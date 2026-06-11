@@ -1,0 +1,13 @@
+{
+  "name": "ipmg-medassist-static-webapp",
+  "version": "5.34.0",
+  "private": true,
+  "description": "IPMG MedAssist UDS / Injection / Samples static web app for Azure Static Web Apps.",
+  "scripts": {
+    "start": "npx serve .",
+    "check": "node -e \"const fs=require('fs'); JSON.parse(fs.readFileSync('staticwebapp.config.json','utf8')); if(!fs.existsSync('index.html')) throw new Error('index.html missing'); console.log('Static app files OK');\""
+  },
+  "devDependencies": {
+    "serve": "latest"
+  }
+}
