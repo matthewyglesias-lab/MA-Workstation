@@ -1,0 +1,2055 @@
+/* v47 Print System — single source of truth for physical print + PDF export.
+   Loaded last on purpose. Older design-layer print rules may stay in place,
+   but this file owns page size, printable area, and document rhythm. */
+
+:root {
+  --print-ink: #243746;
+  --print-muted: #5f7386;
+  --print-faint: #8295a3;
+  --print-line: #d8e6df;
+  --print-line-strong: #b9ccc3;
+  --print-wash: #f7fbf8;
+  --print-mint: #eef8f3;
+  --print-blue: #f1f8fc;
+  --print-rose: #fff5f6;
+}
+
+@page {
+  size: 8.5in 11in;
+  margin: 0.5in;
+}
+
+/* Hidden, controlled Letter canvas used by the Download PDF button. */
+.pdf-export-root {
+  position: fixed !important;
+  left: -12000px !important;
+  top: 0 !important;
+  width: 7.5in !important;
+  max-width: 7.5in !important;
+  min-width: 7.5in !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #fff !important;
+  color: var(--print-ink) !important;
+  z-index: -1 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+}
+
+@media print {
+  html,
+  body {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: var(--print-ink) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  [data-ui="live-preview"],
+  [data-ui="live-preview"] *,
+  [data-ui="print-document"],
+  [data-ui="print-document"] * {
+    visibility: visible !important;
+  }
+
+  .topbar,
+  .rail,
+  .mobile-tabs,
+  .drawer,
+  .toast,
+  .paper-tools,
+  [data-ui="output-rail"],
+  [data-ui="referral-details"],
+  .v44-output-rail,
+  .v44-details-panel,
+  .pdf-export-root {
+    display: none !important;
+  }
+
+  #app,
+  .app-shell,
+  .main-shell,
+  .workspace,
+  .print-view,
+  .v44-print-studio,
+  [data-ui="live-preview"],
+  .paper-stage,
+  .v44-preview-shell,
+  .v44-preview-shell.paper-stage {
+    display: block !important;
+    visibility: visible !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    overflow: visible !important;
+    position: static !important;
+    transform: none !important;
+    inset: auto !important;
+  }
+}
+
+@media print {
+  [data-ui="print-document"] {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+@media print {
+  [data-ui="print-document"],
+  [data-ui="print-document"].paper,
+  .paper-stage > [data-ui="print-document"] {
+    display: block !important;
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: var(--print-ink) !important;
+    font-family: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-size: 10.25pt !important;
+    line-height: 1.43 !important;
+    letter-spacing: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"],
+.pdf-export-root [data-ui="print-document"].paper {
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 7.5in !important;
+  max-width: 7.5in !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+  color: var(--print-ink) !important;
+  font-family: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 13.66px !important; /* 10.25pt at 96px/in */
+  line-height: 1.43 !important;
+  letter-spacing: 0 !important;
+  overflow: visible !important;
+  transform: none !important;
+}
+
+@media print {
+  [data-ui="print-document"] *,
+  [data-ui="print-document"] *::before,
+  [data-ui="print-document"] *::after {
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"] *,
+.pdf-export-root [data-ui="print-document"] *::before,
+.pdf-export-root [data-ui="print-document"] *::after {
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+@media print {
+  [data-ui="print-document"] h1,
+  [data-ui="print-document"] h2,
+  [data-ui="print-document"] h3,
+  [data-ui="print-document"] p,
+  [data-ui="print-document"] ul,
+  [data-ui="print-document"] ol,
+  [data-ui="print-document"] dl {
+    break-after: avoid-page !important;
+  }
+}
+
+@media print {
+  [data-ui="print-document"] h1 {
+    font-family: "Newsreader", Georgia, serif !important;
+    font-size: 24pt !important;
+    line-height: 1.04 !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em !important;
+    color: var(--print-ink) !important;
+    margin: 4pt 0 5pt !important;
+  }
+
+  [data-ui="print-document"] h2 {
+    font-family: "Newsreader", Georgia, serif !important;
+    font-size: 15pt !important;
+    line-height: 1.12 !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    color: var(--print-ink) !important;
+    margin: 0 0 8pt !important;
+  }
+
+  [data-ui="print-document"] h3 {
+    font-size: 11.2pt !important;
+    line-height: 1.24 !important;
+    font-weight: 750 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    color: var(--print-ink) !important;
+    margin: 0 0 5pt !important;
+  }
+
+  [data-ui="print-document"] p,
+  [data-ui="print-document"] li,
+  [data-ui="print-document"] td,
+  [data-ui="print-document"] dd,
+  [data-ui="print-document"] span,
+  [data-ui="print-document"] label {
+    color: var(--print-ink) !important;
+    font-size: 10.25pt !important;
+    line-height: 1.43 !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"] h1 {
+  font-family: "Newsreader", Georgia, serif !important;
+  font-size: 32px !important;
+  line-height: 1.04 !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--print-ink) !important;
+  margin: 5px 0 7px !important;
+}
+
+.pdf-export-root [data-ui="print-document"] h2 {
+  font-family: "Newsreader", Georgia, serif !important;
+  font-size: 20px !important;
+  line-height: 1.12 !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--print-ink) !important;
+  margin: 0 0 11px !important;
+}
+
+.pdf-export-root [data-ui="print-document"] h3 {
+  font-size: 15px !important;
+  line-height: 1.24 !important;
+  font-weight: 750 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--print-ink) !important;
+  margin: 0 0 7px !important;
+}
+
+.pdf-export-root [data-ui="print-document"] p,
+.pdf-export-root [data-ui="print-document"] li,
+.pdf-export-root [data-ui="print-document"] td,
+.pdf-export-root [data-ui="print-document"] dd,
+.pdf-export-root [data-ui="print-document"] span,
+.pdf-export-root [data-ui="print-document"] label {
+  color: var(--print-ink) !important;
+  font-size: 13.66px !important;
+  line-height: 1.43 !important;
+}
+
+@media print {
+  [data-ui="print-document"] p { margin: 0 0 7pt !important; }
+  [data-ui="print-document"] ul,
+  [data-ui="print-document"] ol { margin: 0 !important; padding-left: 17pt !important; }
+  [data-ui="print-document"] li + li { margin-top: 3pt !important; }
+}
+
+.pdf-export-root [data-ui="print-document"] p { margin: 0 0 9px !important; }
+.pdf-export-root [data-ui="print-document"] ul,
+.pdf-export-root [data-ui="print-document"] ol { margin: 0 !important; padding-left: 23px !important; }
+.pdf-export-root [data-ui="print-document"] li + li { margin-top: 4px !important; }
+
+@media print {
+  .paper-doc-head,
+  [data-ui="print-document"] .paper-doc-head,
+  [data-ui="print-document"] .paper-head {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    gap: 14pt !important;
+    align-items: start !important;
+    margin: 0 0 15pt !important;
+    padding: 0 0 12pt !important;
+    border: 0 !important;
+    border-bottom: 1pt solid var(--print-line-strong) !important;
+    background: #fff !important;
+  }
+}
+
+.pdf-export-root .paper-doc-head,
+.pdf-export-root [data-ui="print-document"] .paper-doc-head,
+.pdf-export-root [data-ui="print-document"] .paper-head {
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) auto !important;
+  gap: 19px !important;
+  align-items: start !important;
+  margin: 0 0 20px !important;
+  padding: 0 0 16px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--print-line-strong) !important;
+  background: #fff !important;
+}
+
+@media print {
+  [data-ui="print-document"] .paper-kicker,
+  [data-ui="print-document"] .paper-date-chip,
+  [data-ui="print-document"] .paper-date,
+  [data-ui="print-document"] .paper-mini-label,
+  [data-ui="print-document"] .paper-label,
+  [data-ui="print-document"] .paper-role-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    width: fit-content !important;
+    border: 0.75pt solid var(--print-line) !important;
+    background: var(--print-wash) !important;
+    color: var(--print-muted) !important;
+    border-radius: 999pt !important;
+    padding: 3pt 7pt !important;
+    font-size: 7.8pt !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    font-weight: 800 !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-kicker,
+.pdf-export-root [data-ui="print-document"] .paper-date-chip,
+.pdf-export-root [data-ui="print-document"] .paper-date,
+.pdf-export-root [data-ui="print-document"] .paper-mini-label,
+.pdf-export-root [data-ui="print-document"] .paper-label,
+.pdf-export-root [data-ui="print-document"] .paper-role-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: fit-content !important;
+  border: 1px solid var(--print-line) !important;
+  background: var(--print-wash) !important;
+  color: var(--print-muted) !important;
+  border-radius: 999px !important;
+  padding: 4px 9px !important;
+  font-size: 10.4px !important;
+  line-height: 1.1 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  font-weight: 800 !important;
+}
+
+@media print {
+  [data-ui="print-document"] .paper-kicker::before { display: none !important; }
+  [data-ui="print-document"] .paper-note-line,
+  [data-ui="print-document"] .paper-intro { max-width: 5.9in !important; color: var(--print-muted) !important; margin: 2pt 0 0 !important; }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-kicker::before { display: none !important; }
+.pdf-export-root [data-ui="print-document"] .paper-note-line,
+.pdf-export-root [data-ui="print-document"] .paper-intro { max-width: 566px !important; color: var(--print-muted) !important; margin: 3px 0 0 !important; }
+
+@media print {
+  [data-ui="print-document"] .paper-section {
+    margin: 15pt 0 !important;
+    padding-top: 13pt !important;
+    border-top: 0.75pt solid var(--print-line) !important;
+    background: transparent !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  [data-ui="print-document"] .paper-section:first-of-type { border-top: 0 !important; padding-top: 0 !important; }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-section {
+  margin: 20px 0 !important;
+  padding-top: 17px !important;
+  border-top: 1px solid var(--print-line) !important;
+  background: transparent !important;
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-section:first-of-type { border-top: 0 !important; padding-top: 0 !important; }
+
+@media print {
+  [data-ui="print-document"] .paper-two-col,
+  [data-ui="print-document"] .two-col,
+  [data-ui="print-document"] .paper-info-grid,
+  [data-ui="print-document"] .paper-summary-grid,
+  [data-ui="print-document"] .fax-grid,
+  [data-ui="print-document"] .paper-resource-detail-grid,
+  [data-ui="print-document"] .signature-block,
+  [data-ui="print-document"] .paper-identity-strip,
+  [data-ui="print-document"] .paper-patient-callout {
+    display: grid !important;
+    gap: 10pt !important;
+  }
+
+  [data-ui="print-document"] .paper-two-col,
+  [data-ui="print-document"] .two-col,
+  [data-ui="print-document"] .signature-block { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+  [data-ui="print-document"] .signature-block { grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+  [data-ui="print-document"] .paper-info-grid,
+  [data-ui="print-document"] .paper-summary-grid,
+  [data-ui="print-document"] .fax-grid,
+  [data-ui="print-document"] .paper-resource-detail-grid { grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+  [data-ui="print-document"] .paper-identity-strip { grid-template-columns: repeat(4, minmax(0,1fr)) !important; }
+  [data-ui="print-document"] .paper-patient-callout { grid-template-columns: minmax(0, 1fr) 2.15in !important; }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-two-col,
+.pdf-export-root [data-ui="print-document"] .two-col,
+.pdf-export-root [data-ui="print-document"] .paper-info-grid,
+.pdf-export-root [data-ui="print-document"] .paper-summary-grid,
+.pdf-export-root [data-ui="print-document"] .fax-grid,
+.pdf-export-root [data-ui="print-document"] .paper-resource-detail-grid,
+.pdf-export-root [data-ui="print-document"] .signature-block,
+.pdf-export-root [data-ui="print-document"] .paper-identity-strip,
+.pdf-export-root [data-ui="print-document"] .paper-patient-callout {
+  display: grid !important;
+  gap: 13px !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-two-col,
+.pdf-export-root [data-ui="print-document"] .two-col,
+.pdf-export-root [data-ui="print-document"] .signature-block { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+.pdf-export-root [data-ui="print-document"] .signature-block { grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+.pdf-export-root [data-ui="print-document"] .paper-info-grid,
+.pdf-export-root [data-ui="print-document"] .paper-summary-grid,
+.pdf-export-root [data-ui="print-document"] .fax-grid,
+.pdf-export-root [data-ui="print-document"] .paper-resource-detail-grid { grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+.pdf-export-root [data-ui="print-document"] .paper-identity-strip { grid-template-columns: repeat(4, minmax(0,1fr)) !important; }
+.pdf-export-root [data-ui="print-document"] .paper-patient-callout { grid-template-columns: minmax(0, 1fr) 206px !important; }
+
+@media print {
+  [data-ui="print-document"] .paper-patient-callout,
+  [data-ui="print-document"] .paper-document-intent,
+  [data-ui="print-document"] .paper-soft-panel,
+  [data-ui="print-document"] .paper-script-card,
+  [data-ui="print-document"] .paper-resource-card,
+  [data-ui="print-document"] .paper-contact-block,
+  [data-ui="print-document"] .paper-contact,
+  [data-ui="print-document"] .paper-route-card,
+  [data-ui="print-document"] .paper-compact-route,
+  [data-ui="print-document"] .paper-safety-mini,
+  [data-ui="print-document"] .paper-safety-band,
+  [data-ui="print-document"] .paper-assessment-focus,
+  [data-ui="print-document"] .packet-cover-note,
+  [data-ui="print-document"] .note-starter,
+  [data-ui="print-document"] .paper-checklist label,
+  [data-ui="print-document"] .paper-info-grid > div,
+  [data-ui="print-document"] .paper-summary-grid > div,
+  [data-ui="print-document"] .fax-grid > div,
+  [data-ui="print-document"] .paper-resource-detail-grid > div,
+  [data-ui="print-document"] .paper-identity-strip .paper-detail,
+  [data-ui="print-document"] .paper-reason-pill {
+    border: 0.75pt solid var(--print-line) !important;
+    border-radius: 12pt !important;
+    background: var(--print-wash) !important;
+    color: var(--print-ink) !important;
+    padding: 9pt 10pt !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  [data-ui="print-document"] .paper-patient-callout,
+  [data-ui="print-document"] .paper-document-intent { background: linear-gradient(135deg, var(--print-mint), #fff) !important; }
+  [data-ui="print-document"] .paper-contact-block { background: rgba(255,255,255,.86) !important; }
+  [data-ui="print-document"] .paper-safety-mini,
+  [data-ui="print-document"] .paper-safety-band { background: var(--print-rose) !important; border-color: #efd6d9 !important; }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-patient-callout,
+.pdf-export-root [data-ui="print-document"] .paper-document-intent,
+.pdf-export-root [data-ui="print-document"] .paper-soft-panel,
+.pdf-export-root [data-ui="print-document"] .paper-script-card,
+.pdf-export-root [data-ui="print-document"] .paper-resource-card,
+.pdf-export-root [data-ui="print-document"] .paper-contact-block,
+.pdf-export-root [data-ui="print-document"] .paper-contact,
+.pdf-export-root [data-ui="print-document"] .paper-route-card,
+.pdf-export-root [data-ui="print-document"] .paper-compact-route,
+.pdf-export-root [data-ui="print-document"] .paper-safety-mini,
+.pdf-export-root [data-ui="print-document"] .paper-safety-band,
+.pdf-export-root [data-ui="print-document"] .paper-assessment-focus,
+.pdf-export-root [data-ui="print-document"] .packet-cover-note,
+.pdf-export-root [data-ui="print-document"] .note-starter,
+.pdf-export-root [data-ui="print-document"] .paper-checklist label,
+.pdf-export-root [data-ui="print-document"] .paper-info-grid > div,
+.pdf-export-root [data-ui="print-document"] .paper-summary-grid > div,
+.pdf-export-root [data-ui="print-document"] .fax-grid > div,
+.pdf-export-root [data-ui="print-document"] .paper-resource-detail-grid > div,
+.pdf-export-root [data-ui="print-document"] .paper-identity-strip .paper-detail,
+.pdf-export-root [data-ui="print-document"] .paper-reason-pill {
+  border: 1px solid var(--print-line) !important;
+  border-radius: 16px !important;
+  background: var(--print-wash) !important;
+  color: var(--print-ink) !important;
+  padding: 12px 13px !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-patient-callout,
+.pdf-export-root [data-ui="print-document"] .paper-document-intent { background: linear-gradient(135deg, var(--print-mint), #fff) !important; }
+.pdf-export-root [data-ui="print-document"] .paper-contact-block { background: rgba(255,255,255,.86) !important; }
+.pdf-export-root [data-ui="print-document"] .paper-safety-mini,
+.pdf-export-root [data-ui="print-document"] .paper-safety-band { background: var(--print-rose) !important; border-color: #efd6d9 !important; }
+
+@media print {
+  [data-ui="print-document"] .resource-title,
+  [data-ui="print-document"] .paper-patient-callout .resource-title {
+    font-family: "Newsreader", Georgia, serif !important;
+    font-size: 23pt !important;
+    line-height: 1.05 !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em !important;
+    color: var(--print-ink) !important;
+    margin: 4pt 0 6pt !important;
+  }
+
+  [data-ui="print-document"] .paper-contact-block b,
+  [data-ui="print-document"] .paper-info-grid b,
+  [data-ui="print-document"] .paper-summary-grid b,
+  [data-ui="print-document"] .fax-grid b,
+  [data-ui="print-document"] .paper-identity-strip b,
+  [data-ui="print-document"] .paper-resource-detail-grid dd {
+    display: block !important;
+    font-size: 10pt !important;
+    line-height: 1.25 !important;
+    color: var(--print-ink) !important;
+    min-height: 0 !important;
+    border: 0 !important;
+    margin: 2pt 0 0 !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"] .resource-title,
+.pdf-export-root [data-ui="print-document"] .paper-patient-callout .resource-title {
+  font-family: "Newsreader", Georgia, serif !important;
+  font-size: 31px !important;
+  line-height: 1.05 !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--print-ink) !important;
+  margin: 5px 0 8px !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-contact-block b,
+.pdf-export-root [data-ui="print-document"] .paper-info-grid b,
+.pdf-export-root [data-ui="print-document"] .paper-summary-grid b,
+.pdf-export-root [data-ui="print-document"] .fax-grid b,
+.pdf-export-root [data-ui="print-document"] .paper-identity-strip b,
+.pdf-export-root [data-ui="print-document"] .paper-resource-detail-grid dd {
+  display: block !important;
+  font-size: 13.3px !important;
+  line-height: 1.25 !important;
+  color: var(--print-ink) !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  margin: 3px 0 0 !important;
+}
+
+@media print {
+  [data-ui="print-document"] .paper-resource-top {
+    display: grid !important;
+    grid-template-columns: auto minmax(0,1fr) !important;
+    gap: 9pt !important;
+    align-items: start !important;
+  }
+
+  [data-ui="print-document"] .paper-resource-dot {
+    width: 30pt !important;
+    height: 30pt !important;
+    border-radius: 10pt !important;
+    display: grid !important;
+    place-items: center !important;
+    background: #fff !important;
+    border: 0.75pt solid var(--print-line) !important;
+    color: var(--print-muted) !important;
+    font-size: 10pt !important;
+    font-weight: 850 !important;
+  }
+
+  [data-ui="print-document"] .paper-tag-row,
+  [data-ui="print-document"] .paper-resource-meta,
+  [data-ui="print-document"] .paper-route-detail,
+  [data-ui="print-document"] .focus-chip-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5pt !important;
+    margin-top: 7pt !important;
+  }
+
+  [data-ui="print-document"] .paper-tag-row span,
+  [data-ui="print-document"] .paper-resource-meta span,
+  [data-ui="print-document"] .paper-route-detail strong,
+  [data-ui="print-document"] .paper-route-detail em,
+  [data-ui="print-document"] .focus-chip-row span {
+    display: inline-flex !important;
+    border: 0.75pt solid var(--print-line) !important;
+    background: #fff !important;
+    color: var(--print-muted) !important;
+    border-radius: 999pt !important;
+    padding: 3pt 6pt !important;
+    font-size: 7.8pt !important;
+    line-height: 1.12 !important;
+    font-weight: 750 !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-resource-top {
+  display: grid !important;
+  grid-template-columns: auto minmax(0,1fr) !important;
+  gap: 12px !important;
+  align-items: start !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-resource-dot {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 13px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: #fff !important;
+  border: 1px solid var(--print-line) !important;
+  color: var(--print-muted) !important;
+  font-size: 13px !important;
+  font-weight: 850 !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-tag-row,
+.pdf-export-root [data-ui="print-document"] .paper-resource-meta,
+.pdf-export-root [data-ui="print-document"] .paper-route-detail,
+.pdf-export-root [data-ui="print-document"] .focus-chip-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 7px !important;
+  margin-top: 9px !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-tag-row span,
+.pdf-export-root [data-ui="print-document"] .paper-resource-meta span,
+.pdf-export-root [data-ui="print-document"] .paper-route-detail strong,
+.pdf-export-root [data-ui="print-document"] .paper-route-detail em,
+.pdf-export-root [data-ui="print-document"] .focus-chip-row span {
+  display: inline-flex !important;
+  border: 1px solid var(--print-line) !important;
+  background: #fff !important;
+  color: var(--print-muted) !important;
+  border-radius: 999px !important;
+  padding: 4px 8px !important;
+  font-size: 10.4px !important;
+  line-height: 1.12 !important;
+  font-weight: 750 !important;
+}
+
+@media print {
+  [data-ui="print-document"] .paper-table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 6pt !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  [data-ui="print-document"] .paper-table th {
+    text-align: left !important;
+    color: var(--print-faint) !important;
+    font-size: 7.7pt !important;
+    text-transform: uppercase !important;
+    letter-spacing: .06em !important;
+    padding: 0 7pt 2pt !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  [data-ui="print-document"] .paper-table td {
+    vertical-align: top !important;
+    background: #fff !important;
+    border-top: .75pt solid var(--print-line) !important;
+    border-bottom: .75pt solid var(--print-line) !important;
+    border-radius: 0 !important;
+    padding: 8pt 7pt !important;
+    color: var(--print-ink) !important;
+  }
+
+  [data-ui="print-document"] .paper-table td:first-child { border-left: .75pt solid var(--print-line) !important; border-radius: 10pt 0 0 10pt !important; }
+  [data-ui="print-document"] .paper-table td:last-child { border-right: .75pt solid var(--print-line) !important; border-radius: 0 10pt 10pt 0 !important; }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 8px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-table th {
+  text-align: left !important;
+  color: var(--print-faint) !important;
+  font-size: 10.2px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .06em !important;
+  padding: 0 9px 3px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-table td {
+  vertical-align: top !important;
+  background: #fff !important;
+  border-top: 1px solid var(--print-line) !important;
+  border-bottom: 1px solid var(--print-line) !important;
+  border-radius: 0 !important;
+  padding: 11px 9px !important;
+  color: var(--print-ink) !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-table td:first-child { border-left: 1px solid var(--print-line) !important; border-radius: 13px 0 0 13px !important; }
+.pdf-export-root [data-ui="print-document"] .paper-table td:last-child { border-right: 1px solid var(--print-line) !important; border-radius: 0 13px 13px 0 !important; }
+
+@media print {
+  [data-ui="print-document"] .letter-body,
+  [data-ui="print-document"] .letter-body p,
+  [data-ui="print-document"] .letter-body .letter-body-copy p {
+    font-size: 10.5pt !important;
+    line-height: 1.55 !important;
+  }
+
+  [data-ui="print-document"] .note-starter,
+  [data-ui="print-document"] .note-starter.large {
+    white-space: pre-wrap !important;
+    font-size: 9.8pt !important;
+    line-height: 1.45 !important;
+  }
+
+  [data-ui="print-document"] .call-log-grid {
+    display: grid !important;
+    grid-template-columns: 1.2fr .8fr .8fr 1.4fr !important;
+    border: .75pt solid var(--print-line) !important;
+    border-radius: 12pt !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  [data-ui="print-document"] .call-log-grid > div {
+    min-height: 27pt !important;
+    border-right: .75pt solid var(--print-line) !important;
+    border-bottom: .75pt solid var(--print-line) !important;
+    padding: 7pt !important;
+    color: var(--print-muted) !important;
+    background: #fff !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"] .letter-body,
+.pdf-export-root [data-ui="print-document"] .letter-body p,
+.pdf-export-root [data-ui="print-document"] .letter-body .letter-body-copy p {
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+.pdf-export-root [data-ui="print-document"] .note-starter,
+.pdf-export-root [data-ui="print-document"] .note-starter.large {
+  white-space: pre-wrap !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+.pdf-export-root [data-ui="print-document"] .call-log-grid {
+  display: grid !important;
+  grid-template-columns: 1.2fr .8fr .8fr 1.4fr !important;
+  border: 1px solid var(--print-line) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: #fff !important;
+}
+.pdf-export-root [data-ui="print-document"] .call-log-grid > div {
+  min-height: 36px !important;
+  border-right: 1px solid var(--print-line) !important;
+  border-bottom: 1px solid var(--print-line) !important;
+  padding: 9px !important;
+  color: var(--print-muted) !important;
+  background: #fff !important;
+}
+
+@media print {
+  [data-ui="print-document"] .paper-footer {
+    margin-top: 15pt !important;
+    padding-top: 9pt !important;
+    border-top: .75pt solid var(--print-line-strong) !important;
+    color: var(--print-muted) !important;
+    font-size: 8.4pt !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-ui="print-document"] .signature-block > div,
+  [data-ui="print-document"] .signature-block div {
+    border: 0 !important;
+    border-top: .75pt solid var(--print-line-strong) !important;
+    padding: 8pt 0 0 !important;
+    min-height: 28pt !important;
+    color: var(--print-muted) !important;
+    background: transparent !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-footer {
+  margin-top: 20px !important;
+  padding-top: 12px !important;
+  border-top: 1px solid var(--print-line-strong) !important;
+  color: var(--print-muted) !important;
+  font-size: 11.2px !important;
+  line-height: 1.35 !important;
+}
+.pdf-export-root [data-ui="print-document"] .signature-block > div,
+.pdf-export-root [data-ui="print-document"] .signature-block div {
+  border: 0 !important;
+  border-top: 1px solid var(--print-line-strong) !important;
+  padding: 11px 0 0 !important;
+  min-height: 37px !important;
+  color: var(--print-muted) !important;
+  background: transparent !important;
+}
+
+/* Output-specific page economy: keep the patient handout friendly and usually one page,
+   while letting formal packets flow naturally. */
+@media print {
+  [data-document-type="patient-handout"] .paper-two-col,
+  [data-document-type="patient-options"] .paper-option-stack,
+  [data-document-type="fax-cover"] .fax-records-compact,
+  [data-document-type="referral-letter"] .letter-body,
+  [data-document-type="staff-worksheet"] .call-log-grid,
+  [data-document-type="tebra-note"] .note-starter {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  [data-document-type="patient-handout"] .paper-section,
+  [data-document-type="patient-handout"] .paper-two-col,
+  [data-document-type="patient-handout"] .handout-final-row { margin-block: 12pt !important; }
+  [data-document-type="patient-handout"] .paper-soft-panel,
+  [data-document-type="patient-handout"] .paper-script-card,
+  [data-document-type="patient-handout"] .paper-safety-mini { padding: 8pt 9pt !important; }
+
+  [data-document-type="fax-cover"] h1,
+  [data-document-type="referral-letter"] h1,
+  [data-document-type="referral-packet"] h1,
+  [data-document-type="staff-worksheet"] h1,
+  [data-document-type="tebra-note"] h1 { font-size: 22pt !important; }
+}
+
+.pdf-export-root [data-document-type="patient-handout"] .paper-section,
+.pdf-export-root [data-document-type="patient-handout"] .paper-two-col,
+.pdf-export-root [data-document-type="patient-handout"] .handout-final-row { margin-block: 16px !important; }
+.pdf-export-root [data-document-type="patient-handout"] .paper-soft-panel,
+.pdf-export-root [data-document-type="patient-handout"] .paper-script-card,
+.pdf-export-root [data-document-type="patient-handout"] .paper-safety-mini { padding: 11px 12px !important; }
+.pdf-export-root [data-document-type="fax-cover"] h1,
+.pdf-export-root [data-document-type="referral-letter"] h1,
+.pdf-export-root [data-document-type="referral-packet"] h1,
+.pdf-export-root [data-document-type="staff-worksheet"] h1,
+.pdf-export-root [data-document-type="tebra-note"] h1 { font-size: 29px !important; }
+
+/* v47.1 QA patches for fax grids, checklist flow, and label/value rhythm. */
+@media print {
+  [data-ui="print-document"] .paper-identity-strip span,
+  [data-ui="print-document"] .paper-reason-pill span,
+  [data-ui="print-document"] .paper-info-grid span,
+  [data-ui="print-document"] .paper-summary-grid span,
+  [data-ui="print-document"] .fax-grid span,
+  [data-ui="print-document"] .fax-compact-grid span,
+  [data-ui="print-document"] .paper-resource-detail-grid dt {
+    display: block !important;
+    margin: 0 0 4pt !important;
+    color: var(--print-muted) !important;
+    font-size: 8pt !important;
+    line-height: 1.15 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 650 !important;
+  }
+
+  [data-ui="print-document"] .paper-identity-strip b,
+  [data-ui="print-document"] .paper-reason-pill b,
+  [data-ui="print-document"] .paper-info-grid b,
+  [data-ui="print-document"] .paper-summary-grid b,
+  [data-ui="print-document"] .fax-grid b,
+  [data-ui="print-document"] .fax-compact-grid b {
+    display: block !important;
+    border: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    color: var(--print-ink) !important;
+    font-size: 9.5pt !important;
+    line-height: 1.28 !important;
+    font-weight: 780 !important;
+  }
+
+  [data-ui="print-document"] .fax-compact-grid,
+  [data-ui="print-document"] .fax-attachment-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10pt !important;
+    margin: 0 !important;
+  }
+
+  [data-ui="print-document"] .fax-compact-grid > div,
+  [data-ui="print-document"] .fax-attachment-grid > label {
+    border: .75pt solid var(--print-line) !important;
+    border-radius: 12pt !important;
+    background: var(--print-wash) !important;
+    padding: 9pt 10pt !important;
+    min-height: 38pt !important;
+    color: var(--print-ink) !important;
+    font-size: 9.5pt !important;
+    line-height: 1.3 !important;
+  }
+
+  [data-ui="print-document"] .paper-checklist {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 6pt !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  [data-ui="print-document"] .paper-checklist label {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    padding: 7pt 8pt !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    color: var(--print-ink) !important;
+    font-size: 9.4pt !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-ui="print-document"] .paper-checklist strong {
+    float: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    width: auto !important;
+    margin: 0 0 0 5pt !important;
+    padding: 2pt 5pt !important;
+    border: .75pt solid #eadcb6 !important;
+    border-radius: 999pt !important;
+    background: #fffaf0 !important;
+    color: #735c2c !important;
+    font-size: 7pt !important;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .04em !important;
+  }
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-identity-strip span,
+.pdf-export-root [data-ui="print-document"] .paper-reason-pill span,
+.pdf-export-root [data-ui="print-document"] .paper-info-grid span,
+.pdf-export-root [data-ui="print-document"] .paper-summary-grid span,
+.pdf-export-root [data-ui="print-document"] .fax-grid span,
+.pdf-export-root [data-ui="print-document"] .fax-compact-grid span,
+.pdf-export-root [data-ui="print-document"] .paper-resource-detail-grid dt {
+  display: block !important;
+  margin: 0 0 5px !important;
+  color: var(--print-muted) !important;
+  font-size: 10.6px !important;
+  line-height: 1.15 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-weight: 650 !important;
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-identity-strip b,
+.pdf-export-root [data-ui="print-document"] .paper-reason-pill b,
+.pdf-export-root [data-ui="print-document"] .paper-info-grid b,
+.pdf-export-root [data-ui="print-document"] .paper-summary-grid b,
+.pdf-export-root [data-ui="print-document"] .fax-grid b,
+.pdf-export-root [data-ui="print-document"] .fax-compact-grid b {
+  display: block !important;
+  border: 0 !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+  color: var(--print-ink) !important;
+  font-size: 12.6px !important;
+  line-height: 1.28 !important;
+  font-weight: 780 !important;
+}
+
+.pdf-export-root [data-ui="print-document"] .fax-compact-grid,
+.pdf-export-root [data-ui="print-document"] .fax-attachment-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 13px !important;
+  margin: 0 !important;
+}
+
+.pdf-export-root [data-ui="print-document"] .fax-compact-grid > div,
+.pdf-export-root [data-ui="print-document"] .fax-attachment-grid > label {
+  border: 1px solid var(--print-line) !important;
+  border-radius: 16px !important;
+  background: var(--print-wash) !important;
+  padding: 12px 13px !important;
+  min-height: 51px !important;
+  color: var(--print-ink) !important;
+  font-size: 12.6px !important;
+  line-height: 1.3 !important;
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-checklist {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-checklist label {
+  display: block !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  padding: 9px 11px !important;
+  overflow: visible !important;
+  white-space: normal !important;
+  color: var(--print-ink) !important;
+  font-size: 12.5px !important;
+  line-height: 1.35 !important;
+}
+
+.pdf-export-root [data-ui="print-document"] .paper-checklist strong {
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  width: auto !important;
+  margin: 0 0 0 7px !important;
+  padding: 3px 7px !important;
+  border: 1px solid #eadcb6 !important;
+  border-radius: 999px !important;
+  background: #fffaf0 !important;
+  color: #735c2c !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .04em !important;
+}
+
+/* v47.2 checklist stability: avoid grid fragmentation inside worksheet cards. */
+@media print {
+  [data-ui="print-document"] .paper-checklist {
+    display: block !important;
+    overflow: visible !important;
+  }
+  [data-ui="print-document"] .paper-checklist label {
+    display: block !important;
+    position: static !important;
+    float: none !important;
+    clear: both !important;
+    margin: 0 !important;
+  }
+  [data-ui="print-document"] .paper-checklist label + label { margin-top: 6pt !important; }
+  [data-ui="print-document"] .paper-soft-panel { overflow: visible !important; }
+}
+.pdf-export-root [data-ui="print-document"] .paper-checklist {
+  display: block !important;
+  overflow: visible !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-checklist label {
+  display: block !important;
+  position: static !important;
+  float: none !important;
+  clear: both !important;
+  margin: 0 !important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-checklist label + label { margin-top: 8px !important; }
+.pdf-export-root [data-ui="print-document"] .paper-soft-panel { overflow: visible !important; }
+
+/* v48 Output Redesign — final print/PDF lock
+   Keeps patient-facing documents beautiful, airy, and reliable in both browser print and PDF export. */
+:root{
+  --print-friendly-serif: var(--serif, "Fraunces", Georgia, serif);
+  --print-friendly-sans: var(--sans, "DM Sans", ui-sans-serif, system-ui, sans-serif);
+  --print-patient-paper: #fffdf8;
+  --print-patient-soft: #f8fbf7;
+  --print-patient-mint: #edf8f2;
+  --print-patient-blue: #f0f8fc;
+  --print-patient-gold: #fff8e8;
+  --print-patient-rose: #fff4f5;
+  --print-patient-ink: #243746;
+  --print-patient-muted: #617383;
+  --print-patient-faint: #8798a3;
+  --print-patient-line: #dce7df;
+  --print-patient-line-strong: #c4d6cc;
+}
+
+@media print{
+  [data-ui="print-document"].patient-output-v48,
+  [data-ui="print-document"].packet-output-v48,
+  [data-ui="print-document"].letter-output-v48,
+  [data-ui="print-document"].fax-output-v48,
+  [data-ui="print-document"].staff-output-v48,
+  [data-ui="print-document"].ehr-output-v48{
+    color:var(--print-patient-ink)!important;
+    font-family:var(--print-friendly-sans)!important;
+    font-size:10.35pt!important;
+    line-height:1.46!important;
+    background:#fff!important;
+  }
+  [data-ui="print-document"] .paper-welcome-band,
+  [data-ui="print-document"] .paper-fax-head{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:13pt!important;
+    align-items:start!important;
+    padding:16pt 17pt 15pt!important;
+    margin:0 0 13pt!important;
+    border:.75pt solid var(--print-patient-line)!important;
+    border-radius:19pt!important;
+    background:linear-gradient(135deg,#fff,var(--print-patient-mint))!important;
+    break-inside:avoid!important;
+  }
+  [data-ui="print-document"] .paper-welcome-band.compact,
+  [data-ui="print-document"] .paper-fax-head{padding:14pt 15pt!important;border-radius:17pt!important}
+  [data-ui="print-document"] .paper-welcome-band.internal{background:linear-gradient(135deg,#fff,var(--print-patient-blue))!important}
+  [data-ui="print-document"] .paper-welcome-band h1,
+  [data-ui="print-document"] .paper-fax-head h1{
+    font-family:var(--print-friendly-serif)!important;
+    font-size:26pt!important;
+    line-height:1.02!important;
+    font-weight:500!important;
+    letter-spacing:-.03em!important;
+    color:var(--print-patient-ink)!important;
+    margin:3pt 0 5pt!important;
+  }
+  [data-ui="print-document"] .paper-welcome-band p,
+  [data-ui="print-document"] .paper-fax-head p{margin:0!important;max-width:5.8in!important;color:var(--print-patient-muted)!important;font-size:10.2pt!important;line-height:1.43!important}
+  [data-ui="print-document"] .paper-soft-label{
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:5pt!important;
+    color:#5a7f70!important;
+    font-size:7.7pt!important;
+    font-weight:900!important;
+    letter-spacing:.08em!important;
+    text-transform:uppercase!important;
+  }
+  [data-ui="print-document"] .paper-soft-label::before{content:""!important;width:5pt!important;height:5pt!important;border-radius:999pt!important;background:#93c4b2!important}
+  [data-ui="print-document"] .paper-start-card{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 2.15in!important;
+    gap:13pt!important;
+    align-items:stretch!important;
+    padding:17pt!important;
+    margin:0 0 14pt!important;
+    border:.75pt solid var(--print-patient-line)!important;
+    border-radius:20pt!important;
+    background:linear-gradient(135deg,var(--print-patient-mint),#fff 64%)!important;
+    break-inside:avoid!important;
+  }
+  [data-ui="print-document"] .paper-start-copy h2{
+    font-family:var(--print-friendly-serif)!important;
+    font-size:23pt!important;
+    line-height:1.04!important;
+    font-weight:500!important;
+    letter-spacing:-.025em!important;
+    color:var(--print-patient-ink)!important;
+    margin:4pt 0 6pt!important;
+  }
+  [data-ui="print-document"] .paper-start-copy p{margin:0!important;color:var(--print-patient-muted)!important;font-size:10.4pt!important;line-height:1.45!important}
+  [data-ui="print-document"] .paper-contact-card{
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    gap:4pt!important;
+    padding:11pt!important;
+    border:.75pt solid var(--print-patient-line)!important;
+    border-radius:15pt!important;
+    background:rgba(255,255,255,.9)!important;
+    color:var(--print-patient-ink)!important;
+    break-inside:avoid!important;
+  }
+  [data-ui="print-document"] .paper-contact-card span,
+  [data-ui="print-document"] .paper-option-contact span{display:block!important;color:var(--print-patient-faint)!important;font-size:7.3pt!important;font-weight:900!important;letter-spacing:.08em!important;text-transform:uppercase!important}
+  [data-ui="print-document"] .paper-contact-card b{display:block!important;color:var(--print-patient-ink)!important;font-size:10.6pt!important;line-height:1.25!important;margin:0!important;border:0!important}
+  [data-ui="print-document"] .paper-contact-card em{font-style:normal!important;color:var(--print-patient-muted)!important;font-size:8.8pt!important;line-height:1.3!important}
+  [data-ui="print-document"] .paper-section-title{display:flex!important;align-items:end!important;justify-content:space-between!important;gap:10pt!important;margin:0 0 8pt!important}
+  [data-ui="print-document"] .paper-section-title span{color:var(--print-patient-faint)!important;font-size:7.6pt!important;font-weight:900!important;letter-spacing:.08em!important;text-transform:uppercase!important;white-space:nowrap!important}
+  [data-ui="print-document"] .paper-section-title h2{font-family:var(--print-friendly-serif)!important;font-size:16pt!important;line-height:1.08!important;font-weight:500!important;letter-spacing:-.02em!important;color:var(--print-patient-ink)!important;margin:0!important}
+  [data-ui="print-document"] .paper-next-steps{margin:0 0 14pt!important;break-inside:avoid!important}
+  [data-ui="print-document"] .paper-step-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8pt!important;margin:0!important}
+  [data-ui="print-document"] .paper-step-grid>div{padding:11pt!important;border:.75pt solid var(--print-patient-line)!important;border-radius:14pt!important;background:#fff!important;break-inside:avoid!important;color:var(--print-patient-ink)!important}
+  [data-ui="print-document"] .paper-step-grid b{display:grid!important;place-items:center!important;width:22pt!important;height:22pt!important;margin:0 0 7pt!important;border-radius:999pt!important;background:var(--print-patient-mint)!important;color:#527d6f!important;font-weight:950!important;font-size:9pt!important;line-height:1!important}
+  [data-ui="print-document"] .paper-step-grid h3{margin:0 0 3pt!important;color:var(--print-patient-ink)!important;font-size:10.4pt!important;line-height:1.22!important;font-weight:800!important}
+  [data-ui="print-document"] .paper-step-grid p{margin:0!important;color:var(--print-patient-muted)!important;font-size:9pt!important;line-height:1.34!important}
+  [data-ui="print-document"] .paper-light-card,
+  [data-ui="print-document"] .paper-patient-option-card{
+    border:.75pt solid var(--print-patient-line)!important;
+    border-radius:16pt!important;
+    background:#fff!important;
+    padding:12pt!important;
+    break-inside:avoid!important;
+    color:var(--print-patient-ink)!important;
+  }
+  [data-ui="print-document"] .paper-light-card h3,
+  [data-ui="print-document"] .paper-script-card.friendly h3{margin:4pt 0 6pt!important;color:var(--print-patient-ink)!important;font-size:11.2pt!important;line-height:1.2!important}
+  [data-ui="print-document"] .paper-clean-list{display:grid!important;gap:5pt!important;list-style:none!important;margin:5pt 0 0!important;padding:0!important}
+  [data-ui="print-document"] .paper-clean-list li{position:relative!important;padding-left:13pt!important;color:var(--print-patient-muted)!important;font-size:9.1pt!important;line-height:1.35!important;margin:0!important}
+  [data-ui="print-document"] .paper-clean-list li::before{content:""!important;position:absolute!important;left:0!important;top:.55em!important;width:5pt!important;height:5pt!important;border-radius:999pt!important;background:#9bc9b8!important}
+  [data-ui="print-document"] .paper-script-card.friendly{background:var(--print-patient-gold)!important;border-color:#eadfbe!important;border-radius:16pt!important;padding:12pt!important;break-inside:avoid!important}
+  [data-ui="print-document"] .paper-script-card.friendly p{margin:0!important;color:var(--print-patient-ink)!important;font-size:10pt!important;line-height:1.45!important}
+  [data-ui="print-document"] .paper-patient-option-card{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:10pt!important;margin:0!important}
+  [data-ui="print-document"] .paper-option-number{display:grid!important;place-items:center!important;width:24pt!important;height:24pt!important;border-radius:999pt!important;background:var(--print-patient-mint)!important;color:#527d6f!important;font-weight:950!important;font-size:9pt!important}
+  [data-ui="print-document"] .paper-option-main h3{margin:3pt 0!important;font-size:12pt!important;line-height:1.18!important;color:var(--print-patient-ink)!important}
+  [data-ui="print-document"] .paper-option-main p{margin:0!important;color:var(--print-patient-muted)!important;font-size:9.4pt!important;line-height:1.38!important}
+  [data-ui="print-document"] .paper-option-contact{display:flex!important;align-items:baseline!important;gap:5pt!important;flex-wrap:wrap!important;margin:8pt 0 0!important;padding:7pt 8pt!important;border:.75pt solid var(--print-patient-line)!important;border-radius:11pt!important;background:var(--print-patient-soft)!important}
+  [data-ui="print-document"] .paper-option-contact b{color:var(--print-patient-ink)!important;font-size:9.3pt!important;line-height:1.22!important;margin:0!important;border:0!important}
+  [data-ui="print-document"] .v48-options-stack{display:grid!important;gap:8pt!important}
+  [data-ui="print-document"] .paper-gentle-safety{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:10pt!important;
+    align-items:center!important;
+    margin:14pt 0 0!important;
+    padding:12pt!important;
+    border:.75pt solid #ecd6d8!important;
+    border-radius:16pt!important;
+    background:var(--print-patient-rose)!important;
+    break-inside:avoid!important;
+  }
+  [data-ui="print-document"] .paper-gentle-safety h3{margin:4pt 0 3pt!important;color:#704c52!important;font-size:11pt!important;line-height:1.22!important}
+  [data-ui="print-document"] .paper-gentle-safety p{margin:0!important;color:#755d61!important;font-size:9.2pt!important;line-height:1.36!important}
+  [data-ui="print-document"] .paper-gentle-safety aside{padding:7pt 8pt!important;border-radius:11pt!important;background:#fff!important;border:.75pt solid #ecd6d8!important}
+  [data-ui="print-document"] .paper-gentle-safety aside span{display:block!important;color:#98747a!important;font-size:7.2pt!important;font-weight:900!important;text-transform:uppercase!important;letter-spacing:.08em!important}
+  [data-ui="print-document"] .paper-gentle-safety aside b{display:block!important;margin:2pt 0 0!important;color:#593f44!important;font-size:9pt!important;line-height:1.25!important}
+  [data-ui="print-document"] .paper-footer.patient-footer{color:var(--print-patient-faint)!important;font-size:8.3pt!important;line-height:1.35!important;margin-top:13pt!important;padding-top:8pt!important;border-top:.75pt solid var(--print-patient-line)!important}
+  [data-ui="print-document"] .v48-intent{background:linear-gradient(135deg,#fff,var(--print-patient-soft))!important;border:.75pt solid var(--print-patient-line)!important;border-radius:17pt!important;padding:12pt!important}
+  [data-ui="print-document"] .staff-verify-grid{margin:0 0 13pt!important}
+  [data-ui="print-document"] .patient-output-v48 .paper-section,
+  [data-ui="print-document"].patient-output-v48 .paper-section{margin:14pt 0!important;padding-top:14pt!important;border-top:.75pt solid var(--print-patient-line)!important}
+  [data-ui="print-document"].patient-handout-v48 .paper-two-col{gap:10pt!important}
+}
+
+.pdf-export-root [data-ui="print-document"].patient-output-v48,
+.pdf-export-root [data-ui="print-document"].packet-output-v48,
+.pdf-export-root [data-ui="print-document"].letter-output-v48,
+.pdf-export-root [data-ui="print-document"].fax-output-v48,
+.pdf-export-root [data-ui="print-document"].staff-output-v48,
+.pdf-export-root [data-ui="print-document"].ehr-output-v48{
+  color:var(--print-patient-ink)!important;
+  font-family:var(--print-friendly-sans)!important;
+  font-size:13.8px!important;
+  line-height:1.46!important;
+  background:#fff!important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-welcome-band,
+.pdf-export-root [data-ui="print-document"] .paper-fax-head{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:17px!important;align-items:start!important;padding:21px 23px 20px!important;margin:0 0 17px!important;border:1px solid var(--print-patient-line)!important;border-radius:25px!important;background:linear-gradient(135deg,#fff,var(--print-patient-mint))!important;break-inside:avoid!important;
+}
+.pdf-export-root [data-ui="print-document"] .paper-welcome-band.compact,
+.pdf-export-root [data-ui="print-document"] .paper-fax-head{padding:19px 20px!important;border-radius:23px!important}
+.pdf-export-root [data-ui="print-document"] .paper-welcome-band.internal{background:linear-gradient(135deg,#fff,var(--print-patient-blue))!important}
+.pdf-export-root [data-ui="print-document"] .paper-welcome-band h1,
+.pdf-export-root [data-ui="print-document"] .paper-fax-head h1{font-family:var(--print-friendly-serif)!important;font-size:35px!important;line-height:1.02!important;font-weight:500!important;letter-spacing:-.03em!important;color:var(--print-patient-ink)!important;margin:4px 0 7px!important}
+.pdf-export-root [data-ui="print-document"] .paper-welcome-band p,
+.pdf-export-root [data-ui="print-document"] .paper-fax-head p{margin:0!important;max-width:650px!important;color:var(--print-patient-muted)!important;font-size:13.6px!important;line-height:1.43!important}
+.pdf-export-root [data-ui="print-document"] .paper-soft-label{display:inline-flex!important;align-items:center!important;gap:7px!important;color:#5a7f70!important;font-size:10.3px!important;font-weight:900!important;letter-spacing:.08em!important;text-transform:uppercase!important}
+.pdf-export-root [data-ui="print-document"] .paper-soft-label::before{content:""!important;width:7px!important;height:7px!important;border-radius:999px!important;background:#93c4b2!important}
+.pdf-export-root [data-ui="print-document"] .paper-start-card{display:grid!important;grid-template-columns:minmax(0,1fr) 206px!important;gap:17px!important;align-items:stretch!important;padding:23px!important;margin:0 0 19px!important;border:1px solid var(--print-patient-line)!important;border-radius:27px!important;background:linear-gradient(135deg,var(--print-patient-mint),#fff 64%)!important;break-inside:avoid!important}
+.pdf-export-root [data-ui="print-document"] .paper-start-copy h2{font-family:var(--print-friendly-serif)!important;font-size:31px!important;line-height:1.04!important;font-weight:500!important;letter-spacing:-.025em!important;color:var(--print-patient-ink)!important;margin:5px 0 8px!important}
+.pdf-export-root [data-ui="print-document"] .paper-start-copy p{margin:0!important;color:var(--print-patient-muted)!important;font-size:13.8px!important;line-height:1.45!important}
+.pdf-export-root [data-ui="print-document"] .paper-contact-card{display:flex!important;flex-direction:column!important;justify-content:center!important;gap:5px!important;padding:15px!important;border:1px solid var(--print-patient-line)!important;border-radius:20px!important;background:rgba(255,255,255,.9)!important;color:var(--print-patient-ink)!important;break-inside:avoid!important}
+.pdf-export-root [data-ui="print-document"] .paper-contact-card span,
+.pdf-export-root [data-ui="print-document"] .paper-option-contact span{display:block!important;color:var(--print-patient-faint)!important;font-size:9.8px!important;font-weight:900!important;letter-spacing:.08em!important;text-transform:uppercase!important}
+.pdf-export-root [data-ui="print-document"] .paper-contact-card b{display:block!important;color:var(--print-patient-ink)!important;font-size:14.1px!important;line-height:1.25!important;margin:0!important;border:0!important}
+.pdf-export-root [data-ui="print-document"] .paper-contact-card em{font-style:normal!important;color:var(--print-patient-muted)!important;font-size:11.7px!important;line-height:1.3!important}
+.pdf-export-root [data-ui="print-document"] .paper-section-title{display:flex!important;align-items:end!important;justify-content:space-between!important;gap:13px!important;margin:0 0 11px!important}
+.pdf-export-root [data-ui="print-document"] .paper-section-title span{color:var(--print-patient-faint)!important;font-size:10.1px!important;font-weight:900!important;letter-spacing:.08em!important;text-transform:uppercase!important;white-space:nowrap!important}
+.pdf-export-root [data-ui="print-document"] .paper-section-title h2{font-family:var(--print-friendly-serif)!important;font-size:21px!important;line-height:1.08!important;font-weight:500!important;letter-spacing:-.02em!important;color:var(--print-patient-ink)!important;margin:0!important}
+.pdf-export-root [data-ui="print-document"] .paper-next-steps{margin:0 0 19px!important;break-inside:avoid!important}
+.pdf-export-root [data-ui="print-document"] .paper-step-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:11px!important;margin:0!important}
+.pdf-export-root [data-ui="print-document"] .paper-step-grid>div{padding:15px!important;border:1px solid var(--print-patient-line)!important;border-radius:19px!important;background:#fff!important;break-inside:avoid!important;color:var(--print-patient-ink)!important}
+.pdf-export-root [data-ui="print-document"] .paper-step-grid b{display:grid!important;place-items:center!important;width:29px!important;height:29px!important;margin:0 0 9px!important;border-radius:999px!important;background:var(--print-patient-mint)!important;color:#527d6f!important;font-weight:950!important;font-size:12px!important;line-height:1!important}
+.pdf-export-root [data-ui="print-document"] .paper-step-grid h3{margin:0 0 4px!important;color:var(--print-patient-ink)!important;font-size:13.8px!important;line-height:1.22!important;font-weight:800!important}
+.pdf-export-root [data-ui="print-document"] .paper-step-grid p{margin:0!important;color:var(--print-patient-muted)!important;font-size:12px!important;line-height:1.34!important}
+.pdf-export-root [data-ui="print-document"] .paper-light-card,
+.pdf-export-root [data-ui="print-document"] .paper-patient-option-card{border:1px solid var(--print-patient-line)!important;border-radius:21px!important;background:#fff!important;padding:16px!important;break-inside:avoid!important;color:var(--print-patient-ink)!important}
+.pdf-export-root [data-ui="print-document"] .paper-light-card h3,
+.pdf-export-root [data-ui="print-document"] .paper-script-card.friendly h3{margin:5px 0 8px!important;color:var(--print-patient-ink)!important;font-size:15px!important;line-height:1.2!important}
+.pdf-export-root [data-ui="print-document"] .paper-clean-list{display:grid!important;gap:7px!important;list-style:none!important;margin:7px 0 0!important;padding:0!important}
+.pdf-export-root [data-ui="print-document"] .paper-clean-list li{position:relative!important;padding-left:17px!important;color:var(--print-patient-muted)!important;font-size:12.1px!important;line-height:1.35!important;margin:0!important}
+.pdf-export-root [data-ui="print-document"] .paper-clean-list li::before{content:""!important;position:absolute!important;left:0!important;top:.55em!important;width:7px!important;height:7px!important;border-radius:999px!important;background:#9bc9b8!important}
+.pdf-export-root [data-ui="print-document"] .paper-script-card.friendly{background:var(--print-patient-gold)!important;border-color:#eadfbe!important;border-radius:21px!important;padding:16px!important;break-inside:avoid!important}
+.pdf-export-root [data-ui="print-document"] .paper-script-card.friendly p{margin:0!important;color:var(--print-patient-ink)!important;font-size:13.3px!important;line-height:1.45!important}
+.pdf-export-root [data-ui="print-document"] .paper-patient-option-card{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:13px!important;margin:0!important}
+.pdf-export-root [data-ui="print-document"] .paper-option-number{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;border-radius:999px!important;background:var(--print-patient-mint)!important;color:#527d6f!important;font-weight:950!important;font-size:12px!important}
+.pdf-export-root [data-ui="print-document"] .paper-option-main h3{margin:4px 0!important;font-size:16px!important;line-height:1.18!important;color:var(--print-patient-ink)!important}
+.pdf-export-root [data-ui="print-document"] .paper-option-main p{margin:0!important;color:var(--print-patient-muted)!important;font-size:12.5px!important;line-height:1.38!important}
+.pdf-export-root [data-ui="print-document"] .paper-option-contact{display:flex!important;align-items:baseline!important;gap:7px!important;flex-wrap:wrap!important;margin:11px 0 0!important;padding:9px 11px!important;border:1px solid var(--print-patient-line)!important;border-radius:15px!important;background:var(--print-patient-soft)!important}
+.pdf-export-root [data-ui="print-document"] .paper-option-contact b{color:var(--print-patient-ink)!important;font-size:12.4px!important;line-height:1.22!important;margin:0!important;border:0!important}
+.pdf-export-root [data-ui="print-document"] .v48-options-stack{display:grid!important;gap:11px!important}
+.pdf-export-root [data-ui="print-document"] .paper-gentle-safety{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:13px!important;align-items:center!important;margin:19px 0 0!important;padding:16px!important;border:1px solid #ecd6d8!important;border-radius:21px!important;background:var(--print-patient-rose)!important;break-inside:avoid!important}
+.pdf-export-root [data-ui="print-document"] .paper-gentle-safety h3{margin:5px 0 4px!important;color:#704c52!important;font-size:14.6px!important;line-height:1.22!important}
+.pdf-export-root [data-ui="print-document"] .paper-gentle-safety p{margin:0!important;color:#755d61!important;font-size:12.2px!important;line-height:1.36!important}
+.pdf-export-root [data-ui="print-document"] .paper-gentle-safety aside{padding:9px 11px!important;border-radius:15px!important;background:#fff!important;border:1px solid #ecd6d8!important}
+.pdf-export-root [data-ui="print-document"] .paper-gentle-safety aside span{display:block!important;color:#98747a!important;font-size:9.6px!important;font-weight:900!important;text-transform:uppercase!important;letter-spacing:.08em!important}
+.pdf-export-root [data-ui="print-document"] .paper-gentle-safety aside b{display:block!important;margin:3px 0 0!important;color:#593f44!important;font-size:12px!important;line-height:1.25!important}
+.pdf-export-root [data-ui="print-document"] .paper-footer.patient-footer{color:var(--print-patient-faint)!important;font-size:11.1px!important;line-height:1.35!important;margin-top:17px!important;padding-top:11px!important;border-top:1px solid var(--print-patient-line)!important}
+.pdf-export-root [data-ui="print-document"] .v48-intent{background:linear-gradient(135deg,#fff,var(--print-patient-soft))!important;border:1px solid var(--print-patient-line)!important;border-radius:23px!important;padding:16px!important}
+.pdf-export-root [data-ui="print-document"] .staff-verify-grid{margin:0 0 17px!important}
+.pdf-export-root [data-ui="print-document"].patient-output-v48 .paper-section{margin:19px 0!important;padding-top:19px!important;border-top:1px solid var(--print-patient-line)!important}
+.pdf-export-root [data-ui="print-document"].patient-handout-v48 .paper-two-col{gap:13px!important}
+
+/* v48.1 pagination tuning: keep the handouts airy without forcing big blank page breaks. */
+@media print{
+  [data-ui="print-document"] h1,
+  [data-ui="print-document"] h2,
+  [data-ui="print-document"] h3,
+  [data-ui="print-document"] p,
+  [data-ui="print-document"] ul,
+  [data-ui="print-document"] ol,
+  [data-ui="print-document"] dl{
+    break-after:auto!important;
+    page-break-after:auto!important;
+  }
+  [data-ui="print-document"] .paper-next-steps,
+  [data-ui="print-document"] .paper-help-row,
+  [data-ui="print-document"] .paper-gentle-safety,
+  [data-ui="print-document"] .paper-step-grid,
+  [data-ui="print-document"] .paper-step-grid>div,
+  [data-ui="print-document"] .paper-light-card,
+  [data-ui="print-document"] .paper-script-card.friendly{
+    break-before:auto!important;
+    page-break-before:auto!important;
+    break-inside:auto!important;
+    page-break-inside:auto!important;
+  }
+  [data-ui="print-document"] .paper-welcome-band,
+  [data-ui="print-document"] .paper-start-card,
+  [data-ui="print-document"] .paper-patient-option-card{
+    break-before:auto!important;
+    page-break-before:auto!important;
+  }
+  [data-ui="print-document"].patient-handout-v48 .paper-welcome-band{padding:13pt 15pt!important;margin-bottom:10pt!important;border-radius:17pt!important}
+  [data-ui="print-document"].patient-handout-v48 .paper-start-card{padding:14pt!important;margin-bottom:11pt!important;border-radius:18pt!important}
+  [data-ui="print-document"].patient-handout-v48 .paper-step-grid>div{padding:9pt!important;border-radius:13pt!important}
+  [data-ui="print-document"].patient-handout-v48 .paper-light-card,
+  [data-ui="print-document"].patient-handout-v48 .paper-script-card.friendly{padding:10pt!important;border-radius:14pt!important}
+  [data-ui="print-document"].patient-handout-v48 .paper-gentle-safety{padding:10pt!important;margin-top:11pt!important;border-radius:14pt!important}
+}
+.pdf-export-root [data-ui="print-document"] h1,
+.pdf-export-root [data-ui="print-document"] h2,
+.pdf-export-root [data-ui="print-document"] h3,
+.pdf-export-root [data-ui="print-document"] p,
+.pdf-export-root [data-ui="print-document"] ul,
+.pdf-export-root [data-ui="print-document"] ol,
+.pdf-export-root [data-ui="print-document"] dl{break-after:auto!important;page-break-after:auto!important}
+.pdf-export-root [data-ui="print-document"] .paper-next-steps,
+.pdf-export-root [data-ui="print-document"] .paper-help-row,
+.pdf-export-root [data-ui="print-document"] .paper-gentle-safety,
+.pdf-export-root [data-ui="print-document"] .paper-step-grid,
+.pdf-export-root [data-ui="print-document"] .paper-step-grid>div,
+.pdf-export-root [data-ui="print-document"] .paper-light-card,
+.pdf-export-root [data-ui="print-document"] .paper-script-card.friendly{break-before:auto!important;page-break-before:auto!important;break-inside:auto!important;page-break-inside:auto!important}
+.pdf-export-root [data-ui="print-document"].patient-handout-v48 .paper-welcome-band{padding:17px 20px!important;margin-bottom:13px!important;border-radius:23px!important}
+.pdf-export-root [data-ui="print-document"].patient-handout-v48 .paper-start-card{padding:19px!important;margin-bottom:15px!important;border-radius:24px!important}
+.pdf-export-root [data-ui="print-document"].patient-handout-v48 .paper-step-grid>div{padding:12px!important;border-radius:17px!important}
+.pdf-export-root [data-ui="print-document"].patient-handout-v48 .paper-light-card,
+.pdf-export-root [data-ui="print-document"].patient-handout-v48 .paper-script-card.friendly{padding:13px!important;border-radius:19px!important}
+.pdf-export-root [data-ui="print-document"].patient-handout-v48 .paper-gentle-safety{padding:13px!important;margin-top:15px!important;border-radius:19px!important}
+
+/* v48.2: section wrappers should be invisible; only meaningful cards get borders. */
+@media print{
+  [data-ui="print-document"] .paper-next-steps,
+  [data-ui="print-document"] .paper-help-row{
+    border:0!important;
+    background:transparent!important;
+    padding:0!important;
+  }
+}
+.pdf-export-root [data-ui="print-document"] .paper-next-steps,
+.pdf-export-root [data-ui="print-document"] .paper-help-row{
+  border:0!important;
+  background:transparent!important;
+  padding:0!important;
+}
+
+/* v48.3: patient-facing section wrappers stay invisible; cards carry the structure. */
+@media print{
+  [data-ui="print-document"].patient-output-v48 .paper-section,
+  [data-ui="print-document"].patient-output-v48 .options-footer-guidance{
+    border:0!important;
+    background:transparent!important;
+    padding:0!important;
+  }
+  [data-ui="print-document"].patient-output-v48 .paper-section{margin:13pt 0!important}
+}
+.pdf-export-root [data-ui="print-document"].patient-output-v48 .paper-section,
+.pdf-export-root [data-ui="print-document"].patient-output-v48 .options-footer-guidance{
+  border:0!important;
+  background:transparent!important;
+  padding:0!important;
+}
+.pdf-export-root [data-ui="print-document"].patient-output-v48 .paper-section{margin:17px 0!important}
+
+/* ==============================
+   v49 — Calm Patient Documents
+   Mature, welcoming patient guide system with clinic masthead, open rhythm,
+   fewer boxes, and print/PDF parity.
+   ============================== */
+:root{
+  --ipmg-print-brand-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M31.5 49.5c0-13.2-8.9-18.4-20-19.4 2.1 11.2 9.2 18.4 20 19.4Z' fill='%23235f49'/%3E%3Cpath d='M32.5 49.5c0-16.4 8.1-25.5 20.1-29.1 2 12.2-5.8 25.4-20.1 29.1Z' fill='%2378b595'/%3E%3Cpath d='M32 50c0-15.5 2.4-25 10.5-33' fill='none' stroke='%231e5040' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M31.5 49.4c-2.9-8.3-8.1-12.9-16.2-15.6' fill='none' stroke='%23dceee5' stroke-width='2.2' stroke-linecap='round' opacity='.75'/%3E%3C/svg%3E");
+  --v49-paper:#fffdf8;
+  --v49-ink:#243746;
+  --v49-muted:#5c6f7c;
+  --v49-faint:#8999a1;
+  --v49-line:#dfe8df;
+  --v49-line-strong:#bfd2c8;
+  --v49-sage:#edf7f1;
+  --v49-sage-2:#f7fbf7;
+  --v49-sand:#fff8e9;
+  --v49-rose:#fff5f5;
+  --v49-rose-line:#edd6da;
+  --v49-serif:var(--serif, "Fraunces", Georgia, serif);
+  --v49-sans:var(--sans, "DM Sans", ui-sans-serif, system-ui, sans-serif);
+}
+
+[data-ui="print-document"].patient-output-v49{
+  background:var(--v49-paper)!important;
+  color:var(--v49-ink)!important;
+  font-family:var(--v49-sans)!important;
+  font-size:13px!important;
+  line-height:1.48!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important;
+}
+[data-ui="print-document"].patient-output-v49 h1,
+[data-ui="print-document"].patient-output-v49 h2,
+[data-ui="print-document"].patient-output-v49 h3{color:var(--v49-ink)!important}
+[data-ui="print-document"].patient-output-v49 p{color:var(--v49-muted)!important}
+[data-ui="print-document"].patient-output-v49 .paper-clinic-masthead{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:18px!important;
+  margin:0 0 18px!important;padding:0 0 15px!important;border-bottom:1px solid var(--v49-line)!important;
+  break-inside:avoid!important;
+}
+[data-ui="print-document"].patient-output-v49 .paper-clinic-identity{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-clinic-mark{
+  width:39px!important;height:39px!important;flex:0 0 39px!important;border-radius:14px!important;border:1px solid #c9ddd2!important;
+  background-color:#f5faf7!important;background-image:var(--ipmg-print-brand-mark)!important;background-repeat:no-repeat!important;background-position:center!important;background-size:27px 27px!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9)!important;
+}
+[data-ui="print-document"].patient-output-v49 .paper-clinic-identity b{display:block!important;color:var(--v49-ink)!important;font-weight:850!important;font-size:13.5px!important;line-height:1.15!important;letter-spacing:-.005em!important}
+[data-ui="print-document"].patient-output-v49 .paper-clinic-identity em{display:block!important;font-style:normal!important;color:var(--v49-faint)!important;font-size:11px!important;line-height:1.25!important;margin-top:2px!important}
+[data-ui="print-document"].patient-output-v49 .paper-prepared-date{display:grid!important;gap:2px!important;text-align:right!important;white-space:nowrap!important;color:var(--v49-faint)!important}
+[data-ui="print-document"].patient-output-v49 .paper-prepared-date span{font-size:10px!important;text-transform:uppercase!important;letter-spacing:.08em!important;font-weight:900!important;color:var(--v49-faint)!important}
+[data-ui="print-document"].patient-output-v49 .paper-prepared-date b{font-size:12px!important;color:var(--v49-muted)!important;border:0!important;margin:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-guide-hero{
+  margin:0 0 21px!important;padding:0 0 18px!important;border-bottom:1px solid var(--v49-line)!important;break-inside:avoid!important;
+}
+[data-ui="print-document"].patient-output-v49 .paper-guide-hero.compact{margin-bottom:19px!important}
+[data-ui="print-document"].patient-output-v49 .paper-guide-hero h1{
+  font-family:var(--v49-serif)!important;font-weight:500!important;font-size:43px!important;line-height:.98!important;letter-spacing:-.04em!important;margin:6px 0 8px!important;
+}
+[data-ui="print-document"].patient-output-v49 .paper-guide-hero.compact h1{font-size:39px!important}
+[data-ui="print-document"].patient-output-v49 .paper-guide-hero>p{font-size:14.5px!important;line-height:1.46!important;max-width:670px!important;margin:0!important;color:var(--v49-muted)!important}
+[data-ui="print-document"].patient-output-v49 .paper-prepared-line{display:flex!important;flex-wrap:wrap!important;gap:8px 14px!important;margin-top:13px!important;color:var(--v49-faint)!important;font-size:11.5px!important;line-height:1.3!important}
+[data-ui="print-document"].patient-output-v49 .paper-prepared-line span:first-child{color:#5c7d70!important;font-weight:850!important}
+[data-ui="print-document"].patient-output-v49 .paper-soft-label{display:inline-flex!important;align-items:center!important;gap:7px!important;color:#5c7d70!important;font-size:10px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase!important}
+[data-ui="print-document"].patient-output-v49 .paper-soft-label::before{content:""!important;width:6px!important;height:6px!important;border-radius:999px!important;background:#8fbea9!important;flex:0 0 6px!important}
+[data-ui="print-document"].patient-output-v49 .paper-start-guide{
+  display:grid!important;grid-template-columns:minmax(0,1fr) 255px!important;gap:21px!important;align-items:stretch!important;
+  margin:0 0 23px!important;padding:18px 0 20px 20px!important;border-left:5px solid #a5cdbc!important;border-bottom:1px solid var(--v49-line)!important;
+  background:linear-gradient(90deg,var(--v49-sage),rgba(255,255,255,0) 68%)!important;break-inside:avoid!important;
+}
+[data-ui="print-document"].patient-output-v49 .paper-start-main h2{font-family:var(--v49-serif)!important;font-weight:500!important;font-size:31px!important;line-height:1.04!important;letter-spacing:-.03em!important;margin:5px 0 8px!important;color:var(--v49-ink)!important}
+[data-ui="print-document"].patient-output-v49 .paper-start-main p{font-size:13.2px!important;line-height:1.43!important;margin:7px 0 0!important;color:var(--v49-muted)!important;max-width:520px!important}
+[data-ui="print-document"].patient-output-v49 .paper-start-main .paper-fit-line{font-size:13.8px!important;color:#425a52!important;margin-top:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-contact-panel{
+  align-self:stretch!important;border:1px solid var(--v49-line)!important;border-radius:18px!important;background:rgba(255,255,255,.72)!important;padding:14px!important;break-inside:avoid!important;
+}
+[data-ui="print-document"].patient-output-v49 .paper-contact-panel>span,
+[data-ui="print-document"].patient-output-v49 .paper-call-script>span,
+[data-ui="print-document"].patient-output-v49 .paper-prep-note>span{display:block!important;color:var(--v49-faint)!important;font-size:10px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase!important;margin-bottom:8px!important}
+[data-ui="print-document"].patient-output-v49 .paper-contact-lines{display:grid!important;gap:9px!important;margin:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-contact-lines div{margin:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-contact-lines dt{font-size:9.5px!important;font-weight:950!important;text-transform:uppercase!important;letter-spacing:.08em!important;color:var(--v49-faint)!important;margin:0 0 2px!important}
+[data-ui="print-document"].patient-output-v49 .paper-contact-lines dd{font-size:12px!important;line-height:1.28!important;font-weight:750!important;color:var(--v49-ink)!important;margin:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-tag-row{display:flex!important;gap:6px!important;flex-wrap:wrap!important;margin-top:12px!important}
+[data-ui="print-document"].patient-output-v49 .paper-tag-row span{border:1px solid var(--v49-line)!important;background:rgba(255,255,255,.7)!important;color:#557469!important;border-radius:999px!important;padding:4px 8px!important;font-size:10.5px!important;font-weight:850!important}
+[data-ui="print-document"].patient-output-v49 .paper-section-title.open{display:block!important;margin:0 0 9px!important}
+[data-ui="print-document"].patient-output-v49 .paper-section-title.open span{display:block!important;color:var(--v49-faint)!important;font-size:10px!important;font-weight:950!important;letter-spacing:.08em!important;text-transform:uppercase!important;margin-bottom:3px!important}
+[data-ui="print-document"].patient-output-v49 .paper-section-title.open h2{font-family:var(--v49-serif)!important;font-size:22px!important;line-height:1.08!important;font-weight:500!important;letter-spacing:-.025em!important;margin:0!important;color:var(--v49-ink)!important}
+[data-ui="print-document"].patient-output-v49 .paper-guided-path{margin:0 0 23px!important;break-inside:avoid!important}
+[data-ui="print-document"].patient-output-v49 .paper-timeline{list-style:none!important;display:grid!important;gap:0!important;margin:4px 0 0!important;padding:0!important;border-top:1px solid var(--v49-line)!important;border-bottom:1px solid var(--v49-line)!important}
+[data-ui="print-document"].patient-output-v49 .paper-timeline li{display:grid!important;grid-template-columns:34px minmax(0,1fr)!important;gap:12px!important;padding:12px 0!important;margin:0!important;border-bottom:1px solid var(--v49-line)!important;break-inside:avoid!important;color:var(--v49-muted)!important}
+[data-ui="print-document"].patient-output-v49 .paper-timeline li:last-child{border-bottom:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-timeline b{display:grid!important;place-items:center!important;width:28px!important;height:28px!important;border-radius:999px!important;background:var(--v49-sage)!important;color:#557c6c!important;font-size:12px!important;font-weight:950!important;border:1px solid var(--v49-line-strong)!important}
+[data-ui="print-document"].patient-output-v49 .paper-timeline h3{font-size:13.4px!important;line-height:1.18!important;margin:1px 0 3px!important;font-weight:850!important;color:var(--v49-ink)!important}
+[data-ui="print-document"].patient-output-v49 .paper-timeline p{font-size:12.2px!important;line-height:1.35!important;margin:0!important;color:var(--v49-muted)!important}
+[data-ui="print-document"].patient-output-v49 .paper-ask-section{display:grid!important;grid-template-columns:minmax(0,1fr) 245px!important;gap:22px!important;align-items:start!important;margin:0 0 22px!important;padding-bottom:19px!important;border-bottom:1px solid var(--v49-line)!important;break-inside:avoid!important}
+[data-ui="print-document"].patient-output-v49 .paper-question-list{list-style:none!important;margin:0!important;padding:0!important;display:grid!important;gap:7px!important}
+[data-ui="print-document"].patient-output-v49 .paper-question-list li{position:relative!important;padding-left:18px!important;color:var(--v49-muted)!important;font-size:12.5px!important;line-height:1.35!important;margin:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-question-list li::before{content:""!important;position:absolute!important;left:1px!important;top:.58em!important;width:6px!important;height:6px!important;border-radius:999px!important;background:#91bfaa!important}
+[data-ui="print-document"].patient-output-v49 .paper-call-script,
+[data-ui="print-document"].patient-output-v49 .paper-prep-note{border:0!important;border-radius:18px!important;background:var(--v49-sand)!important;padding:14px!important;color:var(--v49-ink)!important;break-inside:avoid!important}
+[data-ui="print-document"].patient-output-v49 .paper-call-script p{font-size:12.5px!important;line-height:1.45!important;margin:0!important;color:#45513d!important}
+[data-ui="print-document"].patient-output-v49 .paper-other-options{margin:0 0 22px!important;padding-bottom:18px!important;border-bottom:1px solid var(--v49-line)!important;break-inside:avoid!important}
+[data-ui="print-document"].patient-output-v49 .paper-open-options-list{display:grid!important;gap:0!important;border-top:1px solid var(--v49-line)!important}
+[data-ui="print-document"].patient-output-v49 .paper-open-option{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:12px!important;padding:13px 0!important;border-bottom:1px solid var(--v49-line)!important;background:transparent!important;break-inside:avoid!important}
+[data-ui="print-document"].patient-output-v49 .paper-option-number{display:grid!important;place-items:center!important;width:27px!important;height:27px!important;border-radius:999px!important;background:var(--v49-sage)!important;color:#557c6c!important;font-weight:950!important;font-size:12px!important;border:1px solid var(--v49-line-strong)!important}
+[data-ui="print-document"].patient-output-v49 .paper-option-main h3{font-size:15px!important;line-height:1.18!important;margin:2px 0 4px!important;color:var(--v49-ink)!important;font-weight:850!important}
+[data-ui="print-document"].patient-output-v49 .paper-option-main p{font-size:12.2px!important;line-height:1.36!important;margin:0 0 7px!important;color:var(--v49-muted)!important}
+[data-ui="print-document"].patient-output-v49 .paper-option-meta{display:flex!important;align-items:baseline!important;gap:8px!important;flex-wrap:wrap!important;color:var(--v49-faint)!important;font-size:11.2px!important;line-height:1.25!important}
+[data-ui="print-document"].patient-output-v49 .paper-option-meta b{font-size:12px!important;color:var(--v49-ink)!important;margin:0!important;border:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-option-meta span{color:var(--v49-faint)!important}
+[data-ui="print-document"].patient-output-v49 .paper-notes-area{margin:0 0 19px!important;break-inside:avoid!important}
+[data-ui="print-document"].patient-output-v49 .paper-note-lines{display:grid!important;grid-template-columns:156px minmax(0,1fr)!important;gap:9px 12px!important;margin-top:8px!important;align-items:end!important}
+[data-ui="print-document"].patient-output-v49 .paper-note-lines label{font-size:11px!important;text-transform:none!important;letter-spacing:0!important;font-weight:850!important;color:var(--v49-muted)!important;margin:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-note-lines span{display:block!important;height:22px!important;border-bottom:1px solid #aebdb2!important}
+[data-ui="print-document"].patient-output-v49 .paper-gentle-safety{display:block!important;margin:0 0 0!important;padding:13px 15px!important;border:1px solid var(--v49-rose-line)!important;border-radius:18px!important;background:var(--v49-rose)!important;break-inside:avoid!important}
+[data-ui="print-document"].patient-output-v49 .paper-gentle-safety h3{font-size:13px!important;line-height:1.2!important;margin:4px 0 4px!important;color:#704c52!important;font-weight:850!important}
+[data-ui="print-document"].patient-output-v49 .paper-gentle-safety p{font-size:11.8px!important;line-height:1.35!important;margin:0!important;color:#735d61!important}
+[data-ui="print-document"].patient-output-v49 .paper-gentle-safety aside{margin-top:8px!important;padding:0!important;border:0!important;background:transparent!important}
+[data-ui="print-document"].patient-output-v49 .paper-gentle-safety aside span{font-size:9.5px!important;color:#98747a!important;text-transform:uppercase!important;letter-spacing:.08em!important;font-weight:950!important}
+[data-ui="print-document"].patient-output-v49 .paper-gentle-safety aside b{display:block!important;color:#593f44!important;font-size:11.5px!important;line-height:1.25!important;margin:2px 0 0!important;border:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-footer.patient-footer{display:flex!important;justify-content:space-between!important;gap:14px!important;margin-top:15px!important;padding-top:10px!important;border-top:1px solid var(--v49-line)!important;color:var(--v49-faint)!important;font-size:10.7px!important;line-height:1.32!important}
+[data-ui="print-document"].patient-output-v49 .paper-footer.patient-footer b{color:var(--v49-muted)!important;white-space:nowrap!important}
+[data-ui="print-document"].patient-output-v49 .paper-footer.patient-footer span{color:var(--v49-faint)!important}
+[data-ui="print-document"].patient-output-v49 .paper-clean-list{display:grid!important;gap:5px!important;list-style:none!important;margin:5px 0 0!important;padding:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-clean-list li{position:relative!important;padding-left:16px!important;color:var(--v49-muted)!important;font-size:11.8px!important;line-height:1.34!important;margin:0!important}
+[data-ui="print-document"].patient-output-v49 .paper-clean-list li::before{content:""!important;position:absolute!important;left:1px!important;top:.58em!important;width:5px!important;height:5px!important;border-radius:999px!important;background:#91bfaa!important}
+
+@media print{
+  [data-ui="print-document"].patient-output-v49{font-size:9.8pt!important;line-height:1.45!important;background:var(--v49-paper)!important;color:var(--v49-ink)!important;font-family:var(--v49-sans)!important}
+  [data-ui="print-document"].patient-output-v49 .paper-clinic-masthead{margin:0 0 12pt!important;padding:0 0 10pt!important;gap:12pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-clinic-mark{width:29pt!important;height:29pt!important;flex-basis:29pt!important;border-radius:10pt!important;background-size:20pt 20pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-clinic-identity b{font-size:10.2pt!important}.patient-output-v49 .paper-clinic-identity em{font-size:8.3pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-prepared-date span{font-size:7.5pt!important}.patient-output-v49 .paper-prepared-date b{font-size:9pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-guide-hero{margin-bottom:15pt!important;padding-bottom:13pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-guide-hero h1{font-size:32pt!important;margin:4pt 0 6pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-guide-hero.compact h1{font-size:29pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-guide-hero>p{font-size:10.8pt!important;line-height:1.43!important}
+  [data-ui="print-document"].patient-output-v49 .paper-prepared-line{margin-top:9pt!important;gap:6pt 10pt!important;font-size:8.6pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-soft-label{font-size:7.5pt!important;gap:5pt!important}.patient-output-v49 .paper-soft-label::before{width:4.5pt!important;height:4.5pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-start-guide{grid-template-columns:minmax(0,1fr) 1.95in!important;gap:15pt!important;margin-bottom:16pt!important;padding:13pt 0 14pt 15pt!important;border-left-width:4pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-start-main h2{font-size:23pt!important;margin:4pt 0 6pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-start-main p{font-size:9.8pt!important;line-height:1.39!important;margin-top:5pt!important}.patient-output-v49 .paper-start-main .paper-fit-line{font-size:10.3pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-contact-panel{border-radius:13pt!important;padding:10pt!important}.patient-output-v49 .paper-contact-panel>span,.patient-output-v49 .paper-call-script>span,.patient-output-v49 .paper-prep-note>span{font-size:7.4pt!important;margin-bottom:6pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-contact-lines{gap:6pt!important}.patient-output-v49 .paper-contact-lines dt{font-size:7.1pt!important}.patient-output-v49 .paper-contact-lines dd{font-size:9pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-tag-row{gap:4pt!important;margin-top:8pt!important}.patient-output-v49 .paper-tag-row span{font-size:7.8pt!important;padding:3pt 6pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-section-title.open{margin-bottom:6pt!important}.patient-output-v49 .paper-section-title.open span{font-size:7.5pt!important}.patient-output-v49 .paper-section-title.open h2{font-size:16.5pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-guided-path{margin-bottom:16pt!important}.patient-output-v49 .paper-timeline li{grid-template-columns:25pt minmax(0,1fr)!important;gap:9pt!important;padding:9pt 0!important}.patient-output-v49 .paper-timeline b{width:21pt!important;height:21pt!important;font-size:9pt!important}.patient-output-v49 .paper-timeline h3{font-size:10pt!important}.patient-output-v49 .paper-timeline p{font-size:9.1pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-ask-section{grid-template-columns:minmax(0,1fr) 1.85in!important;gap:16pt!important;margin-bottom:15pt!important;padding-bottom:14pt!important}.patient-output-v49 .paper-question-list{gap:5pt!important}.patient-output-v49 .paper-question-list li{font-size:9.3pt!important;padding-left:13pt!important}.patient-output-v49 .paper-question-list li::before{width:4.5pt!important;height:4.5pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-call-script,.patient-output-v49 .paper-prep-note{border-radius:13pt!important;padding:10pt!important}.patient-output-v49 .paper-call-script p{font-size:9.2pt!important;line-height:1.4!important}
+  [data-ui="print-document"].patient-output-v49 .paper-other-options{margin-bottom:15pt!important;padding-bottom:13pt!important}.patient-output-v49 .paper-open-option{gap:9pt!important;padding:9pt 0!important}.patient-output-v49 .paper-option-number{width:20pt!important;height:20pt!important;font-size:9pt!important}.patient-output-v49 .paper-option-main h3{font-size:11.2pt!important}.patient-output-v49 .paper-option-main p{font-size:9.1pt!important}.patient-output-v49 .paper-option-meta{font-size:8.4pt!important}.patient-output-v49 .paper-option-meta b{font-size:9pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-notes-area{margin-bottom:13pt!important}.patient-output-v49 .paper-note-lines{grid-template-columns:116pt minmax(0,1fr)!important;gap:7pt 9pt!important}.patient-output-v49 .paper-note-lines label{font-size:8.3pt!important}.patient-output-v49 .paper-note-lines span{height:16pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-gentle-safety{padding:9pt 11pt!important;border-radius:13pt!important}.patient-output-v49 .paper-gentle-safety h3{font-size:9.8pt!important}.patient-output-v49 .paper-gentle-safety p{font-size:8.8pt!important}.patient-output-v49 .paper-gentle-safety aside b{font-size:8.6pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-footer.patient-footer{font-size:8pt!important;margin-top:10pt!important;padding-top:7pt!important}
+  [data-ui="print-document"].patient-output-v49 .paper-clean-list{gap:4pt!important}.patient-output-v49 .paper-clean-list li{font-size:8.8pt!important;padding-left:12pt!important}.patient-output-v49 .paper-clean-list li::before{width:4pt!important;height:4pt!important}
+}
+
+/* PDF export clone uses the same mature patient document language. */
+.pdf-export-root [data-ui="print-document"].patient-output-v49{width:720px!important;min-height:940px!important;padding:36px!important;background:var(--v49-paper)!important;color:var(--v49-ink)!important;font-family:var(--v49-sans)!important;font-size:13px!important;line-height:1.48!important;box-shadow:none!important;border:0!important;border-radius:0!important}
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-clinic-masthead{margin:0 0 18px!important;padding:0 0 15px!important;border-bottom:1px solid var(--v49-line)!important}
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-guide-hero{margin-bottom:21px!important;padding-bottom:18px!important;border-bottom:1px solid var(--v49-line)!important}
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-start-guide{margin-bottom:23px!important}
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-guided-path{margin-bottom:23px!important}
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-ask-section{margin-bottom:22px!important}
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-other-options{margin-bottom:22px!important}
+
+/* v49.1: avoid awkward blank lower halves when a guidance section can begin near a page edge. */
+@media print{
+  [data-ui="print-document"].patient-output-v49 .paper-ask-section,
+  [data-ui="print-document"].patient-output-v49 .paper-other-options,
+  [data-ui="print-document"].patient-output-v49 .paper-notes-area{
+    break-inside:auto!important;
+    page-break-inside:auto!important;
+  }
+}
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-ask-section,
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-other-options,
+.pdf-export-root [data-ui="print-document"].patient-output-v49 .paper-notes-area{break-inside:auto!important;page-break-inside:auto!important}
+
+/* v49.2: patient handout uses a one-page guide rhythm when content allows. */
+[data-ui="print-document"].patient-handout-v49 .paper-guidance-grid{display:grid!important;grid-template-columns:minmax(0,1fr) 265px!important;gap:22px!important;align-items:start!important;margin:0 0 21px!important;padding-bottom:18px!important;border-bottom:1px solid var(--v49-line)!important;break-inside:avoid!important}
+[data-ui="print-document"].patient-handout-v49 .paper-guidance-grid .paper-guided-path{margin:0!important}
+[data-ui="print-document"].patient-handout-v49 .paper-guidance-grid .paper-question-list{margin-top:0!important}
+[data-ui="print-document"].patient-handout-v49 .paper-guidance-grid .paper-call-script{margin-top:13px!important}
+[data-ui="print-document"].patient-handout-v49 .paper-other-options.compact .paper-open-option{padding:10px 0!important}
+[data-ui="print-document"].patient-handout-v49 .paper-other-options.compact .paper-option-main p{display:none!important}
+
+@media print{
+  [data-ui="print-document"].patient-handout-v49 .paper-clinic-masthead{margin-bottom:9pt!important;padding-bottom:8pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-guide-hero{margin-bottom:11pt!important;padding-bottom:10pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-guide-hero h1{font-size:29pt!important;margin:3pt 0 5pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-guide-hero>p{font-size:10pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-prepared-line{margin-top:7pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-start-guide{margin-bottom:12pt!important;padding:10pt 0 11pt 13pt!important;gap:11pt!important;grid-template-columns:minmax(0,1fr) 1.75in!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-start-main h2{font-size:20pt!important;margin-bottom:4pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-start-main p{font-size:9pt!important;line-height:1.32!important;margin-top:3pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-contact-panel{padding:8pt!important;border-radius:11pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-contact-lines{gap:4pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-tag-row{margin-top:5pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-guidance-grid{grid-template-columns:minmax(0,1fr) 1.95in!important;gap:13pt!important;margin-bottom:11pt!important;padding-bottom:10pt!important;break-inside:auto!important;page-break-inside:auto!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-section-title.open h2{font-size:14.5pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-timeline li{padding:6pt 0!important;grid-template-columns:21pt minmax(0,1fr)!important;gap:7pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-timeline b{width:18pt!important;height:18pt!important;font-size:8pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-timeline h3{font-size:9.2pt!important;margin-bottom:1pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-timeline p{font-size:8.2pt!important;line-height:1.25!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-question-list{gap:3.5pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-question-list li{font-size:8.3pt!important;line-height:1.24!important;padding-left:10pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-guidance-grid .paper-call-script{margin-top:8pt!important;padding:8pt!important;border-radius:10pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-call-script p{font-size:8pt!important;line-height:1.28!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-other-options{margin-bottom:10pt!important;padding-bottom:8pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-other-options.compact .paper-open-option{padding:6pt 0!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-notes-area{margin-bottom:8pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-note-lines{gap:5pt 8pt!important}.patient-handout-v49 .paper-note-lines span{height:12pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-gentle-safety{padding:7pt 9pt!important;border-radius:11pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-footer.patient-footer{margin-top:7pt!important;padding-top:5pt!important;font-size:7.5pt!important}
+}
+
+.pdf-export-root [data-ui="print-document"].patient-handout-v49 .paper-guidance-grid{display:grid!important;grid-template-columns:minmax(0,1fr) 265px!important;gap:22px!important;margin:0 0 21px!important;padding-bottom:18px!important;border-bottom:1px solid var(--v49-line)!important}
+.pdf-export-root [data-ui="print-document"].patient-handout-v49 .paper-guidance-grid .paper-call-script{margin-top:13px!important}
+.pdf-export-root [data-ui="print-document"].patient-handout-v49 .paper-other-options.compact .paper-option-main p{display:none!important}
+
+/* v49.3: patient handout urgent note becomes a quiet footer band to preserve a clean one-page guide. */
+[data-ui="print-document"].patient-handout-v49 .paper-gentle-safety{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:10px!important;align-items:baseline!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important;padding:10px 0!important;margin:0!important}
+[data-ui="print-document"].patient-handout-v49 .paper-gentle-safety .paper-soft-label{white-space:nowrap!important}
+[data-ui="print-document"].patient-handout-v49 .paper-gentle-safety h3{display:inline!important;margin:0 8px 0 0!important;font-size:13px!important}
+[data-ui="print-document"].patient-handout-v49 .paper-gentle-safety p{display:inline!important;font-size:11.8px!important}
+[data-ui="print-document"].patient-handout-v49 .paper-gentle-safety aside{grid-column:2!important;margin:2px 0 0!important}
+@media print{
+  [data-ui="print-document"].patient-handout-v49 .paper-gentle-safety{grid-template-columns:auto minmax(0,1fr)!important;gap:7pt!important;padding:5pt 0!important;break-inside:auto!important;page-break-inside:auto!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-gentle-safety h3{font-size:8.8pt!important;margin-right:5pt!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-gentle-safety p{font-size:8pt!important;line-height:1.25!important}
+  [data-ui="print-document"].patient-handout-v49 .paper-footer.patient-footer{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:8pt!important;font-size:7pt!important;line-height:1.22!important}
+}
+.pdf-export-root [data-ui="print-document"].patient-handout-v49 .paper-gentle-safety{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:10px!important;align-items:baseline!important;border-left:0!important;border-right:0!important;border-radius:0!important;background:transparent!important;padding:10px 0!important}
+
+[data-ui="print-document"].patient-handout-v49 .paper-bottom-note{margin:8px 0 0!important;padding-top:8px!important;border-top:1px solid var(--v49-line)!important;color:var(--v49-faint)!important;font-size:11px!important;line-height:1.28!important}
+[data-ui="print-document"].patient-handout-v49 .paper-bottom-note b{color:#704c52!important;margin-right:4px!important}
+@media print{
+  [data-ui="print-document"].patient-handout-v49 .paper-bottom-note{margin-top:4pt!important;padding-top:4pt!important;font-size:7.7pt!important;line-height:1.18!important}
+}
+.pdf-export-root [data-ui="print-document"].patient-handout-v49 .paper-bottom-note{margin:8px 0 0!important;padding-top:8px!important;border-top:1px solid var(--v49-line)!important;color:var(--v49-faint)!important;font-size:11px!important;line-height:1.28!important}
+
+/* ==============================
+   v50 — Release Candidate Patient Guide System
+   Mature patient-facing documents: calm masthead, open rhythm, fewer boxes.
+   Scoped separately from the older v49 document patches so future styling can
+   change patient guides without fighting the fax/staff print layers.
+   ============================== */
+:root{
+  --v50-paper:#fffdf8;
+  --v50-ink:#243746;
+  --v50-text:#304457;
+  --v50-muted:#617482;
+  --v50-faint:#8a9aa3;
+  --v50-line:#dfe8df;
+  --v50-line-strong:#bed2c7;
+  --v50-sage:#eef7f1;
+  --v50-sage-deep:#6f9c88;
+  --v50-sand:#fff7e6;
+  --v50-blue:#f3f8fb;
+  --v50-rose:#fff6f4;
+  --v50-serif:var(--serif, "Fraunces", Georgia, serif);
+  --v50-sans:var(--sans, "DM Sans", ui-sans-serif, system-ui, sans-serif);
+}
+
+[data-ui="print-document"].patient-output-v50{
+  background:var(--v50-paper)!important;
+  color:var(--v50-ink)!important;
+  font-family:var(--v50-sans)!important;
+  font-size:13px!important;
+  line-height:1.46!important;
+  letter-spacing:0!important;
+  print-color-adjust:exact!important;
+  -webkit-print-color-adjust:exact!important;
+}
+[data-ui="print-document"].patient-output-v50 h1,
+[data-ui="print-document"].patient-output-v50 h2,
+[data-ui="print-document"].patient-output-v50 h3,
+[data-ui="print-document"].patient-output-v50 p,
+[data-ui="print-document"].patient-output-v50 ul,
+[data-ui="print-document"].patient-output-v50 ol,
+[data-ui="print-document"].patient-output-v50 dl{margin-top:0!important}
+[data-ui="print-document"].patient-output-v50 h1,
+[data-ui="print-document"].patient-output-v50 h2{
+  font-family:var(--v50-serif)!important;
+  font-weight:520!important;
+  letter-spacing:-.032em!important;
+  color:var(--v50-ink)!important;
+}
+[data-ui="print-document"].patient-output-v50 h1{font-size:36px!important;line-height:1.02!important;margin:4px 0 8px!important}
+[data-ui="print-document"].patient-output-v50 h2{font-size:24px!important;line-height:1.08!important;margin:0 0 8px!important}
+[data-ui="print-document"].patient-output-v50 h3{font-size:13.5px!important;line-height:1.2!important;margin:0 0 3px!important;color:var(--v50-text)!important;font-weight:850!important;letter-spacing:-.01em!important}
+[data-ui="print-document"].patient-output-v50 p{color:var(--v50-muted)!important;margin:0!important}
+
+.v50-section-kicker{
+  display:block!important;
+  color:#648e7c!important;
+  font-size:10px!important;
+  line-height:1!important;
+  font-weight:950!important;
+  letter-spacing:.095em!important;
+  text-transform:uppercase!important;
+  margin:0 0 7px!important;
+}
+.v50-section-kicker::before{content:""!important;display:inline-block!important;width:5px!important;height:5px!important;border-radius:999px!important;background:#91bfa8!important;margin:0 7px 1px 0!important}
+
+.v50-clinic-masthead{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+  margin:0 0 18px!important;
+  padding:0 0 14px!important;
+  border-bottom:1px solid var(--v50-line)!important;
+  break-inside:avoid!important;
+}
+.v50-brand-lockup{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important}
+.v50-clinic-logo{
+  width:46px!important;height:46px!important;border-radius:16px!important;flex:0 0 46px!important;
+  display:grid!important;place-items:center!important;position:relative!important;overflow:hidden!important;
+  background:linear-gradient(145deg,#eef8f2,#fdfaf1)!important;border:1px solid var(--v50-line-strong)!important;color:#527f6b!important;
+}
+.v50-clinic-logo::before{content:""!important;position:absolute!important;width:20px!important;height:28px!important;border-radius:100% 0 100% 0!important;background:#a9cfbc!important;transform:rotate(38deg) translate(3px,-2px)!important;opacity:.78!important}
+.v50-clinic-logo::after{content:""!important;position:absolute!important;width:16px!important;height:20px!important;border-radius:0 100% 0 100%!important;background:#d6e7c8!important;transform:rotate(28deg) translate(-5px,7px)!important;opacity:.9!important}
+.v50-clinic-logo span{position:relative!important;z-index:1!important;font-size:9px!important;letter-spacing:.08em!important;font-weight:950!important;color:#315f50!important;background:rgba(255,255,255,.74)!important;border:1px solid rgba(255,255,255,.74)!important;border-radius:999px!important;padding:3px 5px!important}
+.v50-brand-lockup b{display:block!important;font-size:13.5px!important;line-height:1.15!important;font-weight:850!important;color:var(--v50-ink)!important;letter-spacing:-.006em!important;margin:0!important}
+.v50-brand-lockup em{display:block!important;font-style:normal!important;font-size:11px!important;line-height:1.25!important;margin-top:3px!important;color:var(--v50-faint)!important}
+.v50-prepared-meta{display:grid!important;gap:2px!important;text-align:right!important;white-space:nowrap!important;color:var(--v50-faint)!important}
+.v50-prepared-meta span{font-size:9.5px!important;line-height:1!important;text-transform:uppercase!important;letter-spacing:.09em!important;font-weight:950!important;color:var(--v50-faint)!important}
+.v50-prepared-meta b{font-size:12px!important;line-height:1.2!important;color:var(--v50-muted)!important;font-weight:850!important}
+
+.v50-guide-intro{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 205px!important;
+  gap:26px!important;
+  align-items:end!important;
+  margin:0 0 20px!important;
+  padding:0 0 17px!important;
+  border-bottom:1px solid var(--v50-line)!important;
+  break-inside:avoid!important;
+}
+.v50-guide-intro.compact{margin-bottom:18px!important}
+.v50-guide-intro p{font-size:14px!important;line-height:1.45!important;max-width:630px!important;color:var(--v50-muted)!important}
+.v50-guide-intro aside{border-left:1px solid var(--v50-line)!important;padding-left:16px!important;align-self:stretch!important;display:flex!important;align-items:end!important}
+.v50-intro-note{font-size:11.8px!important;line-height:1.35!important;color:#607c71!important;margin:0!important}
+
+.v50-start-section{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 224px!important;
+  gap:24px!important;
+  align-items:start!important;
+  margin:0 0 22px!important;
+  padding:18px 0 18px 20px!important;
+  border-left:5px solid #a7cdbb!important;
+  border-bottom:1px solid var(--v50-line)!important;
+  background:linear-gradient(90deg,var(--v50-sage),rgba(255,255,255,0) 68%)!important;
+  break-inside:avoid!important;
+}
+.v50-start-copy h2{font-size:28px!important;margin:2px 0 8px!important;line-height:1.05!important}
+.v50-fit-line{font-size:13.5px!important;line-height:1.42!important;color:#425f55!important;margin:0 0 7px!important;max-width:525px!important}
+.v50-start-copy>p:not(.v50-fit-line){font-size:12.7px!important;line-height:1.38!important;max-width:520px!important;color:var(--v50-muted)!important}
+.v50-contact-block{padding:1px 0 0!important;border:0!important;background:transparent!important;break-inside:avoid!important}
+.v50-contact-list{display:grid!important;gap:9px!important;margin:0!important;padding:0!important}
+.v50-contact-list div{border-top:1px solid var(--v50-line)!important;padding-top:8px!important;margin:0!important}
+.v50-contact-list div:first-child{border-top:0!important;padding-top:0!important}
+.v50-contact-list dt{font-size:9.5px!important;line-height:1!important;text-transform:uppercase!important;letter-spacing:.085em!important;font-weight:950!important;color:var(--v50-faint)!important;margin:0 0 4px!important}
+.v50-contact-list dd{font-size:12.2px!important;line-height:1.3!important;color:var(--v50-ink)!important;font-weight:800!important;margin:0!important}
+[data-ui="print-document"].patient-output-v50 .paper-tag-row{display:flex!important;flex-wrap:wrap!important;gap:5px!important;margin:10px 0 0!important}
+[data-ui="print-document"].patient-output-v50 .paper-tag-row span{border:1px solid var(--v50-line)!important;background:rgba(255,255,255,.74)!important;color:#557469!important;border-radius:999px!important;padding:4px 8px!important;font-size:10.5px!important;line-height:1.1!important;font-weight:850!important}
+
+.v50-action-path{margin:0 0 21px!important;padding-bottom:17px!important;border-bottom:1px solid var(--v50-line)!important;break-inside:avoid!important}
+.v50-action-path ol{list-style:none!important;margin:2px 0 0!important;padding:0!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:18px!important}
+.v50-action-path li{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:10px!important;align-items:start!important;margin:0!important;color:var(--v50-muted)!important}
+.v50-action-path li>b{width:26px!important;height:26px!important;border-radius:999px!important;display:grid!important;place-items:center!important;background:var(--v50-sage)!important;border:1px solid var(--v50-line-strong)!important;color:#5d8876!important;font-size:11px!important;font-weight:950!important;line-height:1!important}
+.v50-action-path h3{font-size:13px!important;margin:1px 0 3px!important}
+.v50-action-path p{font-size:11.7px!important;line-height:1.34!important;color:var(--v50-muted)!important}
+
+.v50-call-guidance{display:grid!important;grid-template-columns:minmax(0,1fr) 255px!important;gap:24px!important;align-items:start!important;margin:0 0 21px!important;padding-bottom:18px!important;border-bottom:1px solid var(--v50-line)!important;break-inside:avoid!important}
+.v50-call-guidance h2{font-size:22px!important;margin-bottom:8px!important}
+.v50-question-list{list-style:none!important;display:grid!important;gap:6px!important;margin:0!important;padding:0!important}
+.v50-question-list li{position:relative!important;padding-left:16px!important;margin:0!important;font-size:12.2px!important;line-height:1.33!important;color:var(--v50-muted)!important}
+.v50-question-list li::before{content:""!important;position:absolute!important;left:1px!important;top:.56em!important;width:5px!important;height:5px!important;border-radius:999px!important;background:#91bfa8!important}
+.v50-script-note,.v50-prep-note{
+  background:var(--v50-sand)!important;
+  border:1px solid #eadfca!important;
+  border-radius:18px!important;
+  padding:14px 15px!important;
+  break-inside:avoid!important;
+}
+.v50-script-note p{font-size:12.4px!important;line-height:1.44!important;color:#5d5140!important}
+.v50-clean-list{list-style:none!important;margin:0!important;padding:0!important;display:grid!important;gap:6px!important}
+.v50-clean-list li{position:relative!important;padding-left:15px!important;font-size:12px!important;line-height:1.34!important;color:#5d5140!important}
+.v50-clean-list li::before{content:"•"!important;position:absolute!important;left:2px!important;color:#927b50!important}
+
+.v50-other-options{margin:0 0 20px!important;padding-bottom:17px!important;border-bottom:1px solid var(--v50-line)!important;break-inside:avoid!important}
+.v50-other-options h2{font-size:21px!important;margin-bottom:9px!important}
+.v50-open-options-list{display:grid!important;gap:0!important;border-top:1px solid var(--v50-line)!important}
+.v50-open-option{display:grid!important;grid-template-columns:auto minmax(0,1fr) 220px!important;gap:12px!important;align-items:start!important;padding:12px 0!important;border-bottom:1px solid var(--v50-line)!important;break-inside:avoid!important}
+.v50-open-option:first-child{padding-top:12px!important}
+.v50-option-number{width:24px!important;height:24px!important;border-radius:999px!important;display:grid!important;place-items:center!important;background:var(--v50-blue)!important;border:1px solid var(--v50-line)!important;color:#547083!important;font-size:11px!important;font-weight:950!important}
+.v50-option-copy>span{display:block!important;color:#648e7c!important;font-size:9.5px!important;line-height:1!important;font-weight:950!important;letter-spacing:.085em!important;text-transform:uppercase!important;margin:0 0 5px!important}
+.v50-option-copy h3{font-size:14px!important;margin:0 0 4px!important;color:var(--v50-ink)!important}
+.v50-option-copy p{font-size:11.7px!important;line-height:1.32!important;color:var(--v50-muted)!important}
+.v50-option-contact b{display:block!important;color:var(--v50-ink)!important;font-size:11.8px!important;line-height:1.28!important;font-weight:850!important}
+.v50-option-contact span{display:block!important;margin-top:4px!important;color:var(--v50-faint)!important;font-size:10.7px!important;line-height:1.25!important}
+
+.v50-notes-area{margin:0 0 19px!important;padding-bottom:17px!important;border-bottom:1px solid var(--v50-line)!important;break-inside:avoid!important}
+.v50-notes-area h2{font-size:21px!important;margin-bottom:10px!important}
+.v50-note-lines{display:grid!important;grid-template-columns:150px minmax(0,1fr)!important;gap:7px 12px!important;align-items:end!important}
+.v50-note-lines label{font-size:10.5px!important;line-height:1!important;text-transform:uppercase!important;letter-spacing:.08em!important;font-weight:950!important;color:var(--v50-faint)!important}
+.v50-note-lines span{height:19px!important;border-bottom:1px solid var(--v50-line-strong)!important;display:block!important}
+
+.v50-support-footer{display:grid!important;grid-template-columns:minmax(0,1fr) 220px!important;gap:18px!important;align-items:start!important;background:transparent!important;border:0!important;border-bottom:1px solid var(--v50-line)!important;padding:0 0 12px!important;margin:0 0 10px!important;break-inside:avoid!important}
+.v50-support-footer h3{font-size:13.5px!important;margin:0 0 4px!important;color:#704d52!important}
+.v50-support-footer p{font-size:11.5px!important;line-height:1.34!important;color:#6f5b5f!important}
+.v50-support-footer aside{border-left:1px solid var(--v50-line)!important;padding-left:13px!important}
+.v50-support-footer aside span{display:block!important;color:var(--v50-faint)!important;font-size:9.5px!important;line-height:1!important;text-transform:uppercase!important;letter-spacing:.08em!important;font-weight:950!important;margin-bottom:5px!important}
+.v50-support-footer aside b{font-size:11.8px!important;line-height:1.28!important;color:var(--v50-ink)!important}
+.v50-document-footer{border:0!important;margin:0!important;padding:0!important;color:var(--v50-faint)!important;font-size:10.6px!important;line-height:1.32!important}
+.v50-document-footer p{font-size:10.6px!important;line-height:1.32!important;color:var(--v50-faint)!important}
+.v50-document-footer b{color:var(--v50-muted)!important}
+
+/* Screen/PDF clone sizing for patient documents. */
+.pdf-export-root [data-ui="print-document"].patient-output-v50{
+  display:block!important;
+  width:720px!important;
+  max-width:720px!important;
+  min-width:720px!important;
+  min-height:0!important;
+  box-sizing:border-box!important;
+  padding:0!important;
+  background:var(--v50-paper)!important;
+  color:var(--v50-ink)!important;
+  font-family:var(--v50-sans)!important;
+  font-size:13px!important;
+  line-height:1.46!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+
+@media print{
+  [data-ui="print-document"].patient-output-v50{
+    background:var(--v50-paper)!important;
+    color:var(--v50-ink)!important;
+    font-family:var(--v50-sans)!important;
+    font-size:9.75pt!important;
+    line-height:1.42!important;
+    width:100%!important;
+    max-width:none!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+  [data-ui="print-document"].patient-output-v50 h1{font-size:24pt!important;line-height:1.02!important;margin:2pt 0 5pt!important}
+  [data-ui="print-document"].patient-output-v50 h2{font-size:15.2pt!important;line-height:1.08!important;margin:0 0 5pt!important}
+  [data-ui="print-document"].patient-output-v50 h3{font-size:9.2pt!important;margin-bottom:2pt!important}
+  [data-ui="print-document"].patient-output-v50 p{color:var(--v50-muted)!important}
+  [data-ui="print-document"].patient-output-v50 .v50-section-kicker{font-size:7.1pt!important;margin-bottom:4pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-section-kicker::before{width:3.5pt!important;height:3.5pt!important;margin-right:4.5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-clinic-masthead{margin-bottom:11pt!important;padding-bottom:8pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-clinic-logo{width:31pt!important;height:31pt!important;border-radius:11pt!important;flex-basis:31pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-clinic-logo span{font-size:6.2pt!important;padding:2pt 3pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-brand-lockup{gap:8pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-brand-lockup b{font-size:9.4pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-brand-lockup em{font-size:7.7pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-prepared-meta span{font-size:6.7pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-prepared-meta b{font-size:8.2pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-guide-intro{grid-template-columns:minmax(0,1fr) 1.65in!important;gap:14pt!important;margin-bottom:11pt!important;padding-bottom:10pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-guide-intro p{font-size:9.4pt!important;line-height:1.34!important}
+  [data-ui="print-document"].patient-output-v50 .v50-intro-note{font-size:7.9pt!important;line-height:1.25!important}
+  [data-ui="print-document"].patient-output-v50 .v50-guide-intro aside{padding-left:9pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-start-section{grid-template-columns:minmax(0,1fr) 1.68in!important;gap:13pt!important;margin-bottom:12pt!important;padding:10pt 0 10pt 12pt!important;border-left-width:3.5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-start-copy h2{font-size:18.5pt!important;margin-bottom:4pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-fit-line{font-size:9pt!important;line-height:1.28!important;margin-bottom:4pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-start-copy>p:not(.v50-fit-line){font-size:8.4pt!important;line-height:1.25!important}
+  [data-ui="print-document"].patient-output-v50 .v50-contact-list{gap:5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-contact-list div{padding-top:5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-contact-list dt{font-size:6.7pt!important;margin-bottom:2pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-contact-list dd{font-size:8.2pt!important;line-height:1.18!important}
+  [data-ui="print-document"].patient-output-v50 .paper-tag-row{gap:3pt!important;margin-top:5pt!important}
+  [data-ui="print-document"].patient-output-v50 .paper-tag-row span{font-size:7pt!important;padding:2pt 4.5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-action-path{margin-bottom:11pt!important;padding-bottom:9pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-action-path ol{gap:9pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-action-path li{gap:6pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-action-path li>b{width:17pt!important;height:17pt!important;font-size:7.4pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-action-path h3{font-size:8.6pt!important;margin-bottom:1.5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-action-path p{font-size:7.7pt!important;line-height:1.22!important}
+  [data-ui="print-document"].patient-output-v50 .v50-call-guidance{grid-template-columns:minmax(0,1fr) 1.92in!important;gap:13pt!important;margin-bottom:11pt!important;padding-bottom:10pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-call-guidance h2{font-size:13.8pt!important;margin-bottom:5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-question-list{gap:3pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-question-list li{font-size:7.8pt!important;line-height:1.22!important;padding-left:9pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-question-list li::before{width:3.5pt!important;height:3.5pt!important;top:.5em!important}
+  [data-ui="print-document"].patient-output-v50 .v50-script-note,
+  [data-ui="print-document"].patient-output-v50 .v50-prep-note{padding:7pt 8pt!important;border-radius:10pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-script-note p,
+  [data-ui="print-document"].patient-output-v50 .v50-clean-list li{font-size:7.7pt!important;line-height:1.22!important}
+  [data-ui="print-document"].patient-output-v50 .v50-other-options{margin-bottom:10pt!important;padding-bottom:8pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-other-options h2{font-size:13.5pt!important;margin-bottom:5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-open-option{grid-template-columns:auto minmax(0,1fr) 1.7in!important;gap:8pt!important;padding:6pt 0!important}
+  [data-ui="print-document"].patient-output-v50 .v50-option-number{width:16pt!important;height:16pt!important;font-size:7.2pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-option-copy>span{font-size:6.6pt!important;margin-bottom:3pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-option-copy h3{font-size:9pt!important;margin-bottom:2pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-option-copy p,
+  [data-ui="print-document"].patient-output-v50 .v50-option-contact b{font-size:7.6pt!important;line-height:1.2!important}
+  [data-ui="print-document"].patient-output-v50 .v50-option-contact span{font-size:6.9pt!important;line-height:1.15!important}
+  [data-ui="print-document"].patient-output-v50 .v50-notes-area{margin-bottom:9pt!important;padding-bottom:8pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-notes-area h2{font-size:13.5pt!important;margin-bottom:5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-note-lines{grid-template-columns:1.18in minmax(0,1fr)!important;gap:4pt 7pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-note-lines label{font-size:6.8pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-note-lines span{height:12pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer{grid-template-columns:minmax(0,1fr) 1.65in!important;gap:10pt!important;padding-bottom:6pt!important;margin-bottom:5pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer h3{font-size:8.7pt!important;margin-bottom:2pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer p{font-size:7.5pt!important;line-height:1.18!important}
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer aside{padding-left:7pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer aside span{font-size:6.5pt!important;margin-bottom:3pt!important}
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer aside b{font-size:7.5pt!important;line-height:1.16!important}
+  [data-ui="print-document"].patient-output-v50 .v50-document-footer p{font-size:6.9pt!important;line-height:1.16!important}
+}
+
+/* v50.1 release polish: remove inherited section boxes and use editorial dividers. */
+[data-ui="print-document"].patient-output-v50 .v50-start-section,
+[data-ui="print-document"].patient-output-v50 .v50-action-path,
+[data-ui="print-document"].patient-output-v50 .v50-call-guidance,
+[data-ui="print-document"].patient-output-v50 .v50-other-options,
+[data-ui="print-document"].patient-output-v50 .v50-notes-area,
+[data-ui="print-document"].patient-output-v50 .v50-support-footer{
+  border-top:0!important;
+  border-right:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+[data-ui="print-document"].patient-output-v50 .v50-action-path,
+[data-ui="print-document"].patient-output-v50 .v50-call-guidance,
+[data-ui="print-document"].patient-output-v50 .v50-other-options,
+[data-ui="print-document"].patient-output-v50 .v50-notes-area,
+[data-ui="print-document"].patient-output-v50 .v50-support-footer{
+  border-left:0!important;
+  background:transparent!important;
+  padding-left:0!important;
+  padding-right:0!important;
+}
+[data-ui="print-document"].patient-output-v50 .v50-start-section{
+  border-top:0!important;
+  border-right:0!important;
+  border-left:4px solid #a7cdbb!important;
+  border-bottom:1px solid var(--v50-line)!important;
+  background:linear-gradient(90deg,rgba(238,247,241,.82),rgba(255,255,255,0) 72%)!important;
+}
+[data-ui="print-document"].patient-output-v50 .v50-action-path ol,
+[data-ui="print-document"].patient-output-v50 .v50-call-guidance,
+[data-ui="print-document"].patient-output-v50 .v50-open-options-list,
+[data-ui="print-document"].patient-output-v50 .v50-note-lines,
+[data-ui="print-document"].patient-output-v50 .v50-support-footer{
+  border-color:var(--v50-line)!important;
+}
+
+@media print{
+  [data-ui="print-document"].patient-output-v50 .v50-start-section,
+  [data-ui="print-document"].patient-output-v50 .v50-action-path,
+  [data-ui="print-document"].patient-output-v50 .v50-call-guidance,
+  [data-ui="print-document"].patient-output-v50 .v50-other-options,
+  [data-ui="print-document"].patient-output-v50 .v50-notes-area,
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer{
+    border-top:0!important;
+    border-right:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+  [data-ui="print-document"].patient-output-v50 .v50-action-path,
+  [data-ui="print-document"].patient-output-v50 .v50-call-guidance,
+  [data-ui="print-document"].patient-output-v50 .v50-other-options,
+  [data-ui="print-document"].patient-output-v50 .v50-notes-area,
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer{
+    border-left:0!important;
+    background:transparent!important;
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+  [data-ui="print-document"].patient-output-v50 .v50-start-section{border-left:3pt solid #a7cdbb!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-clinic-masthead{margin-bottom:9pt!important;padding-bottom:7pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-guide-intro{margin-bottom:9pt!important;padding-bottom:8pt!important}
+  [data-ui="print-document"].patient-guide-v50 h1{font-size:22.5pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-start-section{margin-bottom:9pt!important;padding-top:8pt!important;padding-bottom:8pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-start-copy h2{font-size:17.5pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-action-path{margin-bottom:8pt!important;padding-bottom:7pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-call-guidance{margin-bottom:8pt!important;padding-bottom:7pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-other-options{margin-bottom:7pt!important;padding-bottom:6pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-notes-area{margin-bottom:6pt!important;padding-bottom:6pt!important;break-inside:auto!important;page-break-inside:auto!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-notes-area h2{font-size:12.8pt!important;margin-bottom:4pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-note-lines{grid-template-columns:1.12in minmax(0,1fr)!important;gap:3pt 7pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-note-lines span{height:10pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-support-footer{padding-bottom:4pt!important;margin-bottom:4pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-document-footer p{font-size:6.6pt!important}
+}
+
+/* v50.2: support language is a compact footer note, not another document block. */
+[data-ui="print-document"].patient-output-v50 .v50-support-footer.compact{
+  display:block!important;
+  border-top:1px solid var(--v50-line)!important;
+  border-bottom:1px solid var(--v50-line)!important;
+  padding:8px 0!important;
+  margin:0 0 7px!important;
+  background:transparent!important;
+  break-inside:avoid!important;
+  page-break-inside:avoid!important;
+}
+[data-ui="print-document"].patient-output-v50 .v50-support-footer.compact .v50-section-kicker{display:inline!important;margin-right:8px!important}
+[data-ui="print-document"].patient-output-v50 .v50-support-footer.compact .v50-section-kicker::before{margin-right:6px!important}
+[data-ui="print-document"].patient-output-v50 .v50-support-footer.compact p{display:inline!important;font-size:11.3px!important;line-height:1.32!important;color:#6e5a5e!important}
+[data-ui="print-document"].patient-output-v50 .v50-support-footer.compact b{color:#31495b!important;font-weight:850!important}
+[data-ui="print-document"].patient-output-v50 .v50-support-footer.compact strong{color:#31495b!important;font-weight:850!important;margin-left:4px!important}
+@media print{
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer.compact{padding:4pt 0!important;margin-bottom:3pt!important;break-inside:avoid!important;page-break-inside:avoid!important}
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer.compact p{font-size:7.1pt!important;line-height:1.14!important}
+  [data-ui="print-document"].patient-output-v50 .v50-support-footer.compact .v50-section-kicker{font-size:6.5pt!important;margin-right:5pt!important}
+}
+
+/* v50.3: routine handouts use backup as a quiet line, not a second card block. */
+[data-ui="print-document"].patient-output-v50 .v50-backup-inline{
+  margin:0 0 16px!important;
+  padding:0 0 13px!important;
+  border-top:0!important;
+  border-right:0!important;
+  border-left:0!important;
+  border-bottom:1px solid var(--v50-line)!important;
+  background:transparent!important;
+  break-inside:avoid!important;
+  page-break-inside:avoid!important;
+}
+[data-ui="print-document"].patient-output-v50 .v50-backup-inline p{font-size:12.2px!important;line-height:1.35!important;color:var(--v50-muted)!important}
+[data-ui="print-document"].patient-output-v50 .v50-backup-inline b{color:var(--v50-ink)!important;font-weight:850!important}
+[data-ui="print-document"].patient-output-v50 .v50-backup-inline em{font-style:normal!important;color:#547083!important;font-weight:800!important;margin-left:5px!important}
+@media print{
+  [data-ui="print-document"].patient-guide-v50 .v50-backup-inline{margin-bottom:6pt!important;padding-bottom:5pt!important;break-inside:avoid!important;page-break-inside:avoid!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-backup-inline p{font-size:7.8pt!important;line-height:1.17!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-backup-inline .v50-section-kicker{display:inline!important;margin-right:6pt!important;font-size:6.8pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-backup-inline p{display:inline!important}
+}
+
+/* v50.4: small typography corrections after print rendering. */
+[data-ui="print-document"].patient-output-v50 .v50-brand-lockup>div{min-width:250px!important}
+[data-ui="print-document"].patient-output-v50 .v50-backup-inline em{display:block!important;margin:2px 0 0!important;color:#547083!important}
+@media print{
+  [data-ui="print-document"].patient-output-v50 .v50-brand-lockup>div{min-width:2.75in!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-backup-inline .v50-section-kicker{display:inline!important;margin-right:6pt!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-backup-inline p{display:inline!important}
+  [data-ui="print-document"].patient-guide-v50 .v50-backup-inline em{display:block!important;margin-top:1.5pt!important;font-size:7.3pt!important;line-height:1.15!important}
+}

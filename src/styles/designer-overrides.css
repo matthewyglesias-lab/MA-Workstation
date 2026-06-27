@@ -1,0 +1,2044 @@
+/*
+ * IPMG Referral Hub — designer-overrides.css
+ * Single authoritative pass. No conflicting layers.
+ * Fullscript / clinic-ops release look.
+ * ─────────────────────────────────────────────────
+ * Edit freely. Do not touch app JS, data-packet-*,
+ * onclick, or function names in index.html.
+ */
+
+/* ─── Fonts ─── */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap');
+
+
+/* ══════════════════════════════════════════════════
+   1. TOKENS — one block, no overrides needed later
+   ══════════════════════════════════════════════════ */
+:root {
+  /* Type */
+  --serif: "Fraunces", Georgia, serif;
+  --sans:  "DM Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Canvas — cool blue-gray, Fullscript-accurate */
+  --bg:          #f0f5f9;
+  --surface:     #ffffff;
+  --soft:        #e6eef5;
+  --paper:       #f8fbfd;
+
+  /* Borders */
+  --line:        #cddae6;
+  --line-strong: #aabfd2;
+
+  /* Ink — cool navy */
+  --text:        #192c3b;
+  --muted:       #4c6577;
+  --faint:       #7896a8;
+
+  /* Brand green — CTAs + active states only */
+  --navy:        #1e5040;
+  --navy-2:      #2d6854;
+
+  /* Semantic: Mint */
+  --mint:        #e2f2ee;
+  --mint-b:      #b4d8cc;
+  --mint-ink:    #185e47;
+
+  /* Semantic: Blue */
+  --blue:        #e2f0f9;
+  --blue-b:      #b4d4ec;
+  --blue-ink:    #1d5f8e;
+
+  /* Semantic: Lavender */
+  --lavender:    #f0eefa;
+  --lavender-b:  #cec8ef;
+  --lavender-ink:#4d43a0;
+
+  /* Semantic: Gold */
+  --gold:        #faf4df;
+  --gold-b:      #e2d08a;
+  --gold-ink:    #785a09;
+
+  /* Semantic: Rose / Peach */
+  --rose:        #fdf0f2;
+  --rose-b:      #efbec8;
+  --rose-ink:    #882b38;
+  --peach:       #fdf2ec;
+  --peach-b:     #f0c0a4;
+  --peach-ink:   #883818;
+
+  /* Shape */
+  --radius:    16px;
+  --radius-sm: 10px;
+  --radius-xs:  6px;
+
+  /* Shadows — 3 levels */
+  --elev-0: none;
+  --elev-1: 0 1px 3px rgba(20,40,60,.06), 0 4px 10px rgba(20,40,60,.04);
+  --elev-2: 0 2px 8px rgba(20,40,60,.08), 0 8px 22px rgba(20,40,60,.06);
+  --elev-3: 0 8px 28px rgba(20,40,60,.12), 0 2px 8px rgba(20,40,60,.05);
+  --shadow-soft: var(--elev-1);
+  --shadow:      var(--elev-2);
+
+  /* Easing */
+  --ease-out: cubic-bezier(.22,.61,.36,1);
+
+  /* Patient output tokens (v48 screen layer) */
+  --patient-paper:      #fffdf8;
+  --patient-paper-soft: #f7fbf6;
+  --patient-mint:       #eaf6f0;
+  --patient-blue:       #edf6fb;
+  --patient-gold:       #fff7e6;
+  --patient-rose:       #fff3f4;
+  --patient-ink:        #243746;
+  --patient-muted:      #637586;
+  --patient-faint:      #8b9ba5;
+  --patient-line:       #dce7df;
+  --patient-line-strong:#c5d6cd;
+
+  /* Brand mark SVG — paired leaf paths */
+  --ipmg-brand-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 52C18 45 12 30 18 15C32 22 38 37 32 52Z' fill='%232f7a5a' opacity='0.55'/%3E%3Cpath d='M32 52C46 45 52 30 46 15C32 22 26 37 32 52Z' fill='%234a9b78' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+
+/* ══════════════════════════════════════════════════
+   2. BASE
+   ══════════════════════════════════════════════════ */
+html { background: var(--bg) !important; }
+
+body {
+  font-family: var(--sans) !important;
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-size: 14px !important;
+  line-height: 1.56 !important;
+  font-weight: 400 !important;
+  letter-spacing: -.008em !important;
+  -webkit-font-smoothing: antialiased !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+b, strong { font-weight: 620 !important; }
+p, li { text-wrap: pretty; }
+
+/* No hover lifts — flat tool */
+button:hover,
+.route-tile:hover, .resource-card:hover, .doc-card:hover,
+.db-row:hover, .plan-button:hover, .tray-open:hover,
+.assist:hover, .new-route:hover, .primary-action:hover,
+.secondary-action:hover, .soft-link:hover, .rail-btn:hover {
+  transform: none !important;
+}
+button:active { transform: scale(.985) !important; }
+button:disabled, button[aria-disabled="true"] {
+  opacity: .55 !important; cursor: not-allowed !important;
+}
+
+/* Smooth chip / button transitions */
+.status-chip, .filter-chip, .compact-subnav span,
+.route-tile, .resource-card, .doc-card,
+.rail-btn, .plan-button, .assist,
+.new-route, .primary-action {
+  transition: background .14s ease, border-color .14s ease,
+              color .14s ease, box-shadow .14s ease !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+
+/* Kill all backdrop blur */
+*, *::before, *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Focus */
+button:focus-visible, input:focus-visible,
+select:focus-visible, a:focus-visible {
+  outline: 2px solid var(--mint-b) !important;
+  outline-offset: 2px !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   3. BRAND MARK
+   ══════════════════════════════════════════════════ */
+.brand-mark {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 12px !important;
+  font-size: 0 !important;
+  color: transparent !important;
+  background-color: #f5faf7 !important;
+  background-image: var(--ipmg-brand-mark) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 26px 26px !important;
+  border: 1px solid #c7ddd2 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.86), 0 1px 2px rgba(20,44,32,.06) !important;
+  margin-bottom: 22px !important;
+  display: grid !important;
+  place-items: center !important;
+}
+.brand-mark span { display: none !important; }
+
+/* Handout kicker leaf */
+.paper-kicker::before {
+  content: "" !important;
+  display: inline-block !important;
+  width: 15px !important; height: 15px !important;
+  background-image: var(--ipmg-brand-mark) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 15px 15px !important;
+  background-color: transparent !important;
+  vertical-align: middle !important;
+  margin-right: 3px !important;
+  border-radius: 0 !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   4. APP SHELL
+   ══════════════════════════════════════════════════ */
+.app-shell { grid-template-columns: 66px minmax(0,1fr) !important; }
+
+
+/* ══════════════════════════════════════════════════
+   5. RAIL
+   ══════════════════════════════════════════════════ */
+.rail {
+  width: 66px !important;
+  padding: 16px 9px !important;
+  background: var(--surface) !important;
+  border-right: 1px solid var(--line) !important;
+}
+
+.rail-btn {
+  width: 44px !important; height: 42px !important;
+  border-radius: 10px !important;
+  color: var(--faint) !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  position: relative !important;
+  overflow: hidden !important;
+  display: grid !important; place-items: center !important;
+  padding: 0 !important;
+}
+.rail-btn svg { width: 18px !important; height: 18px !important; }
+
+.rail-btn:hover {
+  background: var(--soft) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+.rail-btn.active {
+  background: var(--mint) !important;
+  border-color: var(--mint-b) !important;
+  color: var(--mint-ink) !important;
+  box-shadow: none !important;
+}
+
+/* Left accent bar on active */
+.rail-btn.active::before { display: none !important; }
+.rail-btn.active::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important; top: 20% !important;
+  height: 60% !important; width: 3px !important;
+  background: var(--navy) !important;
+  border-radius: 0 3px 3px 0 !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+  transform: none !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 0 !important;
+}
+
+.rail-btn.small {
+  width: 40px !important; height: 38px !important;
+  border: 1px solid var(--line) !important;
+  color: var(--muted) !important;
+  border-radius: 10px !important;
+}
+
+/* Tooltip */
+.rail-btn::after {
+  border-radius: 8px !important;
+  font-size: 11.5px !important; font-weight: 700 !important;
+  box-shadow: var(--elev-1) !important;
+  border-color: var(--line) !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   6. TOPBAR
+   ══════════════════════════════════════════════════ */
+.topbar {
+  height: 64px !important;
+  padding: 0 28px !important;
+  background: var(--surface) !important;
+  border-bottom: none !important;
+  box-shadow: 0 1px 0 rgba(20,40,60,.07), 0 2px 8px rgba(20,40,60,.04) !important;
+  gap: 10px !important;
+  z-index: 20 !important;
+  align-items: center !important;
+}
+
+.kicker, .eyebrow, .page-title .kicker, .page-title .eyebrow {
+  font-family: var(--sans) !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+  letter-spacing: .07em !important;
+  color: var(--faint) !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+  display: block !important;
+}
+
+.topbar h1 {
+  font-family: var(--serif) !important;
+  font-size: 22px !important;
+  font-weight: 400 !important;
+  color: var(--text) !important;
+  letter-spacing: -.022em !important;
+  line-height: 1.1 !important;
+}
+
+.page-title { min-width: 180px !important; }
+
+.top-search {
+  height: 36px !important;
+  border-radius: 999px !important;
+  border-color: var(--line) !important;
+  background: var(--soft) !important;
+  box-shadow: none !important;
+  color: var(--muted) !important;
+}
+.top-search:focus-within {
+  border-color: var(--mint-b) !important;
+  box-shadow: 0 0 0 3px var(--mint) !important;
+  background: var(--surface) !important;
+}
+
+.patient-context {
+  height: 36px !important;
+  border-radius: var(--radius-sm) !important;
+  border-color: var(--line) !important;
+  background: var(--soft) !important;
+  min-width: 170px !important;
+}
+.patient-context .avatar {
+  border-radius: 8px !important;
+  background: var(--mint) !important; border-color: var(--mint-b) !important;
+  color: var(--mint-ink) !important;
+  width: 26px !important; height: 26px !important;
+}
+.patient-context b { font-size: 13px !important; font-weight: 620 !important; color: var(--text) !important; }
+.patient-context small { font-size: 10.5px !important; color: var(--muted) !important; }
+
+/* Status chips */
+.status-chip {
+  height: 28px !important;
+  border-radius: 999px !important;
+  border-color: var(--line) !important;
+  padding: 0 11px !important;
+  font-size: 12px !important; font-weight: 560 !important;
+  background: var(--bg) !important;
+}
+.status-chip.mint { background: var(--mint) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important; }
+.status-chip.blue { background: var(--blue) !important; border-color: var(--blue-b) !important; color: var(--blue-ink) !important; }
+.status-chip.gold { background: var(--gold) !important; border-color: var(--gold-b) !important; color: var(--gold-ink) !important; }
+
+/* Buttons — all normalized */
+.new-route, .primary-action {
+  height: 36px !important;
+  border-radius: 12px !important;
+  background: var(--navy) !important; border-color: var(--navy) !important;
+  color: #fff !important;
+  font-size: 13.5px !important; font-weight: 620 !important;
+  box-shadow: none !important;
+  display: inline-flex !important; align-items: center !important;
+  justify-content: center !important; gap: 7px !important;
+  padding: 0 16px !important;
+}
+.new-route:hover, .primary-action:hover { background: var(--navy-2) !important; }
+
+.assist {
+  height: 36px !important;
+  border-radius: 999px !important;
+  padding: 0 16px !important;
+  font-size: 13px !important; font-weight: 580 !important;
+  background: var(--lavender) !important; border-color: var(--lavender-b) !important;
+  color: var(--lavender-ink) !important;
+  box-shadow: none !important;
+  display: inline-flex !important; align-items: center !important;
+  justify-content: center !important; gap: 7px !important;
+}
+
+.secondary-action {
+  height: 36px !important;
+  border-radius: 12px !important;
+  padding: 0 14px !important;
+  font-size: 13px !important; font-weight: 500 !important;
+  background: var(--surface) !important; border-color: var(--line) !important;
+  color: var(--text) !important; box-shadow: none !important;
+}
+
+.soft-link {
+  height: 34px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important; font-weight: 500 !important;
+  background: var(--soft) !important; border-color: var(--line) !important;
+  box-shadow: none !important;
+}
+
+.plan-button {
+  height: 36px !important;
+  border-radius: 999px !important;
+  font-size: 13px !important; font-weight: 560 !important;
+  background: var(--surface) !important; border-color: var(--line) !important;
+  box-shadow: var(--elev-1) !important;
+}
+.plan-button b {
+  min-width: 22px !important; height: 22px !important;
+  border-radius: 999px !important;
+  background: var(--mint) !important; border-color: var(--mint-b) !important;
+  color: var(--mint-ink) !important;
+  font-size: 11.5px !important; font-weight: 660 !important;
+  display: inline-flex !important; align-items: center !important;
+  justify-content: center !important;
+}
+.plan-button.active { background: var(--navy) !important; border-color: var(--navy) !important; color: #fff !important; }
+.plan-button.active b { background: rgba(255,255,255,.18) !important; border-color: rgba(255,255,255,.25) !important; color: #fff !important; }
+
+
+/* ══════════════════════════════════════════════════
+   7. WORKSPACE
+   ══════════════════════════════════════════════════ */
+.workspace {
+  padding: 28px 30px 90px !important;
+  background: var(--bg) !important;
+}
+
+.section-head { margin-bottom: 16px !important; align-items: center !important; }
+
+.section-head h2 {
+  font-family: var(--serif) !important;
+  font-size: 30px !important; font-weight: 400 !important;
+  letter-spacing: -.028em !important;
+  color: var(--text) !important; line-height: 1.1 !important;
+}
+.section-head h3 {
+  font-family: var(--serif) !important;
+  font-size: 23px !important; font-weight: 400 !important;
+  letter-spacing: -.022em !important;
+  color: var(--text) !important;
+}
+.section-head p {
+  font-size: 14px !important; font-weight: 400 !important;
+  color: var(--muted) !important; line-height: 1.55 !important;
+}
+
+/* Inner panel section titles — keep sans */
+.v44-rail-head h2,
+.print-picker .section-head h2,
+.db-side h3,
+.data-quality h3,
+.v44-section-title h3, .v44-section-title h4,
+.letter-template-head h4 {
+  font-family: var(--sans) !important;
+  font-size: 10px !important; font-weight: 700 !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: var(--faint) !important;
+}
+
+.section-dot {
+  width: 8px !important; height: 8px !important;
+  background: var(--mint-ink) !important;
+  box-shadow: 0 0 0 3px var(--mint) !important;
+  border-radius: 50% !important; flex-shrink: 0 !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   8. PANELS
+   ══════════════════════════════════════════════════ */
+.panel {
+  border-radius: var(--radius) !important;
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--elev-1) !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   9. WORKFLOW STEPPER
+   ══════════════════════════════════════════════════ */
+.workflow-stepper {
+  background: var(--surface) !important;
+  border: 1px solid rgba(20,40,60,.07) !important;
+  box-shadow: var(--elev-1) !important;
+  border-radius: var(--radius) !important;
+  padding: 7px !important; gap: 5px !important;
+  margin-bottom: 20px !important;
+}
+.step {
+  border-radius: 10px !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  padding: 10px 13px !important;
+  min-height: 54px !important; gap: 9px !important;
+}
+.step b { font-size: 13px !important; font-weight: 600 !important; color: var(--text) !important; letter-spacing: -.008em !important; }
+.step small { font-size: 11.5px !important; font-weight: 400 !important; color: var(--muted) !important; line-height: 1.3 !important; }
+.step span {
+  width: 26px !important; height: 26px !important;
+  border-radius: var(--radius-xs) !important;
+  background: var(--soft) !important; border-color: var(--line) !important;
+  color: var(--faint) !important;
+  font-size: 11.5px !important; font-weight: 660 !important;
+}
+.step.active {
+  background: var(--mint) !important; border-color: var(--mint-b) !important;
+  box-shadow: none !important;
+}
+.step.active b { color: var(--text) !important; }
+.step.active span, .step.done span {
+  background: var(--surface) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important;
+}
+.step.done { background: transparent !important; border-color: transparent !important; }
+
+
+/* ══════════════════════════════════════════════════
+   10. HERO
+   ══════════════════════════════════════════════════ */
+.status-hero {
+  border-radius: var(--radius) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--elev-1) !important;
+  padding: 32px 34px !important;
+}
+.status-hero::before { display: none !important; }
+
+.hero-left { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+
+.hero-left h2 {
+  font-family: var(--serif) !important;
+  font-size: 44px !important; font-weight: 400 !important;
+  letter-spacing: -.04em !important;
+  color: var(--text) !important; line-height: 1.05 !important;
+  margin: 4px 0 12px !important; max-width: 680px !important;
+}
+.hero-left p {
+  font-size: 15px !important; font-weight: 400 !important;
+  color: var(--muted) !important; line-height: 1.62 !important;
+  max-width: 540px !important; margin: 0 !important;
+}
+.hero-actions { margin-top: 24px !important; gap: 9px !important; flex-wrap: wrap !important; align-items: center !important; }
+
+.hero-status-strip { gap: 8px !important; margin-top: 22px !important; }
+.mini-stat {
+  border-radius: 999px !important;
+  border-color: rgba(20,40,60,.07) !important;
+  background: rgba(255,255,255,.8) !important;
+  padding: 9px 16px !important;
+  min-height: 54px !important;
+  display: flex !important; flex-direction: column !important; justify-content: center !important;
+}
+.mini-stat.mint { background: var(--mint) !important; border-color: var(--mint-b) !important; }
+.mini-stat.blue { background: var(--blue) !important; border-color: var(--blue-b) !important; }
+.mini-stat.gold { background: var(--gold) !important; border-color: var(--gold-b) !important; }
+.mini-stat small {
+  font-size: 9.5px !important; font-weight: 660 !important;
+  letter-spacing: .1em !important; color: var(--faint) !important;
+  text-transform: uppercase !important;
+}
+.mini-stat b { font-size: 15px !important; font-weight: 580 !important; display: block !important; margin-top: 3px !important; }
+
+/* Product card */
+.product-card { border-radius: var(--radius) !important; background: var(--blue) !important; border-color: var(--blue-b) !important; box-shadow: none !important; }
+.product-top { border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important; background: var(--surface) !important; border-color: var(--line) !important; }
+.product-body { background: var(--surface) !important; border-color: var(--line) !important; border-radius: 0 0 var(--radius-sm) var(--radius-sm) !important; }
+
+
+/* ══════════════════════════════════════════════════
+   11. STAT CARDS
+   ══════════════════════════════════════════════════ */
+.stat-card {
+  border-radius: var(--radius) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  border-left: 3px solid var(--line) !important;
+  box-shadow: none !important;
+  padding: 22px 24px !important;
+  min-height: 110px !important;
+  display: flex !important; flex-direction: column !important; justify-content: center !important;
+  overflow: hidden !important;
+}
+.stat-card::after { display: none !important; content: none !important; }
+/* Category left borders */
+.stat-card:nth-child(1) { border-left-color: var(--mint-b)    !important; }
+.stat-card:nth-child(2) { border-left-color: var(--blue-b)    !important; }
+.stat-card:nth-child(3) { border-left-color: var(--lavender-b)!important; }
+.stat-card:nth-child(4) { border-left-color: var(--gold-b)    !important; }
+.stat-card b {
+  font-family: var(--serif) !important;
+  font-size: 36px !important; font-weight: 400 !important;
+  color: var(--text) !important; letter-spacing: -.025em !important; display: block !important;
+}
+.stat-card span {
+  font-size: 10px !important; font-weight: 660 !important;
+  letter-spacing: .1em !important; color: var(--faint) !important;
+  text-transform: uppercase !important; display: block !important; margin-bottom: 4px !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   12. ROUTE TILES
+   ══════════════════════════════════════════════════ */
+.route-tile {
+  border-radius: var(--radius) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--elev-1) !important;
+  padding: 18px 20px !important;
+  min-height: 118px !important;
+}
+.route-tile:hover { border-color: var(--mint-b) !important; box-shadow: var(--elev-2) !important; }
+.route-tile .tile-icon {
+  border-radius: 12px !important;
+  width: 40px !important; height: 40px !important;
+  font-size: 12px !important; box-shadow: none !important;
+}
+.route-tile .tile-stat {
+  font-size: 11.5px !important; font-weight: 540 !important;
+  background: var(--bg) !important; border-color: var(--line) !important;
+  color: var(--muted) !important; border-radius: 999px !important;
+  padding: 4px 9px !important; white-space: nowrap !important;
+}
+.route-tile b { font-size: 14.5px !important; font-weight: 600 !important; color: var(--text) !important; letter-spacing: -.012em !important; line-height: 1.2 !important; }
+.route-tile small { font-size: 12.5px !important; font-weight: 400 !important; color: var(--muted) !important; line-height: 1.4 !important; }
+
+
+/* ══════════════════════════════════════════════════
+   13. RESOURCE CARDS
+   ══════════════════════════════════════════════════ */
+.resource-card {
+  border-radius: var(--radius) !important;
+  border: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--elev-1) !important;
+}
+.resource-card:hover { border-color: var(--mint-b) !important; box-shadow: var(--elev-2) !important; }
+.resource-main { padding: 17px 18px 16px !important; }
+.resource-head h4 { font-size: 15.5px !important; font-weight: 600 !important; color: var(--text) !important; letter-spacing: -.014em !important; line-height: 1.24 !important; }
+.resource-head p { font-size: 13px !important; font-weight: 400 !important; color: var(--muted) !important; line-height: 1.45 !important; margin-top: 3px !important; }
+.resource-meta { background: var(--soft) !important; border-color: var(--line) !important; }
+.resource-meta span { font-size: 9.5px !important; color: var(--faint) !important; letter-spacing: .09em !important; font-weight: 700 !important; text-transform: uppercase !important; }
+.resource-meta b { font-size: 12.5px !important; color: var(--text) !important; font-weight: 560 !important; line-height: 1.3 !important; }
+
+/* Readiness badges */
+.readiness-badge {
+  border-radius: 999px !important;
+  font-size: 11.5px !important; font-weight: 560 !important;
+  padding: 5px 10px !important;
+}
+.readiness-badge.good   { background: var(--mint) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important; }
+.readiness-badge.backup { background: var(--blue) !important; border-color: var(--blue-b) !important; color: var(--blue-ink) !important; }
+.readiness-badge.verify { background: var(--gold) !important; border-color: var(--gold-b) !important; color: var(--gold-ink) !important; }
+.readiness-badge.review { background: var(--rose) !important; border-color: var(--rose-b) !important; color: var(--rose-ink) !important; }
+
+/* Card actions */
+.card-actions {
+  padding: 10px 14px !important; gap: 6px !important;
+  border-top: 1px solid rgba(20,40,60,.06) !important;
+}
+.card-actions button {
+  height: 32px !important; padding: 0 12px !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 12.5px !important; font-weight: 560 !important;
+  border-color: var(--line) !important;
+  background: var(--bg) !important; color: var(--text) !important; box-shadow: none !important;
+  display: inline-flex !important; align-items: center !important; gap: 6px !important;
+}
+.card-actions .dark, .wide.dark {
+  background: var(--navy) !important; border-color: var(--navy) !important; color: #fff !important;
+}
+
+/* Taxonomy chips */
+.mini-tags { gap: 5px !important; margin-top: 7px !important; }
+.mini-tags span { border-radius: 999px !important; font-size: 11px !important; font-weight: 540 !important; background: var(--bg) !important; border-color: var(--line) !important; color: var(--muted) !important; padding: 3px 9px !important; }
+
+.facet-chip { border-radius: 999px !important; font-size: 11px !important; font-weight: 540 !important; padding: 3px 9px !important; }
+.facet-chip.category { background: var(--blue) !important; border-color: var(--blue-b) !important; color: var(--blue-ink) !important; }
+.facet-chip.service  { background: var(--mint) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important; }
+.facet-chip.mode     { background: var(--lavender) !important; border-color: var(--lavender-b) !important; color: var(--lavender-ink) !important; }
+
+
+/* ══════════════════════════════════════════════════
+   14. SUBNAV + FILTER STRIP
+   ══════════════════════════════════════════════════ */
+.compact-subnav { gap: 5px !important; margin-bottom: 14px !important; }
+.compact-subnav span {
+  border-radius: 999px !important;
+  background: var(--surface) !important; border: 1px solid var(--line) !important;
+  color: var(--muted) !important;
+  font-size: 12.5px !important; font-weight: 560 !important;
+  padding: 6px 13px !important; height: 32px !important;
+  display: inline-flex !important; align-items: center !important;
+}
+.compact-subnav span.active {
+  background: var(--navy) !important; border-color: var(--navy) !important;
+  color: #fff !important; font-weight: 620 !important;
+}
+
+.filter-strip {
+  border-radius: var(--radius) !important;
+  background: var(--surface) !important; border: 1px solid var(--line) !important;
+  padding: 9px 10px !important; gap: 7px !important;
+  box-shadow: none !important;
+}
+.field-search {
+  border-radius: 999px !important; border-color: var(--line) !important;
+  background: var(--bg) !important; height: 36px !important; box-shadow: none !important;
+}
+.field-search:focus-within {
+  border-color: var(--mint-b) !important; box-shadow: 0 0 0 3px var(--mint) !important;
+  background: var(--surface) !important;
+}
+.filter-chip {
+  height: 32px !important; border-radius: 999px !important;
+  border-color: var(--line) !important; background: var(--bg) !important;
+  color: var(--muted) !important;
+  font-size: 12.5px !important; font-weight: 560 !important;
+  padding: 0 13px !important;
+  display: inline-flex !important; align-items: center !important;
+}
+.filter-chip.active {
+  background: var(--navy) !important; border-color: var(--navy) !important;
+  color: #fff !important; font-weight: 620 !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   15. DATABASE TABLE
+   ══════════════════════════════════════════════════ */
+.db-table {
+  border-radius: var(--radius) !important; border-color: var(--line) !important;
+  background: var(--surface) !important; overflow: hidden !important;
+  box-shadow: var(--elev-1) !important;
+}
+.db-header {
+  background: var(--bg) !important; color: var(--faint) !important;
+  font-size: 10px !important; font-weight: 700 !important; letter-spacing: .09em !important;
+  padding: 11px 20px !important; border-bottom: 1px solid var(--line) !important;
+  text-transform: uppercase !important;
+}
+.db-row {
+  border-bottom-color: var(--line) !important;
+  padding: 13px 20px !important; min-height: 62px !important;
+  color: var(--text) !important;
+  transition: background .1s !important;
+}
+.db-row:hover { background: #e8f2f9 !important; }
+.db-row::before { width: 3px !important; border-radius: 0 3px 3px 0 !important; opacity: .75 !important; }
+.db-row strong { font-size: 14.5px !important; font-weight: 600 !important; color: var(--text) !important; letter-spacing: -.012em !important; line-height: 1.22 !important; }
+.db-row small { font-size: 12px !important; font-weight: 400 !important; color: var(--muted) !important; margin-top: 3px !important; }
+.db-row > div:not(:first-child) { font-size: 13.5px !important; font-weight: 400 !important; color: var(--text) !important; }
+.review {
+  border-radius: 999px !important;
+  font-size: 11px !important; font-weight: 580 !important;
+  padding: 5px 9px !important; line-height: 1.15 !important;
+}
+.db-actions { gap: 5px !important; }
+.db-actions button {
+  border-radius: var(--radius-sm) !important;
+  font-size: 12px !important; font-weight: 540 !important;
+  border-color: var(--line) !important; background: var(--surface) !important;
+  color: var(--text) !important; height: 30px !important; padding: 0 9px !important;
+  box-shadow: none !important;
+  display: inline-flex !important; align-items: center !important; gap: 5px !important;
+}
+
+/* Coverage chips */
+.coverage-chip {
+  border-radius: 999px !important;
+  font-size: 12px !important; font-weight: 580 !important; padding: 5px 10px !important;
+}
+.coverage-chip.mint     { background: var(--mint) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important; }
+.coverage-chip.blue     { background: var(--blue) !important; border-color: var(--blue-b) !important; color: var(--blue-ink) !important; }
+.coverage-chip.lavender { background: var(--lavender) !important; border-color: var(--lavender-b) !important; color: var(--lavender-ink) !important; }
+.coverage-chip.gold     { background: var(--gold) !important; border-color: var(--gold-b) !important; color: var(--gold-ink) !important; }
+.coverage-chip.rose     { background: var(--rose) !important; border-color: var(--rose-b) !important; color: var(--rose-ink) !important; }
+.coverage-chip.peach    { background: var(--peach) !important; border-color: var(--peach-b) !important; color: var(--peach-ink) !important; }
+
+/* Decision pills */
+.decision-pill {
+  border-radius: 999px !important;
+  font-size: 11.5px !important; font-weight: 580 !important;
+  border-color: var(--line) !important; background: var(--surface) !important;
+  color: var(--muted) !important; padding: 4px 9px !important;
+}
+.decision-pill.good  { background: var(--mint) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important; }
+.decision-pill.check { background: var(--gold) !important; border-color: var(--gold-b) !important; color: var(--gold-ink) !important; }
+.decision-pill.cold  { background: var(--blue) !important; border-color: var(--blue-b) !important; color: var(--blue-ink) !important; }
+
+/* Lane */
+.lane-head b { font-size: 14px !important; font-weight: 620 !important; color: var(--text) !important; }
+.also-under-note { font-size: 12px !important; color: var(--muted) !important; margin-top: 5px !important; }
+
+
+/* ══════════════════════════════════════════════════
+   16. PRINT CENTER
+   ══════════════════════════════════════════════════ */
+
+/* Output rail */
+.v44-output-rail {
+  border-radius: var(--radius) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--elev-1) !important;
+  padding: 14px !important; gap: 10px !important;
+}
+.v44-rail-summary {
+  border-radius: var(--radius-sm) !important; border-color: var(--line) !important;
+  background: var(--bg) !important; padding: 10px 12px !important;
+}
+.v44-rail-summary b { font-size: 13px !important; font-weight: 620 !important; color: var(--text) !important; line-height: 1.25 !important; }
+.v44-rail-summary span { font-size: 11.5px !important; color: var(--muted) !important; }
+.v44-output-groups { gap: 9px !important; }
+.v44-output-group { gap: 4px !important; }
+.v44-output-group > span::before { width: 5px !important; height: 5px !important; background: var(--mint-b) !important; }
+.v44-output-rail .doc-card {
+  border-radius: var(--radius-sm) !important; border-color: var(--line) !important;
+  background: var(--bg) !important; padding: 8px 10px !important; gap: 8px !important;
+  min-height: 48px !important;
+  grid-template-columns: 30px minmax(0,1fr) auto !important;
+}
+.v44-output-rail .doc-card .doc-icon { border-radius: var(--radius-xs) !important; width: 30px !important; height: 30px !important; }
+.v44-output-rail .doc-card b { font-size: 12.5px !important; font-weight: 580 !important; }
+.v44-output-rail .doc-card small { font-size: 10.5px !important; font-weight: 400 !important; color: var(--muted) !important; }
+.v44-output-rail .doc-card.active { background: var(--navy) !important; border-color: var(--navy) !important; }
+.v44-output-rail .doc-card.active b { color: #fff !important; }
+.v44-output-rail .doc-card.active small { color: rgba(255,255,255,.6) !important; }
+
+.v44-action-stack {
+  background: var(--surface) !important;
+  padding-top: 8px !important; border-top: 1px solid rgba(20,40,60,.06) !important;
+  margin-top: 8px !important;
+}
+.v44-action-stack .wide {
+  height: 44px !important; border-radius: 12px !important;
+  font-size: 14px !important; font-weight: 660 !important;
+  display: inline-flex !important; align-items: center !important;
+  justify-content: center !important; gap: 8px !important;
+  width: 100% !important;
+}
+.v44-action-stack .wide.dark,
+.v44-action-stack .download-pdf-button {
+  background: var(--navy) !important; border-color: var(--navy) !important; color: #fff !important;
+}
+.v44-action-stack .secondary-actions,
+.v44-action-stack .secondary-actions.three {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  gap: 7px !important;
+}
+.v44-action-stack .secondary-actions .wide {
+  height: 36px !important; font-size: 12.5px !important; font-weight: 620 !important;
+}
+
+/* Detail hero */
+.v44-detail-hero {
+  border-radius: var(--radius) !important;
+  background: var(--surface) !important; box-shadow: var(--elev-1) !important;
+  padding: 18px 20px !important; border: 1px solid var(--line) !important;
+}
+.v44-detail-hero h2 {
+  font-family: var(--serif) !important;
+  font-size: 26px !important; font-weight: 400 !important; letter-spacing: -.024em !important;
+  color: var(--text) !important; margin: 0 0 5px !important;
+}
+.v44-detail-hero p { font-size: 13px !important; color: var(--muted) !important; line-height: 1.45 !important; }
+
+.v44-builder-section, .letter-template-card.v41 {
+  border-radius: var(--radius) !important;
+  box-shadow: var(--elev-1) !important; border: 1px solid var(--line) !important;
+  background: var(--surface) !important; padding: 14px !important;
+}
+.v44-builder-section.soft { background: var(--bg) !important; }
+
+/* Template chips */
+.template-chip { border-radius: var(--radius-sm) !important; background: var(--bg) !important; border-color: var(--line) !important; font-size: 13px !important; font-weight: 500 !important; }
+.template-chip.active { background: var(--mint) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important; }
+
+/* Patient fields */
+.patient-field { gap: 5px !important; }
+.patient-field span { font-size: 10px !important; font-weight: 660 !important; letter-spacing: .08em !important; text-transform: uppercase !important; color: var(--faint) !important; }
+.patient-field input, .patient-field select, .patient-field textarea {
+  border-radius: var(--radius-sm) !important; border-color: var(--line) !important;
+  background: var(--surface) !important; color: var(--text) !important;
+  font-size: 14px !important; font-weight: 400 !important;
+  min-height: 36px !important; padding: 7px 10px !important; box-shadow: none !important;
+}
+.patient-field input:focus, .patient-field select:focus, .patient-field textarea:focus {
+  border-color: var(--mint-b) !important; box-shadow: 0 0 0 3px var(--mint) !important;
+}
+.patient-field input::placeholder { color: var(--faint) !important; opacity: .8 !important; }
+
+/* v45 template steps */
+.v45-template-step { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--surface) !important; }
+.v45-template-step.subtle { background: var(--bg) !important; }
+.v45-step-title b { font-size: 10px !important; text-transform: uppercase !important; letter-spacing: .1em !important; color: var(--faint) !important; font-weight: 700 !important; }
+.v45-more-reasons { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--bg) !important; }
+.v45-more-reasons summary { font-size: 12.5px !important; font-weight: 600 !important; color: var(--text) !important; }
+
+/* Preview */
+.v44-preview-shell.paper-stage { border-radius: var(--radius) !important; background: var(--soft) !important; border: 1px solid var(--line) !important; }
+.output-preview .paper {
+  border-radius: 16px !important; border-color: var(--line) !important;
+  box-shadow: 0 6px 20px rgba(20,44,32,.07), 0 2px 6px rgba(20,44,32,.04) !important;
+  background: var(--surface) !important; padding: 34px 36px !important;
+}
+.paper h1 { font-family: var(--serif) !important; font-size: 38px !important; font-weight: 400 !important; letter-spacing: -.038em !important; }
+.paper h2 { font-family: var(--serif) !important; font-weight: 400 !important; }
+.paper h3 { font-weight: 580 !important; }
+.paper p  { font-weight: 400 !important; line-height: 1.62 !important; }
+
+
+/* ══════════════════════════════════════════════════
+   17. PLAN TRAY / DRAWER
+   ══════════════════════════════════════════════════ */
+.drawer {
+  border-radius: var(--radius) !important; border-color: var(--line) !important;
+  background: var(--surface) !important; box-shadow: var(--elev-3) !important;
+  padding: 0 !important;
+}
+.drawer-head { border-bottom: 1px solid var(--line) !important; }
+.drawer-head h2, .plan-overview h2 {
+  font-family: var(--serif) !important;
+  font-weight: 400 !important; font-size: 26px !important; letter-spacing: -.024em !important;
+}
+.plan-drawer-item {
+  border-radius: var(--radius-sm) !important;
+  background: var(--mint) !important; border-color: var(--mint-b) !important;
+  border-left: 3px solid var(--mint-b) !important;
+  padding-left: 12px !important;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+}
+.plan-overview-top {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+  background: var(--mint) !important; padding: 12px 14px !important;
+}
+.clear-plan { border-radius: var(--radius-sm) !important; height: 36px !important; }
+.before-send label { border-radius: var(--radius-xs) !important; }
+.tray-open {
+  height: 32px !important; border-radius: 999px !important;
+  font-size: 12.5px !important; font-weight: 580 !important;
+  border-color: var(--line) !important; background: var(--surface) !important;
+}
+
+.drawer-actions-grid .wide,
+.v44-action-stack .wide {
+  height: 44px !important; font-size: 14.5px !important; font-weight: 640 !important;
+  letter-spacing: -.01em !important; border-radius: 12px !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   18. PLAN HEALTH / LOGIC CARDS
+   ══════════════════════════════════════════════════ */
+.plan-health { border-radius: var(--radius-sm) !important; background: var(--surface) !important; border-color: var(--line) !important; }
+.plan-health.mint { background: var(--mint) !important; border-color: var(--mint-b) !important; border-left: 3px solid var(--mint-ink) !important; }
+.plan-health b { font-size: 15px !important; font-weight: 620 !important; color: var(--text) !important; letter-spacing: -.01em !important; }
+.plan-health small { color: var(--muted) !important; font-weight: 400 !important; }
+
+.plan-check-note { border-radius: 999px !important; border-color: var(--line) !important; background: var(--surface) !important; font-size: 12px !important; font-weight: 580 !important; color: var(--muted) !important; }
+
+.logic-card { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--surface) !important; padding: 10px 12px !important; }
+.logic-card span { font-size: 9.5px !important; letter-spacing: .09em !important; color: var(--faint) !important; font-weight: 680 !important; text-transform: uppercase !important; }
+.logic-card b { font-size: 13px !important; font-weight: 400 !important; color: var(--text) !important; line-height: 1.42 !important; }
+
+
+/* ══════════════════════════════════════════════════
+   19. SELECTED ROUTES / LANE CARDS
+   ══════════════════════════════════════════════════ */
+.selected-route { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--surface) !important; }
+.lane-card { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--surface) !important; box-shadow: var(--elev-1) !important; }
+.bundle-row button {
+  border-radius: var(--radius-sm) !important; border-color: var(--line) !important;
+  background: var(--surface) !important; box-shadow: none !important;
+  display: flex !important; flex-direction: column !important;
+  align-items: flex-start !important; justify-content: center !important;
+  gap: 3px !important; line-height: 1.2 !important;
+}
+.bundle-row button:hover { background: var(--soft) !important; border-color: var(--mint-b) !important; }
+
+
+/* ══════════════════════════════════════════════════
+   20. RELEASE / READINESS PANELS
+   ══════════════════════════════════════════════════ */
+.print-readiness-card { border-radius: var(--radius) !important; border-color: var(--line) !important; box-shadow: var(--elev-1) !important; background: var(--surface) !important; }
+.print-readiness-card h3 { font-family: var(--serif) !important; font-size: 18px !important; font-weight: 400 !important; letter-spacing: -.014em !important; }
+
+.release-panel { border-radius: var(--radius) !important; border-left: 5px solid var(--mint-b) !important; box-shadow: var(--elev-1) !important; }
+.release-panel h3 { font-family: var(--serif) !important; font-size: 20px !important; font-weight: 400 !important; letter-spacing: -.016em !important; }
+
+.result-bar { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--bg) !important; }
+.result-bar b { font-family: var(--serif) !important; font-size: 22px !important; font-weight: 400 !important; }
+.result-bar em { border-radius: 999px !important; border-color: var(--line) !important; background: var(--surface) !important; font-size: 11.5px !important; font-weight: 580 !important; }
+
+.empty-results {
+  border-radius: var(--radius) !important;
+  border: 1px dashed var(--line-strong) !important;
+  background: var(--surface) !important;
+  padding: 36px !important; text-align: center !important;
+}
+.empty-results h3 { font-family: var(--serif) !important; font-size: 24px !important; font-weight: 400 !important; letter-spacing: -.022em !important; color: var(--text) !important; margin: 0 0 6px !important; }
+.empty-results p { font-size: 14px !important; color: var(--muted) !important; max-width: 380px !important; margin: 0 auto 16px !important; line-height: 1.6 !important; }
+.empty-results button { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--surface) !important; font-weight: 580 !important; }
+
+
+/* ══════════════════════════════════════════════════
+   21. TOAST
+   ══════════════════════════════════════════════════ */
+.toast { border-radius: var(--radius-sm) !important; box-shadow: var(--elev-3) !important; border: 1px solid var(--line) !important; font-size: 13.5px !important; font-weight: 620 !important; }
+
+
+/* ══════════════════════════════════════════════════
+   22. MOBILE TABS
+   ══════════════════════════════════════════════════ */
+.mobile-tabs { background: var(--surface) !important; border-top-color: var(--line) !important; }
+.mobile-tabs button { border-radius: var(--radius-sm) !important; font-size: 11px !important; font-weight: 580 !important; color: var(--muted) !important; align-items: center !important; justify-content: center !important; gap: 3px !important; }
+.mobile-tabs button.active { background: var(--mint) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important; }
+
+
+/* ══════════════════════════════════════════════════
+   23. DATA MODEL / TAXONOMY / MISC CARDS
+   ══════════════════════════════════════════════════ */
+.data-model-banner, .taxonomy-note {
+  border-radius: var(--radius-sm) !important; font-size: 13px !important;
+  background: var(--blue) !important; border-color: var(--blue-b) !important; color: var(--blue-ink) !important;
+}
+.route-assistant-card { border-radius: var(--radius) !important; border-color: var(--line) !important; background: var(--surface) !important; }
+.route-assistant-card h3 { font-family: var(--serif) !important; font-size: 20px !important; font-weight: 400 !important; letter-spacing: -.016em !important; }
+.assistant-step { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--bg) !important; border-left-color: var(--mint-b) !important; }
+.assistant-step b { font-size: 13px !important; font-weight: 620 !important; color: var(--text) !important; }
+.assistant-step small { font-size: 12px !important; color: var(--muted) !important; }
+
+.quick-output-card, .packet-builder-card { border-radius: var(--radius) !important; border-color: var(--line) !important; background: var(--surface) !important; }
+.quick-output-card h3, .packet-builder-card h3 { font-family: var(--serif) !important; font-size: 20px !important; font-weight: 400 !important; letter-spacing: -.016em !important; color: var(--text) !important; }
+.quick-output-pills span, .packet-destination { border-radius: 999px !important; font-size: 12px !important; font-weight: 580 !important; background: var(--mint) !important; border-color: var(--mint-b) !important; color: var(--mint-ink) !important; }
+
+.packet-check { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--surface) !important; }
+.packet-readiness { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--bg) !important; }
+.packet-readiness.needs { background: var(--gold) !important; border-color: var(--gold-b) !important; }
+.packet-readiness b { font-weight: 620 !important; color: var(--text) !important; }
+
+.print-plan-summary { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--bg) !important; }
+.print-plan-summary.mint { background: var(--mint) !important; border-color: var(--mint-b) !important; }
+.print-plan-summary.blue { background: var(--blue) !important; border-color: var(--blue-b) !important; }
+.print-plan-summary.gold { background: var(--gold) !important; border-color: var(--gold-b) !important; }
+.print-plan-summary.warn { background: var(--rose) !important; border-color: var(--rose-b) !important; }
+
+.helper-pill { border-radius: 999px !important; border-color: var(--line) !important; background: var(--surface) !important; font-size: 12px !important; font-weight: 580 !important; color: var(--muted) !important; }
+.output-dots i { border-radius: 5px !important; }
+.data-quality { border-radius: var(--radius) !important; border-color: var(--line) !important; box-shadow: var(--elev-1) !important; background: var(--surface) !important; }
+.patient-print-card { border-radius: var(--radius) !important; border-color: var(--line) !important; background: var(--surface) !important; box-shadow: none !important; padding: 16px !important; }
+.doc-card { border-radius: var(--radius-sm) !important; border-color: var(--line) !important; background: var(--surface) !important; box-shadow: none !important; }
+.doc-card:hover { border-color: var(--mint-b) !important; box-shadow: var(--elev-1) !important; }
+.doc-card b { font-weight: 620 !important; font-size: 13px !important; }
+.doc-card small { font-size: 11px !important; color: var(--muted) !important; }
+
+
+/* ══════════════════════════════════════════════════
+   24. v48 PATIENT OUTPUT (screen preview layer)
+   ══════════════════════════════════════════════════ */
+.patient-output-v48,
+.packet-output-v48,
+.letter-output-v48,
+.fax-output-v48,
+.staff-output-v48,
+.ehr-output-v48 { background: var(--patient-paper); color: var(--patient-ink); }
+
+.paper-welcome-band, .paper-fax-head {
+  display: grid; grid-template-columns: minmax(0,1fr) auto;
+  gap: 20px; align-items: start;
+  padding: 24px 24px 22px; margin: 0 0 18px;
+  border: 1px solid var(--patient-line); border-radius: 30px;
+  background: linear-gradient(135deg,#fff,var(--patient-mint));
+}
+.paper-welcome-band.compact, .paper-fax-head { padding: 21px 22px; border-radius: 28px; }
+.paper-welcome-band.internal { background: linear-gradient(135deg,#fff,var(--patient-blue)); }
+.paper-welcome-band h1, .paper-fax-head h1 {
+  margin: 5px 0 8px; font-family: var(--serif); font-size: 38px;
+  line-height: 1.02; font-weight: 500; letter-spacing: -.035em; color: var(--patient-ink);
+}
+.paper-welcome-band p, .paper-fax-head p { margin: 0; max-width: 660px; color: var(--patient-muted); font-size: 15px; line-height: 1.55; }
+
+.paper-soft-label {
+  display: inline-flex; align-items: center; gap: 7px;
+  color: #5a7e70; font-size: 10.5px; font-weight: 900;
+  letter-spacing: .09em; text-transform: uppercase;
+}
+.paper-soft-label::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: #93c4b2; }
+
+.paper-start-card {
+  display: grid; grid-template-columns: minmax(0,1fr) 245px;
+  gap: 18px; align-items: stretch;
+  padding: 25px; margin: 0 0 20px;
+  border: 1px solid var(--patient-line); border-radius: 32px;
+  background: linear-gradient(135deg,var(--patient-mint),#fff 62%);
+}
+.paper-start-copy h2 { margin: 6px 0 9px; font-family: var(--serif); font-size: 33px; line-height: 1.05; font-weight: 500; letter-spacing: -.03em; color: var(--patient-ink); }
+.paper-start-copy p { margin: 0; max-width: 650px; color: var(--patient-muted); font-size: 15px; line-height: 1.58; }
+
+.paper-contact-card {
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 6px; padding: 17px;
+  border: 1px solid rgba(199,216,207,.95); border-radius: 24px;
+  background: rgba(255,255,255,.82);
+}
+.paper-contact-card span, .paper-option-contact span { color: var(--patient-faint); font-size: 10px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.paper-contact-card b { display: block; color: var(--patient-ink); font-size: 16px; line-height: 1.25; }
+.paper-contact-card em { font-style: normal; color: var(--patient-muted); font-size: 12.5px; line-height: 1.35; }
+
+.paper-section-title { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 0 0 12px; }
+.paper-section-title span { color: var(--patient-faint); font-size: 10.5px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; white-space: nowrap; }
+.paper-section-title h2 { margin: 0; font-family: var(--serif); font-weight: 500; letter-spacing: -.025em; color: var(--patient-ink); }
+
+.paper-step-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.paper-step-grid > div { padding: 16px 16px 15px; border: 1px solid var(--patient-line); border-radius: 22px; background: #fff; }
+.paper-step-grid b { display: grid; place-items: center; width: 30px; height: 30px; margin-bottom: 11px; border-radius: 999px; background: var(--patient-mint); color: #527d6f; font-weight: 950; }
+.paper-step-grid h3 { margin: 0 0 5px; color: var(--patient-ink); font-size: 15px; }
+.paper-step-grid p { margin: 0; color: var(--patient-muted); font-size: 13px; line-height: 1.45; }
+
+.paper-light-card { padding: 18px; border: 1px solid var(--patient-line); border-radius: 24px; background: #fff; }
+.paper-clean-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.paper-clean-list li { position: relative; padding-left: 18px; color: var(--patient-muted); line-height: 1.42; }
+.paper-clean-list li::before { content: ""; position: absolute; left: 0; top: .55em; width: 7px; height: 7px; border-radius: 999px; background: #9bc9b8; }
+
+.paper-patient-option-card {
+  position: relative; display: grid; grid-template-columns: auto minmax(0,1fr);
+  gap: 14px; padding: 18px;
+  border: 1px solid var(--patient-line); border-radius: 25px; background: #fff; break-inside: avoid;
+}
+.paper-option-number { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; background: var(--patient-mint); color: #527d6f; font-weight: 950; }
+.paper-option-main h3 { margin: 5px 0 5px; font-size: 19px; color: var(--patient-ink); }
+.paper-option-main p { margin: 0; color: var(--patient-muted); line-height: 1.48; }
+.paper-option-contact { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--patient-line); border-radius: 16px; background: var(--patient-paper-soft); }
+.paper-option-contact b { color: var(--patient-ink); font-size: 13px; line-height: 1.25; }
+
+.paper-gentle-safety {
+  display: grid; grid-template-columns: minmax(0,1fr) auto;
+  gap: 14px; align-items: center;
+  margin: 20px 0 0; padding: 17px 18px;
+  border: 1px solid #ecd6d8; border-radius: 24px; background: var(--patient-rose);
+}
+.paper-gentle-safety h3 { margin: 5px 0 4px; color: #704c52; font-size: 16px; }
+.paper-gentle-safety p { margin: 0; color: #755d61; line-height: 1.45; }
+.paper-gentle-safety aside { padding: 10px 12px; border-radius: 16px; background: #fff; border: 1px solid #ecd6d8; }
+.paper-gentle-safety aside span { display: block; color: #98747a; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.paper-gentle-safety aside b { display: block; margin-top: 3px; color: #593f44; font-size: 13px; }
+
+.v48-options-stack { gap: 12px; }
+.v48-intent { background: linear-gradient(135deg,#fff,var(--patient-paper-soft)); border-color: var(--patient-line); border-radius: 26px; }
+.patient-footer { color: var(--patient-faint); }
+
+@media (max-width: 900px) {
+  .paper-welcome-band, .paper-fax-head, .paper-start-card, .paper-gentle-safety { grid-template-columns: 1fr; }
+  .paper-step-grid { grid-template-columns: 1fr; }
+}
+
+
+
+
+/* ══════════════════════════════════════════════════
+   TOPBAR REFINEMENT — Fullscript elegance
+   One page title, one search hero, minimal right side
+   ══════════════════════════════════════════════════ */
+
+/* ── 1. Kill the redundant product kicker above the page title ── */
+.topbar .page-title .kicker,
+.topbar .page-title .eyebrow,
+.topbar .page-title span.kicker,
+header.topbar .page-title span {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+}
+
+/* ── 2. Page title: larger, more presence now that kicker is gone ── */
+.topbar h1 {
+  font-family: var(--serif) !important;
+  font-size: 21px !important;
+  font-weight: 400 !important;
+  letter-spacing: -.022em !important;
+  color: var(--text) !important;
+  line-height: 1 !important;
+}
+
+/* ── 2b. Hide patient context + status chips — moved to end of file to win cascade ── */
+
+/* ── 3. More generous topbar height + padding for air ── */
+.topbar {
+  height: 60px !important;
+  padding: 0 20px !important;
+  gap: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* ── 3b. Topbar layout: title fixed | search flex-grows | buttons right ── */
+.topbar .page-title {
+  flex: 0 0 auto !important;
+  min-width: 120px !important;
+  max-width: 200px !important;
+}
+
+.topbar .top-search {
+  flex: 1 1 auto !important;
+  min-width: 200px !important;
+  max-width: 560px !important;
+  margin: 0 8px !important;
+}
+
+/* Push buttons to the right */
+.topbar .assist    { flex: 0 0 auto !important; margin-left: auto !important; }
+.topbar .plan-button { flex: 0 0 auto !important; }
+.topbar .new-route   { flex: 0 0 auto !important; }
+
+/* ── 4. Search bar: the hero element — wider, more presence ── */
+.top-search {
+  flex: 1 1 auto !important;
+  max-width: 560px !important;
+  height: 36px !important;
+  border-radius: 999px !important;
+  background: var(--soft) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  color: var(--muted) !important;
+}
+.top-search:focus-within {
+  background: #fff !important;
+  border-color: var(--mint-b) !important;
+  box-shadow: 0 0 0 3px var(--mint) !important;
+}
+
+/* ── 5. Patient context: compact, borderless, just context ── */
+.patient-context {
+  height: 34px !important;
+  background: transparent !important;
+  border: 1px solid rgba(20,40,60,.09) !important;
+  border-radius: 999px !important;
+  padding: 0 12px 0 8px !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+  flex-shrink: 1 !important;
+}
+.patient-context .avatar {
+  width: 24px !important; height: 24px !important;
+  border-radius: 6px !important;
+  font-size: 10px !important; font-weight: 700 !important;
+}
+.patient-context b {
+  font-size: 12.5px !important; font-weight: 620 !important;
+  white-space: nowrap !important;
+}
+.patient-context small {
+  font-size: 10.5px !important; color: var(--faint) !important;
+  white-space: nowrap !important;
+}
+
+/* ── 6. Status chips: ghost treatment — secondary, not competing ── */
+.top-status {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Default chip: borderless ghost */
+.top-status .status-chip {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--faint) !important;
+  font-size: 11.5px !important;
+  font-weight: 560 !important;
+  height: 26px !important;
+  padding: 0 8px !important;
+}
+
+/* Semantic chips keep their color — they carry meaning */
+.top-status .status-chip.mint {
+  background: var(--mint) !important;
+  border: 1px solid var(--mint-b) !important;
+  color: var(--mint-ink) !important;
+}
+.top-status .status-chip.gold {
+  background: var(--gold) !important;
+  border: 1px solid var(--gold-b) !important;
+  color: var(--gold-ink) !important;
+}
+.top-status .status-chip.blue {
+  background: var(--blue) !important;
+  border: 1px solid var(--blue-b) !important;
+  color: var(--blue-ink) !important;
+}
+
+/* ── 7. Right buttons: clear hierarchy ── */
+
+/* Assist: filled lavender pill — high specificity to beat app CSS */
+html body .app-shell .topbar .assist,
+html body .app-shell header.topbar button.assist {
+  background: #ddd6fe !important;
+  border: 1px solid #c4b5fd !important;
+  color: #5b21b6 !important;
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 12.5px !important;
+  font-weight: 620 !important;
+  border-radius: 999px !important;
+  flex-shrink: 0 !important;
+  gap: 6px !important;
+  box-shadow: none !important;
+}
+html body .app-shell .topbar .assist:hover {
+  background: #c4b5fd !important;
+  border-color: #a78bfa !important;
+  color: #4c1d95 !important;
+  box-shadow: none !important;
+}
+
+/* Plan: subtle pill with count */
+.topbar .plan-button {
+  height: 32px !important;
+  border-radius: 999px !important;
+  font-size: 12.5px !important;
+  font-weight: 580 !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--text) !important;
+  padding: 0 10px 0 12px !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+}
+.topbar .plan-button b {
+  min-width: 20px !important; height: 20px !important;
+  font-size: 11px !important; font-weight: 700 !important;
+  background: var(--navy) !important;
+  border-color: var(--navy) !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+}
+.topbar .plan-button.active {
+  background: var(--navy) !important;
+  border-color: var(--navy) !important;
+  color: #fff !important;
+}
+.topbar .plan-button.active b {
+  background: rgba(255,255,255,.2) !important;
+  border-color: rgba(255,255,255,.3) !important;
+}
+
+/* New route: the one clear CTA — stands alone */
+.topbar .new-route {
+  height: 34px !important;
+  border-radius: 10px !important;
+  background: var(--navy) !important;
+  border-color: var(--navy) !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 640 !important;
+  padding: 0 14px !important;
+  flex-shrink: 0 !important;
+  gap: 6px !important;
+}
+.topbar .new-route:hover { background: var(--navy-2) !important; }
+
+/* ── 8. Page title area: tighter, no overflow ── */
+.page-title {
+  min-width: 120px !important;
+  max-width: 200px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* ══════════════════════════════════════════════════
+   24b. COHESION PASS — Depth model + unified chrome
+   Chrome (rail+topbar) → Canvas → Cards → Overlays
+   ══════════════════════════════════════════════════ */
+
+/* ── DEPTH MODEL
+   Layer 0: canvas  #f0f5f9 — the backdrop, never interactive
+   Layer 1: chrome  #ffffff — rail + topbar, app shell
+   Layer 2: card    #ffffff + elev-1 shadow — content surfaces
+   Layer 3: raised  #ffffff + elev-2 shadow — selected/focused cards
+   Layer 4: overlay #ffffff + elev-3 shadow — drawers, toasts
+──────────────────────────────────────────────── */
+
+/* ── Chrome: rail + topbar as ONE continuous layer ── */
+/* Rail: no visible right border — shadow on topbar handles separation */
+.rail {
+  border-right: 1px solid rgba(20,40,60,.06) !important;
+  box-shadow: 1px 0 0 rgba(20,40,60,.03) !important;
+}
+
+/* Topbar shadow bleeds under the rail junction too */
+.topbar {
+  box-shadow:
+    0 1px 0 rgba(20,40,60,.07),
+    0 2px 12px rgba(20,40,60,.04) !important;
+}
+
+/* ── Canvas gap: consistent 20px rhythm ── */
+.workspace { padding: 24px 28px 80px !important; }
+.dashboard-view { gap: 16px !important; }
+.stats-row { gap: 12px !important; }
+.route-grid { gap: 10px !important; }
+
+/* ── Hero: Layer 2, but slightly warmer — the page anchor ── */
+.status-hero {
+  background: #ffffff !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--elev-1) !important;
+  border-radius: 18px !important;
+  padding: 30px 32px !important;
+}
+
+/* Hero heading: slightly tighter, fits one line for short titles */
+.hero-left h2 {
+  font-size: 40px !important;
+  line-height: 1.06 !important;
+  letter-spacing: -.038em !important;
+  margin-bottom: 10px !important;
+}
+
+/* ── Stepper: ghost non-active steps with just enough bg to read as a group ── */
+.workflow-stepper {
+  padding: 6px !important;
+  gap: 4px !important;
+  background: var(--surface) !important;
+  border-color: rgba(20,40,60,.07) !important;
+}
+.step {
+  background: rgba(20,40,60,.025) !important;
+  border-color: transparent !important;
+}
+.step.active {
+  background: var(--mint) !important;
+  border-color: var(--mint-b) !important;
+}
+.step.done { background: transparent !important; }
+
+/* ── Cards: flat layer 2 — no shadow by default, only on hover ── */
+.route-tile,
+.resource-card,
+.stat-card,
+.v44-builder-section,
+.letter-template-card.v41 {
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+}
+.route-tile:hover,
+.resource-card:hover {
+  box-shadow: var(--elev-2) !important;
+  border-color: var(--mint-b) !important;
+}
+
+/* ── Stat cards: bolder left accent, no shadow ── */
+.stat-card { border-left-width: 3px !important; }
+
+/* ── Section kicker: one canonical treatment everywhere ── */
+.kicker,
+.eyebrow,
+.page-title .kicker,
+.page-title .eyebrow,
+.v44-rail-head h2,
+.v44-output-group > span,
+.resource-meta span,
+.db-header,
+.mini-stat small,
+.stat-card span,
+.paper-kicker,
+.paper-soft-label {
+  font-family: var(--sans) !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: var(--faint) !important;
+}
+
+/* ── Section heads: more vertical breathing room ── */
+.section-head { margin-bottom: 14px !important; padding-top: 2px !important; }
+
+/* ── Filter strip: same layer as canvas, not elevated ── */
+.filter-strip {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+  border-radius: 12px !important;
+  padding: 8px 10px !important;
+}
+
+/* ── DB table: layer 2 — one clean border, no shadow ── */
+.db-table {
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+}
+
+/* ── Print center output rail: layer 2, elevated from builder ── */
+.v44-output-rail {
+  box-shadow: var(--elev-1) !important;
+  border-color: var(--line) !important;
+}
+
+/* ── Detail hero: layer 2 with a very subtle mint tint — differentiates it ── */
+.v44-detail-hero {
+  background: linear-gradient(135deg, #fff 60%, #f0f8f4 100%) !important;
+  box-shadow: none !important;
+  border-color: var(--line) !important;
+}
+
+/* ── Panel: consistent layer 2 ── */
+.panel {
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+}
+
+/* ── Drawer: layer 4, clear separation ── */
+.drawer { box-shadow: var(--elev-3) !important; }
+
+/* ── Product card in hero: float cleanly inside the hero ── */
+.product-card {
+  border-radius: 14px !important;
+  border-color: rgba(20,40,60,.08) !important;
+  background: var(--blue) !important;
+}
+.product-top { border-color: rgba(20,40,60,.06) !important; border-radius: 12px 12px 0 0 !important; }
+.product-body { border-color: rgba(20,40,60,.06) !important; border-radius: 0 0 12px 12px !important; }
+
+/* ── Mini stat pills: slightly smaller for proportionality ── */
+.mini-stat {
+  padding: 8px 14px !important;
+  min-height: 50px !important;
+}
+.mini-stat b { font-size: 14px !important; font-weight: 600 !important; }
+
+/* ── Topbar pills and buttons: vertically centered, consistent height ── */
+.topbar .assist,
+.topbar .new-route,
+.topbar .plan-button,
+.topbar .status-chip {
+  height: 34px !important;
+}
+
+/* ── Route tile icon badges: rounder, more distinct ── */
+.route-tile .tile-icon {
+  border-radius: 10px !important;
+  width: 36px !important; height: 36px !important;
+}
+
+/* ── Resource card meta footer: same subtle divider as card-actions ── */
+.resource-meta { border-top: 1px solid rgba(20,40,60,.06) !important; }
+
+/* ── DB rows: slightly more air ── */
+.db-row { padding: 12px 18px !important; min-height: 58px !important; }
+
+/* ── Print paper: elevated above the stage background ── */
+.output-preview .paper {
+  box-shadow: 0 4px 24px rgba(20,40,60,.1), 0 1px 4px rgba(20,40,60,.06) !important;
+}
+
+/* ── Cohesive empty state ── */
+.empty-results {
+  border: 1.5px dashed var(--line-strong) !important;
+  background: var(--surface) !important;
+}
+
+/* ── Typography: enforce clean hierarchy across the app ── */
+
+/* L1: Hero (only in hero) */
+.hero-left h2 { font-size: 40px !important; }
+
+/* L2: Section titles */
+.section-head h2 {
+  font-size: 26px !important;
+  font-weight: 400 !important;
+  letter-spacing: -.024em !important;
+  line-height: 1.15 !important;
+}
+.section-head h3 {
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  letter-spacing: -.018em !important;
+}
+
+/* L3: Card titles */
+.resource-head h4 { font-size: 15px !important; font-weight: 620 !important; }
+.route-tile b     { font-size: 14px !important;  font-weight: 620 !important; }
+.db-row strong    { font-size: 14px !important;  font-weight: 620 !important; }
+
+/* L4: Body + secondary */
+.resource-head p { font-size: 13px !important; color: var(--muted) !important; }
+.route-tile small { font-size: 12px !important; color: var(--muted) !important; }
+.db-row small     { font-size: 11.5px !important; color: var(--muted) !important; }
+
+/* Stat number */
+.stat-card b {
+  font-size: 32px !important;
+  font-weight: 400 !important;
+  letter-spacing: -.022em !important;
+}
+
+/* ── Compact subnav: pill tabs with navy-active ── */
+.compact-subnav span {
+  font-size: 12px !important;
+  font-weight: 580 !important;
+  padding: 5px 12px !important;
+  height: 30px !important;
+  letter-spacing: 0 !important;
+}
+
+/* ── Button hierarchy: primary > secondary > ghost ── */
+.new-route, .primary-action { font-size: 13px !important; font-weight: 640 !important; height: 34px !important; }
+.secondary-action, .soft-link { font-size: 12.5px !important; font-weight: 520 !important; height: 34px !important; }
+.assist { font-size: 12.5px !important; font-weight: 540 !important; height: 34px !important; }
+
+/* ── Logic cards: visual grouping — faint left border ── */
+.logic-card { border-left: 2px solid var(--line) !important; }
+
+/* ── Plan drawer item: clean mint accent ── */
+.plan-drawer-item {
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--mint-b) !important;
+  border-left: 3px solid var(--mint-ink) !important;
+  background: var(--mint) !important;
+  padding-left: 12px !important;
+}
+
+/* ── Topbar: hide patient context + status — search + 3 actions only ── */
+html body .app-shell .topbar .patient-context,
+html body .app-shell .topbar .top-status {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  flex: 0 0 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   STRUCTURAL OVERHAUL — DASHBOARD AS LAUNCHPAD
+   Order: stepper spine → hero focal → stats strip →
+   jump-in shortcuts → quiet QA footer
+   ══════════════════════════════════════════════════ */
+
+/* Dashboard grid: consistent rhythm */
+html body .app-shell .dashboard-view {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+/* Reorder children into a calm launchpad sequence */
+html body .dashboard-view .workflow-stepper { order: 1 !important; }
+html body .dashboard-view .status-hero      { order: 2 !important; }
+html body .dashboard-view .stats-row        { order: 3 !important; }
+html body .dashboard-view .panel-grid       { order: 4 !important; }
+html body .dashboard-view .release-panel    { order: 9 !important; }
+
+/* ── Hero: the focal point — more presence, warmer ── */
+html body .dashboard-view .status-hero {
+  padding: 34px 36px !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(120% 140% at 100% 0%, #eef7f2 0%, rgba(238,247,242,0) 55%),
+    #ffffff !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--elev-1) !important;
+}
+
+/* Hero eyebrow: refined */
+html body .dashboard-view .hero-left .eyebrow {
+  color: var(--mint-ink) !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  letter-spacing: .12em !important;
+}
+
+/* Hero headline */
+html body .dashboard-view .hero-left h2 {
+  font-size: 42px !important;
+  line-height: 1.04 !important;
+  letter-spacing: -.04em !important;
+  margin: 8px 0 12px !important;
+}
+
+/* ── QA release panel: quiet footer reassurance strip ── */
+html body .dashboard-view .release-panel {
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  border-left: 3px solid var(--mint-b) !important;
+  box-shadow: none !important;
+  background: var(--surface) !important;
+  padding: 12px 18px !important;
+  opacity: .92 !important;
+}
+html body .dashboard-view .release-panel h3 {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  font-family: var(--sans) !important;
+  letter-spacing: -.01em !important;
+}
+
+/* ── Stats row: clean supporting 4-up strip ── */
+html body .dashboard-view .stats-row {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 12px !important;
+}
+
+/* ── Panel grid: "jump in" shortcuts zone ── */
+html body .dashboard-view .panel-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0,1.65fr) minmax(0,1fr) !important;
+  gap: 16px !important;
+  align-items: start !important;
+}
+
+/* Starting points panel: the primary launchpad surface */
+html body .dashboard-view .large-panel {
+  padding: 20px !important;
+}
+
+/* Embedded Assist: secondary, calmer companion */
+html body .dashboard-view .assist-panel {
+  padding: 20px !important;
+  background: linear-gradient(180deg, #faf9fe, #f4f2fb) !important;
+  border: 1px solid #e4e0f3 !important;
+}
+html body .dashboard-view .assist-panel h3 {
+  font-family: var(--serif) !important;
+  font-size: 19px !important;
+  font-weight: 400 !important;
+  letter-spacing: -.018em !important;
+  color: var(--lavender-ink) !important;
+}
+html body .dashboard-view .assist-option {
+  background: rgba(255,255,255,.7) !important;
+  border: 1px solid #e0dbf2 !important;
+  border-radius: 10px !important;
+  font-weight: 560 !important;
+  color: #4a4080 !important;
+}
+html body .dashboard-view .assist-option:hover {
+  background: #fff !important;
+  border-color: #c9c0ec !important;
+}
+
+
+
+/* ══════════════════════════════════════════════════
+   STRUCTURAL OVERHAUL — WORKBENCH AS WORKSPACE
+   Calm 2-col layout, plan tray = sticky companion
+   ══════════════════════════════════════════════════ */
+
+/* 2-column proportions: fluid main + fixed tray */
+html body .app-shell .workbench-view {
+  grid-template-columns: minmax(0,1fr) 372px !important;
+  gap: 20px !important;
+  align-items: start !important;
+}
+
+/* Main column: consistent vertical rhythm */
+html body .workbench-view .work-main {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+/* Section head: serif workspace title */
+html body .workbench-view > .work-main > .section-head h1,
+html body .workbench-view > .work-main > .section-head h2 {
+  font-family: var(--serif) !important;
+  font-size: 26px !important;
+  font-weight: 400 !important;
+  letter-spacing: -.024em !important;
+}
+
+/* ── Plan tray: sticky persistent companion ── */
+html body .workbench-view .plan-tray {
+  position: sticky !important;
+  top: 16px !important;
+  align-self: start !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  max-height: calc(100vh - 84px) !important;
+  overflow-y: auto !important;
+  padding-right: 2px !important;
+}
+html body .workbench-view .plan-tray::-webkit-scrollbar { width: 4px; }
+
+/* Tray card: the focal anchor — strongest surface on the page */
+html body .workbench-view .tray-card {
+  border: 1px solid var(--mint-b) !important;
+  box-shadow: var(--elev-2) !important;
+  border-radius: 16px !important;
+  padding: 18px !important;
+}
+html body .workbench-view .tray-head h2,
+html body .workbench-view .tray-head h3 {
+  font-family: var(--serif) !important;
+  font-weight: 400 !important;
+  letter-spacing: -.022em !important;
+}
+
+/* Build printout: the workbench's primary CTA — full presence */
+html body .workbench-view .tray-card .wide.dark {
+  height: 46px !important;
+  border-radius: 12px !important;
+  font-size: 14.5px !important;
+  font-weight: 660 !important;
+  background: var(--navy) !important;
+  border-color: var(--navy) !important;
+  box-shadow: 0 4px 12px rgba(30,80,64,.22) !important;
+}
+html body .workbench-view .tray-card .wide.dark:hover {
+  background: var(--navy-2) !important;
+}
+
+/* Route assistant + note card: quieter companions */
+html body .workbench-view .route-assistant-card,
+html body .workbench-view .note-card {
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+}
+html body .workbench-view .route-assistant-card h3 {
+  font-family: var(--serif) !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+}
+
+/* ── Start here: calmer density ── */
+html body .workbench-view .start-here {
+  padding: 20px !important;
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+}
+html body .workbench-view .start-here .route-grid {
+  gap: 12px !important;
+}
+html body .workbench-view .bundle-row {
+  gap: 8px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Workbench results panel: clean */
+html body .workbench-view .workbench-panel {
+  padding: 18px !important;
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+}
+
+
+
+/* ══════════════════════════════════════════════════
+   STRUCTURAL OVERHAUL — DATABASE AS REFERENCE
+   Quiet chrome, table is the focal point, sticky audit
+   ══════════════════════════════════════════════════ */
+
+html body .app-shell .database-view {
+  grid-template-columns: minmax(0,1fr) 324px !important;
+  gap: 20px !important;
+  align-items: start !important;
+}
+html body .database-view > main {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+/* Section head: serif */
+html body .database-view .section-head h1,
+html body .database-view .section-head h2 {
+  font-family: var(--serif) !important;
+  font-size: 26px !important;
+  font-weight: 400 !important;
+  letter-spacing: -.024em !important;
+}
+
+/* Tools panel: calm container */
+html body .database-view .db-tools {
+  padding: 14px !important;
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+}
+
+/* Data-excellence banner: quiet it down — it's a helper note, not a hero */
+html body .database-view .data-model-banner,
+html body .database-view [class*="excellence"] {
+  background: var(--blue) !important;
+  border: 1px solid var(--blue-b) !important;
+  border-radius: 10px !important;
+  font-size: 12.5px !important;
+  padding: 10px 12px !important;
+}
+
+/* Table: the focal reference surface */
+html body .database-view .db-table {
+  box-shadow: var(--elev-1) !important;
+  border: 1px solid var(--line) !important;
+}
+
+/* Data quality: sticky audit companion */
+html body .database-view .db-side {
+  position: sticky !important;
+  top: 16px !important;
+  align-self: start !important;
+}
+html body .database-view .data-quality {
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+}
+html body .database-view .data-quality h3 {
+  font-family: var(--sans) !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   STRUCTURAL OVERHAUL — PRINT CENTER AS OUTPUT STUDIO
+   3 panels: pick (rail) → build (middle) → preview (paper)
+   The paper preview is the signature moment
+   ══════════════════════════════════════════════════ */
+
+html body .app-shell .print-view {
+  gap: 18px !important;
+  align-items: start !important;
+}
+
+/* Output rail: sticky pick column */
+html body .print-view .v44-output-rail {
+  position: sticky !important;
+  top: 16px !important;
+  align-self: start !important;
+  box-shadow: var(--elev-1) !important;
+  border: 1px solid var(--line) !important;
+}
+
+/* Builder middle: clean workspace */
+html body .print-view .v44-details-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+/* Paper stage: the signature surface — premium framing, sticky */
+html body .print-view .paper-stage {
+  position: sticky !important;
+  top: 16px !important;
+  align-self: start !important;
+  background:
+    radial-gradient(120% 100% at 50% 0%, #eaf1f7 0%, #e3ebf2 100%) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 18px !important;
+  padding: 22px !important;
+}
+
+/* The paper itself: elevated, the hero of this screen */
+html body .print-view .paper-stage .paper,
+html body .print-view .v44-preview-shell .paper {
+  box-shadow: 0 8px 32px rgba(20,40,60,.14), 0 2px 8px rgba(20,40,60,.07) !important;
+  border-radius: 6px !important;
+  border: 1px solid #e4e9ee !important;
+}
+
+/* Detail hero in builder: subtle mint anchor */
+html body .print-view .v44-detail-hero {
+  background: linear-gradient(135deg, #fff 58%, #f0f8f4 100%) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+html body .print-view .v44-detail-hero h2 {
+  font-family: var(--serif) !important;
+  font-weight: 400 !important;
+}
+
+
+/* ══════════════════════════════════════════════════
+   25. PRINT FIREWALL
+   Keep physical/PDF output compact, white, document-only.
+   This block must stay at the end.
+   ══════════════════════════════════════════════════ */
+@page { size: Letter; margin: .45in; }
+
+@media print {
+  html, body { width: auto !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  body { color: #000 !important; font-size: 9pt !important; line-height: 1.25 !important; -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; }
+
+  .topbar, .rail, .mobile-tabs, .drawer, .toast,
+  .paper-tools, [data-ui="output-rail"], [data-ui="referral-details"],
+  .v44-output-rail, .v44-details-panel { display: none !important; }
+
+  #app, .app-shell, .main-shell, .workspace, .print-view,
+  .v44-print-studio, [data-ui="live-preview"], .paper-stage,
+  .v44-preview-shell, .v44-preview-shell.paper-stage {
+    display: block !important; width: auto !important; max-width: none !important;
+    min-width: 0 !important; min-height: 0 !important; margin: 0 !important;
+    padding: 0 !important; border: 0 !important; border-radius: 0 !important;
+    box-shadow: none !important; background: #fff !important;
+    overflow: visible !important; position: static !important; transform: none !important;
+  }
+
+  .paper, [data-ui="print-document"] {
+    display: block !important; visibility: visible !important; width: 100% !important;
+    max-width: none !important; min-width: 0 !important; min-height: 0 !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important;
+    border-radius: 0 !important; box-shadow: none !important;
+    background: #fff !important; color: #000 !important;
+    font-family: var(--sans) !important; font-size: 9pt !important; line-height: 1.25 !important;
+  }
+  .paper *, [data-ui="print-document"] * { box-shadow: none !important; text-shadow: none !important; }
+  .paper h1, [data-ui="print-document"] h1 { font-size: 21pt !important; line-height: 1.05 !important; margin: 0 0 4pt !important; color: #000 !important; }
+  .paper h2, [data-ui="print-document"] h2 { font-size: 12pt !important; line-height: 1.12 !important; margin: 0 0 4pt !important; color: #000 !important; }
+  .paper h3, [data-ui="print-document"] h3 { font-size: 9.5pt !important; line-height: 1.15 !important; margin: 0 0 3pt !important; color: #000 !important; }
+  .paper p, .paper li, .paper td, .paper span, [data-ui="print-document"] p, [data-ui="print-document"] li { color: #000 !important; font-size: 9pt !important; line-height: 1.24 !important; }
+
+  .paper-doc-head, .paper-head { padding-bottom: 6pt !important; margin-bottom: 6pt !important; border-bottom: 1pt solid #000 !important; }
+  .paper-kicker, .paper-date, .paper-mini-label, .paper-label { background: #fff !important; border-color: #888 !important; color: #000 !important; border-radius: 0 !important; font-size: 7pt !important; line-height: 1.1 !important; letter-spacing: .06em !important; padding: 2pt 4pt !important; }
+  .paper-section { margin: 5pt 0 !important; padding: 5pt 0 0 !important; break-inside: avoid !important; page-break-inside: avoid !important; }
+  .paper-soft-panel, .paper-script-card, .paper-safety-mini, .paper-resource-card, .paper-document-intent, .paper-contact-block, .paper-contact, .paper-route-card, .paper-checklist label, .note-starter, .paper-meta-grid > div, .fax-grid > div, .paper-summary-grid > div { background: #fff !important; border-color: #888 !important; border-radius: 0 !important; color: #000 !important; padding: 5pt !important; min-height: 0 !important; }
+  .paper-patient-callout { background: #fff !important; border-color: #888 !important; border-radius: 0 !important; padding: 7pt !important; gap: 7pt !important; margin-bottom: 6pt !important; }
+  .paper-patient-callout .resource-title { font-size: 16pt !important; line-height: 1.05 !important; margin: 2pt 0 4pt !important; }
+  .paper-tag-row span, .paper-resource-meta span, .paper-route-detail strong, .paper-route-detail em { background: #fff !important; border-color: #999 !important; color: #000 !important; border-radius: 0 !important; font-size: 7pt !important; padding: 1.5pt 3pt !important; }
+  .paper-table { border-collapse: collapse !important; border-spacing: 0 !important; }
+  .paper-table th, .paper-table td { padding: 4pt !important; background: #fff !important; border-color: #888 !important; border-radius: 0 !important; color: #000 !important; }
+  .paper-footer { color: #000 !important; font-size: 8pt !important; line-height: 1.2 !important; margin-top: 5pt !important; padding-top: 4pt !important; border-top: 1pt solid #888 !important; }
+  .paper-welcome-band, .paper-fax-head, .paper-start-card, .paper-gentle-safety { grid-template-columns: 1fr !important; background: #fff !important; border-color: #888 !important; border-radius: 0 !important; }
+  .paper-step-grid { grid-template-columns: 1fr !important; }
+  .paper-step-grid > div { background: #fff !important; border-color: #888 !important; border-radius: 0 !important; }
+  .paper-patient-option-card { background: #fff !important; border-color: #888 !important; border-radius: 0 !important; }
+  .paper-option-contact { background: #fff !important; border-color: #888 !important; border-radius: 0 !important; }
+}

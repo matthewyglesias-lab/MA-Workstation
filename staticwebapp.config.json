@@ -3,7 +3,9 @@
     "rewrite": "/index.html",
     "exclude": [
       "/favicon.ico",
-      "/assets/*.{css,js,png,jpg,jpeg,gif,svg,webp,ico,json}"
+      "/assets/*.{css,js,png,jpg,jpeg,gif,svg,webp,ico,json}",
+      "/src/styles/*.css",
+      "/src/logic/*.js"
     ]
   },
   "globalHeaders": {

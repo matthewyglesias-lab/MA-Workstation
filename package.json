@@ -1,8 +1,8 @@
 {
-  "name": "ipmg-medassist-static-webapp",
-  "version": "5.34.0",
+  "name": "ipmg-referral-hub-static-webapp",
+  "version": "51.4.0",
   "private": true,
-  "description": "IPMG MedAssist UDS / Injection / Samples static web app for Azure Static Web Apps.",
+  "description": "IPMG Referral Hub static web app for Azure Static Web Apps.",
   "scripts": {
     "start": "npx serve .",
     "check": "node -e \"const fs=require('fs'); JSON.parse(fs.readFileSync('staticwebapp.config.json','utf8')); if(!fs.existsSync('index.html')) throw new Error('index.html missing'); console.log('Static app files OK');\""
