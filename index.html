@@ -7462,13 +7462,15 @@ const MEDS = [
     tip:"q6 months. Use after \u22654 months on Sustenna or \u22651 cycle of Trinza. Gluteal only.",
     flags:["resuspend","stabilized"]},
   {key:"uzedy", label:"Uzedy", name:"Uzedy", gen:"risperidone ER", cls:"Atypical antipsychotic LAI (SubQ)", route:"SubQ", site:"Abdomen (SubQ)", intervalKey:"q4wk", winB:7, winA:7,
+    winByInterval:{q4wk:{winB:7,winA:7}, q8wk:{winB:14,winA:14}},
     tech:"supplied syringe, SubQ abdomen or upper arm",
     doses:["50 mg","75 mg","100 mg","125 mg","150 mg","200 mg","250 mg"],
+    dosesByInterval:{q4wk:["50 mg","75 mg","100 mg","125 mg"], q8wk:["100 mg","150 mg","200 mg","250 mg"]},
     storage:"Refrigerate 2\u20138\u00b0C; may be kept at room temp limited time \u2014 check label.",
     recon:"Prefilled syringe \u2014 no reconstitution; mix per label.",
-    missed:"No loading dose or oral overlap needed. For late doses follow PI; generally resume schedule.",
-    caution:"SubQ only \u2014 abdomen or upper arm. Available q1-month and q2-month strengths.",
-    tip:"SubQ \u2014 abdomen or upper arm, rotate sites. Available q1-month and q2-month strengths; set the interval accordingly. No loading dose / oral overlap required.",
+    missed:"PI defines no fixed early/late cutoff for Uzedy \u2014 if a dose is missed, give the next injection as soon as possible and do not dose more often than the selected interval. No loading dose or oral overlap needed at initiation or when switching between the once-monthly and once-every-2-months regimens.",
+    caution:"SubQ only \u2014 abdomen or upper arm. Once-monthly (50/75/100/125 mg) and once-every-2-months (100/150/200/250 mg) are distinct regimens \u2014 confirm the interval selected matches the ordered dose; 100 mg is the only strength valid on either schedule.",
+    tip:"SubQ \u2014 abdomen or upper arm, rotate sites. To switch regimens, give the first dose of the new schedule on the date the original schedule's next dose would have been due, then revise the return-visit interval \u2014 no loading dose or extra oral overlap needed. Picking a monthly-only or q2-month-only dose auto-sets the matching interval below.",
     flags:["resuspend"]},
   {key:"maintena", label:"Abilify Maintena", name:"Abilify Maintena", gen:"aripiprazole", cls:"Atypical antipsychotic LAI (monthly)", route:"IM", site:"R ventrogluteal", intervalKey:"q4wk", winB:7, winA:7,
     tech:"23G 1\" deltoid / 22G 1.5\" gluteal",
@@ -7527,6 +7529,59 @@ const INTERVALS=[
   {k:"q12wk",l:"q3 mo",d:84},{k:"q26wk",l:"q6 mo",d:182},{k:"once",l:"one-time",d:0}
 ];
 const intDays = k => (INTERVALS.find(i=>i.k===k)||{}).d;
+
+/* ---------- scheduling-window + regimen helpers ----------
+   A drug's window/dose options can depend on which interval is active
+   (e.g. Uzedy is labeled once-monthly AND once-every-2-months on the same
+   product, chosen with the interval chips). winByInterval / dosesByInterval
+   on a MEDS entry override the drug's static defaults whenever the selected
+   interval differs from med.intervalKey; every call site must read the
+   window through effectiveWindow() rather than med.winB/med.winA directly,
+   or it will silently keep using the drug's default-interval window even
+   after the clinician switches to a different labeled interval. */
+function windowForInterval(intervalKey){
+  const d=intDays(intervalKey);
+  if(!(d>0))return {winB:0,winA:0};
+  return d>28 ? {winB:14,winA:14} : {winB:7,winA:7};
+}
+function effectiveWindow(med, intervalKey){
+  const ik=intervalKey||(med&&med.intervalKey)||'';
+  if(med&&med.winByInterval&&med.winByInterval[ik])return med.winByInterval[ik];
+  if(med&&ik===med.intervalKey)return {winB:med.winB||0,winA:med.winA||0};
+  const d=intDays(ik);
+  if(d>0)return windowForInterval(ik);
+  return {winB:(med&&med.winB)||7,winA:(med&&med.winA)||7};
+}
+function windowSummary(med){
+  if(!med)return "±7 days";
+  if(med.winByInterval){
+    return Object.keys(med.winByInterval).map(k=>{
+      const lbl=(INTERVALS.find(i=>i.k===k)||{}).l||k, w=med.winByInterval[k];
+      return `${lbl} ±${w.winB===w.winA?w.winB:(w.winB+"/"+w.winA)}d`;
+    }).join(" · ");
+  }
+  const w=effectiveWindow(med,med.intervalKey);
+  return w.winB===w.winA?`±${w.winB} days`:`${w.winB}/${w.winA} days`;
+}
+function medDosesForInterval(med, intervalKey){
+  if(med&&med.dosesByInterval&&med.dosesByInterval[intervalKey])return med.dosesByInterval[intervalKey];
+  return (med&&med.doses)||[];
+}
+function medDoseSummary(med){
+  if(med.dosesByInterval){
+    return Object.keys(med.dosesByInterval).map(k=>{
+      const lbl=(INTERVALS.find(i=>i.k===k)||{}).l||k;
+      return `${lbl}: ${med.dosesByInterval[k].join("/")}`;
+    }).join(" · ");
+  }
+  return med.doses.join(", ")||"—";
+}
+function medIntervalSummary(med){
+  if(med.winByInterval){
+    return Object.keys(med.winByInterval).map(k=>(INTERVALS.find(i=>i.k===k)||{}).l||k).join(" or ")+" (set per order)";
+  }
+  return (INTERVALS.find(i=>i.k===med.intervalKey)||{}).l||"—";
+}
 
 const REASONS=[
   {k:"scheduled",l:"Scheduled",cc:"scheduled LAI administration"},
@@ -7890,11 +7945,17 @@ function applyMedDoseRules(){
     if(!S.site || !/gluteal/i.test(S.site)){S.site="R ventrogluteal";$("siteAuto").style.display="";}
     S.route="IM";S.intervalKey="q8wk";
   }
+  if(S.med.dosesByInterval){
+    const inQ4=(S.med.dosesByInterval.q4wk||[]).includes(S.dose), inQ8=(S.med.dosesByInterval.q8wk||[]).includes(S.dose);
+    if(inQ4 && !inQ8) S.intervalKey="q4wk";
+    else if(inQ8 && !inQ4) S.intervalKey="q8wk";
+  }
 }
 function renderDoses(){
   const b=$("doseChips");b.innerHTML="";
-  if(!S.med||!S.med.doses.length){const i=document.createElement("input");i.placeholder="enter dose";i.style.maxWidth="160px";i.value=S.dose;i.addEventListener("input",e=>{S.dose=e.target.value;render();});b.appendChild(i);return;}
-  S.med.doses.forEach(d=>b.appendChild(chipEl(d,S.dose===d,"dose sm",()=>{S.dose=d;applyMedDoseRules();renderDoses();renderSites();renderRoutes();renderIntervals();recalcNext();render();})));
+  const doses=medDosesForInterval(S.med,S.intervalKey);
+  if(!S.med||!doses.length){const i=document.createElement("input");i.placeholder="enter dose";i.style.maxWidth="160px";i.value=S.dose;i.addEventListener("input",e=>{S.dose=e.target.value;render();});b.appendChild(i);return;}
+  doses.forEach(d=>b.appendChild(chipEl(d,S.dose===d,"dose sm",()=>{S.dose=d;applyMedDoseRules();renderDoses();renderSites();renderRoutes();renderIntervals();recalcNext();render();})));
 }
 function renderSites(){
   const b=$("siteChips");
@@ -7904,7 +7965,11 @@ function renderSites(){
   rule.sites.forEach(s=>b.appendChild(chipEl(adminSiteDisplay(s), normalizeAdminSite(S.site||'')===s, "sm", ()=>{ selectAdminSite(s,true); })));
 }
 function renderRoutes(){const b=$("routeChips");b.innerHTML="";const routes=(S.med&&S.med.allowedRoutes)||["IM","SubQ","IM (deep)"];routes.forEach(r=>b.appendChild(chipEl(r,S.route===r,"sm",()=>{S.route=r;renderRoutes();render();})));}
-function renderIntervals(){const b=$("intChips");b.innerHTML="";INTERVALS.forEach(i=>b.appendChild(chipEl(i.l,S.intervalKey===i.k,"sm",()=>{S.intervalKey=i.k;$("intAuto").style.display="none";S.retCustom=false;recalcNext();renderIntervals();render();})));}
+function renderIntervals(){const b=$("intChips");b.innerHTML="";INTERVALS.forEach(i=>b.appendChild(chipEl(i.l,S.intervalKey===i.k,"sm",()=>{
+  S.intervalKey=i.k;$("intAuto").style.display="none";S.retCustom=false;
+  if(S.med&&S.med.dosesByInterval&&S.med.dosesByInterval[i.k]&&!S.med.dosesByInterval[i.k].includes(S.dose)){S.dose=S.med.dosesByInterval[i.k][0];}
+  recalcNext();renderDoses();renderIntervals();render();
+})));}
 function renderMedSpec(){
   const wrap=$("medSpecWrap"),b=$("medSpecChips");b.innerHTML="";
   const flags=(S.med&&S.med.flags)||[];
@@ -8171,8 +8236,8 @@ function renderReturn(){
   big.textContent=fmtShort(nd);
   const wd=dow(nd);dowEl.textContent=dowName(nd);
   // window
-  const m=S.med||{winB:7,winA:7};
-  const e=addDays(nd,-(m.winB||0)), l=addDays(nd,(m.winA||0));
+  const w=effectiveWindow(S.med,S.intervalKey);
+  const e=addDays(nd,-(w.winB||0)), l=addDays(nd,(w.winA||0));
   let winTxt=`Window: <b>${fmtShort(e)}</b> \u2192 <b>${fmtShort(l)}</b>`;
   if(S.med){const id=intDays(S.intervalKey);winTxt+= id>0?` \u00b7 ${ (INTERVALS.find(i=>i.k===S.intervalKey)||{}).l } from admin`:"";}
   if(wd===0||wd===6){winTxt+=` \u00b7 <span class="warn">lands on a weekend</span>`;}
@@ -8289,8 +8354,8 @@ function renderAVS(){
   const name=$("ptName").value.trim()||"—", dob=$("ptDOB").value.trim();
   const med=S.med?S.med.name:"", given=$("adminDate").value, next=$("nextDate").value, by=$("admin").value.trim(), orderingProvider=$("orderingProvider")?.value.trim()||"—";
   const cl=$("clinic").value, clName=cl?cl.split("|")[0]:"", clPhone=cl?cl.split("|")[1]:"";
-  const m=S.med||{winB:7,winA:7};
-  const winTxt = next ? `Recommended window: ${fmtDate(addDays(next,-(m.winB||0)))} – ${fmtDate(addDays(next,(m.winA||0)))}` : "";
+  const m=S.med, w=effectiveWindow(m,S.intervalKey);
+  const winTxt = next ? `Recommended window: ${fmtDate(addDays(next,-(w.winB||0)))} – ${fmtDate(addDays(next,(w.winA||0)))}` : "";
   const note=(S.med&&AVSNOTE[S.med.key])||AVSNOTE._default;
   const routeSite=[S.route||"",S.site?S.site:""].filter(Boolean).join(" · ");
   const visitDate=given?fmtDate(given):fmtDate(new Date().toISOString().slice(0,10));
@@ -8535,10 +8600,10 @@ function renderAVS(){
   const name=$('ptName').value.trim()||'—', dob=$('ptDOB').value.trim()||'—';
   const med=S.med?S.med.name:'', dose=S.dose||'', given=$('adminDate').value, next=$('nextDate').value, by=$('admin').value.trim();
   const cl=$('clinic').value, clName=cl?cl.split('|')[0]:'', clPhone=cl?cl.split('|')[1]:'';
-  const m=S.med||{winB:7,winA:7};
+  const w=effectiveWindow(S.med,S.intervalKey);
   const visitDate=given?fmtDate(given):fmtDate(new Date().toISOString().slice(0,10));
   const routeSite=[S.route||'',S.site?S.site:''].filter(Boolean).join(' - ');
-  const nextWindow=next?`${dowName(next)} - any time between ${fmtDate(addDays(next,-(m.winB||0)))} and ${fmtDate(addDays(next,(m.winA||0)))}`:'Your clinic will help schedule the next dose.';
+  const nextWindow=next?`${dowName(next)} - any time between ${fmtDate(addDays(next,-(w.winB||0)))} and ${fmtDate(addDays(next,(w.winA||0)))}`:'Your clinic will help schedule the next dose.';
   const note=(S.med&&AVSNOTE[S.med.key])||AVSNOTE._default;
   const response=(RESP.find(r=>r.k===S.resp)||{}).l||'Tolerated well';
   $('avsSheet').innerHTML=`
@@ -8970,7 +9035,7 @@ function renderAVS(){
   const name=$('ptName').value.trim()||'—', dob=$('ptDOB').value.trim()||'—';
   const med=S.med?S.med.name:'', dose=S.dose||'', given=$('adminDate').value, next=$('nextDate').value, by=$('admin').value.trim(), orderingProvider=$('orderingProvider')?.value.trim()||'—';
   const cl=$('clinic').value, clName=cl?cl.split('|')[0]:'', clPhone=cl?cl.split('|')[1]:'';
-  const m=S.med||{winB:7,winA:7};
+  const w=effectiveWindow(S.med,S.intervalKey);
   const visitDate=given?fmtDate(given):fmtDate(new Date().toISOString().slice(0,10));
   const route=String(S.route||'');
   const site=String(S.site||'');
@@ -8982,7 +9047,7 @@ function renderAVS(){
   const nextDateObj=next?new Date(next+'T12:00:00'):null;
   const nextMonth=nextDateObj?nextDateObj.toLocaleDateString('en-US',{month:'long'}):'To be scheduled';
   const nextDay=nextDateObj?String(nextDateObj.getDate()).padStart(2,'0'):'TBD';
-  const nextWindow=next?`Recommended window: ${fmtDate(addDays(next,-(m.winB||0)))} to ${fmtDate(addDays(next,(m.winA||0)))}.`:'Your clinic will help schedule the next dose.';
+  const nextWindow=next?`Recommended window: ${fmtDate(addDays(next,-(w.winB||0)))} to ${fmtDate(addDays(next,(w.winA||0)))}.`:'Your clinic will help schedule the next dose.';
   const medKey=(S.med&&S.med.key)||'';
   const avsPlan=injectionCarePlan(medKey);
   const siteCare=injectionSiteSpecificCare(route, site);
@@ -9871,10 +9936,10 @@ function kbPanel(title, value){return `<div class="kb-row"><div class="k">${esc(
 function kbFactGrid(items){return `<div class="kb-mini">${items.map(x=>`<div><b>${esc(x.k)}</b>${esc(x.v)}</div>`).join('')}</div>`;}
 
 function laiToKb(m){
-  const interval=(INTERVALS.find(i=>i.k===m.intervalKey)||{}).l||'—';
+  const interval=medIntervalSummary(m);
   const bits=[
-    kbPanel('Doses', esc(m.doses.join(', ')||'—')),
-    kbPanel('Route/site', `${esc(m.route||'—')} · ${esc(m.site||'—')} · interval ${esc(interval)} · window ${esc(String(m.winB))}/${esc(String(m.winA))} days`),
+    kbPanel('Doses', esc(medDoseSummary(m))),
+    kbPanel('Route/site', `${esc(m.route||'—')} · ${esc(m.site||'—')} · interval ${esc(interval)} · window ${esc(windowSummary(m))}`),
     kbPanel('Technique', esc(m.tech||'—')),
     kbPanel('Prep/storage', `${esc(m.recon||'—')}<br>${esc(m.storage||'—')}`),
     kbPanel('Late/missed', esc(m.missed||'Verify against current PI and prescriber direction.')),
@@ -11165,9 +11230,9 @@ renderCommandCenter();
     const cl=$("clinic")?.value||"";
     const clName=cl?cl.split("|")[0]:"";
     const clPhone=cl?cl.split("|")[1]:"";
-    const m=S.med||{winB:7,winA:7};
+    const w=effectiveWindow(S.med,S.intervalKey);
     const visitDate=given?fmtDate(given):fmtDate(new Date().toISOString().slice(0,10));
-    const nextWindow=next?`${fmtDate(addDays(next,-(m.winB||0)))} – ${fmtDate(addDays(next,(m.winA||0)))}`:'To be scheduled with the clinic';
+    const nextWindow=next?`${fmtDate(addDays(next,-(w.winB||0)))} – ${fmtDate(addDays(next,(w.winA||0)))}`:'To be scheduled with the clinic';
     const routeSite=[S.route||'',S.site||''].filter(Boolean).join(' · ')||'Injection administration';
     const note=(S.med&&AVSNOTE[S.med.key])||AVSNOTE._default;
     const response=(RESP.find(r=>r.k===S.resp)||{}).l||'Tolerated well';
@@ -12110,8 +12175,8 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     if(!admin) return null;
     const daysSince=Math.round((new Date(admin+'T00:00:00')-new Date(prior+'T00:00:00'))/86400000);
     if(daysSince<0) return {level:'warn',pill:'Check dates',detail:'The administered date is before the prior-dose date — verify the dates entered.',missed:''};
-    const winB=S.med.winB||0, winA=S.med.winA||0;
-    const early=intervalDays-winB, late=intervalDays+winA;
+    const w=effectiveWindow(S.med,S.intervalKey);
+    const early=intervalDays-(w.winB||0), late=intervalDays+(w.winA||0);
     if(daysSince<early){
       return {level:'warn',pill:'Early',detail:`Given ${daysSince} day(s) after the prior dose — earlier than the labeled window (about ${early}–${late} days). Confirm this is an intentional, provider-directed early dose.`,missed:''};
     }
@@ -13510,7 +13575,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const given=raw('adminDate')||today(); const next=raw('nextDate'); const by=raw('admin','');
     const resp=(typeof RESP!=='undefined'&&typeof S!=='undefined'?(RESP.find(r=>r.k===S.resp)||{}).l:'')||'Tolerated well';
     const cl=raw('clinic',''); const clName=cl?cl.split('|')[0]:''; const clPhone=cl?cl.split('|')[1]:'';
-    const nextWindow=next?`${fmt(add(next,-(med.winB||0)))} – ${fmt(add(next,(med.winA||0)))}`:'To be scheduled with the clinic';
+    const ivKey=(typeof S!=='undefined'&&S.intervalKey)?S.intervalKey:med.intervalKey;
+    const w=(typeof effectiveWindow==='function')?effectiveWindow(med,ivKey):{winB:med.winB||0,winA:med.winA||0};
+    const nextWindow=next?`${fmt(add(next,-(w.winB||0)))} – ${fmt(add(next,(w.winA||0)))}`:'To be scheduled with the clinic';
     const note=(typeof AVSNOTE!=='undefined'&&med.key&&AVSNOTE[med.key])||((typeof AVSNOTE!=='undefined'&&AVSNOTE._default)||'Follow the aftercare instructions from your care team.');
     const routeSite=[route,site].filter(Boolean).join(' · ')||'Injection administered in office';
     const siteCare = /deltoid|arm/i.test(site) ? 'Try to avoid heavy upper-arm activity right after the injection if your arm feels sore.' : /glute|buttock/i.test(site) ? 'Avoid firm rubbing or pressure over the injection site unless your care team tells you otherwise.' : /abdomen|subq|subcutaneous/i.test(site+route) ? 'Avoid scratching, rubbing, or applying heat directly over the area.' : 'Keep the injection area clean and follow your care team’s instructions.';
