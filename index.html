@@ -8995,53 +8995,6 @@ function renderSampleHandout(){
     </div>`;
   renderSampleSigSuggestions();renderSampleReadiness();renderCommandCenter();
 }
-function renderSampleSheet(){
-  renderSampleHandout();
-  const med=sampleMed();
-  const medLabel=sampleFriendlyMedication();
-  const patient=samplePatientName();
-  const dob=$("sampleDOB").value||"—";
-  const prescriber=$("samplePrescriber").value.trim()||"—";
-  const dispensedBy=$("sampleStaff").value.trim()||"—";
-  const date=$("sampleDate").value?fmtDate($("sampleDate").value):fmtDate(new Date().toISOString().slice(0,10));
-  const startDate=$("sampleStart").value?fmtDate($("sampleStart").value):"Follow prescriber instructions";
-  const quantity=$("sampleQty").value.trim()||"—";
-  const instructions=sampleInstructionsBlock();
-  const intent=sampleIntentObj();
-  const extra=( $("sampleExtra").value || '' ).trim();
-  const entries=sampleDoseEntries();
-  const stepPlan = entries.length>1 ? `<div class="step-plan">${entries.map((e,i)=>`<div class="step-row"><b>Step ${i+1}:</b> ${esc(e.strength)} · ${esc(e.qty||'quantity not documented')} · ${esc(e.sig||'Use as directed.')}</div>`).join('')}</div>` : `<div class="step-plan"><div class="step-row"><b>Directions:</b> ${esc(instructions)}</div></div>`;
-  const reminders=(med.reminders&&med.reminders.length?med.reminders:["Take only the amount your prescriber instructed.","Do not share medication samples with anyone else.","Keep samples away from children and pets."]).slice(0,3).map(x=>`<li>${esc(x)}</li>`).join("");
-  const watch=(med.watch&&med.watch.length?med.watch:["You are not sure how to take the sample.","Side effects feel severe, unusual, or concerning.","You have trouble getting the pharmacy prescription filled."]).slice(0,3).map(x=>`<li>${esc(x)}</li>`).join("");
-  $("sampleSheet").innerHTML=`
-    <div class="ck-shell">
-      <div class="ck-head">
-        <div class="ipmg-small">Inland Psychiatric Medical Group</div>
-        <div class="ck-title">Before you start your sample</div>
-        <div class="ck-sub">Please keep this handout with the sample package. It explains what you were given, how to take it, and when to call the clinic.</div>
-        <div class="ck-intro-note">Samples support your prescriber’s plan, but they do not replace follow-up visits, medication monitoring, or scheduled injections when those are part of your care.</div>
-        <div class="meta-line">
-          <div><b>Patient</b>${esc(patient)}</div>
-          <div><b>Date of birth</b>${esc(dob)}</div>
-          <div><b>Prescriber</b>${esc(prescriber)}</div>
-          <div><b>Dispensed by</b>${esc(dispensedBy)}</div>
-        </div>
-      </div>
-      <div class="checklist">
-        <div class="checkitem tight"><div><h3>Know what you were given</h3><p><b>${esc(medLabel)}</b> · ${esc(quantity)}<br>Start date: ${esc(startDate)}${intent.label?` · Purpose: ${esc(intent.label)}`:''}</p></div></div>
-        <div class="checkitem"><div><h3>Know how to take it</h3><p>Follow your prescriber’s instructions exactly. If more than one strength or package was provided, use the plan below.</p>${stepPlan}${med.guard?`<p style="margin-top:8px;font-size:11.9px;color:#394658;"><b>Before you start:</b> ${esc(med.guard)}</p>`:''}${extra?`<p style="margin-top:8px;font-size:11.9px;color:#394658;"><b>Office note:</b> ${esc(extra)}</p>`:''}</div></div>
-        <div class="checkitem tight"><div><h3>Know when to call</h3><ul class="clean">${watch}</ul></div></div>
-        <div class="checkitem tight"><div><h3>Know what not to do</h3><ul class="clean">${reminders}<li>Do not combine sample strengths or change your dose unless your prescriber instructed you to.</li></ul></div></div>
-      </div>
-      <div class="ck-treatment"><b>Treatment-plan reminder:</b> If you receive scheduled injections, please keep those appointments on time. Oral samples should not delay or replace an injection visit unless your prescriber specifically tells you.</div>
-      <div class="ck-footer-grid">
-        <div class="ck-quiet"><h4>Sample tracking</h4><p>Lot: ${esc($("sampleLot").value.trim()||'—')}<br>Expiration: ${esc($("sampleExp").value||'—')}<br>Handout date: ${esc(date)}</p></div>
-        <div class="ck-quiet emphasis"><h4>Questions?</h4><p>Please contact your IPMG office if you are unsure how to take the sample, have side effects, or need to reschedule an injection visit.</p></div>
-      </div>
-      <div class="print-foot">This handout does not replace the Medication Guide, pharmacy counseling, or directions from your prescriber. Printed ${shortPrintDate()}.</div>
-    </div>`;
-}
-
 function resetSample(){
   ["samplePtName","sampleDOB","samplePrescriber","sampleStaff","sampleQty","sampleLot","sampleExp","sampleTitration","sampleExtra"].forEach(id=>{if($(id))$(id).value="";});
   if($("sampleDate"))$("sampleDate").value=new Date().toISOString().slice(0,10);
@@ -10550,48 +10503,6 @@ renderCommandCenter();
 
 
 
-/* ===================== PASS 55: PATIENT HANDOUT RENDERERS ===================== */
-(function(){
-  function safe(v,f='—'){return (v!==undefined&&v!==null&&String(v).trim())?String(v).trim():f;}
-  function li(items){return (items||[]).filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join('');}
-  function meta(items){return `<div class="ipmg-patient-meta">${items.map(i=>`<div class="meta-item"><span>${esc(i.k)}</span><b>${esc(i.v||'—')}</b></div>`).join('')}</div>`;}
-  function header(kind,title,sub,status='',statusClass=''){
-    return `<div class="ipmg-patient-head"><div class="ipmg-patient-kicker">${esc(kind)}</div><h1 class="ipmg-patient-title">${esc(title)}</h1><p class="ipmg-patient-sub">${esc(sub)}</p>${status?`<div class="ipmg-patient-status ${esc(statusClass)}">${esc(status)}</div>`:''}</div>`;
-  }
-  function footer(text){return `<div class="ipmg-footer"><div>${text}</div><div class="printed">Printed ${esc(shortPrintDate())}</div></div>`;}
-
-  window.renderSampleSheet=function(){
-    renderSampleHandout();
-    const med=sampleMed();
-    const medLabel=sampleFriendlyMedication();
-    const patient=samplePatientName();
-    const dob=safe($("sampleDOB")?.value);
-    const prescriber=safe($("samplePrescriber")?.value);
-    const dispensedBy=safe($("sampleStaff")?.value);
-    const date=$("sampleDate")?.value?fmtDate($("sampleDate").value):fmtDate(new Date().toISOString().slice(0,10));
-    const startDate=$("sampleStart")?.value?fmtDate($("sampleStart").value):'as directed by prescriber';
-    const instructions=sampleInstructionsBlock();
-    const quantity=safe($("sampleQty")?.value);
-    const extra=safe($("sampleExtra")?.value,'');
-    const intent=sampleIntentObj();
-    const reminders=(med.reminders&&med.reminders.length?med.reminders:['Take only the amount your prescriber instructed.','Do not share medication samples with anyone else.','Keep samples away from children and pets.']).slice(0,4);
-    const watch=(med.watch&&med.watch.length?med.watch:['You are not sure how to take the sample.','Side effects feel severe, unusual, or concerning.','You have trouble getting the pharmacy prescription filled.']).slice(0,4);
-    const entries=sampleDoseEntries();
-    const plan=entries.length>1?`<div class="ipmg-section"><h2>Samples provided / step plan</h2><table class="ipmg-plan-table"><thead><tr><th>Medication / strength</th><th>Quantity</th><th>Directions</th></tr></thead><tbody>${entries.map(e=>`<tr><td>${esc(e.strength)}</td><td>${esc(e.qty)}</td><td>${esc(e.sig)}</td></tr>`).join('')}</tbody></table></div>`:'';
-    $('sampleSheet').innerHTML=`<div class="ipmg-patient-page ipmg-sample-handout">
-      ${header('Medication sample handout','Inland Psychiatric Medical Group','A patient-friendly medication sample plan showing what was provided, how to take it, and when to call the clinic.','Sample provided','ok')}
-      ${meta([{k:'Patient',v:patient},{k:'Date of birth',v:dob},{k:'Prescriber',v:prescriber},{k:'Dispensed by',v:dispensedBy}])}
-      <div class="ipmg-handout-grid"><div class="ipmg-handout-panel emphasis"><div class="ipmg-label">Medication sample</div><div class="ipmg-big">${esc(medLabel)}</div><p>Start date: ${esc(startDate)}</p><p>Purpose: ${esc(intent.label||$("samplePurpose")?.value||'sample provided')}</p></div><div class="ipmg-handout-panel"><div class="ipmg-label">Quantity / package</div><div class="ipmg-big sm">${esc(quantity)}</div><p>Physical sample package provided today.</p><p class="ipmg-muted">Handout date: ${esc(date)}</p></div></div>
-      ${plan}
-      <div class="ipmg-two"><div class="ipmg-section"><h2>How to take your sample</h2><p>${esc(instructions).replace(/\n/g,'<br>')}</p><div class="ipmg-keyrow"><b>Food timing</b><span>${esc(sampleFoodText())}</span></div>${med.guard?`<div class="ipmg-callout warn"><b>Before you start:</b> ${esc(med.guard)}</div>`:''}${extra?`<div class="ipmg-callout"><b>Office note:</b> ${esc(extra)}</div>`:''}</div><div class="ipmg-section"><h2>Helpful reminders</h2><ul class="ipmg-list">${li(reminders)}</ul></div></div>
-      <div class="ipmg-two"><div class="ipmg-section"><h2>Call the clinic if</h2><ul class="ipmg-list">${li(watch)}</ul></div><div class="ipmg-section"><h2>Sample tracking</h2><div class="ipmg-keyrow"><b>Lot</b><span>${esc(safe($("sampleLot")?.value))}</span></div><div class="ipmg-keyrow"><b>Expiration</b><span>${esc(safe($("sampleExp")?.value))}</span></div><div class="ipmg-callout">Keep this page with the sample package until the sample course is complete.</div></div></div>
-      ${footer('This handout does not replace the Medication Guide, pharmacy counseling, or directions from your prescriber.')}
-    </div>`;
-  };
-})();
-
-
-
 /* ===================== PASS 56: MOVE CLINIC LOCATION TO WORKSPACE RAIL ===================== */
 (function(){
   const STORAGE_KEY='ipmgMedAssistClinicLocation_v1';
@@ -11972,10 +11883,6 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     const preview=$('samplePreview'); if(preview){ preview.innerHTML=`<div class="sample-handout soft-sample rc5"><div class="sh-hero"><div class="sh-kicker">Medication sample packet</div><div class="sh-title">Before you start your sample</div><p class="sh-sub">A clear plan for what was provided, when each step starts, and how long the sample should last.</p></div><div class="sh-body"><div class="sample-soft-grid"><div class="sample-soft-card primary"><div class="mini-label">Medication</div><div><div class="med-name">${esc(medLabel)}</div>${med.generic?`<div class="muted-line">${esc(med.generic)}</div>`:''}</div></div><div class="sample-soft-card"><div class="mini-label">Package</div><div><div class="qty-line">${esc(qty)}</div><div class="muted-line">Actual sample handed out.</div></div></div><div class="sample-soft-card"><div class="mini-label">Purpose</div><div><div class="qty-line">${esc(intent.label||$('samplePurpose')?.value||'Sample provided')}</div><div class="muted-line">Start ${esc(startDate)}.</div></div></div></div><div class="sample-soft-instructions"><div class="take-title">Prescriber directions</div><p class="take-text">${esc(sig).replace(/\n/g,'<br>')}</p><p class="sh-muted"><b>Food timing:</b> ${esc(food)}.</p></div>${rc5TimelineHtml(false)}${med.guard?`<div class="sample-alertline"><b>Before you start:</b> ${esc(med.guard)}</div>`:''}<div class="rc5-intel"><div class="intel-block"><h4>Helpful reminders</h4><ul>${rc5Li(reminders)}</ul></div><div class="intel-block"><h4>Call the clinic if</h4><ul>${rc5Li(watch)}</ul></div></div>${extra?`<div class="sample-warn">${esc(extra)}</div>`:''}</div></div>`; }
     renderSampleReadiness(); if(typeof renderCommandCenter==='function')renderCommandCenter();
   };
-  renderSampleSheet = window.renderSampleSheet = function renderSampleSheetRC5(){
-    renderSampleHandout(); const med=(typeof sampleMed==='function'?sampleMed():{})||{}; const a=rc5PlanAnalysis(); const patient=typeof samplePatientName==='function'?samplePatientName():rc5Safe($('samplePtName')?.value,'Patient'); const dob=rc5Safe($('sampleDOB')?.value); const prescriber=rc5Safe($('samplePrescriber')?.value); const staff=rc5Safe($('sampleStaff')?.value); const date=$('sampleDate')?.value?fmtDate($('sampleDate').value):fmtDate(rc5Today()); const medLabel=sampleFriendlyMedication(); const intent=(typeof sampleIntentObj==='function'?sampleIntentObj():{label:$('samplePurpose')?.value||'Sample provided'}); const food=(typeof sampleFoodText==='function'?sampleFoodText():'as prescribed'); const extra=($('sampleExtra')?.value||'').trim(); const reminders=(med.reminders&&med.reminders.length?med.reminders:['Take only the amount your prescriber instructed.','Do not share medication samples with anyone else.','Keep samples away from children and pets.']).slice(0,4); const watch=(med.watch&&med.watch.length?med.watch:['You are not sure how to take the sample.','Side effects feel severe, unusual, or concerning.','You have trouble getting the pharmacy prescription filled.']).slice(0,4);
-    $('sampleSheet').innerHTML=`<div class="rc5-sample-print"><div class="rc5-sp-head"><div class="rc5-sp-kicker">Inland Psychiatric Medical Group</div><h1 class="rc5-sp-title">Before you start your sample</h1><div class="rc5-sp-sub">Please keep this page with the sample package. It matches the sample plan documented by clinic staff and should be followed with your prescriber’s directions.</div></div><div class="rc5-sp-meta"><div class="kv"><span class="k">Patient</span><span class="v">${esc(patient)}</span></div><div class="kv"><span class="k">Date of birth</span><span class="v">${esc(dob)}</span></div><div class="kv"><span class="k">Prescriber</span><span class="v">${esc(prescriber)}</span></div><div class="kv"><span class="k">Dispensed by</span><span class="v">${esc(staff)}</span></div></div><div class="rc5-sp-hero"><div class="rc5-sp-label">Medication sample</div><div class="rc5-sp-med">${esc(medLabel)}</div><p class="rc5-sp-line"><b>Purpose:</b> ${esc(intent.label||$('samplePurpose')?.value||'Sample provided')} · <b>Handout date:</b> ${esc(date)}</p><p class="rc5-sp-line"><b>Primary package:</b> ${esc(rc5Safe($('sampleQty')?.value))}</p><p class="rc5-sp-line"><b>Food timing:</b> ${esc(food)}.</p></div>${sampleDosePlanPrintHtml()}<div class="rc5-sp-two"><div class="rc5-sp-section"><h2>How to take it</h2><p>${esc(typeof sampleInstructionsBlock==='function'?sampleInstructionsBlock():sampleSigText()).replace(/\n/g,'<br>')}</p>${med.guard?`<div class="rc5-sp-callout"><b>Before you start:</b> ${esc(med.guard)}</div>`:''}${extra?`<div class="rc5-sp-callout"><b>Office note:</b> ${esc(extra)}</div>`:''}</div><div class="rc5-sp-section"><h2>Do not miss this</h2><ul class="rc5-sp-list">${rc5Li(['Use the steps in the order written on this handout.','Do not combine strengths or change your dose unless your prescriber told you to.','Do not share medication samples with anyone else.'])}</ul></div></div><div class="rc5-sp-two"><div class="rc5-sp-section"><h2>Helpful reminders</h2><ul class="rc5-sp-list">${rc5Li(reminders)}</ul></div><div class="rc5-sp-section"><h2>Call the clinic if</h2><ul class="rc5-sp-list">${rc5Li(watch)}</ul></div></div><div class="rc5-sp-section"><h2>Sample tracking</h2><p>Lot: ${esc(rc5Safe($('sampleLot')?.value))} · Expiration: ${esc(rc5Safe($('sampleExp')?.value))}</p><div class="rc5-sp-callout"><b>Coverage check:</b> ${esc(a.headline)}. ${esc(a.detail)}</div></div><div class="rc5-sp-foot">This handout does not replace the Medication Guide, pharmacy counseling, or directions from your prescriber. Sample directions should be confirmed with the prescriber if anything is unclear. Printed ${esc(date)}.</div></div>`;
-  };
   const oldReset=window.resetSample||resetSample;
   resetSample = window.resetSample = function resetSampleRC5(){ oldReset(); if($('samplePrimaryDays'))$('samplePrimaryDays').value=''; rc5RenderTemplateBank(false); renderSampleHandout(); };
   function rc5Init(){ rc5EnsureDom(); rc5RenderTemplateBank(false); renderSampleSigSuggestions(); renderSampleHandout(); }
@@ -12504,48 +12411,6 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     return `<div class="ipmg-plan-timeline"><div class="ipmg-section" style="border-top:0!important;padding-top:0!important;margin-top:0!important"><h2>Medication step plan</h2></div>${a.steps.map(s=>`<div class="ipmg-plan-step"><div class="step-no">Step ${Number(s.index||0)+1}</div><div><b>${h(s.strength||'Sample step')}</b><p>${h(s.sig||'Use as directed by prescriber.')}</p><p>Package: ${h(s.qty||'—')}${s.start&&s.end?` · ${h(typeof rc5PrettyIso==='function'?rc5PrettyIso(s.start):s.start)} to ${h(typeof rc5PrettyIso==='function'?rc5PrettyIso(s.end):s.end)}`:''}${s.needed?` · Needs ${h(s.needed)}`:''}${s.supplied?` · Provided ${h(s.supplied)}`:''}</p></div></div>`).join('')}<div class="ipmg-callout"><b>Coverage check:</b> ${h(a.headline)}. ${h(a.detail)}</div></div>`;
   }
   window.sampleDosePlanPrintHtml = samplePrintTimeline;
-  window.renderSampleSheet=function renderSampleSheetRC55(){
-    try{ if(typeof renderSampleHandout==='function') renderSampleHandout(); }catch(e){}
-    const med=(typeof sampleMed==='function'?sampleMed():{})||{};
-    const analysis=(typeof rc5PlanAnalysis==='function'?rc5PlanAnalysis():{headline:'Coverage not calculated',detail:'Add a dose plan to calculate coverage.',level:'warn'});
-    const patient=typeof samplePatientName==='function'?samplePatientName():v('samplePtName','Patient');
-    const dob=v('sampleDOB');
-    const prescriber=v('samplePrescriber');
-    const staff=v('sampleStaff');
-    const date=q('sampleDate')?.value?fmt(q('sampleDate').value):fmt(today());
-    const medLabel=typeof sampleFriendlyMedication==='function'?sampleFriendlyMedication():v('sampleMedLabel');
-    const intent=typeof sampleIntentObj==='function'?sampleIntentObj():{label:v('samplePurpose','Sample provided')};
-    const food=typeof sampleFoodText==='function'?sampleFoodText():'as prescribed';
-    const sig=typeof sampleInstructionsBlock==='function'?sampleInstructionsBlock():(typeof sampleSigText==='function'?sampleSigText():v('sampleSig','Use as directed by prescriber.'));
-    const extra=(q('sampleExtra')?.value||'').trim();
-    const lot=v('sampleLot');
-    const exp=v('sampleExp');
-    const qty=v('sampleQty');
-    const reminders=(med.reminders&&med.reminders.length?med.reminders:['Take only the amount your prescriber instructed.','Do not share medication samples with anyone else.','Keep samples away from children and pets.']).slice(0,4);
-    const watch=(med.watch&&med.watch.length?med.watch:['You are not sure how to take the sample.','Side effects feel severe, unusual, or concerning.','You have trouble getting the pharmacy prescription filled.']).slice(0,4);
-    const readyChecks=[
-      {k:'Patient',v:patient&&patient!=='Patient'?'Name included':'Add patient name',warn:!(patient&&patient!=='Patient')},
-      {k:'Instructions',v:sig&&sig!=='—'?'Directions included':'Add directions',warn:!(sig&&sig!=='—')},
-      {k:'Traceability',v:(lot!=='—'&&exp!=='—')?'Lot / exp included':'Lot or exp missing',warn:!(lot!=='—'&&exp!=='—')}
-    ];
-    const status=analysis.level==='danger'?'Review':analysis.level==='ok'?'Ready':'Check plan';
-    const statusClass=analysis.level==='danger'||analysis.level==='warn'?'warn':'ok';
-    const sheet=q('sampleSheet'); if(!sheet) return;
-    sheet.innerHTML=`<div class="ipmg-patient-page ipmg-sample-handout rc55">
-      ${sharedHeader('Medication sample handout','Before you start your sample','Keep this page with the sample package. It shows what was provided, how to take it, and when to call the clinic.',status,statusClass)}
-      ${sharedMeta([{k:'Patient',v:patient},{k:'Date of birth',v:dob},{k:'Prescriber',v:prescriber},{k:'Dispensed by',v:staff}])}
-      <div class="ipmg-handout-grid">
-        <div class="ipmg-handout-panel emphasis"><div class="ipmg-label">Medication sample</div><div class="ipmg-big">${h(medLabel)}</div><p><b>Purpose:</b> ${h(intent.label||v('samplePurpose','Sample provided'))}</p><p><b>Food timing:</b> ${h(food)}.</p></div>
-        <div class="ipmg-handout-panel"><div class="ipmg-label">Package / coverage</div><div class="ipmg-big sm">${h(analysis.headline||qty)}</div><p>${h(analysis.detail||'Verify the package quantity against the written directions.')}</p><p class="ipmg-muted">Primary package: ${h(qty)} · Handout date: ${h(date)}</p></div>
-      </div>
-      ${samplePrintTimeline()}
-      <div class="ipmg-two"><div class="ipmg-section"><h2>How to take it</h2><p>${h(sig).replace(/\n/g,'<br>')}</p>${med.guard?`<div class="ipmg-callout warning"><b>Before you start:</b> ${h(med.guard)}</div>`:''}${extra?`<div class="ipmg-callout"><b>Office note:</b> ${h(extra)}</div>`:''}</div><div class="ipmg-section"><h2>Do not miss this</h2><ul class="ipmg-list">${list(['Use the steps in the order written on this handout.','Do not combine strengths or change your dose unless your prescriber told you to.','Do not share medication samples with anyone else.'])}</ul></div></div>
-      <div class="ipmg-two"><div class="ipmg-section"><h2>Helpful reminders</h2><ul class="ipmg-list">${list(reminders)}</ul></div><div class="ipmg-section"><h2>Call the clinic if</h2><ul class="ipmg-list">${list(watch)}</ul></div></div>
-      <div class="ipmg-section"><h2>Sample tracking</h2><div class="ipmg-keyrow"><b>Medication</b><span>${h(medLabel)}</span></div><div class="ipmg-keyrow"><b>Lot / expiration</b><span>Lot: ${h(lot)} · Expiration: ${h(exp)}</span></div><div class="ipmg-keyrow"><b>Package</b><span>${h(qty)}</span></div></div>
-      <div class="ipmg-print-ready">${readyChecks.map(c=>`<div class="check ${c.warn?'warn':''}"><b>${h(c.k)}</b>${h(c.v)}</div>`).join('')}</div>
-      ${sharedFooter('This handout does not replace the Medication Guide, pharmacy counseling, or directions from your prescriber. Sample directions should be confirmed with the prescriber if anything is unclear.',date)}
-    </div>`;
-  };
 })();
 
 
@@ -12617,35 +12482,6 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     return `<div class="rc56-timeline"><h2>Your medication step plan</h2>${a.steps.map((s,i)=>`<div class="rc56-step"><div class="rc56-step-label ${i===0?'first':'then'}">${h(stepLabel(i,a.steps.length))}</div><div><b>${h(s.strength||'Sample step')}</b><p>${h(s.sig||'Use as directed by prescriber.')}</p><p class="muted">${s.start&&s.end?`${h(fmt(s.start))} – ${h(fmt(s.end))}`:(s.days?`${h(s.days)} day(s)`:'Dates depend on start date')}${s.qty?` · Package: ${h(s.qty)}`:''}${s.needed?` · Needs ${h(s.needed)}`:''}${s.supplied?` · Provided ${h(s.supplied)}`:''}</p></div></div>`).join('')}</div>`;
   }
   window.sampleDosePlanPrintHtml=function sampleDosePlanPrintHtmlRC56(){ const a=analyze(); return timelineHtml(a)+`<div class="rc56-callout ${a.level==='danger'?'warning':''}"><b>Coverage check:</b> ${h(a.headline)}. ${h(a.detail)}</div>`; };
-  window.renderSampleSheet=function renderSampleSheetRC56(){
-    try{ if(typeof renderSampleHandout==='function') renderSampleHandout(); }catch(e){}
-    const med=(typeof sampleMed==='function'?sampleMed():{})||{}; const a=analyze();
-    const patient=(typeof samplePatientName==='function'?samplePatientName():raw('samplePtName','Patient'))||'Patient'; const dob=raw('sampleDOB','—'); const prescriber=raw('samplePrescriber','—'); const staff=raw('sampleStaff','—');
-    const date=raw('sampleDate')?fmt(raw('sampleDate')):fmt(today()); const medLabel=typeof sampleFriendlyMedication==='function'?sampleFriendlyMedication():raw('sampleMedLabel','Medication sample');
-    const intent=typeof sampleIntentObj==='function'?sampleIntentObj():{label:raw('samplePurpose','Sample provided')}; const food=typeof sampleFoodText==='function'?sampleFoodText():'as prescribed';
-    const sig=typeof sampleInstructionsBlock==='function'?sampleInstructionsBlock():(typeof sampleSigText==='function'?sampleSigText():raw('sampleSig','Use as directed by prescriber.'));
-    const extra=raw('sampleExtra',''); const lot=raw('sampleLot','—'); const exp=raw('sampleExp','—'); const qty=raw('sampleQty','—');
-    const reminders=(med.reminders&&med.reminders.length?med.reminders:['Take only the amount your prescriber instructed.','Do not share medication samples with anyone else.','Keep samples away from children and pets.']).slice(0,4);
-    const watch=(med.watch&&med.watch.length?med.watch:['You are not sure which sample to take first.','Your instructions do not match what your provider told you.','You run out before your pharmacy prescription is ready.','Side effects feel severe, unusual, or concerning.']).slice(0,4);
-    const multi=a.steps.length>1 || /\b(and|\+)\b/.test(raw('sampleMedLabel',''));
-    const ready=[{k:'Patient',v:patient&&patient!=='Patient'?'Name included':'Add patient name',warn:!(patient&&patient!=='Patient')},{k:'Instructions',v:sig?'Directions included':'Add directions',warn:!sig},{k:'Traceability',v:(lot!=='—'&&exp!=='—')?'Lot / exp included':'Lot or exp missing',warn:!(lot!=='—'&&exp!=='—')}];
-    const cls=a.level==='danger'?'danger':a.level==='ok'?'ok':'warn'; const status=a.level==='ok'?'Ready':a.level==='danger'?'Review quantity':'Check plan';
-    const sheet=q('sampleSheet'); if(!sheet) return;
-    const header=(typeof sharedHeader==='function')?sharedHeader('Medication sample handout','Before you start your sample','Keep this page with the sample package. It shows what was provided, how to take it, and when to call the clinic.',status,cls):`<div class="ipmg-patient-head"><div class="ipmg-patient-kicker">Medication sample handout</div><h1 class="ipmg-patient-title">Before you start your sample</h1><p class="ipmg-patient-sub">Keep this page with the sample package. It shows what was provided, how to take it, and when to call the clinic.</p></div>`;
-    const meta=(typeof sharedMeta==='function')?sharedMeta([{k:'Patient',v:patient},{k:'Date of birth',v:dob},{k:'Prescriber',v:prescriber},{k:'Dispensed by',v:staff}]):`<div class="ipmg-patient-meta"><div><span>Patient</span><b>${h(patient)}</b></div><div><span>Date of birth</span><b>${h(dob)}</b></div><div><span>Prescriber</span><b>${h(prescriber)}</b></div><div><span>Dispensed by</span><b>${h(staff)}</b></div></div>`;
-    const footer=(typeof sharedFooter==='function')?sharedFooter('This handout does not replace the Medication Guide, pharmacy counseling, or directions from your prescriber. Sample directions should be confirmed with the prescriber if anything is unclear.',date):`<div class="ipmg-footer">This handout does not replace the Medication Guide, pharmacy counseling, or directions from your prescriber.<div class="printed">Printed ${h(date)}</div></div>`;
-    sheet.innerHTML=`<div class="ipmg-patient-page ipmg-sample-handout rc56">
-      ${header}${meta}
-      <div class="rc56-sample-hero"><div class="rc56-med-card"><div class="eyebrow">Medication sample</div><div class="rc56-med-name">${h(medLabel)}</div><p class="rc56-subline"><b>Purpose:</b> ${h(intent.label||raw('samplePurpose','Sample provided'))}</p><p class="rc56-subline"><b>Food timing:</b> ${h(food)}.</p><p class="rc56-subline"><b>Primary package:</b> ${h(qty)}</p></div><div class="rc56-coverage-card ${h(cls)}"><div class="eyebrow">Sample supply</div><div class="rc56-coverage-date">${h(a.headline)}</div><p class="rc56-subline">${h(a.detail)}</p>${a.level==='ok'?`<p class="rc56-subline"><b>Please contact your pharmacy or clinic before this date if you do not have your prescription.</b></p>`:''}</div></div>
-      ${timelineHtml(a)}
-      ${multi?`<div class="rc56-safety-banner"><b>Important:</b> Do not take multiple strengths together unless your provider specifically told you to. Use the steps in the order written above.</div>`:''}
-      <div class="rc56-two"><div class="rc56-section"><h2>How to take it</h2><p>${h(sig).replace(/\n/g,'<br>')}</p>${med.guard?`<div class="rc56-callout warning"><b>Before you start:</b> ${h(med.guard)}</div>`:''}${extra?`<div class="rc56-callout"><b>Office note:</b> ${h(extra)}</div>`:''}</div><div class="rc56-section"><h2>Call the clinic if</h2><ul class="rc56-list">${list(watch)}</ul></div></div>
-      <div class="rc56-two"><div class="rc56-section"><h2>Helpful reminders</h2><ul class="rc56-list">${list(reminders)}</ul></div><div class="rc56-section"><h2>Do not miss this</h2><ul class="rc56-list">${list(['Take only the sample listed on the current step.','Do not share medication samples with anyone else.','Keep samples away from children and pets.'])}</ul></div></div>
-      <div class="rc56-tracking"><div class="eyebrow">Sample tracking</div><div class="rc56-tracking-grid"><div><span>Medication</span>${h(medLabel)}</div><div><span>Lot / expiration</span>Lot: ${h(lot)} · Exp: ${h(exp)}</div><div><span>Package</span>${h(qty)}</div></div></div>
-      <div class="rc56-ready-strip">${ready.map(c=>`<div class="check ${c.warn?'warn':''}"><b>${h(c.k)}</b>${h(c.v)}</div>`).join('')}</div>
-      ${footer}
-    </div>`;
-  };
 })();
 
 
@@ -12689,36 +12525,6 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(start&&total>0){const end=add(start,total-1);return {status:'Estimated supply through',line:fmt(end),detail:'Please contact your pharmacy or clinic before this date if you do not have your prescription.'};}
     return {status:'Supply coverage',line:'Follow prescriber directions',detail:'Coverage depends on the exact package and instructions provided.'};
   }
-  window.renderSampleSheet=function renderSampleSheetRC510(){
-    try{ if(typeof renderSampleHandout==='function') renderSampleHandout(); }catch(e){}
-    const sheet=q('sampleSheet'); if(!sheet) return;
-    const med=(typeof sampleMed==='function'?sampleMed():{})||{};
-    const patient=(typeof samplePatientName==='function'?samplePatientName():raw('samplePtName','Patient'));
-    const dob=raw('sampleDOB','—'), prescriber=raw('samplePrescriber','—'), staff=raw('sampleStaff','—');
-    const date=raw('sampleDate')?fmt(raw('sampleDate')):fmt(today());
-    const medLabel=typeof sampleFriendlyMedication==='function'?sampleFriendlyMedication():raw('sampleMedLabel','Medication sample');
-    const qty=raw('sampleQty','Quantity not documented');
-    const lot=raw('sampleLot','not documented'), exp=raw('sampleExp')?fmt(raw('sampleExp')):'not documented';
-    const food=typeof sampleFoodText==='function'?sampleFoodText():'as directed';
-    const sig=typeof sampleInstructionsBlock==='function'?sampleInstructionsBlock():(typeof sampleSigText==='function'?sampleSigText():'Take exactly as directed by your provider.');
-    const entries=sampleEntries();
-    const start=raw('sampleStart')||raw('sampleDate')||today();
-    const cov=sampleCoverage(entries,start);
-    const multi=entries.length>1 || /\b(and|\+)\b/i.test(raw('sampleMedLabel',''));
-    const reminders=(med.reminders&&med.reminders.length?med.reminders:['Take only the amount your prescriber instructed.','Do not share medication samples with anyone else.','Keep samples away from children and pets.']).slice(0,4);
-    const watch=(med.watch&&med.watch.length?med.watch:['You are not sure which sample to take first.','Your instructions do not match what your provider told you.','You may run out before your pharmacy prescription is ready.','You have a side effect that feels concerning.']).slice(0,4);
-    sheet.innerHTML=`<div class="beauty-page beauty-sample">
-      ${head('Medication sample instructions','You were given a medication sample today','Follow the plan below exactly as directed by your prescriber. If anything looks different from what your provider told you, call the clinic before starting.','Sample handout','')}
-      ${meta([{k:'Patient',v:patient},{k:'Date of birth',v:dob},{k:'Date',v:date},{k:'Prescriber / staff',v:`${prescriber} · ${staff}`}])}
-      <div class="beauty-grid"><div class="beauty-hero emphasis"><div class="beauty-label">Medication sample</div><div class="beauty-big">${h(medLabel)}</div><p class="beauty-plain">${h(qty)}</p><p class="beauty-muted">Take with food timing: ${h(food)}.</p></div><div class="beauty-hero mint"><div class="beauty-label">${h(cov.status)}</div><div class="beauty-big sm">${h(cov.line)}</div><p class="beauty-plain">${h(cov.detail)}</p></div></div>
-      ${entries.length?doseRows(entries):`<div class="beauty-callout warm"><b>Dose plan:</b> ${h(sig)}</div>`}
-      ${multi?`<div class="beauty-callout warm"><b>Important:</b> Do not take multiple sample strengths together unless your provider specifically told you to. Use the steps in the order written above.</div>`:''}
-      <div class="beauty-grid"><div class="beauty-card"><h2>How to take it</h2><p>${h(sig).replace(/\n/g,'<br>')}</p>${med.guard?`<div class="beauty-callout warm"><b>Before you start:</b> ${h(med.guard)}</div>`:''}</div><div class="beauty-card"><h2>Call the clinic if</h2><ul class="beauty-list">${list(watch)}</ul></div></div>
-      <div class="beauty-grid"><div class="beauty-card"><h2>Helpful reminders</h2><ul class="beauty-list">${list(reminders)}</ul></div><div class="beauty-card"><h2>Do not miss this</h2><ul class="beauty-list">${list(['Take only the sample listed on the current step.','Keep the sample packaging until you finish the starter plan.','Keep medication samples away from children and pets.'])}</ul></div></div>
-      <div class="beauty-trace"><b>Sample tracking:</b> ${h(medLabel)} · Lot ${h(lot)} · Exp ${h(exp)} · Package ${h(qty)}</div>
-      ${footer('<b>Questions?</b> Please contact Inland Psychiatric Medical Group before changing how you take this sample.')}
-    </div>`;
-  };
   function udsPatientName(panel){try{return typeof udsPanelPatientName==='function'?udsPanelPatientName(panel):panel;}catch(e){return panel;}}
   function joined(panels,none){return panels&&panels.length?panels.map(udsPatientName).join(', '):(none||'None documented');}
   window.renderUdsPatientSummary=function renderUdsPatientSummaryRC510(){
