@@ -7736,6 +7736,17 @@ const SAFE_STORAGE={
   set(k,v){try{window.localStorage.setItem(k,String(v));}catch(e){}},
   remove(k){try{window.localStorage.removeItem(k);}catch(e){}}
 };
+const STAFF_STORAGE_KEY='ipmgMedAssistStaff';
+const LEGACY_STAFF_STORAGE_KEY='ipmgStaffName';
+function getStoredStaff(){
+  const saved=SAFE_STORAGE.get(STAFF_STORAGE_KEY,'').trim();
+  if(saved)return saved;
+  const legacy=SAFE_STORAGE.get(LEGACY_STAFF_STORAGE_KEY,'').trim();
+  if(!legacy)return '';
+  SAFE_STORAGE.set(STAFF_STORAGE_KEY,legacy);
+  SAFE_STORAGE.remove(LEGACY_STAFF_STORAGE_KEY);
+  return legacy;
+}
 function loadLog(){try{const raw=SAFE_STORAGE.get(LOG_STORAGE_KEY);LOG=raw?JSON.parse(raw):[];if(!Array.isArray(LOG))LOG=[];}catch(e){LOG=[];}}
 function saveLog(){try{SAFE_STORAGE.set(LOG_STORAGE_KEY,JSON.stringify(LOG));}catch(e){/* session log still works if storage is blocked */}}
 
@@ -8358,18 +8369,18 @@ function applyStaffToEncounter(force=false){
   if(!s)return;
   if($('admin')&&(force||!$('admin').value.trim()))$('admin').value=s;
   if($('udsCollector')&&(force||!$('udsCollector').value.trim()))$('udsCollector').value=s;
-  SAFE_STORAGE.set('ipmgMedAssistStaff',s);
+  SAFE_STORAGE.set(STAFF_STORAGE_KEY,s);
   updateStaffCurrent();
   render();renderUdsNote();
 }
 function initStaffSignIn(){
   const inp=$('staffSignIn');
   if(!inp)return;
-  const saved=SAFE_STORAGE.get('ipmgMedAssistStaff','');
+  const saved=getStoredStaff();
   if(saved){inp.value=saved;applyStaffToEncounter(false);}else updateStaffCurrent();
-  inp.addEventListener('input',()=>{SAFE_STORAGE.set('ipmgMedAssistStaff',inp.value.trim());updateStaffCurrent();applyStaffToEncounter(false);});
+  inp.addEventListener('input',()=>{SAFE_STORAGE.set(STAFF_STORAGE_KEY,inp.value.trim());updateStaffCurrent();applyStaffToEncounter(false);});
   if($('staffApply'))$('staffApply').addEventListener('click',()=>{if(!getSignedStaff()){toast('Enter staff name first');return;}applyStaffToEncounter(true);toast('Staff applied');});
-  if($('staffClear'))$('staffClear').addEventListener('click',()=>{inp.value='';SAFE_STORAGE.remove('ipmgMedAssistStaff');updateStaffCurrent();toast('Staff sign-in cleared');});
+  if($('staffClear'))$('staffClear').addEventListener('click',()=>{inp.value='';SAFE_STORAGE.remove(STAFF_STORAGE_KEY);SAFE_STORAGE.remove(LEGACY_STAFF_STORAGE_KEY);updateStaffCurrent();toast('Staff sign-in cleared');});
 }
 
 
@@ -9010,7 +9021,7 @@ function resetSample(){
   toast("Sample handout cleared");
 }
 function applyStaffToSamples(show=true){
-  const saved=SAFE_STORAGE.get('ipmgStaffName','');
+  const saved=getStoredStaff();
   if(saved&&$("sampleStaff"))$("sampleStaff").value=saved;
   if(show)toast(saved?"Signed-in staff applied":"No signed-in staff saved");
   renderSampleHandout();
@@ -9168,7 +9179,11 @@ function dailySummaryText(){
   }else lines.push('', 'Needs review: none');
   return lines.join('\\n');
 }
-function csvEscape(v){v=(v??'').toString();return /[",\n\t]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function csvEscape(v){
+  v=(v??'').toString();
+  if(/^[\t\r ]*[=+\-@]/.test(v))v="'"+v;
+  return /[",\n\t]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+}
 function exportDailyCsv(){
   if(!LOG.length){toast('Activity log is empty');return;}
   const cols=['#','Time','Type','Status','Patient','Summary','Details','Traceability','Follow-up','By'];
@@ -13048,7 +13063,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     return clean(el?.textContent||'');
   }
   function staffFallback(){
-    return first(val('sampleStaff'), val('admin'), val('staffSignIn'), txt('staffCurrent'), ()=>{try{return (window.SAFE_STORAGE&&SAFE_STORAGE.get('ipmgStaffName',''))||localStorage.getItem('ipmgStaffName')||'';}catch(e){return '';}});
+    return first(val('sampleStaff'), val('admin'), val('staffSignIn'), txt('staffCurrent'), ()=>{try{return typeof window.getStoredStaff==='function'?window.getStoredStaff():((window.SAFE_STORAGE&&SAFE_STORAGE.get('ipmgMedAssistStaff',''))||localStorage.getItem('ipmgMedAssistStaff')||'');}catch(e){return '';}});
   }
   function patientFallback(){ return first(val('samplePtName'), val('ptName'), val('udsPtName')); }
   function dobFallback(){ return first(val('sampleDOB'), val('ptDOB'), val('udsDOB')); }
@@ -13354,7 +13369,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const m={q2w:'Every 2 weeks',q3w:'Every 3 weeks',q4w:'Every 4 weeks',monthly:'Monthly',q8w:'Every 8 weeks',q12w:'Every 12 weeks',q6mo:'Every 6 months',new_start:'New start',dose_change:'Dose change'};
     return m[s] || s.replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
   }
-  function staffFallback(){return first(val('sampleStaff'),val('admin'),val('staffSignIn'),txt('staffCurrent'),()=>{try{return (window.SAFE_STORAGE&&SAFE_STORAGE.get('ipmgStaffName',''))||localStorage.getItem('ipmgStaffName')||'';}catch(e){return '';}});}
+  function staffFallback(){return first(val('sampleStaff'),val('admin'),val('staffSignIn'),txt('staffCurrent'),()=>{try{return typeof window.getStoredStaff==='function'?window.getStoredStaff():((window.SAFE_STORAGE&&SAFE_STORAGE.get('ipmgMedAssistStaff',''))||localStorage.getItem('ipmgMedAssistStaff')||'');}catch(e){return '';}});}
   function patientFallback(){return first(val('samplePtName'),val('ptName'),val('udsPtName'));}
   function dobFallback(){return first(val('sampleDOB'),val('ptDOB'),val('udsDOB'));}
   function providerFallback(){return first(val('samplePrescriber'),val('orderingProvider'));}
