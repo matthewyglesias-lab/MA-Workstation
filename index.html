@@ -6908,6 +6908,9 @@ button *::selection{
           <div class="field"><label>Administered</label><input id="adminDate" type="date" /></div>
           <div class="field"><label>Next dose <span class="req">*</span></label><input id="nextDate" type="date" /></div>
         </div>
+        <div class="row2" style="margin-bottom:14px">
+          <div class="field" style="grid-column:1/-1;max-width:340px"><label>Prior site <span class="auto-tag" style="margin-left:4px">optional</span></label><select id="priorSite"><option value="">—</option></select></div>
+        </div>
         <div class="inj-timing" id="injTiming"></div>
         <div class="retbox">
           <div class="big"><span class="d" id="retBig">—</span><span class="dow" id="retDow"></span></div>
@@ -11381,19 +11384,38 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     wrapped._timingWrap=true;
     recalcNext=wrapped;
   }
-  /* inject prior-dose date + dosing-window assessment into the injection note (kept copyable via window._note.pl) */
+  function populatePriorSiteOptions(){
+    const sel=$('priorSite'); if(!sel||sel.dataset.built) return;
+    sel.dataset.built='1';
+    ADMIN_SITE_LIBRARY.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.label; sel.appendChild(o); });
+  }
+  function priorSiteInfo(){
+    const prior=($('priorSite')?.value||'').trim();
+    if(!prior) return null;
+    const label=(ADMIN_SITE_LIBRARY.find(s=>s.id===prior)||{}).label||prior;
+    const today=typeof normalizeAdminSite==='function'?normalizeAdminSite(S.site||''):(S.site||'');
+    const same=!!today && today===prior;
+    return {label, same, line: same?`Same site as the prior documented dose (${label}) — consider rotating to a different site.`:`Prior site: ${label}.`};
+  }
+  /* inject prior-dose date/timing and prior-site/rotation check into the injection note (kept copyable via window._note.pl) */
   if(typeof render==='function' && !render._priorDoseWrap){
     const _prevRender=render;
     const wrapped=function(){
       const r=_prevRender.apply(this,arguments);
       try{
         const prior=($('priorDose')?.value||'').trim();
-        if(prior && typeof S!=='undefined' && S.med){
-          const t=injectionTiming();
-          const line=`Prior dose: ${fmtDate(prior)}${t&&t.detail?' — '+t.detail:''}`;
-          if(window._note){ window._note.pl=(window._note.pl?window._note.pl+'\n':'')+line; }
+        const siteInfo=priorSiteInfo();
+        if((prior||siteInfo) && typeof S!=='undefined' && S.med){
+          const lines=[];
+          if(prior){ const t=injectionTiming(); lines.push(`Prior dose: ${fmtDate(prior)}${t&&t.detail?' — '+t.detail:''}`); }
+          if(siteInfo) lines.push(siteInfo.line);
+          const joined=lines.join('\n');
+          if(window._note){ window._note.pl=(window._note.pl?window._note.pl+'\n':'')+joined; }
           const pl=$('outPL');
-          if(pl){ const g=document.createElement('div'); g.className='note-group'; g.innerHTML=`<span class="note-label">Dosing timing</span><p>${esc(line)}</p>`; pl.appendChild(g); }
+          if(pl){
+            if(prior){ const p=document.createElement('p'); p.textContent=lines[0]; pl.appendChild(p); }
+            if(siteInfo){ const p=document.createElement('p'); p.textContent=siteInfo.line; if(siteInfo.same){p.style.color='var(--amber)';p.style.fontWeight='600';} pl.appendChild(p); }
+          }
         }
       }catch(e){}
       return r;
@@ -11409,7 +11431,9 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
   }
   function initClinical(){
     buildUdsReconUI();
+    populatePriorSiteOptions();
     try{ if($('priorDose')) $('priorDose').addEventListener('change',()=>{try{renderInjTiming();}catch(e){} try{if(typeof render==='function')render();}catch(e){}}); }catch(e){}
+    try{ if($('priorSite')) $('priorSite').addEventListener('change',()=>{try{if(typeof render==='function')render();}catch(e){}}); }catch(e){}
     try{ if($('exp')) $('exp').addEventListener('input',()=>{try{renderInjTiming();}catch(e){}}); }catch(e){}
     try{ if(typeof renderUdsNote==='function') renderUdsNote(); }catch(e){}
     try{ renderInjTiming(); }catch(e){}
