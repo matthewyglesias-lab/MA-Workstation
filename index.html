@@ -11381,6 +11381,26 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     wrapped._timingWrap=true;
     recalcNext=wrapped;
   }
+  /* inject prior-dose date + dosing-window assessment into the injection note (kept copyable via window._note.pl) */
+  if(typeof render==='function' && !render._priorDoseWrap){
+    const _prevRender=render;
+    const wrapped=function(){
+      const r=_prevRender.apply(this,arguments);
+      try{
+        const prior=($('priorDose')?.value||'').trim();
+        if(prior && typeof S!=='undefined' && S.med){
+          const t=injectionTiming();
+          const line=`Prior dose: ${fmtDate(prior)}${t&&t.detail?' — '+t.detail:''}`;
+          if(window._note){ window._note.pl=(window._note.pl?window._note.pl+'\n':'')+line; }
+          const pl=$('outPL');
+          if(pl){ const g=document.createElement('div'); g.className='note-group'; g.innerHTML=`<span class="note-label">Dosing timing</span><p>${esc(line)}</p>`; pl.appendChild(g); }
+        }
+      }catch(e){}
+      return r;
+    };
+    wrapped._priorDoseWrap=true;
+    render=wrapped;
+  }
   if(typeof softResetUds==='function' && !softResetUds._reconWrap){
     const _prev=softResetUds;
     const wrapped=function(){ if(typeof UDS!=='undefined') UDS.rxMeds=[]; const r=_prev.apply(this,arguments); try{renderUdsReconChips();renderUdsReconInterp();}catch(e){} return r; };
@@ -11389,7 +11409,7 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
   }
   function initClinical(){
     buildUdsReconUI();
-    try{ if($('priorDose')) $('priorDose').addEventListener('change',()=>{try{renderInjTiming();}catch(e){}}); }catch(e){}
+    try{ if($('priorDose')) $('priorDose').addEventListener('change',()=>{try{renderInjTiming();}catch(e){} try{if(typeof render==='function')render();}catch(e){}}); }catch(e){}
     try{ if($('exp')) $('exp').addEventListener('input',()=>{try{renderInjTiming();}catch(e){}}); }catch(e){}
     try{ if(typeof renderUdsNote==='function') renderUdsNote(); }catch(e){}
     try{ renderInjTiming(); }catch(e){}
