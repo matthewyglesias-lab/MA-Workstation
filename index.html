@@ -7407,13 +7407,15 @@ const FLAG = {
 
 const MEDS = [
   {key:"aristada", label:"Aristada", name:"Aristada", gen:"aripiprazole lauroxil", cls:"Atypical antipsychotic LAI", route:"IM", site:"R ventrogluteal", intervalKey:"q4wk", winB:7, winA:7,
+    winByInterval:{q4wk:{winB:7,winA:7}, q6wk:{winB:14,winA:14}, q8wk:{winB:14,winA:14}},
     tech:"21G 1.5\" (2\" if obese), shake vigorously",
     doses:["441 mg","662 mg","882 mg","1064 mg"],
+    dosesByInterval:{q4wk:["441 mg","662 mg","882 mg"], q6wk:["882 mg"], q8wk:["1064 mg"]},
     storage:"Room temp; protect from light.",
     recon:"Prefilled syringe \u2014 tap and shake vigorously \u2265 30 s.",
     missed:"Late dose: use the PI re-initiation table \u2014 may need Aristada Initio 675 mg + a single 30 mg oral aripiprazole depending on the prior dose and length of gap.",
-    caution:"Establish tolerability with oral aripiprazole first. 441 mg deltoid or gluteal; higher doses gluteal.",
-    tip:"441 mg may be deltoid or gluteal; higher doses gluteal. 1064 mg dosed q6 wk. Initiate with Aristada Initio 675 mg + single 30 mg oral aripiprazole, or 21-day oral overlap.",
+    caution:"Establish tolerability with oral aripiprazole first. 441 mg deltoid or gluteal; higher doses gluteal. Confirm the interval selected matches the ordered dose \u2014 882 mg is the only strength valid on both the q4wk and q6wk schedules; 1064 mg is q8wk (every 2 months) only.",
+    tip:"441 mg may be deltoid or gluteal; higher doses gluteal. 882 mg may be dosed q4wk or q6wk; 1064 mg is dosed q8wk (every 2 months) only. Initiate with Aristada Initio 675 mg + single 30 mg oral aripiprazole, or 21-day oral overlap.",
     flags:["resuspend","oralOverlap"]},
   {key:"initio", label:"Aristada Initio", name:"Aristada Initio", gen:"aripiprazole lauroxil", cls:"LAI initiation kit", route:"IM", site:"R deltoid", intervalKey:"once", winB:0, winA:0,
     tech:"shake vigorously 30s",
