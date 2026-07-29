@@ -108,6 +108,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>IPMG · Injection &amp; Medication Assistant RC5.15</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -7462,13 +7463,15 @@ const MEDS = [
     tip:"q6 months. Use after \u22654 months on Sustenna or \u22651 cycle of Trinza. Gluteal only.",
     flags:["resuspend","stabilized"]},
   {key:"uzedy", label:"Uzedy", name:"Uzedy", gen:"risperidone ER", cls:"Atypical antipsychotic LAI (SubQ)", route:"SubQ", site:"Abdomen (SubQ)", intervalKey:"q4wk", winB:7, winA:7,
+    winByInterval:{q4wk:{winB:7,winA:7}, q8wk:{winB:14,winA:14}},
     tech:"supplied syringe, SubQ abdomen or upper arm",
     doses:["50 mg","75 mg","100 mg","125 mg","150 mg","200 mg","250 mg"],
+    dosesByInterval:{q4wk:["50 mg","75 mg","100 mg","125 mg"], q8wk:["100 mg","150 mg","200 mg","250 mg"]},
     storage:"Refrigerate 2\u20138\u00b0C; may be kept at room temp limited time \u2014 check label.",
     recon:"Prefilled syringe \u2014 no reconstitution; mix per label.",
-    missed:"No loading dose or oral overlap needed. For late doses follow PI; generally resume schedule.",
-    caution:"SubQ only \u2014 abdomen or upper arm. Available q1-month and q2-month strengths.",
-    tip:"SubQ \u2014 abdomen or upper arm, rotate sites. Available q1-month and q2-month strengths; set the interval accordingly. No loading dose / oral overlap required.",
+    missed:"PI defines no fixed early/late cutoff for Uzedy \u2014 if a dose is missed, give the next injection as soon as possible and do not dose more often than the selected interval. No loading dose or oral overlap needed at initiation or when switching between the once-monthly and once-every-2-months regimens.",
+    caution:"SubQ only \u2014 abdomen or upper arm. Once-monthly (50/75/100/125 mg) and once-every-2-months (100/150/200/250 mg) are distinct regimens \u2014 confirm the interval selected matches the ordered dose; 100 mg is the only strength valid on either schedule.",
+    tip:"SubQ \u2014 abdomen or upper arm, rotate sites. To switch regimens, give the first dose of the new schedule on the date the original schedule's next dose would have been due, then revise the return-visit interval \u2014 no loading dose or extra oral overlap needed. Picking a monthly-only or q2-month-only dose auto-sets the matching interval below.",
     flags:["resuspend"]},
   {key:"maintena", label:"Abilify Maintena", name:"Abilify Maintena", gen:"aripiprazole", cls:"Atypical antipsychotic LAI (monthly)", route:"IM", site:"R ventrogluteal", intervalKey:"q4wk", winB:7, winA:7,
     tech:"23G 1\" deltoid / 22G 1.5\" gluteal",
@@ -7527,6 +7530,59 @@ const INTERVALS=[
   {k:"q12wk",l:"q3 mo",d:84},{k:"q26wk",l:"q6 mo",d:182},{k:"once",l:"one-time",d:0}
 ];
 const intDays = k => (INTERVALS.find(i=>i.k===k)||{}).d;
+
+/* ---------- scheduling-window + regimen helpers ----------
+   A drug's window/dose options can depend on which interval is active
+   (e.g. Uzedy is labeled once-monthly AND once-every-2-months on the same
+   product, chosen with the interval chips). winByInterval / dosesByInterval
+   on a MEDS entry override the drug's static defaults whenever the selected
+   interval differs from med.intervalKey; every call site must read the
+   window through effectiveWindow() rather than med.winB/med.winA directly,
+   or it will silently keep using the drug's default-interval window even
+   after the clinician switches to a different labeled interval. */
+function windowForInterval(intervalKey){
+  const d=intDays(intervalKey);
+  if(!(d>0))return {winB:0,winA:0};
+  return d>28 ? {winB:14,winA:14} : {winB:7,winA:7};
+}
+function effectiveWindow(med, intervalKey){
+  const ik=intervalKey||(med&&med.intervalKey)||'';
+  if(med&&med.winByInterval&&med.winByInterval[ik])return med.winByInterval[ik];
+  if(med&&ik===med.intervalKey)return {winB:med.winB||0,winA:med.winA||0};
+  const d=intDays(ik);
+  if(d>0)return windowForInterval(ik);
+  return {winB:(med&&med.winB)||7,winA:(med&&med.winA)||7};
+}
+function windowSummary(med){
+  if(!med)return "±7 days";
+  if(med.winByInterval){
+    return Object.keys(med.winByInterval).map(k=>{
+      const lbl=(INTERVALS.find(i=>i.k===k)||{}).l||k, w=med.winByInterval[k];
+      return `${lbl} ±${w.winB===w.winA?w.winB:(w.winB+"/"+w.winA)}d`;
+    }).join(" · ");
+  }
+  const w=effectiveWindow(med,med.intervalKey);
+  return w.winB===w.winA?`±${w.winB} days`:`${w.winB}/${w.winA} days`;
+}
+function medDosesForInterval(med, intervalKey){
+  if(med&&med.dosesByInterval&&med.dosesByInterval[intervalKey])return med.dosesByInterval[intervalKey];
+  return (med&&med.doses)||[];
+}
+function medDoseSummary(med){
+  if(med.dosesByInterval){
+    return Object.keys(med.dosesByInterval).map(k=>{
+      const lbl=(INTERVALS.find(i=>i.k===k)||{}).l||k;
+      return `${lbl}: ${med.dosesByInterval[k].join("/")}`;
+    }).join(" · ");
+  }
+  return med.doses.join(", ")||"—";
+}
+function medIntervalSummary(med){
+  if(med.winByInterval){
+    return Object.keys(med.winByInterval).map(k=>(INTERVALS.find(i=>i.k===k)||{}).l||k).join(" or ")+" (set per order)";
+  }
+  return (INTERVALS.find(i=>i.k===med.intervalKey)||{}).l||"—";
+}
 
 const REASONS=[
   {k:"scheduled",l:"Scheduled",cc:"scheduled LAI administration"},
@@ -7863,16 +7919,6 @@ const tickHTML=`<span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="
 function renderReasons(){const b=$("reasonChips");b.innerHTML="";REASONS.forEach(r=>b.appendChild(chipEl(r.l,S.reason===r.k,"sm",()=>{S.reason=r.k;renderReasons();render();})));}
 function renderMeds(){const b=$("medChips");b.innerHTML="";MEDS.forEach(m=>b.appendChild(chipEl(m.label,S.med&&S.med.key===m.key,"med",()=>selectMed(m))));}
 
-function selectMed(m){
-  S.med=m;S.dose=m.doses[0]||"";S.site=m.site;S.route=m.route;S.intervalKey=m.intervalKey;S.retCustom=false;
-  S.flags={};(m.flags||[]).forEach(f=>S.flags[f]=true);
-  $("tech").value=m.tech||"";$("siteAuto").style.display="";$("intAuto").style.display="";
-  if(m.ndc){const n=$("ndc");n.value=m.ndc;n.classList.add("auto");}
-  $("medHdr").classList.add("show");$("medHdrName").textContent=m.label;$("medHdrGen").textContent=m.gen||"manual entry";
-  $("medChipsGrp").classList.add("hidden");$("medDetail").classList.remove("hidden");
-  if(m.tip){$("medTip").classList.add("show");$("medTipTxt").textContent=m.tip;}else $("medTip").classList.remove("show");
-  applyMedDoseRules();renderDoses();renderSites();renderRoutes();renderIntervals();renderMedSpec();renderInjSafetyChips();recalcNext();render();
-}
 $("medClear").addEventListener("click",()=>{
   S.med=null;S.dose="";S.flags={};S.adminGuideCollapsed=false;S.needleGuideOpen=false;
   $("medHdr").classList.remove("show");$("medChipsGrp").classList.remove("hidden");
@@ -7880,31 +7926,17 @@ $("medClear").addEventListener("click",()=>{
   renderMeds();render();
 });
 
-function applyMedDoseRules(){
-  if(!S.med)return;
-  if(S.med.key==="erzofri" && S.dose==="351 mg"){
-    if(!S.site || !/deltoid/i.test(S.site)){S.site="R deltoid";$("siteAuto").style.display="";}
-    S.route="IM";S.intervalKey="q4wk";
-  }
-  if(S.med.key==="asimtufii"){
-    if(!S.site || !/gluteal/i.test(S.site)){S.site="R ventrogluteal";$("siteAuto").style.display="";}
-    S.route="IM";S.intervalKey="q8wk";
-  }
-}
 function renderDoses(){
   const b=$("doseChips");b.innerHTML="";
-  if(!S.med||!S.med.doses.length){const i=document.createElement("input");i.placeholder="enter dose";i.style.maxWidth="160px";i.value=S.dose;i.addEventListener("input",e=>{S.dose=e.target.value;render();});b.appendChild(i);return;}
-  S.med.doses.forEach(d=>b.appendChild(chipEl(d,S.dose===d,"dose sm",()=>{S.dose=d;applyMedDoseRules();renderDoses();renderSites();renderRoutes();renderIntervals();recalcNext();render();})));
+  const doses=medDosesForInterval(S.med,S.intervalKey);
+  if(!S.med||!doses.length){const i=document.createElement("input");i.placeholder="enter dose";i.style.maxWidth="160px";i.value=S.dose;i.addEventListener("input",e=>{S.dose=e.target.value;render();});b.appendChild(i);return;}
+  doses.forEach(d=>b.appendChild(chipEl(d,S.dose===d,"dose sm",()=>{S.dose=d;applyMedDoseRules();renderDoses();renderSites();renderRoutes();renderIntervals();recalcNext();render();})));
 }
-function renderSites(){
-  const b=$("siteChips");
-  if(!b) return;
-  b.innerHTML="";
-  const rule=medAdminRule();
-  rule.sites.forEach(s=>b.appendChild(chipEl(adminSiteDisplay(s), normalizeAdminSite(S.site||'')===s, "sm", ()=>{ selectAdminSite(s,true); })));
-}
-function renderRoutes(){const b=$("routeChips");b.innerHTML="";const routes=(S.med&&S.med.allowedRoutes)||["IM","SubQ","IM (deep)"];routes.forEach(r=>b.appendChild(chipEl(r,S.route===r,"sm",()=>{S.route=r;renderRoutes();render();})));}
-function renderIntervals(){const b=$("intChips");b.innerHTML="";INTERVALS.forEach(i=>b.appendChild(chipEl(i.l,S.intervalKey===i.k,"sm",()=>{S.intervalKey=i.k;$("intAuto").style.display="none";S.retCustom=false;recalcNext();renderIntervals();render();})));}
+function renderIntervals(){const b=$("intChips");b.innerHTML="";INTERVALS.forEach(i=>b.appendChild(chipEl(i.l,S.intervalKey===i.k,"sm",()=>{
+  S.intervalKey=i.k;$("intAuto").style.display="none";S.retCustom=false;
+  if(S.med&&S.med.dosesByInterval&&S.med.dosesByInterval[i.k]&&!S.med.dosesByInterval[i.k].includes(S.dose)){S.dose=S.med.dosesByInterval[i.k][0];}
+  recalcNext();renderDoses();renderIntervals();render();
+})));}
 function renderMedSpec(){
   const wrap=$("medSpecWrap"),b=$("medSpecChips");b.innerHTML="";
   const flags=(S.med&&S.med.flags)||[];
@@ -8171,8 +8203,8 @@ function renderReturn(){
   big.textContent=fmtShort(nd);
   const wd=dow(nd);dowEl.textContent=dowName(nd);
   // window
-  const m=S.med||{winB:7,winA:7};
-  const e=addDays(nd,-(m.winB||0)), l=addDays(nd,(m.winA||0));
+  const w=effectiveWindow(S.med,S.intervalKey);
+  const e=addDays(nd,-(w.winB||0)), l=addDays(nd,(w.winA||0));
   let winTxt=`Window: <b>${fmtShort(e)}</b> \u2192 <b>${fmtShort(l)}</b>`;
   if(S.med){const id=intDays(S.intervalKey);winTxt+= id>0?` \u00b7 ${ (INTERVALS.find(i=>i.k===S.intervalKey)||{}).l } from admin`:"";}
   if(wd===0||wd===6){winTxt+=` \u00b7 <span class="warn">lands on a weekend</span>`;}
@@ -8285,51 +8317,6 @@ function render(){
 }
 
 /* ---------- After-Visit Summary ---------- */
-function renderAVS(){
-  const name=$("ptName").value.trim()||"—", dob=$("ptDOB").value.trim();
-  const med=S.med?S.med.name:"", given=$("adminDate").value, next=$("nextDate").value, by=$("admin").value.trim(), orderingProvider=$("orderingProvider")?.value.trim()||"—";
-  const cl=$("clinic").value, clName=cl?cl.split("|")[0]:"", clPhone=cl?cl.split("|")[1]:"";
-  const m=S.med||{winB:7,winA:7};
-  const winTxt = next ? `Recommended window: ${fmtDate(addDays(next,-(m.winB||0)))} – ${fmtDate(addDays(next,(m.winA||0)))}` : "";
-  const note=(S.med&&AVSNOTE[S.med.key])||AVSNOTE._default;
-  const routeSite=[S.route||"",S.site?S.site:""].filter(Boolean).join(" · ");
-  const visitDate=given?fmtDate(given):fmtDate(new Date().toISOString().slice(0,10));
-  const response=(RESP.find(r=>r.k===S.resp)||{}).l||"Tolerated well";
-  $("avsSheet").innerHTML=`
-    <div class="print-shell avs-shell">
-      <div class="avs-hero">
-        <div><h1 class="avs-brand">Inland Psychiatric Medical Group</h1><div class="avs-sub">After-Visit Summary${clName?" · "+esc(clName):""}</div></div>
-        <div class="avs-type">Injection visit</div>
-      </div>
-      <div class="avs-meta">
-        <div><span>Patient</span><b>${esc(name)}</b></div>
-        <div><span>DOB</span><b>${esc(dob||"—")}</b></div>
-        <div><span>Visit date</span><b>${esc(visitDate)}</b></div>
-        <div><span>Ordering provider</span><b>${esc(orderingProvider)}</b></div>
-        <div><span>Response</span><b>${esc(response)}</b></div>
-      </div>
-      <div class="avs-main">
-        <div>
-          <div class="avs-card avs-med"><h3>Today you received</h3><div class="avs-med-name">${med?esc(med+(S.dose?" "+S.dose:"")):"—"}</div><p class="avs-med-line">${routeSite?esc(routeSite):"Injection administration"}</p><p class="avs-med-line">Given ${esc(visitDate)}${by?" · Administered by "+esc(by):""}</p><p class="avs-med-line">Ordering provider: ${esc(orderingProvider)}</p></div>
-          <div class="avs-card"><h3>After your injection</h3><ul class="avs-list">
-            <li>Mild soreness, redness, or a small firm lump at the injection site can be normal for a few days.</li>
-            <li>You may apply a cool pack. Avoid rubbing or massaging the injection site.</li>
-            <li>${esc(note)}</li>
-            <li>Continue medications exactly as prescribed unless your provider gives different instructions.</li>
-          </ul></div>
-        </div>
-        <div>
-          <div class="avs-card avs-next"><h3>Your next injection</h3><p class="avs-date">${next?fmtDate(next):"To be scheduled"}</p>${next?`<p class="avs-window">${dowName(next)} · ${esc(winTxt)}</p>`:"<p class=\"avs-window\">Your clinic will help schedule the next dose.</p>"}</div>
-          <div class="avs-card avs-alert"><h3>Call your clinic if you have</h3><ul class="avs-list">
-            <li>Severe or worsening pain, swelling, warmth, or drainage at the injection site.</li>
-            <li>Fever, rash, hives, trouble breathing, or swelling of the face, lips, or throat.</li>
-            <li>Any reaction or symptom that worries you.</li>
-          </ul></div>
-        </div>
-      </div>
-      <div class="avs-footer"><b>Questions?</b> ${clPhone?`Call ${esc(clName)} at ${esc(clPhone)}.`:"Please contact your IPMG clinic."}<div class="avs-print">Printed ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div></div>
-    </div>`;
-}
 function cleanPrintClasses(){document.body.classList.remove("print-avs","print-uds","print-uds-patient","print-sample","print-daily","print-letter","print-sample-worksheet","print-inj-worksheet");}
 $("printAVS").addEventListener("click",()=>{
   if(!S.med){toast("Pick a drug first");return;}
@@ -8355,152 +8342,6 @@ function udsResultPill(panel){
 function udsGroupPillHtml(){
   return UDS_GROUPS.map(group=>`<div class="group-line"><div class="group-title">${esc(group.l)}</div><div class="pillgrid">${group.panels.map(udsResultPill).join('')}</div></div>`).join('');
 }
-function renderUdsReport(){
-  renderUdsNote();
-  const n=window._udsNote||{};
-  const name=$('udsPtName').value.trim()||'—', dob=$('udsDOB').value.trim()||'—', collector=$('udsCollector').value.trim()||'—';
-  const collection=udsCollectionDateText()||'—', reason=udsReasonObj().l, temp=udsTempObj().l;
-  const device=$('udsDevice').value||'—', lot=$('udsLot').value.trim()||'—', exp=$('udsExp').value.trim()||'—';
-  const pos=udsPanelsByState('pos'), inv=udsPanelsByState('invalid'), neg=udsPanelsByState('neg'), nt=udsPanelsByState('nt');
-  const tested=UDS_PANELS.length-nt.length;
-  const comment=$('udsComment').value.trim();
-  const statusClass=udsPrintStatusClass();
-  const statusText=udsPrintStatusText();
-  const attention=(n.attentionLines||udsClinicianAttentionText(pos,inv,nt));
-  const attentionHtml=attention.length?attention.map(l=>`<li>${esc(l)}</li>`).join(''):'<li>No flagged findings documented by staff.</li>';
-  const statusDetail=statusClass==='danger'
-    ? 'One or more validity or device findings means affected results should not be interpreted without clinician review.'
-    : statusClass==='warn'
-      ? 'One or more screening findings require clinician review. Staff handoff is included below.'
-      : 'No preliminary positive or invalid findings were documented among the panels tested today.';
-  const interpretation=statusClass==='danger'
-    ? 'Invalid or non-interpretable finding documented. Do not use affected result(s) for clinical interpretation without repeat testing or confirmation per provider direction.'
-    : statusClass==='warn'
-      ? 'One or more findings require clinician review. Staff handoff is provided; final interpretation is deferred to the treating clinician.'
-      : 'No preliminary positive or invalid findings documented among tested panels.';
-  const groupRows=(typeof UDS_GROUPS!=='undefined'?UDS_GROUPS:[]).map(group=>{
-    const rows=group.panels.map(panel=>{
-      const state=UDS.results[panel]||'neg';
-      return `<tr><td>${esc(panel)}</td><td class="full">${esc(udsPanelName(panel))}</td><td><span class="eudr-result ${state}">${esc(udsLabResultWord(state))}</span></td><td>${state==='pos'?'Provider review':state==='invalid'?'Repeat/review':state==='nt'?'Not tested today':'—'}</td></tr>`;
-    }).join('');
-    return `<div class="eudr-group"><div class="eudr-group-name">${esc(group.l)}</div><table class="eudr-table"><thead><tr><th>Panel</th><th>Screen</th><th>Result</th><th>Staff note</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  }).join('') || `<table class="eudr-table"><thead><tr><th>Panel</th><th>Screen</th><th>Result</th><th>Staff note</th></tr></thead><tbody>${UDS_PANELS.map(panel=>{const state=UDS.results[panel]||'neg';return `<tr><td>${esc(panel)}</td><td class="full">${esc(udsPanelName(panel))}</td><td><span class="eudr-result ${state}">${esc(udsLabResultWord(state))}</span></td><td>${state==='pos'?'Provider review':state==='invalid'?'Repeat/review':state==='nt'?'Not tested today':'—'}</td></tr>`}).join('')}</tbody></table>`;
-  const context=(n.contextLines||[]).map(l=>`<p class="eudr-paragraph">${esc(l)}</p>`).join('') || '<p class="eudr-paragraph">No additional staff context documented.</p>';
-  const follow=(n.followLines||[]).map(l=>`<p class="eudr-paragraph">${esc(l)}</p>`).join('');
-  const photoBlock=UDS.photoData?`<div class="eudr-photo"><div class="rule-label">Cup image</div><img src="${UDS.photoData}" alt="Point-of-care cup photo" /></div>`:'';
-  const sigOn=$('udsSigToggle') ? $('udsSigToggle').checked : true;
-  const sigBlock=sigOn?`<div class="eudr-sign"><div>Reviewed by / date</div><div>Clinical action / outside lab decision</div></div>`:'';
-  $('udsSheet').innerHTML=`
-    <div class="eudr">
-      <div class="eudr-head">
-        <div class="eudr-kicker">Inland Psychiatric Medical Group</div>
-        <div class="eudr-title">Point-of-Care Urine Drug Screen Report</div>
-        <div class="eudr-sub">Clinician copy · preliminary qualitative immunoassay screen · not confirmatory laboratory testing.</div>
-        <div class="eudr-reportline"><span><b>Report ID:</b> ${esc(udsReportId())}</span><span><b>Printed:</b> ${esc(new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}))}</span></div>
-      </div>
-      <div class="eudr-meta">
-        <div><span>Patient</span><b>${esc(name)}</b></div>
-        <div><span>Date of birth</span><b>${esc(dob)}</b></div>
-        <div><span>Collection date/time</span><b>${esc(collection)}</b></div>
-        <div><span>Collected by</span><b>${esc(collector)}</b></div>
-        <div><span>Reason</span><b>${esc(reason)}</b></div>
-        <div><span>Temperature</span><b>${esc(temp)}</b></div>
-        <div><span>Device</span><b>${esc(device)}</b></div>
-        <div><span>Lot / exp</span><b>${esc(lot)} / ${esc(exp)}</b></div>
-      </div>
-      <div class="eudr-status">
-        <div class="eudr-status-main">
-          <div class="eudr-status-label">Overall report status</div>
-          <div class="eudr-status-value ${statusClass}">${esc(statusText)}</div>
-          <div class="eudr-counts"><span>${tested}/${UDS_PANELS.length} tested</span><span>${pos.length} prelim positive</span><span>${inv.length} invalid</span><span>${nt.length} not tested</span></div>
-        </div>
-        <div class="eudr-status-detail">${esc(statusDetail)}</div>
-      </div>
-      <div class="eudr-body">
-        <div class="eudr-section"><div class="eudr-section-title">Clinician attention</div><div class="eudr-attention"><ul>${attentionHtml}</ul></div></div>
-        <div class="eudr-section"><div class="eudr-section-title">Qualitative screening results</div>${groupRows}</div>
-        <div class="eudr-split">
-          <div class="eudr-section">
-            <div class="eudr-section-title">Specimen / device checks</div>
-            <div class="eudr-minirow"><b>Control line</b><span>${esc(udsControlObj().l)}</span></div>
-            <div class="eudr-minirow"><b>Temperature</b><span>${esc(temp)}</span></div>
-            <div class="eudr-minirow"><b>Validity markers</b><span>${esc(UDS.validity)}</span></div>
-            <div class="eudr-minirow"><b>Consistency</b><span>${esc(UDS.consistent)}</span></div>
-            <div class="eudr-minirow"><b>Device</b><span>${esc(device)}</span></div>
-            <div class="eudr-minirow"><b>Lot / exp</b><span>${esc(lot)} / ${esc(exp)}</span></div>
-            ${photoBlock}
-          </div>
-          <div class="eudr-section">
-            <div class="eudr-section-title">Interpretation / handoff</div>
-            <p class="eudr-paragraph"><b>Overall:</b> ${esc(interpretation)}</p>
-            ${context}${follow}${comment?`<p class="eudr-paragraph"><b>Patient/staff comment:</b> ${esc(comment)}</p>`:''}
-          </div>
-        </div>
-        <div class="eudr-section">
-          <div class="eudr-section-title">Method & limitations</div>
-          <p class="eudr-paragraph">This point-of-care urine drug screen is a preliminary qualitative screening result. Results should be interpreted by the treating clinician in context of prescribed medications, timing, specimen quality, history, and clinical presentation.</p>
-          <p class="eudr-paragraph">Outside laboratory confirmation may be ordered when clinically indicated. Staff documentation is a handoff and is not the final clinical interpretation.</p>
-          ${sigBlock}
-        </div>
-      </div>
-      <div class="eudr-footer">Clinician review document for point-of-care screening workflow. Not a definitive laboratory confirmation report.</div>
-    </div>`;
-}
-function renderUdsPatientSummary(){
-  renderUdsNote();
-  const name=$('udsPtName').value.trim()||'—', dob=$('udsDOB').value.trim()||'—';
-  const collection=udsCollectionDateText()||'—', reason=udsReasonObj().l;
-  const pos=udsPanelsByState('pos'), inv=udsPanelsByState('invalid'), nt=udsPanelsByState('nt'), neg=udsPanelsByState('neg');
-  const invalidControl=UDS.control==='invalid';
-  const hasReview=invalidControl || pos.length || inv.length || UDS.temp==='not acceptable' || UDS.validity==='needs review' || UDS.consistent==='not aligned' || UDS.consistent==='needs review';
-  const statusLabel=invalidControl ? 'Repeat / confirm may be needed' : (hasReview ? 'Provider review' : 'Screen completed');
-  const resultLabel=invalidControl ? 'Non-interpretable screen' : (pos.length||inv.length ? 'Findings need review' : 'No flagged findings documented');
-  const positiveText=pos.length ? udsPlainList(pos,'') : 'No initial positive findings were documented.';
-  const unreadableText=inv.length ? udsPlainList(inv,'') : 'No unreadable or invalid panel findings were documented.';
-  const notTestedText=nt.length ? udsPlainList(nt,'') : 'All usual screening areas were marked as tested.';
-  const negativeText=neg.length===UDS_PANELS.length && !pos.length && !inv.length && !nt.length ? 'All screening areas marked today were negative.' : `${neg.length} screening area${neg.length===1?' was':'s were'} marked negative.`;
-  const nextStep=invalidControl ? 'Because the device control was not valid, the result should not be interpreted from today’s cup. Your provider or care team will decide whether the screen should be repeated or confirmed with outside laboratory testing.' : hasReview ? 'Your provider will review today’s office screen with your medications, history, and treatment plan. An outside laboratory test may be ordered if your provider feels it is needed.' : 'Your provider will review the office screen in the context of your visit. Please continue medications exactly as prescribed unless your provider gives different instructions.';
-  $('udsPatientSheet').innerHTML=`
-    <div class="rr-shell">
-      <div class="rr-head">
-        <div class="ipmg-small">Inland Psychiatric Medical Group</div>
-        <div class="rr-title">Office screen summary</div>
-        <div class="rr-sub">A point-of-care urine screen was completed today. This handout explains the office screen in plain language. Your provider reviews the result in clinical context.</div>
-        <div class="meta-line">
-          <div><b>Patient</b>${esc(name)}</div>
-          <div><b>Date of birth</b>${esc(dob)}</div>
-          <div><b>Date / time</b>${esc(collection)}</div>
-          <div><b>Reason</b>${esc(reason)}</div>
-        </div>
-      </div>
-      <div class="rr-band">
-        <div><div class="rule-label">Today’s screen</div><div class="big">Completed</div></div>
-        <div><div class="rule-label">Next step</div><div class="big">${esc(statusLabel)}</div></div>
-      </div>
-      <div class="rr-body">
-        <table class="rr-table">
-          <tr><th>Area</th><th>Plain-language explanation</th></tr>
-          <tr><td>Overall status</td><td>${esc(resultLabel)}</td></tr>
-          <tr><td>Initial positive findings</td><td>${esc(positiveText)}</td></tr>
-          <tr><td>Negative findings</td><td>${esc(negativeText)}</td></tr>
-          <tr><td>Unreadable findings</td><td>${esc(unreadableText)}</td></tr>
-          <tr><td>Not tested today</td><td>${esc(notTestedText)}</td></tr>
-        </table>
-        <div class="rr-note"><b>What happens next:</b> ${esc(nextStep)}</div>
-        <div class="rule-label" style="margin-top:16px">When to contact the clinic</div>
-        <ul class="clean">
-          <li>You have questions about your result or follow-up plan.</li>
-          <li>You think the result may be related to a prescription, over-the-counter medicine, or recent medical care.</li>
-          <li>You need to update your medication list or report a new prescription.</li>
-        </ul>
-        <div class="print-foot">This summary is for patient education and visit documentation. It is not a definitive laboratory confirmation report. Printed ${shortPrintDate()}.</div>
-      </div>
-    </div>`;
-}
-
-
-
-
 /* ---------- staff sign-in / autofill ---------- */
 function getSignedStaff(){return (($('staffSignIn')&&$('staffSignIn').value)||'').trim();}
 function updateStaffCurrent(){
@@ -8531,203 +8372,6 @@ function initStaffSignIn(){
 /* ===================== PASS 12 OVERRIDES: print output refinement ===================== */
 function shortPrintDate(){return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 function classicDash(v){return (v&&String(v).trim())?String(v).trim():'—';}
-function renderAVS(){
-  const name=$('ptName').value.trim()||'—', dob=$('ptDOB').value.trim()||'—';
-  const med=S.med?S.med.name:'', dose=S.dose||'', given=$('adminDate').value, next=$('nextDate').value, by=$('admin').value.trim();
-  const cl=$('clinic').value, clName=cl?cl.split('|')[0]:'', clPhone=cl?cl.split('|')[1]:'';
-  const m=S.med||{winB:7,winA:7};
-  const visitDate=given?fmtDate(given):fmtDate(new Date().toISOString().slice(0,10));
-  const routeSite=[S.route||'',S.site?S.site:''].filter(Boolean).join(' - ');
-  const nextWindow=next?`${dowName(next)} - any time between ${fmtDate(addDays(next,-(m.winB||0)))} and ${fmtDate(addDays(next,(m.winA||0)))}`:'Your clinic will help schedule the next dose.';
-  const note=(S.med&&AVSNOTE[S.med.key])||AVSNOTE._default;
-  const response=(RESP.find(r=>r.k===S.resp)||{}).l||'Tolerated well';
-  $('avsSheet').innerHTML=`
-    <div class="print-shell avs-shell classic-sheet">
-      <div class="classic-head">
-        <h1 class="classic-brand">Inland Psychiatric Medical Group</h1>
-        <div class="classic-sub">After-Visit Summary${clName?' - '+esc(clName):''}</div>
-      </div>
-      <div class="classic-meta">
-        <div class="kv"><span class="k">Patient</span><span class="v">${esc(name)}</span></div>
-        <div class="kv"><span class="k">Date of birth</span><span class="v">${esc(dob)}</span></div>
-        <div class="kv"><span class="k">Visit date</span><span class="v">${esc(visitDate)}</span></div>
-      </div>
-      <div class="classic-section compact">
-        <h2>Today you received</h2>
-        <p class="classic-med-name">${med?esc(med+(dose?' '+dose:'')):'Injection administration'}</p>
-        <p class="classic-line">${routeSite?esc(routeSite):'Injection administered'}${by?' - administered by '+esc(by):''}</p>
-        <p class="classic-line">Response: ${esc(response)}</p>
-      </div>
-      <div class="classic-callout">
-        <h2>Your next injection</h2>
-        <p class="classic-date">${next?esc(fmtDate(next)):'To be scheduled'}</p>
-        <p class="classic-line">${esc(nextWindow)}</p>
-      </div>
-      <div class="classic-section">
-        <h2>After your injection</h2>
-        <ul class="classic-list">
-          <li>Mild soreness, redness, or a small firm lump at the injection site can be normal for a few days.</li>
-          <li>You may apply a cool pack. Avoid rubbing or massaging the injection site.</li>
-          <li>${esc(note)}</li>
-          <li>Please keep your next appointment and arrive within the window above so your treatment stays on schedule.</li>
-        </ul>
-      </div>
-      <div class="classic-section">
-        <h2>Call your clinic if you have</h2>
-        <ul class="classic-list">
-          <li>Severe or worsening pain, swelling, warmth, or drainage at the injection site.</li>
-          <li>Fever, rash, hives, trouble breathing, or swelling of the face, lips, or throat.</li>
-          <li>Any reaction or symptom that worries you.</li>
-        </ul>
-      </div>
-      <div class="classic-footer">
-        ${by?`Administered by <b>${esc(by)}</b>. `:''}Questions? ${clPhone?`Please contact ${esc(clName)} at ${esc(clPhone)}.`:'Please contact your IPMG clinic.'}
-        <div class="classic-print">Printed ${shortPrintDate()}</div>
-      </div>
-    </div>`;
-}
-function renderUdsReport(){
-  renderUdsNote();
-  const n=window._udsNote||{};
-  const name=$('udsPtName').value.trim()||'—', dob=$('udsDOB').value.trim()||'—', collector=$('udsCollector').value.trim()||'—';
-  const collection=udsCollectionDateText()||'—', reason=udsReasonObj().l, temp=udsTempObj().l;
-  const device=$('udsDevice').value||'—', lot=$('udsLot').value.trim()||'—', exp=$('udsExp').value.trim()||'—';
-  const pos=udsPanelsByState('pos'), inv=udsPanelsByState('invalid'), nt=udsPanelsByState('nt');
-  const tested=UDS_PANELS.length-nt.length;
-  const comment=$('udsComment').value.trim();
-  const statusClass=udsPrintStatusClass();
-  const attention=(n.attentionLines||udsClinicianAttentionText(pos,inv,nt));
-  const attentionClass=statusClass==='danger'?'danger':statusClass==='ok'?'ok':'';
-  const attentionHtml=attention.length?attention.map(l=>`<li>${esc(l)}</li>`).join(''):'<li>No flagged findings documented by staff.</li>';
-  const resultCells=UDS_PANELS.map(panel=>{
-    const state=UDS.results[panel]||'neg';
-    return `<td class="screen">${esc(panel)}<small>${esc(udsPanelName(panel))}</small></td><td><span class="result-badge compact ${state}">${esc(udsLabResultWord(state))}</span></td>`;
-  });
-  const compactRows=[];
-  for(let i=0;i<resultCells.length;i+=2){compactRows.push(`<tr>${resultCells[i]}${resultCells[i+1]||'<td></td><td></td>'}</tr>`);}
-  const interpretation=statusClass==='danger'
-    ? 'Invalid or non-interpretable finding documented. Do not use affected result(s) for clinical interpretation without repeat testing or confirmation per provider direction.'
-    : statusClass==='warn'
-      ? 'One or more findings require clinician review. Staff handoff is provided; final interpretation is deferred to the treating clinician.'
-      : 'No preliminary positive or invalid findings documented among tested panels.';
-  const context=(n.contextLines||[]).slice(0,2).map(l=>`<p>${esc(l)}</p>`).join('') || '<p>No additional staff context documented.</p>';
-  const follow=(n.followLines||[]).slice(0,2).map(l=>`<p>${esc(l)}</p>`).join('');
-  const photoBlock=UDS.photoData?`<div class="lab-mini-photo"><img src="${UDS.photoData}" alt="Point-of-care cup photo" /></div>`:'';
-  $('udsSheet').innerHTML=`
-    <div class="report-shell lab-v3">
-      <div class="lab-head">
-        <div class="lab-title">
-          <div class="facility">Inland Psychiatric Medical Group</div>
-          <h1>Point-of-Care Urine Drug Screen Report</h1>
-          <div class="method">Qualitative immunoassay screening - clinician copy - preliminary office screen, not confirmatory laboratory testing</div>
-          <div class="lab-report-line"><span><b>Report ID:</b> ${esc(udsReportId())}</span><span><b>Printed:</b> ${esc(new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}))}</span></div>
-        </div>
-        <div class="lab-status-box">
-          <div class="lab-status ${statusClass}">${esc(udsPrintStatusText())}</div>
-          <div class="lab-small"><b>Tested:</b> ${tested}/${UDS_PANELS.length}</div>
-          <div class="lab-small"><b>Prelim positive:</b> ${pos.length}</div>
-          <div class="lab-small"><b>Invalid:</b> ${inv.length}</div>
-          <div class="lab-small"><b>Not tested:</b> ${nt.length}</div>
-        </div>
-      </div>
-      <div class="lab-section"><h2>Patient & specimen</h2><div class="lab-grid">
-        <div class="lab-cell"><span>Patient</span><b>${esc(name)}</b></div>
-        <div class="lab-cell"><span>Date of birth</span><b>${esc(dob)}</b></div>
-        <div class="lab-cell"><span>Collection</span><b>${esc(collection)}</b></div>
-        <div class="lab-cell"><span>Collected by</span><b>${esc(collector)}</b></div>
-        <div class="lab-cell"><span>Reason</span><b>${esc(reason)}</b></div>
-        <div class="lab-cell"><span>Temperature</span><b>${esc(temp)}</b></div>
-        <div class="lab-cell"><span>Device control</span><b>${esc(udsControlObj().l)}</b></div>
-        <div class="lab-cell"><span>Validity markers</span><b>${esc(UDS.validity)}</b></div>
-      </div></div>
-      <div class="lab-section lab-results-section"><h2>Qualitative screening results</h2><table class="lab-results-compact">
-        <thead><tr><th>Screen</th><th>Result</th><th>Screen</th><th>Result</th></tr></thead>
-        <tbody>${compactRows.join('')}</tbody>
-      </table></div>
-      <div class="lab-two-col">
-        <div>
-          <div class="lab-section"><h2>Clinician attention</h2><div class="lab-attention ${attentionClass}"><ul>${attentionHtml}</ul></div></div>
-          <div class="lab-section"><h2>Handoff / interpretation</h2><div class="lab-body"><p><b>Overall:</b> ${esc(interpretation)}</p>${context}${follow}${comment?`<p><b>Patient/staff comment:</b> ${esc(comment)}</p>`:''}</div></div>
-        </div>
-        <div>
-          <div class="lab-section"><h2>Device traceability</h2><div class="trace-inline">
-            <div><span>Device</span>${esc(device)}</div><div><span>Lot</span>${esc(lot)}</div><div><span>Expiration</span>${esc(exp)}</div><div><span>Operator</span>${esc(collector)}</div>
-          </div>${photoBlock?`<div class="lab-body">${photoBlock}</div>`:''}</div>
-          <div class="lab-section"><h2>Method & limitations</h2><div class="lab-body"><p>Point-of-care urine drug screen results are preliminary qualitative screening results. Cross-reactivity, prescribed medications, timing of last use, specimen quality, and device limitations may affect interpretation.</p><p>No final clinical interpretation is made by staff. Provider determines whether outside laboratory confirmation is clinically indicated.</p></div></div>
-        </div>
-      </div>
-      <div class="lab-footer">This report is intended for clinician review as a point-of-care screening handoff. It is not a confirmatory laboratory report and should be interpreted in clinical context.<div class="lab-sign-mini"><div>Reviewed by / date</div><div>Follow-up / outside lab decision</div></div></div>
-    </div>`;
-}
-function renderUdsPatientSummary(){
-  renderUdsNote();
-  const name=$('udsPtName').value.trim()||'—', dob=$('udsDOB').value.trim()||'—';
-  const collection=udsCollectionDateText()||'—', reason=udsReasonObj().l;
-  const pos=udsPanelsByState('pos'), inv=udsPanelsByState('invalid'), nt=udsPanelsByState('nt'), neg=udsPanelsByState('neg');
-  const hasReview=udsPrintStatusClass()!=='ok';
-  const invalidControl=UDS.control==='invalid';
-  const positiveText=udsPlainList(pos,'None documented');
-  const unreadableText=udsPlainList(inv,'None documented');
-  const notTestedText=udsPlainList(nt,'None documented');
-  const testedText=(neg.length===UDS_PANELS.length && !pos.length && !inv.length && !nt.length)
-    ? 'All of the screening areas tested today were negative.'
-    : `${neg.length} screening area${neg.length===1?' was':'s were'} negative.`;
-  const statusText=invalidControl
-    ? 'The device control was not valid, so the screen should not be interpreted from today’s cup.'
-    : hasReview
-      ? 'Your provider will review today’s screening result and decide whether any follow-up is needed.'
-      : 'No initial positive results were documented among the screening areas tested today.';
-  const nextStep=invalidControl
-    ? 'Your provider or care team will decide whether the screen should be repeated or confirmed with an outside laboratory test.'
-    : 'Your provider will review the result with your medication list, history, and treatment plan. An outside laboratory test may be ordered if your provider feels it is needed.';
-  $('udsPatientSheet').innerHTML=`
-    <div class="patient-shell classic-sheet">
-      <div class="classic-head">
-        <h1 class="classic-brand">Inland Psychiatric Medical Group</h1>
-        <div class="classic-sub">Urine Drug Screen Visit Summary</div>
-      </div>
-      <div class="classic-meta">
-        <div class="kv"><span class="k">Patient</span><span class="v">${esc(name)}</span></div>
-        <div class="kv"><span class="k">Date of birth</span><span class="v">${esc(dob)}</span></div>
-        <div class="kv"><span class="k">Visit date</span><span class="v">${esc(collection)}</span></div>
-        <div class="kv"><span class="k">Reason</span><span class="v">${esc(reason)}</span></div>
-      </div>
-      <div class="classic-callout">
-        <h2>Today’s screen</h2>
-        <p class="classic-statusline">${hasReview?'Provider review requested':'Screen completed'}</p>
-        <p class="classic-line">${esc(statusText)}</p>
-      </div>
-      <div class="classic-two">
-        <div class="classic-section plain-result">
-          <h2>Result summary</h2>
-          <p><b>Initial positive findings:</b> ${esc(positiveText)}</p>
-          <p><b>Negative findings:</b> ${esc(testedText)}</p>
-          <p><b>Unreadable findings:</b> ${esc(unreadableText)}</p>
-          <p><b>Not tested today:</b> ${esc(notTestedText)}</p>
-        </div>
-        <div class="classic-section plain-result">
-          <h2>What this means</h2>
-          <p>This cup is an initial office screening tool. It is not the same as a final laboratory confirmation.</p>
-          <p>Your provider makes the final clinical decision after reviewing your medications, history, and treatment plan.</p>
-        </div>
-      </div>
-      <div class="classic-section">
-        <h2>What happens next</h2>
-        <ul class="classic-list">
-          <li>${esc(nextStep)}</li>
-          <li>Please continue medications exactly as prescribed unless your provider gives different instructions.</li>
-          <li>Contact the clinic if you have questions about the result, need to update your medication list, or recently received a new prescription.</li>
-        </ul>
-      </div>
-      <div class="classic-footer">
-        Questions? Please contact your IPMG clinic.
-        <div class="classic-print">Printed ${shortPrintDate()}</div>
-      </div>
-    </div>`;
-}
-
-
-
 /* ===================== PASS 13 OVERRIDES: report redesign + signature toggle ===================== */
 function udsIncludeSignatureFields(){
   const el=$('udsSigToggle');
@@ -8805,84 +8449,6 @@ function renderUdsReport(){
       <div class="lm-footer">This report is intended for clinician review as a point-of-care screening handoff. It is not a confirmatory laboratory report and should be interpreted in clinical context.${signBlock}</div>
     </div>`;
 }
-function renderUdsPatientSummary(){
-  renderUdsNote();
-  const name=$('udsPtName').value.trim()||'—', dob=$('udsDOB').value.trim()||'—';
-  const collection=udsCollectionDateText()||'—', reason=udsReasonObj().l;
-  const pos=udsPanelsByState('pos'), inv=udsPanelsByState('invalid'), nt=udsPanelsByState('nt'), neg=udsPanelsByState('neg');
-  const hasReview=udsPrintStatusClass()!=='ok';
-  const invalidControl=UDS.control==='invalid';
-  const positiveText=udsPlainList(pos,'None documented');
-  const unreadableText=udsPlainList(inv,'None documented');
-  const notTestedText=udsPlainList(nt,'None documented');
-  const testedText=(neg.length===UDS_PANELS.length && !pos.length && !inv.length && !nt.length)
-    ? 'All screening areas tested today were negative.'
-    : `${neg.length} screening area${neg.length===1?' was':'s were'} negative today.`;
-  const headline=invalidControl
-    ? 'The office screen needs to be repeated or reviewed.'
-    : hasReview
-      ? 'Your provider will review today’s office screen.'
-      : 'Your office screen was completed today.';
-  const statusText=invalidControl
-    ? 'The device control was not valid, so today’s cup should not be used as an interpreted result.'
-    : hasReview
-      ? 'Some part of the office screen needs provider review. This does not mean a final laboratory result has been made.'
-      : 'No initial positive findings were documented among the areas tested today.';
-  const nextStep=invalidControl
-    ? 'Your provider or care team will decide whether the screen should be repeated or confirmed with an outside laboratory test.'
-    : 'Your provider reviews office screening results with your medication list, history, and treatment plan. An outside laboratory test may be ordered if your provider feels it is needed.';
-  $('udsPatientSheet').innerHTML=`
-    <div class="patient-v4">
-      <div class="p4-head">
-        <div class="p4-kicker">Patient visit summary</div>
-        <h1 class="p4-brand">Inland Psychiatric Medical Group</h1>
-        <div class="p4-sub">Urine screen summary</div>
-        <div class="p4-meta">
-          <div><span>Patient</span><b>${esc(name)}</b></div>
-          <div><span>Date of birth</span><b>${esc(dob)}</b></div>
-          <div><span>Visit date</span><b>${esc(collection)}</b></div>
-          <div><span>Reason</span><b>${esc(reason)}</b></div>
-        </div>
-      </div>
-      <div class="p4-status">
-        <div class="label">Today’s visit</div>
-        <h2>${esc(headline)}</h2>
-        <p>${esc(statusText)}</p>
-      </div>
-      <div class="p4-row">
-        <div class="p4-card">
-          <h3>What the office screen showed</h3>
-          <div class="p4-results">
-            <div class="p4-result-line"><b>Initial positive findings</b>${esc(positiveText)}</div>
-            <div class="p4-result-line"><b>Negative findings</b>${esc(testedText)}</div>
-            <div class="p4-result-line"><b>Unreadable findings</b>${esc(unreadableText)}</div>
-            <div class="p4-result-line"><b>Not tested today</b>${esc(notTestedText)}</div>
-          </div>
-        </div>
-        <div class="p4-card">
-          <h3>What this means</h3>
-          <p>This was an initial office screening test. It is not the same as a final laboratory confirmation.</p>
-          <p>Your provider makes the final clinical decision after reviewing your medications, history, and treatment plan.</p>
-          <div class="p4-note">If you recently started a new prescription, took an over-the-counter medicine, or received care elsewhere, please let the clinic know.</div>
-        </div>
-      </div>
-      <div class="p4-card">
-        <h3>What happens next</h3>
-        <ul class="p4-list">
-          <li>${esc(nextStep)}</li>
-          <li>Please continue medications exactly as prescribed unless your provider gives different instructions.</li>
-          <li>Contact the clinic if you have questions about the result, need to update your medication list, or recently received a new prescription.</li>
-        </ul>
-      </div>
-      <div class="p4-footer">
-        Questions? Please contact your IPMG clinic.
-        <div class="p4-print">Printed ${shortPrintDate()}</div>
-      </div>
-    </div>`;
-}
-
-
-
 /* ===================== PASS 14 OVERRIDES: patient-friendly print layouts ===================== */
 
 function injectionCarePlan(med){
@@ -8966,176 +8532,6 @@ function injectionHowItWorksLine(med){
   if(['sustenna','erzofri','aristada','initio','maintena','uzedy','haldol','prolixin'].includes(k))return 'This medication is long-acting and continues releasing over time. Your next injection keeps the treatment schedule consistent.';
   return 'This is a long-acting injection. Keeping the next appointment helps your treatment stay consistent.';
 }
-function renderAVS(){
-  const name=$('ptName').value.trim()||'—', dob=$('ptDOB').value.trim()||'—';
-  const med=S.med?S.med.name:'', dose=S.dose||'', given=$('adminDate').value, next=$('nextDate').value, by=$('admin').value.trim(), orderingProvider=$('orderingProvider')?.value.trim()||'—';
-  const cl=$('clinic').value, clName=cl?cl.split('|')[0]:'', clPhone=cl?cl.split('|')[1]:'';
-  const m=S.med||{winB:7,winA:7};
-  const visitDate=given?fmtDate(given):fmtDate(new Date().toISOString().slice(0,10));
-  const route=String(S.route||'');
-  const site=String(S.site||'');
-  const routeText=patientRouteLabel(route);
-  const siteText=site?patientSiteLabel(site):'site documented in chart';
-  const medLine=med?`${med}${dose?' '+dose:''}`:'Injection administration';
-  const response=(RESP.find(r=>r.k===S.resp)||{}).l||'Tolerated well';
-  const nextDateText=next?fmtDate(next):'To be scheduled';
-  const nextDateObj=next?new Date(next+'T12:00:00'):null;
-  const nextMonth=nextDateObj?nextDateObj.toLocaleDateString('en-US',{month:'long'}):'To be scheduled';
-  const nextDay=nextDateObj?String(nextDateObj.getDate()).padStart(2,'0'):'TBD';
-  const nextWindow=next?`Recommended window: ${fmtDate(addDays(next,-(m.winB||0)))} to ${fmtDate(addDays(next,(m.winA||0)))}.`:'Your clinic will help schedule the next dose.';
-  const medKey=(S.med&&S.med.key)||'';
-  const avsPlan=injectionCarePlan(medKey);
-  const siteCare=injectionSiteSpecificCare(route, site);
-  const howItWorks=injectionHowItWorksLine(S.med);
-  const ndc=$('ndc')?.value.trim()||'', lot=$('lot')?.value.trim()||'', exp=$('exp')?.value.trim()||'';
-  const allergies=$('allergies')?.value.trim()||'—';
-  const vitals=[]; if($('bp')?.value.trim())vitals.push(`BP ${$('bp').value.trim()}`); if($('hr')?.value.trim())vitals.push(`HR ${$('hr').value.trim()}`); if($('temp')?.value.trim())vitals.push(`Temp ${$('temp').value.trim()}`);
-  const medReminder=(avsPlan.reminders&&avsPlan.reminders[0])||'Keep taking your medicines exactly as prescribed unless your provider gives different instructions.';
-  const clinicLine=clPhone?`Questions before your next injection? Please call ${clName||'IPMG'} at ${clPhone}.`:'Questions before your next injection? Please contact your IPMG office.';
-  const readyItems=[
-    {k:'Patient',v:name&&name!=='—'?'Ready':'Needs info'},
-    {k:'Medication',v:med?'Ready':'Needs info'},
-    {k:'Site',v:site?'Ready':'Needs info'},
-    {k:'Next dose',v:next?'Ready':'Schedule'}
-  ];
-  $('avsSheet').innerHTML=`
-    <div class="avs8-shell">
-      <div class="avs8-head">
-        <div class="avs8-kicker">Inland Psychiatric Medical Group</div>
-        <div class="avs8-title">You received your injection today</div>
-        <div class="avs8-sub">This handout summarizes today’s injection, how to care for the injection site, and when to return for the next dose.${clName?` Visit location: ${esc(clName)}.`:''}</div>
-        <div class="avs8-meta">
-          <div><b>Patient</b>${esc(name)}</div>
-          <div><b>Date of birth</b>${esc(dob)}</div>
-          <div><b>Visit date</b>${esc(visitDate)}</div>
-          <div><b>Ordering provider</b>${esc(orderingProvider)}</div>
-          <div><b>Response</b>${esc(response)}</div>
-        </div>
-        <div class="avs8-status">${readyItems.map(x=>`<div><b>${esc(x.k)}</b>${esc(x.v)}</div>`).join('')}</div>
-      </div>
-      <div class="avs8-main">
-        <div class="avs8-left">
-          <div class="avs8-received">
-            <div class="avs8-label">Today you received</div>
-            <div class="avs8-med">${esc(medLine)}</div>
-            <div class="avs8-line">${esc(routeText)}${site?` · ${esc(siteText)}`:''}</div>
-            <div class="avs8-line">Given ${esc(visitDate)}${by?` · Administered by ${esc(by)}`:''}</div>
-          </div>
-          <div class="avs8-section">
-            <h2>What to expect</h2>
-            <ul class="avs8-list">${renderListItems(avsPlan.expect)}</ul>
-          </div>
-          <div class="avs8-twocol">
-            <div class="avs8-carebox"><h3>Site care</h3><p>${esc(siteCare.join(' '))}</p></div>
-            <div class="avs8-carebox"><h3>Medication reminder</h3><p>${esc(medReminder)}</p></div>
-          </div>
-          <div class="avs8-section">
-            <h2>Why timing matters</h2>
-            <p>${esc(howItWorks)}</p>
-            <p>Please call early if you need to reschedule. Do not wait until the recommended window has passed.</p>
-          </div>
-          <div class="avs8-section avs8-callout">
-            <h2>Call the clinic if</h2>
-            <ul class="avs8-list">${renderListItems(avsPlan.call.slice(0,4))}</ul>
-          </div>
-          <div class="avs8-section">
-            <h2>Seek emergency care now for</h2>
-            <p>Trouble breathing, chest pain, fainting, or swelling of the face, lips, or throat.</p>
-          </div>
-        </div>
-        <div class="avs8-right">
-          <div class="avs8-label">Next dose</div>
-          <p class="avs8-nextword">Return around</p>
-          <div class="avs8-date">${esc(nextDay)}</div>
-          <div class="avs8-month">${esc(nextMonth)}</div>
-          <div class="avs8-window">${esc(nextDateText)}<br>${esc(nextWindow)}</div>
-          <div class="avs8-windowbox"><b>Before your next visit</b><p>Bring medication changes, side effects, recent ER/hospital updates, and any insurance or pharmacy changes.</p></div>
-          <div class="avs8-windowbox"><b>Today’s site</b><p>${site?esc(siteText):'Site not documented on handout.'}</p></div>
-          <div class="avs8-barcode"></div>
-        </div>
-      </div>
-      <div class="avs8-trace"><b>Documentation details:</b> ${esc([ndc?`NDC ${ndc}`:'NDC not documented',lot?`Lot ${lot}`:'Lot not documented',exp?`Exp ${exp}`:'Exp not documented',vitals.length?vitals.join(' · '):'',allergies&&allergies!=='—'?`Allergies: ${allergies}`:''].filter(Boolean).join(' · '))}<br>${esc(clinicLine)}<br>Printed ${shortPrintDate()}.</div>
-    </div>`;
-}
-function renderUdsPatientSummary(){
-  renderUdsNote();
-  const name=$('udsPtName').value.trim()||'—', dob=$('udsDOB').value.trim()||'—';
-  const collection=udsCollectionDateText()||'—', reason=udsReasonObj().l;
-  const pos=udsPanelsByState('pos'), inv=udsPanelsByState('invalid'), nt=udsPanelsByState('nt'), neg=udsPanelsByState('neg');
-  const hasReview=udsPrintStatusClass()!=='ok';
-  const invalidControl=UDS.control==='invalid';
-  const positiveText=udsPlainList(pos,'None documented');
-  const unreadableText=udsPlainList(inv,'None documented');
-  const notTestedText=udsPlainList(nt,'None documented');
-  const testedText=(neg.length===UDS_PANELS.length && !pos.length && !inv.length && !nt.length)
-    ? 'All screening areas tested today were negative.'
-    : `${neg.length} screening area${neg.length===1?' was':'s were'} negative today.`;
-  const headline=invalidControl
-    ? 'Today’s office screen could not be interpreted.'
-    : hasReview
-      ? 'Your provider will review today’s office screen.'
-      : 'Your office screen was completed today.';
-  const statusText=invalidControl
-    ? 'The device control was not valid, so today’s cup should not be used as an interpreted result.'
-    : hasReview
-      ? 'Some part of the office screen needs provider review. This does not mean a final laboratory result has been made.'
-      : 'No initial positive findings were documented among the areas tested today.';
-  const nextStep=invalidControl
-    ? 'Your provider or care team will decide whether the screen should be repeated or confirmed with an outside laboratory test.'
-    : 'Your provider reviews office screening results with your medication list, history, and treatment plan. An outside laboratory test may be ordered if your provider feels it is needed.';
-  $('udsPatientSheet').innerHTML=`
-    <div class="patient-soft uds-soft">
-      <div class="ph-head">
-        <div class="ph-kicker">Patient visit summary</div>
-        <h1 class="ph-brand">Inland Psychiatric Medical Group</h1>
-        <p class="ph-sub">Urine screen summary — a plain-language explanation of today’s office screen. This is not a final laboratory report.</p>
-      </div>
-      <div class="ph-meta">
-        <div><span>Patient</span>${esc(name)}</div>
-        <div><span>Date of birth</span>${esc(dob)}</div>
-        <div><span>Visit date</span>${esc(collection)}</div>
-        <div><span>Reason</span>${esc(reason)}</div>
-      </div>
-      <div class="ph-status-card ${hasReview?'':'ok'}">
-        <p class="ph-label">Today’s office screen</p>
-        <h2 class="ph-status-title">${esc(headline)}</h2>
-        <p class="ph-plain">${esc(statusText)}</p>
-        <p class="ph-plain">Office urine screens are preliminary. Your provider makes the final clinical decision after reviewing your medication list, history, and treatment plan.</p>
-      </div>
-      <div class="ph-care-grid">
-        <div class="ph-section" style="margin-top:0;border-top:0;padding-top:0">
-          <h2>What the screen showed</h2>
-          <div>
-            <div class="ph-result-row"><b>Initial positive</b><span>${esc(positiveText)}</span></div>
-            <div class="ph-result-row"><b>Negative</b><span>${esc(testedText)}</span></div>
-            <div class="ph-result-row"><b>Unreadable</b><span>${esc(unreadableText)}</span></div>
-            <div class="ph-result-row"><b>Not tested</b><span>${esc(notTestedText)}</span></div>
-          </div>
-        </div>
-        <div class="ph-section" style="margin-top:0;border-top:0;padding-top:0">
-          <h2>What this means for you</h2>
-          <p class="ph-plain">Please continue medications exactly as prescribed unless your provider gives different instructions.</p>
-          <p class="ph-plain">If you recently started a new prescription, took an over-the-counter medicine, or received care elsewhere, please let the clinic know.</p>
-          <div class="ph-note">Questions are normal. Your care team can explain why the screen was done and what your provider recommends next.</div>
-        </div>
-      </div>
-      <div class="ph-treatment"><b>Treatment-plan reminder:</b> If you receive scheduled injections, keeping your injection visit within the recommended window is part of staying on your treatment plan. Please call early if a conflict comes up.</div>
-      <div class="ph-section">
-        <div class="ph-next-box">
-          <h2>What happens next</h2>
-          <ul class="ph-list">
-            <li>${esc(nextStep)}</li>
-            <li>Contact the clinic if you have questions about the result, need to update your medication list, or recently received a new prescription.</li>
-          </ul>
-        </div>
-      </div>
-      <div class="ph-footer">
-        <b>Questions?</b> Please contact your IPMG clinic.
-        <div class="ph-print">Printed ${shortPrintDate()}</div>
-      </div>
-    </div>`;
-}
-
 /* ---------- copy / toast ---------- */
 function toast(m){const t=$("toast");$("toastMsg").textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1600);}
 function copy(text,label){if(!text){toast("Nothing to copy yet");return;}navigator.clipboard.writeText(text).then(()=>toast(label+" copied")).catch(()=>{const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();toast(label+" copied");});}
@@ -9871,10 +9267,10 @@ function kbPanel(title, value){return `<div class="kb-row"><div class="k">${esc(
 function kbFactGrid(items){return `<div class="kb-mini">${items.map(x=>`<div><b>${esc(x.k)}</b>${esc(x.v)}</div>`).join('')}</div>`;}
 
 function laiToKb(m){
-  const interval=(INTERVALS.find(i=>i.k===m.intervalKey)||{}).l||'—';
+  const interval=medIntervalSummary(m);
   const bits=[
-    kbPanel('Doses', esc(m.doses.join(', ')||'—')),
-    kbPanel('Route/site', `${esc(m.route||'—')} · ${esc(m.site||'—')} · interval ${esc(interval)} · window ${esc(String(m.winB))}/${esc(String(m.winA))} days`),
+    kbPanel('Doses', esc(medDoseSummary(m))),
+    kbPanel('Route/site', `${esc(m.route||'—')} · ${esc(m.site||'—')} · interval ${esc(interval)} · window ${esc(windowSummary(m))}`),
     kbPanel('Technique', esc(m.tech||'—')),
     kbPanel('Prep/storage', `${esc(m.recon||'—')}<br>${esc(m.storage||'—')}`),
     kbPanel('Late/missed', esc(m.missed||'Verify against current PI and prescriber direction.')),
@@ -10538,6 +9934,15 @@ function wireCommandCenter(){
   });
 }
 
+/* Hoisting placeholders: the real renderAVS/renderUdsPatientSummary implementations
+   are assigned later (window.renderAVS=.../window.renderUdsPatientSummary=... inside
+   later patch IIFEs). The bootstrap call below runs render() synchronously before
+   those IIFEs execute, and only a plain function declaration — not a later assignment —
+   is hoisted early enough for that call to find it. Without this, render() throws
+   ReferenceError here and aborts the rest of this script block, including install(). */
+function renderAVS(){}
+function renderUdsPatientSummary(){}
+
 wireCommandCenter();
 renderReasons();renderMeds();renderAtt();renderInjSafetyChips();renderResp();renderUdsReasons();renderUdsTemp();renderUdsControl();renderUdsResults();renderRef("");renderLog();recalcNext();render();renderUdsNote();renderCommandCenter();
 initStaffSignIn();
@@ -11155,73 +10560,6 @@ renderCommandCenter();
   }
   function footer(text){return `<div class="ipmg-footer"><div>${text}</div><div class="printed">Printed ${esc(shortPrintDate())}</div></div>`;}
 
-  window.renderAVS=function(){
-    const name=safe($("ptName")?.value), dob=safe($("ptDOB")?.value);
-    const med=S.med?S.med.name:"";
-    const dose=S.dose||"";
-    const given=$("adminDate")?.value;
-    const next=$("nextDate")?.value;
-    const by=safe($("admin")?.value,'');
-    const cl=$("clinic")?.value||"";
-    const clName=cl?cl.split("|")[0]:"";
-    const clPhone=cl?cl.split("|")[1]:"";
-    const m=S.med||{winB:7,winA:7};
-    const visitDate=given?fmtDate(given):fmtDate(new Date().toISOString().slice(0,10));
-    const nextWindow=next?`${fmtDate(addDays(next,-(m.winB||0)))} – ${fmtDate(addDays(next,(m.winA||0)))}`:'To be scheduled with the clinic';
-    const routeSite=[S.route||'',S.site||''].filter(Boolean).join(' · ')||'Injection administration';
-    const note=(S.med&&AVSNOTE[S.med.key])||AVSNOTE._default;
-    const response=(RESP.find(r=>r.k===S.resp)||{}).l||'Tolerated well';
-    const care=[
-      'Mild soreness, redness, or a small firm area at the injection site can be normal for a few days.',
-      'Avoid rubbing or massaging the injection site unless your care team specifically tells you otherwise.',
-      note,
-      'Continue medications exactly as prescribed unless your provider gives different instructions.'
-    ];
-    const call=[
-      'Severe or worsening pain, swelling, warmth, drainage, or rash at the injection site.',
-      'Fever, hives, trouble breathing, or swelling of the face, lips, or throat.',
-      'Any symptom or reaction that feels unusual or worries you.'
-    ];
-    $('avsSheet').innerHTML=`<div class="ipmg-patient-page ipmg-injection-handout">
-      ${header('Injection after-visit summary','Inland Psychiatric Medical Group','A simple summary of today’s injection, site-care reminders, and the next-dose plan.','Injection visit','ok')}
-      ${meta([{k:'Patient',v:name},{k:'Date of birth',v:dob},{k:'Visit date',v:visitDate},{k:'Response',v:response}])}
-      <div class="ipmg-handout-grid">
-        <div class="ipmg-handout-panel emphasis"><div class="ipmg-label">Today you received</div><div class="ipmg-big">${esc(med?med+(dose?' '+dose:''):'—')}</div><p>${esc(routeSite)}</p><p class="ipmg-muted">${by?`Administered by ${esc(by)}`:'Administered in office'}</p></div>
-        <div class="ipmg-handout-panel"><div class="ipmg-label">Next injection</div><div class="ipmg-big sm">${esc(next?fmtDate(next):'To be scheduled')}</div><p>${next?`${esc(dowName(next))} · Recommended window: ${esc(nextWindow)}`:'Your clinic will help schedule the next dose.'}</p></div>
-      </div>
-      <div class="ipmg-two">
-        <div class="ipmg-section"><h2>After your injection</h2><ul class="ipmg-list">${li(care)}</ul></div>
-        <div class="ipmg-section"><h2>Call the clinic if</h2><ul class="ipmg-list">${li(call)}</ul></div>
-      </div>
-      <div class="ipmg-section"><h2>Visit details</h2><div class="ipmg-keyrow"><b>Medication</b><span>${esc(med||'—')}</span></div><div class="ipmg-keyrow"><b>Dose / route</b><span>${esc([dose,routeSite].filter(Boolean).join(' · ')||'—')}</span></div></div>
-      ${footer(`<b>Questions?</b> ${clPhone?`Call ${esc(clName||'your clinic')} at ${esc(clPhone)}.`:'Please contact your IPMG clinic.'}`)}
-    </div>`;
-  };
-
-  window.renderUdsPatientSummary=function(){
-    renderUdsNote();
-    const name=safe($('udsPtName')?.value), dob=safe($('udsDOB')?.value);
-    const collection=udsCollectionDateText()||'—';
-    const reason=udsReasonObj().l;
-    const pos=udsPanelsByState('pos'), inv=udsPanelsByState('invalid'), nt=udsPanelsByState('nt'), neg=udsPanelsByState('neg');
-    const invalidControl=UDS.control==='invalid';
-    const hasReview=udsPrintStatusClass()!=='ok';
-    const positiveText=udsPlainList(pos,'None documented');
-    const unreadableText=udsPlainList(inv,'None documented');
-    const notTestedText=udsPlainList(nt,'None documented');
-    const testedText=neg.length===UDS_PANELS.length && !pos.length && !inv.length && !nt.length ? 'All screening areas tested today were negative.' : `${neg.length} screening area${neg.length===1?' was':'s were'} negative.`;
-    const statusText=invalidControl ? 'The device control was not valid, so today’s cup should not be interpreted.' : hasReview ? 'Your provider will review today’s screening result and decide whether any follow-up is needed.' : 'No initial positive results were documented among the screening areas tested today.';
-    const nextStep=invalidControl ? 'Your provider or care team will decide whether the screen should be repeated or confirmed with an outside laboratory test.' : 'Your provider reviews the result with your medication list, history, and treatment plan. An outside laboratory test may be ordered if your provider feels it is needed.';
-    $('udsPatientSheet').innerHTML=`<div class="ipmg-patient-page ipmg-uds-handout">
-      ${header('Urine drug screen visit summary','Inland Psychiatric Medical Group','Plain-language summary of the office screen completed today. This is a preliminary point-of-care screen, not a final laboratory confirmation.',hasReview?'Provider review':'Screen completed',hasReview?'warn':'ok')}
-      ${meta([{k:'Patient',v:name},{k:'Date of birth',v:dob},{k:'Date / time',v:collection},{k:'Reason',v:reason}])}
-      <div class="ipmg-handout-panel ${hasReview?'warning':'emphasis'}"><div class="ipmg-label">Today’s summary</div><div class="ipmg-big sm">${esc(statusText)}</div><p>This cup is an initial office screening tool. Your provider reviews the result in context with your medications, history, and treatment plan.</p></div>
-      <div class="ipmg-section"><h2>Plain-language result summary</h2><div class="ipmg-uds-summary"><div class="line"><div class="k">Initial positive findings</div><div class="v">${esc(positiveText)}</div></div><div class="line"><div class="k">Negative findings</div><div class="v">${esc(testedText)}</div></div><div class="line"><div class="k">Unreadable findings</div><div class="v">${esc(unreadableText)}</div></div><div class="line"><div class="k">Not tested today</div><div class="v">${esc(notTestedText)}</div></div></div></div>
-      <div class="ipmg-two"><div class="ipmg-section"><h2>What happens next</h2><p>${esc(nextStep)}</p><div class="ipmg-callout">A screening result is not the same as a final laboratory confirmation. Your provider makes the final clinical decision.</div></div><div class="ipmg-section"><h2>When to contact the clinic</h2><ul class="ipmg-list">${li(['You have questions about your result or follow-up plan.','You think the result may be related to a prescription, over-the-counter medicine, or recent medical care.','You need to update your medication list or report a new prescription.'])}</ul></div></div>
-      ${footer('This summary is for patient education and visit documentation. It is not a definitive laboratory confirmation report.')}
-    </div>`;
-  };
-
   window.renderSampleSheet=function(){
     renderSampleHandout();
     const med=sampleMed();
@@ -11612,15 +10950,6 @@ function renderNeedleGuide(){
   list.innerHTML=(d.bullets||[]).map(x=>`<li>${esc(x)}</li>`).join('');
   diagram.innerHTML=d.svg;
   guide.classList.toggle('hidden', !S.needleGuideOpen);
-}
-function selectAdminSite(site,allowed=true){
-  S.site=site;
-  const meta=ADMIN_SITE_LIBRARY.find(s=>s.id===site);
-  if(meta)S.route=meta.route;
-  S.adminGuideCollapsed=true;
-  $('siteAuto').style.display='none';
-  if(!allowed)toast('Selected site is outside usual guidance — verify provider direction');
-  renderSites();renderRoutes();renderInjQa();render();
 }
 function setAdminGuideCollapsed(next){
   S.adminGuideCollapsed=!!next;
@@ -12110,8 +11439,8 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     if(!admin) return null;
     const daysSince=Math.round((new Date(admin+'T00:00:00')-new Date(prior+'T00:00:00'))/86400000);
     if(daysSince<0) return {level:'warn',pill:'Check dates',detail:'The administered date is before the prior-dose date — verify the dates entered.',missed:''};
-    const winB=S.med.winB||0, winA=S.med.winA||0;
-    const early=intervalDays-winB, late=intervalDays+winA;
+    const w=effectiveWindow(S.med,S.intervalKey);
+    const early=intervalDays-(w.winB||0), late=intervalDays+(w.winA||0);
     if(daysSince<early){
       return {level:'warn',pill:'Early',detail:`Given ${daysSince} day(s) after the prior dose — earlier than the labeled window (about ${early}–${late} days). Confirm this is an intentional, provider-directed early dose.`,missed:''};
     }
@@ -13321,90 +12650,6 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
 
 
 
-/* ===================== RC5.7: UDS PATIENT SUMMARY UPGRADE =====================
-   Patient-facing UDS output now reads like a visit summary instead of a lab report. */
-(function(){
-  if(window.__IPMG_RC57_UDS_PATIENT__) return;
-  window.__IPMG_RC57_UDS_PATIENT__=true;
-  const q=id=>document.getElementById(id);
-  const h=s=>typeof esc==='function'?esc(s==null?'':String(s)):String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const val=(id,f='—')=>{const el=q(id); const v=el && 'value' in el ? String(el.value||'').trim() : ''; return v||f;};
-  const fmt=d=>{try{return typeof fmtDate==='function'?fmtDate(d):d;}catch(e){return d||'—';}};
-  const printed=()=>{try{return typeof shortPrintDate==='function'?shortPrintDate():fmt(new Date().toISOString().slice(0,10));}catch(e){return fmt(new Date().toISOString().slice(0,10));}};
-  const li=items=>(items||[]).filter(Boolean).map(x=>`<li>${h(x)}</li>`).join('');
-  function header(kind,title,sub,status,cls){
-    return `<div class="ipmg-patient-head"><div class="ipmg-patient-kicker">${h(kind)}</div><h1 class="ipmg-patient-title">${h(title)}</h1><p class="ipmg-patient-sub">${h(sub)}</p>${status?`<div class="ipmg-patient-status ${h(cls||'')}">${h(status)}</div>`:''}</div>`;
-  }
-  function meta(items){
-    return `<div class="ipmg-patient-meta">${items.map(i=>`<div class="meta-item"><span>${h(i.k)}</span><b>${h(i.v||'—')}</b></div>`).join('')}</div>`;
-  }
-  function footer(text){return `<div class="ipmg-footer"><div>${text}</div><div class="printed">Printed ${h(printed())}</div></div>`;}
-  function patientName(panel){try{return typeof udsPanelPatientName==='function'?udsPanelPatientName(panel):panel;}catch(e){return panel;}}
-  function joined(panels,none){return panels&&panels.length?panels.map(patientName).join(', '):(none||'None documented');}
-  function rows(items){return items.map(i=>`<div class="rc57-plain-row"><b>${h(i.k)}</b><span>${h(i.v)}</span></div>`).join('');}
-  function resultCard(cls,label,text){return `<div class="rc57-result ${h(cls)}"><b>${h(label)}</b><span>${h(text)}</span></div>`;}
-  window.renderUdsPatientSummary=function renderUdsPatientSummaryRC57(){
-    try{ if(typeof renderUdsNote==='function') renderUdsNote(); }catch(e){}
-    const name=val('udsPtName'), dob=val('udsDOB');
-    const collection=(typeof udsCollectionDateText==='function'?udsCollectionDateText():val('udsDate'))||'—';
-    const reason=(typeof udsReasonObj==='function'?udsReasonObj().l:val('udsReason','Routine screening'));
-    const panels=(typeof UDS_PANELS!=='undefined'?UDS_PANELS:[]);
-    const pos=(typeof udsPanelsByState==='function'?udsPanelsByState('pos'):panels.filter(p=>UDS.results[p]==='pos'));
-    const inv=(typeof udsPanelsByState==='function'?udsPanelsByState('invalid'):panels.filter(p=>UDS.results[p]==='invalid'));
-    const nt=(typeof udsPanelsByState==='function'?udsPanelsByState('nt'):panels.filter(p=>UDS.results[p]==='nt'));
-    const neg=(typeof udsPanelsByState==='function'?udsPanelsByState('neg'):panels.filter(p=>(UDS.results[p]||'neg')==='neg'));
-    const invalidControl=typeof UDS!=='undefined' && UDS.control==='invalid';
-    const tested=Math.max(0,panels.length-nt.length);
-    const needsReview=invalidControl||pos.length||inv.length;
-    const title=invalidControl?'Do not interpret today’s cup':(pos.length||inv.length?'Some screening areas need provider review':'Screen completed today');
-    const status=invalidControl?'Do not interpret':(pos.length||inv.length?'Provider review':'Screen completed');
-    const statusClass=invalidControl?'danger':(pos.length||inv.length?'warn':'ok');
-    const heroClass=invalidControl?'invalid':(pos.length||inv.length?'review':'');
-    const heroText=invalidControl
-      ? 'The device control was not valid, so the cup should not be used to interpret results.'
-      : (pos.length||inv.length
-        ? 'Some office-screening areas were flagged or unreadable. Your provider will review them with your medication list and treatment plan.'
-        : 'No initial positive results were documented among the screening areas tested today.');
-    const nextTitle=invalidControl?'What happens next':'What this means';
-    const nextText=invalidControl
-      ? 'Your provider or care team may repeat the cup or order an outside laboratory test if needed.'
-      : 'This is an initial office screen. It helps your provider decide whether any follow-up discussion, repeat screen, or outside laboratory confirmation is needed.';
-    const resultCards=[];
-    if(invalidControl){
-      resultCards.push(resultCard('invalid','Device control','Control was invalid or missing. The cup should not be interpreted.'));
-    }else{
-      if(pos.length) resultCards.push(resultCard('review','Needs provider review',joined(pos,'None documented')));
-      if(inv.length) resultCards.push(resultCard('invalid','Unreadable areas',joined(inv,'None documented')));
-      if(!pos.length&&!inv.length) resultCards.push(resultCard('ok','Initial positives','None documented among tested areas.'));
-      resultCards.push(resultCard('ok','Negative areas',neg.length===panels.length && !nt.length?'All screening areas tested today were negative.':`${neg.length} of ${tested} tested screening area${neg.length===1?' was':'s were'} negative.`));
-      if(nt.length) resultCards.push(resultCard('', 'Not tested today', joined(nt,'None documented')));
-    }
-    const medContext=[
-      'Prescription and over-the-counter medications can affect how an office screen is reviewed.',
-      'Some medications may not show on every cup panel, and some cup panels may require confirmation.',
-      'Your provider makes the final clinical interpretation, not the cup by itself.'
-    ];
-    const contact=[
-      'You have questions about what the office screen means.',
-      'You recently started, stopped, or changed a prescription or over-the-counter medication.',
-      'You think an outside laboratory confirmation may be needed.',
-      'You need to update your medication list before the provider reviews the result.'
-    ];
-    const sheet=q('udsPatientSheet'); if(!sheet) return;
-    sheet.innerHTML=`<div class="ipmg-patient-page ipmg-uds-handout rc57">
-      ${header('Urine drug screen visit summary','Your office screen was completed today','This plain-language summary explains the point-of-care cup result. It is not a final laboratory confirmation report.',status,statusClass)}
-      ${meta([{k:'Patient',v:name},{k:'Date of birth',v:dob},{k:'Date / time',v:collection},{k:'Reason',v:reason}])}
-      <div class="rc57-hero ${h(heroClass)}"><div class="eyebrow">Today’s main takeaway</div><h2>${h(title)}</h2><p>${h(heroText)}</p></div>
-      <div class="rc57-next"><b>${h(nextTitle)}</b><p>${h(nextText)}</p></div>
-      <div class="rc57-grid"><div class="rc57-card"><h3>Result summary</h3><div class="rc57-result-list">${resultCards.join('')}</div><div class="rc57-note">This summary uses plain-language names instead of panel abbreviations. Your provider may still document the clinical note using standard panel codes.</div></div><div class="rc57-card"><h3>Screen details</h3>${rows([{k:'Screen type',v:'Initial office urine drug screen'},{k:'Tested areas',v:`${tested} of ${panels.length}`},{k:'Provider review',v:needsReview?'Yes — review or follow-up may be needed.':'Routine provider review.'}])}</div></div>
-      <div class="rc57-grid"><div class="rc57-card"><h3>Important context</h3><ul class="rc57-list">${li(medContext)}</ul></div><div class="rc57-card"><h3>Contact the clinic if</h3><ul class="rc57-list">${li(contact)}</ul></div></div>
-      <div class="rc57-card"><h3>What this does not mean</h3><p>This page does not diagnose substance use and does not replace provider interpretation. It also does not replace a final laboratory confirmation if your provider orders one.</p></div>
-      ${footer('This patient summary is for education and visit documentation. The provider reviews office-screening results with the full clinical context.')}
-    </div>`;
-  };
-})();
-
-
 /* ===================== RC5.9: QA MARKER =====================
    Version marker used during print smoke testing; no workflow logic changes. */
 window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
@@ -13510,7 +12755,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const given=raw('adminDate')||today(); const next=raw('nextDate'); const by=raw('admin','');
     const resp=(typeof RESP!=='undefined'&&typeof S!=='undefined'?(RESP.find(r=>r.k===S.resp)||{}).l:'')||'Tolerated well';
     const cl=raw('clinic',''); const clName=cl?cl.split('|')[0]:''; const clPhone=cl?cl.split('|')[1]:'';
-    const nextWindow=next?`${fmt(add(next,-(med.winB||0)))} – ${fmt(add(next,(med.winA||0)))}`:'To be scheduled with the clinic';
+    const ivKey=(typeof S!=='undefined'&&S.intervalKey)?S.intervalKey:med.intervalKey;
+    const w=(typeof effectiveWindow==='function')?effectiveWindow(med,ivKey):{winB:med.winB||0,winA:med.winA||0};
+    const nextWindow=next?`${fmt(add(next,-(w.winB||0)))} – ${fmt(add(next,(w.winA||0)))}`:'To be scheduled with the clinic';
     const note=(typeof AVSNOTE!=='undefined'&&med.key&&AVSNOTE[med.key])||((typeof AVSNOTE!=='undefined'&&AVSNOTE._default)||'Follow the aftercare instructions from your care team.');
     const routeSite=[route,site].filter(Boolean).join(' · ')||'Injection administered in office';
     const siteCare = /deltoid|arm/i.test(site) ? 'Try to avoid heavy upper-arm activity right after the injection if your arm feels sore.' : /glute|buttock/i.test(site) ? 'Avoid firm rubbing or pressure over the injection site unless your care team tells you otherwise.' : /abdomen|subq|subcutaneous/i.test(site+route) ? 'Avoid scratching, rubbing, or applying heat directly over the area.' : 'Keep the injection area clean and follow your care team’s instructions.';
