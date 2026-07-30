@@ -235,6 +235,57 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#recordsDrawerTrigger')).toBeFocused();
   });
 
+  test('keeps every clinical workspace contained in side-by-side Tebra widths', async ({ page }) => {
+    const widths = [1181, 1040, 700, 390, 320];
+    const workflows = [
+      ['administer', '#panel-administer .layout'],
+      ['uds', '#panel-uds .layout'],
+      ['samples', '#panel-samples .layout'],
+      ['forms', '#panel-forms .forms-layout']
+    ];
+
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
+      await page.goto(`/?responsive=${width}`);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth))
+        .toBeLessThanOrEqual(1);
+
+      if (width >= 1040) {
+        const headerHeight = await page.locator('.app-sidebar').evaluate(node => node.getBoundingClientRect().height);
+        expect(headerHeight).toBeLessThan(300);
+      }
+
+      for (const [tab, selector] of workflows) {
+        await page.locator(`.tab[data-tab="${tab}"]`).click();
+        await expect(page.locator(selector)).toBeVisible();
+        await expect.poll(() => page.locator(selector).evaluate(node => node.scrollWidth - node.clientWidth))
+          .toBeLessThanOrEqual(1);
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth))
+          .toBeLessThanOrEqual(1);
+      }
+
+      if (width <= 390) {
+        const formsHeroHeight = await page.locator('.forms-hero').evaluate(node => node.getBoundingClientRect().height);
+        expect(formsHeroHeight).toBeLessThan(520);
+        await page.locator('.tab[data-tab="log"]').click();
+        const logHeroHeight = await page.locator('.log-hero').evaluate(node => node.getBoundingClientRect().height);
+        expect(logHeroHeight).toBeLessThan(520);
+      }
+
+      const useButton = page.locator('#staffApply');
+      const clearButton = page.locator('#staffClear');
+      const [useBox, clearBox] = await Promise.all([useButton.boundingBox(), clearButton.boundingBox()]);
+      expect(useBox).not.toBeNull();
+      expect(clearBox).not.toBeNull();
+      if (width > 360) {
+        expect(useBox.x + useBox.width).toBeLessThanOrEqual(clearBox.x + 1);
+      } else {
+        expect(useBox.y + useBox.height).toBeLessThanOrEqual(clearBox.y + 1);
+      }
+      await expect(useButton).toHaveText('Use for this encounter');
+    }
+  });
+
   test('renders a blank sample worksheet through the browser print path', async ({ page }) => {
     await page.addInitScript(() => {
       window.__ipmgPrintCalls = 0;
