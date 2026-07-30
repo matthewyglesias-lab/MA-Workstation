@@ -50,9 +50,6 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('#bodyMap [data-site="' + (medication === 'Other' ? 'R deltoid' : 'R ventrogluteal') + '"]').click();
     await openInjectionCard(page, 'card-medication');
     await page.locator('#intChips').getByRole('button', { name: 'q4 wk', exact: true }).click();
-    if (medication !== 'Other') {
-      await page.locator('#medSpecChips').getByRole('button', { name: 'Ordered route / technique verified', exact: true }).click();
-    }
 
     await openInjectionCard(page, 'card-trace');
     await page.locator('#ndc').fill('00000-0000-42');
@@ -60,18 +57,21 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('#exp').fill('2027-12');
 
     await openInjectionCard(page, 'card-safety');
+    if (medication !== 'Other') {
+      await page.locator('#medSpecChips').getByRole('button', { name: 'Ordered route / technique verified', exact: true }).click();
+    }
     await page.locator('#allergies').fill('NKDA verified in active record');
     await page.locator('[data-rc530-noacute]').click();
 
-    await openInjectionCard(page, 'card-return');
+    await openInjectionCard(page, 'card-response');
     await page.locator('#adminDate').fill('2026-07-30');
-    await page.locator('#nextDate').fill('2026-08-27');
     if (includeAdministrationTime) {
       await page.locator('#injAdminTime').fill(administrationTime);
     }
-
-    await openInjectionCard(page, 'card-response');
     await page.locator('#admin').fill('QA Staff, MA');
+
+    await openInjectionCard(page, 'card-return');
+    await page.locator('#nextDate').fill('2026-08-27');
     return page.locator('#clinicalDisposition');
   }
 
@@ -190,18 +190,35 @@ test.describe('MA Workstation browser journeys', () => {
     const receipt = encounter.locator('.rc530-summary');
     await expect(receipt).toBeVisible();
     await expect(receipt).toHaveJSProperty('tagName', 'BUTTON');
+    await expect(receipt).toHaveAttribute('aria-expanded', 'false');
+    await expect(receipt).toHaveAttribute('aria-label', /Patient & order — complete:/);
 
     const progressStep = page.locator('[data-rc526-jump="encounter"]');
     await progressStep.focus();
     await page.keyboard.press('Enter');
     await expect.poll(() => encounter.evaluate(node => node.classList.contains('rc530-collapsed'))).toBe(false);
     await expect(encounter).toHaveClass(/rc530-open/);
+    await expect(progressStep).toBeFocused();
   });
 
   test('keeps module navigation and the records drawer contained at phone width', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+
+    const homeTab = page.locator('.tab[data-tab="home"]');
+    const logTab = page.locator('.tab[data-tab="log"]');
+    await homeTab.focus();
+    await page.keyboard.press('End');
+    await expect(logTab).toBeFocused();
+    await expect(logTab).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(() => page.evaluate(() => {
+      const rail = document.querySelector('.tabs');
+      const target = document.querySelector('.tab[data-tab="log"]');
+      if (!rail || !target) return false;
+      const railRect = rail.getBoundingClientRect(), targetRect = target.getBoundingClientRect();
+      return targetRect.left >= railRect.left - 1 && targetRect.right <= railRect.right + 1;
+    })).toBe(true);
 
     await page.locator('.tab[data-tab="samples"]').click();
     await expect(page.locator('.tab[data-tab="samples"]')).toHaveAttribute('aria-selected', 'true');
@@ -339,7 +356,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(disposition).toContainText('Document the actual administration time.');
     await expect(administered).toBeDisabled();
 
-    await openInjectionCard(page, 'card-return');
+    await openInjectionCard(page, 'card-response');
     await page.locator('#injAdminTime').fill('09:41');
     await expect(administered).toBeEnabled();
 
@@ -420,7 +437,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#injCompletionOverlay')).toBeHidden();
     await expect(page.locator('#injRecordWorkspace')).toBeFocused();
     await expect(page.locator('#panel-administer')).toHaveClass(/record-readonly/);
+    await expect(page.locator('#rc526Flow .rc526-mode b')).toHaveText('Locked injection record');
+    await expect(page.locator('#injRecordWorkspace [data-inj-new]')).toHaveAttribute('aria-label', 'Start a new injection');
     await expect(page.locator('#ptName')).toBeDisabled();
+    await openInjectionCard(page, 'card-medication');
     await expect(page.locator('#medClear')).toHaveAttribute('aria-disabled', 'true');
     const lockedMedication = await page.locator('#medHdrName').textContent();
     expect(lockedMedication).toBeTruthy();
@@ -428,6 +448,100 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#medHdrName')).toHaveText(lockedMedication || '');
     await expect(page.locator('#outPL')).toContainText('actual administration time: 9:41 AM');
     await expect(page.locator('#outPL')).toContainText('Product source: Clinic stock.');
+
+    await page.locator('#injAddendumAuthor').fill('QA Addendum Staff');
+    await page.locator('#injAddendumText').fill('Saved clarification by the current reviewer.');
+    await page.locator('[data-inj-addendum]').click();
+    await expect(page.locator('.record-addenda-item').first()).toContainText('QA Addendum Staff');
+    await expect(page.locator('.record-addenda-item').first()).toContainText('Saved clarification by the current reviewer.');
+
+    await page.locator('#injAddendumText').fill('Pending clarification that must not be abandoned.');
+    await page.locator('#injRecordWorkspace [data-inj-new]').click();
+    await expect(page.locator('#injAddendumText')).toHaveValue('Pending clarification that must not be abandoned.');
+    await expect(page.locator('#injAddendumText')).toBeFocused();
+    await expect(page.locator('#ptName')).toHaveValue('QA, Formatted Note');
+  });
+
+  test('locks a paired aripiprazole initiation with both injection components in the completion receipt', async ({ page }) => {
+    test.setTimeout(90000);
+    await page.goto('/');
+    await page.locator('.tab[data-tab="administer"]').click();
+
+    await openInjectionCard(page, 'card-encounter');
+    await page.locator('#ptName').fill('QA, Paired Initiation');
+    await page.locator('#ptDOB').fill('04/05/1993');
+    await page.locator('#orderingProvider').fill('QA Ordering Provider');
+    await openInjectionCard(page, 'card-encounter');
+    await page.locator('#reasonChips').getByRole('button', { name: 'Initiation', exact: true }).click();
+
+    await openInjectionCard(page, 'card-medication');
+    await page.locator('#medChips').getByRole('button', { name: 'Abilify Maintena', exact: true }).click();
+    await page.locator('#doseChips').getByRole('button', { name: '400 mg', exact: true }).click();
+    await page.locator('#routeChips').getByRole('button', { name: 'IM', exact: true }).click();
+    await page.locator('#bodyMap [data-site="R deltoid"]').click();
+    await page.locator('#intChips').getByRole('button', { name: 'q4 wk', exact: true }).click();
+
+    const initiation = page.locator('#initiationProtocolCard');
+    await expect(initiation).toBeVisible();
+    await initiation.getByRole('button', { name: /1-day initiation/ }).click();
+    await page.evaluate(() => {
+      const setValue = (id, value) => {
+        const control = document.getElementById(id);
+        control.value = value;
+        control.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      const setChecked = id => {
+        const control = document.getElementById(id);
+        control.checked = true;
+        control.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      setChecked('initPlanVerified');
+      setValue('initSecondDose', '400 mg');
+      setValue('initSecondSite', 'L deltoid');
+      setValue('initSecondNdc', '00000-0000-22');
+      setValue('initSecondLot', 'PAIR-LOT-2');
+      setValue('initSecondExp', '2028-06');
+      setChecked('initSecondOrderVerified');
+      setChecked('initSecondGiven');
+      document.querySelector('[data-init-oral="administered"]').click();
+    });
+    await expect(initiation).toContainText('Protocol fields complete');
+
+    await openInjectionCard(page, 'card-trace');
+    await page.locator('#ndc').fill('00000-0000-11');
+    await page.locator('#lot').fill('PAIR-LOT-1');
+    await page.locator('#exp').fill('2028-05');
+
+    await openInjectionCard(page, 'card-safety');
+    await page.locator('#medSpecChips').getByRole('button', { name: 'Suspension inspected & mixed', exact: true }).click();
+    await page.locator('#medSpecChips').getByRole('button', { name: 'Ordered oral initiation plan documented', exact: true }).click();
+    await page.locator('#allergies').fill('NKDA verified in active record');
+    await page.locator('[data-rc530-noacute]').click();
+
+    await openInjectionCard(page, 'card-response');
+    await page.locator('#adminDate').fill('2026-07-30');
+    await page.locator('#injAdminTime').fill('10:15');
+    await page.locator('#injSecondAdminTime').fill('10:18');
+    await page.locator('#admin').fill('QA Staff, MA');
+
+    await openInjectionCard(page, 'card-return');
+    await page.locator('#nextDate').fill('2026-08-27');
+
+    const administered = page.locator('#clinicalDisposition [data-disposition="administered"]');
+    await expect(administered).toBeEnabled();
+    await administered.click();
+    await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
+
+    const complete = page.locator('#injRecordWorkspace [data-inj-complete]');
+    await expect(complete).toBeEnabled();
+    await complete.click();
+    const receipt = page.locator('#injCompletionOverlay .inj-completion-receipt');
+    await expect(receipt).toContainText('Component 1');
+    await expect(receipt).toContainText('400 mg · IM · R deltoid · at 10:15');
+    await expect(receipt).toContainText('NDC 00000-0000-11 · Lot PAIR-LOT-1 · Exp 2028-05');
+    await expect(receipt).toContainText('Component 2 · Abilify Maintena');
+    await expect(receipt).toContainText('400 mg · IM · L deltoid · at 10:18');
+    await expect(receipt).toContainText('NDC 00000-0000-22 · Lot PAIR-LOT-2 · Exp 2028-06');
   });
 
   test('round-trips structured injection draft fields through the local records drawer', async ({ page }) => {
@@ -440,7 +554,7 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('#orderingProvider').fill('QA Draft Provider');
     await openInjectionCard(page, 'card-encounter');
     await page.locator('#injOrderPurpose').fill('Draft order-linked encounter context');
-    await openInjectionCard(page, 'card-return');
+    await openInjectionCard(page, 'card-response');
     await page.locator('#injAdminTime').fill('14:06');
 
     // Switch immediately: the record lifecycle must flush the pending sub-700 ms
@@ -456,5 +570,130 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#ptName')).toHaveValue('QA, Draft Detail');
     await expect(page.locator('#injOrderPurpose')).toHaveValue('Draft order-linked encounter context');
     await expect(page.locator('#injAdminTime')).toHaveValue('14:06');
+  });
+
+  test('resets smart-vitals state for a new injection and restores it with its draft', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab[data-tab="administer"]').click();
+
+    await page.locator('#ptName').fill('QA, Smart Vitals Draft');
+    await page.locator('#orderingProvider').fill('QA Ordering Provider');
+    await openInjectionCard(page, 'card-medication');
+    await page.locator('#medChips').getByRole('button', { name: 'Other', exact: true }).click();
+    await openInjectionCard(page, 'card-safety');
+    await page.locator('[data-rc526-toggle-vitals]').click();
+    await expect(page.locator('#rr')).toBeVisible();
+
+    await page.locator('#rr').fill('10');
+    await page.locator('#spo2').fill('93');
+    await page.locator('#vitalRepeatNote').fill('Repeat sitting after five minutes: 96%.');
+    // Blurring the repeat-note field redraws the smart-vitals panel; interact with
+    // the freshly rendered recheck action rather than its pre-blur instance.
+    await page.locator('#vitalRepeatNote').blur();
+    const recheck = page.locator('#vitalsRecheckChip');
+    await expect(recheck).toBeVisible();
+    await recheck.click();
+    await expect(recheck).toHaveAttribute('aria-pressed', 'true');
+
+    await page.locator('#injRecordWorkspace [data-inj-save]').click();
+    await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+
+    await page.locator('#injRecordWorkspace [data-inj-new]').click();
+    await expect(page.locator('#ptName')).toHaveValue('');
+    await expect(page.locator('#rr')).toHaveValue('');
+    await expect(page.locator('#spo2')).toHaveValue('');
+    await expect(page.locator('#vitalRepeatNote')).toHaveValue('');
+    await expect.poll(() => page.evaluate(() => window.ipmgSmartVitalsSnapshot().recheck)).toBe(false);
+
+    await page.locator('#recordsDrawerTrigger').click();
+    await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
+    await page.locator('#recordsDrawerSearch').fill('QA, Smart Vitals Draft');
+    await page.locator('[data-records-open]').click();
+
+    await expect(page.locator('#rr')).toHaveValue('10');
+    await expect(page.locator('#spo2')).toHaveValue('93%');
+    await expect(page.locator('#vitalRepeatNote')).toHaveValue('Repeat sitting after five minutes: 96%.');
+    await expect(recheck).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('clearing the first meaningful draft field cancels autosave without creating a record', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab[data-tab="administer"]').click();
+
+    const recordStatus = page.locator('#injRecordStatus');
+    // Dispatch both edits in one browser task so the test exercises the actual
+    // pre-autosave clear path without becoming timing-sensitive under CI load.
+    await page.evaluate(() => {
+      const patient = document.getElementById('ptName');
+      patient.value = 'QA, Transient Draft';
+      patient.dispatchEvent(new Event('input', { bubbles: true }));
+      patient.value = '';
+      patient.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    // Let the original 700 ms autosave window elapse before verifying its cancellation.
+    await page.waitForTimeout(850);
+    await expect(recordStatus).toHaveText('New draft');
+    await expect(page.locator('#recordsDrawerCount')).toHaveText('0');
+    await expect.poll(() => page.evaluate(() => {
+      return JSON.parse(localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]');
+    })).toEqual([]);
+  });
+
+  test('never reports a draft as saved or abandons it when browser persistence fails', async ({ page }) => {
+    await page.addInitScript(() => {
+      const nativeSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function(key, value) {
+        if (key === 'ipmgMedAssistInjectionRecordsV1') {
+          throw new DOMException('Storage blocked for test', 'QuotaExceededError');
+        }
+        return nativeSetItem.call(this, key, value);
+      };
+    });
+    await page.goto('/');
+    await page.locator('.tab[data-tab="administer"]').click();
+    await page.locator('#ptName').fill('QA, Persistence Guard');
+    await page.locator('#ptDOB').fill('03/04/1992');
+    await page.locator('#orderingProvider').fill('QA Provider');
+
+    await page.locator('#injRecordWorkspace [data-inj-new]').click();
+    await expect(page.locator('#ptName')).toHaveValue('QA, Persistence Guard');
+    await expect(page.locator('#injRecordStatus')).toHaveText('Save failed');
+    await expect(page.locator('#injRecordStatus')).toHaveAttribute('role', 'status');
+    await expect(page.locator('#panel-administer')).not.toHaveClass(/record-readonly/);
+  });
+
+  test('uses prior administration context to recommend, but never auto-select, the actual site', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.locator('.tab[data-tab="administer"]').click();
+
+    await page.locator('#ptName').fill('QA, Smart Rotation');
+    await page.locator('#orderingProvider').fill('QA Ordering Provider');
+    await openInjectionCard(page, 'card-medication');
+    await page.locator('#medChips').getByRole('button', { name: 'Other', exact: true }).click();
+    await page.locator('#doseChips input').fill('100 mg');
+    await page.locator('#priorDose').fill('2026-07-02');
+    await page.locator('#priorSite').selectOption('R deltoid');
+
+    await expect(page.locator('#injPriorContextCopy')).toContainText('A valid alternate is L deltoid');
+    await expect(page.locator('#bodyMap .bm-lm.recommended[data-site="L deltoid"]')).toBeVisible();
+    await expect(page.locator('#bodyMap .bz-sel,#bodyMap .bm-lm.on')).toHaveCount(0);
+
+    await page.locator('#bodyMap .bm-rot-alt').click();
+    await expect(page.locator('#adminGuideSummaryLine')).toContainText('IM · L deltoid');
+    await expect(page.locator('#adminGuideDetail')).toHaveClass(/hidden/);
+    await expect(page.locator('#panel-administer .card-medication')).not.toHaveClass(/rc530-collapsed/);
+    await expect(page.locator('#intChips')).toBeVisible();
+    await page.locator('#adminGuideEdit').click();
+    await expect(page.locator('#bodyMap')).toBeVisible();
+    await expect(page.locator('#bodyMap [role="button"][tabindex="0"]').first()).toBeFocused();
+    await page.locator('#intChips').getByRole('button', { name: 'q4 wk', exact: true }).click();
+
+    await openInjectionCard(page, 'card-response');
+    await expect(page.locator('#injAdministrationCoreSub')).toContainText('Other · 100 mg · IM · L deltoid');
+    await expect(page.locator('#panel-administer .card-response')).not.toHaveClass(/rc530-collapsed/);
+    await expect(page.locator('#panel-administer .card-safety')).toHaveClass(/rc530-collapsed/);
+    await expect(page.getByLabel('Actual administration time *')).toBeVisible();
   });
 });

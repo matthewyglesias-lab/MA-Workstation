@@ -74,7 +74,7 @@ assert.match(html, /else UDS_PANELS\.forEach\(panel=>\{UDS\.results\[panel\]='nt
 assert.match(html, /readingsVerified:false/, 'UDS cup-profile state must begin with readings unverified');
 assert.match(html, /id='udsReadingsVerified'/, 'Named UDS cups must require a compact physical-reading confirmation');
 assert.match(html, /issues\.push\(\.\.\.udsReadingVerificationIssues\(\)\);/, 'UDS final-output gating must require the physical-reading confirmation');
-assert.match(html, /monthExpired\(val\('udsExp'\)\)/, 'Expired UDS cups must block finalized output');
+assert.match(html, /monthExpired\(val\('udsExp'\),val\('udsDateTime'\)\)/, 'Expired UDS cups must block finalized output against the documented collection date');
 assert.match(html, /<select id="udsValidity"><option value="acceptable">Acceptable<\/option>/, 'UDS validity must start at the routine review value');
 assert.match(html, /<select id="udsConsistent"><option value="no unexpected">No unexpected findings noted by staff<\/option>/, 'UDS alignment must start at the routine review value');
 assert.match(html, /<select id="sampleMedCheck"><option>Prescriber reviewed \/ ok to dispense<\/option>/, 'Sample medication review must start selected for quick review');
@@ -141,7 +141,18 @@ assert.match(html, /role="dialog" aria-modal="true" aria-labelledby="recordsDraw
 assert.match(html, /data-records-filter/, 'The records drawer must expose interactive record filters');
 assert.match(html, /function openDrawerRecord\(id\)/, 'The drawer must reopen an existing injection record through the record lifecycle');
 assert.match(html, /function flushDraft\(updateUi=true\)/, 'Record transitions must synchronously flush an in-progress injection draft');
-assert.match(html, /function openRecord\(id\)\{\s*if\(mode==='edit'&&meaningful\(\)\)flushDraft\(\)/, 'Opening any record must flush pending injection edits before restoring its snapshot');
+assert.match(html, /function openRecord\(id\)\{[\s\S]{0,300}if\(mode==='edit'&&draftNeedsPersistence\(\)&&!flushDraft\(false\)\)/, 'Opening any record must flush pending injection edits and remain in place if persistence fails');
+assert.match(html, /function draftNeedsPersistence\(\)\{const record=currentRecord\(\);return meaningful\(\)\|\|!!\(record&&record\.status==='draft'\);\}/, 'An existing draft must persist even after its meaningful fields are cleared');
+assert.match(html, /if\(!record\)\{\s*saveFeedback='error';renderWorkspace\(\);[\s\S]{0,180}remains editable and was not locked/, 'A failed completed-record save must leave the injection editable');
+assert.match(html, /set\(k,v\)\{try\{window\.localStorage\.setItem\(k,String\(v\)\);return true;\}catch\(e\)\{return false;\}\}/, 'Browser storage writes must report success or failure truthfully');
+assert.match(html, /function appendLogEntry\(entry\)\{LOG\.push\(entry\);if\(saveLog\(\)\)return true;LOG\.pop\(\);return false;\}/, 'Activity-log writes must roll back when browser persistence fails');
+assert.match(html, /window\.ipmgSmartVitalsSnapshot=\(\)=>\(\{version:1,recheck:!!state\.recheck\}\)/, 'Smart-vitals recheck state must be serializable');
+assert.match(html, /call\(window\.restoreSmartVitalsState,snap\.smartVitals\|\|\{\}\)/, 'Opening a saved injection must restore smart-vitals state');
+assert.match(html, /if\(typeof window\.resetSmartVitalsState==='function'\)window\.resetSmartVitalsState\(\)/, 'Starting a new injection must clear smart-vitals state');
+assert.match(html, /const staff=val\('injAddendumAuthor'\)\|\|String\(call\(window\.getStoredStaff\)\|\|''\)\.trim\(\)/, 'A locked-record addendum must use the current addendum author');
+assert.doesNotMatch(html, /const staff=val\('admin'\)\|\|String\(call\(window\.getStoredStaff\)/, 'A locked-record addendum must not inherit the original administering staff');
+assert.match(html, /return patient&&birthDate\?`\$\{patient\}\|\$\{birthDate\}`:'';/, 'Site rotation history must require both patient name and DOB');
+assert.match(html, /entry&&entry\.medKey===medKey&&entry\.route===route/, 'Site rotation history must stay scoped to the same medication and route');
 assert.match(html, /document\.addEventListener\('keydown',handleRecordsDrawerKeys\)/, 'The drawer must install keyboard handling');
 assert.match(html, /event\.key==='Escape'/, 'The drawer must close with Escape');
 assert.match(html, /function refreshRecordsDrawer\(\)/, 'The record drawer must refresh after lifecycle persistence');
@@ -157,6 +168,7 @@ assert.match(html, /new Set\(\[encounter,medCard,safety\]\)\.size!==3/, 'Samples
 assert.match(html, /root\.closest\('\.panel'\)\?\.querySelector\('\.preview-col'\)/, 'Guided output highlighting must stay inside its active workflow panel');
 assert.match(html, /rootState\.openInjection=openInj/, 'The injection progress rail must route through the active collapse controller');
 assert.match(html, /recordsDrawerState=\{query:'',filter:'all',lastFocus:null,closing:false\}/, 'The records drawer must distinguish its open and closing interaction states');
+assert.match(html, /localDay\(review\.confirmedAt\)===localDay\(new Date\(\)\)/, 'Reviewed-today confirmation must expire on the next local calendar day');
 assert.match(html, /overlay\.setAttribute\('aria-labelledby','injCompletionTitle'\)/, 'The completion dialog must expose a labelled modal contract');
 assert.match(html, /event\.key==='Escape'\)\{event\.preventDefault\(\);close\(\)/, 'The completion dialog must close with Escape');
 assert.match(html, /--rc544-radius:var\(--r-lg,22px\)/, 'New top-level workflow surfaces must inherit the original large card radius');
