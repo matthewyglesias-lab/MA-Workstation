@@ -1,14 +1,16 @@
 {
   "name": "ipmg-medassist-static-webapp",
-  "version": "5.34.0",
+  "version": "5.43.0",
   "private": true,
   "description": "IPMG MedAssist UDS / Injection / Samples static web app for Azure Static Web Apps.",
   "scripts": {
-    "start": "npx serve .",
+    "start": "node scripts/static-server.js",
     "check": "node scripts/check-app.js",
-    "test": "npm run check"
+    "test": "npm run check",
+    "test:e2e": "playwright test",
+    "test:ci": "npm run check && npm run test:e2e"
   },
   "devDependencies": {
-    "serve": "latest"
+    "@playwright/test": "1.62.0"
   }
 }
