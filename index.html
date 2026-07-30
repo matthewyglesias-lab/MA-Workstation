@@ -121,7 +121,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>IPMG MA Workstation RC5.43</title>
+<title>IPMG MA Workstation</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -2446,7 +2446,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 
   --focus:0 0 0 4px rgba(107,124,250,.14);
 }
 
-html{scroll-behavior:smooth;}
+html{scroll-behavior:auto;}
 body{
   font-family:var(--font-ui);
   font-size:var(--fs-base);
@@ -6827,7 +6827,7 @@ button *::selection{
                   <div class="admin-guide-summary-line" id="adminGuideSummaryLine">—</div>
                   <div class="admin-guide-summary-sub" id="adminGuideSummarySub">Review route and site selection.</div>
                 </div>
-                <button type="button" class="admin-guide-edit" id="adminGuideEdit">Review / change</button>
+                <button type="button" class="admin-guide-edit" id="adminGuideEdit" aria-controls="adminGuideDetail" aria-expanded="true">Review / change</button>
               </div>
               <div class="admin-guide-detail" id="adminGuideDetail">
                 <div class="admin-guide-body">
@@ -6989,8 +6989,8 @@ button *::selection{
           <div class="field" style="margin:12px 0"><label>Clinic (for call-back line)</label>
             <select id="clinic"><option value="">— none —</option></select>
           </div>
-          <div class="smscard"><div class="lh"><span class="flag">English</span><span class="cp" data-sms="en"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span></div><div class="body" id="smsEN"></div></div>
-          <div class="smscard"><div class="lh"><span class="flag">Español</span><span class="cp" data-sms="es"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span></div><div class="body" id="smsES"></div></div>
+          <div class="smscard"><div class="lh"><span class="flag">English</span><button type="button" class="cp" data-sms="en"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div class="body" id="smsEN"></div></div>
+          <div class="smscard"><div class="lh"><span class="flag">Español</span><button type="button" class="cp" data-sms="es"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div class="body" id="smsES"></div></div>
         </div>
       </div>
 
@@ -7048,9 +7048,9 @@ button *::selection{
           <span class="ttl">Administration note</span><span class="badge">Live</span>
         </div>
         <div class="note-body">
-          <div class="sect"><div class="sh"><span class="tag">CC</span><span class="cp" data-copy="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span></div><div id="outCC"></div></div>
-          <div class="sect"><div class="sh"><span class="tag">Assessment</span><span class="cp" data-copy="as"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span></div><div id="outAS"></div></div>
-          <div class="sect"><div class="sh"><span class="tag">Plan</span><span class="cp" data-copy="pl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span></div><div id="outPL"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">CC</span><button type="button" class="cp" data-copy="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="outCC"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">Assessment</span><button type="button" class="cp" data-copy="as"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="outAS"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">Plan</span><button type="button" class="cp" data-copy="pl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="outPL"></div></div>
         </div>
         <div class="actions">
           <button class="btn ghost" id="resetBtn" title="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
@@ -7157,9 +7157,9 @@ button *::selection{
           <span class="ttl">UDS note</span><span class="badge">Live</span>
         </div>
         <div class="note-body">
-          <div class="sect"><div class="sh"><span class="tag">First line</span><span class="cp" data-udscopy="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span></div><div id="udsOutCC"></div></div>
-          <div class="sect"><div class="sh"><span class="tag">Handoff body</span><span class="cp" data-udscopy="as"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span></div><div id="udsOutAS"></div></div>
-          <div class="sect"><div class="sh"><span class="tag">Footer details</span><span class="cp" data-udscopy="pl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span></div><div id="udsOutPL"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">First line</span><button type="button" class="cp" data-udscopy="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="udsOutCC"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">Handoff body</span><button type="button" class="cp" data-udscopy="as"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="udsOutAS"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">Footer details</span><button type="button" class="cp" data-udscopy="pl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="udsOutPL"></div></div>
         </div>
         <div class="actions">
           <button class="btn ghost" id="udsReset" title="Clear UDS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
@@ -7847,8 +7847,8 @@ function localDateKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMon
 const LOG_STORAGE_KEY="ipmgMedAssistActivityLog_"+localDateKey();
 const SAFE_STORAGE={
   get(k,f=''){try{return window.localStorage.getItem(k)??f;}catch(e){return f;}},
-  set(k,v){try{window.localStorage.setItem(k,String(v));}catch(e){}},
-  remove(k){try{window.localStorage.removeItem(k);}catch(e){}}
+  set(k,v){try{window.localStorage.setItem(k,String(v));return true;}catch(e){return false;}},
+  remove(k){try{window.localStorage.removeItem(k);return true;}catch(e){return false;}}
 };
 const STAFF_STORAGE_KEY='ipmgMedAssistStaff';
 const LEGACY_STAFF_STORAGE_KEY='ipmgStaffName';
@@ -7862,7 +7862,8 @@ function getStoredStaff(){
   return legacy;
 }
 function loadLog(){try{const raw=SAFE_STORAGE.get(LOG_STORAGE_KEY);LOG=raw?JSON.parse(raw):[];if(!Array.isArray(LOG))LOG=[];}catch(e){LOG=[];}}
-function saveLog(){try{SAFE_STORAGE.set(LOG_STORAGE_KEY,JSON.stringify(LOG));}catch(e){/* session log still works if storage is blocked */}}
+function saveLog(){try{return SAFE_STORAGE.set(LOG_STORAGE_KEY,JSON.stringify(LOG))===true;}catch(e){return false;}}
+function appendLogEntry(entry){LOG.push(entry);if(saveLog())return true;LOG.pop();return false;}
 
 
 /* ---------- helpers ---------- */
@@ -7881,13 +7882,15 @@ function localDateTimeValue(d=new Date()){
   const pad=n=>String(n).padStart(2,"0");
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-function monthExpired(v){
+function monthExpired(v,referenceDate=""){
   if(!v)return false;
   const [y,m]=v.split("-").map(Number);
   if(!y||!m)return false;
   const end=new Date(y,m,0,23,59,59,999);
-  const today=new Date();today.setHours(0,0,0,0);
-  return end<today;
+  const reference=referenceDate?new Date(String(referenceDate).slice(0,10)+"T00:00:00"):new Date();
+  if(Number.isNaN(reference.getTime()))return false;
+  reference.setHours(0,0,0,0);
+  return end<reference;
 }
 function setFieldQa(id,level){
   const el=$(id);if(!el)return;
@@ -8000,7 +8003,7 @@ function renderInjQa(){
   const ndc=$('ndc').value.trim(),lot=$('lot').value.trim(),exp=$('exp').value.trim(),next=$('nextDate').value,admin=$('admin').value.trim(),adminTime=$('injAdminTime')?.value.trim()||'',ordering=$('orderingProvider').value.trim();
   setFieldQa('ndc',hasMed&&!ndc?'warn':null);
   setFieldQa('lot',hasMed&&!lot?'danger':null);
-  setFieldQa('exp',hasMed?(!exp?'danger':monthExpired(exp)?'danger':null):null);
+  setFieldQa('exp',hasMed?(!exp?'danger':monthExpired(exp,$('adminDate').value)?'danger':null):null);
   setFieldQa('nextDate',hasMed&&!next?'warn':null);
   setFieldQa('injAdminTime',hasMed&&!adminTime?'warn':null);
   setFieldQa('admin',hasMed&&!admin?'warn':null);
@@ -8009,7 +8012,7 @@ function renderInjQa(){
   if(!hasMed){items.push({level:'info',text:'Pick a medication to start'});renderQaPanel('injQa','Injection readiness',items);return;}
   items.push({level:ordering?'ok':'warn',text:ordering?'Ordering provider documented':'Add ordering provider'});
   items.push({level:ndc&&lot&&exp?'ok':(lot&&exp?'warn':'danger'),text:ndc&&lot&&exp?'NDC / lot / exp documented':'Complete NDC / lot / exp'});
-  if(exp&&monthExpired(exp))items.push({level:'danger',text:'Medication expiration appears past'});
+  if(exp&&monthExpired(exp,$('adminDate').value))items.push({level:'danger',text:'Medication expiration appears past'});
   items.push({level:S.site&&S.route?'ok':'warn',text:S.site&&S.route?`Route/site selected · ${S.route} · ${S.site}`:'Route/site incomplete'});
   items.push({level:next?'ok':'warn',text:next?'Next dose date ready':'Next dose missing'});
   items.push({level:adminTime?'ok':'warn',text:adminTime?'Actual administration time documented':'Add actual administration time'});
@@ -8022,7 +8025,7 @@ function renderInjQa(){
 function renderUdsQa(pos=udsPanelsByState('pos'),inv=udsPanelsByState('invalid'),neg=udsPanelsByState('neg'),nt=udsPanelsByState('nt')){
   const lot=$('udsLot').value.trim(),exp=$('udsExp').value.trim(),collector=$('udsCollector').value.trim();
   setFieldQa('udsLot',!lot?'warn':null);
-  setFieldQa('udsExp',!exp?'warn':monthExpired(exp)?'danger':null);
+  setFieldQa('udsExp',!exp?'warn':monthExpired(exp,$('udsDateTime').value)?'danger':null);
   setFieldQa('udsCollector',!collector?'warn':null);
   const items=[];
   if(UDS.control==='valid')items.push({level:'ok',text:'Control line valid'});
@@ -8035,8 +8038,8 @@ function renderUdsQa(pos=udsPanelsByState('pos'),inv=udsPanelsByState('invalid')
   else if(UDS.temp==='not documented')items.push({level:'warn',text:'Temperature not documented'});
   if(UDS.validity==='needs review')items.push({level:'warn',text:'Validity needs review'});
   if(UDS.consistent==='not aligned'||UDS.consistent==='needs review')items.push({level:'warn',text:'Clinician handoff requested'});
-  items.push({level:lot&&exp&&!monthExpired(exp)?'ok':(exp&&monthExpired(exp)?'danger':'warn'),text:lot&&exp&&!monthExpired(exp)?'Device lot/exp documented':'Complete device lot/exp'});
-  if(exp&&monthExpired(exp))items.push({level:'danger',text:'Device expiration appears past'});
+  items.push({level:lot&&exp&&!monthExpired(exp,$('udsDateTime').value)?'ok':(exp&&monthExpired(exp,$('udsDateTime').value)?'danger':'warn'),text:lot&&exp&&!monthExpired(exp,$('udsDateTime').value)?'Device lot/exp documented':'Complete device lot/exp'});
+  if(exp&&monthExpired(exp,$('udsDateTime').value))items.push({level:'danger',text:'Device expiration appears past'});
   items.push({level:collector?'ok':'warn',text:collector?'Collector documented':'Add collector'});
   renderQaPanel('udsQa','UDS readiness',items);
 }
@@ -8694,8 +8697,9 @@ $("udsReset").addEventListener("click",()=>{if(confirm("Clear the current UDS no
 function softReset(){
   S.med=null;S.dose="";S.flags={};S.guard={};S.reason="scheduled";S.resp="well";S.retCustom=false;
   ATTEST.forEach(a=>S.attest[a.id]=!a.off&&a.id!=="prior");
-  ["ptName","ptDOB","orderingProvider","injOrderPurpose","tech","ndc","lot","exp","injProductSource","injProductSourceOther","injPreparation","injPreparationDetail","injWasteAmount","injWasteWitness","injProductIssueDetail","injProductIssueAction","bp","hr","temp","admin","respCustom","injAdminTime","injSecondAdminTime","injVolume","injVolumeUnit","injDevice","injDeviceOther","injSiteCondition","injSiteConditionDetail","injExceptionSummary","injExceptionRecipient","injExceptionTime","injExceptionOutcome","nextDate","priorDose","priorSite"].forEach(id=>$(id).value="");
+  ["ptName","ptDOB","orderingProvider","injOrderPurpose","tech","ndc","lot","exp","injProductSource","injProductSourceOther","injPreparation","injPreparationDetail","injWasteAmount","injWasteWitness","injProductIssueDetail","injProductIssueAction","bp","hr","temp","rr","spo2","vitalRepeatNote","admin","respCustom","injAdminTime","injSecondAdminTime","injVolume","injVolumeUnit","injDevice","injDeviceOther","injSiteCondition","injSiteConditionDetail","injExceptionSummary","injExceptionRecipient","injExceptionTime","injExceptionOutcome","nextDate","priorDose","priorSite"].forEach(id=>{if($(id))$(id).value="";});
   ["injWasteToggle","injProductIssueToggle","injExceptionToggle"].forEach(id=>{if($(id))$(id).checked=false;});
+  try{if(typeof window.resetSmartVitalsState==='function')window.resetSmartVitalsState();}catch(e){}
   $("allergies").value="";$("adminDate").value=localDateValue();
   try{const flow=window.__IPMG_RC530__;if(flow){flow.safetyNone=false;flow.inj={};flow.manualOpen.inj={};}}catch(e){}
   $("medHdr").classList.remove("show");$("medChipsGrp").classList.remove("hidden");
@@ -9059,7 +9063,7 @@ function sampleTraceIssues(){
   if(!$("samplePrescriber").value.trim())out.push("prescriber");
   if(!$("sampleLot").value.trim())out.push("lot");
   if(!$("sampleExp").value.trim())out.push("expiration");
-  if(monthExpired($("sampleExp").value))out.push("expired sample");
+  if(monthExpired($("sampleExp").value,$("sampleDate").value))out.push("expired sample");
   if(!$("sampleStaff").value.trim())out.push("dispensed by");
   return out;
 }
@@ -9179,8 +9183,9 @@ function initSamples(){
   $("sampleAddLog").addEventListener("click",()=>{
     const issues=sampleTraceIssues();
     if(issues.length&&!confirm(`Sample documentation incomplete (${issues.join(", ")}). Add sample to activity log anyway?`))return;
-    LOG.push({type:"sample",status:issues.length?"needs_review":"completed",time:nowStamp(),pt:$("samplePtName").value.trim()||"—",summary:sampleFriendlyMedication(),details:[sampleSigText(), sampleDosePlanText()].filter(Boolean).join(" | "),trace:[$("sampleQty").value.trim(),$("sampleLot").value.trim()?`Lot ${$("sampleLot").value.trim()}`:"",$("sampleExp").value?`Exp ${$("sampleExp").value}`:""].filter(Boolean).join(" · ")||"—",follow:$("samplePurpose").value||"Sample dispensed",by:$("sampleStaff").value.trim()||"—"});
-    saveLog();renderLog();renderCommandCenter();toast("Sample added to activity log");
+    const entry={type:"sample",status:issues.length?"needs_review":"completed",time:nowStamp(),pt:$("samplePtName").value.trim()||"—",summary:sampleFriendlyMedication(),details:[sampleSigText(), sampleDosePlanText()].filter(Boolean).join(" | "),trace:[$("sampleQty").value.trim(),$("sampleLot").value.trim()?`Lot ${$("sampleLot").value.trim()}`:"",$("sampleExp").value?`Exp ${$("sampleExp").value}`:""].filter(Boolean).join(" · ")||"—",follow:$("samplePurpose").value||"Sample dispensed",by:$("sampleStaff").value.trim()||"—"};
+    if(!appendLogEntry(entry)){toast("Sample could not be saved to the activity log in this browser.");return;}
+    renderLog();renderCommandCenter();toast("Sample added to activity log");
   });
 }
 
@@ -9204,7 +9209,7 @@ function activityStatusFromUds(){
   const tested=UDS_PANELS.filter(p=>UDS.results[p]&&UDS.results[p]!=="nt");
   const profileIssues=typeof window.ipmgUdsPanelProfileIssues==="function"?window.ipmgUdsPanelProfileIssues():[];
   const additionalIssues=typeof window.ipmgUdsAdditionalOutputIssues==="function"?window.ipmgUdsAdditionalOutputIssues():[];
-  if(!$("udsPtName").value.trim()||!$("udsDOB").value.trim()||!$("udsDateTime").value||!$("udsDevice").value||trace.length||profileIssues.length||additionalIssues.length||!tested.length||UDS.control!=="valid"||inv.length||pos.length||UDS.validity!=="acceptable"||UDS.consistent!=="no unexpected"||UDS.temp!=="acceptable"||monthExpired($("udsExp").value))return "needs_review";
+  if(!$("udsPtName").value.trim()||!$("udsDOB").value.trim()||!$("udsDateTime").value||!$("udsDevice").value||trace.length||profileIssues.length||additionalIssues.length||!tested.length||UDS.control!=="valid"||inv.length||pos.length||UDS.validity!=="acceptable"||UDS.consistent!=="no unexpected"||UDS.temp!=="acceptable"||monthExpired($("udsExp").value,$("udsDateTime").value))return "needs_review";
   return "completed";
 }
 function activityMatchesFilter(r){
@@ -9227,7 +9232,7 @@ $("addLog").addEventListener("click",()=>{
   const protocolLog=typeof window.ipmgInitiationProtocolLog==='function'?window.ipmgInitiationProtocolLog():{details:[],trace:[],follow:""};
   const actualAdminTime=$("injAdminTime")?.value.trim()||"",secondAdminTime=$("injSecondAdminTime")?.value.trim()||"";
   if(actualAdminTime||secondAdminTime)protocolLog.details=[actualAdminTime?"Actual administration time "+actualAdminTime:"",secondAdminTime?"Component 2 administration time "+secondAdminTime:"",...(protocolLog.details||[])].filter(Boolean);
-  LOG.push({
+  const entry={
     type:"injection",status:"completed",time:nowStamp(),
     pt:$("ptName").value.trim()||"—",
     summary:`${S.med.name||S.med.label||'Medication'} ${S.dose}`.trim(),
@@ -9235,9 +9240,9 @@ $("addLog").addEventListener("click",()=>{
     trace:[ndc?`NDC ${ndc}`:"",lot?`Lot ${lot}`:"",exp?`Exp ${exp}`:"",...(protocolLog.trace||[])].filter(Boolean).join(" · ")||"—",
     follow:protocolLog.follow||($("nextDate").value?`Next ${fmtShort($("nextDate").value)}`:"Next dose TBD"),
     by:$("admin").value.trim()||"—"
-  });
-  saveLog();renderLog();renderCommandCenter();toast("Injection added to activity log");
-  try{ if(window.recordInjectionSite) window.recordInjectionSite($("ptName").value.trim(), S.site); }catch(e){}
+  };
+  if(!appendLogEntry(entry)){toast("Injection could not be saved to the activity log in this browser.");return;}
+  renderLog();renderCommandCenter();toast("Injection added to activity log");
 });
 $("addUdsLog").addEventListener("click",()=>{
   renderUdsNote();
@@ -9248,7 +9253,7 @@ $("addUdsLog").addEventListener("click",()=>{
   const device=$("udsDevice").value,lot=$("udsLot").value.trim(),exp=$("udsExp").value.trim();
   const detail=[pos.length?`Pos ${shortList(pos)}`:"",inv.length?`Invalid ${shortList(inv)}`:"",`Neg ${neg.length}`,nt.length?`Not tested ${shortList(nt)}`:""].filter(Boolean).join(" · ");
   const status=activityStatusFromUds();
-  LOG.push({
+  const entry={
     type:"uds",status,time:nowStamp(),
     pt:$("udsPtName").value.trim()||"—",
     summary:n.headline||"UDS documented",
@@ -9256,8 +9261,9 @@ $("addUdsLog").addEventListener("click",()=>{
     trace:[device||"",lot?`Lot ${lot}`:"",exp?`Exp ${exp}`:""].filter(Boolean).join(" · ")||"—",
     follow:udsLabPlanLine().replace(/\.$/,""),
     by:$("udsCollector").value.trim()||"—"
-  });
-  saveLog();renderLog();renderCommandCenter();toast(status==="needs_review"?`UDS added as Needs review${traceIssues.length?` — complete ${traceIssues.join(", ")}`:""}`:"UDS added to activity log");
+  };
+  if(!appendLogEntry(entry)){toast("UDS could not be saved to the activity log in this browser.");return;}
+  renderLog();renderCommandCenter();toast(status==="needs_review"?`UDS added as Needs review${traceIssues.length?` — complete ${traceIssues.join(", ")}`:""}`:"UDS added to activity log");
 });
 function renderLog(){
   $("logCount").textContent=LOG.length;
@@ -9757,7 +9763,17 @@ function wireHomeDashboard(){
       });
       document.dispatchEvent(new CustomEvent('ipmg:tabchange',{detail:{from:currentName,to:name}}));
     }else if(options.focusPanel)requestAnimationFrame(()=>focusPanel(name));
-    if(options.focusTab)target.focus({preventScroll:true});
+    if(options.focusTab){
+      target.focus({preventScroll:true});
+      requestAnimationFrame(()=>{
+        const rail=target.closest('.tabs');
+        if(!rail||rail.scrollWidth<=rail.clientWidth+2)return;
+        const left=target.offsetLeft,right=left+target.offsetWidth;
+        const viewLeft=rail.scrollLeft,viewRight=viewLeft+rail.clientWidth;
+        const next=left<viewLeft?Math.max(0,left-8):(right>viewRight?right-rail.clientWidth+8:viewLeft);
+        if(next!==viewLeft)rail.scrollTo({left:next,behavior:reducedMotion()?'auto':'smooth'});
+      });
+    }
     return true;
   }
   const list=document.querySelector('.tabs');
@@ -10008,8 +10024,9 @@ function initForms(){
   $('formsAddLog')?.addEventListener('click',()=>{
     const issues=formsReadinessIssues();
     if(issues.length&&!confirm(`Forms/letter tracking incomplete (${issues.join(', ')}). Add to activity log anyway?`))return;
-    LOG.push({type:'forms',status:FORMS.status==='completed'||FORMS.status==='notified'?'completed':'needs_review',time:nowStamp(),pt:letterVal('formsPtName')||'—',summary:currentLetterType().l,details:`Status: ${currentFormStatus().l} · Provider: ${(letterVal('formsProvider')||letterVal('letterProvider')||'—')}`,trace:[$('formsFee')?.value,$('formsDelivery')?.value].filter(Boolean).join(' · '),follow:`Due: ${$('formsDue')?.value?fmtShort($('formsDue').value):'TBD'} · ${$('formsNotified')?.value||'Not documented'}`,by:letterVal('formsStaff')||letterVal('letterPreparedBy')||'—'});
-    saveLog();renderLog();renderCommandCenter();toast('Forms/letter item added to activity log');
+    const entry={type:'forms',status:FORMS.status==='completed'||FORMS.status==='notified'?'completed':'needs_review',time:nowStamp(),pt:letterVal('formsPtName')||'—',summary:currentLetterType().l,details:`Status: ${currentFormStatus().l} · Provider: ${(letterVal('formsProvider')||letterVal('letterProvider')||'—')}`,trace:[$('formsFee')?.value,$('formsDelivery')?.value].filter(Boolean).join(' · '),follow:`Due: ${$('formsDue')?.value?fmtShort($('formsDue').value):'TBD'} · ${$('formsNotified')?.value||'Not documented'}`,by:letterVal('formsStaff')||letterVal('letterPreparedBy')||'—'};
+    if(!appendLogEntry(entry)){toast('Forms/letter item could not be saved to the activity log in this browser.');return;}
+    renderLog();renderCommandCenter();toast('Forms/letter item added to activity log');
   });
   renderForms();
 }
@@ -10041,7 +10058,7 @@ function injectionCommandStatus(){
   const vitalFlags=vitalSafetyItems().filter(i=>i.level==='danger'||i.level==='warn');
   const selected=selectedSafetyGuards();
   const medFlags=medicationSafetyItems().filter(i=>i.level==='danger'||i.level==='warn');
-  const danger=vitalFlags.some(i=>i.level==='danger')||selected.some(g=>g.level==='danger')||medFlags.some(i=>i.level==='danger')||($('exp').value&&monthExpired($('exp').value));
+  const danger=vitalFlags.some(i=>i.level==='danger')||selected.some(g=>g.level==='danger')||medFlags.some(i=>i.level==='danger')||($('exp').value&&monthExpired($('exp').value,$('adminDate').value));
   const warn=trace.length||vitalFlags.length||selected.length||medFlags.length||!$('nextDate').value||!$('admin').value.trim();
   if(danger)return {level:'danger',status:'Review',detail:'Provider review or expired/missing safety item before administration/logging.',next:'Review injection safety flags with provider before completing the note.'};
   if(warn)return {level:'warn',status:'Check',detail:`${trace.length?'Missing '+trace.join(', ')+'. ':''}${!$('nextDate').value?'Next dose missing. ':''}${!$('admin').value.trim()?'Staff not documented. ':''}`.trim()||'Review warning items before logging.',next:'Complete injection traceability and staff fields, then copy note or print AVS.'};
@@ -11056,13 +11073,15 @@ function renderNeedleGuide(){
 }
 function setAdminGuideCollapsed(next){
   S.adminGuideCollapsed=!!next;
-  const guide=$('adminGuide'), summary=$('adminGuideSummary'), detail=$('adminGuideDetail');
+  const guide=$('adminGuide'), summary=$('adminGuideSummary'), detail=$('adminGuideDetail'), edit=$('adminGuideEdit');
   if(!guide||!summary||!detail)return;
   const canCollapse=!!(S.med && normalizeAdminSite(S.site||'') && S.route);
   const collapsed=canCollapse && !!S.adminGuideCollapsed;
   guide.classList.toggle('collapsed', collapsed);
   summary.classList.toggle('hidden', !collapsed);
   detail.classList.toggle('hidden', collapsed);
+  detail.setAttribute('aria-hidden',String(collapsed));
+  if(edit)edit.setAttribute('aria-expanded',String(!collapsed));
 }
 function renderAdminGuide(){
   const rule=medAdminRule();
@@ -11161,7 +11180,15 @@ medicationSafetyItems=function medicationSafetyItems(){
   }
   return items;
 }
-if($('adminGuideEdit'))$('adminGuideEdit').addEventListener('click',()=>{S.adminGuideCollapsed=!S.adminGuideCollapsed;renderAdminGuide();});
+if($('adminGuideEdit'))$('adminGuideEdit').addEventListener('click',()=>{
+  const opening=!!S.adminGuideCollapsed;
+  S.adminGuideCollapsed=!S.adminGuideCollapsed;
+  renderAdminGuide();
+  if(opening)requestAnimationFrame(()=>{
+    const target=$('bodyMap')?.querySelector('[role="button"][tabindex="0"],button:not([disabled])');
+    if(target)target.focus({preventScroll:true});
+  });
+});
 if($('needleGuideToggle'))$('needleGuideToggle').addEventListener('click',()=>{S.needleGuideOpen=!S.needleGuideOpen;renderNeedleGuide();});
 try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site guide init skipped',e);}
 
@@ -11530,7 +11557,7 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
   function injectionTiming(){
     if(typeof S==='undefined'||!S.med||S.med.key==='other') return null;
     const exp=($('exp')?.value||'').trim();
-    if(exp && typeof monthExpired==='function' && monthExpired(exp)){
+    if(exp && typeof monthExpired==='function' && monthExpired(exp,$('adminDate')?.value||'')){
       return {level:'danger',pill:'Do not administer',detail:'Medication lot appears past its expiration date — do not administer. Obtain in-date stock and re-verify lot and expiration before giving.',missed:''};
     }
     if(S.med.intervalKey==='once'){
@@ -11624,7 +11651,11 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     buildUdsReconUI();
     populatePriorSiteOptions();
     try{ if($('priorDose')) $('priorDose').addEventListener('change',()=>{try{renderInjTiming();}catch(e){} try{if(typeof render==='function')render();}catch(e){}}); }catch(e){}
-    try{ if($('priorSite')) $('priorSite').addEventListener('change',()=>{try{if(typeof render==='function')render();}catch(e){}}); }catch(e){}
+    try{ if($('priorSite')) $('priorSite').addEventListener('change',()=>{
+      try{if(typeof renderBodyMap==='function')renderBodyMap();}catch(e){}
+      try{if(typeof renderAdminGuide==='function')renderAdminGuide();}catch(e){}
+      try{if(typeof render==='function')render();}catch(e){}
+    }); }catch(e){}
     try{ if($('exp')) $('exp').addEventListener('input',()=>{try{renderInjTiming();}catch(e){}}); }catch(e){}
     try{ if(typeof renderUdsNote==='function') renderUdsNote(); }catch(e){}
     try{ renderInjTiming(); }catch(e){}
@@ -11666,23 +11697,34 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
   /* ----- persistent per-patient site history (cross-visit rotation) ----- */
   const SITE_HISTORY_KEY='ipmgMedAssistSiteHistory';
   function loadSiteHistory(){ try{const r=SAFE_STORAGE.get(SITE_HISTORY_KEY);const o=r?JSON.parse(r):{};return (o&&typeof o==='object')?o:{};}catch(e){return {};} }
-  function ptKey(name){ return (name||'').trim().toLowerCase(); }
-  window.recordInjectionSite=function(name,site){
-    const key=ptKey(name); if(!key||!site) return;
+  function ptKey(name,dob){
+    const patient=(name||'').trim().toLowerCase(),birthDate=(dob||'').trim().toLowerCase();
+    return patient&&birthDate?`${patient}|${birthDate}`:'';
+  }
+  window.recordInjectionSite=function(name,site,dob,context={}){
+    const key=ptKey(name,dob||$('ptDOB')?.value);
+    const medKey=String(context.medKey||(typeof S!=='undefined'&&S.med&&S.med.key)||'').trim();
+    const route=String(context.route||(typeof S!=='undefined'&&S.route)||'').trim();
+    const date=String(context.adminDate||$('adminDate')?.value||localDateValue()).trim();
+    if(!key||!site||!medKey||!route||!date)return false;
     try{
       const h=loadSiteHistory();
-      const list=Array.isArray(h[key])?h[key]:[];
-      list.push({site:site,date:localDateValue()});
-      h[key]=list.slice(-8);
-      SAFE_STORAGE.set(SITE_HISTORY_KEY,JSON.stringify(h));
-    }catch(e){}
+      const list=Array.isArray(h[key])?h[key]:[],recordId=String(context.recordId||'').trim();
+      const fingerprint=[date,medKey,route,site].join('|');
+      const next=list.filter(entry=>recordId?entry.recordId!==recordId:entry.fingerprint!==fingerprint);
+      next.push({site,date,medKey,route,recordId,fingerprint,storedAt:new Date().toISOString()});
+      h[key]=next.slice(-12);
+      return SAFE_STORAGE.set(SITE_HISTORY_KEY,JSON.stringify(h))===true;
+    }catch(e){return false;}
   };
   function lastInjectionSiteForPatient(){
-    const key=ptKey($('ptName')?.value);
+    const key=ptKey($('ptName')?.value,$('ptDOB')?.value);
     if(!key) return null;
     try{
       const h=loadSiteHistory();
-      const list=h[key];
+      const medKey=String((typeof S!=='undefined'&&S.med&&S.med.key)||'').trim();
+      const route=String((typeof S!=='undefined'&&S.route)||'').trim();
+      const list=(Array.isArray(h[key])?h[key]:[]).filter(entry=>entry&&entry.medKey===medKey&&entry.route===route).sort((a,b)=>`${a.date||''}|${a.storedAt||''}`.localeCompare(`${b.date||''}|${b.storedAt||''}`));
       if(Array.isArray(list)&&list.length){
         const e=list[list.length-1];
         let whenShort=e.date;
@@ -11692,28 +11734,60 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     }catch(e){}
     return null;
   }
+  function enteredPriorSiteForEncounter(){
+    const site=typeof normalizeAdminSite==='function'
+      ? normalizeAdminSite(($('priorSite')?.value||'').trim())
+      : ($('priorSite')?.value||'').trim();
+    if(!site)return null;
+    const priorDose=($('priorDose')?.value||'').trim();
+    let whenShort='';
+    if(priorDose){
+      try{whenShort=new Date(priorDose+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch(_){whenShort=priorDose;}
+    }
+    return {site,whenShort,source:'encounter'};
+  }
+  function injectionSiteRotationContext(){
+    return enteredPriorSiteForEncounter()||lastInjectionSiteForPatient();
+  }
   function mirrorSite(site){
     if(/^R /.test(site)) return site.replace(/^R /,'L ');
     if(/^L /.test(site)) return site.replace(/^L /,'R ');
     const q={'Abdomen LUQ (SubQ)':'Abdomen RLQ (SubQ)','Abdomen RUQ (SubQ)':'Abdomen LLQ (SubQ)','Abdomen LLQ (SubQ)':'Abdomen RUQ (SubQ)','Abdomen RLQ (SubQ)':'Abdomen LUQ (SubQ)'};
     return q[site]||site;
   }
+  function recommendedInjectionSite(rule,prior){
+    const allowed=Array.isArray(rule&&rule.sites)?rule.sites:[];
+    if(!prior||!prior.site||!allowed.length)return '';
+    const normalized=typeof normalizeAdminSite==='function'?normalizeAdminSite(prior.site):prior.site;
+    const mirrored=mirrorSite(normalized);
+    if(mirrored!==normalized&&allowed.includes(mirrored))return mirrored;
+    const opposite=allowed.find(site=>site!==normalized&&(
+      (/^R /.test(normalized)&&/^L /.test(site))||
+      (/^L /.test(normalized)&&/^R /.test(site))
+    ));
+    return opposite||allowed.find(site=>site!==normalized)||'';
+  }
+  window.injectionSiteRotationContext=injectionSiteRotationContext;
+  window.injectionRecommendedSite=function(rule){return recommendedInjectionSite(rule||medAdminRule(),injectionSiteRotationContext());};
 
-  function zoneSVG(z,rule,selKey,lastKey){
+  function zoneSVG(z,rule,selKey,lastKey,recommendedKey){
     const allowed=z.cands.some(c=>rule.sites.includes(c));
     const sel=selKey===z.key;
     const isLast=lastKey===z.key;
-    const cls='bz '+(allowed?'bz-ok':'bz-mute')+(sel?' bz-sel':'');
+    const isRecommended=recommendedKey===z.key&&!sel;
+    const cls='bz '+(allowed?'bz-ok':'bz-mute')+(sel?' bz-sel':'')+(isRecommended?' bz-rec':'');
     const s=z.shape; let shape,ring='';
     if(s.t==='ellipse'){
-      shape=`<ellipse class="bz-shape" cx="${s.cx}" cy="${s.cy}" rx="${s.rx}" ry="${s.ry}"></ellipse>`;
+      const hitRx=z.key.includes('gluteal')?Math.min(s.rx,20):s.rx;
+      shape=`<ellipse class="bz-hit" cx="${s.cx}" cy="${s.cy}" rx="${hitRx}" ry="${s.ry}"></ellipse><ellipse class="bz-shape" cx="${s.cx}" cy="${s.cy}" rx="${s.rx}" ry="${s.ry}"></ellipse>`;
       if(isLast) ring=`<ellipse class="bz-last-ring" cx="${s.cx}" cy="${s.cy}" rx="${s.rx+5}" ry="${s.ry+5}"></ellipse>`;
     }else{
-      shape=`<rect class="bz-shape" x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="${s.rx}"></rect>`;
+      shape=`<rect class="bz-hit" x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="${s.rx||5}"></rect><rect class="bz-shape" x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="${s.rx}"></rect>`;
       if(isLast) ring=`<rect class="bz-last-ring" x="${s.x-4}" y="${s.y-4}" width="${s.w+8}" height="${s.h+8}" rx="${(s.rx||5)+3}"></rect>`;
     }
     const label=z.label?`<text class="bm-z-label" x="${z.lx}" y="${z.ly}" text-anchor="middle">${z.label}</text>`:'';
-    return `<g class="${cls}" data-zone="${z.key}" role="button" tabindex="0" aria-label="${esc((ADMIN_SITE_LIBRARY.find(a=>a.id===z.cands[0])||{}).label||z.key)}">${shape}${label}</g>${ring}`;
+    const ariaState=(isRecommended?', recommended alternate':'')+(isLast?', previous site':'');
+    return `<g class="${cls}" data-zone="${z.key}" role="button" tabindex="0" aria-pressed="${sel?'true':'false'}" aria-label="${esc(((ADMIN_SITE_LIBRARY.find(a=>a.id===z.cands[0])||{}).label||z.key)+ariaState)}">${shape}${label}</g>${ring}`;
   }
 
   function renderBodyMapInteractive(){
@@ -11725,20 +11799,31 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     }
     const rule=medAdminRule();
     const selKey=previewSiteKey(normalizeAdminSite(S.site||''));
-    const last=lastInjectionSiteForPatient();
+    const last=injectionSiteRotationContext();
     const lastKey=last?previewSiteKey(last.site):'';
+    const recommended=last?recommendedInjectionSite(rule,last):'';
+    const recommendedKey=recommended?previewSiteKey(recommended):'';
+    if(typeof S!=='undefined')S.siteSuggestion=recommended||((rule.sites||[])[0]||'');
     const routeTxt=(rule.route||[]).join(' / ')||'Route';
-    const frontZones=BM_ZONES_FRONT.map(z=>zoneSVG(z,rule,selKey,lastKey)).join('');
-    const backZones=BM_ZONES_BACK.map(z=>zoneSVG(z,rule,selKey,lastKey)).join('');
+    const frontZones=BM_ZONES_FRONT.map(z=>zoneSVG(z,rule,selKey,lastKey,recommendedKey)).join('');
+    const backZones=BM_ZONES_BACK.map(z=>zoneSVG(z,rule,selKey,lastKey,recommendedKey)).join('');
     const frontSVG=`<svg class="bm-svg" viewBox="0 0 250 300" role="group" aria-label="Front view injection sites">${BM_FRONT_BASE}${frontZones}</svg>`;
     const backSVG=`<svg class="bm-svg" viewBox="0 0 250 300" role="group" aria-label="Back view injection sites">${BM_BACK_BASE}${backZones}</svg>`;
     let rot;
     if(last){
-      const alt=mirrorSite(last.site);
-      const altAllowed=rule.sites.includes(alt);
-      const alreadyRotated=normalizeAdminSite(S.site||'')===alt;
-      const altChip=(altAllowed&&!alreadyRotated)?`<span class="bm-rot-alt" data-alt="${esc(alt)}" role="button" tabindex="0">use ${esc(adminSiteDisplay(alt))}</span>`:'';
-      rot=`<div class="bm-rotation">${ROT_IC}<div><b>Last dose:</b> ${esc(adminSiteDisplay(last.site))}${last.whenShort?` · ${esc(last.whenShort)}`:''}. Rotate to the alternate side this visit.${altChip}</div></div>`;
+      const selected=normalizeAdminSite(S.site||'');
+      const sameAsPrior=selected&&selected===normalizeAdminSite(last.site);
+      const recommendationSelected=recommended&&selected===recommended;
+      const altChip=(recommended&&!recommendationSelected)?`<span class="bm-rot-alt" data-alt="${esc(recommended)}" role="button" tabindex="0">Select ${esc(adminSiteDisplay(recommended))}</span>`:'';
+      const selectedMark=recommendationSelected?'<span class="bm-rec-confirmed">Recommended site selected</span>':'';
+      const recommendationCopy=recommended
+        ? ` <b>Recommended alternate:</b> ${esc(adminSiteDisplay(recommended))}.`
+        : ' No different site is available within the current medication guidance; verify the active order and product instructions.';
+      rot=`<div class="bm-rotation ${sameAsPrior?'warn':''} ${recommendationSelected?'done':''}">${ROT_IC}<div><b>Prior dose:</b> ${esc(adminSiteDisplay(last.site))}${last.whenShort?` · ${esc(last.whenShort)}`:''}.${recommendationCopy}${sameAsPrior?' <strong>Today’s selection repeats the prior site.</strong>':''}${altChip}${selectedMark}</div></div>`;
+    }else if(($('priorDose')?.value||'').trim()){
+      let priorLabel='';
+      try{priorLabel=new Date($('priorDose').value+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch(_){priorLabel=$('priorDose').value;}
+      rot=`<div class="bm-rotation none">${ROT_IC}<div><b>Prior dose:</b> ${esc(priorLabel)}. Add the previous injection site above to receive a rotation recommendation.</div></div>`;
     }else{
       rot=`<div class="bm-rotation none">${ROT_IC}<div>No prior injection on file for this patient. Documenting today’s site starts rotation tracking for next visit.</div></div>`;
     }
@@ -11746,7 +11831,10 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     const lmChips=allowedSites.map(id=>{
       const on=normalizeAdminSite(S.site||'')===id;
       const lastDot=(last&&previewSiteKey(last.site)===previewSiteKey(id))?'<span class="bm-lm-dot" title="last dose zone"></span>':'';
-      return `<span class="bm-lm ${on?'on':''}" data-site="${esc(id)}" role="button" tabindex="0">${lastDot}${esc(adminSiteDisplay(id))}</span>`;
+      const rec=id===recommended&&!on;
+      const recBadge=rec?'<span class="bm-rec-badge">Recommended</span>':'';
+      const ariaState=(rec?', recommended alternate':'')+(last&&previewSiteKey(last.site)===previewSiteKey(id)?', previous site':'');
+      return `<span class="bm-lm ${on?'on':''} ${rec?'recommended':''}" data-site="${esc(id)}" role="button" tabindex="0" aria-pressed="${on?'true':'false'}" aria-label="${esc(adminSiteDisplay(id)+ariaState)}">${lastDot}${esc(adminSiteDisplay(id))}${recBadge}</span>`;
     }).join('');
     wrap.className='bodymap2';
     wrap.innerHTML=`
@@ -11754,35 +11842,36 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
       ${rot}
       <div class="bm-figs"><div class="bm-fig"><div class="bm-cap">Front · facing patient</div>${frontSVG}</div><div class="bm-fig"><div class="bm-cap">Back</div>${backSVG}</div></div>
       <div class="bm-landmarks"><div class="bm-lm-label">Exact site for documentation</div><div class="bm-lm-chips">${lmChips}</div></div>
-      <div class="bm-legend"><span><i class="l-ok"></i>Allowed</span><span><i class="l-sel"></i>Selected</span><span><i class="l-mute"></i>Off-guidance</span><span><i class="l-last"></i>Last dose</span></div>`;
+      <div class="bm-legend"><span><i class="l-ok"></i>Allowed</span><span><i class="l-rec"></i>Recommended</span><span><i class="l-sel"></i>Selected</span><span><i class="l-mute"></i>Off-guidance</span><span><i class="l-last"></i>Prior dose</span></div>`;
     wrap.querySelectorAll('.bz').forEach(g=>{
       const z=ALL_ZONES.find(x=>x.key===g.dataset.zone);
-      const pick=()=>{ const allowedCand=z.cands.find(c=>rule.sites.includes(c)); pickSiteFromFigure(allowedCand||z.cands[0], !!allowedCand); };
-      g.addEventListener('click',pick);
-      g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}});
+      const pick=(focusAfter=false)=>{ const allowedCand=z.cands.find(c=>rule.sites.includes(c)); pickSiteFromFigure(allowedCand||z.cands[0],!!allowedCand,focusAfter); };
+      g.addEventListener('click',()=>pick(false));
+      g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(true);}});
     });
     wrap.querySelectorAll('.bm-lm').forEach(c=>{
-      const go=()=>pickSiteFromFigure(c.dataset.site, rule.sites.includes(c.dataset.site));
-      c.addEventListener('click',go);
-      c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+      const go=(focusAfter=false)=>pickSiteFromFigure(c.dataset.site,rule.sites.includes(c.dataset.site),focusAfter);
+      c.addEventListener('click',()=>go(false));
+      c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go(true);}});
     });
     const altBtn=wrap.querySelector('.bm-rot-alt');
     if(altBtn){
-      const go=()=>pickSiteFromFigure(altBtn.dataset.alt, rule.sites.includes(altBtn.dataset.alt));
-      altBtn.addEventListener('click',go);
-      altBtn.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+      const go=(focusAfter=false)=>pickSiteFromFigure(altBtn.dataset.alt,rule.sites.includes(altBtn.dataset.alt),focusAfter);
+      altBtn.addEventListener('click',()=>go(false));
+      altBtn.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go(true);}});
     }
   }
-  function pickSiteFromFigure(site,allowed){
+  function pickSiteFromFigure(site,allowed,focusAfter=false){
     S.site=site;
     const meta=ADMIN_SITE_LIBRARY.find(s=>s.id===site); if(meta)S.route=meta.route;
-    S.adminGuideCollapsed=false;
+    S.adminGuideCollapsed=!!allowed;
     if($('siteAuto'))$('siteAuto').style.display='none';
     if(!allowed)toast('Selected site is outside usual guidance — verify provider direction');
     try{renderSites();}catch(e){}      /* renderSites → renderAdminGuide → renderBodyMap refreshes the figure */
     try{renderRoutes();}catch(e){}
     try{renderInjQa();}catch(e){}
     try{render();}catch(e){}
+    document.dispatchEvent(new CustomEvent('ipmg:siteconfirmed',{detail:{site,allowed:!!allowed,focusAfter:!!focusAfter}}));
   }
   window.pickSiteFromFigure=pickSiteFromFigure;
 
@@ -11791,6 +11880,7 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
 
   function initBodyMap(){
     try{ if($('ptName')) $('ptName').addEventListener('input',()=>{try{ if(typeof renderBodyMap==='function') renderBodyMap(); }catch(e){}}); }catch(e){}
+    try{ if($('ptDOB')) $('ptDOB').addEventListener('input',()=>{try{ if(typeof renderBodyMap==='function') renderBodyMap(); }catch(e){}}); }catch(e){}
     try{ if(typeof renderBodyMap==='function') renderBodyMap(); }catch(e){}
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initBodyMap,{once:true});
@@ -11848,13 +11938,13 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     g.innerHTML=legend+groups;
     g.querySelectorAll('.cup-strip').forEach(el=>{
       const p=el.dataset.panel;
-      const cycle=()=>{ UDS.results[p]=nextCupState(UDS.results[p]||'nt'); renderUdsResults(); if(typeof renderUdsNote==='function')renderUdsNote(); };
-      el.addEventListener('click',cycle);
-      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();cycle();}});
+      const cycle=(restoreFocus=false)=>{ UDS.results[p]=nextCupState(UDS.results[p]||'nt'); renderUdsResults(); if(typeof renderUdsNote==='function')renderUdsNote(); if(restoreFocus)requestAnimationFrame(()=>$('udsResultGrid')?.querySelector(`[data-panel="${CSS.escape(p)}"]`)?.focus({preventScroll:true})); };
+      el.addEventListener('click',()=>cycle(false));
+      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();cycle(true);}});
     });
     g.querySelectorAll('[data-gstate]').forEach(btn=>{
       const grp=UDS_GROUPS.find(x=>x.k===btn.dataset.grp);
-      btn.addEventListener('click',e=>{ e.stopPropagation(); if(grp) setUdsPanels(grp.panels, btn.dataset.gstate); });
+      btn.addEventListener('click',e=>{ e.stopPropagation(); const selector=`[data-gstate="${CSS.escape(btn.dataset.gstate)}"][data-grp="${CSS.escape(btn.dataset.grp)}"]`; if(grp)setUdsPanels(grp.panels,btn.dataset.gstate); requestAnimationFrame(()=>$('udsResultGrid')?.querySelector(selector)?.focus({preventScroll:true})); });
     });
     /* preserve the attention panel + summary badges that the original renderer maintained */
     try{
@@ -12506,7 +12596,9 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
   function monthExpired(value){
     try{
       if(!value) return false;
-      const now=new Date();
+      const documented=txt('udsDateTime');
+      if(typeof window.monthExpired==='function') return !!window.monthExpired(value,documented);
+      const now=documented?new Date(documented):new Date();
       const ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
       return value<ym;
     }catch(e){return false;}
@@ -14571,7 +14663,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   .vitals-smart-item.ok::before{background:var(--mint);} .vitals-smart-item.info::before{background:var(--blue);} .vitals-smart-item.warn::before{background:var(--amber);} .vitals-smart-item.danger::before{background:var(--rose);}
   .vitals-smart-item.warn{border-color:var(--amber-line);background:var(--amber-soft);} .vitals-smart-item.danger{border-color:var(--rose-line);background:var(--rose-soft);}
   .vitals-recheck-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);}
-  .vitals-recheck-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:#fff;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;color:var(--ink-soft);cursor:pointer;user-select:none;}
+  .vitals-recheck-chip{appearance:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:#fff;border-radius:999px;padding:6px 10px;font:800 11px var(--font-body,Inter,Arial,sans-serif);color:var(--ink-soft);cursor:pointer;user-select:none;}
   .vitals-recheck-chip.on{background:var(--mint-soft);border-color:var(--mint-line);color:var(--mint);}
   .vitals-recheck-chip.need{background:var(--amber-soft);border-color:var(--amber-line);color:var(--amber);}
   .vitals-recheck-chip.danger{background:var(--rose-soft);border-color:var(--rose-line);color:var(--rose);}
@@ -14760,7 +14852,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       </div>
       <div class="vitals-smart-list">${body}</div>
       ${showRecheck?`<div class="vitals-recheck-row">
-        <span id="vitalsRecheckChip" class="vitals-recheck-chip ${state.recheck?'on':hasDanger?'danger':'need'}">${state.recheck?'✓ Recheck documented':'☐ Recheck abnormal vitals'}</span>
+        <button type="button" id="vitalsRecheckChip" class="vitals-recheck-chip ${state.recheck?'on':hasDanger?'danger':'need'}" aria-pressed="${state.recheck?'true':'false'}">${state.recheck?'✓ Recheck documented':'☐ Recheck abnormal vitals'}</button>
         <span style="font-size:11px;color:var(--ink-soft);">Use the repeat note field for manual/orthostatic repeat values when needed.</span>
       </div>`:''}`;
     const chip=$id('vitalsRecheckChip'); if(chip)chip.onclick=()=>{state.recheck=!state.recheck; renderSmartVitalsPanel(); try{if(typeof renderInjQa==='function')renderInjQa();}catch(e){}};
@@ -14780,7 +14872,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     ['bp','hr','temp','rr','spo2','vitalRepeatNote'].forEach(id=>{
       const el=$id(id); if(!el||el.dataset.rc525Vitals)return; el.dataset.rc525Vitals='1';
       el.addEventListener('blur',normalizeOnBlur);
-      el.addEventListener('input',()=>{renderSmartVitalsPanel();});
+      el.addEventListener('input',()=>{if(id!=='vitalRepeatNote')state.recheck=false;renderSmartVitalsPanel();});
     });
   }
   function extraVitalsText(){
@@ -14842,6 +14934,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   if(oldRenderInjQa){window.renderInjQa=function(){const r=oldRenderInjQa.apply(this,arguments);renderSmartVitalsPanel();return r;};}
   const oldRender=typeof window.render==='function'?window.render:null;
   if(oldRender){window.render=function(){const r=oldRender.apply(this,arguments);addListeners();renderSmartVitalsPanel();augmentNote();return r;};}
+  window.ipmgSmartVitalsSnapshot=()=>({version:1,recheck:!!state.recheck});
+  window.restoreSmartVitalsState=data=>{state.recheck=!!(data&&data.recheck);renderSmartVitalsPanel();};
+  window.resetSmartVitalsState=()=>{state.recheck=false;renderSmartVitalsPanel();};
   function boot(){ensureExtraFields();addListeners();renderSmartVitalsPanel();augmentNote();try{window.IPMG_RC_VERSION=VERSION;}catch(e){}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
@@ -14947,10 +15042,15 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const medLine=()=>{const m=med(); if(!m)return ''; const parts=[m.name||m.label||'Medication', sget('dose'), sget('route'), sget('site')].filter(Boolean); return parts.join(' · ');};
 
   function ensureFlow(){
-    const form=q('#panel-administer .form-col'); if(!form)return null;
-    let flow=by('rc526Flow'); if(flow)return flow;
+    const panel=by('panel-administer'),form=q('#panel-administer .form-col'); if(!panel||!form)return null;
+    let flow=by('rc526Flow');
+    if(flow){
+      const layout=q(':scope > .layout',panel);
+      if(layout&&flow.parentElement!==panel)panel.insertBefore(flow,layout);
+      return flow;
+    }
     flow=document.createElement('div'); flow.id='rc526Flow'; flow.className='rc526-flow';
-    const first=q('.card-encounter',form); form.insertBefore(flow,first||form.firstChild);
+    const layout=q(':scope > .layout',panel);panel.insertBefore(flow,layout||panel.firstChild);
     return flow;
   }
   function ensureCard(id, selector){
@@ -14976,13 +15076,13 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function sectionStates(){
     const m=med(), vit=vitalsDecision(), guards=selectedGuards();
     const encounterComplete=!!(val('orderingProvider')&&(val('ptName')||val('ptDOB')));
-    const medComplete=!!(m&&sget('dose')&&sget('site')&&sget('route'));
+    const medComplete=!!(m&&sget('dose')&&sget('site')&&sget('route')&&sget('intervalKey'));
     const traceComplete=!!(m&&val('lot')&&val('exp'));
     const nonRoutine=!!(hasS()&&S.reason&&S.reason!=='scheduled');
     const guardBlock=guards.length>0;
     const safetyComplete=!!(m&&vit.complete&&!guardBlock);
-    const returnComplete=!!(m&&val('nextDate'));
-    const responseComplete=!!(m&&val('admin')&&sget('resp')&&(sget('resp')!=='custom'||val('respCustom')));
+    const returnComplete=!!(m&&(sget('intervalKey')==='once'||val('nextDate')));
+    const responseComplete=!!(m&&val('adminDate')&&val('injAdminTime')&&val('admin')&&sget('resp')&&(sget('resp')!=='custom'||val('respCustom')));
     let safetyLevel='info', safetySummary='Routine/asymptomatic path';
     if(guardBlock){safetyLevel='danger'; safetySummary='Provider-review trigger selected';}
     else if(vit.required||vit.abnormal){safetyLevel='danger'; safetySummary=vit.abnormal?'Abnormal vitals need recheck':'Provider review + vitals indicated';}
@@ -14990,12 +15090,12 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     else if(vit.needed&&vit.hasCore){safetyLevel='done'; safetySummary='Vitals captured for med rule';}
     else if(vit.any){safetyLevel='done'; safetySummary='Vitals documented';}
     return [
-      {id:'encounter',selector:'.card-encounter',label:'Encounter',complete:encounterComplete,level:encounterComplete?'done':'need',summary:encounterComplete?`${val('ptName')||'Patient'}${val('ptDOB')?' · DOB '+val('ptDOB'):''}${val('orderingProvider')?' · '+val('orderingProvider'):''}`:'Add patient and ordering provider.'},
-      {id:'med',selector:'.card-medication',label:'Medication',complete:medComplete,level:medComplete?'done':'need',summary:medComplete?`${medLine()}${intervalLabel()?' · '+intervalLabel():''}`:'Select medication, dose, route, and site.'},
-      {id:'trace',selector:'.card-trace',label:'Trace',complete:traceComplete,level:traceComplete?'done':'need',summary:traceComplete?`Lot ${val('lot')} · Exp ${val('exp')}${val('ndc')?' · NDC '+val('ndc'):''}`:'Enter lot and expiration from package.'},
-      {id:'safety',selector:'.card-safety',label:'Safety review',complete:safetyComplete,level:safetyComplete?'done':safetyLevel,summary:safetyComplete?'Review documented — not an authorization.':safetySummary},
-      {id:'return',selector:'.card-return',label:'Return',complete:returnComplete,level:returnComplete?'done':'need',summary:returnComplete?`Next due ${formatDate(val('nextDate'))}`:'Set or confirm next dose date.'},
-      {id:'response',selector:'.card-response',label:'Response',complete:responseComplete,level:responseComplete?'done':'need',summary:responseComplete?`${respLabel()} · Administered by ${val('admin')}`:'Document response and administered-by.'}
+      {id:'encounter',selector:'.card-encounter',label:'Patient & order',complete:encounterComplete,level:encounterComplete?'done':'need',summary:encounterComplete?`${val('ptName')||'Patient'}${val('ptDOB')?' · DOB '+val('ptDOB'):''}${val('orderingProvider')?' · '+val('orderingProvider'):''}`:'Add patient and ordering provider.'},
+      {id:'med',selector:'.card-medication',label:'Medication & site',complete:medComplete,level:medComplete?'done':'need',summary:medComplete?`${medLine()}${intervalLabel()?' · '+intervalLabel():''}`:'Select medication, dose, route, actual site, and ordered interval.'},
+      {id:'safety',selector:'.card-safety',label:'Safety',complete:safetyComplete,level:safetyComplete?'done':safetyLevel,summary:safetyComplete?'Review documented — not an authorization.':safetySummary},
+      {id:'trace',selector:'.card-trace',label:'Product trace',complete:traceComplete,level:traceComplete?'done':'need',summary:traceComplete?`Lot ${val('lot')} · Exp ${val('exp')}${val('ndc')?' · NDC '+val('ndc'):''}`:'Enter lot and expiration from package.'},
+      {id:'response',selector:'.card-response',label:'Administration',complete:responseComplete,level:responseComplete?'done':'need',summary:responseComplete?`${formatDate(val('adminDate'))} · ${respLabel()} · ${val('admin')}`:'Document date/time, response, and administered-by.'},
+      {id:'return',selector:'.card-return',label:'Follow-up',complete:returnComplete,level:returnComplete?'done':'need',summary:returnComplete?(sget('intervalKey')==='once'?'One-time dose plan':'Next due '+formatDate(val('nextDate'))):'Set or confirm the next dose plan.'}
     ];
   }
   function flowMode(states){
@@ -15010,14 +15110,20 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function renderFlow(states){
     const flow=ensureFlow(); if(!flow)return;
     const mode=flowMode(states);
+    const focused=document.activeElement&&document.activeElement.getAttribute&&document.activeElement.getAttribute('data-rc526-jump')||'';
+    const active=(states.find(st=>!st.complete)||{}).id||'';
     flow.innerHTML=`<div class="rc526-mode"><b>${safe(mode.title)}</b><span>${safe(mode.sub)}</span></div>`+
-      states.map(st=>`<button type="button" class="rc526-step ${safe(st.level==='done'?'done':st.level==='danger'?'danger':'need')}" data-rc526-jump="${safe(st.id)}" aria-label="Open ${safe(st.label)} section"><span class="n">${safe(st.label)}</span><span class="s">${safe(st.summary)}</span></button>`).join('');
+      states.map(st=>`<button type="button" class="rc526-step ${safe(st.level==='done'?'done':st.level==='danger'?'danger':'need')}" data-rc526-jump="${safe(st.id)}" aria-current="${st.id===active?'step':'false'}" aria-label="Open ${safe(st.label)} section — ${st.complete?'complete':'needs attention'}: ${safe(st.summary)}"><span class="n">${safe(st.label)}</span><span class="s">${safe(st.summary)}</span></button>`).join('');
     qa('[data-rc526-jump]',flow).forEach(btn=>btn.addEventListener('click',()=>{
       const id=btn.getAttribute('data-rc526-jump'); const card=q(`[data-rc526-card="${CSS.escape(id)}"]`);
       const current=window.__IPMG_RC530__;
       if(current&&typeof current.openInjection==='function')current.openInjection(id,true);
       else if(card){card.classList.add('rc526-open');card.dataset.rc526Manual='open';card.scrollIntoView({behavior:'auto',block:'nearest'});}
     }));
+    if(focused){
+      const replacement=q(`[data-rc526-jump="${CSS.escape(focused)}"]`,flow);
+      if(replacement)requestAnimationFrame(()=>replacement.focus({preventScroll:true}));
+    }
   }
   function updateCards(states){
     ensureResponseCard();
@@ -15084,7 +15190,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const oldRenderInjQa=typeof window.renderInjQa==='function'?window.renderInjQa:null;
   if(oldRenderInjQa){window.renderInjQa=function(){const r=oldRenderInjQa.apply(this,arguments); compactRefresh(); return r;};}
   function wireInputs(){
-    ['ptName','ptDOB','orderingProvider','ndc','lot','exp','bp','hr','temp','rr','spo2','vitalRepeatNote','nextDate','admin','respCustom'].forEach(id=>{const n=by(id); if(n&&!n.dataset.rc526Refresh){n.dataset.rc526Refresh='1'; n.addEventListener('input',compactRefresh); n.addEventListener('change',compactRefresh);}});
+    ['ptName','ptDOB','orderingProvider','priorDose','priorSite','ndc','lot','exp','bp','hr','temp','rr','spo2','vitalRepeatNote','adminDate','injAdminTime','nextDate','admin','respCustom'].forEach(id=>{const n=by(id); if(n&&!n.dataset.rc526Refresh){n.dataset.rc526Refresh='1'; n.addEventListener('input',compactRefresh); n.addEventListener('change',compactRefresh);}});
     document.addEventListener('click',e=>{ if(e.target.closest('.chip,.mini,.ir-mini,.vitals-recheck-chip')) setTimeout(compactRefresh,0); },true);
   }
   function boot(){ensureResponseCard();wireInputs();compactRefresh();}
@@ -15589,7 +15695,6 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const openMedicationCard=()=>{
     const card=q('#panel-administer .card-medication');
     if(card){card.dataset.rc526Manual='open';card.classList.add('rc526-open');card.classList.remove('rc526-collapsed');}
-    try{ if(hasS()) S.adminGuideCollapsed=false; }catch(e){}
   };
   const forceCompactRefresh=()=>{
     try{ if(typeof renderInjQa==='function')renderInjQa(); }catch(e){}
@@ -15607,7 +15712,8 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       return;
     }
     S.site='';
-    S.siteSuggestion=(r.sites&&r.sites[0])||'';
+    const smartSuggestion=typeof window.injectionRecommendedSite==='function'?window.injectionRecommendedSite(r):'';
+    S.siteSuggestion=smartSuggestion||(r.sites&&r.sites[0])||'';
     S.adminGuideCollapsed=false;
     siteTag('needed');
   }
@@ -15661,13 +15767,14 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     S.site=s;
     const rt=routeFromSite(s);
     if(rt)S.route=rt;
-    S.adminGuideCollapsed=false;
+    S.adminGuideCollapsed=!!allowed;
     siteTag('picked');
     openMedicationCard();
     if(!allowed){try{toast('Selected site is outside usual guidance — verify provider direction');}catch(e){}}
     try{renderSites();}catch(e){}
     try{renderRoutes();}catch(e){}
     forceCompactRefresh();
+    document.dispatchEvent(new CustomEvent('ipmg:siteconfirmed',{detail:{site:s,allowed:!!allowed,focusAfter:true}}));
   }
 
   function renderRoutesNatural(){
@@ -15876,7 +15983,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function panelOf(workflow){return workflow==='inj'?'#panel-administer':workflow==='uds'?'#panel-uds':'#panel-samples';}
   function pulse(el){if(!el)return;el.classList.remove('rc530-pulse');void el.offsetWidth;el.classList.add('rc530-pulse');setTimeout(()=>el.classList.remove('rc530-pulse'),650);}
 
-  const INJ_ORDER=['encounter','med','trace','safety','return','response'];
+  const INJ_ORDER=['encounter','med','safety','trace','response','return'];
   const INJ_SELECTORS={encounter:'.card-encounter',med:'.card-medication',trace:'.card-trace',safety:'.card-safety',return:'.card-return',response:'.card-response'};
   function injCard(id){return q(`#panel-administer ${INJ_SELECTORS[id]}`);}
   function ensureInjResponseCard(){const c=$('respChips')&&$('respChips').closest('.card'); if(c)c.classList.add('inj-card','card-response'); return c;}
@@ -15890,8 +15997,8 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       return {ok,block:!ok,label:ok?'Confirmed':'Needs info',summary:ok?`${text('ptName')}${text('ptDOB')?' · DOB '+text('ptDOB'):''} · ${text('orderingProvider')}`:`Add ${miss.join(' and ')}.`};
     }
     if(id==='med'){
-      const ok=!!(m&&sget('dose')&&sget('route')&&sget('site'));
-      const miss=[!m?'medication':null,!(sget('dose'))?'dose':null,!(sget('route'))?'route':null,!(sget('site'))?'actual site':null].filter(Boolean);
+      const ok=!!(m&&sget('dose')&&sget('route')&&sget('site')&&sget('intervalKey'));
+      const miss=[!m?'medication':null,!(sget('dose'))?'dose':null,!(sget('route'))?'route':null,!(sget('site'))?'actual site':null,!(sget('intervalKey'))?'ordered interval':null].filter(Boolean);
       return {ok,block:!ok,label:ok?'Confirmed':'Needs selection',summary:ok?medLine():`Select ${miss.join(', ')}. App suggestions do not select the actual site.`};
     }
     if(id==='trace'){
@@ -15910,17 +16017,14 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     }
     if(id==='return'){
       if(!m)return {ok:false,block:true,label:'Waiting',summary:'Select medication first.'};
-      const detailStops=administrationDetailStops('return');
-      if(detailStops.length)return {ok:false,block:true,label:'Needs date/time',summary:detailStops[0]};
-      if(!text('adminDate'))return {ok:false,block:true,label:'Needs date/time',summary:'Document the administration date.'};
       const once=!!(m&&sget('intervalKey')==='once'); const ok=!!(m&&(once||text('nextDate')));
-      return {ok,block:!ok,label:ok?'Return confirmed':'Needs date',summary:ok?(once?'One-time/initiation dose — routine interval not required.':'Next due '+prettyDate(text('nextDate'))):'Confirm next dose date/window.'};
+      return {ok,block:!ok,label:ok?'Follow-up confirmed':'Needs date',summary:ok?(once?'One-time/initiation dose — routine interval not required.':'Next due '+prettyDate(text('nextDate'))):'Confirm the next dose date or ordered one-time plan.'};
     }
     if(id==='response'){
-      const detailStops=administrationDetailStops('response');
-      if(detailStops.length)return {ok:false,block:true,label:'Needs response',summary:detailStops[0]};
-      const ok=!!(text('admin')&&sget('resp')&&(sget('resp')!=='custom'||text('respCustom')));
-      return {ok,block:!ok,label:ok?'Response confirmed':'Needs response',summary:ok?`${responseLabel()} · Administered by ${text('admin')}`:'Select patient response and administered-by.'};
+      const detailStops=[...administrationDetailStops('return'),...administrationDetailStops('response')];
+      if(detailStops.length)return {ok:false,block:true,label:'Needs administration',summary:detailStops[0]};
+      const ok=!!(text('adminDate')&&text('admin')&&sget('resp')&&(sget('resp')!=='custom'||text('respCustom')));
+      return {ok,block:!ok,label:ok?'Administration confirmed':'Needs administration',summary:ok?`${prettyDate(text('adminDate'))}${text('injAdminTime')?' · '+text('injAdminTime'):''} · ${responseLabel()} · ${text('admin')}`:'Document the administration date/time, patient response, and administered-by.'};
     }
     return {ok:false,block:true,label:'Needs info',summary:'Complete this section.'};
   }
@@ -15939,7 +16043,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       if(!q(':scope > .rc530-summary',card)){
         const sum=document.createElement('button');sum.type='button';sum.className='rc530-summary';sum.setAttribute('aria-label',`Open ${labelFor(id,'inj')} section`);
         const head=q(':scope > .card-head',card); if(head)head.insertAdjacentElement('afterend',sum); else card.insertBefore(sum,card.firstChild);
-        sum.addEventListener('click',()=>openInj(id,true));
+        sum.addEventListener('click',()=>openInj(id,true,true));
       }
       if(!q(':scope .rc530-footer',card)){
         const foot=document.createElement('div'); foot.className='rc530-footer';
@@ -15956,7 +16060,19 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     try{card.scrollIntoView({behavior:reduced?'auto':'smooth',block:'nearest'});}catch(e){}
   }
-  function openInj(id,manual){const card=injCard(id);if(!card)return;if(manual)rootState.manualOpen.inj[id]=true;card.classList.add('rc530-open');card.classList.remove('rc530-collapsed');card.dataset.rc526Manual='open';card.classList.remove('rc526-collapsed');if(manual)revealIfNeeded(card);}
+  function openInj(id,manual,focusInside=false){
+    const card=injCard(id);if(!card)return;
+    if(manual){
+      INJ_ORDER.forEach(section=>{rootState.manualOpen.inj[section]=section===id;});
+      reconcileInj();
+    }else rootState.manualOpen.inj[id]=true;
+    card.classList.add('rc530-open');card.classList.remove('rc530-collapsed');card.dataset.rc526Manual='open';card.classList.remove('rc526-collapsed');
+    if(manual)revealIfNeeded(card);
+    if(focusInside)requestAnimationFrame(()=>{
+      const target=q(':scope > .card-head h2,:scope > .card-head h3,:scope > .card-head',card);
+      if(target){target.tabIndex=-1;target.focus({preventScroll:true});}
+    });
+  }
   rootState.openInjection=openInj;
   function closeInj(id){const card=injCard(id); if(!card)return; card.classList.remove('rc530-open'); card.classList.add('rc530-collapsed'); card.dataset.rc526Manual='auto';}
   function firstUnconfirmedInj(){return INJ_ORDER.find(id=>!rootState.inj[id]||injStatus(id).block||injStatus(id).review)||null;}
@@ -15971,6 +16087,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function reconcileInj(){
     ensureInjSafetyChoice(); ensureInjFooters(); ensureReadyCard('inj');
     const active=firstUnconfirmedInj();
+    const manualActive=INJ_ORDER.find(id=>rootState.manualOpen.inj[id])||'';
     INJ_ORDER.forEach(id=>{
       const card=injCard(id); if(!card)return; const st=injStatus(id);
       if(window.IPMG_FAST_REVIEW&&st.ok&&!st.block&&!st.review)rootState.inj[id]=true;
@@ -15979,9 +16096,17 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       if(sum){sum.className='rc530-summary '+(st.block?'need':st.review?'review':'ready'); sum.innerHTML=`<span class="edit">edit</span><span class="state">${safe(confirmed?(st.review?'review':'done'):(st.block?'needs info':'confirm'))}</span><b>${safe(labelFor(id,'inj'))}:</b> ${safe(st.summary)}`;}
       const btn=q(':scope .rc530-continue',card); if(btn){btn.textContent=st.review?'Acknowledge & continue':st.block?'Complete required fields':'Confirm & continue'; btn.classList.toggle('warn',!!st.review); btn.classList.toggle('blocked',!!st.block);}
       const shouldCollapse=confirmed&&!st.review&&!rootState.manualOpen.inj[id];
-      const shouldOpen=rootState.manualOpen.inj[id]||(!confirmed&&id===active)||st.review&&confirmed;
-      card.classList.toggle('rc530-collapsed',!!shouldCollapse&&!shouldOpen);
+      const shouldOpen=manualActive?id===manualActive:(!confirmed&&id===active)||st.review&&confirmed;
+      const queued=!confirmed&&!shouldOpen&&(!!manualActive||id!==active);
+      if(sum){
+        const stateLabel=confirmed?(st.review?'review required':'complete'):(st.block?'needs attention':'ready to confirm');
+        sum.setAttribute('aria-label',`${labelFor(id,'inj')} — ${stateLabel}: ${st.summary}`);
+        sum.setAttribute('aria-expanded',String(!!shouldOpen));
+        sum.setAttribute('aria-current',id===active?'step':'false');
+      }
+      card.classList.toggle('rc530-collapsed',!!(shouldCollapse||queued)&&!shouldOpen);
       card.classList.toggle('rc530-open',!!shouldOpen);
+      card.classList.toggle('rc530-queued',!!queued);
       card.classList.toggle('rc530-active',id===active&&!confirmed);
       /* RC5.26 previously had a competing card-collapse system. RC5.30 is the
          single receipt owner, so clear every legacy collapse class on each pass. */
@@ -16066,7 +16191,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     }
   }
   function labelFor(id,workflow){
-    const map={inj:{encounter:'Encounter',med:'Medication',trace:'Trace',safety:'Safety',return:'Return',response:'Response'},uds:{encounter:'Collection',device:'Device',results:'Results',review:'Review',output:'Output'},samples:{patient:'Patient',selected:'Sample',plan:'Directions',trace:'Trace',safety:'Counseling',output:'Output'}};
+    const map={inj:{encounter:'Patient & order',med:'Medication & site',safety:'Safety',trace:'Product trace',response:'Administration',return:'Follow-up'},uds:{encounter:'Collection',device:'Device',results:'Results',review:'Review',output:'Output'},samples:{patient:'Patient',selected:'Sample',plan:'Directions',trace:'Trace',safety:'Counseling',output:'Output'}};
     return (map[workflow]&&map[workflow][id])||id;
   }
   function allReady(workflow){
@@ -16091,7 +16216,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const rows=statusRows(workflow); const ready=rows.every(r=>r.cls==='ok'); const review=rows.some(r=>r.cls==='warn')&&!rows.some(r=>r.cls==='block');
     card.className='rc530-ready-card '+(ready?'ready':review?'review':'');
     const title=workflow==='inj'?'Ready to document':workflow==='uds'?'UDS packet readiness':'Sample closeout readiness';
-    card.innerHTML=`<div class="head"><div class="title">${safe(title)}</div><div class="badge">${ready?'ready':review?'review':'working'}</div></div><ul>${rows.map(r=>`<li class="${r.cls}"><b>${safe(r.label)}:</b>&nbsp;${safe(r.text)}</li>`).join('')}</ul>`;
+    card.innerHTML=`<div class="head"><div class="title">${safe(title)}</div><div class="badge">${ready?'ready':review?'review':'working'}</div></div><ul>${rows.map(r=>`<li class="${r.cls}"><span class="rc530-ready-copy"><b>${safe(r.label)}</b><span>${safe(r.text)}</span></span></li>`).join('')}</ul>`;
   }
   function unconfirm(workflow,id,downstream){
     const order=workflow==='inj'?INJ_ORDER:(GUIDED_ORDER[workflow]||[]).filter(x=>x!=='output');
@@ -16100,7 +16225,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
   function bindInvalidation(){
     const map={
-      inj:{encounter:['ptName','ptDOB','orderingProvider','injOrderPurpose'],med:['medChips','doseChips','siteChips','routeChips','intChips','bodyMap'],trace:['ndc','lot','exp','injProductSource','injProductSourceOther','injPreparation','injPreparationDetail','injWasteToggle','injWasteAmount','injWasteWitness','injProductIssueToggle','injProductIssueDetail','injProductIssueAction'],safety:['attChips','medSpecChips','injSafetyChips','bp','hr','temp','rr','spo2','vitalRepeatNote'],return:['priorDose','adminDate','injAdminTime','nextDate'],response:['respChips','respCustom','admin','injSecondAdminTime','injVolume','injVolumeUnit','injDevice','injDeviceOther','injSiteCondition','injSiteConditionDetail','injExceptionToggle','injExceptionSummary','injExceptionRecipient','injExceptionTime','injExceptionOutcome']},
+      inj:{encounter:['ptName','ptDOB','orderingProvider','injOrderPurpose'],med:['medChips','doseChips','siteChips','routeChips','intChips','bodyMap','priorDose','priorSite'],trace:['ndc','lot','exp','injProductSource','injProductSourceOther','injPreparation','injPreparationDetail','injWasteToggle','injWasteAmount','injWasteWitness','injProductIssueToggle','injProductIssueDetail','injProductIssueAction'],safety:['attChips','medSpecChips','injSafetyChips','bp','hr','temp','rr','spo2','vitalRepeatNote'],return:['nextDate'],response:['respChips','respCustom','admin','adminDate','injAdminTime','injSecondAdminTime','injVolume','injVolumeUnit','injDevice','injDeviceOther','injSiteCondition','injSiteConditionDetail','injExceptionToggle','injExceptionSummary','injExceptionRecipient','injExceptionTime','injExceptionOutcome']},
       uds:{encounter:['udsPtName','udsDOB','udsCollector','udsDateTime','udsTempChips','udsReasonChips'],device:['udsDevice','udsLot','udsExp','udsControlChips','udsPhoto'],results:['udsResultGrid','udsAllNeg','udsAllNt','udsThcPos','udsClearFlags'],review:['udsValidity','udsConsistent','udsLab','udsComment']},
       samples:{patient:['samplePtName','sampleDOB','samplePrescriber','sampleStaff','sampleDate','samplePurpose','sampleIntentChips'],selected:['sampleMedChips','sampleMedLabel','sampleQty','samplePackageButtons'],plan:['sampleStart','sampleFood','sampleSig','sampleSigSuggestions','sampleDoseRows','sampleTitration'],trace:['sampleLot','sampleExp'],safety:['sampleMedCheck','sampleEdu','sampleExtra']}
     };
@@ -16531,7 +16656,7 @@ input,select,textarea{
     if(!text('lot'))stops.push('Document the medication lot.');
     const exp=text('exp');
     if(!exp)stops.push('Document the medication expiration.');
-    else if(call(()=>monthExpired(exp),false))stops.push('Medication expiration appears past; obtain in-date product before documenting administration.');
+    else if(call(()=>monthExpired(exp,text('adminDate')),false))stops.push('Medication expiration appears past; obtain in-date product before documenting administration.');
 
     call(()=>selectedSafetyGuards(),[]).forEach(g=>stops.push(`Provider-review trigger selected: ${g.t}. Administration cannot be finalized while this exception remains active.`));
     call(()=>vitalSafetyItems(),[]).filter(i=>i&&i.level==='danger').forEach(i=>stops.push(i.text));
@@ -16596,8 +16721,10 @@ input,select,textarea{
   function ensure(){
     let panel=by('clinicalDisposition'); if(panel)return panel;
     const anchor=document.querySelector('#panel-administer .card-safety'); if(!anchor)return null;
-    panel=document.createElement('section');panel.id='clinicalDisposition';panel.className='card inj-card card-disposition';panel.setAttribute('aria-live','polite');
+    panel=document.createElement('section');panel.id='clinicalDisposition';panel.className='card inj-card card-disposition';
     panel.innerHTML='<div class="cd-head"><div><div class="cd-title">Clinical disposition <span class="req">*</span></div><div class="cd-sub">Use the checked routine review items as a fast review-by-exception sheet, then make one final documentation choice. An administration note and AVS remain unavailable until a complete administration is documented.</div></div><span class="cd-badge" id="clinicalDispositionBadge">Needs disposition</span></div><div class="cd-options" role="group" aria-label="Clinical disposition"><button type="button" class="cd-choice" data-disposition="administered">Review complete — document administration</button><button type="button" class="cd-choice hold" data-disposition="held">Held</button><button type="button" class="cd-choice escalate" data-disposition="escalated">Escalated</button><button type="button" class="cd-choice provider" data-disposition="provider">Provider-directed plan</button></div><div class="cd-message" id="clinicalDispositionMessage"></div><div class="cd-list" id="clinicalDispositionList"></div><div class="cd-handoff" id="clinicalDispositionHandoff"><div class="cd-handoff-title">Required handoff details for a non-administration disposition</div><div class="cd-handoff-grid"><div class="field"><label>Provider / recipient <span class="req">*</span></label><input id="clinicalDispositionProvider" placeholder="Name and role" autocomplete="off"></div><div class="field"><label>Contact / decision time <span class="req">*</span></label><input id="clinicalDispositionTime" type="datetime-local"></div><div class="field full"><label>Direction / outcome <span class="req">*</span></label><textarea id="clinicalDispositionOutcome" placeholder="Concise direction, follow-up, and where responsibility was handed off"></textarea></div></div></div><div class="cd-foot">If medication was not given, select Held, Escalated, or Provider-directed plan and document the handoff. This tool will log it as <b>Needs review</b>, not as an administration.</div>';
+    const status=panel.querySelector('#clinicalDispositionMessage');
+    if(status){status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.setAttribute('aria-atomic','true');}
     anchor.insertAdjacentElement('afterend',panel);
     panel.querySelectorAll('[data-disposition]').forEach(btn=>btn.addEventListener('click',()=>choose(btn.dataset.disposition)));
     ['clinicalDispositionProvider','clinicalDispositionTime','clinicalDispositionOutcome'].forEach(id=>{const el=by(id);if(el){['input','change'].forEach(ev=>el.addEventListener(ev,()=>{renderDisposition();refreshOutput();}));}});
@@ -16928,6 +17055,8 @@ button.chip{appearance:none;font-family:inherit;}
 .record-readonly-banner b{color:#216548;}
 .record-addendum{margin-top:9px;padding-top:9px;border-top:1px solid #D6E8DF;}
 .record-addendum label{display:block;margin:0 0 5px;color:#2D6D52;font-size:10px;font-weight:850;}
+.record-addendum-author{margin:0 0 7px;}
+.record-addendum-author input{height:36px;border-color:#C8E3D5;background:#fff;font-size:11px;}
 .record-addendum-grid{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:start;}
 .record-addendum textarea{min-height:58px;border-color:#C8E3D5;background:#fff;font-size:11px;line-height:1.42;resize:vertical;}
 .record-addendum button{border:1px solid #9FD4BB;border-radius:10px;background:#fff;color:#28704F;padding:8px 9px;font:850 10px var(--font-body,Inter,Arial,sans-serif);cursor:pointer;}
@@ -17071,7 +17200,7 @@ button.chip{appearance:none;font-family:inherit;}
     issues.push(...udsProfileIssues());
     issues.push(...udsReadingVerificationIssues());
     const trace=call(window.udsTraceIssues)||[];issues.push(...trace);
-    if(val('udsExp')&&call(()=>monthExpired(val('udsExp')),false))issues.push('an in-date cup');
+    if(val('udsExp')&&call(()=>monthExpired(val('udsExp'),val('udsDateTime')),false))issues.push('an in-date cup');
     const tested=UDS_PANELS.filter(panel=>(UDS.results[panel]||'nt')!=='nt');
     if(!tested.length)issues.push('at least one documented result');
     if(UDS.control!=='valid')issues.push('valid control line');
@@ -17224,25 +17353,37 @@ button.chip{appearance:none;font-family:inherit;}
   const call=(fn,...args)=>{try{return typeof fn==='function'?fn(...args):undefined;}catch(e){return undefined;}};
   const say=message=>call(window.toast,message);
   const storageKey='ipmgMedAssistInjectionRecordsV1';
-  const fieldIds=['ptName','ptDOB','orderingProvider','injOrderPurpose','ndc','lot','exp','injProductSource','injProductSourceOther','injPreparation','injPreparationDetail','injWasteToggle','injWasteAmount','injWasteWitness','injProductIssueToggle','injProductIssueDetail','injProductIssueAction','allergies','bp','hr','temp','tech','priorDose','priorSite','adminDate','injAdminTime','injSecondAdminTime','nextDate','clinic','respCustom','admin','injVolume','injVolumeUnit','injDevice','injDeviceOther','injSiteCondition','injSiteConditionDetail','injExceptionToggle','injExceptionSummary','injExceptionRecipient','injExceptionTime','injExceptionOutcome'];
-  let records=loadRecords(),activeId='',mode='edit',autoTimer=null,applying=false;
+  const fieldIds=['ptName','ptDOB','orderingProvider','injOrderPurpose','ndc','lot','exp','injProductSource','injProductSourceOther','injPreparation','injPreparationDetail','injWasteToggle','injWasteAmount','injWasteWitness','injProductIssueToggle','injProductIssueDetail','injProductIssueAction','allergies','bp','hr','temp','rr','spo2','vitalRepeatNote','tech','priorDose','priorSite','adminDate','injAdminTime','injSecondAdminTime','nextDate','clinic','respCustom','admin','injVolume','injVolumeUnit','injDevice','injDeviceOther','injSiteCondition','injSiteConditionDetail','injExceptionToggle','injExceptionSummary','injExceptionRecipient','injExceptionTime','injExceptionOutcome'];
+  let records=loadRecords(),activeId='',mode='edit',autoTimer=null,lockRefreshTimer=null,applying=false,saveFeedback='idle',lastPersistOk=true;
 
   function readStorage(){try{return typeof SAFE_STORAGE!=='undefined'?SAFE_STORAGE.get(storageKey,''):window.localStorage.getItem(storageKey)||'';}catch(e){return '';}}
-  function writeStorage(value){try{if(typeof SAFE_STORAGE!=='undefined')SAFE_STORAGE.set(storageKey,value);else window.localStorage.setItem(storageKey,value);}catch(e){}}
+  function writeStorage(value){
+    try{
+      if(typeof SAFE_STORAGE!=='undefined')return SAFE_STORAGE.set(storageKey,value)===true;
+      window.localStorage.setItem(storageKey,value);return true;
+    }catch(e){return false;}
+  }
   function loadRecords(){try{const parsed=JSON.parse(readStorage()||'[]');return Array.isArray(parsed)?parsed.filter(r=>r&&r.type==='injection'&&r.id):[];}catch(e){return [];}}
-  function persist(){records.sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));writeStorage(JSON.stringify(records));refreshRecordsDrawer();}
+  function persist(){
+    records.sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+    lastPersistOk=writeStorage(JSON.stringify(records));
+    refreshRecordsDrawer();
+    return lastPersistOk;
+  }
   function now(){return new Date().toISOString();}
   function stamp(value){const date=new Date(value||'');if(Number.isNaN(date.getTime()))return 'Saved locally';return date.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
   function makeId(){return `inj_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;}
   function currentRecord(){return records.find(record=>record.id===activeId)||null;}
   function meaningful(){return !!(val('ptName')||val('ptDOB')||val('orderingProvider')||val('lot')||val('ndc')||(S&&S.med)||(S&&S.dose));}
+  function draftNeedsPersistence(){const record=currentRecord();return meaningful()||!!(record&&record.status==='draft');}
   function noteSnapshot(){const note=window._note||{};return {cc:String(note.cc||''),as:String(note.as||''),pl:String(note.pl||'')};}
   function captureSnapshot(){
     const fields={};fieldIds.forEach(id=>{const el=by(id);if(el&&'value' in el)fields[id]=el.type==='checkbox'?!!el.checked:el.value;});
     const root=window.__IPMG_RC530__||{};
     return {
-      version:3,medKey:S.med&&S.med.key||'',state:{dose:S.dose||'',site:S.site||'',route:S.route||'',intervalKey:S.intervalKey||'',reason:S.reason||'',resp:S.resp||'',attest:clone(S.attest||{}),flags:clone(S.flags||{}),guard:clone(S.guard||{}),retCustom:!!S.retCustom},
+      version:4,medKey:S.med&&S.med.key||'',state:{dose:S.dose||'',site:S.site||'',route:S.route||'',intervalKey:S.intervalKey||'',reason:S.reason||'',resp:S.resp||'',attest:clone(S.attest||{}),flags:clone(S.flags||{}),guard:clone(S.guard||{}),retCustom:!!S.retCustom},
       initiation:clone(call(window.ipmgInitiationProtocolSnapshot)||{}),
+      smartVitals:clone(call(window.ipmgSmartVitalsSnapshot)||{}),
       disposition:clone(call(window.ipmgClinicalDispositionSnapshot)||{}),
       fields,safetyNone:!!root.safetyNone,note:noteSnapshot()
     };
@@ -17253,32 +17394,67 @@ button.chip{appearance:none;font-family:inherit;}
     return [med.name||med.label||'Injection',snapshot.state&&snapshot.state.dose||''].filter(Boolean).join(' ')+(protocol?` — ${protocol}`:'');
   }
   function upsert(status){
+    const previousRecords=records.slice(),previousActiveId=activeId;
     const existing=currentRecord(),snapshot=captureSnapshot(),time=now();
     const record={
       ...(existing||{}),id:existing&&existing.id||makeId(),type:'injection',status,createdAt:existing&&existing.createdAt||time,updatedAt:time,
       completedAt:status==='completed'?(existing&&existing.completedAt||time):'',patient:{name:val('ptName'),dob:val('ptDOB')},summary:recordSummary(snapshot),snapshot,addenda:clone(existing&&existing.addenda||[])
     };
     const index=records.findIndex(item=>item.id===record.id);if(index>=0)records[index]=record;else records.unshift(record);
-    activeId=record.id;persist();return record;
+    activeId=record.id;
+    if(!persist()){
+      records=previousRecords;activeId=previousActiveId;refreshRecordsDrawer();
+      return null;
+    }
+    return record;
   }
   function canComplete(){const badge=by('clinicalDispositionBadge');return mode==='edit'&&!!badge&&/Administration documented/i.test(badge.textContent||'');}
   function saveDraft(silent=false,updateUi=true){
-    if(mode!=='edit'||!meaningful())return null;
-    const record=upsert('draft');if(updateUi)renderWorkspace();if(!silent)say('Injection draft saved locally.');return record;
+    if(mode!=='edit'||!draftNeedsPersistence())return null;
+    const hadRecord=!!currentRecord();
+    const restoreSaveFocus=!!(document.activeElement&&document.activeElement.matches&&document.activeElement.matches('[data-inj-save]'));
+    const record=upsert('draft');
+    saveFeedback=record?'saved':'error';
+    if(updateUi){
+      if(silent&&hadRecord)updateRecordStatus();
+      else renderWorkspace({restoreSaveFocus});
+    }
+    if(!silent)say(record?'Injection draft saved locally.':'Injection draft could not be saved in this browser. Keep this page open and check browser storage access.');
+    return record;
   }
   function flushDraft(updateUi=true){
     clearTimeout(autoTimer);autoTimer=null;
-    if(applying||mode!=='edit'||!meaningful())return null;
+    if(applying||mode!=='edit'||!draftNeedsPersistence())return null;
     return saveDraft(true,updateUi);
   }
   function scheduleDraft(){
-    if(applying||mode!=='edit'||!meaningful())return;
+    if(applying||mode!=='edit')return;
+    if(!draftNeedsPersistence()){
+      clearTimeout(autoTimer);autoTimer=null;saveFeedback='idle';updateRecordStatus();return;
+    }
+    saveFeedback='saving';
+    updateRecordStatus();
     clearTimeout(autoTimer);autoTimer=setTimeout(()=>saveDraft(true),700);
   }
   function statusCopy(record){
+    if(saveFeedback==='error')return {badge:'Save failed',className:'error',detail:'The latest changes are still visible, but this browser did not accept the local save. Keep this page open and check storage access before switching records.'};
     if(mode==='readonly'&&record)return {badge:'Completed / locked',className:'locked',detail:`Completed ${stamp(record.completedAt||record.updatedAt)}. This snapshot cannot be changed; use a dated addendum for corrections or follow-up.`};
-    if(record)return {badge:'Draft autosaved',className:'draft',detail:`Last saved ${stamp(record.updatedAt)} in this browser. Select Complete & lock after the final clinical disposition is green.`};
+    if(saveFeedback==='saving')return {badge:'Saving…',className:'saving',detail:'Saving the latest encounter changes in this browser.'};
+    if(record)return {badge:'Saved',className:'draft saved',detail:`Saved ${stamp(record.updatedAt)} in this browser. Complete and lock after the final clinical disposition is ready.`};
     return {badge:'New draft',className:'',detail:'A local draft begins automatically once you enter encounter details. This is not a replacement for the approved EHR record.'};
+  }
+  function updateRecordStatus(){
+    const workspace=by('injRecordWorkspace'),badge=by('injRecordStatus'),detail=workspace&&workspace.querySelector('.inj-record-status');
+    if(!badge||!detail)return;
+    const status=statusCopy(currentRecord());
+    badge.className=`record-badge ${status.className}`.trim();
+    if(badge.textContent!==status.badge)badge.textContent=status.badge;
+    if(detail.textContent!==status.detail)detail.textContent=status.detail;
+    const complete=workspace.querySelector('[data-inj-complete]'),ready=canComplete();
+    if(complete){
+      complete.disabled=!ready;
+      complete.title=ready?'Lock the completed injection record.':'Finish the clinical disposition and required checks first.';
+    }
   }
   function ensureWorkspace(){
     let workspace=by('injRecordWorkspace');if(workspace)return workspace;
@@ -17288,7 +17464,8 @@ button.chip{appearance:none;font-family:inherit;}
   function addendaHtml(record){
     const entries=(record.addenda||[]).slice().reverse();
     const list=entries.length?`<div class="record-addenda-list">${entries.map(entry=>`<div class="record-addenda-item"><b>${safe(entry.author||'Staff')}</b> · ${safe(stamp(entry.createdAt))}<br>${safe(entry.text||'').replace(/\n/g,'<br>')}</div>`).join('')}</div>`:'';
-    return `<div class="record-readonly-banner"><b>Read-only completed record.</b> The original encounter snapshot is locked. Add a dated addendum instead of changing the completed documentation.</div><div class="record-addendum"><label for="injAddendumText">Dated addendum</label><div class="record-addendum-grid"><textarea id="injAddendumText" placeholder="Clarification, correction, or follow-up. The original completed record remains unchanged."></textarea><button type="button" data-inj-addendum>Save addendum</button></div>${list}</div>`;
+    const author=String(call(window.getStoredStaff)||'').trim();
+    return `<div class="record-readonly-banner"><b>Read-only completed record.</b> The original encounter snapshot is locked. Add a dated addendum instead of changing the completed documentation.</div><div class="record-addendum"><div class="record-addendum-author"><label for="injAddendumAuthor">Addendum entered by</label><input id="injAddendumAuthor" value="${safe(author)}" placeholder="Current staff name or initials" autocomplete="off"></div><label for="injAddendumText">Dated addendum</label><div class="record-addendum-grid"><textarea id="injAddendumText" placeholder="Clarification, correction, or follow-up. The original completed record remains unchanged."></textarea><button type="button" data-inj-addendum>Save addendum</button></div>${list}</div>`;
   }
   function historyHtml(){
     if(!records.length)return '';
@@ -17385,20 +17562,21 @@ button.chip{appearance:none;font-family:inherit;}
   }
   function closeRecordsDrawer(restoreFocus=true,afterClose=null){
     const layer=by('recordsDrawerLayer');if(!layer||layer.hidden)return;
+    const reduced=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches),duration=reduced?0:240;
     recordsDrawerState.closing=true;
     layer.classList.remove('is-open');document.body.classList.remove('records-drawer-open');
     layer.setAttribute('aria-hidden','true');layer.style.pointerEvents='none';
     const dialog=layer.querySelector('[role="dialog"]');if(dialog)dialog.inert=true;
-    const shell=document.querySelector('.app-shell');if(shell)shell.inert=false;
+    const shell=document.querySelector('.app-shell');
     by('recordsDrawerTrigger')?.setAttribute('aria-expanded','false');
-    if(restoreFocus){
-      const target=recordsDrawerState.lastFocus&&document.contains(recordsDrawerState.lastFocus)?recordsDrawerState.lastFocus:by('recordsDrawerTrigger');
-      if(target&&typeof target.focus==='function')requestAnimationFrame(()=>target.focus({preventScroll:true}));
-    }
     clearTimeout(recordsDrawerHideTimer);recordsDrawerHideTimer=setTimeout(()=>{
-      layer.hidden=true;recordsDrawerState.closing=false;
+      layer.hidden=true;recordsDrawerState.closing=false;if(shell)shell.inert=false;
+      if(restoreFocus){
+        const target=recordsDrawerState.lastFocus&&document.contains(recordsDrawerState.lastFocus)?recordsDrawerState.lastFocus:by('recordsDrawerTrigger');
+        if(target&&typeof target.focus==='function')target.focus({preventScroll:true});
+      }
       if(typeof afterClose==='function')afterClose();
-    },180);
+    },duration);
   }
   function handleRecordsDrawerKeys(event){
     const layer=by('recordsDrawerLayer');if(!layer||layer.hidden||recordsDrawerState.closing||!layer.classList.contains('is-open'))return;
@@ -17415,22 +17593,23 @@ button.chip{appearance:none;font-family:inherit;}
     if(!records.some(record=>record.id===id))return;
     closeRecordsDrawer(false,()=>{
       window.IPMGNavigation?.activate('administer',{resetScroll:true});
-      openRecord(id);
-      const workspace=by('injRecordWorkspace');if(workspace){workspace.tabIndex=-1;workspace.focus({preventScroll:true});}
+      if(openRecord(id)!==false){
+        const workspace=by('injRecordWorkspace');if(workspace){workspace.tabIndex=-1;workspace.focus({preventScroll:true});}
+      }
     });
   }
   function newDrawerInjection(){
     closeRecordsDrawer(false,()=>{
       window.IPMGNavigation?.activate('administer',{resetScroll:true});
-      newInjection();
-      by('ptName')?.focus({preventScroll:true});
+      if(newInjection()!==false)by('ptName')?.focus({preventScroll:true});
     });
   }
-  function renderWorkspace(){
+  function renderWorkspace(options={}){
     const workspace=ensureWorkspace();if(!workspace)return;
+    const restoreSaveFocus=!!options.restoreSaveFocus;
     const record=currentRecord(),status=statusCopy(record),complete=canComplete();
     const draftText=record&&record.status==='draft'?'Save draft':'Save draft';
-    workspace.innerHTML=`<div class="inj-record-head"><div><div class="inj-record-kicker">Injection record</div><div class="inj-record-title">Fast, persistent encounter state</div><div class="inj-record-sub">Draft as you go. Complete once, then keep the locked snapshot read-only.</div></div><span class="record-badge ${status.className}" id="injRecordStatus">${safe(status.badge)}</span></div><div class="inj-record-actions"><button type="button" class="inj-record-btn" data-inj-save ${mode==='readonly'?'disabled':''}>${draftText}</button><button type="button" class="inj-record-btn complete" data-inj-complete ${complete?'':'disabled'} title="${complete?'Lock the completed injection record.':'Finish the clinical disposition and required checks first.'}">Complete &amp; lock</button><button type="button" class="inj-record-btn icon" data-inj-new title="Start a new injection">+</button></div><div class="inj-record-status">${safe(status.detail)}</div>${mode==='readonly'&&record?addendaHtml(record):''}${historyHtml()}`;
+    workspace.innerHTML=`<div class="inj-record-head"><div><div class="inj-record-kicker">Injection record</div><div class="inj-record-title">Fast, persistent encounter state</div><div class="inj-record-sub">Draft as you go. Complete once, then keep the locked snapshot read-only.</div></div><span class="record-badge ${status.className}" id="injRecordStatus" role="status" aria-live="polite" aria-atomic="true">${safe(status.badge)}</span></div><div class="inj-record-actions"><button type="button" class="inj-record-btn" data-inj-save ${mode==='readonly'?'disabled':''}>${draftText}</button><button type="button" class="inj-record-btn complete" data-inj-complete ${complete?'':'disabled'} title="${complete?'Lock the completed injection record.':'Finish the clinical disposition and required checks first.'}">Complete &amp; lock</button><button type="button" class="inj-record-btn icon" data-inj-new title="Start a new injection" aria-label="Start a new injection">+</button></div><div class="inj-record-status">${safe(status.detail)}</div>${mode==='readonly'&&record?addendaHtml(record):''}${historyHtml()}`;
     workspace.querySelector('[data-inj-save]')?.addEventListener('click',()=>saveDraft(false));
     workspace.querySelector('[data-inj-complete]')?.addEventListener('click',completeRecord);
     workspace.querySelector('[data-inj-new]')?.addEventListener('click',newInjection);
@@ -17438,12 +17617,16 @@ button.chip{appearance:none;font-family:inherit;}
     workspace.querySelector('[data-records-drawer-open]')?.addEventListener('click',openRecordsDrawer);
     workspace.querySelector('[data-inj-addendum]')?.addEventListener('click',saveAddendum);
     applyRecordLock();
+    if(restoreSaveFocus)requestAnimationFrame(()=>workspace.querySelector('[data-inj-save]')?.focus({preventScroll:true}));
   }
   function applyRecordLock(){
     const panel=by('panel-administer'),locked=mode==='readonly'&&!!currentRecord();if(!panel)return;
     panel.classList.toggle('record-readonly',locked);panel.setAttribute('aria-readonly',String(locked));
     panel.querySelectorAll('input,select,textarea,button').forEach(control=>{
-      const allow=!!control.closest('#injRecordWorkspace')||['copyAll','printAVS','injWorksheetPrint','injWorksheetBlank'].includes(control.id);
+      const allow=['copyAll','printAVS','injWorksheetPrint','injWorksheetBlank'].includes(control.id)||
+        !!control.closest('#injRecordWorkspace,#rc526Flow')||
+        control.matches('.rc530-summary,.rc526-summary,.inj-detail-toggle,.needle-guide-toggle,.smsbtn')||
+        control.id==='adminGuideEdit';
       if(locked&&!allow){if(!('rc538WasDisabled' in control.dataset))control.dataset.rc538WasDisabled=control.disabled?'1':'0';control.disabled=true;control.setAttribute('aria-disabled','true');}
       if(!locked&&('rc538WasDisabled' in control.dataset)){control.disabled=control.dataset.rc538WasDisabled==='1';delete control.dataset.rc538WasDisabled;if(!control.disabled)control.removeAttribute('aria-disabled');}
     });
@@ -17457,6 +17640,8 @@ button.chip{appearance:none;font-family:inherit;}
         delete control.dataset.rc538TabIndex;control.removeAttribute('aria-disabled');
       }
     });
+    clearTimeout(lockRefreshTimer);
+    lockRefreshTimer=setTimeout(()=>call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh),120);
   }
   function showLockedOutput(record){
     const note=record.snapshot&&record.snapshot.note||{};const cc=note.cc||`${record.summary||'Injection'} completed.`;const as=note.as||'Completed injection record — read-only snapshot.';const pl=note.pl||'Use a dated addendum for any correction or follow-up.';
@@ -17478,41 +17663,91 @@ button.chip{appearance:none;font-family:inherit;}
     call(window.restoreInitiationProtocol,snap.initiation||{});
     Object.entries(snap.fields||{}).forEach(([id,value])=>{const el=by(id);if(el&&'value' in el){if(el.type==='checkbox')el.checked=!!value;else el.value=value==null?'':value;}});
     if(window.__IPMG_RC530__)window.__IPMG_RC530__.safetyNone=!!snap.safetyNone;
+    call(window.restoreSmartVitalsState,snap.smartVitals||{});
     call(window.renderReasons);call(window.renderMeds);call(window.renderDoses);call(window.renderIntervals);call(window.renderMedSpec);call(window.renderInjSafetyChips);call(window.renderAtt);call(window.renderResp);call(window.renderSites);call(window.renderRoutes);call(window.recalcNext);call(window.render);
     Object.entries(snap.fields||{}).forEach(([id,value])=>{const el=by(id);if(el&&'value' in el){if(el.type==='checkbox')el.checked=!!value;else el.value=value==null?'':value;}});
     call(window.restoreClinicalDisposition,snap.disposition||{});
     applying=false;
   }
+  function blockForPendingAddendum(){
+    const input=by('injAddendumText');
+    if(mode!=='readonly'||!input||!String(input.value||'').trim())return false;
+    say('Save or clear the pending addendum before leaving this locked record.');
+    requestAnimationFrame(()=>input.focus({preventScroll:true}));
+    return true;
+  }
   function openRecord(id){
-    if(mode==='edit'&&meaningful())flushDraft();
-    const record=records.find(item=>item.id===id);if(!record)return;
+    let record=records.find(item=>item.id===id);if(!record)return;
+    if(blockForPendingAddendum())return false;
+    if(mode==='edit'&&draftNeedsPersistence()&&!flushDraft(false)){
+      saveFeedback='error';renderWorkspace();
+      say('The current draft could not be saved, so the app kept it open instead of switching records.');
+      return false;
+    }
+    record=records.find(item=>item.id===id);if(!record)return false;
     activeId=record.id;restoreSnapshot(record);
     mode=record.status==='completed'?'readonly':'edit';
+    saveFeedback='idle';
     if(mode==='readonly')showLockedOutput(record);
-    renderWorkspace();applyRecordLock();
+    renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);
     say(mode==='readonly'?'Completed injection record opened read-only.':'Injection draft opened for editing.');
+    return true;
   }
   function completeRecord(){
     if(!canComplete()){say('Finish the final clinical disposition and required checks before locking this injection record.');renderWorkspace();return;}
     clearTimeout(autoTimer);autoTimer=null;
-    call(window.render);const record=upsert('completed');mode='readonly';showLockedOutput(record);renderWorkspace();applyRecordLock();showCompletion(record);say('Injection record completed and locked.');
+    call(window.render);const record=upsert('completed');
+    if(!record){
+      saveFeedback='error';renderWorkspace();
+      say('The completed record could not be saved, so it remains editable and was not locked.');
+      return;
+    }
+    try{if(window.recordInjectionSite&&S&&S.site)window.recordInjectionSite(val('ptName'),S.site,val('ptDOB'),{medKey:S.med&&S.med.key||'',route:S.route||'',adminDate:val('adminDate'),recordId:record.id});}catch(error){}
+    mode='readonly';saveFeedback='idle';showLockedOutput(record);renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);showCompletion(record);say('Injection record completed and locked.');
   }
   function newInjection(){
-    if(mode==='edit'&&meaningful())flushDraft();
-    activeId='';mode='edit';applying=true;call(window.softReset);call(window.render);applying=false;renderWorkspace();applyRecordLock();say('New injection started. Any previous work remains available as a draft.');
+    if(blockForPendingAddendum())return false;
+    if(mode==='edit'&&draftNeedsPersistence()&&!flushDraft(false)){
+      saveFeedback='error';renderWorkspace();
+      say('The current draft could not be saved, so the app kept it open instead of starting a new injection.');
+      return false;
+    }
+    activeId='';mode='edit';saveFeedback='idle';applying=true;call(window.softReset);call(window.render);applying=false;renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);say('New injection started. Any previous work remains available as a draft.');
+    return true;
   }
   function saveAddendum(){
     const record=currentRecord(),text=val('injAddendumText');if(!record||record.status!=='completed')return;
     if(!text){say('Enter the addendum before saving it.');return;}
-    const staff=val('admin')||call(window.getStoredStaff)||'Staff not documented';
-    record.addenda=Array.isArray(record.addenda)?record.addenda:[];record.addenda.push({id:`add_${Date.now()}`,createdAt:now(),author:staff,text});record.updatedAt=now();persist();renderWorkspace();say('Dated addendum saved to the locked record.');
+    const staff=val('injAddendumAuthor')||String(call(window.getStoredStaff)||'').trim();
+    if(!staff){say('Enter the current staff member adding this addendum.');by('injAddendumAuthor')?.focus();return;}
+    const updated={...record,addenda:[...(Array.isArray(record.addenda)?record.addenda:[]),{id:`add_${Date.now()}`,createdAt:now(),author:staff,text}],updatedAt:now()};
+    records=records.map(item=>item.id===record.id?updated:item);
+    if(!persist()){
+      records=records.map(item=>item.id===record.id?record:item);saveFeedback='error';refreshRecordsDrawer();renderWorkspace();
+      const input=by('injAddendumText');if(input){input.value=text;requestAnimationFrame(()=>input.focus({preventScroll:true}));}
+      say('The addendum could not be saved. Its text is still here; check browser storage access and try again.');
+      return;
+    }
+    saveFeedback='idle';renderWorkspace();say('Dated addendum saved to the locked record.');
   }
   function showCompletion(record){
     const previous=by('injCompletionOverlay');if(previous&&typeof previous._ipmgClose==='function')previous._ipmgClose(false);else previous?.remove();
     const restoreTarget=by('injRecordWorkspace'),shell=document.querySelector('.app-shell');
     const overlay=document.createElement('div');overlay.id='injCompletionOverlay';overlay.className='inj-completion-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','injCompletionTitle');overlay.setAttribute('aria-describedby','injCompletionDescription');
-    const sparks=[['-130px','-85px','#9D8AF4','.02s'],['115px','-102px','#6FC5ED','.10s'],['155px','-5px','#8ED7AF','.16s'],['108px','102px','#F3B865','.06s'],['-122px','100px','#7FC2E7','.13s'],['-158px','13px','#C895E8','.20s'],['-58px','-137px','#74CCA1','.08s'],['55px','-132px','#F0A9A4','.18s']];
-    overlay.innerHTML=`<div class="inj-completion-card"><div class="inj-completion-ring" aria-hidden="true"></div><h2 id="injCompletionTitle">Injection record complete</h2><p id="injCompletionDescription">${safe(record.summary||'Injection')} is locked as a read-only local snapshot. Addenda remain available for any follow-up.</p><button type="button">View locked record</button>${sparks.map(item=>`<i class="inj-completion-spark" aria-hidden="true" style="--x:${item[0]};--y:${item[1]};--spark:${item[2]};--delay:${item[3]}"></i>`).join('')}</div>`;
+    const snapshot=record&&record.snapshot||{},state=snapshot.state||{},fields=snapshot.fields||{},initiation=snapshot.initiation||{},second=initiation.second||{};
+    const patient=record&&record.patient&&record.patient.name||'Patient not entered';
+    const medication=record&&record.summary||'Injection';
+    const site=state.site||'Documented in record';
+    const lockedAt=stamp(record&&record.completedAt||record&&record.updatedAt);
+    const paired=!!(initiation.protocol&&second.given&&(second.dose||second.site));
+    const primaryDetails=[state.dose,state.route||'IM',site,fields.injAdminTime?`at ${fields.injAdminTime}`:''].filter(Boolean).join(' · ');
+    const primaryTrace=[fields.ndc?`NDC ${fields.ndc}`:'',fields.lot?`Lot ${fields.lot}`:'',fields.exp?`Exp ${fields.exp}`:''].filter(Boolean).join(' · ');
+    const secondProduct=initiation.protocol==='maintena-1day'?'Abilify Maintena':initiation.protocol==='asimtufii-1day'?'Abilify Maintena':initiation.protocol==='aristada-initio-sameday'?(snapshot.medKey==='initio'?'First ARISTADA maintenance dose':'ARISTADA INITIO'):'Component 2';
+    const secondDetails=[second.dose,'IM',second.site,fields.injSecondAdminTime?`at ${fields.injSecondAdminTime}`:''].filter(Boolean).join(' · ');
+    const secondTrace=[second.ndc?`NDC ${second.ndc}`:'',second.lot?`Lot ${second.lot}`:'',second.exp?`Exp ${second.exp}`:''].filter(Boolean).join(' · ');
+    const primaryReceipt=paired?`<div><span>Component 1</span><b>${safe(primaryDetails||'Documented in record')}</b></div><div><span>Component 1 trace</span><b>${safe(primaryTrace||'Documented in record')}</b></div>`:`<div><span>Actual site</span><b>${safe(site)}</b></div>`;
+    const pairedReceipt=paired?`<div><span>Component 2 · ${safe(secondProduct)}</span><b>${safe(secondDetails||'Documented in record')}</b></div><div><span>Component 2 trace</span><b>${safe(secondTrace||'Documented in record')}</b></div>`:'';
+    overlay.innerHTML=`<div class="inj-completion-card"><div class="inj-completion-ring" aria-hidden="true"></div><h2 id="injCompletionTitle">Injection record complete</h2><p id="injCompletionDescription">The encounter is locked as a read-only local snapshot. A dated addendum can be added later without changing the original.</p><div class="inj-completion-receipt ${paired?'paired':''}" aria-label="Completed injection receipt"><div><span>Patient</span><b>${safe(patient)}</b></div><div><span>Medication</span><b>${safe(medication)}</b></div>${primaryReceipt}${pairedReceipt}<div><span>Record status</span><b>Locked · ${safe(lockedAt)}</b></div></div><button type="button">View locked record</button></div>`;
     const button=overlay.querySelector('button');
     let closing=false;
     const onKey=event=>{
@@ -17521,12 +17756,12 @@ button.chip{appearance:none;font-family:inherit;}
     };
     const close=(restoreFocus=true)=>{
       if(closing)return;closing=true;overlay.classList.add('is-closing');
-      document.removeEventListener('keydown',onKey,true);document.body.classList.remove('inj-completion-open');
-      if(shell)shell.inert=false;
+      const reduced=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches),duration=reduced?0:160;
+      document.removeEventListener('keydown',onKey,true);
       setTimeout(()=>{
-        overlay.remove();
+        overlay.remove();document.body.classList.remove('inj-completion-open');if(shell)shell.inert=false;
         if(restoreFocus&&restoreTarget&&document.contains(restoreTarget)){restoreTarget.tabIndex=-1;restoreTarget.focus({preventScroll:true});}
-      },160);
+      },duration);
     };
     overlay._ipmgClose=close;
     overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
@@ -17553,12 +17788,22 @@ button.chip{appearance:none;font-family:inherit;}
     ensureRecordsDrawer();renderWorkspace();refreshRecordsDrawer();bindLogDedup();
     document.addEventListener('click',event=>{
       if(mode!=='readonly')return;
+      const reviewOnly=event.target&&event.target.closest&&event.target.closest('#panel-administer .rc530-summary,#panel-administer .rc526-summary,#panel-administer .inj-detail-toggle,#panel-administer .needle-guide-toggle,#panel-administer .smsbtn,#panel-administer #adminGuideEdit');
+      if(reviewOnly)return;
       const interactive=event.target&&event.target.closest&&event.target.closest('#panel-administer .form-col input,#panel-administer .form-col select,#panel-administer .form-col textarea,#panel-administer .form-col button,#panel-administer .form-col [role="button"],#panel-administer .form-col #medClear,#panel-administer .form-col [data-site]');
       if(!interactive)return;
       event.preventDefault();event.stopImmediatePropagation();say('This completed record is read-only. Use a dated addendum for any correction or follow-up.');
     },true);
-    ['input','change','click'].forEach(type=>document.addEventListener(type,event=>{if(event.target&&event.target.closest&&event.target.closest('#panel-administer')&&!event.target.closest('#injRecordWorkspace')){setTimeout(()=>{scheduleDraft();renderWorkspace();},0);}},true));
+    ['input','change'].forEach(type=>document.addEventListener(type,event=>{
+      if(event.target&&event.target.closest&&event.target.closest('#panel-administer')&&!event.target.closest('#injRecordWorkspace'))setTimeout(scheduleDraft,0);
+    },true));
+    document.addEventListener('click',event=>{
+      const target=event.target&&event.target.closest&&event.target.closest('#panel-administer .form-col button,#panel-administer .form-col [role="button"],#panel-administer .form-col #medClear');
+      if(!target||target.closest('#injRecordWorkspace')||target.matches('.rc530-summary,.rc526-summary,.inj-detail-toggle,.needle-guide-toggle,.smsbtn,#adminGuideEdit')||target.closest('.rc530-summary,.rc526-summary,.inj-detail-toggle,.needle-guide-toggle,.smsbtn'))return;
+      setTimeout(scheduleDraft,0);
+    },true);
     const panel=by('panel-administer');if(panel){const observer=new MutationObserver(()=>{if(mode==='readonly')applyRecordLock();});observer.observe(panel,{childList:true,subtree:true});}
+    window.addEventListener('beforeunload',event=>{if(mode==='readonly'&&val('injAddendumText')){event.preventDefault();event.returnValue='';}});
     window.addEventListener('pagehide',()=>flushDraft(false));
     document.addEventListener('visibilitychange',()=>{if(document.hidden)flushDraft(false);});
   }
@@ -17733,7 +17978,33 @@ button.chip{appearance:none;font-family:inherit;}
   function setProtocol(id){if(!protocolOptions().some(option=>option.id===id)||id===state.protocol)return;clearSecondAdministrationTime();state=blankState();state.protocol=id;setProtocolReason();syncMedicationFlags();applyInitiationSchedule();refreshUi();}
   function resetState(){clearSecondAdministrationTime();state=blankState();syncMedicationFlags();}
   function updateFromControl(control){if(!control)return;const id=control.id,second=state.second||{};if(id==='initPlanVerified')state.planVerified=!!control.checked;if(id==='initSecondDose')second.dose=control.value;if(id==='initSecondSite')second.site=control.value;if(id==='initSecondNdc')second.ndc=control.value;if(id==='initSecondLot')second.lot=control.value;if(id==='initSecondExp')second.exp=control.value;if(id==='initSecondOrderVerified')second.orderVerified=!!control.checked;if(id==='initSecondGiven')second.given=!!control.checked;if(id==='initSecondNote')second.note=control.value;if(id==='initProviderNote')state.providerNote=control.value;if(id==='initDay1Date')state.day1Date=control.value;state.second=second;syncMedicationFlags();}
-  function bindCard(card){card.addEventListener('click',event=>{const path=event.target&&event.target.closest&&event.target.closest('[data-init-protocol]');if(path){event.preventDefault();setProtocol(path.dataset.initProtocol);return;}const oral=event.target&&event.target.closest&&event.target.closest('[data-init-oral]');if(oral){event.preventDefault();state.oralStatus=oral.dataset.initOral;refreshUi();return;}const order=event.target&&event.target.closest&&event.target.closest('[data-init-sustenna-order]');if(order){event.preventDefault();state.sustennaOrder=order.dataset.initSustennaOrder;refreshUi();return;}const clear=event.target&&event.target.closest&&event.target.closest('[data-init-clear]');if(clear){event.preventDefault();resetState();refreshUi();}});card.addEventListener('input',event=>{updateFromControl(event.target);});card.addEventListener('change',event=>{updateFromControl(event.target);if(event.target&&event.target.id==='initDay1Date')applyInitiationSchedule();renderCard();call(window.render);});}
+  let protocolFocusTimer=0;
+  function restoreProtocolFocus(selector){
+    if(!selector)return;
+    const apply=()=>{const target=document.querySelector(selector);if(target)target.focus({preventScroll:true});};
+    requestAnimationFrame(apply);
+    clearTimeout(protocolFocusTimer);protocolFocusTimer=setTimeout(apply,140);
+  }
+  function bindCard(card){
+    card.addEventListener('click',event=>{
+      const path=event.target&&event.target.closest&&event.target.closest('[data-init-protocol]');
+      if(path){event.preventDefault();const id=path.dataset.initProtocol;setProtocol(id);restoreProtocolFocus(`[data-init-protocol="${CSS.escape(id)}"]`);return;}
+      const oral=event.target&&event.target.closest&&event.target.closest('[data-init-oral]');
+      if(oral){event.preventDefault();const id=oral.dataset.initOral;state.oralStatus=id;refreshUi();restoreProtocolFocus(`[data-init-oral="${CSS.escape(id)}"]`);return;}
+      const order=event.target&&event.target.closest&&event.target.closest('[data-init-sustenna-order]');
+      if(order){event.preventDefault();const id=order.dataset.initSustennaOrder;state.sustennaOrder=id;refreshUi();restoreProtocolFocus(`[data-init-sustenna-order="${CSS.escape(id)}"]`);return;}
+      const clear=event.target&&event.target.closest&&event.target.closest('[data-init-clear]');
+      if(clear){event.preventDefault();resetState();refreshUi();restoreProtocolFocus('[data-init-protocol]');}
+    });
+    card.addEventListener('input',event=>{updateFromControl(event.target);});
+    card.addEventListener('change',event=>{
+      const focusId=event.target&&event.target.id||'';
+      updateFromControl(event.target);
+      if(focusId==='initDay1Date')applyInitiationSchedule();
+      renderCard();call(window.render);
+      if(focusId)restoreProtocolFocus(`#${CSS.escape(focusId)}`);
+    });
+  }
   function narrative(){const c=config(),current=med(),app=appState()||{};if(!c||!current)return {assessment:[],plan:[]};const assessment=[],plan=[];if(c.kind==='dual'){const second=state.second||{};assessment.push(`${c.title}: active provider plan verified; ${c.oralLabel.toLowerCase()} ${state.oralStatus==='administered'?'documented as administered today':'verified in the active record'}; paired injection components documented separately.`);plan.push(`Initiation components: #1 ${current.name||current.label} ${String(app.dose||'').trim()} IM ${String(app.site||'').trim()}; #2 ${c.secondaryProduct.replace(/^Injection 2 —\s*/,'')} ${second.dose} IM ${second.site}.`);plan.push(`Component 2 traceability: NDC ${second.ndc}; Lot ${second.lot}; Exp ${second.exp}.`);if(second.note)plan.push(`Component 2 note: ${second.note}`);}else if(c.kind==='oral'){assessment.push(`${c.title}: active provider plan verified; ${c.oralLabel.toLowerCase()} ${state.oralStatus==='administered'?'documented as administered today':'verified in the active record'}.`);}else if(c.kind==='provider'){assessment.push(`${c.title}: active provider plan verified.`);plan.push(`Provider-directed initiation/re-initiation plan: ${state.providerNote}`);}else if(c.kind==='sustenna-day1'){const target=value('adminDate')?addCalendarDays(value('adminDate'),7):'';assessment.push(`Invega Sustenna Day 1 initiation: active provider order/current PI verified; ordered category ${state.sustennaOrder||'not documented'}; deltoid initiation site documented.`);if(target)plan.push(`Day 8 scheduling target: ${displayDate(target)}. Staff-facing timing support only; dose, renal status, and re-initiation decisions remain order/PI based.`);}else if(c.kind==='sustenna-day8'){const timing=day8Window(state.day1Date);assessment.push(`Invega Sustenna Day 8 initiation: active provider order/current PI verified; documented Day 1 ${displayDate(state.day1Date)}; deltoid initiation site documented.`);if(timing)plan.push(`Day 8 timing: target ${displayDate(timing.target)}; displayed window ${displayDate(timing.early)} to ${displayDate(timing.late)}. This tool did not calculate dose, renal adjustment, or re-initiation.`);}return {assessment,plan};}
   function appendNarrativeToNote(){const badge=by('clinicalDispositionBadge');if(!badge||!/Administration documented/i.test(badge.textContent||''))return;const extra=narrative();if(!extra.assessment.length&&!extra.plan.length)return;const note=window._note||{cc:'',as:'',pl:''};note.as=[note.as,...extra.assessment].filter(Boolean).join('\n');note.pl=[note.pl,...extra.plan].filter(Boolean).join('\n');window._note=note;const assessment=by('outAS'),plan=by('outPL');if(assessment)extra.assessment.forEach(line=>{const p=document.createElement('p');p.className='initiation-note-line';p.textContent=line;assessment.appendChild(p);});if(plan)extra.plan.forEach(line=>{const p=document.createElement('p');p.className='initiation-note-line';p.textContent=line;plan.appendChild(p);});}
   function logData(){const c=config(),current=med();if(!c||!current)return {details:[],trace:[],follow:''};const details=[`Initiation: ${c.title}`],trace=[];let follow='';if(c.kind==='dual'){const second=state.second||{};details.push(`#2 ${c.secondaryProduct.replace(/^Injection 2 —\s*/,'')} ${second.dose} IM ${second.site}`);trace.push(`#2 NDC ${second.ndc}`,`#2 Lot ${second.lot}`,`#2 Exp ${second.exp}`);}
@@ -17906,10 +18177,16 @@ button.chip{appearance:none;font-family:inherit;}
   }
   function monthExpired(month){
     if(!month)return false;
-    try{if(typeof window.monthExpired==='function')return !!window.monthExpired(month);}catch(error){}
-    const now=new Date();
+    const documented=val('sampleDate');
+    try{if(typeof window.monthExpired==='function')return !!window.monthExpired(month,documented);}catch(error){}
+    const now=documented?new Date(documented+'T00:00:00'):new Date();
     const current=String(now.getFullYear())+'-'+String(now.getMonth()+1).padStart(2,'0');
     return month<current;
+  }
+  function localDay(value){
+    const date=value instanceof Date?value:new Date(value||'');
+    if(Number.isNaN(date.getTime()))return '';
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
   }
   function rowId(row){
     if(!row)return '';
@@ -17968,7 +18245,7 @@ button.chip{appearance:none;font-family:inherit;}
   }
   function reviewCurrent(){
     const review=traceState().review;
-    return !!(review.confirmedAt&&review.fingerprint&&review.fingerprint===reviewFingerprint());
+    return !!(review.confirmedAt&&localDay(review.confirmedAt)===localDay(new Date())&&review.fingerprint&&review.fingerprint===reviewFingerprint());
   }
   function confirmationTime(){
     const stamp=traceState().review.confirmedAt;
@@ -18175,8 +18452,10 @@ button.chip{appearance:none;font-family:inherit;}
       try{
         if(typeof LOG==='undefined')return;
         const detail=[call(window.sampleSigText)||val('sampleSig'),call(window.sampleDosePlanText),reviewLine()].filter(Boolean).join(' | ');
-        LOG.push({type:'sample',status:'completed',time:typeof nowStamp==='function'?nowStamp():'',pt:val('samplePtName')||'—',summary:call(window.sampleFriendlyMedication)||val('sampleMedLabel')||'Sample',details:detail,trace:packageTraceText(),follow:val('samplePurpose')||'Sample dispensed',by:val('sampleStaff')||'—'});
-        call(window.saveLog);call(window.renderLog);call(window.renderCommandCenter);toastSafe('Sample added to activity log');
+        const entry={type:'sample',status:'completed',time:typeof nowStamp==='function'?nowStamp():'',pt:val('samplePtName')||'—',summary:call(window.sampleFriendlyMedication)||val('sampleMedLabel')||'Sample',details:detail,trace:packageTraceText(),follow:val('samplePurpose')||'Sample dispensed',by:val('sampleStaff')||'—'};
+        const saved=typeof window.appendLogEntry==='function'?window.appendLogEntry(entry):false;
+        if(!saved){toastSafe('Sample could not be saved to the activity log in this browser.');return;}
+        call(window.renderLog);call(window.renderCommandCenter);toastSafe('Sample added to activity log');
       }catch(error){toastSafe('Unable to add the sample to the activity log.');}
     });
   }
@@ -18773,6 +19052,8 @@ html{scrollbar-gutter:stable;}
 .record-addendum button{min-height:40px;font:800 var(--fs-xs) var(--font-ui);}
 .record-readonly-banner{border-radius:var(--r-md);font-size:var(--fs-xs);}
 .record-readonly-banner b{color:var(--ink);}
+#panel-administer .inj-record-workspace:focus{outline:none;}
+#panel-administer .inj-record-workspace:focus-visible{outline:3px solid rgba(109,94,210,.24);outline-offset:3px;}
 
 #clinicalDisposition.card-disposition{
   border-radius:var(--r-lg);padding:18px 20px;box-shadow:var(--shadow-sm);
@@ -18849,9 +19130,713 @@ body.records-drawer-open,body.inj-completion-open{overflow:hidden;}
 .inj-completion-overlay.is-closing{opacity:0;transition:opacity .16s var(--ease);}
 .inj-completion-overlay.is-closing .inj-completion-card{transform:translateY(8px) scale(.98);transition:transform .16s var(--ease);}
 .guided-head:focus-visible,.sample-guide-head:focus-visible,.uds-guide-head:focus-visible,[data-guided-head]:focus-visible{outline:3px solid rgba(107,124,250,.22);outline-offset:3px;}
-@media(max-width:620px){#panel-administer .inj-detail-toggle{align-items:flex-start;}}
-@media(max-width:620px){.rc526-flow{grid-template-columns:1fr 1fr}.rc526-mode{grid-column:1/-1;display:block}.rc526-mode span{text-align:left;margin-top:3px}.rc526-step .s{white-space:normal}}
-@media print{.inj-completion-overlay,.records-drawer-layer{display:none!important;}}
+  @media(max-width:620px){#panel-administer .inj-detail-toggle{align-items:flex-start;}}
+  @media(max-width:620px){.rc526-flow{grid-template-columns:1fr 1fr}.rc526-mode{grid-column:1/-1;display:block}.rc526-mode span{text-align:left;margin-top:3px}.rc526-step .s{white-space:normal}}
+
+  /* ===================== RC5.45: mature clinical product system =====================
+     A single late screen layer now owns density, hierarchy, motion, and responsive
+     behavior. Clinical semantics and print layouts remain unchanged. */
+  :root{
+    --p-bg:#F3F5F9;
+    --p-surface:#FFFFFF;
+    --p-surface-subtle:#F8FAFD;
+    --p-ink:#182235;
+    --p-soft:#627086;
+    --p-faint:#8C97A9;
+    --p-line:#E1E6EF;
+    --p-line-strong:#D3DBE7;
+    --p-brand:#6574E8;
+    --p-brand-2:#5362D6;
+    --p-brand-soft:#EEF1FF;
+    --p-shadow-shell:0 20px 54px rgba(54,68,96,.10),0 2px 8px rgba(54,68,96,.04);
+    --p-shadow-card:0 10px 26px rgba(54,68,96,.055),0 1px 2px rgba(54,68,96,.04);
+    --p-ease:cubic-bezier(.2,.72,.24,1);
+    --p-ease-emphasis:cubic-bezier(.16,1,.3,1);
+    --p-fast:120ms;
+    --p-state:180ms;
+    --p-panel:240ms;
+  }
+  @media screen{
+    html{background:var(--p-bg);}
+    body{
+      color:var(--p-ink);
+      background:
+        radial-gradient(900px 560px at -8% -10%,rgba(111,124,232,.10),transparent 62%),
+        radial-gradient(780px 520px at 108% 12%,rgba(92,169,197,.07),transparent 64%),
+        linear-gradient(180deg,#F7F8FB 0%,var(--p-bg) 55%,#F5F7FA 100%);
+    }
+    .wrap{
+      max-width:min(1600px,calc(100vw - 24px))!important;
+      padding:18px 6px 64px!important;
+    }
+    .app-shell{
+      grid-template-columns:228px minmax(0,1fr)!important;
+      gap:20px!important;
+      align-items:start;
+    }
+    .app-sidebar{
+      top:18px!important;
+      padding:15px 13px 14px!important;
+      border:1px solid rgba(218,225,236,.94)!important;
+      border-radius:26px!important;
+      background:rgba(255,255,255,.90)!important;
+      box-shadow:var(--p-shadow-shell)!important;
+      backdrop-filter:blur(20px) saturate(1.08);
+    }
+    .app-sidebar .topbar{margin-bottom:12px;}
+    .app-sidebar .brand{
+      gap:10px;padding:2px 2px 14px;margin:0 0 12px;
+      border-bottom:1px solid var(--p-line);
+    }
+    .app-sidebar .leaf{
+      width:39px;height:39px;border-radius:12px;
+      background:linear-gradient(145deg,#7784F0,#6458DA);
+      box-shadow:0 8px 18px rgba(95,103,218,.25);
+    }
+    .app-sidebar .brand h1{font-size:16px;line-height:1.08;letter-spacing:-.035em;}
+    .app-sidebar .brand .sub{font-size:10.5px;line-height:1.35;color:var(--p-soft);}
+    .app-sidebar .pill{
+      width:100%;justify-content:flex-start;margin:0 0 12px;padding:8px 10px;
+      border-radius:12px;background:var(--p-brand-soft);border-color:#DCE2FF;
+      color:#5563C7;font-size:10.5px;box-shadow:none;
+    }
+    .staffbar,.global-location-card{
+      border:1px solid var(--p-line)!important;border-radius:17px!important;
+      background:var(--p-surface-subtle)!important;box-shadow:none!important;
+    }
+    .staffbar{padding:10px!important;gap:7px!important;margin-bottom:11px!important;}
+    .staff-chip{margin-bottom:1px;}
+    .staff-label,.global-location-card .loc-title{font-size:10px;letter-spacing:.09em;color:#748095;}
+    .staff-help{display:none;}
+    .staff-field{min-width:0!important;}
+    .staff-field input,.global-location-card select{
+      width:100%!important;height:40px!important;border-radius:12px!important;background:#fff!important;
+    }
+    .staff-apply,.staff-clear{
+      min-height:38px!important;border-radius:12px!important;font-size:10.8px!important;
+      transition:transform var(--p-fast) var(--p-ease),box-shadow var(--p-state) var(--p-ease),background var(--p-state) var(--p-ease);
+    }
+    .staff-apply{background:linear-gradient(180deg,var(--p-brand),var(--p-brand-2))!important;border-color:var(--p-brand-2)!important;box-shadow:0 7px 14px rgba(83,98,214,.17)!important;}
+    .staff-current{font-size:10.5px!important;border-radius:11px!important;}
+    .global-location-card{padding:10px!important;margin-bottom:10px!important;}
+    .global-location-card .loc-top{margin-bottom:7px;}
+    .global-location-card .loc-hint{font-size:10px;margin-top:6px;}
+    .nav-label,.records-launcher-kicker{
+      padding:7px 8px 6px!important;color:#8A94A5!important;font-size:9.5px!important;
+      letter-spacing:.12em!important;font-weight:850!important;
+    }
+    .tabs{gap:4px!important;}
+    .tab{
+      min-height:42px!important;padding:10px 11px!important;border-radius:13px!important;
+      font:720 12.5px var(--font-display)!important;color:#5F6B7E!important;
+      transition:transform var(--p-fast) var(--p-ease),background var(--p-state) var(--p-ease),color var(--p-state) var(--p-ease),border-color var(--p-state) var(--p-ease),box-shadow var(--p-state) var(--p-ease)!important;
+    }
+    .tab:hover{background:#F4F6FB!important;border-color:#E5E9F1!important;color:#303B50!important;}
+    .tab.on{
+      padding-left:12px!important;background:linear-gradient(135deg,#242F49,#33405F)!important;
+      color:#fff!important;border-color:#26324C!important;box-shadow:0 9px 20px rgba(35,47,75,.18)!important;
+    }
+    .tab.on:before{width:3px!important;height:18px!important;background:#9EA8FF!important;box-shadow:0 0 0 4px rgba(158,168,255,.10)!important;}
+    .tab .count{margin-left:auto;}
+    .records-drawer-trigger{min-height:44px!important;border-radius:13px!important;}
+
+    /* Compact, functional module headers replace marketing-sized hero blocks. */
+    .home-hero{margin-bottom:14px!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;}
+    .home-hero:before,.home-hero:after{display:none!important;}
+    .home-hero-inner,
+    #panel-administer .inj-modern-hero,
+    #panel-uds .uds-modern-hero,
+    #panel-samples .sample-module-hero.rc5 .sample-hero-main,
+    #panel-samples .sample-module-hero .sample-hero-main,
+    .forms-hero,.tms-hero,.log-hero,#panel-reference .kb-hero{
+      border:1px solid #DEE4EE!important;border-radius:24px!important;
+      background:
+        linear-gradient(112deg,rgba(255,255,255,.98) 0%,rgba(250,251,255,.98) 64%,rgba(242,245,255,.96) 100%)!important;
+      box-shadow:var(--p-shadow-card)!important;
+    }
+    .home-hero-inner{min-height:0!important;padding:23px 25px!important;grid-template-columns:minmax(0,1fr) 280px!important;gap:18px!important;}
+    .home-hero-inner:after{width:210px!important;height:210px!important;right:-70px!important;bottom:-110px!important;opacity:.52;}
+    .home-title{font-size:clamp(30px,3.2vw,39px)!important;line-height:1.02!important;letter-spacing:-.035em!important;word-spacing:.045em!important;max-width:720px!important;}
+    .home-subtitle{max-width:740px!important;margin-top:8px!important;font-size:13.5px!important;line-height:1.58!important;}
+    .home-pills{margin-top:13px!important;gap:7px!important;}
+    .home-pill{padding:6px 9px!important;font-size:10.5px!important;box-shadow:none!important;}
+    .home-status-card{padding:16px!important;border-radius:18px!important;background:rgba(255,255,255,.86)!important;box-shadow:none!important;}
+    .home-status-card .patient{font-size:20px!important;}
+    .home-status-card .mini-row{margin-top:12px!important;gap:8px!important;}
+    .home-mini{padding:11px 12px!important;border-radius:14px!important;box-shadow:none!important;}
+
+    #panel-administer .inj-modern-hero,#panel-uds .uds-modern-hero{
+      padding:20px 23px!important;margin-bottom:12px!important;overflow:hidden;
+    }
+    #panel-administer .inj-modern-hero .hero-grid,#panel-uds .uds-modern-hero .hero-grid{grid-template-columns:1fr!important;}
+    #panel-administer .inj-modern-hero h2,#panel-uds .uds-modern-hero h2,
+    #panel-samples .sample-module-hero.rc5 .sample-hero-title,
+    #panel-samples .sample-module-hero .sample-hero-title{
+      font-size:28px!important;line-height:1.08!important;letter-spacing:-.025em!important;word-spacing:.035em!important;max-width:880px!important;
+    }
+    #panel-administer .inj-modern-hero p,#panel-uds .uds-modern-hero p,
+    #panel-samples .sample-module-hero.rc5 .sample-hero-copy,
+    #panel-samples .sample-module-hero .sample-hero-copy{
+      margin-top:7px!important;font-size:13px!important;line-height:1.55!important;max-width:920px!important;
+    }
+    #panel-administer .inj-modern-hero .steps,#panel-uds .uds-modern-hero .steps,
+    #panel-administer .inj-modern-hero .mini-panel,#panel-uds .uds-modern-hero .mini-panel,
+    #panel-samples .sample-module-hero.rc5 .sample-hero-side,#panel-samples .sample-module-hero .sample-hero-side{display:none!important;}
+    #panel-samples .sample-module-hero.rc5,#panel-samples .sample-module-hero{display:block!important;margin-bottom:12px!important;}
+    #panel-samples .sample-module-hero.rc5 .sample-hero-main,#panel-samples .sample-module-hero .sample-hero-main{padding:20px 23px!important;}
+    #panel-samples .sample-hero-main:after{opacity:.34!important;transform:scale(.72) rotate(18deg)!important;}
+    #panel-samples .sample-hero-pills{margin-top:12px!important;gap:7px!important;}
+    #panel-samples .sample-hero-pill{padding:6px 9px!important;font-size:10.5px!important;box-shadow:none!important;}
+
+    /* A single visual surface and type hierarchy across every clinical module. */
+    .card,.home-card,.home-action,.guided-card,.sample-guide-card,.uds-guide-card,
+    .kb-card,.kb-side-card,.closeout-card,.scanrow,.note,.qa-panel,.rc530-ready-card{
+      border-color:var(--p-line)!important;
+    }
+    .card,.home-card,.home-action,.guided-card,.sample-guide-card,.uds-guide-card,.kb-card,.closeout-card{
+      border-radius:20px!important;box-shadow:var(--p-shadow-card)!important;background:var(--p-surface)!important;
+    }
+    .card{padding:18px 19px!important;margin-bottom:12px!important;}
+    .card-head,.home-card-head,.panel-head{
+      padding-bottom:12px!important;margin-bottom:13px!important;border-bottom:1px solid #E8ECF2!important;
+    }
+    .card-head h2,.home-card-head h2,.panel-title{font-size:16.5px!important;font-weight:780!important;letter-spacing:-.025em!important;}
+    .card-head .hint,.panel-subtitle{font-size:11.5px!important;line-height:1.42!important;color:var(--p-soft)!important;}
+    .ico{width:34px!important;height:34px!important;border-radius:11px!important;box-shadow:none!important;}
+    label,.gl,.field-label,#panel-samples label,#panel-samples .gl,#panel-forms label,#panel-forms .gl{
+      text-transform:none!important;letter-spacing:.005em!important;font-size:11.5px!important;font-weight:720!important;color:#4F5D71!important;
+    }
+    input,select,textarea{
+      min-height:42px!important;border:1px solid var(--p-line-strong)!important;border-radius:13px!important;
+      background:#FBFCFE!important;color:var(--p-ink)!important;
+      transition:border-color var(--p-state) var(--p-ease),box-shadow var(--p-state) var(--p-ease),background var(--p-state) var(--p-ease)!important;
+    }
+    input:hover,select:hover,textarea:hover{border-color:#BBC5D5!important;background:#fff!important;}
+    input:focus,select:focus,textarea:focus{border-color:var(--p-brand)!important;background:#fff!important;box-shadow:0 0 0 4px rgba(101,116,232,.12)!important;}
+    .field{gap:5px!important;}
+    .row2,.row3{gap:11px 12px!important;}
+    .chips{gap:7px!important;}
+    .chip,.mini,.rc530-choice,.cd-choice{
+      min-height:36px;border-radius:12px!important;padding:7px 11px!important;
+      transition:transform var(--p-fast) var(--p-ease),border-color var(--p-state) var(--p-ease),background var(--p-state) var(--p-ease),color var(--p-state) var(--p-ease),box-shadow var(--p-state) var(--p-ease)!important;
+    }
+    .chip.on,.mini.on{box-shadow:0 6px 14px rgba(80,96,211,.15)!important;}
+    .btn,.staff-apply,.staff-clear,.rc530-continue,.inj-record-btn,.records-drawer-new{
+      border-radius:13px!important;min-height:40px;
+    }
+    .home-quick,.preview-col .actions .btn,.preview-col .btnbar .btn{border-radius:13px!important;}
+    button:active,.btn:active,.chip:active,.mini:active,.home-action:active,.home-quick:active{
+      transform:translateY(0) scale(.985)!important;
+    }
+
+    /* Dashboard cards are tools, not oversized marketing tiles. */
+    .home-grid{gap:12px!important;}
+    .home-action{min-height:150px!important;padding:17px!important;border-radius:20px!important;gap:9px!important;}
+    .home-action h3{font-size:18px!important;}
+    .home-action p{font-size:12.5px!important;line-height:1.5!important;}
+    .home-action .go{font-size:12px!important;}
+    .big-ico{width:43px!important;height:43px!important;border-radius:14px!important;}
+    .home-row{gap:12px!important;margin-bottom:12px!important;}
+    .home-card{border-radius:20px!important;}
+    .home-check{border-radius:14px!important;}
+    .home-quick{min-height:44px!important;padding:10px 12px!important;}
+
+    /* Injection: one full-width navigator, a wider working column, and compact receipts. */
+    #panel-administer>.rc526-flow{
+      display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+      gap:7px!important;margin:0 0 12px!important;padding:9px!important;
+      border:1px solid var(--p-line)!important;border-radius:19px!important;
+      background:rgba(255,255,255,.94)!important;box-shadow:var(--p-shadow-card)!important;
+    }
+    #panel-administer>.rc526-flow .rc526-mode{
+      grid-column:1/-1!important;min-height:36px!important;padding:8px 10px!important;border:0!important;
+      border-radius:12px!important;background:#F6F8FC!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;
+    }
+    #panel-administer>.rc526-flow .rc526-mode b{font-size:11.5px!important;}
+    #panel-administer>.rc526-flow .rc526-mode span{margin:0!important;text-align:right!important;font-size:10.5px!important;}
+    #panel-administer>.rc526-flow .rc526-step{
+      min-height:55px!important;padding:9px 10px!important;border-radius:13px!important;background:#FBFCFE!important;
+      border-color:#E3E8F0!important;box-shadow:none!important;
+    }
+    #panel-administer>.rc526-flow .rc526-step.need{background:#FBFCFE!important;border-color:#E3E8F0!important;}
+    #panel-administer>.rc526-flow .rc526-step.done{background:#F2FAF6!important;border-color:#D7ECDF!important;}
+    #panel-administer>.rc526-flow .rc526-step.danger{background:#FFF6F4!important;border-color:#F0D3CE!important;}
+    #panel-administer>.rc526-flow .rc526-step .n{font-size:11px!important;}
+    #panel-administer>.rc526-flow .rc526-step .s{font-size:10.5px!important;line-height:1.25!important;}
+    #panel-administer>.rc526-flow .rc526-step:focus-visible{
+      outline:3px solid rgba(101,116,232,.24)!important;outline-offset:2px!important;
+      border-color:#9DA9F4!important;box-shadow:0 0 0 1px rgba(255,255,255,.9)!important;
+    }
+    #panel-administer .layout{
+      grid-template-columns:minmax(600px,1fr) minmax(340px,380px)!important;
+      gap:18px!important;align-items:start!important;
+    }
+    #panel-administer .preview-col{max-width:380px!important;width:100%!important;top:16px!important;}
+    #panel-administer .inj-card{
+      border-radius:20px!important;border-color:var(--p-line)!important;
+      box-shadow:var(--p-shadow-card)!important;padding:18px 19px!important;
+      transition:border-color var(--p-state) var(--p-ease),box-shadow var(--p-state) var(--p-ease),transform var(--p-state) var(--p-ease)!important;
+    }
+    #panel-administer .inj-card.rc530-active{
+      outline:0!important;border-color:#C9D1FF!important;
+      box-shadow:0 0 0 3px rgba(101,116,232,.08),0 16px 34px rgba(54,68,96,.075)!important;
+    }
+    #panel-administer .inj-card.rc530-open{animation:pCardIn var(--p-state) var(--p-ease) both;}
+    #panel-administer .inj-card.rc530-collapsed{
+      padding:0!important;overflow:hidden!important;border-color:#E3E8F0!important;box-shadow:0 5px 14px rgba(54,68,96,.035)!important;
+    }
+    #panel-administer .inj-card.rc530-collapsed>.card-head{display:none!important;}
+    #panel-administer .inj-card.rc530-collapsed>.rc530-summary{
+      display:block!important;margin:0!important;padding:13px 15px!important;min-height:54px!important;
+      border:0!important;border-radius:19px!important;background:#fff!important;color:var(--p-soft)!important;
+    }
+    #panel-administer .inj-card.rc530-queued>.rc530-summary{background:#FBFCFE!important;}
+    .rc530-summary .state{font-size:10.2px!important;padding:3px 7px!important;}
+    .rc530-summary .edit{margin-top:2px!important;color:#6876D6!important;}
+    .rc530-footer{
+      display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;
+      margin-top:14px!important;padding-top:12px!important;
+    }
+    .rc530-footnote{font-size:10.5px!important;}
+    .rc530-continue{padding:9px 13px!important;background:linear-gradient(180deg,var(--p-brand),var(--p-brand-2))!important;box-shadow:0 8px 16px rgba(83,98,214,.17)!important;}
+    #panel-administer .rc530-continue.blocked{
+      border:1px solid #E1E6EE!important;background:#EEF1F5!important;color:#7A8594!important;
+      box-shadow:none!important;filter:none!important;cursor:not-allowed!important;
+    }
+    #clinicalDisposition.card-disposition{
+      margin:0 0 12px!important;border-radius:20px!important;padding:17px 18px!important;
+      box-shadow:var(--p-shadow-card)!important;
+    }
+    #clinicalDisposition .cd-options{gap:6px!important;}
+    #clinicalDisposition .cd-choice{min-height:38px!important;}
+
+    /* Prior administration now informs the actual-site decision in context. */
+    .inj-prior-context{
+      margin:0 0 13px;padding:12px 13px;border:1px solid #DDE4EF;border-radius:16px;
+      background:linear-gradient(180deg,#F9FAFE,#F5F7FC);
+    }
+    .inj-prior-context-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:9px;flex-wrap:wrap;}
+    .inj-prior-context-title{margin:0;font:780 12px var(--font-display);color:var(--p-ink);}
+    .inj-prior-context-copy{margin-top:2px;font-size:10.5px;line-height:1.4;color:var(--p-soft);}
+    .inj-prior-context-badge{flex:none;border:1px solid #DCE2F2;border-radius:999px;background:#fff;padding:4px 8px;font-size:10px;font-weight:850;letter-spacing:.055em;text-transform:uppercase;color:#77839A;}
+    .inj-prior-context-badge.is-smart{border-color:#C8D1FF;background:#F1F4FF;color:#5263C7;}
+    .inj-prior-context-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .inj-prior-context .field>label,.inj-administration-core .field>label{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .inj-prior-context .inj-timing{margin:10px 0 0!important;}
+    .inj-administration-core{
+      display:grid;grid-template-columns:1fr 1fr minmax(180px,1.15fr);gap:10px 11px;
+      margin:0 0 13px;padding:12px 13px;border:1px solid #DDE4EF;border-radius:16px;background:#F8FAFD;
+    }
+    .inj-administration-core-title{grid-column:1/-1;margin:0;font:780 12px var(--font-display);color:var(--p-ink);}
+    .inj-administration-core-sub{grid-column:1/-1;margin-top:-7px;font-size:10.5px;color:var(--p-soft);}
+
+    /* Site recommendation and confirmation states. */
+    .bodymap2 .bz-shape{pointer-events:none;}
+    .bodymap2 .bz:focus-visible .bz-hit{fill:rgba(101,116,232,.13);stroke:var(--p-brand);stroke-width:2;}
+    .bodymap2 .bz.bz-rec .bz-shape{fill:#EEF1FF;stroke:var(--p-brand);stroke-width:2;stroke-dasharray:4 2;}
+    .bodymap2 .bz.bz-mute.bz-sel .bz-shape{fill:#D99538!important;stroke:#B67922!important;stroke-dasharray:none!important;}
+    .bodymap2 .bm-rotation{border-radius:14px!important;padding:10px 11px!important;}
+    .bodymap2 .bm-rotation.warn{border-color:var(--amber-line)!important;background:var(--amber-soft)!important;color:#7B581A!important;}
+    .bodymap2 .bm-rotation.warn .bm-rot-ic{color:var(--amber)!important;}
+    .bodymap2 .bm-rotation.done{border-color:var(--mint-line)!important;background:var(--mint-soft)!important;}
+    .bodymap2 .bm-rot-alt{
+      display:flex!important;width:max-content;max-width:100%;min-height:40px;margin:7px 0 0!important;padding:8px 11px!important;border-radius:11px!important;
+      background:#fff!important;color:#5262D1!important;border-color:#C8D0FF!important;
+    }
+    .bodymap2 .bm-rot-alt:hover{background:var(--p-brand)!important;color:#fff!important;border-color:var(--p-brand)!important;}
+    .bodymap2 .bm-rot-alt:focus-visible,.bodymap2 .bm-lm:focus-visible{
+      outline:3px solid rgba(101,116,232,.22)!important;outline-offset:2px!important;
+    }
+    .bodymap2 .bm-rec-confirmed{display:inline-flex;margin:6px 0 0;color:var(--mint);font-weight:800;font-size:10.5px;}
+    .bodymap2 .bm-lm{min-height:40px!important;padding:7px 10px!important;border-radius:11px!important;}
+    .bodymap2 .bm-lm.recommended{border-color:#AEB9FF!important;background:#F4F6FF!important;color:#4E5FC8!important;}
+    .bodymap2 .bm-rec-badge{
+      margin-left:2px;border-radius:999px;background:#fff;border:1px solid #CDD4FF;
+      padding:2px 5px;font-size:10px;font-weight:900;letter-spacing:.035em;text-transform:uppercase;
+    }
+    .bodymap2 .bm-legend i.l-rec{background:#EEF1FF;border:2px dashed var(--p-brand);}
+    #adminGuideSummary.is-confirming{animation:pSiteSummaryConfirm .36s var(--p-ease-emphasis);}
+    #adminGuide.is-warning{animation:pSiteGuidanceWarn .36s var(--p-ease-emphasis);}
+
+    /* Right rails read as operational trays, not detached cards. */
+    .preview-col::before,.preview-col>.output-tray-label,.preview-col .output-tray{
+      margin:0 0 7px 2px!important;padding:0!important;border:0!important;background:transparent!important;
+      font-size:9.5px!important;color:#8B95A7!important;letter-spacing:.13em!important;
+    }
+    .preview-col .scanrow,.preview-col .note,.preview-col .qa-panel,.preview-col .rc530-ready-card{
+      border-radius:18px!important;box-shadow:0 8px 22px rgba(54,68,96,.05)!important;
+    }
+    .preview-col .rc530-ready-card{padding:14px!important;background:#fff!important;}
+    .preview-col .rc530-ready-card .badge{font-size:9.5px!important;}
+    .preview-col .rc530-ready-card ul{gap:3px!important;}
+    .preview-col .rc530-ready-card li{
+      display:grid!important;grid-template-columns:18px minmax(0,1fr)!important;gap:9px!important;
+      padding:7px 6px!important;border-radius:10px!important;background:transparent!important;
+    }
+    .preview-col .rc530-ready-card li:before{grid-column:1;grid-row:1;width:17px!important;height:17px!important;}
+    .rc530-ready-copy{grid-column:2;display:grid;gap:1px;min-width:0;}
+    .rc530-ready-copy b{font-size:10.8px!important;line-height:1.25;color:var(--p-ink)!important;}
+    .rc530-ready-copy span{font-size:10.7px;line-height:1.34;color:var(--p-soft);overflow-wrap:anywhere;}
+    .preview-col .rc530-ready-card li.block{border-left:2px solid rgba(198,107,98,.42);}
+    .preview-col .rc530-ready-card li.warn{border-left:2px solid rgba(185,132,40,.42);}
+    .note-top{padding:12px 14px!important;}
+    .app-sidebar .brand h1,.note-top .ttl{word-spacing:.04em;}
+    .note-body{padding:4px 14px 12px!important;}
+    .sect{padding:11px 0!important;}
+    .sect p{font-size:11.7px!important;line-height:1.48!important;}
+    .preview-col .sect .sh .cp,.smscard .cp{
+      appearance:none;min-width:40px!important;min-height:34px!important;margin-left:auto;
+      border:1px solid var(--p-line)!important;border-radius:10px!important;background:#fff!important;
+      color:#6976D2!important;padding:6px 8px!important;
+    }
+    .preview-col .actions,.preview-col .btnbar{gap:7px!important;}
+    .preview-col .actions .btn,.preview-col .btnbar .btn{min-height:40px!important;padding:9px 11px!important;font-size:11px!important;}
+
+    /* Guided modules use brand for active, mint only for confirmed. */
+    .guided-banner,.sample-guide-banner,.uds-guide-banner{border-radius:18px!important;box-shadow:var(--p-shadow-card)!important;}
+    .guided-card.open,.sample-guide-card.open,.uds-guide-card.open{
+      border-color:#CAD2FF!important;box-shadow:0 0 0 3px rgba(101,116,232,.07),var(--p-shadow-card)!important;
+    }
+    .guided-card.open:not(.rc530-confirmed),.sample-guide-card.open:not(.rc530-confirmed),.uds-guide-card.open:not(.rc530-confirmed){
+      background:#fff!important;
+    }
+    .guided-status{font-size:10px!important;}
+    .fast-review{border-radius:16px!important;}
+    #panel-samples .sample-guide-playbook{gap:7px!important;}
+    #panel-samples .sample-guide-playbook>div{border-radius:14px!important;}
+    #sampleReadiness.qa-list{display:grid!important;gap:7px!important;}
+    #sampleReadiness.qa-list .qa-ok,#sampleReadiness.qa-list .qa-warn{
+      margin:0;padding:9px 10px;border:1px solid var(--p-line);border-radius:12px;background:#F8FAFD;
+      color:var(--p-soft);font-size:11px;line-height:1.4;
+    }
+
+    /* Drawer and dialog details meet the same product standard. */
+    .records-drawer{padding:22px 20px 18px!important;background:#fff!important;}
+    .records-drawer-close{width:40px!important;height:40px!important;border-radius:12px!important;}
+    .records-drawer-filters button{min-height:38px!important;border-radius:11px!important;}
+    .records-drawer-row{border-radius:15px!important;transition:transform var(--p-fast) var(--p-ease),border-color var(--p-state) var(--p-ease),box-shadow var(--p-state) var(--p-ease)!important;}
+    .inj-completion-overlay{background:rgba(19,28,46,.38)!important;backdrop-filter:blur(7px)!important;}
+    .inj-completion-card{
+      width:min(430px,100%)!important;border-radius:24px!important;padding:26px 24px 22px!important;
+      background:linear-gradient(180deg,#FFFFFF,#F8FBFA)!important;box-shadow:0 28px 80px rgba(18,30,51,.25)!important;
+    }
+    .inj-completion-ring{width:64px!important;height:64px!important;}
+    .inj-completion-card h2{font-size:22px!important;letter-spacing:-.025em!important;word-spacing:.055em!important;}
+    .inj-completion-card p{font-size:12px!important;}
+    .inj-completion-receipt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:15px 0;text-align:left;}
+    .inj-completion-receipt div{padding:9px 10px;border:1px solid #E1E8E5;border-radius:12px;background:#fff;}
+    .inj-completion-receipt span{display:block;font-size:10px;font-weight:850;letter-spacing:.055em;text-transform:uppercase;color:#8A978F;}
+    .inj-completion-receipt b{display:block;margin-top:2px;font-size:11.5px;color:#26352F;overflow-wrap:anywhere;}
+    .inj-completion-receipt.paired>div:last-child{grid-column:1/-1;}
+    .record-badge.saving{border-color:#D9E0F8!important;background:#F3F5FD!important;color:#6370B8!important;}
+    .record-badge.saving:before{content:"";display:inline-block;width:6px;height:6px;margin-right:5px;border-radius:50%;background:#7A87D7;animation:pSavePulse 1s ease-in-out infinite;}
+    .record-badge.error{border-color:#E8C5BF!important;background:#FFF4F2!important;color:#A64E43!important;}
+    #samplePrint.sample-output-pending,#sampleAddLog.sample-output-pending,
+    #printUdsReport:disabled,#printUdsPatient:disabled,
+    .guided-continue:disabled,.guided-continue.is-disabled{
+      border-color:#E1E6EE!important;background:#F2F4F7!important;color:#7B8592!important;
+      box-shadow:none!important;opacity:1!important;filter:none!important;cursor:not-allowed!important;
+    }
+  }
+  @media screen and (hover:hover) and (pointer:fine){
+    .home-action:hover{transform:translateY(-2px)!important;box-shadow:0 14px 30px rgba(54,68,96,.09)!important;}
+    #panel-administer>.rc526-flow .rc526-step:hover,.records-drawer-row:hover{transform:translateY(-1px)!important;}
+    .tab:hover{transform:translateX(1px);}
+  }
+  @media screen and (max-width:1180px){
+    .wrap{max-width:calc(100vw - 16px)!important;padding-left:4px!important;padding-right:4px!important;}
+    .app-shell{grid-template-columns:1fr!important;gap:16px!important;}
+    .app-sidebar{position:relative!important;top:0!important;padding:12px!important;}
+    .app-sidebar .topbar{display:flex!important;align-items:center!important;margin:0 0 10px!important;}
+    .app-sidebar .brand{border:0!important;padding:0!important;margin:0!important;flex:1;}
+    .app-sidebar .pill{width:auto!important;margin:0!important;}
+    .staffbar,.global-location-card,.records-launcher{max-width:none!important;}
+    .tabs{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:5px!important;width:100%!important;padding:3px 0 2px!important;scrollbar-width:thin;}
+    .tab{flex:0 0 auto!important;width:auto!important;min-height:42px!important;white-space:nowrap!important;}
+    .nav-label{display:none!important;}
+    #panel-administer .layout{grid-template-columns:minmax(0,1fr) minmax(320px,360px)!important;gap:15px!important;}
+    #panel-administer .preview-col{max-width:360px!important;}
+    #panel-administer>.rc526-flow{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+  }
+  @media screen and (max-width:1040px){
+    .app-shell{grid-template-columns:1fr!important;}
+    .app-sidebar{position:relative!important;top:0!important;padding:12px!important;}
+    .app-sidebar .topbar{display:flex!important;align-items:center!important;margin:0 0 10px!important;}
+    .app-sidebar .brand{border:0!important;padding:0!important;margin:0!important;flex:1;}
+    .app-sidebar .pill{width:auto!important;margin:0!important;}
+    .staffbar,.global-location-card,.records-launcher{max-width:none!important;}
+    .tabs{
+      display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;overflow-x:auto!important;
+      gap:5px!important;width:100%!important;padding:3px 0 2px!important;scrollbar-width:thin;
+    }
+    .tab{flex:0 0 auto!important;width:auto!important;min-height:42px!important;white-space:nowrap!important;}
+    .nav-label{display:none!important;}
+    #panel-administer .layout{grid-template-columns:1fr!important;}
+    #panel-administer .preview-col{position:static!important;max-width:none!important;}
+    .home-hero-inner{grid-template-columns:1fr!important;}
+    .home-status-card{display:none!important;}
+  }
+  @media screen and (max-width:700px){
+    .wrap{max-width:100%!important;padding:8px 10px 48px!important;}
+    .app-shell{gap:12px!important;}
+    .app-sidebar{border-radius:20px!important;}
+    .app-sidebar .brand .sub{display:none!important;}
+    .app-sidebar .pill{display:none!important;}
+    .staffbar{grid-template-columns:1fr 1fr!important;}
+    .staff-chip,.staff-field,.staff-current{grid-column:1/-1;}
+    .staff-apply,.staff-clear{width:100%!important;}
+    .global-location-card .loc-hint{display:none;}
+    .home-hero-inner,#panel-administer .inj-modern-hero,#panel-uds .uds-modern-hero,
+    #panel-samples .sample-module-hero.rc5 .sample-hero-main{padding:18px!important;border-radius:20px!important;}
+    .home-title{font-size:28px!important;}
+    #panel-administer .inj-modern-hero h2,#panel-uds .uds-modern-hero h2,#panel-samples .sample-module-hero.rc5 .sample-hero-title,#panel-samples .sample-module-hero .sample-hero-title{font-size:24px!important;}
+    #panel-administer>.rc526-flow{grid-template-columns:1fr 1fr!important;padding:7px!important;}
+    #panel-administer>.rc526-flow .rc526-mode{display:block!important;}
+    #panel-administer>.rc526-flow .rc526-mode span{text-align:left!important;margin-top:2px!important;}
+    #panel-administer .inj-card,.card{padding:15px!important;border-radius:18px!important;}
+    .row2,.row3,.inj-prior-context-fields,.inj-administration-core{grid-template-columns:1fr!important;}
+    .inj-administration-core-title,.inj-administration-core-sub{grid-column:auto!important;}
+    .rc530-footer{grid-template-columns:1fr!important;}
+    .rc530-continue{width:100%!important;}
+    .bodymap2 .bm-figs{grid-template-columns:1fr!important;}
+    .records-drawer{padding:calc(16px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom))!important;overscroll-behavior:contain;}
+    .records-drawer-filters button,.records-drawer-new{min-height:42px!important;}
+    .inj-completion-receipt{grid-template-columns:1fr!important;}
+    .preview-col .sect .sh .cp,.smscard .cp{min-height:40px!important;}
+  }
+  @keyframes pCardIn{from{opacity:.72;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @keyframes pPanelIn{from{opacity:.82}to{opacity:1}}
+  @keyframes pSiteSummaryConfirm{0%{box-shadow:0 0 0 0 rgba(86,171,136,0);transform:scale(.992)}55%{box-shadow:0 0 0 4px rgba(86,171,136,.14);transform:scale(1.003)}100%{box-shadow:0 0 0 0 rgba(86,171,136,0);transform:none}}
+  @keyframes pSiteGuidanceWarn{0%{box-shadow:0 0 0 0 rgba(190,132,37,0)}55%{box-shadow:0 0 0 4px rgba(190,132,37,.16)}100%{box-shadow:0 0 0 0 rgba(190,132,37,0)}}
+  @keyframes pSavePulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+  .panel.on{animation:pPanelIn var(--p-state) var(--p-ease) both;}
+  @media(prefers-reduced-motion:reduce){
+    .panel.on,#panel-administer .inj-card.rc530-open,#adminGuideSummary.is-confirming,#adminGuide.is-warning,.record-badge.saving:before{animation:none!important;}
+  }
+  @media print{.inj-completion-overlay,.records-drawer-layer{display:none!important;}}
 </style>
+<script id="rc545SmartClinicalWorkspaceScript">
+/* ===================== RC5.45: smart, efficient clinical workspace =====================
+   The form responds to prior answers, preserves explicit clinical choice, and keeps
+   the active documentation task close to the information that informs it. */
+(function(){
+  'use strict';
+  if(window.__IPMG_RC545_SMART_WORKSPACE__)return;
+  window.__IPMG_RC545_SMART_WORKSPACE__=true;
+
+  const by=id=>document.getElementById(id);
+  const qs=(selector,root=document)=>root&&root.querySelector?root.querySelector(selector):null;
+  const text=(selector,value,root=document)=>{const node=qs(selector,root);if(node&&value&&node.textContent!==value)node.textContent=value;return node;};
+  const fieldFor=id=>by(id)?.closest('.field')||null;
+  const cleanEmptyWrap=node=>{if(node&&node.children.length===0)node.remove();};
+
+  function setFieldLabel(id,html){
+    const field=fieldFor(id),label=field&&qs(':scope > label',field);
+    if(label)label.innerHTML=html;
+  }
+
+  function moveProgressRail(){
+    const panel=by('panel-administer'),flow=by('rc526Flow'),layout=panel&&qs(':scope > .layout',panel);
+    if(panel&&flow&&layout&&flow.parentElement!==panel)panel.insertBefore(flow,layout);
+  }
+
+  function buildPriorContext(){
+    const detail=by('medDetail'),siteGroup=detail&&qs('.admin-site-grp',detail);
+    if(!detail||!siteGroup)return null;
+    let context=by('injPriorContext');
+    if(!context){
+      context=document.createElement('section');
+      context.id='injPriorContext';
+      context.className='inj-prior-context';
+      context.setAttribute('aria-labelledby','injPriorContextTitle');
+      context.innerHTML='<div class="inj-prior-context-head"><div><h3 class="inj-prior-context-title" id="injPriorContextTitle">Prior administration context</h3><div class="inj-prior-context-copy" id="injPriorContextCopy" aria-live="polite">Previous dose details can check timing and recommend a valid alternate site. The actual site is always selected separately.</div></div><span class="inj-prior-context-badge" id="injPriorContextBadge">Optional · smart helper</span></div><div class="inj-prior-context-fields"></div>';
+      detail.insertBefore(context,siteGroup);
+    }
+    const fields=qs('.inj-prior-context-fields',context);
+    ['priorDose','priorSite'].forEach(id=>{
+      const field=fieldFor(id);
+      if(field&&fields&&field.parentElement!==fields){const old=field.parentElement;field.removeAttribute('style');fields.appendChild(field);cleanEmptyWrap(old);}
+    });
+    const timing=by('injTiming');
+    if(timing&&timing.parentElement!==context){const old=timing.parentElement;context.appendChild(timing);cleanEmptyWrap(old);}
+    setFieldLabel('priorDose','Previous dose date <span class="auto-tag">Optional</span>');
+    setFieldLabel('priorSite','Previous injection site <span class="auto-tag">Optional</span>');
+    return context;
+  }
+
+  function buildAdministrationCore(){
+    const card=qs('#panel-administer .card-response');
+    if(!card)return null;
+    let core=by('injAdministrationCore');
+    if(!core){
+      core=document.createElement('section');
+      core.id='injAdministrationCore';
+      core.className='inj-administration-core';
+      core.setAttribute('aria-labelledby','injAdministrationCoreTitle');
+      core.innerHTML='<h3 class="inj-administration-core-title" id="injAdministrationCoreTitle">Administration facts</h3><div class="inj-administration-core-sub" id="injAdministrationCoreSub" aria-live="polite">Date, actual time, and staff attribution stay together.</div>';
+      const patientResponse=by('respChips')?.closest('.grp');
+      card.insertBefore(core,patientResponse||card.querySelector('.inj-detail-disclosure')||null);
+    }
+    ['adminDate','injAdminTime','admin'].forEach(id=>{
+      const field=fieldFor(id);
+      if(field&&field.parentElement!==core){const old=field.parentElement;field.removeAttribute('style');core.appendChild(field);cleanEmptyWrap(old);}
+    });
+    setFieldLabel('adminDate','Administration date <span class="req">*</span>');
+    setFieldLabel('injAdminTime','Actual administration time <span class="req">*</span>');
+    setFieldLabel('admin','Administered by <span class="req">*</span>');
+    return core;
+  }
+
+  function setCardHeading(selector,title,hint){
+    const card=qs(selector);
+    if(!card)return;
+    text('.card-head h2',title,card);
+    text('.card-head .hint',hint,card);
+  }
+
+  function setModuleCopy(){
+    document.title='IPMG MA Workstation';
+    text('.home-title','Medical assistant workspace.');
+    text('.home-subtitle','Fast documentation for injections, UDS, samples, forms, and daily closeout.');
+    text('#panel-administer .inj-modern-hero .eyebrow','Injection documentation');
+    text('#panel-administer .inj-modern-hero h2','Injection documentation, from order to closeout.');
+    text('#panel-administer .inj-modern-hero p','Medication-aware guidance, focused safety checks, product traceability, and a Tebra-ready note in one efficient workflow.');
+    text('#panel-uds .uds-modern-hero h2','Point-of-care UDS, documented with clear guardrails.');
+    text('#panel-uds .uds-modern-hero p','Capture the exact device and result, surface reconciliation needs, and produce a clean handoff without slowing the visit.');
+    text('#panel-samples .sample-hero-title','Document exactly what was dispensed.');
+    text('#panel-samples .sample-hero-copy','Package-level traceability, patient instructions, and a deliberate final review for a complete sample handoff.');
+  }
+
+  function reorderInjectionCards(){
+    const form=qs('#panel-administer .form-col');
+    if(!form)return;
+    const order=[
+      qs('.card-encounter',form),
+      qs('.card-medication',form),
+      qs('.initiation-card',form),
+      qs('.card-safety',form),
+      qs('.card-trace',form),
+      qs('.card-response',form),
+      qs('.card-return',form),
+      by('clinicalDisposition')
+    ].filter(Boolean);
+    if(!order.length)return;
+    if(form.firstElementChild!==order[0])form.insertBefore(order[0],form.firstElementChild);
+    order.slice(1).forEach((card,index)=>{
+      const previous=order[index];
+      if(previous.nextElementSibling!==card)previous.insertAdjacentElement('afterend',card);
+    });
+  }
+
+  function smartSiteCopy(){
+    const copy=by('injPriorContextCopy'),badge=by('injPriorContextBadge');
+    if(!copy||!badge)return;
+    const write=(node,value)=>{if(node.textContent!==value)node.textContent=value;};
+    let prior=null,recommended='';
+    try{prior=window.injectionSiteRotationContext?.()||null;}catch(error){}
+    try{recommended=window.injectionRecommendedSite?.()||'';}catch(error){}
+    const hasDate=!!by('priorDose')?.value;
+    if(prior&&recommended){
+      write(copy,`Previous site: ${prior.site}${prior.whenShort?` · ${prior.whenShort}`:''}. A valid alternate is ${recommended}; confirm the actual site after administration.`);
+      write(badge,`Suggests ${recommended}`);
+      badge.classList.add('is-smart');
+    }else if(prior){
+      write(copy,'The previous site is recorded, but the selected medication and route do not provide a distinct alternate. Choose today’s actual allowed site.');
+      write(badge,'Review site options');
+      badge.classList.add('is-smart');
+    }else if(hasDate){
+      write(copy,'Previous dose timing is available. Add the previous injection site to enable medication-aware rotation guidance.');
+      write(badge,'Add site for rotation');
+      badge.classList.add('is-smart');
+    }else{
+      write(copy,'Previous dose details can check timing and recommend a valid alternate site. The actual site is always selected separately.');
+      write(badge,'Optional · smart helper');
+      badge.classList.remove('is-smart');
+    }
+  }
+
+  function smartAdministrationCopy(){
+    const sub=by('injAdministrationCoreSub');
+    if(!sub)return;
+    const state=typeof S!=='undefined'&&S?S:{},med=state.med||null;
+    let next='';
+    if(med&&state.site){
+      next=[med.name||med.label,state.dose,state.route,state.site].filter(Boolean).join(' · ')+' — record the actual date, time, response, and staff attribution.';
+    }else if(med){
+      next='Choose an allowed actual site in Medication & site; administration facts will stay grouped here for closeout.';
+    }else{
+      next='Medication and site choices will carry forward here. Record the actual date, time, response, and staff attribution.';
+    }
+    if(sub.textContent!==next)sub.textContent=next;
+  }
+
+  function syncLockedWorkspaceCopy(){
+    const panel=by('panel-administer');
+    if(!panel)return;
+    const locked=panel.classList.contains('record-readonly');
+    panel.querySelectorAll('.rc530-summary .edit').forEach(node=>{const value=locked?'view':'edit';if(node.textContent!==value)node.textContent=value;});
+    const guideEdit=by('adminGuideEdit');
+    if(guideEdit)guideEdit.textContent=locked?'View details':'Review / change';
+    if(locked){
+      text('#rc526Flow .rc526-mode b','Locked injection record');
+      text('#rc526Flow .rc526-mode span','Sections remain available for review. Use a dated addendum for any correction or follow-up.');
+    }else{
+      text('#rc526Flow .rc526-mode b','Routine injection mode');
+      text('#rc526Flow .rc526-mode span','Completed sections auto-collapse into editable receipt rows.');
+    }
+  }
+
+  function refineHeadings(){
+    setCardHeading('#panel-administer .card-encounter','1 · Patient & order','Identify the patient and verify the active order context.');
+    setCardHeading('#panel-administer .card-medication','2 · Medication & site','Medication, prior administration, and route rules guide today’s site choice.');
+    setCardHeading('#panel-administer .card-safety','3 · Safety review','Routine items are preselected; remove anything not verified and surface exceptions.');
+    setCardHeading('#panel-administer .card-trace','4 · Product traceability','Capture the exact product used; open handling details only when they apply.');
+    setCardHeading('#panel-administer .card-response','5 · Administration & response','Record the actual administration facts, tolerance, and any exception.');
+    setCardHeading('#panel-administer .card-return','6 · Follow-up & next dose','Use the medication interval to calculate the next dose, then confirm or adjust.');
+  }
+
+  function applyWorkspace(){
+    moveProgressRail();
+    buildPriorContext();
+    buildAdministrationCore();
+    reorderInjectionCards();
+    refineHeadings();
+    setModuleCopy();
+    smartSiteCopy();
+    smartAdministrationCopy();
+    syncLockedWorkspaceCopy();
+  }
+
+  let refreshTimer=0;
+  function scheduleWorkspace(){
+    clearTimeout(refreshTimer);
+    refreshTimer=setTimeout(applyWorkspace,0);
+  }
+
+  document.addEventListener('ipmg:siteconfirmed',event=>{
+    const allowed=event.detail?.allowed!==false,summary=by('adminGuideSummary'),guide=by('adminGuide');
+    if(!summary||!guide)return;
+    summary.classList.remove('is-confirming');guide.classList.remove('is-warning');
+    requestAnimationFrame(()=>{
+      (allowed?summary:guide).classList.add(allowed?'is-confirming':'is-warning');
+      if(event.detail?.focusAfter){
+        const target=allowed?by('adminGuideEdit'):by('adminStatusText');
+        if(target){if(!target.matches('button,input,select,textarea,a[href]'))target.tabIndex=-1;target.focus({preventScroll:true});}
+      }
+      setTimeout(()=>{summary.classList.remove('is-confirming');guide.classList.remove('is-warning');},400);
+    });
+  });
+  document.addEventListener('click',event=>{
+    if(event.target&&event.target.closest&&event.target.closest('#panel-administer'))scheduleWorkspace();
+  },true);
+  ['input','change'].forEach(type=>document.addEventListener(type,event=>{
+    if(event.target&&event.target.closest&&event.target.closest('#panel-administer'))scheduleWorkspace();
+  },true));
+
+  function boot(){applyWorkspace();setTimeout(applyWorkspace,80);window.IPMG_RC_VERSION='RC5.45 Mature Clinical Workspace';}
+  window.IPMGSmartWorkspace={refresh:applyWorkspace,smartSiteCopy,smartAdministrationCopy};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+</script>
 </body>
 </html>
