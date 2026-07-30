@@ -140,11 +140,27 @@ assert.match(html, /data-records-drawer-open/, 'The compact injection history mu
 assert.match(html, /role="dialog" aria-modal="true" aria-labelledby="recordsDrawerTitle"/, 'The records drawer must use modal dialog semantics');
 assert.match(html, /data-records-filter/, 'The records drawer must expose interactive record filters');
 assert.match(html, /function openDrawerRecord\(id\)/, 'The drawer must reopen an existing injection record through the record lifecycle');
-assert.match(html, /if\(mode==='edit'&&meaningful\(\)&&activeId!==id\)saveDraft\(true\)/, 'Opening another record must preserve an in-progress injection draft first');
+assert.match(html, /function flushDraft\(updateUi=true\)/, 'Record transitions must synchronously flush an in-progress injection draft');
+assert.match(html, /function openRecord\(id\)\{\s*if\(mode==='edit'&&meaningful\(\)\)flushDraft\(\)/, 'Opening any record must flush pending injection edits before restoring its snapshot');
 assert.match(html, /document\.addEventListener\('keydown',handleRecordsDrawerKeys\)/, 'The drawer must install keyboard handling');
 assert.match(html, /event\.key==='Escape'/, 'The drawer must close with Escape');
 assert.match(html, /function refreshRecordsDrawer\(\)/, 'The record drawer must refresh after lifecycle persistence');
 assert.match(html, /<script id="rc543InjectionDocumentationScript">/, 'Expected structured injection documentation behavior');
+assert.match(html, /<style id="rc544ClinicalVisualConsolidationStyle">/, 'New workflow surfaces must use the consolidated clinical visual system');
+assert.doesNotMatch(html, /\.chip\{appearance:none;font:inherit;\}/, 'Chip typography must not be reset globally by a late style pass');
+assert.match(html, /card\.classList\.remove\('rc526-complete','rc526-collapsed','rc526-active','rc526-open'\)/, 'RC5.30 must remain the sole owner of injection-card collapse state');
+assert.match(html, /window\.IPMGNavigation=\{activate,sync,focusPanel,state,reducedMotion\}/, 'Workspace modules must share one navigation, ARIA, focus, and scroll controller');
+assert.doesNotMatch(html, /function activateTab\(/, 'Legacy duplicate tab activation must stay retired');
+assert.match(html, /<button type="button" class="tab on" data-tab="home">/, 'Workspace tabs must use native keyboard-accessible buttons');
+assert.match(html, /const encounter=q\('samplePtName'\)\?\.closest\('\.card'\)/, 'Samples must resolve its Patient guide from a unique field anchor');
+assert.match(html, /new Set\(\[encounter,medCard,safety\]\)\.size!==3/, 'Samples must reject merged guided-card ownership');
+assert.match(html, /root\.closest\('\.panel'\)\?\.querySelector\('\.preview-col'\)/, 'Guided output highlighting must stay inside its active workflow panel');
+assert.match(html, /rootState\.openInjection=openInj/, 'The injection progress rail must route through the active collapse controller');
+assert.match(html, /recordsDrawerState=\{query:'',filter:'all',lastFocus:null,closing:false\}/, 'The records drawer must distinguish its open and closing interaction states');
+assert.match(html, /overlay\.setAttribute\('aria-labelledby','injCompletionTitle'\)/, 'The completion dialog must expose a labelled modal contract');
+assert.match(html, /event\.key==='Escape'\)\{event\.preventDefault\(\);close\(\)/, 'The completion dialog must close with Escape');
+assert.match(html, /--rc544-radius:var\(--r-lg,22px\)/, 'New top-level workflow surfaces must inherit the original large card radius');
+assert.match(html, /--rc544-control-radius:var\(--r-md,16px\)/, 'New controls must inherit the original rounded control tier');
 assert.match(html, /id="injAdminTime" data-injection-field="admin-time"/, 'Injection completion must capture the actual administration time');
 assert.match(html, /window\.ipmgInjectionDetailReview=detailReview/, 'Conditional injection documentation must expose a shared finalization review');
 assert.match(html, /Document both the administration amount and its unit/, 'Partial structured administration details must block finalization');
@@ -160,7 +176,7 @@ assert.match(html, /function refreshOutput\(\).*window\.render/s, 'Disposition i
 assert.match(html, /copy\(\[n\.cc,n\.as,n\.pl\]\.filter\(Boolean\)\.join\("\\n\\n────────────────────────────────\\n\\n"\)/, 'Copy All must preserve Tebra section boundaries without duplicating its headings');
 assert.doesNotMatch(html, /copy\(`CC:\\n/, 'Copy All must not prepend duplicate CC, Assessment, or Plan headings for Tebra');
 
-const drawerSearchLogic = section("const recordsDrawerState={query:'',filter:'all',lastFocus:null};", 'function ensureRecordsDrawer(){');
+const drawerSearchLogic = section("const recordsDrawerState={query:'',filter:'all',lastFocus:null,closing:false};", 'function ensureRecordsDrawer(){');
 const drawerFixture = [
   {
     id: 'draft-1',

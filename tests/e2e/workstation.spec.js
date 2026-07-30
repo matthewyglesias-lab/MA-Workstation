@@ -92,9 +92,130 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#recordsDrawerSearch')).toBeFocused();
     await expect(page.locator('[data-records-filter="draft"]')).toBeVisible();
 
+    const drawerClose = page.locator('.records-drawer-close');
+    const drawerNew = page.locator('[data-records-new]');
+    await drawerClose.focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(drawerNew).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(drawerClose).toBeFocused();
+
     await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
+    await expect(drawerLauncher).toHaveAttribute('aria-expanded', 'false');
+    await expect(drawerLauncher).toBeFocused();
     expect(pageErrors).toEqual([]);
+  });
+
+  test('uses one keyboard-accessible module navigator with stable ARIA and quick-action routing', async ({ page }) => {
+    await page.goto('/');
+    const tabs = page.locator('.tab[data-tab]');
+    const home = page.locator('.tab[data-tab="home"]');
+    const administer = page.locator('.tab[data-tab="administer"]');
+
+    await home.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(administer).toBeFocused();
+    await expect(administer).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#panel-administer')).toHaveClass(/on/);
+    await expect(page.locator('.tab[data-tab][aria-selected="true"]')).toHaveCount(1);
+    await expect(page.locator('.tab[data-tab][tabindex="0"]')).toHaveCount(1);
+    await expect(page.locator('.tabs')).toHaveAttribute('role', 'tablist');
+
+    await page.evaluate(() => {
+      window.__ipmgTabChanges = 0;
+      document.addEventListener('ipmg:tabchange', () => { window.__ipmgTabChanges += 1; });
+    });
+    await home.click();
+    await page.locator('#panel-home .home-action[data-jump-tab="uds"]').click();
+    await expect(page.locator('.tab[data-tab="uds"]')).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(() => page.evaluate(() => window.__ipmgTabChanges)).toBe(2);
+    await expect(page.locator('#panel-uds h2').first()).toBeFocused();
+
+    await page.evaluate(() => {
+      window.__ipmgQuickRoute = { uds: 0, injection: 0 };
+      document.getElementById('udsCopyAll').click = () => { window.__ipmgQuickRoute.uds += 1; };
+      document.getElementById('copyAll').click = () => { window.__ipmgQuickRoute.injection += 1; };
+    });
+    await home.click();
+    await page.locator('[data-home-action="copy-note"]').click();
+    await expect.poll(() => page.evaluate(() => window.__ipmgQuickRoute)).toEqual({ uds: 1, injection: 0 });
+
+    await page.locator('.tab[data-tab="samples"]').click();
+    const savedScroll = await page.evaluate(() => {
+      const target = Math.min(1200, Math.max(0, document.documentElement.scrollHeight - innerHeight));
+      scrollTo(0, target);
+      return scrollY;
+    });
+    await page.locator('.tab[data-tab="uds"]').click();
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(220);
+    await page.locator('.tab[data-tab="samples"]').click();
+    await expect.poll(() => page.evaluate(expected => Math.abs(scrollY - expected), savedScroll)).toBeLessThan(80);
+  });
+
+  test('keeps Samples guide ownership, ARIA, and output highlighting in the Samples panel', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab[data-tab="samples"]').click();
+    const guides = page.locator('#panel-samples [data-guide]');
+    await expect(guides).toHaveCount(6);
+    expect(await guides.evaluateAll(nodes => nodes.map(node => node.dataset.guide)))
+      .toEqual(['patient', 'selected', 'plan', 'trace', 'safety', 'output']);
+
+    const selected = page.locator('#panel-samples [data-guide="selected"]');
+    await selected.locator('[data-guided-head]').focus();
+    await page.keyboard.press('Enter');
+    await expect(selected).toHaveClass(/open/);
+    await expect(selected.locator('[data-guided-head]')).toHaveAttribute('aria-expanded', 'true');
+    await expect.poll(() => guides.evaluateAll(nodes => nodes.filter(node => node.classList.contains('open')).length)).toBe(1);
+    await expect.poll(() => guides.evaluateAll(nodes =>
+      nodes.filter(node => node.querySelector('[data-guided-head]')?.getAttribute('aria-expanded') === 'true').length
+    )).toBe(1);
+
+    const output = page.locator('#panel-samples [data-guide="output"]');
+    await output.locator('[data-guided-head]').click();
+    await output.locator('button.secondary').click();
+    await expect(page.locator('#panel-samples .preview-col')).toHaveClass(/output-pulse/);
+    await expect(page.locator('#panel-administer .preview-col')).not.toHaveClass(/output-pulse/);
+  });
+
+  test('reopens a collapsed injection receipt from the progress rail with the keyboard', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.tab[data-tab="administer"]').click();
+    const encounter = page.locator('#panel-administer .card-encounter');
+    await page.locator('#ptName').fill('QA, Receipt');
+    await page.locator('#ptDOB').fill('01/02/1990');
+    await page.locator('#orderingProvider').fill('QA Provider');
+
+    await expect.poll(() => encounter.evaluate(node => node.classList.contains('rc530-collapsed'))).toBe(true);
+    const receipt = encounter.locator('.rc530-summary');
+    await expect(receipt).toBeVisible();
+    await expect(receipt).toHaveJSProperty('tagName', 'BUTTON');
+
+    const progressStep = page.locator('[data-rc526-jump="encounter"]');
+    await progressStep.focus();
+    await page.keyboard.press('Enter');
+    await expect.poll(() => encounter.evaluate(node => node.classList.contains('rc530-collapsed'))).toBe(false);
+    await expect(encounter).toHaveClass(/rc530-open/);
+  });
+
+  test('keeps module navigation and the records drawer contained at phone width', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+
+    await page.locator('.tab[data-tab="samples"]').click();
+    await expect(page.locator('.tab[data-tab="samples"]')).toHaveAttribute('aria-selected', 'true');
+    await page.locator('#recordsDrawerTrigger').click();
+    const drawer = page.locator('.records-drawer');
+    await expect(drawer).toBeVisible();
+    const bounds = await drawer.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.width).toBeLessThanOrEqual(390);
+
+    await page.keyboard.press('Escape');
+    await expect(drawer).toBeHidden();
+    await expect(page.locator('#recordsDrawerTrigger')).toBeFocused();
   });
 
   test('renders a blank sample worksheet through the browser print path', async ({ page }) => {
@@ -139,8 +260,8 @@ test.describe('MA Workstation browser journeys', () => {
       await expect(guide).toHaveClass(/open/);
     }
 
-    await page.locator('#sampleMedChips button').first().click();
     await openGuide('selected');
+    await page.locator('#sampleMedChips button').first().click();
 
     const packageOption = page.locator('#samplePackageButtons button:not(.manual)').first();
     await expect(packageOption).toBeVisible();
@@ -154,6 +275,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(doseRow).toHaveCount(1);
     await expect(traceRow).toHaveCount(1);
 
+    await openGuide('patient');
     await page.locator('#samplePtName').fill('QA, Browser');
     await page.locator('#sampleDOB').fill('01/02/1990');
     await page.locator('#samplePrescriber').fill('QA Prescriber');
@@ -293,8 +415,17 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(complete).toBeEnabled();
     await complete.click();
     await expect(page.locator('#injCompletionOverlay')).toBeVisible();
-    await page.locator('#injCompletionOverlay button').click();
+    await expect(page.locator('#injCompletionOverlay button')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#injCompletionOverlay')).toBeHidden();
+    await expect(page.locator('#injRecordWorkspace')).toBeFocused();
     await expect(page.locator('#panel-administer')).toHaveClass(/record-readonly/);
+    await expect(page.locator('#ptName')).toBeDisabled();
+    await expect(page.locator('#medClear')).toHaveAttribute('aria-disabled', 'true');
+    const lockedMedication = await page.locator('#medHdrName').textContent();
+    expect(lockedMedication).toBeTruthy();
+    await page.locator('#medClear').click();
+    await expect(page.locator('#medHdrName')).toHaveText(lockedMedication || '');
     await expect(page.locator('#outPL')).toContainText('actual administration time: 9:41 AM');
     await expect(page.locator('#outPL')).toContainText('Product source: Clinic stock.');
   });
@@ -312,7 +443,8 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionCard(page, 'card-return');
     await page.locator('#injAdminTime').fill('14:06');
 
-    await expect.poll(() => page.locator('#injRecordStatus').textContent()).toContain('Draft autosaved');
+    // Switch immediately: the record lifecycle must flush the pending sub-700 ms
+    // autosave instead of losing the most recent structured fields.
     await page.locator('#injRecordWorkspace [data-inj-new]').click();
     await expect(page.locator('#ptName')).toHaveValue('');
 
