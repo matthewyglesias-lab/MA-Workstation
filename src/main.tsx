@@ -3,15 +3,19 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   ClinicalDesktopShell,
   ContextDialog,
+  LegacyWorkflowHost,
+  WORKFLOW_LABELS,
   type ClinicOption,
   type LegacyPanelAdapter,
   type PatientContext,
   type ReadinessItem,
   type ToolbarAction,
   type WorkflowId,
+  type WorkflowRenderContext,
   type WorkQueueItem,
   type InjectionRecordRow,
 } from './presentation';
+import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
 import {
   createClinicalCoordinator,
   selectClinicalEvaluation,
@@ -162,6 +166,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const [posting, setPosting] = useState(false);
   const refreshTimer = useRef<number | null>(null);
   const snapshotRef = useRef(snapshot);
+  const formsPanelRef = useRef<HTMLDivElement | null>(null);
 
   const refresh = () => {
     if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
@@ -255,7 +260,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     () =>
       Object.fromEntries(
         (Object.keys(runtime.panels) as WorkflowId[])
-          .filter((workflow) => workflow !== 'home')
+          // 'forms' is migrated to <FormsPanel>; the legacy panel stays
+          // loaded (hidden) only as a print/readiness compatibility mirror.
+          .filter((workflow) => workflow !== 'home' && workflow !== 'forms')
           .map((workflow) => [
             workflow,
             {
@@ -274,6 +281,28 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       ) as Partial<Record<WorkflowId, LegacyPanelAdapter>>,
     [runtime],
   );
+
+  const renderWorkflow = (
+    workflow: WorkflowId,
+    context: WorkflowRenderContext,
+  ) => {
+    if (workflow === 'forms') {
+      return (
+        <FormsPanel
+          initialEncounter={clinical.state.workflows.forms.encounter}
+          activePatient={context.patient}
+          evaluation={selectClinicalEvaluation(clinical, 'forms')}
+          staffSignInValue={activeStaffValue()}
+          previewRef={formsPanelRef}
+        />
+      );
+    }
+    const adapter = legacyPanels[workflow];
+    if (adapter) {
+      return <LegacyWorkflowHost adapter={adapter} label={WORKFLOW_LABELS[workflow]} />;
+    }
+    return undefined;
+  };
 
   const openWorkflow = (workflow: WorkflowId) => {
     coordinator.navigate(DESKTOP_TO_APPLICATION[workflow]);
@@ -343,6 +372,11 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     activeWorkflow === 'samples' ||
     activeWorkflow === 'forms';
   const reviewOrComplete = () => {
+    if (activeWorkflow === 'forms') {
+      formsPanelRef.current?.focus({ preventScroll: false });
+      formsPanelRef.current?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
     if (isReviewWorkflow) {
       runtime.focusOutput();
       refresh();
@@ -400,6 +434,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             : snapshot.noteSubtitle
         }
         legacyPanels={legacyPanels}
+        renderWorkflow={renderWorkflow}
         toolbarActions={toolbarActions}
         postState={effectivePostState}
         postMessage={

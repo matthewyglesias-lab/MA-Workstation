@@ -67,23 +67,11 @@ const WORKFLOWS = {
       '#panel-samples #samplePreview'
     ]
   },
-  forms: {
-    label: 'Forms',
-    headingText:
-      'Track paperwork, draft letters, and keep release steps clear.',
-    panel: '#panel-forms',
-    layout: '#panel-forms .forms-layout',
-    heading: '#panel-forms .forms-title, #panel-forms .card-head h2',
-    representative: '#panel-forms .card',
-    control: '#panel-forms #formsPtName',
-    hero: '#panel-forms .forms-hero',
-    landmarks: [
-      '#panel-forms #formsPtName',
-      '#panel-forms #formsTypeGrid',
-      '#panel-forms .letter-builder-card',
-      '#panel-forms #formsNotePreview'
-    ]
-  }
+  // 'forms' is intentionally not covered here: it has been migrated to a
+  // real new panel (`.wfp-panel`) with a fundamentally different structure
+  // from the shared legacy card/chip contract this suite validates for the
+  // still-legacy-hosted workflows. A dedicated visual contract for the new
+  // Forms panel is a follow-up, not part of this generic legacy contract.
 };
 
 async function openWorkflow(page, workflow) {

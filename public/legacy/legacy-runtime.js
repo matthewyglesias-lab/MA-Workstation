@@ -10894,4 +10894,16 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     }
   });
 })();
+/* Write-only compatibility bridge: lets a typed presentation panel keep the
+   legacy FORMS/LETTER chip state (not plain DOM field values) in sync when
+   it is the authoritative UI for a workflow. Does not affect print output. */
+(()=>{
+  window.ipmgSetFormsChipState=(patch)=>{
+    if(!patch)return;
+    if(patch.requestType&&FORM_TYPES.some(x=>x.k===patch.requestType))FORMS.type=patch.requestType;
+    if(patch.status&&FORM_STATUS.some(x=>x.k===patch.status))FORMS.status=patch.status;
+    if(patch.letterType&&LETTER_TYPES.some(x=>x.k===patch.letterType))LETTER.type=patch.letterType;
+    renderFormsTypeGrid();renderFormsStatusChips();renderLetterTypeChips();renderForms();
+  };
+})();
 /* </script> */

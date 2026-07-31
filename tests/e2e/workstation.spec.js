@@ -23,7 +23,11 @@ test.describe('MA Workstation browser journeys', () => {
     }
     await navButton.click();
     await expect(shell).toHaveAttribute('data-active-workflow', workflow);
-    if (workflow !== 'home') {
+    if (workflow === 'forms') {
+      // Forms is migrated to a real panel; the legacy #panel-forms markup
+      // stays loaded hidden as a print/readiness compatibility mirror only.
+      await expect(page.locator('.wfp-panel')).toBeVisible();
+    } else if (workflow !== 'home') {
       const panelId = workflow === 'reference' ? '#panel-reference' : `#panel-${workflow}`;
       await expect(page.locator(panelId)).toBeVisible();
     }
@@ -563,7 +567,7 @@ test.describe('MA Workstation browser journeys', () => {
       ['administer', '#panel-administer .layout'],
       ['uds', '#panel-uds .layout'],
       ['samples', '#panel-samples .layout'],
-      ['forms', '#panel-forms .forms-layout']
+      ['forms', '.wfp-panel']
     ];
 
     for (const width of widths) {
@@ -649,8 +653,6 @@ test.describe('MA Workstation browser journeys', () => {
       }
 
       if (width <= 390) {
-        const formsHeroHeight = await page.locator('.forms-hero').evaluate(node => node.getBoundingClientRect().height);
-        expect(formsHeroHeight).toBeLessThan(520);
         await openWorkflow(page, 'log');
         const logHeroHeight = await page.locator('.log-hero').evaluate(node => node.getBoundingClientRect().height);
         expect(logHeroHeight).toBeLessThan(520);
@@ -1041,17 +1043,21 @@ test.describe('MA Workstation browser journeys', () => {
   test('keeps Forms handoff guidance limited to explicit workflow selections', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'forms');
-    await page.locator('#formsPtName').fill('QA, Explicit Forms');
-    await page.locator('#formsStatusChips')
-      .getByRole('button', { name: 'Provider review', exact: true })
-      .click();
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('input').first().fill('QA, Explicit Forms');
+    await panel.getByText('Provider review', { exact: true }).click();
 
-    const preview = page.locator('#formsNotePreview');
+    const preview = panel.locator('.wfp-tabpanel .wfp-preview').first();
     await expect(preview).toContainText('Status: Provider review');
     await expect(preview).not.toContainText(
       'Release only after provider approval is confirmed.'
     );
     await expect(preview).not.toContainText('ACTION / FOLLOW-UP');
+
+    // The hidden legacy mirror stays in sync so print/log/readiness keep working.
+    await expect.poll(() =>
+      page.evaluate(() => document.getElementById('formsPtName')?.value)
+    ).toBe('QA, Explicit Forms');
   });
 
   test('locks a paired aripiprazole initiation with both injection components in the completion receipt', async ({ page }) => {

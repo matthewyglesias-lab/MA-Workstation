@@ -22,7 +22,7 @@ const WORKFLOWS = {
   },
   forms: {
     label: 'Forms',
-    panel: '#panel-forms'
+    panel: '.wfp-panel'
   }
 };
 

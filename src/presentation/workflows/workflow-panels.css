@@ -1,0 +1,301 @@
+/*
+ * Shared structural patterns for migrated workflow panels: dense,
+ * utilitarian, tab-folder navigation and sunken field groups in the same
+ * late-90s clinical-terminal idiom as the shell chrome (clinical-desktop.css)
+ * — native form controls and list-style pickers instead of the legacy app's
+ * rounded "chip" buttons. Reuses the --cd-* tokens defined on .cd2004-shell.
+ */
+
+.cd2004-shell .wfp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.cd2004-shell .wfp-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  background: var(--cd-face);
+  border: 1px solid;
+  border-color: var(--cd-border-light) var(--cd-border-dark) var(--cd-border-dark)
+    var(--cd-border-light);
+}
+
+.cd2004-shell .wfp-summary-bar strong {
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-summary-spacer {
+  flex: 1 1 auto;
+}
+
+.cd2004-shell .wfp-status-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-status-flag::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgb(0 0 0 / 35%);
+}
+
+.cd2004-shell .wfp-status-flag.is-ready {
+  color: var(--cd-green);
+  background: var(--cd-green-soft);
+  border-color: var(--cd-green);
+}
+.cd2004-shell .wfp-status-flag.is-ready::before {
+  background: var(--cd-green);
+}
+
+.cd2004-shell .wfp-status-flag.is-warning {
+  color: var(--cd-amber);
+  background: var(--cd-amber-soft);
+  border-color: var(--cd-amber);
+}
+.cd2004-shell .wfp-status-flag.is-warning::before {
+  background: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-status-flag.is-stop {
+  color: var(--cd-red);
+  background: var(--cd-red-soft);
+  border-color: var(--cd-red);
+}
+.cd2004-shell .wfp-status-flag.is-stop::before {
+  background: var(--cd-red);
+}
+
+.cd2004-shell .wfp-status-flag.is-idle {
+  color: var(--cd-ink-muted);
+  background: var(--cd-face);
+  border-color: var(--cd-border-mid);
+}
+.cd2004-shell .wfp-status-flag.is-idle::before {
+  background: var(--cd-border-mid);
+}
+
+/* Tab-folder */
+
+.cd2004-shell .wfp-tabbar {
+  display: flex;
+  gap: 2px;
+  padding-inline: 2px;
+  border-bottom: 2px solid var(--cd-border-dark);
+}
+
+.cd2004-shell .wfp-tab {
+  padding: 5px 12px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome-light);
+  border: 1px solid var(--cd-border-mid);
+  border-bottom: none;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-tab[aria-selected="true"] {
+  position: relative;
+  top: 2px;
+  color: var(--cd-ink);
+  background: var(--cd-paper);
+  border-color: var(--cd-border-dark);
+  border-bottom: 2px solid var(--cd-paper);
+}
+
+.cd2004-shell .wfp-tab .wfp-tab-badge {
+  display: inline-block;
+  min-width: 14px;
+  margin-left: 6px;
+  padding: 0 3px;
+  color: #fff;
+  background: var(--cd-red);
+  font-size: 9px;
+  text-align: center;
+}
+
+.cd2004-shell .wfp-tabpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--cd-paper);
+  border: 1px solid var(--cd-border-dark);
+  border-top: none;
+}
+
+/* Field groups */
+
+.cd2004-shell .wfp-section {
+  border: 1px solid var(--cd-border-mid);
+  box-shadow: inset 1px 1px var(--cd-border-light);
+}
+
+.cd2004-shell .wfp-section-head {
+  padding: 4px 8px;
+  color: var(--cd-ink);
+  background: var(--cd-face);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px;
+}
+
+.cd2004-shell .wfp-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.cd2004-shell .wfp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-field label {
+  color: var(--cd-ink-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-field input,
+.cd2004-shell .wfp-field select,
+.cd2004-shell .wfp-field textarea {
+  padding: 4px 6px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 1px solid;
+  border-color: var(--cd-border-mid) var(--cd-border-light) var(--cd-border-light)
+    var(--cd-border-mid);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+  font: inherit;
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-field input:focus-visible,
+.cd2004-shell .wfp-field select:focus-visible,
+.cd2004-shell .wfp-field textarea:focus-visible {
+  outline: 2px solid var(--cd-focus);
+  outline-offset: -1px;
+}
+
+.cd2004-shell .wfp-field textarea {
+  min-height: 52px;
+  resize: vertical;
+}
+
+.cd2004-shell .wfp-field-hint {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+}
+
+/* Dense radio-style option list — replaces legacy "chip" grids */
+
+.cd2004-shell .wfp-option-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-option-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--cd-chrome);
+  cursor: pointer;
+}
+
+.cd2004-shell .wfp-option-row:last-child {
+  border-bottom: none;
+}
+
+.cd2004-shell .wfp-option-row:hover {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-option-row.is-selected {
+  background: var(--cd-selection);
+}
+
+.cd2004-shell .wfp-option-row input[type="radio"] {
+  margin-top: 2px;
+}
+
+.cd2004-shell .wfp-option-title {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-option-desc {
+  color: var(--cd-ink-muted);
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-option-list.wfp-option-list-inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.cd2004-shell .wfp-option-list-inline .wfp-option-row {
+  flex: 1 1 140px;
+  border-bottom: none;
+  border-right: 1px solid var(--cd-chrome);
+}
+
+.cd2004-shell .wfp-option-list-inline .wfp-option-row:last-child {
+  border-right: none;
+}
+
+/* Live preview */
+
+.cd2004-shell .wfp-preview {
+  padding: 9px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-mid);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
+  font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.cd2004-shell .wfp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cd2004-shell .wfp-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
