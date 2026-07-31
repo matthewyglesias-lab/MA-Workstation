@@ -252,64 +252,26 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(fileMenu).not.toHaveAttribute('open', '');
   });
 
-  test('operates fixed tiled window controls and restores the approved layout', async ({ page }) => {
+  test('keeps the navigator, work, and note panels fixed and simultaneously visible', async ({ page }) => {
     await page.goto('/');
-    const shell = page.locator('.cd2004-shell');
     const navigator = page.locator('.cd2004-navigator-window');
     const work = page.locator('.cd2004-work-window');
     const inspector = page.locator('.cd2004-inspector-window');
 
+    // The desktop layout is fixed: every panel a workflow needs is always in
+    // its place, with no minimize/maximize/close controls to hide it.
     await expect(navigator).toBeVisible();
     await expect(work).toBeVisible();
     await expect(inspector).toBeVisible();
+    await expect(page.locator('.cd2004-caption-button')).toHaveCount(0);
 
-    await navigator.getByRole('button', { name: 'Minimize Navigator' }).click();
-    await expect(navigator).toBeHidden();
-    const navigatorTask = page.locator('.cd2004-task-buttons button').filter({
-      hasText: 'Navigator'
-    });
-    await expect(navigatorTask).toHaveClass(/is-minimized/);
-    await navigatorTask.click();
-    await expect(navigator).toBeVisible();
-
-    await work.getByRole('button', { name: 'Maximize Start Center' }).click();
-    await expect(shell).toHaveAttribute('data-maximized-pane', 'work');
-    await expect(navigator).toBeHidden();
-    await expect(inspector).toBeHidden();
-    await page.keyboard.press('Control+Tab');
-    await expect(work).toHaveClass(/is-active/);
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.cd2004-work-window'))
-    )).toBe(true);
-    await work.getByRole('button', { name: 'Restore Start Center' }).click();
-    await expect(shell).toHaveAttribute('data-maximized-pane', '');
-    await expect(navigator).toBeVisible();
-    await expect(inspector).toBeVisible();
-
-    await inspector.getByRole('button', { name: 'Close Note / Readiness' }).click();
-    await expect(inspector).toBeHidden();
-    const inspectorTask = page.locator('.cd2004-task-buttons button').filter({
-      hasText: 'Note / Readiness'
-    });
-    await expect(inspectorTask).toHaveClass(/is-minimized/);
-    await inspectorTask.click();
-    await expect(inspector).toBeVisible();
-
-    await navigator.getByRole('button', { name: 'Maximize Navigator' }).click();
-    await expect(shell).toHaveAttribute('data-maximized-pane', 'navigator');
-    await navigator.getByRole('button', { name: 'Minimize Navigator' }).click();
-    await expect(work).toHaveClass(/is-active/);
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.cd2004-work-window'))
-    )).toBe(true);
-    await page.getByRole('button', { name: 'Reset Layout' }).click();
-    await expect(shell).toHaveAttribute('data-maximized-pane', '');
+    await openWorkflow(page, 'uds');
     await expect(navigator).toBeVisible();
     await expect(work).toBeVisible();
     await expect(inspector).toBeVisible();
   });
 
-  test('supports core desktop shortcuts and moves focus between open windows', async ({ page }) => {
+  test('supports core desktop shortcuts and moves focus into the note panel', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
 
@@ -332,12 +294,6 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-inspector-window')).toHaveClass(/is-active/);
     await expect.poll(() => page.evaluate(() =>
       Boolean(document.activeElement?.closest('.cd2004-inspector-window'))
-    )).toBe(true);
-
-    await page.keyboard.press('Control+Tab');
-    await expect(page.locator('.cd2004-navigator-window')).toHaveClass(/is-active/);
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.cd2004-navigator-window'))
     )).toBe(true);
 
     await page.keyboard.press('F6');
@@ -566,9 +522,6 @@ test.describe('MA Workstation browser journeys', () => {
     expect(await page.locator('.cd2004-status-message').evaluate(node =>
       getComputedStyle(node).display
     )).not.toBe('none');
-    expect(await page.locator('.cd2004-caption-button').first().evaluate(node =>
-      node.getBoundingClientRect().height
-    )).toBeLessThanOrEqual(23);
 
     await workTab.focus();
     await page.keyboard.press('ArrowRight');

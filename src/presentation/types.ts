@@ -11,7 +11,6 @@ export type WorkflowId =
   | "tms";
 
 export type DesktopPane = "navigator" | "work" | "inspector";
-export type WindowMode = "normal" | "minimized" | "maximized" | "closed";
 export type ClinicalTone = "neutral" | "ready" | "warning" | "stop" | "info";
 
 export interface PatientContext {

@@ -173,7 +173,6 @@ async function collectVisualContract(page, workflow) {
     const activeWindowTitlebar = activeWindow?.querySelector(
       ':scope > .cd2004-window-titlebar'
     );
-    const captionButton = activeWindow?.querySelector('.cd2004-caption-button');
     const recordTableWrap = document.querySelector(
       '.cd2004-start-bottom .cd2004-table-wrap'
     );
@@ -220,6 +219,7 @@ async function collectVisualContract(page, workflow) {
       'boxShadow'
     ]);
     const activeTitlebarStyle = styleOf(activeWindowTitlebar, [
+      'backgroundColor',
       'backgroundImage',
       'color',
       'minHeight'
@@ -249,7 +249,12 @@ async function collectVisualContract(page, workflow) {
           'overflow'
         ]),
         applicationTitlebar: {
-          ...styleOf(appTitlebar, ['color', 'height', 'backgroundImage']),
+          ...styleOf(appTitlebar, [
+            'color',
+            'height',
+            'backgroundColor',
+            'backgroundImage'
+          ]),
           usesGradient: getComputedStyle(appTitlebar).backgroundImage.includes(
             'linear-gradient'
           )
@@ -264,13 +269,7 @@ async function collectVisualContract(page, workflow) {
           titlebarMinHeight: activeTitlebarStyle?.minHeight,
           titlebarUsesGradient:
             activeTitlebarStyle?.backgroundImage.includes('linear-gradient'),
-          titlebarUsesNavy:
-            activeTitlebarStyle?.backgroundImage.includes('rgb(10, 36, 106)')
-        },
-        captionButton: {
-          ...rectOf(captionButton),
-          borderRadius: getComputedStyle(captionButton).borderRadius,
-          minHeight: getComputedStyle(captionButton).minHeight
+          titlebarUsesNavy: activeTitlebarStyle?.backgroundColor === 'rgb(10, 36, 106)'
         }
       },
       panes: {
@@ -386,10 +385,9 @@ function expectedContract(workflow, viewport) {
       applicationTitlebar: {
         color: 'rgb(255, 255, 255)',
         height: titlebarHeight,
-        backgroundImage: expect.stringMatching(
-          /linear-gradient.*rgb\(10, 36, 106\)/
-        ),
-        usesGradient: true
+        backgroundColor: 'rgb(10, 36, 106)',
+        backgroundImage: 'none',
+        usesGradient: false
       },
       activeWindow: {
         borderRadius: '0px',
@@ -397,18 +395,8 @@ function expectedContract(workflow, viewport) {
         borderRightWidth: '2px',
         titlebarColor: 'rgb(255, 255, 255)',
         titlebarMinHeight: windowTitlebarMinHeight,
-        titlebarUsesGradient: true,
+        titlebarUsesGradient: false,
         titlebarUsesNavy: true
-      },
-      captionButton: {
-        x: expect.any(Number),
-        y: expect.any(Number),
-        width: desktop ? 20 : 26,
-        height: desktop ? 19 : 23,
-        right: expect.any(Number),
-        bottom: expect.any(Number),
-        borderRadius: '0px',
-        minHeight: '0px'
       }
     },
     panes: {

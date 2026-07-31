@@ -132,7 +132,7 @@
   height: 27px;
   padding: 3px 6px;
   color: #fff;
-  background: linear-gradient(90deg, var(--cd-navy), #3768a8 68%, #78a2ce);
+  background: var(--cd-navy);
   border-bottom: 1px solid var(--cd-navy-dark);
   font-size: 12px;
   font-weight: 700;
@@ -219,8 +219,7 @@
   border: 1px solid var(--cd-border-dark);
   box-shadow:
     inset 1px 1px var(--cd-border-light),
-    inset -1px -1px var(--cd-border-mid),
-    2px 3px 0 rgb(0 0 0 / 22%);
+    inset -1px -1px var(--cd-border-mid);
 }
 
 .cd2004-menu-popup button {
@@ -260,7 +259,7 @@
   padding: 3px 5px;
   overflow-x: auto;
   overflow-y: hidden;
-  background: linear-gradient(#e7ebef, #cbd1d8);
+  background: var(--cd-face);
   border-bottom: 1px solid #78838d;
   box-shadow: inset 0 1px #fff;
   scrollbar-width: thin;
@@ -500,34 +499,6 @@
     1px 1px 1px rgb(0 0 0 / 24%);
 }
 
-.cd2004-window.is-minimized {
-  display: none;
-}
-
-.cd2004-shell[data-maximized-pane="navigator"]
-  .cd2004-workspace
-  .cd2004-window:not(.cd2004-navigator-window),
-.cd2004-shell[data-maximized-pane="work"]
-  .cd2004-workspace
-  .cd2004-window:not(.cd2004-work-window),
-.cd2004-shell[data-maximized-pane="inspector"]
-  .cd2004-workspace
-  .cd2004-window:not(.cd2004-inspector-window) {
-  display: none;
-}
-
-.cd2004-shell[data-maximized-pane="navigator"]
-  .cd2004-workspace
-  .cd2004-navigator-window,
-.cd2004-shell[data-maximized-pane="work"]
-  .cd2004-workspace
-  .cd2004-work-window,
-.cd2004-shell[data-maximized-pane="inspector"]
-  .cd2004-workspace
-  .cd2004-inspector-window {
-  grid-column: 1 / -1;
-  grid-row: 1 / -1;
-}
 
 .cd2004-window-titlebar {
   display: flex;
@@ -537,7 +508,7 @@
   min-height: 24px;
   padding: 2px 2px 2px 4px;
   color: #eef4ff;
-  background: linear-gradient(90deg, #59697b, #8c98a5);
+  background: #6b7885;
   border-bottom: 1px solid #424e5a;
   font-weight: 700;
   user-select: none;
@@ -546,7 +517,7 @@
 .cd2004-window.is-active > .cd2004-window-titlebar,
 .cd2004-help-dialog > .cd2004-window-titlebar {
   color: #fff;
-  background: linear-gradient(90deg, var(--cd-navy), #31639d 74%, #7599bf);
+  background: var(--cd-navy);
 }
 
 .cd2004-window-mark {
@@ -570,12 +541,6 @@
   color: #e0e6ef;
   font-size: 9px;
   font-weight: 400;
-}
-
-.cd2004-window-controls {
-  display: flex;
-  gap: 2px;
-  margin-left: auto;
 }
 
 .cd2004-caption-button {
@@ -1771,7 +1736,7 @@
   position: relative;
   z-index: 20;
   display: grid;
-  grid-template-columns: 66px minmax(180px, auto) auto minmax(130px, 1fr);
+  grid-template-columns: 66px auto minmax(130px, 1fr);
   align-items: stretch;
   gap: 3px;
   min-width: 0;
@@ -1782,8 +1747,7 @@
   box-shadow: inset 0 1px #fff;
 }
 
-.cd2004-start-button,
-.cd2004-task-buttons button {
+.cd2004-start-button {
   min-width: 0;
   padding: 2px 6px;
   overflow: hidden;
@@ -1798,8 +1762,7 @@
   font-weight: 700;
 }
 
-.cd2004-start-button:active,
-.cd2004-task-buttons button.is-active {
+.cd2004-start-button:active {
   background: #b7bec6;
   border-color: #4e5863 #fff #fff #4e5863;
   box-shadow: inset 1px 1px #87919b;
@@ -1808,32 +1771,6 @@
 .cd2004-start-flag {
   margin-right: 4px;
   color: var(--cd-navy);
-}
-
-.cd2004-task-buttons {
-  display: flex;
-  gap: 3px;
-  min-width: 0;
-}
-
-.cd2004-task-buttons button {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  width: clamp(90px, 12vw, 166px);
-  text-align: left;
-}
-
-.cd2004-task-buttons button.is-minimized {
-  font-weight: 400;
-}
-
-.cd2004-task-mark {
-  flex: 0 0 auto;
-  width: 11px;
-  height: 11px;
-  background: var(--cd-navy);
-  border: 1px solid #fff;
 }
 
 .cd2004-storage-status {
@@ -2430,23 +2367,8 @@
   }
 
   .cd2004-taskbar {
-    grid-template-columns: 58px minmax(0, 1fr) auto;
+    grid-template-columns: 58px auto minmax(0, 1fr);
     height: 34px;
-  }
-
-  .cd2004-task-buttons {
-    overflow: hidden;
-  }
-
-  .cd2004-task-buttons button {
-    flex: 1 1 0;
-    width: auto;
-    padding: 2px 4px;
-    font-size: 9px;
-  }
-
-  .cd2004-task-buttons button:not(.is-active) {
-    display: none;
   }
 
   .cd2004-status-message {
@@ -3411,7 +3333,6 @@
   }
 
   .cd2004-readiness-marker,
-  .cd2004-task-mark,
   .cd2004-start-flag {
     forced-color-adjust: none;
   }
@@ -3488,7 +3409,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 3px 4px 3px 7px;
-  background: linear-gradient(90deg, #0a246a, #3a6ea5);
+  background: var(--cd-navy);
   color: #fff;
   font-weight: 700;
 }

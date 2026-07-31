@@ -1,13 +1,7 @@
 import type { ComponentChildren, TargetedMouseEvent } from "preact";
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import "./clinical-desktop.css";
-import { ClassicWindow } from "./ClassicWindow";
+import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
 import { LegacyWorkflowHost } from "./LegacyWorkflowHost";
 import { NoteInspector } from "./NoteInspector";
@@ -18,7 +12,6 @@ import {
   type ClinicalDesktopShellProps,
   type DesktopPane,
   type PatientContext,
-  type WindowMode,
   type WorkflowId,
 } from "./types";
 
@@ -43,12 +36,6 @@ const navigatorGroups: Array<{
   { label: "Utilities", workflows: ["reference", "log"] },
   { label: "Future", workflows: ["tms"] },
 ];
-
-const initialWindowModes: Record<DesktopPane, WindowMode> = {
-  navigator: "normal",
-  work: "normal",
-  inspector: "normal",
-};
 
 function normalizedPatientValue(value?: string) {
   return (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -116,9 +103,7 @@ export function ClinicalDesktopShell({
 }: ClinicalDesktopShellProps) {
   const [internalWorkflow, setInternalWorkflow] =
     useState<WorkflowId>(defaultActiveWorkflow);
-  const [windowModes, setWindowModes] =
-    useState<Record<DesktopPane, WindowMode>>(initialWindowModes);
-  const [activePane, setActivePane] = useState<DesktopPane>("work");
+  const [focusedPane, setFocusedPane] = useState<DesktopPane>("work");
   const [mobilePane, setMobilePane] = useState<DesktopPane>("work");
   const [internalStatus, setInternalStatus] = useState<string | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
@@ -135,21 +120,6 @@ export function ClinicalDesktopShell({
   const effectiveStatus =
     internalStatus ?? statusMessage ?? "Ready. Select a workflow to begin.";
 
-  const visiblePanes = useMemo(
-    () => {
-      const panes = ["navigator", "work", "inspector"] as DesktopPane[];
-      const maximized = panes.find(
-        (pane) => windowModes[pane] === "maximized",
-      );
-      if (maximized) return [maximized];
-      return panes.filter(
-        (pane) =>
-          windowModes[pane] !== "closed" && windowModes[pane] !== "minimized",
-      );
-    },
-    [windowModes],
-  );
-
   const openWorkflow = (workflow: WorkflowId) => {
     const scrollBody = shellRef.current?.querySelector<HTMLElement>(
       ".cd2004-work-window .cd2004-window-body",
@@ -161,57 +131,8 @@ export function ClinicalDesktopShell({
     }
     if (activeWorkflow === undefined) setInternalWorkflow(workflow);
     onWorkflowChange?.(workflow);
-    setWindowModes((current) => ({ ...current, work: "normal" }));
-    setActivePane("work");
     setMobilePane("work");
     setInternalStatus(`${WORKFLOW_LABELS[workflow]} opened.`);
-  };
-
-  const setWindowMode = (pane: DesktopPane, mode: WindowMode) => {
-    const panes = ["navigator", "work", "inspector"] as DesktopPane[];
-    const next = { ...windowModes };
-    if (mode === "maximized") {
-      panes.forEach((key) => {
-        if (next[key] === "maximized") next[key] = "normal";
-      });
-    }
-    next[pane] = mode;
-
-    let focusPane = pane;
-    if (mode !== "normal" && mode !== "maximized") {
-      focusPane =
-        panes.find(
-          (candidate) =>
-            candidate !== pane &&
-            next[candidate] !== "closed" &&
-            next[candidate] !== "minimized",
-        ) ?? "work";
-      if (
-        next[focusPane] === "closed" ||
-        next[focusPane] === "minimized"
-      ) {
-        next[focusPane] = "normal";
-      }
-    }
-
-    setWindowModes(next);
-    setActivePane(focusPane);
-    setMobilePane(focusPane);
-    globalThis.setTimeout(() => {
-      shellRef.current
-        ?.querySelector<HTMLElement>(
-          `.cd2004-window[data-pane="${focusPane}"]`,
-        )
-        ?.focus({ preventScroll: true });
-    }, 0);
-  };
-
-  const resetLayout = () => {
-    setWindowModes(initialWindowModes);
-    setActivePane("work");
-    setMobilePane("work");
-    setShowShortcutHelp(false);
-    setInternalStatus("Window layout restored.");
   };
 
   const focusInspector = () => {
@@ -219,8 +140,7 @@ export function ClinicalDesktopShell({
       typeof document !== "undefined"
         ? (document.activeElement as HTMLElement | null)
         : null;
-    setWindowModes((current) => ({ ...current, inspector: "normal" }));
-    setActivePane("inspector");
+    setFocusedPane("inspector");
     setMobilePane("inspector");
     globalThis.setTimeout(() => {
       const inspectorWindow = shellRef.current?.querySelector<HTMLElement>(
@@ -484,37 +404,11 @@ export function ClinicalDesktopShell({
         return;
       }
 
-      if (event.ctrlKey && event.key === "Tab") {
-        event.preventDefault();
-        const panes = visiblePanes.length ? visiblePanes : (["work"] as DesktopPane[]);
-        const currentIndex = panes.indexOf(activePane);
-        const direction = event.shiftKey ? -1 : 1;
-        const nextIndex = (currentIndex + direction + panes.length) % panes.length;
-        const nextPane = panes[nextIndex] ?? "work";
-        setActivePane(nextPane);
-        setMobilePane(nextPane);
-        const nextWindow = shellRef.current?.querySelector<HTMLElement>(
-          `.cd2004-window[data-pane="${nextPane}"]`,
-        );
-        const focusTarget =
-          nextWindow?.querySelector<HTMLElement>(
-            'button:not([disabled]), [tabindex="0"]',
-          ) ?? nextWindow;
-        focusTarget?.focus();
-        return;
-      }
-
       if (event.key === "Escape") {
-        const maximized = (
-          Object.keys(windowModes) as DesktopPane[]
-        ).find((pane) => windowModes[pane] === "maximized");
         if (showShortcutHelp) {
           event.preventDefault();
           setShowShortcutHelp(false);
           restorePreviousFocus();
-        } else if (maximized) {
-          event.preventDefault();
-          setWindowMode(maximized, "normal");
         } else {
           onEscape?.();
           restorePreviousFocus();
@@ -525,7 +419,6 @@ export function ClinicalDesktopShell({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
-    activePane,
     canComplete,
     canReview,
     onOpenRecords,
@@ -535,8 +428,6 @@ export function ClinicalDesktopShell({
     reviewActionMode,
     selectedWorkflow,
     showShortcutHelp,
-    visiblePanes,
-    windowModes,
   ]);
 
   const windowTitle =
@@ -562,16 +453,11 @@ export function ClinicalDesktopShell({
     onRecordOpen,
   });
 
-  const anyMaximized = (Object.keys(windowModes) as DesktopPane[]).find(
-    (pane) => windowModes[pane] === "maximized",
-  );
-
   return (
     <div
       ref={shellRef}
       class={`cd2004-shell ${className}`.trim()}
       data-active-workflow={selectedWorkflow}
-      data-maximized-pane={anyMaximized ?? ""}
       data-post-state={postState}
     >
       <a class="cd2004-skip-link" href="#cd2004-work-area">
@@ -628,7 +514,6 @@ export function ClinicalDesktopShell({
             ))}
           </DesktopMenu>
           <DesktopMenu label="Tools">
-            <MenuCommand label="Reset Layout" onInvoke={resetLayout} />
             <MenuCommand
               label="Knowledge Base"
               disabled={!onOpenKnowledge}
@@ -699,16 +584,6 @@ export function ClinicalDesktopShell({
               <span>{action.shortLabel ?? action.label}</span>
             </button>
           ))}
-          <span class="cd2004-toolbar-spacer" />
-          <button
-            type="button"
-            class="cd2004-toolbar-button"
-            onClick={resetLayout}
-            title="Reset window layout"
-          >
-            <DesktopIcon name="reset" />
-            <span>Reset Layout</span>
-          </button>
         </div>
 
         <PatientBanner
@@ -725,7 +600,7 @@ export function ClinicalDesktopShell({
       <div
         class="cd2004-mobile-switcher cd2004-print-exclude"
         role="tablist"
-        aria-label="Desktop window switcher"
+        aria-label="Desktop section switcher"
       >
         {(["navigator", "work", "inspector"] as DesktopPane[]).map((pane) => (
           <button
@@ -738,9 +613,8 @@ export function ClinicalDesktopShell({
             tabIndex={mobilePane === pane ? 0 : -1}
             class={mobilePane === pane ? "is-active" : ""}
             onClick={() => {
-              setWindowMode(pane, "normal");
               setMobilePane(pane);
-              setActivePane(pane);
+              setFocusedPane(pane);
             }}
             onKeyDown={(event) => {
               if (
@@ -769,7 +643,7 @@ export function ClinicalDesktopShell({
                           panes.length) %
                           panes.length
                       ]!;
-              setWindowMode(next, "normal");
+              setMobilePane(next);
               globalThis.setTimeout(() => {
                 shellRef.current
                   ?.querySelector<HTMLElement>(
@@ -793,14 +667,12 @@ export function ClinicalDesktopShell({
         id="cd2004-work-area"
         data-mobile-pane={mobilePane}
       >
-        <ClassicWindow
+        <Panel
           pane="navigator"
           title="Navigator"
-          mode={windowModes.navigator}
-          active={activePane === "navigator"}
+          active={focusedPane === "navigator"}
           mobileActive={mobilePane === "navigator"}
-          onActivate={setActivePane}
-          onModeChange={setWindowMode}
+          onActivate={setFocusedPane}
         >
           <nav class="cd2004-navigator" aria-label="Clinical modules">
             {navigatorGroups.map((group) => (
@@ -847,27 +719,17 @@ export function ClinicalDesktopShell({
             <strong>LOCAL</strong>
             <span>No server synchronization</span>
           </div>
-        </ClassicWindow>
+        </Panel>
 
-        <ClassicWindow
+        <Panel
           pane="work"
           title={windowTitle}
           subtitle={
             selectedWorkflow === "home" ? "Local workstation overview" : "Active encounter"
           }
-          mode={windowModes.work}
-          active={activePane === "work"}
+          active={focusedPane === "work"}
           mobileActive={mobilePane === "work"}
-          canClose={selectedWorkflow !== "home"}
-          onActivate={setActivePane}
-          onModeChange={(pane, mode) => {
-            if (mode === "closed") {
-              openWorkflow("home");
-              setWindowMode("work", "normal");
-            } else {
-              setWindowMode(pane, mode);
-            }
-          }}
+          onActivate={setFocusedPane}
           toolbar={
             selectedWorkflow !== "home" ? (
               <div class="cd2004-work-context-strip">
@@ -906,17 +768,15 @@ export function ClinicalDesktopShell({
             )}
             {workflowContent}
           </div>
-        </ClassicWindow>
+        </Panel>
 
-        <ClassicWindow
+        <Panel
           pane="inspector"
           title="Note / Readiness"
           subtitle={WORKFLOW_LABELS[selectedWorkflow]}
-          mode={windowModes.inspector}
-          active={activePane === "inspector"}
+          active={focusedPane === "inspector"}
           mobileActive={mobilePane === "inspector"}
-          onActivate={setActivePane}
-          onModeChange={setWindowMode}
+          onActivate={setFocusedPane}
         >
           <NoteInspector
             title={noteTitle ?? `${WORKFLOW_LABELS[selectedWorkflow]} note`}
@@ -932,7 +792,7 @@ export function ClinicalDesktopShell({
             onCopyAll={onCopyAllNotes}
             onComplete={onReviewComplete}
           />
-        </ClassicWindow>
+        </Panel>
       </main>
 
       <footer class="cd2004-taskbar cd2004-print-exclude">
@@ -946,35 +806,6 @@ export function ClinicalDesktopShell({
           </span>
           Start
         </button>
-        <div class="cd2004-task-buttons" aria-label="Open desktop windows">
-          {(["navigator", "work", "inspector"] as DesktopPane[]).map((pane) => (
-            <button
-              key={pane}
-              type="button"
-              class={[
-                activePane === pane ? "is-active" : "",
-                windowModes[pane] === "closed" ||
-                windowModes[pane] === "minimized"
-                  ? "is-minimized"
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onClick={() => {
-                setWindowMode(pane, "normal");
-                setActivePane(pane);
-                setMobilePane(pane);
-              }}
-            >
-              <span class="cd2004-task-mark" aria-hidden="true" />
-              {pane === "navigator"
-                ? "Navigator"
-                : pane === "work"
-                  ? windowTitle
-                  : "Note / Readiness"}
-            </button>
-          ))}
-        </div>
         <div
           class={`cd2004-storage-status ${localStorageAvailable ? "is-online" : "is-error"}`}
           title={
@@ -1030,7 +861,6 @@ export function ClinicalDesktopShell({
               <ShortcutRow keys="F6" label="Open injection records" />
               <ShortcutRow keys="F8" label="Focus note and readiness" />
               <ShortcutRow keys="F10" label="Review or complete" />
-              <ShortcutRow keys="Ctrl+Tab" label="Cycle open desktop windows" />
               <ShortcutRow keys="Esc" label="Close utility or restore focus" />
             </div>
             <footer>
