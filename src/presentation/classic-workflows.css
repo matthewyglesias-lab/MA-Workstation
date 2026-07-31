@@ -1,0 +1,1209 @@
+/*
+ * Classic-EHR presentation adapter
+ *
+ * The clinical workflow DOM remains the compatibility surface for the proven
+ * calculators and record handlers. These rules deliberately restyle only the
+ * mounted workstation panels; print artifacts live outside this host and keep
+ * their original layout.
+ */
+
+#app .cd2004-shell .cd2004-legacy-host {
+  container-type: inline-size;
+  min-width: 0;
+  min-height: 100%;
+  color: #101828;
+  background: #eef1f4;
+  font: 11px/1.3 Tahoma, Verdana, "Segoe UI", sans-serif;
+}
+
+#app .cd2004-shell .cd2004-legacy-host,
+#app .cd2004-shell .cd2004-legacy-host * {
+  font-family: Tahoma, Verdana, "Segoe UI", sans-serif !important;
+  animation-duration: 120ms !important;
+  transition-duration: 100ms !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .panel {
+  width: 100%;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #101828;
+  background: #eef1f4 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .panel *,
+#app .cd2004-shell .cd2004-legacy-host .panel *::before,
+#app .cd2004-shell .cd2004-legacy-host .panel *::after {
+  box-sizing: border-box;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .panel :where(
+    .card,
+    .home-card,
+    .home-action,
+    .guided-banner,
+    .guided-card,
+    .sample-guide-card,
+    .uds-guide-card,
+    .mini-panel,
+    .qa-panel,
+    .note,
+    .tip,
+    .alert,
+    .admin-guide,
+    .admin-panel-card,
+    .needle-guide,
+    .sample-intent-box,
+    .form-kind .fi,
+    .record-card,
+    .records-drawer,
+    .kb-card,
+    .refcard,
+    .closeout-card
+  ) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .panel :where(button, input, select, textarea) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .panel :where(
+    button,
+    input,
+    select,
+    textarea,
+    [role="button"]
+  ):focus-visible {
+  outline: 2px solid #ffb400 !important;
+  outline-offset: 1px !important;
+  border-color: #ffb400 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 6px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .form-col,
+#app .cd2004-shell .cd2004-legacy-host .preview-col,
+#app .cd2004-shell .cd2004-legacy-host .guided-stack {
+  min-width: 0 !important;
+  gap: 6px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .layout > .form-col,
+#app .cd2004-shell .cd2004-legacy-host .layout > .preview-col,
+#app .cd2004-shell .cd2004-legacy-host .forms-layout > .form-col,
+#app .cd2004-shell .cd2004-legacy-host .forms-layout > .preview-col {
+  grid-area: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Compact module mastheads replace the large marketing-style hero panels. */
+
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero) {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 7px 9px !important;
+  color: #15243a !important;
+  background: #dbe4ee !important;
+  border: 0 !important;
+  border-bottom: 1px solid #7c8996 !important;
+  border-radius: 0 !important;
+  box-shadow: inset 0 1px #fff !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero)::before,
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero)::after {
+  display: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero) .hero-grid {
+  display: block !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero) .hero-grid > * {
+  min-width: 0;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero) .eyebrow {
+  margin: 0 0 2px !important;
+  color: #40536a !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero) h1,
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero) h2 {
+  margin: 0 !important;
+  color: #102a56 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.15 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.inj-modern-hero, .uds-modern-hero) p {
+  max-width: none !important;
+  margin: 3px 0 0 !important;
+  color: #465365 !important;
+  font-size: 10px !important;
+  line-height: 1.3 !important;
+}
+
+/* Remaining module mastheads use the same information-dense grammar. */
+
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero) {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 7px 9px !important;
+  color: #15243a !important;
+  background: #dbe4ee !important;
+  border: 0 !important;
+  border-bottom: 1px solid #7c8996 !important;
+  border-radius: 0 !important;
+  box-shadow: inset 0 1px #fff !important;
+}
+
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero)::before,
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero)::after {
+  display: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-module-hero {
+  display: block !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-hero-main {
+  max-width: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-hero-side {
+  display: none !important;
+}
+
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.sample-hero-kicker, .forms-eyebrow, .log-kicker) {
+  margin: 0 0 2px !important;
+  color: #40536a !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+}
+
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.sample-hero-title, .forms-title, .kb-hero h2, .log-title) {
+  margin: 0 !important;
+  color: #102a56 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.15 !important;
+}
+
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.sample-hero-copy, .forms-sub, .kb-hero p, .log-subtitle) {
+  max-width: none !important;
+  margin: 3px 0 0 !important;
+  color: #465365 !important;
+  font-size: 10px !important;
+  line-height: 1.3 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-hero-pills {
+  display: flex !important;
+  gap: 3px !important;
+  margin: 5px 0 0 !important;
+  flex-wrap: wrap !important;
+}
+
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.sample-hero-pill, .forms-hero-pill, .kb-badge) {
+  min-height: 17px !important;
+  padding: 2px 5px !important;
+  color: #34445a !important;
+  background: #eef2f6 !important;
+  border: 1px solid #7d8995 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-hero-pill > span {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .fast-review {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-height: 0 !important;
+  margin: 5px 6px 0 !important;
+  padding: 5px 7px !important;
+  color: #1e2d42 !important;
+  background: #edf0f3 !important;
+  border: 1px solid #818c97 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .fast-review-copy {
+  min-width: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .fast-review-copy strong {
+  font-size: 10px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .fast-review-copy span {
+  color: #556377 !important;
+  font-size: 9px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc51-progress {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 1px !important;
+  margin: 5px 6px 0 !important;
+  padding: 4px !important;
+  background: #909ba6 !important;
+  border: 1px solid #56616d !important;
+  border-radius: 0 !important;
+  box-shadow: inset 0 1px #fff !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc51-progress-card {
+  min-width: 0 !important;
+  min-height: 34px !important;
+  padding: 4px 5px !important;
+  color: #1b293a !important;
+  background: #e9edf1 !important;
+  border: 1px solid #a0a9b2 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc51-progress-card strong {
+  font-size: 9px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc51-progress-card span {
+  color: #586577 !important;
+  font-size: 8px !important;
+}
+
+/* Forms keeps the provider-release guardrail visible without consuming the
+ * entire first screen. */
+
+#app .cd2004-shell .cd2004-legacy-host .forms-hero-inner {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.7fr) !important;
+  gap: 7px !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .forms-steps {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 1px !important;
+  margin: 5px 0 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .forms-step {
+  display: grid !important;
+  grid-template-columns: 16px minmax(0, 1fr) !important;
+  gap: 3px !important;
+  min-height: 25px !important;
+  padding: 3px !important;
+  color: #25364b !important;
+  background: #eef1f4 !important;
+  border: 1px solid #929ca6 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 8px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .forms-step b {
+  color: #0a246a !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .forms-hero-card {
+  display: grid !important;
+  align-content: center !important;
+  gap: 4px !important;
+  min-height: 0 !important;
+  padding: 5px 7px !important;
+  color: #213148 !important;
+  background: #eef2f6 !important;
+  border: 1px solid #7d8995 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .forms-hero-card .value {
+  color: #17263a !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .forms-hero-card .meta {
+  color: #556377 !important;
+  font-size: 8px !important;
+  line-height: 1.25 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .forms-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 6px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .forms-kind-grid {
+  gap: 4px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .form-kind {
+  min-height: 52px !important;
+  padding: 6px !important;
+  color: #17263a !important;
+  background: #f7f8fa !important;
+  border: 1px solid #7d8894 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .form-kind.on {
+  color: #fff !important;
+  background: #0a246a !important;
+  border-color: #02143f #718db8 #718db8 #02143f !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .form-kind.on * {
+  color: #fff !important;
+}
+
+/* Knowledge keeps search/category tools alongside the result ledger. */
+
+#app .cd2004-shell .cd2004-legacy-host .kb-hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-workspace {
+  display: grid !important;
+  grid-template-columns: 175px minmax(0, 1fr) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 6px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.kb-side, .kb-main) {
+  min-width: 0 !important;
+}
+
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.kb-side-card, .kb-side-note, .kb-tools, .kb-mode-strip) {
+  margin: 0 0 5px !important;
+  padding: 5px !important;
+  background: #f5f7f9 !important;
+  border: 1px solid #838e99 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-stat-grid {
+  gap: 3px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-stat {
+  padding: 5px !important;
+  background: #fff !important;
+  border: 1px solid #a0a9b2 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-stat .n {
+  color: #18335f !important;
+  font-size: 15px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-filters {
+  gap: 2px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-filter {
+  min-height: 23px !important;
+  padding: 3px 6px !important;
+  color: #1e2b3c !important;
+  background: #e1e5e9 !important;
+  border: 1px solid !important;
+  border-color: #fff #56616d #56616d #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-filter.on {
+  color: #fff !important;
+  background: #0a246a !important;
+  border-color: #02143f #718db8 #718db8 #02143f !important;
+}
+
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  :where(.kb-mode-pill, .kb-tag, .kicon, .chev, .kb-copy-btn) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .refsearch {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Closeout preserves live counts while shrinking the hero to a status band. */
+
+#app .cd2004-shell .cd2004-legacy-host .log-hero-inner {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 185px !important;
+  gap: 7px !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .log-steps {
+  display: flex !important;
+  gap: 2px !important;
+  margin: 5px 0 0 !important;
+  flex-wrap: wrap !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .log-step {
+  min-height: 21px !important;
+  padding: 3px 5px !important;
+  color: #28384c !important;
+  background: #edf0f3 !important;
+  border: 1px solid #8b96a1 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 8px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .log-live-card {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 4px !important;
+  min-height: 0 !important;
+  padding: 5px 7px !important;
+  color: #203149 !important;
+  background: #eef2f6 !important;
+  border: 1px solid #7d8995 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .log-live-card .big {
+  color: #112a53 !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .log-live-card .small {
+  color: #556377 !important;
+  font-size: 8px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .log-live-mini {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 3px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .log-live-mini > div {
+  padding: 3px !important;
+  background: #fff !important;
+  border: 1px solid #a2abb4 !important;
+  border-radius: 0 !important;
+}
+
+/* Workflow progress reads as a compact ledger rather than floating cards. */
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-flow {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 1px !important;
+  margin: 0 !important;
+  padding: 5px !important;
+  background: #9aa5b0 !important;
+  border-bottom: 1px solid #596572 !important;
+  border-radius: 0 !important;
+  box-shadow: inset 0 1px #e8edf2 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-mode {
+  grid-column: 1 / -1 !important;
+  min-height: 22px !important;
+  margin: 0 0 3px !important;
+  padding: 3px 5px !important;
+  color: #eaf1fb !important;
+  background: #53677e !important;
+  border: 1px solid #354454 !important;
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-mode * {
+  color: #eef4ff !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-step {
+  min-width: 0 !important;
+  min-height: 38px !important;
+  margin: 0 !important;
+  padding: 4px 6px !important;
+  color: #172337 !important;
+  text-align: left !important;
+  background: #e7ebef !important;
+  border: 1px solid !important;
+  border-color: #f8fafc #4e5965 #4e5965 #f8fafc !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-step:hover {
+  background: #f2f5f8 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-step.active,
+#app .cd2004-shell .cd2004-legacy-host .rc526-step[aria-current="step"] {
+  color: #fff !important;
+  background: #0a246a !important;
+  border-color: #03143e #6f8bb6 #6f8bb6 #03143e !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-step.active *,
+#app
+  .cd2004-shell
+  .cd2004-legacy-host
+  .rc526-step[aria-current="step"]
+  * {
+  color: #fff !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-step.done {
+  background: #dcecdf !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc526-step.need {
+  border-left: 4px solid #bd7b00 !important;
+}
+
+/* Classic group boxes and rows. */
+
+#app .cd2004-shell .cd2004-legacy-host .card,
+#app .cd2004-shell .cd2004-legacy-host .guided-card,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-card,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-card {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 8px !important;
+  overflow: visible !important;
+  color: #111827 !important;
+  background: #f8f9fa !important;
+  border: 1px solid #7d8894 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .card + .card,
+#app .cd2004-shell .cd2004-legacy-host .guided-card + .guided-card {
+  margin-top: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .card-head,
+#app .cd2004-shell .cd2004-legacy-host .guided-head,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-head,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-head {
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-height: 30px !important;
+  margin: -8px -8px 7px !important;
+  padding: 4px 6px !important;
+  color: #16263b !important;
+  background: #dce2e8 !important;
+  border: 0 !important;
+  border-bottom: 1px solid #89939e !important;
+  border-radius: 0 !important;
+  cursor: pointer;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .card-head .ico,
+#app .cd2004-shell .cd2004-legacy-host .guided-head .ico,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-head .ico,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-head .ico {
+  display: grid !important;
+  grid-row: 1 / span 2 !important;
+  place-items: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  margin: 0 !important;
+  padding: 3px !important;
+  color: #0a246a !important;
+  background: #eef2f6 !important;
+  border: 1px solid #7b8793 !important;
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .card-head,
+    .guided-head,
+    .sample-guide-head,
+    .uds-guide-head
+  ) h2 {
+  margin: 0 !important;
+  color: #142235 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.2 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .card-head,
+    .guided-head,
+    .sample-guide-head,
+    .uds-guide-head
+  ) .hint,
+#app .cd2004-shell .cd2004-legacy-host .guided-preview,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-preview,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-preview {
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  color: #596678 !important;
+  font-size: 9px !important;
+  font-weight: 400 !important;
+  line-height: 1.2 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .guided-head,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-head,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-head {
+  grid-template-columns: 24px minmax(0, 1fr) auto auto !important;
+  margin: -8px -8px 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .guided-body,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-body,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-body {
+  min-width: 0 !important;
+  padding: 8px 0 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .guided-status,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-status,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-status,
+#app .cd2004-shell .cd2004-legacy-host :where(.badge, .tag, .auto-tag, .qa-chip) {
+  min-height: 17px !important;
+  padding: 2px 5px !important;
+  color: #39485b !important;
+  background: #eef1f4 !important;
+  border: 1px solid #87929e !important;
+  border-radius: 0 !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.035em !important;
+  line-height: 1.1 !important;
+  text-transform: uppercase !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .guided-status.needs,
+    .sample-guide-status.needs,
+    .uds-guide-status.needs,
+    .badge.warn,
+    .qa-chip.warn
+  ) {
+  color: #6d4300 !important;
+  background: #fff0bc !important;
+  border-color: #a66d00 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .guided-status.ready,
+    .sample-guide-status.ready,
+    .uds-guide-status.ready,
+    .badge.ok,
+    .qa-chip.ok
+  ) {
+  color: #075329 !important;
+  background: #dcecdf !important;
+  border-color: #4a795c !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .guided-chevron,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-chevron,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-chevron {
+  display: grid !important;
+  place-items: center !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  color: #172337 !important;
+  background: #d9dee5 !important;
+  border: 1px solid !important;
+  border-color: #fff #4f5964 #4f5964 #fff !important;
+  border-radius: 0 !important;
+  transform: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .guided-banner,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-banner,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-banner {
+  display: grid !important;
+  grid-template-columns: 25px minmax(0, 1fr) auto !important;
+  gap: 6px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  padding: 5px 7px !important;
+  color: #15243a !important;
+  background: #e2e8ee !important;
+  border: 1px solid #77838f !important;
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .guided-banner,
+    .sample-guide-banner,
+    .uds-guide-banner
+  ) :where(.guide-mark, .sample-guide-mark, .uds-guide-mark) {
+  width: 23px !important;
+  height: 23px !important;
+  color: #0a246a !important;
+  background: #edf2f7 !important;
+  border: 1px solid #7c8996 !important;
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .guided-banner,
+    .sample-guide-banner,
+    .uds-guide-banner
+  ) :where(.guide-title, .sample-guide-title, .uds-guide-title) {
+  color: #142235 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .guided-banner,
+    .sample-guide-banner,
+    .uds-guide-banner
+  ) :where(.guide-sub, .sample-guide-sub, .uds-guide-sub) {
+  color: #536174 !important;
+  font-size: 9px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .guided-banner,
+    .sample-guide-banner,
+    .uds-guide-banner
+  ) :where(.guide-mode, .sample-guide-mode, .uds-guide-mode) {
+  padding: 3px 6px !important;
+  color: #0a246a !important;
+  background: #f5f7fa !important;
+  border: 1px solid #748292 !important;
+  border-radius: 0 !important;
+  font-size: 8px !important;
+}
+
+/* Dense form controls. */
+
+#app .cd2004-shell .cd2004-legacy-host :where(.row, .row2, .row3) {
+  gap: 6px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .row2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .row3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .field,
+#app .cd2004-shell .cd2004-legacy-host .grp {
+  min-width: 0 !important;
+  gap: 3px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.field > label, .gl, .lbl) {
+  margin: 0 !important;
+  color: #303e50 !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.025em !important;
+  line-height: 1.2 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(input, select, textarea) {
+  width: 100%;
+  min-width: 0;
+  min-height: 25px !important;
+  padding: 3px 5px !important;
+  color: #101828 !important;
+  background: #fff !important;
+  border: 1px solid #65717e !important;
+  font-size: 11px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host textarea {
+  min-height: 54px !important;
+  resize: vertical;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(input, select, textarea):disabled {
+  color: #5d6671 !important;
+  background: #e4e7ea !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .chips {
+  gap: 3px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .chip {
+  min-height: 24px !important;
+  margin: 0 !important;
+  padding: 3px 7px !important;
+  color: #1d2a3a !important;
+  background: #e1e5e9 !important;
+  border: 1px solid !important;
+  border-color: #fff #56616d #56616d #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  transform: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .chip:hover {
+  background: #f0f2f5 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .chip.on,
+#app .cd2004-shell .cd2004-legacy-host .chip[aria-pressed="true"] {
+  color: #fff !important;
+  background: #0a246a !important;
+  border-color: #02143f #718db8 #718db8 #02143f !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .btn,
+    .guided-continue,
+    .sample-guide-continue,
+    .uds-guide-continue,
+    .staff-apply,
+    .staff-clear
+  ) {
+  min-height: 26px !important;
+  padding: 4px 9px !important;
+  color: #162234 !important;
+  background: #d9dee5 !important;
+  border: 1px solid !important;
+  border-color: #fff #46515d #46515d #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  transform: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .btn,
+    .guided-continue,
+    .sample-guide-continue,
+    .uds-guide-continue
+  ).primary {
+  color: #fff !important;
+  background: #0a246a !important;
+  border-color: #02143f #718db8 #718db8 #02143f !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .btn,
+    .guided-continue,
+    .sample-guide-continue,
+    .uds-guide-continue
+  ):active:not(:disabled) {
+  border-color: #46515d #fff #fff #46515d !important;
+  transform: translate(1px, 1px) !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .guided-footer,
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-footer,
+#app .cd2004-shell .cd2004-legacy-host .uds-guide-footer,
+#app .cd2004-shell .cd2004-legacy-host .rc530-footer {
+  gap: 6px !important;
+  margin-top: 7px !important;
+  padding: 6px !important;
+  color: #465365 !important;
+  background: #e8ebef !important;
+  border: 1px solid #a1aab4 !important;
+  border-radius: 0 !important;
+  font-size: 9px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-guide-playbook {
+  gap: 3px !important;
+  padding: 5px !important;
+  background: #e7ebef !important;
+  border: 1px solid #909aa5 !important;
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-play-step {
+  min-height: 44px !important;
+  padding: 5px !important;
+  color: #1a293c !important;
+  background: #f7f8fa !important;
+  border: 1px solid #a0a9b2 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-play-step .num {
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(.tip, .info, .warn, .alert, .uds-attention) {
+  margin: 5px 0 !important;
+  padding: 5px 7px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 9px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .divider {
+  margin: 7px 0 !important;
+  border-color: #aab2bb !important;
+}
+
+/* Keep the embedded output utilities available, but let the fixed inspector be
+ * the primary note surface. */
+
+#app .cd2004-shell .cd2004-legacy-host .preview-col {
+  gap: 6px !important;
+  padding: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .preview-col > :where(.card, .note, .mini-panel) {
+  border-color: #7d8894 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .note-top,
+#app .cd2004-shell .cd2004-legacy-host .qa-head,
+#app .cd2004-shell .cd2004-legacy-host .home-card-head {
+  min-height: 25px !important;
+  margin: 0 !important;
+  padding: 4px 6px !important;
+  color: #fff !important;
+  background: #53677e !important;
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .note-body,
+#app .cd2004-shell .cd2004-legacy-host .uds-note,
+#app .cd2004-shell .cd2004-legacy-host :where(.output, .preview) {
+  color: #101828 !important;
+  background: #fffef8 !important;
+  border-radius: 0 !important;
+  font: 10px/1.45 "Courier New", Consolas, monospace !important;
+}
+
+/* Medication/site decision support should read as a compact rules panel. */
+
+#app .cd2004-shell .cd2004-legacy-host .admin-guide,
+#app .cd2004-shell .cd2004-legacy-host .needle-guide {
+  margin: 4px 0 !important;
+  padding: 6px !important;
+  background: #edf2f7 !important;
+  border: 1px solid #788593 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .admin-guide-top,
+#app .cd2004-shell .cd2004-legacy-host .admin-guide-summary {
+  gap: 6px !important;
+  padding: 4px !important;
+  background: #dbe4ee !important;
+  border: 1px solid #9aa6b2 !important;
+  border-radius: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .admin-panel-card {
+  min-height: 0 !important;
+  padding: 5px !important;
+  background: #f7f8fa !important;
+  border: 1px solid #9ba5af !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .body-map {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Dense list/ledger treatment for records, closeout, and knowledge utilities. */
+
+#app .cd2004-shell .cd2004-legacy-host :where(table, .alist, .qa-list, .records-list) {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host table {
+  width: 100%;
+  color: #162234 !important;
+  background: #fff !important;
+  border: 1px solid #697582 !important;
+  font-size: 10px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(th, td) {
+  padding: 4px 5px !important;
+  border: 1px solid #a9b1b9 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host th {
+  color: #fff !important;
+  background: #53677e !important;
+  font-size: 9px !important;
+  text-align: left !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host tbody tr:nth-child(even) {
+  background: #edf1f5 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-card,
+#app .cd2004-shell .cd2004-legacy-host .refcard,
+#app .cd2004-shell .cd2004-legacy-host .closeout-card {
+  margin: 0 0 5px !important;
+  padding: 7px !important;
+  background: #f8f9fa !important;
+  border: 1px solid #7d8894 !important;
+}
+
+@container (max-width: 520px) {
+  #app .cd2004-shell .cd2004-legacy-host .rc526-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #app .cd2004-shell .cd2004-legacy-host :where(.row2, .row3) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  #app .cd2004-shell .cd2004-legacy-host :where(
+      .guided-banner,
+      .sample-guide-banner,
+      .uds-guide-banner
+    ) {
+    grid-template-columns: 23px minmax(0, 1fr) !important;
+  }
+
+  #app .cd2004-shell .cd2004-legacy-host :where(
+      .guided-banner,
+      .sample-guide-banner,
+      .uds-guide-banner
+    ) :where(.guide-mode, .sample-guide-mode, .uds-guide-mode) {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  #app .cd2004-shell .cd2004-legacy-host .forms-hero-inner,
+  #app .cd2004-shell .cd2004-legacy-host .log-hero-inner,
+  #app .cd2004-shell .cd2004-legacy-host .kb-workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  #app .cd2004-shell .cd2004-legacy-host .rc51-progress,
+  #app .cd2004-shell .cd2004-legacy-host .forms-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app .cd2004-shell .cd2004-legacy-host,
+  #app .cd2004-shell .cd2004-legacy-host *,
+  #app .cd2004-shell .cd2004-legacy-host *::before,
+  #app .cd2004-shell .cd2004-legacy-host *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media print {
+  #app .cd2004-shell .cd2004-legacy-host {
+    display: none !important;
+  }
+}

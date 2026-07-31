@@ -1,16 +1,33 @@
 {
   "name": "ipmg-medassist-static-webapp",
-  "version": "5.45.0",
+  "version": "6.0.0",
   "private": true,
   "description": "IPMG MedAssist UDS / Injection / Samples static web app for Azure Static Web Apps.",
   "scripts": {
-    "start": "node scripts/static-server.js",
-    "check": "node scripts/check-app.js",
-    "test": "npm run check",
-    "test:e2e": "playwright test",
-    "test:ci": "npm run check && npm run test:e2e"
+    "dev": "vite --host 127.0.0.1",
+    "start": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "typecheck": "tsc --noEmit",
+    "check:static": "node scripts/check-app.js",
+    "check": "npm run typecheck && npm run check:static",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:artifact": "playwright test",
+    "test:visual": "npm run build && playwright test tests/e2e/visual-contracts.spec.js tests/e2e/visual-snapshots.spec.js",
+    "test:print": "npm run build && playwright test tests/e2e/print-regression.spec.js",
+    "test:ci": "npm run check && npm run test:unit && npm run test:e2e",
+    "smoke:browser": "node scripts/smoke-browser-deployment.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.62.0"
+    "@playwright/test": "1.62.0",
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "preact": "^10.29.7"
   }
 }

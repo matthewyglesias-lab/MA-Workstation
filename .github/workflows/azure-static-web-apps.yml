@@ -13,34 +13,66 @@ jobs:
   static_checks:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-    name: Static checks
+    name: Type, static, unit, and production build
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Install test dependencies
+      - name: Install dependencies
         run: npm ci
-      - name: Run static application checks
-        run: npm run check
+      - name: Type check
+        run: npm run typecheck
+      - name: Run static compatibility checks
+        run: npm run check:static
+      - name: Run unit tests
+        run: npm run test:unit
+      - name: Build production bundle
+        run: npm run build
+      - name: Verify deployment bundle
+        run: |
+          test -f dist/index.html
+          test -f dist/staticwebapp.config.json
+          test -f dist/legacy/legacy-runtime.js
+          test -f dist/legacy/legacy.css
+      - name: Upload tested production bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
 
   browser_and_print_e2e:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    needs: static_checks
     runs-on: ubuntu-latest
-    name: Browser and print end-to-end tests
+    name: Test the exact production artifact
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Install test dependencies
+      - name: Install dependencies
         run: npm ci
+      - name: Download the production bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist
+      - name: Verify downloaded bundle
+        run: |
+          test -f dist/index.html
+          test -f dist/staticwebapp.config.json
+          test -f dist/legacy/legacy-runtime.js
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
-      - name: Run browser and print end-to-end tests
-        run: npm run test:e2e
+      - name: Run browser, visual, and print end-to-end tests
+        run: npm run test:e2e:artifact
       - name: Upload Playwright artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -58,16 +90,42 @@ jobs:
     name: Build and Deploy
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install smoke-test dependencies
+        run: npm ci
+      - name: Install Chromium for deployed-app smoke test
+        run: npx playwright install --with-deps chromium
+      - name: Download tested production bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist
       - name: Deploy static app
+        id: deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "/"
+          app_location: "/dist"
           api_location: ""
           output_location: ""
           skip_app_build: true
+      - name: Smoke deployed workstation
+        env:
+          DEPLOYED_URL: ${{ steps.deploy.outputs.static_web_app_url }}
+          PRODUCTION_FALLBACK_URL: https://white-grass-07a8c0910.7.azurestaticapps.net/
+          IS_PRODUCTION: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: node scripts/smoke-deployment.mjs
+      - name: Smoke deployed workstation in Chromium
+        env:
+          DEPLOYED_URL: ${{ steps.deploy.outputs.static_web_app_url }}
+          PRODUCTION_FALLBACK_URL: https://white-grass-07a8c0910.7.azurestaticapps.net/
+          IS_PRODUCTION: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: npm run smoke:browser
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

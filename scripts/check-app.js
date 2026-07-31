@@ -7,16 +7,42 @@ const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const appPath = path.join(root, 'index.html');
+const legacyMarkupPath = path.join(root, 'src', 'legacy', 'legacy-markup.html');
+const legacyRuntimePath = path.join(root, 'public', 'legacy', 'legacy-runtime.js');
+const legacyStylePath = path.join(root, 'public', 'legacy', 'legacy.css');
+const classicWorkflowStylePath = path.join(root, 'src', 'presentation', 'classic-workflows.css');
+const desktopStylePath = path.join(root, 'src', 'presentation', 'clinical-desktop.css');
 const configPath = path.join(root, 'staticwebapp.config.json');
 const workflowPath = path.join(root, '.github', 'workflows', 'azure-static-web-apps.yml');
+const smokePath = path.join(root, 'scripts', 'smoke-deployment.mjs');
+const browserSmokePath = path.join(root, 'scripts', 'smoke-browser-deployment.mjs');
 
 assert.ok(fs.existsSync(appPath), 'index.html is missing');
+assert.ok(fs.existsSync(legacyMarkupPath), 'Legacy clinical markup is missing');
+assert.ok(fs.existsSync(legacyRuntimePath), 'Legacy clinical runtime is missing');
+assert.ok(fs.existsSync(legacyStylePath), 'Legacy clinical styles are missing');
+assert.ok(fs.existsSync(classicWorkflowStylePath), 'Classic workflow adapter styles are missing');
+assert.ok(fs.existsSync(desktopStylePath), 'Clinical desktop styles are missing');
 JSON.parse(fs.readFileSync(configPath, 'utf8'));
 assert.ok(fs.existsSync(workflowPath), 'Azure Static Web Apps workflow is missing');
+assert.ok(fs.existsSync(smokePath), 'Azure deployment smoke script is missing');
+assert.ok(fs.existsSync(browserSmokePath), 'Azure browser deployment smoke script is missing');
 
-const html = fs.readFileSync(appPath, 'utf8');
+const shellHtml = fs.readFileSync(appPath, 'utf8');
+const legacyMarkup = fs.readFileSync(legacyMarkupPath, 'utf8');
+const legacyRuntime = fs.readFileSync(legacyRuntimePath, 'utf8');
+const legacyStyle = fs.readFileSync(legacyStylePath, 'utf8');
+const classicWorkflowStyle = fs.readFileSync(classicWorkflowStylePath, 'utf8');
+const desktopStyle = fs.readFileSync(desktopStylePath, 'utf8');
+const html = [shellHtml, legacyMarkup, legacyStyle, legacyRuntime].join('\n');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
-const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(match => match[1]);
+const smoke = fs.readFileSync(smokePath, 'utf8');
+const browserSmoke = fs.readFileSync(browserSmokePath, 'utf8');
+const scripts = [
+  ...legacyRuntime.matchAll(
+    /\/\* Legacy runtime block \d+: <script[^>]*> \*\/\s*([\s\S]*?)\/\* <\/script> \*\//gi,
+  ),
+].map(match => match[1]);
 assert.ok(scripts.length > 0, 'No inline scripts found');
 scripts.forEach((script, index) => {
   new vm.Script(script, { filename: `index.html:inline-script-${index + 1}` });
@@ -116,6 +142,14 @@ assert.match(html, /Package trace manifest/, 'The sample note must carry the pac
 assert.match(html, /window\.samplePackageTraceText==='function'/, 'Sample log deduplication must include package-level traceability');
 assert.match(workflow, /browser_and_print_e2e:/, 'Azure deployment must include browser and print end-to-end tests');
 assert.match(workflow, /needs: \[static_checks, browser_and_print_e2e\]/, 'Azure deployment must wait for browser and print end-to-end tests');
+assert.match(workflow, /needs: static_checks[\s\S]*actions\/download-artifact@v4[\s\S]*run: npm run test:e2e:artifact/, 'Browser tests must exercise the exact uploaded production artifact');
+assert.match(workflow, /id: deploy[\s\S]*steps\.deploy\.outputs\.static_web_app_url[\s\S]*node scripts\/smoke-deployment\.mjs/, 'Azure preview and production deployments must run the smoke check');
+assert.match(workflow, /npx playwright install --with-deps chromium[\s\S]*id: deploy[\s\S]*npm run smoke:browser/, 'Azure preview and production deployments must run the deployed app in Chromium');
+assert.match(smoke, /legacy\/legacy-runtime\.js/, 'Deployment smoke must verify the compatibility runtime');
+assert.match(browserSmoke, /body\[data-application-ready="true"\]/, 'Browser deployment smoke must wait for application readiness');
+assert.match(browserSmoke, /data-active-workflow="administer"/, 'Browser deployment smoke must open the Injection workflow');
+assert.match(browserSmoke, /width: 390/, 'Browser deployment smoke must exercise the protected narrow viewport');
+assert.match(browserSmoke, /documentScrollWidth/, 'Browser deployment smoke must reject horizontal page overflow');
 
 assert.match(html, /function localDateValue\(d=new Date\(\)\)/, 'Date defaults must use the local calendar date');
 assert.doesNotMatch(html, /new Date\(\)\.toISOString\(\)\.slice\(0,10\)/, 'Local date defaults must not drift through UTC conversion');
@@ -123,6 +157,9 @@ assert.match(html, /document\.createElement\("button"\)/, 'Interactive chips mus
 assert.match(html, /<script id="rc538PremiumPolishScript">/, 'Expected RC5.38 premium quick-review polish');
 assert.match(html, /<script id="rc538RecordLifecycleScript">/, 'Expected local injection record lifecycle');
 assert.match(html, /const storageKey='ipmgMedAssistInjectionRecordsV1'/, 'Injection drafts and completed snapshots must persist locally');
+assert.match(html, /function mergePreservingUnknown\(previous,next\)/, 'Injection persistence must recursively preserve unknown historical fields');
+assert.match(html, /snapshot=captureSnapshot\(existing&&existing\.snapshot\)/, 'Injection v4 snapshots must merge over the existing historical snapshot');
+assert.match(html, /const record=mergePreservingUnknown\(existing,\{/, 'Injection saves must preserve unknown nested record fields');
 assert.match(html, /Complete &amp; lock/, 'Injection completion must use a deliberate lock action');
 assert.match(html, /Dated addendum/, 'Completed injection records must support addenda rather than silent edits');
 assert.match(html, /function showCompletion\(record\)/, 'Completed injections must show the completion experience');
@@ -171,8 +208,9 @@ assert.match(html, /recordsDrawerState=\{query:'',filter:'all',lastFocus:null,cl
 assert.match(html, /localDay\(review\.confirmedAt\)===localDay\(new Date\(\)\)/, 'Reviewed-today confirmation must expire on the next local calendar day');
 assert.match(html, /overlay\.setAttribute\('aria-labelledby','injCompletionTitle'\)/, 'The completion dialog must expose a labelled modal contract');
 assert.match(html, /event\.key==='Escape'\)\{event\.preventDefault\(\);close\(\)/, 'The completion dialog must close with Escape');
-assert.match(html, /--rc544-radius:var\(--r-lg,22px\)/, 'New top-level workflow surfaces must inherit the original large card radius');
-assert.match(html, /--rc544-control-radius:var\(--r-md,16px\)/, 'New controls must inherit the original rounded control tier');
+assert.match(classicWorkflowStyle, /\.panel :where\([\s\S]*?\) \{[^}]*border-radius: 0 !important;/, 'Mounted workflows must use the square classic-EHR surface treatment');
+assert.match(desktopStyle, /\.records-drawer \{[^}]*border-radius: 0 !important;/, 'The global records drawer must use the classic-EHR treatment');
+assert.match(desktopStyle, /\.inj-completion-card \{[^}]*border-radius: 1px !important;/, 'The completion receipt must use the classic-EHR treatment');
 assert.match(html, /id="injAdminTime" data-injection-field="admin-time"/, 'Injection completion must capture the actual administration time');
 assert.match(html, /window\.ipmgInjectionDetailReview=detailReview/, 'Conditional injection documentation must expose a shared finalization review');
 assert.match(html, /Document both the administration amount and its unit/, 'Partial structured administration details must block finalization');
