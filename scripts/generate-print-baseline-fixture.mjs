@@ -57,7 +57,7 @@ function extractLegacyCss(html) {
 }
 
 async function openBaselinePage(browser, html, init) {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ timezoneId: 'America/Los_Angeles' });
   if (init) await page.addInitScript(init);
   await page.clock.install({ time: new Date(FIXED_CLOCK) });
   await page.route('http://print-baseline.test/', (route) =>
