@@ -60,7 +60,12 @@
     .records-drawer,
     .kb-card,
     .refcard,
-    .closeout-card
+    .closeout-card,
+    .tms-card,
+    .review-empty,
+    .forms-note-preview,
+    .logwrap,
+    .logempty
   ) {
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -171,7 +176,7 @@
 #app
   .cd2004-shell
   .cd2004-legacy-host
-  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero) {
+  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero, .tms-hero) {
   min-height: 0 !important;
   margin: 0 !important;
   padding: 7px 9px !important;
@@ -186,11 +191,11 @@
 #app
   .cd2004-shell
   .cd2004-legacy-host
-  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero)::before,
+  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero, .tms-hero)::before,
 #app
   .cd2004-shell
   .cd2004-legacy-host
-  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero)::after {
+  :where(.sample-module-hero, .forms-hero, .kb-hero, .log-hero, .tms-hero)::after {
   display: none !important;
 }
 
@@ -214,7 +219,7 @@
 #app
   .cd2004-shell
   .cd2004-legacy-host
-  :where(.sample-hero-kicker, .forms-eyebrow, .log-kicker) {
+  :where(.sample-hero-kicker, .forms-eyebrow, .log-kicker, .tms-hero .kicker) {
   margin: 0 0 2px !important;
   color: #40536a !important;
   font-size: 9px !important;
@@ -226,7 +231,7 @@
 #app
   .cd2004-shell
   .cd2004-legacy-host
-  :where(.sample-hero-title, .forms-title, .kb-hero h2, .log-title) {
+  :where(.sample-hero-title, .forms-title, .kb-hero h2, .log-title, .tms-hero h2) {
   margin: 0 !important;
   color: #102a56 !important;
   font-size: 16px !important;
@@ -238,7 +243,7 @@
 #app
   .cd2004-shell
   .cd2004-legacy-host
-  :where(.sample-hero-copy, .forms-sub, .kb-hero p, .log-subtitle) {
+  :where(.sample-hero-copy, .forms-sub, .kb-hero p, .log-subtitle, .tms-hero p) {
   max-width: none !important;
   margin: 3px 0 0 !important;
   color: #465365 !important;
@@ -256,7 +261,7 @@
 #app
   .cd2004-shell
   .cd2004-legacy-host
-  :where(.sample-hero-pill, .forms-hero-pill, .kb-badge) {
+  :where(.sample-hero-pill, .forms-hero-pill, .kb-badge, .tms-pill) {
   min-height: 17px !important;
   padding: 2px 5px !important;
   color: #34445a !important;
@@ -514,6 +519,32 @@
   box-shadow: none !important;
 }
 
+#app .cd2004-shell .cd2004-legacy-host .kb-card .kicon {
+  background: #eef2f6 !important;
+  border: 1px solid #7d8995 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-card .kh {
+  background: #fff !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-mode-pill span {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .kb-mini div {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .foot {
+  background: #f5f7f9 !important;
+  border: 1px solid #a0a9b2 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 #app .cd2004-shell .cd2004-legacy-host .refsearch {
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -545,6 +576,14 @@
   border-radius: 0 !important;
   box-shadow: none !important;
   font-size: 8px !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .log-step b {
+  width: 14px !important;
+  height: 14px !important;
+  color: #fff !important;
+  background: #28384c !important;
+  border-radius: 0 !important;
 }
 
 #app .cd2004-shell .cd2004-legacy-host .log-live-card {
@@ -1189,6 +1228,88 @@
   #app .cd2004-shell .cd2004-legacy-host .forms-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
+}
+
+/* Samples keeps the same flat, radius-free grammar as the rest of the
+   restyled legacy host - the guided-workflow cards, dose builder, and
+   readiness scanrow otherwise carry the original rounded/gradient look. */
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .sample-hero-side,
+    .sample-micro-step,
+    .field.sample-qty-field,
+    .sample-packbox,
+    .field.rc5-primary-days,
+    .sample-sigbox,
+    .sample-dose-builder,
+    .rc5-plan-toolbar,
+    .rc5-template-bank,
+    .sample-guide-helper,
+    .sample-package-trace,
+    .sample-package-trace-primary,
+    .sample-package-trace-row,
+    .sample-dose-row,
+    .sample-reviewed-today,
+    .sample-output-panel,
+    .scanrow,
+    .qa-warn,
+    .qa-ok,
+    .rc530-ready-card,
+    .rc5-bridge-card,
+    .sample-stat,
+    .sample-handout,
+    .sample-draft-safety,
+    .sample-guide-playbook > div,
+    .sh-hero,
+    li.block,
+    li.ok,
+    li.warn
+  ) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .sample-intent-box,
+    .rc5-plan-toolbar,
+    .sample-output-panel,
+    .rc5-bridge-card,
+    .sh-hero
+  ) {
+  background: #fff !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc5-bridge-card.ok {
+  background: #edf7f1 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc5-bridge-card.warn {
+  background: #faf3e2 !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc5-bridge-card.danger {
+  background: #fbeeee !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host :where(
+    .sample-micro-step .num,
+    .rc5-status-dot,
+    .sample-reviewed-today-icon,
+    .rc534-track,
+    .rc534-fill,
+    .rc5-chip,
+    .rc5-step .orb
+  ) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .sample-micro-step .num {
+  background: #e7f7ef !important;
+}
+
+#app .cd2004-shell .cd2004-legacy-host .rc534-fill {
+  background: #4f66df !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
