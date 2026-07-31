@@ -23,6 +23,13 @@ import type { PatientContext } from "../../types";
 
 type FormsTab = "request" | "letter";
 
+// The letter builder is being rebuilt and isn't ready for use yet — the tab
+// stays visible so staff know it's coming, but shows a placeholder instead
+// of the live form. Flip to true to restore it; the domain model,
+// documentation formatter, and print mirror underneath are already wired
+// and tested, only the interactive UI is gated.
+const LETTER_BUILDER_ENABLED = false;
+
 interface FormsPanelProps {
   initialEncounter: FormsEncounter;
   activePatient: PatientContext;
@@ -35,27 +42,28 @@ const patientIsEmpty = (patient: FormsEncounter["patient"]): boolean =>
   !patient.name.trim() && !patient.dob.trim();
 
 function StatusFlag({
-  evaluation,
+  idle,
+  stopCount,
+  warningCount,
 }: {
-  evaluation?: ClinicalEvaluation<FormsEvaluationOutput>;
+  idle: boolean;
+  stopCount: number;
+  warningCount: number;
 }) {
-  const readiness = evaluation?.readiness ?? "idle";
-  const variant =
-    readiness === "blocked"
+  const variant = idle
+    ? "is-idle"
+    : stopCount > 0
       ? "is-stop"
-      : readiness === "review"
+      : warningCount > 0
         ? "is-warning"
-        : readiness === "ready"
-          ? "is-ready"
-          : "is-idle";
-  const label =
-    readiness === "blocked"
-      ? `${evaluation?.stops.length ?? 0} stop${evaluation?.stops.length === 1 ? "" : "s"}`
-      : readiness === "review"
-        ? `${evaluation?.warnings.length ?? 0} to review`
-        : readiness === "ready"
-          ? "Ready"
-          : "Not started";
+        : "is-ready";
+  const label = idle
+    ? "Not started"
+    : stopCount > 0
+      ? `${stopCount} stop${stopCount === 1 ? "" : "s"}`
+      : warningCount > 0
+        ? `${warningCount} to review`
+        : "Ready";
   return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
 }
 
@@ -158,20 +166,29 @@ export function FormsPanel({
   ).text;
   const letterDraft = formatProviderLetterDraft(encounter);
 
+  // While the letter builder is walled off, its section-scoped stops/
+  // warnings aren't actionable from this UI — exclude them from the visible
+  // summary so staff aren't shown issues they have no way to resolve here.
   const isLetterIssue = (issue: { section?: string }) => issue.section === "letter";
-  const letterTabIssues =
-    (evaluation?.stops.filter(isLetterIssue).length ?? 0) +
-    (evaluation?.warnings.filter(isLetterIssue).length ?? 0);
-  const requestTabIssues =
-    (evaluation?.stops.length ?? 0) +
-    (evaluation?.warnings.length ?? 0) -
-    letterTabIssues;
+  const requestStops =
+    evaluation?.stops.filter((issue) => LETTER_BUILDER_ENABLED || !isLetterIssue(issue)) ?? [];
+  const requestWarnings =
+    evaluation?.warnings.filter((issue) => LETTER_BUILDER_ENABLED || !isLetterIssue(issue)) ?? [];
+  const requestTabIssues = requestStops.length + requestWarnings.length;
+  const letterTabIssues = LETTER_BUILDER_ENABLED
+    ? (evaluation?.stops.filter(isLetterIssue).length ?? 0) +
+      (evaluation?.warnings.filter(isLetterIssue).length ?? 0)
+    : 0;
 
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <div class="wfp-summary-bar">
         <strong>Forms &amp; letters</strong>
-        <StatusFlag evaluation={evaluation} />
+        <StatusFlag
+          idle={(evaluation?.readiness ?? "idle") === "idle"}
+          stopCount={requestStops.length}
+          warningCount={requestWarnings.length}
+        />
         <span class="wfp-summary-spacer" />
         <button
           type="button"
@@ -223,7 +240,10 @@ export function FormsPanel({
           onClick={() => setTab("letter")}
         >
           Letter builder
-          {letterTabIssues > 0 && <span class="wfp-tab-badge">{letterTabIssues}</span>}
+          {!LETTER_BUILDER_ENABLED && <span class="wfp-tab-badge wfp-tab-badge-muted">Soon</span>}
+          {LETTER_BUILDER_ENABLED && letterTabIssues > 0 && (
+            <span class="wfp-tab-badge">{letterTabIssues}</span>
+          )}
         </button>
       </div>
 
@@ -401,7 +421,19 @@ export function FormsPanel({
         </div>
       )}
 
-      {tab === "letter" && (
+      {tab === "letter" && !LETTER_BUILDER_ENABLED && (
+        <div class="wfp-tabpanel" role="tabpanel">
+          <div class="wfp-wall">
+            <div class="wfp-wall-title">Letter builder — in progress</div>
+            <p>
+              This module is being rebuilt and isn't available in this workspace yet.
+              Provider letter drafting will return here once it's ready.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {tab === "letter" && LETTER_BUILDER_ENABLED && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
             <div class="wfp-section-head">Letter purpose</div>

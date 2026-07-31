@@ -127,6 +127,37 @@
   text-align: center;
 }
 
+.cd2004-shell .wfp-tab .wfp-tab-badge.wfp-tab-badge-muted {
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-wall {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 16px;
+  color: var(--cd-ink-muted);
+  text-align: center;
+  background: var(--cd-chrome-light);
+  border: 1px dashed var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-wall-title {
+  color: var(--cd-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-wall p {
+  max-width: 46ch;
+  margin-inline: auto;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .cd2004-shell .wfp-tabpanel {
   display: flex;
   flex-direction: column;
