@@ -147,6 +147,7 @@ export interface InjectionEncounter {
   administrationTime: string;
   secondAdministrationTime?: string;
   allergies: string;
+  technique?: string;
   traceability: InjectionTraceability;
   vitals?: InjectionVitals;
   response: InjectionResponse;
@@ -235,7 +236,389 @@ const requiredAttestations: Array<
   ["hygiene", "attestation.hygiene", "Document aseptic technique."],
 ];
 
-const verificationLabels: Record<MedicationVerificationKey, string> = {
+const REQUIRED_ATTESTATION_KEYS = new Set(
+  requiredAttestations.map(([key]) => key),
+);
+
+/**
+ * UI-facing catalogs matching legacy's REASONS/ATTEST/RESP/INJ_SAFETY arrays
+ * (legacy-runtime.js), scoped to the fields the typed InjectionEncounter
+ * actually captures. Legacy's three optional ATTEST chips ("twoperson",
+ * "observe", "education") aren't part of the typed attestations union and
+ * are intentionally not ported here.
+ */
+export const INJECTION_REASON_OPTIONS: ReadonlyArray<{
+  key: InjectionReason;
+  label: string;
+}> = [
+  { key: "scheduled", label: "Scheduled" },
+  { key: "initiation", label: "Initiation" },
+  { key: "reinit", label: "Re-initiation" },
+  { key: "loading", label: "Loading dose" },
+  { key: "prn", label: "PRN / ordered" },
+];
+
+export const INJECTION_ATTESTATION_OPTIONS: ReadonlyArray<{
+  key: keyof InjectionEncounter["attestations"];
+  label: string;
+  description: string;
+  required: boolean;
+}> = [
+  {
+    key: "id2",
+    label: "Two-identifier ID",
+    description: "Pt identity verified using two identifiers (full name & DOB).",
+    required: true,
+  },
+  {
+    key: "rights",
+    label: "Medication ‘rights’",
+    description:
+      "Med verified against active order — right pt, right drug, right dose, right route, right time, right documentation.",
+    required: true,
+  },
+  {
+    key: "allergy",
+    label: "Allergies reviewed",
+    description: "Verified allergy status is documented in the Safety section.",
+    required: true,
+  },
+  {
+    key: "consent",
+    label: "Consent reaffirmed",
+    description: "Consent for injection obtained and reaffirmed prior to administration.",
+    required: true,
+  },
+  {
+    key: "prior",
+    label: "Prior dose tolerated",
+    description: "Prior dose tolerated well per pt report; no new or unresolved s/e.",
+    required: false,
+  },
+  {
+    key: "screen",
+    label: "No contraindications",
+    description:
+      "No acute s/e or contraindications to administration noted on pre-injection screening.",
+    required: true,
+  },
+  {
+    key: "hygiene",
+    label: "Aseptic technique",
+    description:
+      "Hand hygiene performed and gloves donned; injection site cleansed w/ alcohol and allowed to dry.",
+    required: true,
+  },
+];
+
+export const INJECTION_RESPONSE_OPTIONS: ReadonlyArray<{
+  key: Exclude<InjectionResponse["kind"], "">;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: "well",
+    label: "Tolerated well",
+    description: "no immediate complication, no bleeding or swelling at site",
+  },
+  {
+    key: "bleed",
+    label: "Minor bleeding, controlled",
+    description: "minor bleeding controlled with pressure, no swelling",
+  },
+  { key: "disc", label: "Mild site discomfort", description: "mild transient site discomfort, no acute reaction" },
+  { key: "custom", label: "Custom…", description: "" },
+];
+
+export const INJECTION_SAFETY_TRIGGERS: ReadonlyArray<{
+  key: string;
+  label: string;
+  level: "warn" | "danger";
+  description: string;
+  medications?: InjectionMedicationKey[];
+}> = [
+  {
+    key: "dizzy",
+    label: "Dizzy / faint / fall concern",
+    level: "warn",
+    description:
+      "Patient reports dizziness, lightheadedness, syncope, or acute fall-risk concern; provider review requested before administration.",
+  },
+  {
+    key: "cardiac",
+    label: "Chest pain / SOB / palpitations",
+    level: "danger",
+    description:
+      "Patient reports chest pain, shortness of breath, palpitations, or acute cardiac symptoms; provider review requested before administration.",
+  },
+  {
+    key: "nms",
+    label: "Fever + rigidity/confusion",
+    level: "danger",
+    description:
+      "Patient reports fever with muscle rigidity, confusion, diaphoresis, or autonomic instability; provider review requested for possible serious antipsychotic reaction.",
+  },
+  {
+    key: "eps",
+    label: "Severe EPS / akathisia",
+    level: "warn",
+    description:
+      "Patient reports severe restlessness, stiffness, abnormal movements, tremor, or extrapyramidal symptoms; provider review requested.",
+  },
+  {
+    key: "site",
+    label: "Severe injection-site reaction",
+    level: "warn",
+    description:
+      "Patient reports severe or worsening injection-site pain, swelling, warmth, drainage, skin changes, or a rapidly enlarging lump; provider review requested.",
+  },
+  {
+    key: "opioid",
+    label: "Recent opioid / withdrawal concern",
+    level: "danger",
+    medications: ["vivitrol"],
+    description:
+      "Recent opioid use, possible opioid exposure, or withdrawal symptoms reported; provider review requested before Vivitrol administration.",
+  },
+  {
+    key: "liver",
+    label: "Possible liver symptoms",
+    level: "warn",
+    medications: ["vivitrol"],
+    description:
+      "Patient reports possible liver-related symptoms such as right upper-quadrant pain, dark urine, jaundice, or unusual fatigue; provider review requested before Vivitrol administration.",
+  },
+];
+
+export const injectionReasonLabel = (key: InjectionReason): string =>
+  INJECTION_REASON_OPTIONS.find((option) => option.key === key)?.label ?? key;
+
+export const injectionAttestationRequired = (
+  key: keyof InjectionEncounter["attestations"],
+): boolean => REQUIRED_ATTESTATION_KEYS.has(key);
+
+/**
+ * Faithful port of legacy-runtime.js's protocolOptions()/config() — the
+ * per-medication paired-injection/oral-overlap/Sustenna Day-1/Day-8
+ * initiation pathways. aristada and initio share the same options set
+ * (legacy: key==='aristada'||key==='initio').
+ */
+export interface InjectionInitiationOption {
+  id: InjectionInitiationProtocol;
+  title: string;
+  sub: string;
+}
+
+const ARISTADA_INITIO_OPTIONS: readonly InjectionInitiationOption[] = [
+  {
+    id: "aristada-initio-sameday",
+    title: "INITIO + first ARISTADA today",
+    sub: "Two same-encounter IM components plus one oral aripiprazole dose.",
+  },
+  {
+    id: "aristada-21day",
+    title: "21-day oral plan",
+    sub: "First ARISTADA injection with the ordered 21-day oral continuation.",
+  },
+  {
+    id: "aristada-provider",
+    title: "Staged / re-initiation plan",
+    sub: "Use if components are on different dates or the provider has a specific restart plan.",
+  },
+];
+
+export const INJECTION_INITIATION_OPTIONS_BY_MEDICATION: Partial<
+  Record<InjectionMedicationKey, readonly InjectionInitiationOption[]>
+> = {
+  maintena: [
+    {
+      id: "maintena-1day",
+      title: "1-day initiation",
+      sub: "Two separate IM injections today plus a single oral aripiprazole dose.",
+    },
+    {
+      id: "maintena-14day",
+      title: "14-day oral plan",
+      sub: "One injection today with the ordered 14-day oral continuation.",
+    },
+    {
+      id: "maintena-provider",
+      title: "Restart / provider plan",
+      sub: "Use for a provider-directed or nonstandard initiation/restart plan.",
+    },
+  ],
+  asimtufii: [
+    {
+      id: "asimtufii-1day",
+      title: "1-day initiation",
+      sub: "Asimtufii plus separate Maintena IM component and one oral dose.",
+    },
+    {
+      id: "asimtufii-14day",
+      title: "14-day oral plan",
+      sub: "One Asimtufii injection with the ordered 14-day oral continuation.",
+    },
+    {
+      id: "asimtufii-provider",
+      title: "Restart / transition plan",
+      sub: "Use for provider-directed restart, transition, or adjusted initiation.",
+    },
+  ],
+  aristada: ARISTADA_INITIO_OPTIONS,
+  initio: ARISTADA_INITIO_OPTIONS,
+  sustenna: [
+    {
+      id: "sustenna-day1",
+      title: "Day 1 initiation",
+      sub: "Sets a staff-facing Day 8 scheduling target from today's recorded date.",
+    },
+    {
+      id: "sustenna-day8",
+      title: "Day 8 initiation",
+      sub: "Calculates the Day 8 target and the permitted ±4-day timing window.",
+    },
+    {
+      id: "sustenna-provider",
+      title: "Re-initiation / provider plan",
+      sub: "For missed-dose or nonstandard pathways; no regimen is calculated.",
+    },
+  ],
+};
+
+export const injectionInitiationOptions = (
+  medicationKey: InjectionMedicationKey | "",
+): readonly InjectionInitiationOption[] =>
+  (medicationKey && INJECTION_INITIATION_OPTIONS_BY_MEDICATION[medicationKey]) || [];
+
+export type InjectionInitiationConfigKind = "dual" | "oral" | "provider" | "sustenna-day1" | "sustenna-day8";
+
+export interface InjectionInitiationConfig {
+  kind: InjectionInitiationConfigKind;
+  title: string;
+  summary: string;
+  oralLabel: string;
+  primaryLabel?: string;
+  secondaryProduct?: string;
+  secondaryGuide?: string;
+}
+
+const ALL_IM_SITES = ["R deltoid", "L deltoid", "R ventrogluteal", "L ventrogluteal", "R dorsogluteal", "L dorsogluteal"];
+
+/** Faithful port of legacy-runtime.js's config() from the RC5.39 initiation-protocol module. */
+export function injectionInitiationConfig(
+  protocol: InjectionInitiationProtocol,
+  medicationKey: InjectionMedicationKey | "",
+): InjectionInitiationConfig | null {
+  if (protocol === "maintena-1day") {
+    return {
+      kind: "dual",
+      title: "Abilify Maintena 1-day initiation",
+      summary:
+        "Label reference: two separate ABILIFY MAINTENA IM injections on Day 1 plus one oral aripiprazole 20 mg dose. Do not use the same muscle for both injections.",
+      primaryLabel: "Injection 1 — Abilify Maintena (main medication fields)",
+      secondaryProduct: "Injection 2 — Abilify Maintena",
+      secondaryGuide:
+        "Use the matching ordered pair: 400 mg + 400 mg, or the adjusted 300 mg + 300 mg pathway.",
+      oralLabel: "Single oral aripiprazole 20 mg dose",
+    };
+  }
+  if (protocol === "asimtufii-1day") {
+    return {
+      kind: "dual",
+      title: "Abilify Asimtufii 1-day initiation",
+      summary:
+        "Label reference: one gluteal ASIMTUFII injection, a separate Maintena injection, and one oral aripiprazole 20 mg dose. Do not use the same muscle.",
+      primaryLabel: "Injection 1 — Abilify Asimtufii (main medication fields)",
+      secondaryProduct: "Injection 2 — Abilify Maintena",
+      secondaryGuide: "Use the ordered pair: 960 mg + Maintena 400 mg, or adjusted 720 mg + Maintena 300 mg.",
+      oralLabel: "Single oral aripiprazole 20 mg dose",
+    };
+  }
+  if (protocol === "aristada-initio-sameday") {
+    const initioFirst = medicationKey === "initio";
+    return {
+      kind: "dual",
+      title: "Aristada INITIO + first ARISTADA, same encounter",
+      summary:
+        "Label reference: ARISTADA INITIO 675 mg, one oral aripiprazole 30 mg dose, and the first ARISTADA injection. When concomitant, do not use the same deltoid or gluteal muscle.",
+      primaryLabel: initioFirst
+        ? "Injection 1 — ARISTADA INITIO (main medication fields)"
+        : "Injection 1 — first ARISTADA (main medication fields)",
+      secondaryProduct: initioFirst
+        ? "Injection 2 — first ARISTADA maintenance dose"
+        : "Injection 2 — ARISTADA INITIO",
+      secondaryGuide: initioFirst
+        ? "Enter the exact ordered ARISTADA maintenance dose."
+        : "Label reference is INITIO 675 mg; enter the actual product/dose used.",
+      oralLabel: "Single oral aripiprazole 30 mg dose",
+    };
+  }
+  if (protocol === "maintena-14day") {
+    return {
+      kind: "oral",
+      title: "Abilify Maintena 14-day oral initiation",
+      summary:
+        "One Abilify Maintena injection with the ordered 14 consecutive days of oral aripiprazole or the current oral antipsychotic.",
+      oralLabel: "14-day oral continuation documented",
+    };
+  }
+  if (protocol === "asimtufii-14day") {
+    return {
+      kind: "oral",
+      title: "Abilify Asimtufii 14-day oral initiation",
+      summary:
+        "One gluteal Asimtufii injection with the ordered 14 consecutive days of oral aripiprazole or current oral antipsychotic.",
+      oralLabel: "14-day oral continuation documented",
+    };
+  }
+  if (protocol === "aristada-21day") {
+    return {
+      kind: "oral",
+      title: "Aristada 21-day oral initiation",
+      summary: "First ARISTADA injection with the ordered 21 consecutive days of oral aripiprazole.",
+      oralLabel: "21-day oral continuation documented",
+    };
+  }
+  if (
+    protocol === "maintena-provider" ||
+    protocol === "asimtufii-provider" ||
+    protocol === "aristada-provider" ||
+    protocol === "sustenna-provider"
+  ) {
+    return {
+      kind: "provider",
+      title:
+        injectionInitiationOptions(medicationKey).find((option) => option.id === protocol)?.title ??
+        "Provider-directed plan",
+      summary:
+        "This is a non-calculating path. Record the active provider direction and verify it against the current PI and clinic policy.",
+      oralLabel: "",
+    };
+  }
+  if (protocol === "sustenna-day1") {
+    return {
+      kind: "sustenna-day1",
+      title: "Invega Sustenna Day 1 initiation",
+      summary:
+        "Day 1 uses the documented administration date to set a staff-facing Day 8 target. Both initiation injections are deltoid per the current label.",
+      oralLabel: "",
+    };
+  }
+  if (protocol === "sustenna-day8") {
+    return {
+      kind: "sustenna-day8",
+      title: "Invega Sustenna Day 8 initiation",
+      summary:
+        "Uses the recorded Day 1 date to calculate the Day 8 target and ±4-day timing window. It does not calculate doses, renal assessment, or missed-dose re-initiation.",
+      oralLabel: "",
+    };
+  }
+  return null;
+}
+
+export const injectionInitiationSecondarySites = (): readonly string[] => ALL_IM_SITES;
+
+export const verificationLabels: Record<MedicationVerificationKey, string> = {
   opioidFree: "Current opioid-risk / provider plan verified",
   naltrexHS: "Naltrexone/hepatic review verified",
   suppliedNeedle: "Supplied needle / body-habitus check",
@@ -1516,6 +1899,7 @@ export const emptyInjectionEncounter = (): InjectionEncounter => ({
   administrationTime: "",
   secondAdministrationTime: "",
   allergies: "",
+  technique: "",
   traceability: { ndc: "", lot: "", expiration: "" },
   vitals: {},
   response: { kind: "", custom: "" },

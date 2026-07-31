@@ -9199,7 +9199,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const storageKey='ipmgMedAssistInjectionRecordsV1';
   const fieldIds=['ptName','ptDOB','orderingProvider','injOrderPurpose','ndc','lot','exp','injProductSource','injProductSourceOther','injPreparation','injPreparationDetail','injWasteToggle','injWasteAmount','injWasteWitness','injProductIssueToggle','injProductIssueDetail','injProductIssueAction','injProductIssueRecipient','injProductIssueNotificationTime','injProductIssueDirection','injProductIssueNextStep','allergies','bp','hr','temp','rr','spo2','vitalRepeatNote','tech','priorDose','priorSite','adminDate','injAdminTime','injSecondAdminTime','nextDate','clinic','respCustom','admin','injVolume','injVolumeUnit','injDevice','injDeviceOther','injSiteCondition','injSiteConditionDetail','injExceptionToggle','injExceptionSummary','injExceptionRecipient','injExceptionTime','injExceptionOutcome'];
   let recordsStorageProblem='';
-  let records=loadRecords(),activeId='',mode='edit',autoTimer=null,lockRefreshTimer=null,applying=false,saveFeedback='idle',lastPersistOk=true;
+  let records=loadRecords(),activeId='',mode='edit',autoTimer=null,lockRefreshTimer=null,applying=false,saveFeedback='idle',lastPersistOk=true,recordGeneration=0;
 
   function inspectStoredRecords(){
     let raw='';
@@ -9556,6 +9556,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       return false;
     }
     record=records.find(item=>item.id===id);if(!record)return false;
+    recordGeneration++;
     activeId=record.id;restoreSnapshot(record);
     mode=record.status==='completed'?'readonly':'edit';
     saveFeedback='idle';
@@ -9583,7 +9584,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       say('The current draft could not be saved, so the app kept it open instead of starting a new injection.');
       return false;
     }
-    activeId='';mode='edit';saveFeedback='idle';applying=true;call(window.softReset);call(window.render);applying=false;renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);say('New injection started. Any previous work remains available as a draft.');
+    recordGeneration++;activeId='';mode='edit';saveFeedback='idle';applying=true;call(window.softReset);call(window.render);applying=false;renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);say('New injection started. Any previous work remains available as a draft.');
     return true;
   }
   function saveAddendum(){
@@ -9655,6 +9656,8 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       setTimeout(()=>{if(LOG.length<=count)return;const entry=LOG[LOG.length-1];if(entry&&entry.type===type){entry._rc538Signature=signature;call(window.saveLog);}},0);
     },true);
   }
+  window.ipmgInjectionRecordGeneration=()=>recordGeneration;
+  window.ipmgRefreshInjectionRecordStatus=()=>{try{updateRecordStatus();}catch(e){}};
   function boot(){
     ensureRecordsDrawer();renderWorkspace();refreshRecordsDrawer();bindLogDedup();
     document.addEventListener('click',event=>{
@@ -10933,6 +10936,70 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(typeof renderUdsControl==='function')renderUdsControl();
     if(typeof renderUdsResults==='function')renderUdsResults();
     if(typeof renderUdsNote==='function')renderUdsNote();
+  };
+})();
+/* Write-only compatibility bridge for the injection S-chip state
+   (medication/dose/site/route/interval/reason/response/attestations/
+   verifications/safety-triggers) and the acute-safety-screen flag — none
+   of these are backed by a plain DOM field value. The initiation-protocol
+   and clinical-disposition modules already expose their own write bridges
+   (window.restoreInitiationProtocol / window.restoreClinicalDisposition,
+   built for the records-drawer draft restore), reused here rather than
+   duplicated. Does not affect print output. */
+(()=>{
+  const ATTEST_KEYS=['id2','rights','allergy','consent','prior','screen','hygiene'];
+  const VERIFICATION_KEYS=['opioidFree','naltrexHS','suppliedNeedle','resuspend','invegaInit','oralOverlap','stabilized','paliperidoneTolerability','aripiprazoleTolerability','glutealOnly','noMassage','deepZtrack'];
+  const SAFETY_KEYS=['dizzy','cardiac','nms','eps','site','opioid','liver'];
+  window.ipmgSetInjectionChipState=(patch)=>{
+    if(!patch)return;
+    if('medicationKey' in patch){
+      const key=patch.medicationKey||'';
+      const current=(S.med&&S.med.key)||'';
+      const customName=key==='other'?String(patch.customMedication||'').trim():'';
+      if(key!==current||(key==='other'&&customName&&S.med&&S.med.name!==customName)){
+        const found=key?MEDS.find(m=>m.key===key):null;
+        const entry=found&&key==='other'&&customName?{...found,name:customName,label:customName}:found;
+        if(entry){
+          selectMed(entry);
+        }else{
+          S.med=null;S.dose='';S.flags={};S.adminGuideCollapsed=false;S.needleGuideOpen=false;
+          $('medHdr').classList.remove('show');$('medChipsGrp').classList.remove('hidden');
+          $('medDetail').classList.add('hidden');$('medSpecWrap').classList.remove('show');$('medTip').classList.remove('show');
+        }
+      }
+    }
+    if(typeof patch.dose==='string')S.dose=patch.dose;
+    if(typeof patch.site==='string')S.site=patch.site;
+    if(typeof patch.route==='string')S.route=patch.route;
+    if(typeof patch.intervalKey==='string')S.intervalKey=patch.intervalKey;
+    if(patch.reason&&REASONS.some(x=>x.k===patch.reason))S.reason=patch.reason;
+    if(patch.response&&RESP.some(x=>x.k===patch.response))S.resp=patch.response;
+    if(patch.attestations&&typeof patch.attestations==='object'){
+      ATTEST_KEYS.forEach(key=>{if(key in patch.attestations)S.attest[key]=Boolean(patch.attestations[key]);});
+    }
+    if(patch.verifications&&typeof patch.verifications==='object'){
+      const flags={};
+      VERIFICATION_KEYS.forEach(key=>{flags[key]=Boolean(patch.verifications[key]);});
+      S.flags=flags;
+    }
+    if(patch.safetyConcerns&&typeof patch.safetyConcerns==='object'){
+      const guard={};
+      SAFETY_KEYS.forEach(key=>{guard[key]=Boolean(patch.safetyConcerns[key]);});
+      S.guard=guard;
+    }
+    if('acuteSafetyScreenConfirmed' in patch){
+      const store=window.__IPMG_RC530__||(window.__IPMG_RC530__={});
+      store.safetyNone=Boolean(patch.acuteSafetyScreenConfirmed);
+    }
+    renderReasons();renderMeds();renderDoses();renderIntervals();renderMedSpec();renderInjSafetyChips();renderAtt();renderResp();renderSites();renderRoutes();recalcNext();render();
+    if(patch.initiation&&typeof window.restoreInitiationProtocol==='function')window.restoreInitiationProtocol(patch.initiation);
+    if(patch.disposition&&typeof window.restoreClinicalDisposition==='function')window.restoreClinicalDisposition(patch.disposition);
+    // restoreClinicalDisposition()/restoreInitiationProtocol() set fields
+    // directly and don't dispatch input/change events, so the delegated
+    // #panel-administer listener that normally calls scheduleDraft() (and
+    // so refreshes the record workspace's Complete & lock button) never
+    // fires for them. Refresh it explicitly.
+    if(typeof window.ipmgRefreshInjectionRecordStatus==='function')window.ipmgRefreshInjectionRecordStatus();
   };
 })();
 /* </script> */

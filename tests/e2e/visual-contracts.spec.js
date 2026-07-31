@@ -17,23 +17,6 @@ const WORKFLOWS = {
       '.cd2004-launcher'
     ]
   },
-  administer: {
-    label: 'Injection',
-    headingText: 'Injection documentation, from order to closeout.',
-    panel: '#panel-administer',
-    layout: '#panel-administer .layout',
-    heading:
-      '#panel-administer .inj-modern-hero h1, #panel-administer .inj-modern-hero h2, #panel-administer .card-head h2',
-    representative: '#panel-administer .card-encounter',
-    control: '#panel-administer #ptName',
-    hero: '#panel-administer .inj-modern-hero',
-    landmarks: [
-      '#panel-administer .card-encounter',
-      '#panel-administer .card-medication',
-      '#panel-administer .card-trace',
-      '#panel-administer .note'
-    ]
-  },
   samples: {
     label: 'Samples',
     headingText: 'Document exactly what was dispensed.',
@@ -50,12 +33,12 @@ const WORKFLOWS = {
       '#panel-samples #samplePreview'
     ]
   },
-  // 'forms' and 'uds' are intentionally not covered here: they've been
-  // migrated to real new panels (`.wfp-panel`) with a fundamentally
-  // different structure from the shared legacy card/chip contract this
-  // suite validates for the still-legacy-hosted workflows. A dedicated
-  // visual contract for the new panels is a follow-up, not part of this
-  // generic legacy contract.
+  // 'forms', 'uds', and 'administer' (injection) are intentionally not
+  // covered here: they've been migrated to real new panels (`.wfp-panel`)
+  // with a fundamentally different structure from the shared legacy
+  // card/chip contract this suite validates for the still-legacy-hosted
+  // workflows. A dedicated visual contract for the new panels is a
+  // follow-up, not part of this generic legacy contract.
 };
 
 async function openWorkflow(page, workflow) {

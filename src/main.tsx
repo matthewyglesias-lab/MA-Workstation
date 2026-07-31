@@ -17,17 +17,20 @@ import {
 } from './presentation';
 import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
 import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
+import { InjectionPanel } from './presentation/workflows/injection/InjectionPanel';
 import {
   createClinicalCoordinator,
   selectClinicalEvaluation,
   selectClinicalMirrorAgreement,
   type ApplicationWorkflow,
   type ClinicalCoordinatorSnapshot,
+  type ClinicalEncounterSource,
   type ClinicalWorkflow,
 } from './application';
 import { loadLegacyRuntime, type LegacyRuntime } from './legacy/loader';
 import { installLegacyDocumentationAdapter } from './legacy/documentation-adapter';
 import { createLegacyClinicalSource } from './legacy/clinical-source';
+import type { InjectionEncounter } from './domain/injection';
 import {
   copyAllLegacyNotes,
   copyLegacyNoteSection,
@@ -35,6 +38,12 @@ import {
   type LegacyShellSnapshot,
 } from './legacy/shell-state';
 import classicWorkflowCss from './presentation/classic-workflows.css?inline';
+
+declare global {
+  interface Window {
+    ipmgInjectionRecordGeneration?: () => number;
+  }
+}
 
 type ContextEditor = 'staff' | 'location' | null;
 
@@ -148,16 +157,28 @@ function activeStaffValue(): string {
   return input?.value ?? '';
 }
 
+// Reads the injection encounter straight from the legacy DOM, bypassing the
+// coordinator's cross-workflow active-patient inheritance in synchronize().
+// That inheritance is right for switching between workflows mid-visit, but
+// wrong for InjectionPanel's own remount after "+ New"/open-a-different-
+// record: legacy's own newInjection() clears #ptName with no auto-refill, so
+// the panel's fresh mount must see that same genuinely-blank patient instead
+// of picking up a stale still-active patient from another workflow.
+function rawInjectionEncounter(source: ClinicalEncounterSource): InjectionEncounter {
+  return source.read('injection').encounter as InjectionEncounter;
+}
+
 function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const [snapshot, setSnapshot] = useState<LegacyShellSnapshot>(() =>
     readLegacyShellSnapshot(runtime),
   );
+  const clinicalSource = useMemo(() => createLegacyClinicalSource(), [runtime]);
   const coordinator = useMemo(
     () =>
       createClinicalCoordinator({
-        source: createLegacyClinicalSource(),
+        source: clinicalSource,
       }),
-    [runtime],
+    [clinicalSource],
   );
   const [clinical, setClinical] = useState<ClinicalCoordinatorSnapshot>(() => {
     coordinator.navigate(DESKTOP_TO_APPLICATION[runtime.activeWorkflow()]);
@@ -169,6 +190,14 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const snapshotRef = useRef(snapshot);
   const formsPanelRef = useRef<HTMLDivElement | null>(null);
   const udsPanelRef = useRef<HTMLDivElement | null>(null);
+  const injectionPanelRef = useRef<HTMLDivElement | null>(null);
+  // Bumped only when the active injection record genuinely changes (opening
+  // a different saved record, or starting a new one) - not when a fresh
+  // draft's first autosave silently assigns it an id - so InjectionPanel's
+  // internal typed state can be reset via `key` without discarding in-flight
+  // typing on every autosave tick.
+  const [injectionRecordEpoch, setInjectionRecordEpoch] = useState(0);
+  const injectionRecordGenerationRef = useRef(0);
 
   const refresh = () => {
     if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
@@ -186,6 +215,18 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       if (!sameSnapshot(snapshotRef.current, next)) {
         snapshotRef.current = next;
         setSnapshot(next);
+      }
+      const nextRecordGeneration = window.ipmgInjectionRecordGeneration?.() ?? 0;
+      if (nextRecordGeneration !== injectionRecordGenerationRef.current) {
+        injectionRecordGenerationRef.current = nextRecordGeneration;
+        setInjectionRecordEpoch((value) => value + 1);
+        // A genuine record switch (opening a different saved record, or
+        // starting a new one) must not let the coordinator's cross-workflow
+        // active-patient inheritance resurrect the previous record's
+        // patient into the freshly (un)loaded one - sync the active patient
+        // to match whatever the newly active record itself holds, same as
+        // legacy's own newInjection()/openRecord() (no ambient inheritance).
+        coordinator.setActivePatient(rawInjectionEncounter(clinicalSource).patient);
       }
       setPosting(false);
     }, 55);
@@ -262,12 +303,15 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     () =>
       Object.fromEntries(
         (Object.keys(runtime.panels) as WorkflowId[])
-          // 'forms' and 'uds' are migrated to new panels; their legacy
-          // panels stay loaded (hidden) only as a print/readiness
-          // compatibility mirror.
+          // 'forms', 'uds', and 'administer' (injection) are migrated to
+          // new panels; their legacy panels stay loaded (hidden) only as a
+          // print/readiness compatibility mirror.
           .filter(
             (workflow) =>
-              workflow !== 'home' && workflow !== 'forms' && workflow !== 'uds',
+              workflow !== 'home' &&
+              workflow !== 'forms' &&
+              workflow !== 'uds' &&
+              workflow !== 'administer',
           )
           .map((workflow) => [
             workflow,
@@ -311,6 +355,19 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           evaluation={selectClinicalEvaluation(clinical, 'uds')}
           staffSignInValue={activeStaffValue()}
           previewRef={udsPanelRef}
+        />
+      );
+    }
+    if (workflow === 'administer') {
+      return (
+        <InjectionPanel
+          key={injectionRecordEpoch}
+          initialEncounter={rawInjectionEncounter(clinicalSource)}
+          activePatient={context.patient}
+          evaluation={selectClinicalEvaluation(clinical, 'injection')}
+          staffSignInValue={activeStaffValue()}
+          previewRef={injectionPanelRef}
+          locked={snapshot.postState === 'posted'}
         />
       );
     }

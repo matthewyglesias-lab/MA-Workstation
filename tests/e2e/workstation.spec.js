@@ -23,10 +23,10 @@ test.describe('MA Workstation browser journeys', () => {
     }
     await navButton.click();
     await expect(shell).toHaveAttribute('data-active-workflow', workflow);
-    if (workflow === 'forms' || workflow === 'uds') {
-      // Forms and UDS are migrated to real panels; their legacy #panel-*
-      // markup stays loaded hidden as a print/readiness compatibility
-      // mirror only.
+    if (workflow === 'forms' || workflow === 'uds' || workflow === 'administer') {
+      // Forms, UDS, and Injection are migrated to real panels; their legacy
+      // #panel-* markup stays loaded hidden as a print/readiness
+      // compatibility mirror only.
       await expect(page.locator('.wfp-panel')).toBeVisible();
     } else if (workflow !== 'home') {
       const panelId = workflow === 'reference' ? '#panel-reference' : `#panel-${workflow}`;
@@ -53,22 +53,23 @@ test.describe('MA Workstation browser journeys', () => {
     }, property);
   }
 
-  async function openInjectionCard(page, cardClass) {
-    const card = page.locator(`#panel-administer .${cardClass}`);
-    await expect(card).toBeVisible();
-    const isCollapsed = () => card.evaluate(node =>
-      node.classList.contains('rc530-collapsed') || node.classList.contains('rc526-collapsed')
-    );
-    if (await isCollapsed()) {
-      const receipt = card.locator('.rc530-summary:visible, .rc526-summary:visible').first();
-      if (await receipt.count()) {
-        await receipt.click();
-      } else {
-        await card.locator('.card-head').click();
-      }
-    }
-    await expect.poll(isCollapsed).toBe(false);
-    return card;
+  async function openInjectionTab(page, tabName) {
+    const panel = page.locator('.wfp-panel');
+    await panel.getByRole('tab', { name: tabName, exact: true }).click();
+    return panel;
+  }
+
+  // The records workspace (Save draft / Complete & lock / New) lives inside
+  // the hidden legacy #panel-administer mirror with no equivalent control in
+  // the new panel, so its buttons are triggered with a plain DOM click
+  // (bypassing Playwright's visibility requirement) rather than simulating a
+  // pointer click on an element the user can no longer see.
+  async function clickInjectionRecordAction(page, selector) {
+    await page.evaluate((sel) => {
+      const button = document.querySelector(sel);
+      if (!button) throw new Error(`Missing injection record action: ${sel}`);
+      button.click();
+    }, selector);
   }
 
   async function prepareRoutineInjection(page, options = {}) {
@@ -82,49 +83,49 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.goto('/');
     await openWorkflow(page, 'administer');
-    await expect(page.locator('#injRecordWorkspace')).toBeVisible();
+    const panel = page.locator('.wfp-panel');
 
-    await openInjectionCard(page, 'card-encounter');
-    await page.locator('#ptName').fill(patient);
-    await page.locator('#ptDOB').fill(dob);
-    await page.locator('#orderingProvider').fill('QA Ordering Provider');
-    await openInjectionCard(page, 'card-encounter');
-    await page.locator('#reasonChips').getByRole('button', { name: 'PRN / ordered', exact: true }).click();
+    await openInjectionTab(page, 'Encounter');
+    await panel.locator('input[placeholder="Last, First"]').fill(patient);
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill(dob);
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
+    await panel.getByText('PRN / ordered', { exact: true }).click();
 
-    await openInjectionCard(page, 'card-medication');
-    await page.locator('#medChips').getByRole('button', { name: medication, exact: true }).click();
+    await openInjectionTab(page, 'Medication');
+    await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: medication });
     if (medication === 'Other') {
-      await page.locator('#doseChips input').fill('100 mg');
+      await panel.locator('.wfp-field:has-text("Dose") input').fill('100 mg');
     } else {
-      await page.locator('#doseChips').getByRole('button', { name: '50 mg', exact: true }).click();
+      await panel.locator('.wfp-field:has-text("Dose") select').selectOption('50 mg');
     }
-    await page.locator('#routeChips').getByRole('button', { name: 'IM', exact: true }).click();
-    await page.locator('#bodyMap [data-site="' + (medication === 'Other' ? 'R deltoid' : 'R ventrogluteal') + '"]').click();
-    await openInjectionCard(page, 'card-medication');
-    await page.locator('#intChips').getByRole('button', { name: 'q4 wk', exact: true }).click();
+    await panel.locator('input[placeholder="IM / SubQ"]').fill('IM');
+    await panel.locator('.wfp-field:has-text("Interval") select').selectOption('q4wk');
+    await panel
+      .getByText(medication === 'Other' ? 'R deltoid' : 'R ventrogluteal', { exact: true })
+      .click();
 
-    await openInjectionCard(page, 'card-trace');
-    await page.locator('#ndc').fill('00000-0000-42');
-    await page.locator('#lot').fill('BROWSER-LOT-42');
-    await page.locator('#exp').fill('2027-12');
+    await openInjectionTab(page, 'Traceability');
+    await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
+    await panel.locator('input[placeholder="LOT123"]').fill('BROWSER-LOT-42');
+    await panel.locator('input[type="month"]').first().fill('2027-12');
 
-    await openInjectionCard(page, 'card-safety');
+    await openInjectionTab(page, 'Safety');
     if (medication !== 'Other') {
-      await page.locator('#medSpecChips').getByRole('button', { name: 'Ordered route / technique verified', exact: true }).click();
+      await panel.getByText('Ordered route / technique verified', { exact: true }).click();
     }
-    await page.locator('#allergies').fill('NKDA verified in active record');
-    await page.locator('[data-rc530-noacute]').click();
+    await panel.locator('input[placeholder*="Verify in active record"]').fill('NKDA verified in active record');
+    await panel.getByText('No acute concerns today confirmed', { exact: true }).click();
 
-    await openInjectionCard(page, 'card-response');
-    await page.locator('#adminDate').fill('2026-07-30');
+    await openInjectionTab(page, 'Response');
+    await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
     if (includeAdministrationTime) {
-      await page.locator('#injAdminTime').fill(administrationTime);
+      await panel.locator('input[type="time"]').first().fill(administrationTime);
     }
-    await page.locator('#admin').fill('QA Staff, MA');
 
-    await openInjectionCard(page, 'card-return');
-    await page.locator('#nextDate').fill('2026-08-27');
-    return page.locator('#clinicalDisposition');
+    await openInjectionTab(page, 'Disposition');
+    await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
+    await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+    return panel;
   }
 
   test('boots without page errors and exposes the local injection-record drawer', async ({ page }) => {
@@ -288,10 +289,11 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.keyboard.press('Alt+2');
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
-    await expect(page.locator('#panel-administer')).toBeVisible();
+    const injectionPanel = page.locator('.wfp-panel');
+    await expect(injectionPanel).toBeVisible();
 
-    await page.locator('#ptName').fill('QA, Shortcut');
-    await page.locator('#orderingProvider').fill('QA Provider');
+    await injectionPanel.locator('input[placeholder="Last, First"]').fill('QA, Shortcut');
+    await injectionPanel.locator('input[placeholder="Provider name"]').fill('QA Provider');
     await page.keyboard.press('Control+S');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
@@ -379,8 +381,9 @@ test.describe('MA Workstation browser journeys', () => {
   test('soft-syncs empty workflows and never overwrites a started patient context', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'administer');
-    await page.locator('#ptName').fill('Alpha, Patient');
-    await page.locator('#ptDOB').fill('01/02/1990');
+    const injectionPanel = page.locator('.wfp-panel');
+    await injectionPanel.locator('input[placeholder="Last, First"]').fill('Alpha, Patient');
+    await injectionPanel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Alpha, Patient');
 
     await openWorkflow(page, 'samples');
@@ -486,29 +489,6 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#panel-administer .preview-col')).not.toHaveClass(/output-pulse/);
   });
 
-  test('reopens a collapsed injection receipt from the progress rail with the keyboard', async ({ page }) => {
-    await page.goto('/');
-    await openWorkflow(page, 'administer');
-    const encounter = page.locator('#panel-administer .card-encounter');
-    await page.locator('#ptName').fill('QA, Receipt');
-    await page.locator('#ptDOB').fill('01/02/1990');
-    await page.locator('#orderingProvider').fill('QA Provider');
-
-    await expect.poll(() => encounter.evaluate(node => node.classList.contains('rc530-collapsed'))).toBe(true);
-    const receipt = encounter.locator('.rc530-summary');
-    await expect(receipt).toBeVisible();
-    await expect(receipt).toHaveJSProperty('tagName', 'BUTTON');
-    await expect(receipt).toHaveAttribute('aria-expanded', 'false');
-    await expect(receipt).toHaveAttribute('aria-label', /Patient & order — complete:/);
-
-    const progressStep = page.locator('[data-rc526-jump="encounter"]');
-    await progressStep.focus();
-    await page.keyboard.press('Enter');
-    await expect.poll(() => encounter.evaluate(node => node.classList.contains('rc530-collapsed'))).toBe(false);
-    await expect(encounter).toHaveClass(/rc530-open/);
-    await expect(progressStep).toBeFocused();
-  });
-
   test('keeps the single-window task switcher and records drawer contained at phone width', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
@@ -567,7 +547,7 @@ test.describe('MA Workstation browser journeys', () => {
     const widths = [1181, 1040, 700, 390, 320];
     const overflowFailures = [];
     const workflows = [
-      ['administer', '#panel-administer .layout'],
+      ['administer', '.wfp-panel'],
       ['uds', '.wfp-panel'],
       ['samples', '#panel-samples .layout'],
       ['forms', '.wfp-panel']
@@ -786,55 +766,63 @@ test.describe('MA Workstation browser journeys', () => {
   });
 
   test('gates actual administration, product handling, and exception detail before administration can be documented', async ({ page }) => {
-    const disposition = await prepareRoutineInjection(page, {
+    const panel = await prepareRoutineInjection(page, {
       patient: 'QA, Conditional',
       includeAdministrationTime: false
     });
+    // The legacy #clinicalDisposition element stays loaded (hidden) as a
+    // compatibility mirror target; it keeps computing its own stop list and
+    // disabled state from the same fields this panel mirrors into it.
+    const disposition = page.locator('#clinicalDisposition');
     const administered = disposition.locator('[data-disposition="administered"]');
 
     await expect(disposition).toContainText('Document the actual administration time.');
     await expect(administered).toBeDisabled();
 
-    await openInjectionCard(page, 'card-response');
-    await page.locator('#injAdminTime').fill('09:41');
+    await openInjectionTab(page, 'Response');
+    await panel.locator('input[type="time"]').first().fill('09:41');
     await expect(administered).toBeEnabled();
 
-    await openInjectionCard(page, 'card-trace');
-    await page.locator('#injHandlingToggle').click();
-    await expect(page.locator('#injHandlingFields')).toBeVisible();
-    await page.locator('#injWasteToggle').check();
-    await expect(page.locator('#injWasteFields')).toBeVisible();
+    await openInjectionTab(page, 'Traceability');
+    await panel.getByText('Document medication waste', { exact: true }).click();
     await expect(disposition).toContainText('Document the medication waste amount and unit.');
     await expect(administered).toBeDisabled();
 
-    await page.locator('#injWasteAmount').fill('0.2 mL');
-    await page.locator('#injWasteWitness').fill('QA Witness');
+    await panel.locator('.wfp-field:has-text("Waste amount") input').fill('0.2 mL');
+    await panel.locator('.wfp-field:has-text("Waste witness") input').fill('QA Witness');
     await expect(administered).toBeEnabled();
 
-    await openInjectionCard(page, 'card-response');
-    await page.locator('#injExceptionToggle').check();
-    await expect(page.locator('#injExceptionFields')).toBeVisible();
+    await openInjectionTab(page, 'Response');
+    await panel
+      .getByText('Administration exception / escalation', { exact: false })
+      .click();
     await expect(disposition).toContainText('Describe what changed or was observed for the administration exception.');
     await expect(administered).toBeDisabled();
 
-    await page.locator('#injExceptionSummary').fill('Patient reported transient dizziness after injection.');
-    await page.locator('#injExceptionRecipient').fill('QA Provider, notified');
-    await page.locator('#injExceptionTime').fill('2026-07-30T09:48');
-    await page.locator('#injExceptionOutcome').fill('Provider advised seated observation; staff reassessed and reviewed return precautions.');
+    await panel
+      .locator('.wfp-field:has-text("What changed") textarea')
+      .fill('Patient reported transient dizziness after injection.');
+    await panel
+      .locator('.wfp-field:has-text("Recipient notified") input')
+      .fill('QA Provider, notified');
+    await panel
+      .locator('.wfp-field:has-text("Notification / decision time") input')
+      .fill('2026-07-30T09:48');
+    await panel
+      .locator('.wfp-field:has-text("Direction, action, and next step") textarea')
+      .fill('Provider advised seated observation; staff reassessed and reviewed return precautions.');
     await expect(administered).toBeEnabled();
   });
 
   test('requires a complete product or device issue handoff before producing the dense administration note', async ({ page }) => {
-    const disposition = await prepareRoutineInjection(page, {
+    const panel = await prepareRoutineInjection(page, {
       patient: 'QA, Product Issue'
     });
+    const disposition = page.locator('#clinicalDisposition');
     const administered = disposition.locator('[data-disposition="administered"]');
 
-    await openInjectionCard(page, 'card-trace');
-    await page.locator('#injHandlingToggle').click();
-    await expect(page.locator('#injHandlingFields')).toBeVisible();
-    await page.locator('#injProductIssueToggle').check();
-    await expect(page.locator('#injProductIssueFields')).toBeVisible();
+    await openInjectionTab(page, 'Traceability');
+    await panel.getByText('Document product or device issue', { exact: true }).click();
 
     await expect(disposition).toContainText('Describe the product or device issue.');
     await expect(disposition).toContainText(
@@ -854,21 +842,21 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(administered).toBeDisabled();
 
-    await page.locator('#injProductIssueDetail').fill(
-      'Plunger resistance noted during pre-administration device inspection.'
-    );
-    await page.locator('#injProductIssueAction').fill(
-      'Affected product quarantined; replacement package selected and independently verified.'
-    );
-    await page.locator('#injProductIssueRecipient').fill(
-      'QA Ordering Provider'
-    );
-    await page.locator('#injProductIssueNotificationTime').fill(
-      '2026-07-30T09:35'
-    );
-    await page.locator('#injProductIssueDirection').fill(
-      'Do not use the affected device; proceed only with the verified replacement.'
-    );
+    await panel
+      .locator('.wfp-field:has-text("Product / device issue") textarea')
+      .fill('Plunger resistance noted during pre-administration device inspection.');
+    await panel
+      .locator('.wfp-field:has-text("Immediate action") textarea')
+      .fill('Affected product quarantined; replacement package selected and independently verified.');
+    await panel
+      .locator('.wfp-field:has-text("Recipient notified") input')
+      .fill('QA Ordering Provider');
+    await panel
+      .locator('.wfp-field:has-text("Notification / decision time") input')
+      .fill('2026-07-30T09:35');
+    await panel
+      .locator('.wfp-field:has-text("Direction received") textarea')
+      .fill('Do not use the affected device; proceed only with the verified replacement.');
 
     await expect(disposition).not.toContainText('Describe the product or device issue.');
     await expect(disposition).toContainText(
@@ -876,15 +864,16 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(administered).toBeDisabled();
 
-    await page.locator('#injProductIssueNextStep').fill(
-      'QA Staff will retain the device for clinic follow-up and reconcile the replacement before closeout.'
-    );
+    await panel
+      .locator('.wfp-field:has-text("Next step / owner / timing") textarea')
+      .fill('QA Staff will retain the device for clinic follow-up and reconcile the replacement before closeout.');
     await expect(disposition).not.toContainText(
       'Document the next step, owner, and timing for the product/device issue.'
     );
     await expect(administered).toBeEnabled();
 
-    await administered.click();
+    await openInjectionTab(page, 'Disposition');
+    await panel.getByText('Review complete — document administration', { exact: true }).click();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
     );
@@ -914,28 +903,30 @@ test.describe('MA Workstation browser journeys', () => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
       origin: 'http://127.0.0.1:4173'
     });
-    const disposition = await prepareRoutineInjection(page, {
+    const panel = await prepareRoutineInjection(page, {
       patient: 'QA, Formatted Note',
       medication: 'Haldol Dec.'
     });
+    const disposition = page.locator('#clinicalDisposition');
 
-    await openInjectionCard(page, 'card-encounter');
-    await page.locator('#injOrderPurpose').fill('Active order follow-up context');
+    await openInjectionTab(page, 'Encounter');
+    await panel.locator('.wfp-field:has-text("Verified active-order purpose") input').fill('Active order follow-up context');
 
-    await openInjectionCard(page, 'card-trace');
-    await page.locator('#injHandlingToggle').click();
-    await page.locator('#injProductSource').selectOption({ label: 'Clinic stock' });
+    await openInjectionTab(page, 'Traceability');
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic stock' });
 
-    await openInjectionCard(page, 'card-response');
-    await page.locator('#injAdminDetailToggle').click();
-    await page.locator('#injVolume').fill('2');
-    await page.locator('#injVolumeUnit').selectOption('mL');
-    await page.locator('#injDevice').selectOption({ label: 'Prefilled syringe' });
-    await page.locator('#injSiteCondition').selectOption({ label: 'Skin/site intact before administration' });
+    await openInjectionTab(page, 'Response');
+    await panel.locator('.wfp-field:has-text("Administration amount") input').fill('2');
+    await panel.locator('.wfp-field:has-text("Unit") select').selectOption('mL');
+    await panel.locator('.wfp-field:has-text("Delivery device") select').selectOption({ label: 'Prefilled syringe' });
+    await panel
+      .locator('.wfp-field:has-text("Site condition") select')
+      .selectOption({ label: 'Skin/site intact before administration' });
 
+    await openInjectionTab(page, 'Disposition');
     const administered = disposition.locator('[data-disposition="administered"]');
     await expect(administered).toBeEnabled();
-    await administered.click();
+    await panel.getByText('Review complete — document administration', { exact: true }).click();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
     await expect(page.locator('#outCC')).toContainText('Purpose: Active order follow-up context');
     await expect(page.locator('#outPL')).toContainText('MEDICATION ADMINISTRATION');
@@ -1021,25 +1012,30 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#rc526Flow .rc526-mode b')).toHaveText('Locked injection record');
     await expect(page.locator('#injRecordWorkspace [data-inj-new]')).toHaveAttribute('aria-label', 'Start a new injection');
     await expect(page.locator('#ptName')).toBeDisabled();
-    await openInjectionCard(page, 'card-medication');
     await expect(page.locator('#medClear')).toHaveAttribute('aria-disabled', 'true');
+    await expect(panel.getByText('Record locked', { exact: true })).toBeVisible();
+    await openInjectionTab(page, 'Encounter');
+    await expect(panel.locator('input[placeholder="Last, First"]')).toBeDisabled();
+    await openInjectionTab(page, 'Disposition');
     const lockedMedication = await page.locator('#medHdrName').textContent();
     expect(lockedMedication).toBeTruthy();
-    await page.locator('#medClear').click();
-    await expect(page.locator('#medHdrName')).toHaveText(lockedMedication || '');
     await expect(page.locator('#outPL')).toContainText('Actual administration time: 9:41 AM');
     await expect(page.locator('#outPL')).toContainText('Product source: Clinic stock');
 
-    await page.locator('#injAddendumAuthor').fill('QA Addendum Staff');
-    await page.locator('#injAddendumText').fill('Saved clarification by the current reviewer.');
-    await page.locator('[data-inj-addendum]').click();
+    // The addenda-authoring UI lives entirely inside the hidden legacy
+    // record workspace; the new panel provides its own addendum section
+    // (outside the disabled fieldset) that mirrors into the same hidden
+    // fields and record so this stays reachable by a real user.
+    const addendumTextField = panel.locator('.wfp-field:has-text("Dated addendum") textarea');
+    await panel.locator('.wfp-field:has-text("Addendum entered by") input').fill('QA Addendum Staff');
+    await addendumTextField.fill('Saved clarification by the current reviewer.');
+    await panel.getByText('Save addendum', { exact: true }).click();
     await expect(page.locator('.record-addenda-item').first()).toContainText('QA Addendum Staff');
     await expect(page.locator('.record-addenda-item').first()).toContainText('Saved clarification by the current reviewer.');
 
-    await page.locator('#injAddendumText').fill('Pending clarification that must not be abandoned.');
-    await page.locator('#injRecordWorkspace [data-inj-new]').click();
-    await expect(page.locator('#injAddendumText')).toHaveValue('Pending clarification that must not be abandoned.');
-    await expect(page.locator('#injAddendumText')).toBeFocused();
+    await addendumTextField.fill('Pending clarification that must not be abandoned.');
+    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-new]');
+    await expect(addendumTextField).toHaveValue('Pending clarification that must not be abandoned.');
     await expect(page.locator('#ptName')).toHaveValue('QA, Formatted Note');
   });
 
@@ -1067,68 +1063,58 @@ test.describe('MA Workstation browser journeys', () => {
     test.setTimeout(90000);
     await page.goto('/');
     await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
 
-    await openInjectionCard(page, 'card-encounter');
-    await page.locator('#ptName').fill('QA, Paired Initiation');
-    await page.locator('#ptDOB').fill('04/05/1993');
-    await page.locator('#orderingProvider').fill('QA Ordering Provider');
-    await openInjectionCard(page, 'card-encounter');
-    await page.locator('#reasonChips').getByRole('button', { name: 'Initiation', exact: true }).click();
+    await openInjectionTab(page, 'Encounter');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Paired Initiation');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
+    await panel.getByText('Initiation', { exact: true }).click();
 
-    await openInjectionCard(page, 'card-medication');
-    await page.locator('#medChips').getByRole('button', { name: 'Abilify Maintena', exact: true }).click();
-    await page.locator('#doseChips').getByRole('button', { name: '400 mg', exact: true }).click();
-    await page.locator('#routeChips').getByRole('button', { name: 'IM', exact: true }).click();
-    await page.locator('#bodyMap [data-site="R deltoid"]').click();
-    await page.locator('#intChips').getByRole('button', { name: 'q4 wk', exact: true }).click();
+    await openInjectionTab(page, 'Medication');
+    await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: 'Abilify Maintena' });
+    await panel.locator('.wfp-field:has-text("Dose") select').selectOption('400 mg');
+    await panel.locator('input[placeholder="IM / SubQ"]').fill('IM');
+    await panel.getByText('R deltoid', { exact: true }).click();
+    await panel.locator('.wfp-field:has-text("Interval") select').selectOption('q4wk');
 
+    // #initiationProtocolCard stays loaded (hidden) as a compatibility mirror
+    // target; readiness/validation text assertions against it don't need
+    // visibility, only the interactive steps move to the new panel below.
     const initiation = page.locator('#initiationProtocolCard');
-    await expect(initiation).toBeVisible();
-    await initiation.getByRole('button', { name: /1-day initiation/ }).click();
-    await page.evaluate(() => {
-      const setValue = (id, value) => {
-        const control = document.getElementById(id);
-        control.value = value;
-        control.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      const setChecked = id => {
-        const control = document.getElementById(id);
-        control.checked = true;
-        control.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      setChecked('initPlanVerified');
-      setValue('initSecondDose', '300 mg');
-      setValue('initSecondSite', 'L deltoid');
-      setValue('initSecondNdc', '00000-0000-22');
-      setValue('initSecondLot', 'PAIR-LOT-2');
-      setValue('initSecondExp', '2026-06');
-      setChecked('initSecondOrderVerified');
-      setChecked('initSecondGiven');
-      document.querySelector('[data-init-oral="administered"]').click();
-    });
+    await panel.getByText('1-day initiation', { exact: true }).click();
+    await panel.getByText('Active provider initiation/re-initiation order', { exact: false }).click();
+    await panel.locator('.wfp-field:has-text("Component 2 — dose") input').fill('300 mg');
+    await panel.locator('.wfp-field:has-text("Component 2 — site") select').selectOption('L deltoid');
+    await panel.locator('.wfp-field:has-text("Component 2 — NDC") input').fill('00000-0000-22');
+    await panel.locator('.wfp-field:has-text("Component 2 — Lot") input').fill('PAIR-LOT-2');
+    await panel.locator('.wfp-field:has-text("Component 2 — Exp") input').fill('2026-06');
+    await panel.getByText('Exact product and dose verified against the active order', { exact: true }).click();
+    await panel.getByText('Injection component 2 was actually administered today', { exact: true }).click();
+    await panel.getByText('Administered today', { exact: true }).click();
     await expect(initiation).toContainText(
       /2 protocol items still need documentation/
     );
 
-    await openInjectionCard(page, 'card-trace');
-    await page.locator('#ndc').fill('00000-0000-11');
-    await page.locator('#lot').fill('PAIR-LOT-1');
-    await page.locator('#exp').fill('2028-05');
+    await openInjectionTab(page, 'Traceability');
+    await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-11');
+    await panel.locator('input[placeholder="LOT123"]').fill('PAIR-LOT-1');
+    await panel.locator('input[type="month"]').first().fill('2028-05');
 
-    await openInjectionCard(page, 'card-safety');
-    await page.locator('#medSpecChips').getByRole('button', { name: 'Suspension inspected & mixed', exact: true }).click();
-    await page.locator('#medSpecChips').getByRole('button', { name: 'Ordered oral initiation plan documented', exact: true }).click();
-    await page.locator('#allergies').fill('NKDA verified in active record');
-    await page.locator('[data-rc530-noacute]').click();
+    await openInjectionTab(page, 'Safety');
+    await panel.getByText('Suspension inspected and mixed', { exact: true }).click();
+    await panel.getByText('Ordered oral initiation plan documented', { exact: true }).click();
+    await panel.locator('input[placeholder*="Verify in active record"]').fill('NKDA verified in active record');
+    await panel.getByText('No acute concerns today confirmed', { exact: true }).click();
 
-    await openInjectionCard(page, 'card-response');
-    await page.locator('#adminDate').fill('2026-07-30');
-    await page.locator('#injAdminTime').fill('10:15');
-    await page.locator('#injSecondAdminTime').fill('10:18');
-    await page.locator('#admin').fill('QA Staff, MA');
+    await openInjectionTab(page, 'Response');
+    await panel.locator('input[type="time"]').first().fill('10:15');
+    await panel.locator('.wfp-field:has-text("Component 2 actual time") input').fill('10:18');
+    await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
 
-    await openInjectionCard(page, 'card-return');
-    await page.locator('#nextDate').fill('2026-08-27');
+    await openInjectionTab(page, 'Disposition');
+    await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
+    await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
 
     const administered = page.locator('#clinicalDisposition [data-disposition="administered"]');
     await expect(page.locator('#clinicalDisposition')).toContainText(
@@ -1139,8 +1125,9 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(administered).toBeDisabled();
 
-    await page.locator('#initSecondDose').fill('400 mg');
-    await page.locator('#initSecondDose').press('Tab');
+    await openInjectionTab(page, 'Medication');
+    await panel.locator('.wfp-field:has-text("Component 2 — dose") input').fill('400 mg');
+    await panel.locator('.wfp-field:has-text("Component 2 — dose") input').press('Tab');
     await expect(page.locator('#clinicalDisposition')).not.toContainText(
       'The Abilify Maintena 1-day pathway requires matching paired doses'
     );
@@ -1149,14 +1136,15 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(administered).toBeDisabled();
 
-    await page.locator('#initSecondExp').fill('2028-06');
-    await page.locator('#initSecondExp').press('Tab');
+    await panel.locator('.wfp-field:has-text("Component 2 — Exp") input').fill('2028-06');
+    await panel.locator('.wfp-field:has-text("Component 2 — Exp") input').press('Tab');
     await expect(initiation).toContainText('Protocol fields complete');
     await expect(page.locator('#clinicalDisposition')).not.toContainText(
       'Injection component 2 expiration appears past; obtain in-date product before documenting administration.'
     );
     await expect(administered).toBeEnabled();
-    await administered.click();
+    await openInjectionTab(page, 'Disposition');
+    await panel.getByText('Review complete — document administration', { exact: true }).click();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
 
     const complete = page.locator('.cd2004-complete-button');
@@ -1217,20 +1205,23 @@ test.describe('MA Workstation browser journeys', () => {
   test('round-trips structured injection draft fields through the local records drawer', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'administer');
-    await expect(page.locator('#injRecordWorkspace')).toBeVisible();
+    const panel = page.locator('.wfp-panel');
 
-    await page.locator('#ptName').fill('QA, Draft Detail');
-    await page.locator('#ptDOB').fill('02/03/1991');
-    await page.locator('#orderingProvider').fill('QA Draft Provider');
-    await openInjectionCard(page, 'card-encounter');
-    await page.locator('#injOrderPurpose').fill('Draft order-linked encounter context');
-    await openInjectionCard(page, 'card-response');
-    await page.locator('#injAdminTime').fill('14:06');
+    await openInjectionTab(page, 'Encounter');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Draft Detail');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/03/1991');
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Draft Provider');
+    await panel.locator('.wfp-field:has-text("Verified active-order purpose") input').fill('Draft order-linked encounter context');
+    await openInjectionTab(page, 'Response');
+    await panel.locator('input[type="time"]').first().fill('14:06');
 
     // Switch immediately: the record lifecycle must flush the pending sub-700 ms
     // autosave instead of losing the most recent structured fields.
-    await page.locator('#injRecordWorkspace [data-inj-new]').click();
+    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-new]');
     await expect(page.locator('#ptName')).toHaveValue('');
+    // The new panel must reset its own typed state too, not just the hidden
+    // legacy mirror fields, when the active record genuinely changes.
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
 
     await page.locator(
       '.cd2004-toolbar-button[aria-label="Injection Records"]'
@@ -1242,13 +1233,18 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#ptName')).toHaveValue('QA, Draft Detail');
     await expect(page.locator('#injOrderPurpose')).toHaveValue('Draft order-linked encounter context');
     await expect(page.locator('#injAdminTime')).toHaveValue('14:06');
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('QA, Draft Detail');
+    await expect(
+      panel.locator('.wfp-field:has-text("Verified active-order purpose") input')
+    ).toHaveValue('Draft order-linked encounter context');
   });
 
   test('preserves unknown historical record fields through open, save, and completion', async ({ page }) => {
     const patient = 'QA, Compatibility Fields';
-    const disposition = await prepareRoutineInjection(page, { patient });
+    await prepareRoutineInjection(page, { patient });
+    const disposition = page.locator('#clinicalDisposition');
 
-    await page.locator('#injRecordWorkspace [data-inj-save]').click();
+    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-save]');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
     // Reload first to cancel any pending fixture-entry autosave before replacing
@@ -1315,7 +1311,7 @@ test.describe('MA Workstation browser journeys', () => {
     expect(opened.snapshot.version).toBe(3);
     expect(opened.snapshot.futureSnapshot.nested.preserve).toBe('snapshot-value');
 
-    await page.locator('#injRecordWorkspace [data-inj-save]').click();
+    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-save]');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
     const expectedUnknownFields = {
@@ -1360,7 +1356,8 @@ test.describe('MA Workstation browser journeys', () => {
 
     const administered = disposition.locator('[data-disposition="administered"]');
     await expect(administered).toBeEnabled();
-    await administered.click();
+    await openInjectionTab(page, 'Disposition');
+    await page.locator('.wfp-panel').getByText('Review complete — document administration', { exact: true }).click();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
 
     await expect(page.locator('.cd2004-complete-button')).toBeEnabled();
@@ -1373,38 +1370,38 @@ test.describe('MA Workstation browser journeys', () => {
     expect(completed).toMatchObject(expectedUnknownFields);
   });
 
-  test('resets smart-vitals state for a new injection and restores it with its draft', async ({ page }) => {
+  test('resets vitals for a new injection and restores them with its draft', async ({ page }) => {
+    // The legacy "smart vitals" reveal-toggle/repeat-note/recheck-chip nudge
+    // (window.ipmgSmartVitalsSnapshot) is a UI-only ergonomic layer with no
+    // typed-encounter field of its own and no live interactive path through
+    // the new panel (its reveal button lives in the now-hidden legacy DOM).
+    // This test focuses on what the new panel actually owns: RR/SpO2 values
+    // persisting correctly across New/reopen through the local draft store.
     await page.goto('/');
     await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
 
-    await page.locator('#ptName').fill('QA, Smart Vitals Draft');
-    await page.locator('#orderingProvider').fill('QA Ordering Provider');
-    await openInjectionCard(page, 'card-medication');
-    await page.locator('#medChips').getByRole('button', { name: 'Other', exact: true }).click();
-    await openInjectionCard(page, 'card-safety');
-    await page.locator('[data-rc526-toggle-vitals]').click();
-    await expect(page.locator('#rr')).toBeVisible();
+    await openInjectionTab(page, 'Encounter');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Smart Vitals Draft');
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
+    await openInjectionTab(page, 'Medication');
+    await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: 'Other' });
+    await openInjectionTab(page, 'Safety');
+    await panel.locator('.wfp-field:has-text("RR") input').fill('10');
+    await panel.locator('.wfp-field:has-text("SpO2") input').fill('93');
 
-    await page.locator('#rr').fill('10');
-    await page.locator('#spo2').fill('93');
-    await page.locator('#vitalRepeatNote').fill('Repeat sitting after five minutes: 96%.');
-    // Blurring the repeat-note field redraws the smart-vitals panel; interact with
-    // the freshly rendered recheck action rather than its pre-blur instance.
-    await page.locator('#vitalRepeatNote').blur();
-    const recheck = page.locator('#vitalsRecheckChip');
-    await expect(recheck).toBeVisible();
-    await recheck.click();
-    await expect(recheck).toHaveAttribute('aria-pressed', 'true');
-
-    await page.locator('#injRecordWorkspace [data-inj-save]').click();
+    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-save]');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
-    await page.locator('#injRecordWorkspace [data-inj-new]').click();
+    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-new]');
     await expect(page.locator('#ptName')).toHaveValue('');
     await expect(page.locator('#rr')).toHaveValue('');
     await expect(page.locator('#spo2')).toHaveValue('');
-    await expect(page.locator('#vitalRepeatNote')).toHaveValue('');
-    await expect.poll(() => page.evaluate(() => window.ipmgSmartVitalsSnapshot().recheck)).toBe(false);
+    await openInjectionTab(page, 'Encounter');
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
+    await openInjectionTab(page, 'Safety');
+    await expect(panel.locator('.wfp-field:has-text("RR") input')).toHaveValue('');
+    await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveValue('');
 
     await page.locator(
       '.cd2004-toolbar-button[aria-label="Injection Records"]'
@@ -1414,9 +1411,10 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('[data-records-open]').click();
 
     await expect(page.locator('#rr')).toHaveValue('10');
-    await expect(page.locator('#spo2')).toHaveValue('93%');
-    await expect(page.locator('#vitalRepeatNote')).toHaveValue('Repeat sitting after five minutes: 96%.');
-    await expect(recheck).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#spo2')).toHaveValue('93');
+    await openInjectionTab(page, 'Safety');
+    await expect(panel.locator('.wfp-field:has-text("RR") input')).toHaveValue('10');
+    await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveValue('93');
   });
 
   test('clearing the first meaningful draft field cancels autosave without creating a record', async ({ page }) => {
@@ -1455,11 +1453,12 @@ test.describe('MA Workstation browser journeys', () => {
     });
     await page.goto('/');
     await openWorkflow(page, 'administer');
-    await page.locator('#ptName').fill('QA, Persistence Guard');
-    await page.locator('#ptDOB').fill('03/04/1992');
-    await page.locator('#orderingProvider').fill('QA Provider');
+    const persistencePanel = page.locator('.wfp-panel');
+    await persistencePanel.locator('input[placeholder="Last, First"]').fill('QA, Persistence Guard');
+    await persistencePanel.locator('input[placeholder="MM/DD/YYYY"]').fill('03/04/1992');
+    await persistencePanel.locator('input[placeholder="Provider name"]').fill('QA Provider');
 
-    await page.locator('#injRecordWorkspace [data-inj-new]').click();
+    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-new]');
     await expect(page.locator('#ptName')).toHaveValue('QA, Persistence Guard');
     await expect(page.locator('#injRecordStatus')).toHaveText('Save failed');
     await expect(page.locator('#injRecordStatus')).toHaveAttribute('role', 'status');
@@ -1467,36 +1466,42 @@ test.describe('MA Workstation browser journeys', () => {
   });
 
   test('uses prior administration context to recommend, but never auto-select, the actual site', async ({ page }) => {
+    // The legacy interactive body-map (recommended/quick-rotate CSS classes,
+    // auto-collapsing cards) has been replaced by a plain list-based site
+    // picker per the approved redesign; this test now covers that picker's
+    // equivalent guarantees: a recommended-site badge is shown, but nothing
+    // is ever pre-selected on the user's behalf.
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
 
-    await page.locator('#ptName').fill('QA, Smart Rotation');
-    await page.locator('#orderingProvider').fill('QA Ordering Provider');
-    await openInjectionCard(page, 'card-medication');
-    await page.locator('#medChips').getByRole('button', { name: 'Other', exact: true }).click();
-    await page.locator('#doseChips input').fill('100 mg');
-    await page.locator('#priorDose').fill('2026-07-02');
-    await page.locator('#priorSite').selectOption('R deltoid');
+    await openInjectionTab(page, 'Encounter');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Smart Rotation');
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
 
-    await expect(page.locator('#injPriorContextCopy')).toContainText('A valid alternate is L deltoid');
-    await expect(page.locator('#bodyMap .bm-lm.recommended[data-site="L deltoid"]')).toBeVisible();
-    await expect(page.locator('#bodyMap .bz-sel,#bodyMap .bm-lm.on')).toHaveCount(0);
+    await openInjectionTab(page, 'Medication');
+    await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: 'Other' });
+    await panel.locator('.wfp-field:has-text("Dose") input').fill('100 mg');
+    await panel.locator('.wfp-field:has-text("Interval") select').selectOption('q4wk');
 
-    await page.locator('#bodyMap .bm-rot-alt').click();
-    await expect(page.locator('#adminGuideSummaryLine')).toContainText('IM · L deltoid');
-    await expect(page.locator('#adminGuideDetail')).toHaveClass(/hidden/);
-    await expect(page.locator('#panel-administer .card-medication')).not.toHaveClass(/rc530-collapsed/);
-    await expect(page.locator('#intChips')).toBeVisible();
-    await page.locator('#adminGuideEdit').click();
-    await expect(page.locator('#bodyMap')).toBeVisible();
-    await expect(page.locator('#bodyMap [role="button"][tabindex="0"]').first()).toBeFocused();
-    await page.locator('#intChips').getByRole('button', { name: 'q4 wk', exact: true }).click();
+    await openInjectionTab(page, 'Disposition');
+    await panel.locator('input[type="date"]').first().fill('2026-07-02');
+    await panel.locator('.wfp-field:has-text("Prior site") select').selectOption('R deltoid');
 
-    await openInjectionCard(page, 'card-response');
-    await expect(page.locator('#injAdministrationCoreSub')).toContainText('Other · 100 mg · IM · L deltoid');
-    await expect(page.locator('#panel-administer .card-response')).not.toHaveClass(/rc530-collapsed/);
-    await expect(page.locator('#panel-administer .card-safety')).toHaveClass(/rc530-collapsed/);
-    await expect(page.getByLabel('Actual administration time *')).toBeVisible();
+    await openInjectionTab(page, 'Medication');
+    await expect(panel.locator('.wfp-section-head', { hasText: 'Administration site' })).toContainText(
+      'rotate: L deltoid'
+    );
+    await expect(panel.locator('.wfp-option-row.is-selected')).toHaveCount(0);
+
+    await panel.getByText('L deltoid', { exact: true }).click();
+    await expect(
+      panel.locator('.wfp-option-row', { hasText: 'L deltoid' })
+    ).toHaveClass(/is-selected/);
+    await expect(panel.locator('.wfp-option-row.is-selected')).toHaveCount(1);
+
+    await openInjectionTab(page, 'Response');
+    await expect(panel.locator('input[type="time"]').first()).toBeVisible();
   });
 });

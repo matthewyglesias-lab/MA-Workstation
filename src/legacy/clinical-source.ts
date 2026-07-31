@@ -318,6 +318,7 @@ export function createLegacyClinicalSource(
       administrationTime: value("injAdminTime"),
       secondAdministrationTime: value("injSecondAdminTime"),
       allergies: value("allergies"),
+      technique: value("tech"),
       traceability: {
         ndc: value("ndc"),
         lot: value("lot"),

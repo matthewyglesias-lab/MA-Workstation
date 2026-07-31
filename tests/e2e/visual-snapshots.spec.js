@@ -10,7 +10,7 @@ const WORKFLOWS = {
   },
   administer: {
     label: 'Injection',
-    panel: '#panel-administer'
+    panel: '.wfp-panel'
   },
   uds: {
     label: 'UDS',

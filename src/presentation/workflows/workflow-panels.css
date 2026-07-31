@@ -93,18 +93,24 @@
 .cd2004-shell .wfp-tabbar {
   display: flex;
   gap: 2px;
+  min-width: 0;
   padding-inline: 2px;
   border-bottom: 2px solid var(--cd-border-dark);
 }
 
 .cd2004-shell .wfp-tab {
-  padding: 5px 12px;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 5px 8px;
   color: var(--cd-ink-muted);
   background: var(--cd-chrome-light);
   border: 1px solid var(--cd-border-mid);
   border-bottom: none;
   font-size: 11px;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cd2004-shell .wfp-tab[aria-selected="true"] {
