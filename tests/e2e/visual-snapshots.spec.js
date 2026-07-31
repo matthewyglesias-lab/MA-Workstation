@@ -14,7 +14,7 @@ const WORKFLOWS = {
   },
   uds: {
     label: 'UDS',
-    panel: '#panel-uds'
+    panel: '.wfp-panel'
   },
   samples: {
     label: 'Samples',

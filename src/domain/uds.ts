@@ -31,6 +31,99 @@ export type UdsResultState = "neg" | "pos" | "invalid" | "nt";
 export type UdsControlState = "not documented" | "valid" | "invalid";
 export type UdsTemperatureState = "acceptable" | "not documented" | "not acceptable";
 
+export const UDS_PANEL_INFO: Record<
+  UdsPanel,
+  { name: string; patientName: string; group: string }
+> = {
+  BUP: { name: "Buprenorphine", patientName: "buprenorphine medication screen", group: "Opioid / medication-assisted treatment" },
+  MTD: { name: "Methadone", patientName: "methadone medication screen", group: "Opioid / medication-assisted treatment" },
+  MOP: { name: "Morphine / opiate", patientName: "opiate pain medicine screen", group: "Opioid / medication-assisted treatment" },
+  OXY: { name: "Oxycodone", patientName: "oxycodone pain medicine screen", group: "Opioid / medication-assisted treatment" },
+  PPX: { name: "Propoxyphene", patientName: "propoxyphene pain medicine screen", group: "Opioid / medication-assisted treatment" },
+  BZO: { name: "Benzodiazepines", patientName: "benzodiazepine medicine screen", group: "Sedative / psychiatric relevance" },
+  BAR: { name: "Barbiturates", patientName: "barbiturate medicine screen", group: "Sedative / psychiatric relevance" },
+  TCA: { name: "Tricyclic antidepressants", patientName: "tricyclic antidepressant medicine screen", group: "Sedative / psychiatric relevance" },
+  AMP: { name: "Amphetamines", patientName: "amphetamine stimulant screen", group: "Stimulant / other substances" },
+  MET: { name: "Methamphetamine", patientName: "methamphetamine stimulant screen", group: "Stimulant / other substances" },
+  COC: { name: "Cocaine metabolite", patientName: "cocaine screen", group: "Stimulant / other substances" },
+  MDMA: { name: "MDMA / ecstasy", patientName: "ecstasy-related substance screen", group: "Stimulant / other substances" },
+  PCP: { name: "Phencyclidine", patientName: "phencyclidine screen", group: "Stimulant / other substances" },
+  THC: { name: "Cannabinoids / THC", patientName: "cannabis or marijuana screen", group: "Cannabis" },
+};
+
+export const UDS_GROUPS: ReadonlyArray<{
+  key: string;
+  label: string;
+  sub: string;
+  panels: readonly UdsPanel[];
+}> = [
+  { key: "opioid", label: "Opioid / MAT-related", sub: "Medication-assisted treatment and opioid panels", panels: ["BUP", "MTD", "MOP", "OXY", "PPX"] },
+  { key: "sedative", label: "Sedative / psychiatric relevance", sub: "Benzodiazepine, barbiturate, and TCA panels", panels: ["BZO", "BAR", "TCA"] },
+  { key: "stimulant", label: "Stimulant / illicit", sub: "Amphetamine, methamphetamine, cocaine, MDMA, PCP", panels: ["AMP", "MET", "COC", "MDMA", "PCP"] },
+  { key: "cannabis", label: "Cannabis", sub: "THC panel", panels: ["THC"] },
+];
+
+export const UDS_REASON_OPTIONS: ReadonlyArray<{ key: UdsEncounter["reason"]; label: string }> = [
+  { key: "routine", label: "Routine monitoring" },
+  { key: "medmgmt", label: "Medication management" },
+  { key: "preinj", label: "Pre-injection" },
+  { key: "ordered", label: "Provider ordered" },
+  { key: "other", label: "Other" },
+];
+
+export const UDS_TEMP_OPTIONS: ReadonlyArray<{ key: UdsTemperatureState; label: string }> = [
+  { key: "acceptable", label: "Acceptable" },
+  { key: "not documented", label: "Not documented" },
+  { key: "not acceptable", label: "Not acceptable" },
+];
+
+export const UDS_CONTROL_OPTIONS: ReadonlyArray<{ key: UdsControlState; label: string }> = [
+  { key: "not documented", label: "Not documented" },
+  { key: "valid", label: "Valid control line" },
+  { key: "invalid", label: "Invalid / missing control" },
+];
+
+export const UDS_RESULT_LABEL: Record<UdsResultState, string> = {
+  neg: "Negative",
+  pos: "Preliminary positive",
+  invalid: "Invalid / unreadable",
+  nt: "Not tested",
+};
+
+export const udsPanelName = (panel: UdsPanel): string => UDS_PANEL_INFO[panel]?.name ?? panel;
+export const udsReasonLabel = (key: UdsEncounter["reason"]): string =>
+  UDS_REASON_OPTIONS.find((option) => option.key === key)?.label ?? key;
+export const udsTempLabel = (key: UdsTemperatureState): string =>
+  UDS_TEMP_OPTIONS.find((option) => option.key === key)?.label ?? key;
+export const udsControlLabel = (key: UdsControlState): string =>
+  UDS_CONTROL_OPTIONS.find((option) => option.key === key)?.label ?? key;
+
+/**
+ * Faithful port of legacy-runtime.js's applyUdsDeviceProfile() default-fill
+ * behavior: selecting a named cup device pre-fills all its panels as
+ * negative (13-panel cups leave the omitted panel not-tested), so staff
+ * only need to mark exceptions. Device profile changes always reset
+ * physicalReadingsVerified — a fresh cup needs a fresh confirmation.
+ */
+export function applyUdsDeviceProfileDefaults(encounter: UdsEncounter): UdsEncounter {
+  const profile = profileFor(encounter.device);
+  const results: Partial<Record<UdsPanel, UdsResultState>> = {};
+  if (profile === "14") {
+    UDS_PANELS.forEach((panel) => {
+      results[panel] = "neg";
+    });
+  } else if (profile === "13" && encounter.omittedPanel) {
+    UDS_PANELS.forEach((panel) => {
+      results[panel] = panel === encounter.omittedPanel ? "nt" : "neg";
+    });
+  } else {
+    UDS_PANELS.forEach((panel) => {
+      results[panel] = "nt";
+    });
+  }
+  return { ...encounter, results, physicalReadingsVerified: false };
+}
+
 export interface UdsEncounter {
   patient: PatientIdentity;
   collectionDateTime: string;
@@ -53,6 +146,7 @@ export interface UdsEncounter {
     | "unavailable";
   results: Partial<Record<UdsPanel, UdsResultState>>;
   labPlan?: string;
+  comment?: string;
 }
 
 export interface UdsEngineContext {
@@ -82,7 +176,7 @@ const resultGroups = (encounter: UdsEncounter) => {
   };
 };
 
-const profileFor = (device: string): UdsEvaluationOutput["deviceProfile"] => {
+export const profileFor = (device: string): UdsEvaluationOutput["deviceProfile"] => {
   if (device === "SAFE life 14-Panel Cup") return "14";
   if (device === "SAFE life 13-Panel Cup") return "13";
   return device.trim() ? "other" : "none";
@@ -415,4 +509,5 @@ export const emptyUdsEncounter = (): UdsEncounter => ({
     UdsResultState
   >,
   labPlan: "provider to decide",
+  comment: "",
 });

@@ -10906,4 +10906,33 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     renderFormsTypeGrid();renderFormsStatusChips();renderLetterTypeChips();renderForms();
   };
 })();
+/* Write-only compatibility bridge for the UDS chip/photo state — UDS.reason,
+   UDS.temp, UDS.control, UDS.results, and UDS.photoData are internal state,
+   not backed by a plain DOM field value, plus the dynamically-injected
+   13-panel-cup omitted-panel/readings-verified profile. Does not affect
+   print output. */
+(()=>{
+  const RESULT_STATES=['neg','pos','invalid','nt'];
+  window.ipmgSetUdsChipState=(patch)=>{
+    if(!patch)return;
+    if(patch.reason&&UDS_REASONS.some(x=>x.k===patch.reason))UDS.reason=patch.reason;
+    if(patch.temp&&UDS_TEMP.some(x=>x.k===patch.temp))UDS.temp=patch.temp;
+    if(patch.control&&UDS_CONTROL.some(x=>x.k===patch.control))UDS.control=patch.control;
+    if(patch.results&&typeof patch.results==='object'){
+      UDS_PANELS.forEach(panel=>{
+        const state=patch.results[panel];
+        if(RESULT_STATES.includes(state))UDS.results[panel]=state;
+      });
+    }
+    if(typeof patch.photoData==='string')UDS.photoData=patch.photoData;
+    const profile=window.__IPMG_RC538_UDS_PROFILE__||(window.__IPMG_RC538_UDS_PROFILE__={omitted:'',readingsVerified:false});
+    if('omittedPanel' in patch)profile.omitted=UDS_PANELS.includes(patch.omittedPanel)?patch.omittedPanel:'';
+    if('readingsVerified' in patch)profile.readingsVerified=Boolean(patch.readingsVerified);
+    if(typeof renderUdsReasons==='function')renderUdsReasons();
+    if(typeof renderUdsTemp==='function')renderUdsTemp();
+    if(typeof renderUdsControl==='function')renderUdsControl();
+    if(typeof renderUdsResults==='function')renderUdsResults();
+    if(typeof renderUdsNote==='function')renderUdsNote();
+  };
+})();
 /* </script> */

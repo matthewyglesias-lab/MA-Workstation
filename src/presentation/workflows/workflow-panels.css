@@ -330,3 +330,107 @@
   gap: 6px;
   font-size: 11px;
 }
+
+/* Dense result grid — one row per analyte/item, replaces legacy chip grids */
+
+.cd2004-shell .wfp-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.cd2004-shell .wfp-grid-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 3px 8px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-face);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-grid-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--cd-chrome);
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-grid-row:last-child {
+  border-bottom: none;
+}
+
+.cd2004-shell .wfp-grid-row:nth-child(even) {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-grid-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-grid-cell-actions {
+  display: flex;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-grid-toggle {
+  padding: 2px 7px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-mid);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.cd2004-shell .wfp-grid-toggle:hover {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected {
+  color: var(--cd-ink);
+  border-color: var(--cd-border-dark);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 12%);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected.is-neg {
+  color: #fff;
+  background: var(--cd-green);
+  border-color: var(--cd-green);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected.is-pos {
+  color: #fff;
+  background: var(--cd-red);
+  border-color: var(--cd-red);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected.is-invalid {
+  color: #fff;
+  background: var(--cd-amber);
+  border-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected.is-nt {
+  color: var(--cd-ink);
+  background: var(--cd-chrome);
+  border-color: var(--cd-border-dark);
+}
+
+.cd2004-shell .wfp-group-action {
+  margin-left: 10px;
+  font-size: 9px;
+  text-transform: uppercase;
+}

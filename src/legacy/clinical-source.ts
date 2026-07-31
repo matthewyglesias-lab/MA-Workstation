@@ -510,6 +510,7 @@ export function createLegacyClinicalSource(
           : "unavailable",
       results,
       labPlan: asString(raw.labPlan) || value("udsLab"),
+      comment: value("udsComment"),
     };
     return {
       workflow: "uds",

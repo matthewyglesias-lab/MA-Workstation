@@ -20,6 +20,15 @@ export function setLegacyFieldValue(id: string, value: string): void {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+export function setLegacyCheckboxValue(id: string, checked: boolean): void {
+  const element = document.getElementById(id) as HTMLInputElement | null;
+  if (!element) return;
+  if (element.checked === checked) return;
+  element.checked = checked;
+  element.dispatchEvent(new Event("input", { bubbles: true }));
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 export function clickLegacyControl(id: string): void {
   document.getElementById(id)?.click();
 }

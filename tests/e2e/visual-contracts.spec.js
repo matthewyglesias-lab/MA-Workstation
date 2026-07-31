@@ -34,23 +34,6 @@ const WORKFLOWS = {
       '#panel-administer .note'
     ]
   },
-  uds: {
-    label: 'UDS',
-    headingText: 'Point-of-care UDS, documented with clear guardrails.',
-    panel: '#panel-uds',
-    layout: '#panel-uds .layout',
-    heading:
-      '#panel-uds .uds-modern-hero h1, #panel-uds .uds-modern-hero h2, #panel-uds .card-head h2',
-    representative: '#panel-uds .card',
-    control: '#panel-uds #udsPtName',
-    hero: '#panel-uds .uds-modern-hero',
-    landmarks: [
-      '#panel-uds #udsPtName',
-      '#panel-uds #udsDevice',
-      '#panel-uds #udsResultGrid',
-      '#panel-uds .uds-note'
-    ]
-  },
   samples: {
     label: 'Samples',
     headingText: 'Document exactly what was dispensed.',
@@ -67,11 +50,12 @@ const WORKFLOWS = {
       '#panel-samples #samplePreview'
     ]
   },
-  // 'forms' is intentionally not covered here: it has been migrated to a
-  // real new panel (`.wfp-panel`) with a fundamentally different structure
-  // from the shared legacy card/chip contract this suite validates for the
-  // still-legacy-hosted workflows. A dedicated visual contract for the new
-  // Forms panel is a follow-up, not part of this generic legacy contract.
+  // 'forms' and 'uds' are intentionally not covered here: they've been
+  // migrated to real new panels (`.wfp-panel`) with a fundamentally
+  // different structure from the shared legacy card/chip contract this
+  // suite validates for the still-legacy-hosted workflows. A dedicated
+  // visual contract for the new panels is a follow-up, not part of this
+  // generic legacy contract.
 };
 
 async function openWorkflow(page, workflow) {

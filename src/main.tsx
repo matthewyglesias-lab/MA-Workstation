@@ -16,6 +16,7 @@ import {
   type InjectionRecordRow,
 } from './presentation';
 import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
+import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
 import {
   createClinicalCoordinator,
   selectClinicalEvaluation,
@@ -167,6 +168,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const refreshTimer = useRef<number | null>(null);
   const snapshotRef = useRef(snapshot);
   const formsPanelRef = useRef<HTMLDivElement | null>(null);
+  const udsPanelRef = useRef<HTMLDivElement | null>(null);
 
   const refresh = () => {
     if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
@@ -260,9 +262,13 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     () =>
       Object.fromEntries(
         (Object.keys(runtime.panels) as WorkflowId[])
-          // 'forms' is migrated to <FormsPanel>; the legacy panel stays
-          // loaded (hidden) only as a print/readiness compatibility mirror.
-          .filter((workflow) => workflow !== 'home' && workflow !== 'forms')
+          // 'forms' and 'uds' are migrated to new panels; their legacy
+          // panels stay loaded (hidden) only as a print/readiness
+          // compatibility mirror.
+          .filter(
+            (workflow) =>
+              workflow !== 'home' && workflow !== 'forms' && workflow !== 'uds',
+          )
           .map((workflow) => [
             workflow,
             {
@@ -294,6 +300,17 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           evaluation={selectClinicalEvaluation(clinical, 'forms')}
           staffSignInValue={activeStaffValue()}
           previewRef={formsPanelRef}
+        />
+      );
+    }
+    if (workflow === 'uds') {
+      return (
+        <UdsPanel
+          initialEncounter={clinical.state.workflows.uds.encounter}
+          activePatient={context.patient}
+          evaluation={selectClinicalEvaluation(clinical, 'uds')}
+          staffSignInValue={activeStaffValue()}
+          previewRef={udsPanelRef}
         />
       );
     }
@@ -375,6 +392,11 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     if (activeWorkflow === 'forms') {
       formsPanelRef.current?.focus({ preventScroll: false });
       formsPanelRef.current?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (activeWorkflow === 'uds') {
+      udsPanelRef.current?.focus({ preventScroll: false });
+      udsPanelRef.current?.scrollIntoView({ block: 'nearest' });
       return;
     }
     if (isReviewWorkflow) {

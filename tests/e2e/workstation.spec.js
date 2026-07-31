@@ -23,9 +23,10 @@ test.describe('MA Workstation browser journeys', () => {
     }
     await navButton.click();
     await expect(shell).toHaveAttribute('data-active-workflow', workflow);
-    if (workflow === 'forms') {
-      // Forms is migrated to a real panel; the legacy #panel-forms markup
-      // stays loaded hidden as a print/readiness compatibility mirror only.
+    if (workflow === 'forms' || workflow === 'uds') {
+      // Forms and UDS are migrated to real panels; their legacy #panel-*
+      // markup stays loaded hidden as a print/readiness compatibility
+      // mirror only.
       await expect(page.locator('.wfp-panel')).toBeVisible();
     } else if (workflow !== 'home') {
       const panelId = workflow === 'reference' ? '#panel-reference' : `#panel-${workflow}`;
@@ -330,7 +331,7 @@ test.describe('MA Workstation browser journeys', () => {
     await page.evaluate(() => {
       window.__qaReviewActionClicks = 0;
       document
-        .querySelectorAll('#panel-uds [data-complete], #panel-uds .primary')
+        .querySelectorAll('.wfp-panel [data-complete], .wfp-panel .primary')
         .forEach(control => {
           control.addEventListener('click', () => {
             window.__qaReviewActionClicks += 1;
@@ -349,8 +350,10 @@ test.describe('MA Workstation browser journeys', () => {
       )
     );
     await page.keyboard.press('F10');
+    // UDS is migrated to a real panel; F10 focuses the panel root instead of
+    // the legacy hidden mirror's .preview-col.
     await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('#panel-uds .preview-col'))
+      Boolean(document.activeElement?.closest('.wfp-panel'))
     )).toBe(true);
     expect(await page.evaluate(() => window.__qaReviewActionClicks)).toBe(0);
     await expect(page.locator('.cd2004-status-message')).toHaveText(
@@ -565,7 +568,7 @@ test.describe('MA Workstation browser journeys', () => {
     const overflowFailures = [];
     const workflows = [
       ['administer', '#panel-administer .layout'],
-      ['uds', '#panel-uds .layout'],
+      ['uds', '.wfp-panel'],
       ['samples', '#panel-samples .layout'],
       ['forms', '.wfp-panel']
     ];
