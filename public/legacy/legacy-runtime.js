@@ -1784,6 +1784,13 @@ function renderLog(){
   });
   body.querySelectorAll(".del").forEach(d=>d.addEventListener("click",()=>{LOG.splice(+d.dataset.i,1);saveLog();renderLog();renderCommandCenter();}));
 }
+// Write-only bridge for the Daily Closeout panel's per-row delete - there's
+// no stable element id per row for clickLegacyControl() to target, so this
+// mirrors the .del click handler above exactly.
+window.ipmgDeleteLogEntry=(index)=>{
+  if(!(index>=0&&index<LOG.length))return;
+  LOG.splice(index,1);saveLog();renderLog();renderCommandCenter();
+};
 $("clearLog").addEventListener("click",()=>{if(LOG.length&&confirm("Clear the entire activity log?")){LOG=[];LOG_FILTER="all";saveLog();renderLog();renderCommandCenter();renderCommandCenter();toast("Activity log cleared");}});
 $("copyLog").addEventListener("click",()=>{
   if(!LOG.length){toast("Log is empty");return;}

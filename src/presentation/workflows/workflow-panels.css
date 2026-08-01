@@ -440,3 +440,48 @@
   font-size: 9px;
   text-transform: uppercase;
 }
+
+/* Multi-column dense table - for tabular data too wide for the two-column
+   wfp-grid pattern (e.g. Daily Closeout's activity log). */
+
+.cd2004-shell .wfp-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-table th {
+  padding: 4px 6px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-face);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--cd-chrome);
+  vertical-align: top;
+}
+
+.cd2004-shell .wfp-table tbody tr:nth-child(even) {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-table-delete {
+  padding: 0 3px;
+  color: var(--cd-red);
+  background: transparent;
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+}

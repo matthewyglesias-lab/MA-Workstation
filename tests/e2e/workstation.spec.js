@@ -28,12 +28,14 @@ test.describe('MA Workstation browser journeys', () => {
       workflow === 'uds' ||
       workflow === 'administer' ||
       workflow === 'tms' ||
-      workflow === 'reference'
+      workflow === 'reference' ||
+      workflow === 'log'
     ) {
-      // Forms, UDS, Injection, TMS, and Knowledge are migrated to real
-      // panels. Forms/UDS/Injection's legacy #panel-* markup stays loaded
-      // hidden as a print/readiness compatibility mirror; TMS and
-      // Knowledge have no print/readiness dependency, so their legacy
+      // Forms, UDS, Injection, TMS, Knowledge, and Daily Closeout are
+      // migrated to real panels. Forms/UDS/Injection's legacy #panel-*
+      // markup stays loaded hidden as a print/readiness compatibility
+      // mirror; TMS, Knowledge, and Daily Closeout have no print/readiness
+      // dependency on their own panel being mounted, so their legacy
       // panels are never mounted at all.
       await expect(page.locator('.wfp-panel')).toBeVisible();
     } else if (workflow !== 'home') {

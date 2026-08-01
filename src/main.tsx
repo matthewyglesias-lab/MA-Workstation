@@ -20,6 +20,7 @@ import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
 import { InjectionPanel } from './presentation/workflows/injection/InjectionPanel';
 import { TmsPanel } from './presentation/workflows/tms/TmsPanel';
 import { KnowledgePanel } from './presentation/workflows/knowledge/KnowledgePanel';
+import { DailyCloseoutPanel } from './presentation/workflows/log/DailyCloseoutPanel';
 import {
   createClinicalCoordinator,
   selectClinicalEvaluation,
@@ -307,10 +308,12 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         (Object.keys(runtime.panels) as WorkflowId[])
           // 'forms', 'uds', and 'administer' (injection) are migrated to
           // new panels; their legacy panels stay loaded (hidden) only as a
-          // print/readiness compatibility mirror. 'tms' and 'reference'
-          // (Knowledge) are also migrated, but neither has any print/
-          // readiness dependency, so their legacy panels are simply never
-          // mounted.
+          // print/readiness compatibility mirror. 'tms', 'reference'
+          // (Knowledge), and 'log' (Daily Closeout) are also migrated; none
+          // of the three has any print/readiness dependency on its own
+          // panel being mounted (Daily Closeout's print sheet reads
+          // directly from the in-memory activity log, not from the panel
+          // DOM), so their legacy panels are simply never mounted.
           .filter(
             (workflow) =>
               workflow !== 'home' &&
@@ -318,7 +321,8 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
               workflow !== 'uds' &&
               workflow !== 'administer' &&
               workflow !== 'tms' &&
-              workflow !== 'reference',
+              workflow !== 'reference' &&
+              workflow !== 'log',
           )
           .map((workflow) => [
             workflow,
@@ -380,6 +384,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     }
     if (workflow === 'reference') {
       return <KnowledgePanel />;
+    }
+    if (workflow === 'log') {
+      return <DailyCloseoutPanel />;
     }
     const adapter = legacyPanels[workflow];
     if (adapter) {
