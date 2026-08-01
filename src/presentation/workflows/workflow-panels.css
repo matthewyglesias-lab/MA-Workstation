@@ -485,3 +485,56 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Clickable outstanding-requirements list - each row jumps straight to the
+   tab that owns the still-unmet field, instead of leaving staff to hunt
+   across every tab for whatever is blocking a stop. */
+
+.cd2004-shell .wfp-issue-section .wfp-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd2004-shell .wfp-issue-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.cd2004-shell .wfp-issue-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  color: var(--cd-ink);
+  background: var(--cd-paper);
+  border: none;
+  border-bottom: 1px solid var(--cd-chrome);
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cd2004-shell .wfp-issue-row:last-child {
+  border-bottom: none;
+}
+
+.cd2004-shell .wfp-issue-row:hover {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-issue-tab {
+  flex: 0 0 auto;
+  min-width: 82px;
+  color: var(--cd-red);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-issue-message {
+  flex: 1 1 auto;
+}

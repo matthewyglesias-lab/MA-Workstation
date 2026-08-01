@@ -37,6 +37,99 @@ import type { PatientContext } from "../../types";
 
 type InjectionTab = "encounter" | "medication" | "traceability" | "safety" | "response" | "disposition";
 
+const INJECTION_TABS: Array<[InjectionTab, string]> = [
+  ["encounter", "Encounter"],
+  ["medication", "Medication"],
+  ["traceability", "Traceability"],
+  ["safety", "Safety"],
+  ["response", "Response"],
+  ["disposition", "Disposition"],
+];
+
+const INJECTION_TAB_LABELS = Object.fromEntries(INJECTION_TABS) as Record<InjectionTab, string>;
+
+// "details.*" is the one field prefix that doesn't map to a single tab -
+// its sub-fields are split across Traceability (product/prep/waste/product
+// issue) and Response (volume/device/site condition/administration
+// exception). Everything else maps by top-level field name/prefix alone.
+const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
+  purpose: "encounter",
+  productSource: "traceability",
+  productSourceOther: "traceability",
+  preparation: "traceability",
+  preparationOther: "traceability",
+  waste: "traceability",
+  wasteAmount: "traceability",
+  wasteWitness: "traceability",
+  productIssue: "traceability",
+  productIssueDetail: "traceability",
+  productIssueAction: "traceability",
+  productIssueRecipient: "traceability",
+  productIssueNotificationTime: "traceability",
+  productIssueDirection: "traceability",
+  productIssueNextStep: "traceability",
+  volume: "response",
+  volumeUnit: "response",
+  device: "response",
+  deviceOther: "response",
+  siteCondition: "response",
+  siteConditionOther: "response",
+  administrationException: "response",
+  exceptionSummary: "response",
+  exceptionRecipient: "response",
+  exceptionTime: "response",
+  exceptionOutcome: "response",
+};
+
+/**
+ * Maps a ClinicalIssue's dot-path `field` back to the tab that actually
+ * edits it, so an outstanding stop can be surfaced as a direct "go here"
+ * link instead of leaving staff to hunt across all six tabs for whichever
+ * field is still blank.
+ */
+function tabForInjectionField(field?: string): InjectionTab {
+  const [head, sub] = (field ?? "").split(".");
+  switch (head) {
+    case "patient":
+    case "orderingProvider":
+    case "reason":
+      return "encounter";
+    case "medicationKey":
+    case "customMedication":
+    case "dose":
+    case "route":
+    case "site":
+    case "intervalKey":
+    case "technique":
+    case "initiation":
+      return "medication";
+    case "traceability":
+      return "traceability";
+    case "attestations":
+    case "verifications":
+    case "vitals":
+    case "allergies":
+    case "acuteSafetyScreenConfirmed":
+    case "activeSafetyConcerns":
+      return "safety";
+    case "response":
+    case "administeredBy":
+    case "administrationTime":
+    case "secondAdministrationTime":
+      return "response";
+    case "disposition":
+    case "priorDoseDate":
+    case "priorSite":
+    case "administrationDate":
+    case "nextDoseDate":
+      return "disposition";
+    case "details":
+      return (sub && INJECTION_DETAILS_FIELD_TAB[sub]) || "response";
+    default:
+      return "encounter";
+  }
+}
+
 interface InjectionPanelProps {
   initialEncounter: InjectionEncounter;
   activePatient: PatientContext;
@@ -314,13 +407,20 @@ export function InjectionPanel({
 
   const administered = encounter.disposition.kind === "administered";
 
+  const stops = evaluation?.stops ?? [];
+  const stopsByTab = new Map<InjectionTab, number>();
+  stops.forEach((stop) => {
+    const stopTab = tabForInjectionField(stop.field);
+    stopsByTab.set(stopTab, (stopsByTab.get(stopTab) ?? 0) + 1);
+  });
+
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <div class="wfp-summary-bar">
         <strong>Injection encounter</strong>
         <StatusFlag
           idle={(evaluation?.readiness ?? "idle") === "idle"}
-          stopCount={evaluation?.stops.length ?? 0}
+          stopCount={stops.length}
           warningCount={evaluation?.warnings.length ?? 0}
         />
         <span class="wfp-summary-spacer" />
@@ -355,33 +455,57 @@ export function InjectionPanel({
       </div>
 
       <div class="wfp-tabbar" role="tablist">
-        {(
-          [
-            ["encounter", "Encounter"],
-            ["medication", "Medication"],
-            ["traceability", "Traceability"],
-            ["safety", "Safety"],
-            ["response", "Response"],
-            ["disposition", "Disposition"],
-          ] as Array<[InjectionTab, string]>
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            class="wfp-tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
+        {INJECTION_TABS.map(([key, label]) => {
+          const tabStopCount = stopsByTab.get(key) ?? 0;
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              class="wfp-tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+            >
+              {label}
+              {tabStopCount > 0 && (
+                <span class="wfp-tab-badge" aria-hidden="true">
+                  {tabStopCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {locked && (
         <div class="wfp-summary-bar">
           <span class="wfp-status-flag is-idle">Record locked</span>
           <span>This encounter is completed and read-only. Use a dated addendum to add follow-up documentation.</span>
+        </div>
+      )}
+
+      {!locked && stops.length > 0 && (
+        <div class="wfp-section wfp-issue-section">
+          <div class="wfp-section-head">
+            Outstanding requirements
+            <span class="wfp-tab-badge">{stops.length}</span>
+          </div>
+          <div class="wfp-issue-list">
+            {stops.map((stop) => {
+              const stopTab = tabForInjectionField(stop.field);
+              return (
+                <button
+                  key={`${stop.code}-${stop.field ?? ""}`}
+                  type="button"
+                  class="wfp-issue-row"
+                  onClick={() => setTab(stopTab)}
+                >
+                  <span class="wfp-issue-tab">{INJECTION_TAB_LABELS[stopTab]}</span>
+                  <span class="wfp-issue-message">{stop.message}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
