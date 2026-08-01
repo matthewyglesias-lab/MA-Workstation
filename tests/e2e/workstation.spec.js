@@ -23,10 +23,11 @@ test.describe('MA Workstation browser journeys', () => {
     }
     await navButton.click();
     await expect(shell).toHaveAttribute('data-active-workflow', workflow);
-    if (workflow === 'forms' || workflow === 'uds' || workflow === 'administer') {
-      // Forms, UDS, and Injection are migrated to real panels; their legacy
-      // #panel-* markup stays loaded hidden as a print/readiness
-      // compatibility mirror only.
+    if (workflow === 'forms' || workflow === 'uds' || workflow === 'administer' || workflow === 'tms') {
+      // Forms, UDS, Injection, and TMS are migrated to real panels. Forms/
+      // UDS/Injection's legacy #panel-* markup stays loaded hidden as a
+      // print/readiness compatibility mirror; TMS has no print/readiness
+      // dependency, so its legacy panel is never mounted at all.
       await expect(page.locator('.wfp-panel')).toBeVisible();
     } else if (workflow !== 'home') {
       const panelId = workflow === 'reference' ? '#panel-reference' : `#panel-${workflow}`;

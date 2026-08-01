@@ -18,6 +18,7 @@ import {
 import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
 import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
 import { InjectionPanel } from './presentation/workflows/injection/InjectionPanel';
+import { TmsPanel } from './presentation/workflows/tms/TmsPanel';
 import {
   createClinicalCoordinator,
   selectClinicalEvaluation,
@@ -305,13 +306,16 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         (Object.keys(runtime.panels) as WorkflowId[])
           // 'forms', 'uds', and 'administer' (injection) are migrated to
           // new panels; their legacy panels stay loaded (hidden) only as a
-          // print/readiness compatibility mirror.
+          // print/readiness compatibility mirror. 'tms' is also migrated,
+          // but has no print/readiness dependency at all, so its legacy
+          // panel is simply never mounted.
           .filter(
             (workflow) =>
               workflow !== 'home' &&
               workflow !== 'forms' &&
               workflow !== 'uds' &&
-              workflow !== 'administer',
+              workflow !== 'administer' &&
+              workflow !== 'tms',
           )
           .map((workflow) => [
             workflow,
@@ -370,6 +374,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           locked={snapshot.postState === 'posted'}
         />
       );
+    }
+    if (workflow === 'tms') {
+      return <TmsPanel />;
     }
     const adapter = legacyPanels[workflow];
     if (adapter) {
