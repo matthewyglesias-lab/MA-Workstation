@@ -305,12 +305,12 @@ function expectedContract(workflow, viewport) {
       tag: isHome ? 'H1' : 'H2',
       style: {
         color: isHome ? 'rgb(16, 35, 66)' : 'rgb(16, 42, 86)',
-        fontSize: isHome && desktop ? '18px' : '16px',
+        fontSize: isHome ? (desktop ? '15px' : '14px') : '16px',
         fontWeight: '700',
         lineHeight: isHome
           ? desktop
-            ? '19.8px'
-            : '17.6px'
+            ? '16.5px'
+            : '15.4px'
           : '18.4px'
       }
     },

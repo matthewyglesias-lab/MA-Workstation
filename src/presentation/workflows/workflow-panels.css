@@ -9,9 +9,9 @@
 .cd2004-shell .wfp-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
   min-width: 0;
-  padding: 10px;
+  padding: 8px;
 }
 
 /* Safety net: legacy.css's unscoped `input,select,textarea{border-radius:...}`
@@ -28,7 +28,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 5px 8px;
+  padding: 4px 7px;
   background: var(--cd-face);
   border: 1px solid;
   border-color: var(--cd-border-light) var(--cd-border-dark) var(--cd-border-dark)
@@ -112,7 +112,7 @@
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
-  padding: 5px 8px;
+  padding: 4px 7px;
   color: var(--cd-ink-muted);
   background: var(--cd-chrome-light);
   border: 1px solid var(--cd-border-mid);
@@ -177,8 +177,8 @@
 .cd2004-shell .wfp-tabpanel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px;
+  gap: 7px;
+  padding: 8px;
   background: var(--cd-paper);
   border: 1px solid var(--cd-border-dark);
   border-top: none;
@@ -192,7 +192,7 @@
 }
 
 .cd2004-shell .wfp-section-head {
-  padding: 4px 8px;
+  padding: 3px 7px;
   color: var(--cd-ink);
   background: var(--cd-face);
   border-bottom: 1px solid var(--cd-border-mid);
@@ -205,14 +205,14 @@
 .cd2004-shell .wfp-section-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 9px;
+  gap: 6px;
+  padding: 7px;
 }
 
 .cd2004-shell .wfp-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .cd2004-shell .wfp-field {
@@ -274,7 +274,7 @@
   grid-template-columns: 16px minmax(0, 1fr);
   align-items: start;
   gap: 8px;
-  padding: 5px 8px;
+  padding: 4px 7px;
   border-bottom: 1px solid var(--cd-chrome);
   cursor: pointer;
 }
@@ -358,7 +358,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
-  padding: 3px 8px;
+  padding: 2px 7px;
   color: var(--cd-ink-muted);
   background: var(--cd-face);
   border-bottom: 1px solid var(--cd-border-mid);
@@ -373,8 +373,8 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  min-height: 22px;
-  padding: 2px 8px;
+  min-height: 19px;
+  padding: 1px 7px;
   border-bottom: 1px solid var(--cd-chrome);
   font-size: 11px;
 }
@@ -392,6 +392,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cd2004-shell .wfp-grid-head > span:first-child,
+.cd2004-shell .wfp-grid-row .wfp-grid-cell:first-child {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding-right: 7px;
+  border-right: 1px solid var(--cd-chrome);
+}
+
+.cd2004-shell .wfp-grid-head > span:first-child {
+  border-right-color: var(--cd-border-mid);
 }
 
 .cd2004-shell .wfp-grid-cell-actions {
@@ -466,9 +479,10 @@
 }
 
 .cd2004-shell .wfp-table th {
-  padding: 4px 6px;
+  padding: 3px 5px;
   color: var(--cd-ink-muted);
   background: var(--cd-face);
+  border-right: 1px solid var(--cd-border-mid);
   border-bottom: 1px solid var(--cd-border-mid);
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -478,9 +492,15 @@
 }
 
 .cd2004-shell .wfp-table td {
-  padding: 4px 6px;
+  padding: 3px 5px;
+  border-right: 1px solid var(--cd-chrome);
   border-bottom: 1px solid var(--cd-chrome);
   vertical-align: top;
+}
+
+.cd2004-shell .wfp-table th:last-child,
+.cd2004-shell .wfp-table td:last-child {
+  border-right: none;
 }
 
 .cd2004-shell .wfp-table tbody tr:nth-child(even) {
@@ -516,7 +536,7 @@
   align-items: baseline;
   gap: 8px;
   width: 100%;
-  padding: 5px 8px;
+  padding: 4px 7px;
   color: var(--cd-ink);
   background: var(--cd-paper);
   border: none;
