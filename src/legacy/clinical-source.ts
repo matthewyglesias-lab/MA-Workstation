@@ -596,6 +596,8 @@ export function createLegacyClinicalSource(
           }))
         : [],
       extra: hasMeaningfulEntry ? value("sampleExtra") : "",
+      handoutStatus: hasMeaningfulEntry ? value("sampleHandoutStatus") : "",
+      followUp: hasMeaningfulEntry ? value("sampleFollowUp") : "",
       review: { confirmedAt: "", fingerprint: "" },
     };
     let reviewCurrent = false;

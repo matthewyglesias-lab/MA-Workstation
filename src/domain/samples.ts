@@ -55,6 +55,8 @@ export interface SamplesEncounter {
   packages: SamplePackage[];
   plan: SamplePlanStep[];
   extra?: string;
+  handoutStatus?: string;
+  followUp?: string;
   review: SampleReviewConfirmation;
 }
 
@@ -393,5 +395,7 @@ export const emptySamplesEncounter = (): SamplesEncounter => ({
   packages: [],
   plan: [],
   extra: "",
+  handoutStatus: "",
+  followUp: "",
   review: { confirmedAt: "", fingerprint: "" },
 });

@@ -27,16 +27,17 @@ test.describe('MA Workstation browser journeys', () => {
       workflow === 'forms' ||
       workflow === 'uds' ||
       workflow === 'administer' ||
+      workflow === 'samples' ||
       workflow === 'tms' ||
       workflow === 'reference' ||
       workflow === 'log'
     ) {
-      // Forms, UDS, Injection, TMS, Knowledge, and Daily Closeout are
-      // migrated to real panels. Forms/UDS/Injection's legacy #panel-*
-      // markup stays loaded hidden as a print/readiness compatibility
-      // mirror; TMS, Knowledge, and Daily Closeout have no print/readiness
-      // dependency on their own panel being mounted, so their legacy
-      // panels are never mounted at all.
+      // Forms, UDS, Injection, Samples, TMS, Knowledge, and Daily Closeout
+      // are migrated to real panels. Forms/UDS/Injection/Samples' legacy
+      // #panel-* markup stays loaded hidden as a print/readiness
+      // compatibility mirror; TMS, Knowledge, and Daily Closeout have no
+      // print/readiness dependency on their own panel being mounted, so
+      // their legacy panels are never mounted at all.
       await expect(page.locator('.wfp-panel')).toBeVisible();
     } else if (workflow !== 'home') {
       const panelId = workflow === 'reference' ? '#panel-reference' : `#panel-${workflow}`;
@@ -322,7 +323,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.keyboard.press('Alt+4');
     await expect(shell).toHaveAttribute('data-active-workflow', 'samples');
-    await expect(page.locator('#panel-samples')).toBeVisible();
+    await expect(page.locator('.wfp-panel')).toBeVisible();
   });
 
   test('routes live workflows through the clinical coordinator and keeps review shortcuts non-destructive', async ({ page }) => {
@@ -397,10 +398,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Alpha, Patient');
 
     await openWorkflow(page, 'samples');
+    const samplesPanel = page.locator('.wfp-panel');
     await expect(page.locator('#samplePtName')).toHaveValue('Alpha, Patient');
     await expect(page.locator('#sampleDOB')).toHaveValue('01/02/1990');
-    await page.locator('#samplePtName').fill('Bravo, Patient');
-    await page.locator('#sampleDOB').fill('03/04/1992');
+    await samplesPanel.locator('input[placeholder="Last, First"]').fill('Bravo, Patient');
+    await samplesPanel.locator('input[placeholder="MM/DD/YYYY"]').fill('03/04/1992');
 
     const mismatch = page.locator('.cd2004-context-mismatch');
     await expect(mismatch).toBeVisible();
@@ -474,29 +476,25 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'uds');
   });
 
-  test('keeps Samples guide ownership, ARIA, and output highlighting in the Samples panel', async ({ page }) => {
+  test('keeps the Samples tab-folder accessible and scoped to one section at a time', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'samples');
-    const guides = page.locator('#panel-samples [data-guide]');
-    await expect(guides).toHaveCount(6);
-    expect(await guides.evaluateAll(nodes => nodes.map(node => node.dataset.guide)))
-      .toEqual(['patient', 'selected', 'plan', 'trace', 'safety', 'output']);
+    const panel = page.locator('.wfp-panel');
+    const tabs = panel.getByRole('tab');
+    await expect(tabs).toHaveCount(4);
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+    await expect(panel.getByRole('tabpanel')).toContainText('Patient / order');
 
-    const selected = page.locator('#panel-samples [data-guide="selected"]');
-    await selected.locator('[data-guided-head]').focus();
-    await page.keyboard.press('Enter');
-    await expect(selected).toHaveClass(/open/);
-    await expect(selected.locator('[data-guided-head]')).toHaveAttribute('aria-expanded', 'true');
-    await expect.poll(() => guides.evaluateAll(nodes => nodes.filter(node => node.classList.contains('open')).length)).toBe(1);
-    await expect.poll(() => guides.evaluateAll(nodes =>
-      nodes.filter(node => node.querySelector('[data-guided-head]')?.getAttribute('aria-expanded') === 'true').length
-    )).toBe(1);
+    const planTab = tabs.filter({ hasText: 'Plan & traceability' });
+    await planTab.click();
+    await expect(planTab).toHaveAttribute('aria-selected', 'true');
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'false');
+    await expect(panel.getByRole('tabpanel')).toContainText('Package traceability');
+    await expect(panel.getByRole('tabpanel')).not.toContainText('Patient / order');
 
-    const output = page.locator('#panel-samples [data-guide="output"]');
-    await output.locator('[data-guided-head]').click();
-    await output.locator('button.secondary').click();
-    await expect(page.locator('#panel-samples .preview-col')).toHaveClass(/output-pulse/);
-    await expect(page.locator('#panel-administer .preview-col')).not.toHaveClass(/output-pulse/);
+    const reviewTab = tabs.filter({ hasText: 'Safety & review' });
+    await reviewTab.click();
+    await expect(panel.getByRole('tabpanel')).toContainText('Final dispense review');
   });
 
   test('keeps the single-window task switcher and records drawer contained at phone width', async ({ page }) => {
@@ -559,7 +557,7 @@ test.describe('MA Workstation browser journeys', () => {
     const workflows = [
       ['administer', '.wfp-panel'],
       ['uds', '.wfp-panel'],
-      ['samples', '#panel-samples .layout'],
+      ['samples', '.wfp-panel'],
       ['forms', '.wfp-panel']
     ];
 
@@ -672,9 +670,12 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.goto('/');
     await openWorkflow(page, 'samples');
-    await expect(page.locator('#sampleWorksheetBlank')).toBeVisible();
+    const panel = page.locator('.wfp-panel');
+    await panel.getByRole('tab', { name: 'Safety & review' }).click();
+    const blankButton = panel.getByRole('button', { name: 'Blank worksheet' });
+    await expect(blankButton).toBeVisible();
 
-    await page.locator('#sampleWorksheetBlank').click();
+    await blankButton.click();
     await expect.poll(() => page.evaluate(() => window.__ipmgPrintCalls)).toBe(1);
     await expect(page.locator('#sampleWorksheetSheet .sw-page')).toContainText(/Medication Sample|Sample/i);
 
@@ -696,81 +697,74 @@ test.describe('MA Workstation browser journeys', () => {
   test('requires a distinct trace and current review for each added sample package', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'samples');
+    const panel = page.locator('.wfp-panel');
+    const tabs = panel.getByRole('tab');
+    const field = (label) => panel.locator('.wfp-field').filter({ has: page.getByText(label, { exact: true }) });
 
-    async function openGuide(id) {
-      const guide = page.locator(`#panel-samples [data-guide="${id}"]`);
-      await expect(guide).toBeVisible();
-      if (!await guide.evaluate(card => card.classList.contains('open'))) {
-        await guide.locator('[data-guided-head]').click();
-      }
-      await expect(guide).toHaveClass(/open/);
-    }
+    await field('Patient name').locator('input').fill('QA, Browser');
+    await field('DOB').locator('input').fill('01/02/1990');
+    await field('Prescriber').locator('input').fill('QA Prescriber');
+    await field('Dispensed by').locator('input').fill('QA Staff');
+    await field('Date dispensed').locator('input').fill('2026-07-29');
+    await field('Start date').locator('input').fill('2026-07-29');
 
-    await openGuide('selected');
-    await page.locator('#sampleMedChips button').first().click();
+    await tabs.filter({ hasText: 'Medication' }).click();
+    await field('Medication').locator('select').selectOption({ label: 'Vraylar' });
+    await field('Patient instructions').locator('textarea').fill('Take as prescribed.');
 
-    const packageOption = page.locator('#samplePackageButtons button:not(.manual)').first();
-    await expect(packageOption).toBeVisible();
-    // RC5.38 intentionally starts with no physical package. The first click makes
-    // the primary package; the second is the separate package we need to trace.
-    await packageOption.click();
-    await packageOption.click();
+    await tabs.filter({ hasText: 'Plan & traceability' }).click();
+    await field('Primary package lot #').locator('input').fill('PRIMARY-LOT-42');
+    await field('Primary package exp').locator('input').fill('2027-12');
 
-    const doseRow = page.locator('#sampleDoseRows [data-sample-package-trace]');
-    const traceRow = page.locator('#samplePackageTraceList [data-sample-package-trace-row]');
-    await expect(doseRow).toHaveCount(1);
-    await expect(traceRow).toHaveCount(1);
-
-    await openGuide('patient');
-    await page.locator('#samplePtName').fill('QA, Browser');
-    await page.locator('#sampleDOB').fill('01/02/1990');
-    await page.locator('#samplePrescriber').fill('QA Prescriber');
-    await page.locator('#sampleStaff').fill('QA Staff');
-    await page.locator('#sampleDate').fill('2026-07-29');
-
-    await openGuide('plan');
-    await page.locator('#sampleStart').fill('2026-07-29');
-    await page.locator('#sampleSig').fill('Take as prescribed.');
-
-    await openGuide('safety');
-    await page.locator('#sampleMedCheck').selectOption({ label: 'Prescriber reviewed / ok to dispense' });
-    await page.locator('#sampleEdu').selectOption({ label: 'Reviewed with patient' });
-
-    await openGuide('trace');
-    await page.locator('#sampleLot').fill('PRIMARY-LOT-42');
-    await page.locator('#sampleExp').fill('2027-12');
+    await panel.getByRole('button', { name: '+ Add package / step' }).click();
+    const row = panel.locator('.wfp-table tbody tr').first();
+    // RC5.38-equivalent: an added row only becomes a distinct trace-eligible
+    // package once it has a non-empty package/quantity value.
+    await row.locator('input').nth(0).fill('Vraylar 3 mg capsule');
+    await row.locator('input').nth(1).fill('1 box');
+    await row.locator('input').nth(3).fill('Then take 1 capsule daily.');
 
     await expect.poll(() => page.evaluate(() => window.sampleTraceIssues().join(' | ')))
       .toContain('Added package 2 lot');
     await expect.poll(() => page.evaluate(() => window.sampleTraceIssues().join(' | ')))
       .toContain('Added package 2 expiration');
 
-    const reviewButton = page.locator('#sampleReviewedToday');
-    await openGuide('safety');
-    await reviewButton.click();
-    await expect(reviewButton).toHaveAttribute('aria-pressed', 'false');
+    const entriesBeforeTrace = await page.evaluate(() => window.samplePackageTraceEntries());
+    expect(entriesBeforeTrace).toHaveLength(2);
+    expect(entriesBeforeTrace[0]).toMatchObject({ label: 'Primary package', lot: 'PRIMARY-LOT-42', exp: '2027-12' });
+    expect(entriesBeforeTrace[1]).toMatchObject({ label: 'Added package 2', lot: '', exp: '' });
 
-    await openGuide('trace');
-    await traceRow.locator('[data-sample-package-trace-field="lot"]').fill('SECONDARY-LOT-42');
-    await traceRow.locator('[data-sample-package-trace-field="exp"]').fill('2028-01');
+    await tabs.filter({ hasText: 'Safety & review' }).click();
+    await field('Medication list / interaction check').locator('select')
+      .selectOption({ label: 'Prescriber reviewed / ok to dispense' });
+    await field('Patient education').locator('select').selectOption({ label: 'Reviewed with patient' });
 
-    const entries = await page.evaluate(() => window.samplePackageTraceEntries());
-    expect(entries).toHaveLength(2);
-    expect(entries[0]).toMatchObject({ label: 'Primary package', lot: 'PRIMARY-LOT-42', exp: '2027-12' });
-    expect(entries[1]).toMatchObject({ label: 'Added package 2', lot: 'SECONDARY-LOT-42', exp: '2028-01' });
-
-    await expect.poll(() => page.evaluate(() => window.sampleTraceIssues().join(' | ')))
-      .toContain('final dispense review confirmation');
+    const reviewButton = panel.getByRole('button', { name: /reviewed today/i });
+    await expect(reviewButton).toBeDisabled();
     await expect(page.locator('#samplePrint')).toBeDisabled();
 
-    await openGuide('safety');
+    await tabs.filter({ hasText: 'Plan & traceability' }).click();
+    await row.locator('input').nth(4).fill('SECONDARY-LOT-42');
+    await row.locator('input').nth(5).fill('2028-01');
+
+    const entriesAfterTrace = await page.evaluate(() => window.samplePackageTraceEntries());
+    expect(entriesAfterTrace[1]).toMatchObject({ label: 'Added package 2', lot: 'SECONDARY-LOT-42', exp: '2028-01' });
+    await expect.poll(() => page.evaluate(() => window.sampleTraceIssues().join(' | ')))
+      .not.toContain('Added package 2 lot');
+    await expect.poll(() => page.evaluate(() => window.sampleTraceIssues().join(' | ')))
+      .toContain('final dispense review confirmation');
+
+    await tabs.filter({ hasText: 'Safety & review' }).click();
+    await expect(reviewButton).toBeEnabled();
     await reviewButton.click();
     await expect(reviewButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#sampleReviewedTodayStatus')).toContainText('Final dispense review confirmed today');
     await expect(page.locator('#samplePrint')).toBeEnabled();
 
-    await openGuide('trace');
-    await traceRow.locator('[data-sample-package-trace-field="lot"]').fill('SECONDARY-LOT-43');
+    await tabs.filter({ hasText: 'Plan & traceability' }).click();
+    await row.locator('input').nth(4).fill('SECONDARY-LOT-43');
+
+    await tabs.filter({ hasText: 'Safety & review' }).click();
     await expect(reviewButton).toHaveAttribute('aria-pressed', 'false');
     await expect(page.locator('#samplePrint')).toBeDisabled();
   });

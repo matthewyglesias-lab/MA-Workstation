@@ -10136,6 +10136,18 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   window.samplePackageTraceText=packageTraceText;
   window.sampleReviewConfirmationCurrent=reviewCurrent;
   window.sampleTraceIssues=wrappedSampleTraceIssues;try{sampleTraceIssues=wrappedSampleTraceIssues;}catch(error){}
+  // Write-only bridge: the additional-package lot/exp fields are keyed by an
+  // auto-generated data-sample-package-trace id, not a plain DOM field id,
+  // so setLegacyFieldValue() can't target them. Callers are expected to have
+  // already tagged the corresponding #sampleDoseRows row with this same id
+  // (see the Samples legacy mirror), matching exactly what the dynamically
+  // rendered #samplePackageTraceList input handler does on user input.
+  window.ipmgSetSamplePackageTrace=(id,lot,exp)=>{
+    if(!id)return;
+    const state=traceState();
+    state.packages[id]={lot:lot||'',exp:exp||''};
+    markReviewStale();renderPackageTraceability();refreshOutputs();
+  };
   function wrapDoseRows(){
     const oldAdd=window.addSampleDoseRow;
     if(typeof oldAdd==='function'&&!oldAdd.__rc542PackageTraceWrap){
@@ -10943,6 +10955,21 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(typeof renderUdsControl==='function')renderUdsControl();
     if(typeof renderUdsResults==='function')renderUdsResults();
     if(typeof renderUdsNote==='function')renderUdsNote();
+  };
+})();
+/* Write-only compatibility bridge for the Samples chip state -
+   SAMPLE_STATE.med isn't backed by a plain DOM field value. The typed panel
+   computes and writes its own auto-filled label/purpose/sig/titration/food/
+   quantity fields directly (setLegacyFieldValue), so this only updates the
+   selected-medication reference itself, not selectSampleMed()'s auto-fill
+   side effects (which would clobber those already-written fields). Does not
+   affect print output. */
+(()=>{
+  window.ipmgSetSamplesChipState=(patch)=>{
+    if(!patch||!('medicationKey' in patch))return;
+    const key=patch.medicationKey||'';
+    SAMPLE_STATE.med=key?SAMPLE_MEDS.find(m=>m.key===key)||null:null;
+    if(typeof renderSampleMedChips==='function')renderSampleMedChips();
   };
 })();
 /* Write-only compatibility bridge for the injection S-chip state

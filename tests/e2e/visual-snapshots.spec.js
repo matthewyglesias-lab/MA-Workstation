@@ -18,7 +18,7 @@ const WORKFLOWS = {
   },
   samples: {
     label: 'Samples',
-    panel: '#panel-samples'
+    panel: '.wfp-panel'
   },
   forms: {
     label: 'Forms',

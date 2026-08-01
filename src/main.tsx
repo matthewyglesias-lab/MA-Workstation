@@ -18,6 +18,7 @@ import {
 import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
 import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
 import { InjectionPanel } from './presentation/workflows/injection/InjectionPanel';
+import { SamplesPanel } from './presentation/workflows/samples/SamplesPanel';
 import { TmsPanel } from './presentation/workflows/tms/TmsPanel';
 import { KnowledgePanel } from './presentation/workflows/knowledge/KnowledgePanel';
 import { DailyCloseoutPanel } from './presentation/workflows/log/DailyCloseoutPanel';
@@ -194,6 +195,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const formsPanelRef = useRef<HTMLDivElement | null>(null);
   const udsPanelRef = useRef<HTMLDivElement | null>(null);
   const injectionPanelRef = useRef<HTMLDivElement | null>(null);
+  const samplesPanelRef = useRef<HTMLDivElement | null>(null);
   // Bumped only when the active injection record genuinely changes (opening
   // a different saved record, or starting a new one) - not when a fresh
   // draft's first autosave silently assigns it an id - so InjectionPanel's
@@ -306,20 +308,21 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     () =>
       Object.fromEntries(
         (Object.keys(runtime.panels) as WorkflowId[])
-          // 'forms', 'uds', and 'administer' (injection) are migrated to
-          // new panels; their legacy panels stay loaded (hidden) only as a
-          // print/readiness compatibility mirror. 'tms', 'reference'
-          // (Knowledge), and 'log' (Daily Closeout) are also migrated; none
-          // of the three has any print/readiness dependency on its own
-          // panel being mounted (Daily Closeout's print sheet reads
-          // directly from the in-memory activity log, not from the panel
-          // DOM), so their legacy panels are simply never mounted.
+          // 'forms', 'uds', 'administer' (injection), and 'samples' are
+          // migrated to new panels; their legacy panels stay loaded
+          // (hidden) only as a print/readiness compatibility mirror. 'tms',
+          // 'reference' (Knowledge), and 'log' (Daily Closeout) are also
+          // migrated; none of the three has any print/readiness dependency
+          // on its own panel being mounted (Daily Closeout's print sheet
+          // reads directly from the in-memory activity log, not from the
+          // panel DOM), so their legacy panels are simply never mounted.
           .filter(
             (workflow) =>
               workflow !== 'home' &&
               workflow !== 'forms' &&
               workflow !== 'uds' &&
               workflow !== 'administer' &&
+              workflow !== 'samples' &&
               workflow !== 'tms' &&
               workflow !== 'reference' &&
               workflow !== 'log',
@@ -376,6 +379,17 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           staffSignInValue={activeStaffValue()}
           previewRef={injectionPanelRef}
           locked={snapshot.postState === 'posted'}
+        />
+      );
+    }
+    if (workflow === 'samples') {
+      return (
+        <SamplesPanel
+          initialEncounter={clinical.state.workflows.samples.encounter}
+          activePatient={context.patient}
+          evaluation={selectClinicalEvaluation(clinical, 'samples')}
+          staffSignInValue={activeStaffValue()}
+          previewRef={samplesPanelRef}
         />
       );
     }
@@ -471,6 +485,11 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     if (activeWorkflow === 'uds') {
       udsPanelRef.current?.focus({ preventScroll: false });
       udsPanelRef.current?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (activeWorkflow === 'samples') {
+      samplesPanelRef.current?.focus({ preventScroll: false });
+      samplesPanelRef.current?.scrollIntoView({ block: 'nearest' });
       return;
     }
     if (isReviewWorkflow) {
