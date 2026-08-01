@@ -19,6 +19,7 @@ import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
 import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
 import { InjectionPanel } from './presentation/workflows/injection/InjectionPanel';
 import { TmsPanel } from './presentation/workflows/tms/TmsPanel';
+import { KnowledgePanel } from './presentation/workflows/knowledge/KnowledgePanel';
 import {
   createClinicalCoordinator,
   selectClinicalEvaluation,
@@ -306,24 +307,23 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         (Object.keys(runtime.panels) as WorkflowId[])
           // 'forms', 'uds', and 'administer' (injection) are migrated to
           // new panels; their legacy panels stay loaded (hidden) only as a
-          // print/readiness compatibility mirror. 'tms' is also migrated,
-          // but has no print/readiness dependency at all, so its legacy
-          // panel is simply never mounted.
+          // print/readiness compatibility mirror. 'tms' and 'reference'
+          // (Knowledge) are also migrated, but neither has any print/
+          // readiness dependency, so their legacy panels are simply never
+          // mounted.
           .filter(
             (workflow) =>
               workflow !== 'home' &&
               workflow !== 'forms' &&
               workflow !== 'uds' &&
               workflow !== 'administer' &&
-              workflow !== 'tms',
+              workflow !== 'tms' &&
+              workflow !== 'reference',
           )
           .map((workflow) => [
             workflow,
             {
-              selector:
-                workflow === 'reference'
-                  ? '#panel-reference'
-                  : `#panel-${workflow}`,
+              selector: `#panel-${workflow}`,
               resolve: () => runtime.panels[workflow],
               mountedClassName: 'cd2004-legacy-panel-mounted',
               onMount: (panel: HTMLElement) => {
@@ -377,6 +377,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     }
     if (workflow === 'tms') {
       return <TmsPanel />;
+    }
+    if (workflow === 'reference') {
+      return <KnowledgePanel />;
     }
     const adapter = legacyPanels[workflow];
     if (adapter) {
