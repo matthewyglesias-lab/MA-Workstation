@@ -15,6 +15,14 @@ body {
   background: #c6ccd4 !important;
 }
 
+/* legacy.css's toast notification (still reused app-wide via toast()/
+   toastSafe()) is a rounded, softly-blurred modern popup. Flatten it to a
+   plain rectangle with the same hard-edged offset shadow the dialogs use. */
+.toast {
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35) !important;
+}
+
 #app .cd2004-shell .cd2004-legacy-host {
   container-type: inline-size;
   min-width: 0;
