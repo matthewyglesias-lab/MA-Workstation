@@ -579,7 +579,7 @@ export function ClinicalDesktopShell({
               onClick={action.onInvoke}
             >
               <span class="cd2004-toolbar-glyph" aria-hidden="true">
-                {action.icon ?? "▪"}
+                <DesktopIcon name={action.icon} />
               </span>
               <span>{action.shortLabel ?? action.label}</span>
             </button>

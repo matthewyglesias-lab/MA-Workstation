@@ -14,6 +14,16 @@
   padding: 10px;
 }
 
+/* Safety net: legacy.css's unscoped `input,select,textarea{border-radius:...}`
+   rule otherwise wins on every native form control anywhere in a migrated
+   panel (not just ones wrapped in .wfp-field, e.g. .wfp-table cell inputs),
+   since nothing else in this file's cascade happens to out-rank it. */
+.cd2004-shell .wfp-panel input,
+.cd2004-shell .wfp-panel select,
+.cd2004-shell .wfp-panel textarea {
+  border-radius: 0 !important;
+}
+
 .cd2004-shell .wfp-summary-bar {
   display: flex;
   align-items: center;

@@ -1,18 +1,8 @@
 import type { JSX } from "preact";
-import type { WorkflowId } from "./types";
+import type { DesktopIconName } from "./types";
 
 interface DesktopIconProps extends JSX.SVGAttributes<SVGSVGElement> {
-  name:
-    | WorkflowId
-    | "save"
-    | "records"
-    | "note"
-    | "print"
-    | "reset"
-    | "patient"
-    | "staff"
-    | "alert"
-    | "check";
+  name: DesktopIconName;
 }
 
 export function DesktopIcon({ name, ...props }: DesktopIconProps) {
@@ -132,6 +122,13 @@ export function DesktopIcon({ name, ...props }: DesktopIconProps) {
           <path d="M3 4h14v13H3V4Z" />
           <circle cx="7" cy="9" r="2" />
           <path d="M5 14c.8-2 3.2-2 4 0M11 8h4M11 11h4M11 14h3" />
+        </svg>
+      );
+    case "location":
+      return (
+        <svg {...common}>
+          <path d="M4 18V6l6-4 6 4v12" />
+          <path d="M4 18h12M8 18v-5h4v5M8 8h1M11 8h1M8 11h1M11 11h1" />
         </svg>
       );
     case "alert":

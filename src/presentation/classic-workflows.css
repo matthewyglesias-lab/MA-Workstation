@@ -7,6 +7,14 @@
  * their original layout.
  */
 
+/* legacy.css sets a soft ambient radial-gradient "glow" on <body> (a modern
+   SaaS marketing-page touch, not a period-appropriate flat terminal
+   background) that bleeds in behind/around the fixed shell. Flatten it to
+   the same neutral chrome tone the shell itself uses. */
+body {
+  background: #c6ccd4 !important;
+}
+
 #app .cd2004-shell .cd2004-legacy-host {
   container-type: inline-size;
   min-width: 0;

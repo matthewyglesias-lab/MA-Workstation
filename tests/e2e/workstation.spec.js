@@ -1087,7 +1087,12 @@ test.describe('MA Workstation browser journeys', () => {
     // visibility, only the interactive steps move to the new panel below.
     const initiation = page.locator('#initiationProtocolCard');
     await panel.getByText('1-day initiation', { exact: true }).click();
-    await panel.getByText('Active provider initiation/re-initiation order', { exact: false }).click();
+    // Scoped to the option row rather than a bare getByText: the same stop
+    // message also appears verbatim in the "Outstanding requirements" list
+    // once the 1-day protocol is selected but not yet plan-verified.
+    await panel
+      .locator('.wfp-checkbox-row label', { hasText: 'Active provider initiation/re-initiation order' })
+      .click();
     await panel.locator('.wfp-field:has-text("Component 2 — dose") input').fill('300 mg');
     await panel.locator('.wfp-field:has-text("Component 2 — site") select').selectOption('L deltoid');
     await panel.locator('.wfp-field:has-text("Component 2 — NDC") input').fill('00000-0000-22');
