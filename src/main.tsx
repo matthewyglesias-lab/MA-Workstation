@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { installRecordsWindowEnhancements } from './presentation/records-window';
+import { RecordsWindow } from './presentation/RecordsWindow';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   ClinicalDesktopShell,
@@ -202,6 +202,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   // internal typed state can be reset via `key` without discarding in-flight
   // typing on every autosave tick.
   const [injectionRecordEpoch, setInjectionRecordEpoch] = useState(0);
+  const [recordsOpen, setRecordsOpen] = useState(false);
   const injectionRecordGenerationRef = useRef(0);
 
   const refresh = () => {
@@ -573,7 +574,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             : undefined
         }
         onReviewComplete={reviewOrComplete}
-        onOpenRecords={() => runtime.openRecords()}
+        onOpenRecords={() => setRecordsOpen(true)}
         onOpenKnowledge={() => openWorkflow('reference')}
         onOpenCloseout={() => openWorkflow('log')}
         onCopyNoteSection={(section) =>
@@ -584,6 +585,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         onRecordOpen={openRecord}
         onEscape={() => setContextEditor(null)}
       />
+      <RecordsWindow open={recordsOpen} onClose={() => setRecordsOpen(false)} />
       {contextEditor && (
         <ContextDialog
           kind={contextEditor}
@@ -613,9 +615,15 @@ async function boot(): Promise<void> {
   const app = document.getElementById('app');
   if (!app) throw new Error('Missing application mount point.');
 
+  // Claim the records window before the legacy runtime boots. Its
+  // ensureRecordsDrawer() rebuilds the drawer layer whenever it is missing and
+  // runs from five call sites, so removing the element is not enough - it has
+  // to be told to stand down, or two dialogs answer to #recordsDrawerLayer.
+  (window as unknown as { IPMG_RECORDS_WINDOW_OWNED?: boolean })
+    .IPMG_RECORDS_WINDOW_OWNED = true;
+
   const runtime = await loadLegacyRuntime();
   installLegacyDocumentationAdapter();
-  installRecordsWindowEnhancements();
   render(<LegacyDesktopApp runtime={runtime} />, app);
   window.setTimeout(() => {
     runtime.staging.hidden = true;

@@ -9385,6 +9385,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       by('recordsDrawerTrigger')?.addEventListener('click',openRecordsDrawer);
     }
     let layer=by('recordsDrawerLayer');
+    if(!layer&&window.IPMG_RECORDS_WINDOW_OWNED)return null;
     if(!layer){
       layer=document.createElement('div');
       layer.id='recordsDrawerLayer';
@@ -9420,9 +9421,11 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       return '<button type="button" class="records-drawer-row '+(locked?'locked':'draft')+'" data-records-open="'+safe(record.id)+'" aria-label="'+safe(action+' for '+title)+'"><span class="records-drawer-row-top"><span class="records-drawer-row-title">'+safe(title)+'</span><span class="records-drawer-row-badge '+(locked?'locked':'draft')+'">'+(locked?'Locked':'Draft')+'</span></span><span class="records-drawer-row-summary">'+safe(summary)+'</span><span class="records-drawer-row-meta">'+safe(drawerMessage(record))+'</span><span class="records-drawer-row-action">'+safe(action)+' <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 5 7 7-7 7"/></svg></span></button>';
     }).join(''):'<div class="records-drawer-empty"><b>No matching local injection records.</b><span>Try another patient, medication, traceability field, or filter.</span></div>';
   }
+  const recordsChangeHandlers=[];
   function refreshRecordsDrawer(){
     ensureRecordsDrawer();
     renderRecordsDrawer();
+    recordsChangeHandlers.forEach(handler=>{try{handler();}catch(error){}});
   }
   function openRecordsDrawer(){
     const layer=ensureRecordsDrawer();if(!layer)return;
@@ -9482,6 +9485,32 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       if(newInjection()!==false)by('ptName')?.focus({preventScroll:true});
     });
   }
+  /* Record lifecycle for the typed records window. openRecord() restores a
+     v4 snapshot into the encounter form - the one path by which a draft is
+     resumed or a locked record viewed - so it is exposed rather than
+     re-derived. */
+  window.IPMGRecords={
+    /* Deliberately not openDrawerRecord/newDrawerInjection: those route through
+       closeRecordsDrawer(), which early-returns when no legacy layer exists and
+       so never runs its afterClose callback - the part that actually restores
+       the record. The typed window closes itself, then calls the same proven
+       openRecord()/newInjection() those callbacks call. */
+    open:id=>{
+      if(!records.some(record=>record.id===id))return;
+      window.IPMGNavigation?.activate('administer',{resetScroll:true});
+      if(openRecord(id)!==false){
+        const workspace=by('injRecordWorkspace');
+        if(workspace){workspace.tabIndex=-1;workspace.focus({preventScroll:true});}
+      }
+    },
+    create:()=>{
+      window.IPMGNavigation?.activate('administer',{resetScroll:true});
+      if(newInjection()!==false)by('ptName')?.focus({preventScroll:true});
+    },
+    list:()=>records.slice(),
+    count:()=>records.length,
+    onChange:handler=>{if(typeof handler==='function')recordsChangeHandlers.push(handler);},
+  };
   function renderWorkspace(options={}){
     const workspace=ensureWorkspace();if(!workspace)return;
     const restoreSaveFocus=!!options.restoreSaveFocus;

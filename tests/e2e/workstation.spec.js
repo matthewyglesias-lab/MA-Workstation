@@ -155,9 +155,19 @@ test.describe('MA Workstation browser journeys', () => {
     const drawer = page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]');
     await expect(drawer).toBeVisible();
     await expect(page.locator('#recordsDrawerSearch')).toBeFocused();
+    // The records window is a native <dialog> opened with showModal(), so the
+    // platform inerts the background instead of an author setting .inert on
+    // the shell. Assert the guarantee itself: it is the modal, and a control
+    // behind it genuinely cannot take focus. (The injection-completion overlay
+    // below is still legacy-driven and keeps its own .inert assertion.)
     await expect.poll(() =>
-      page.locator('.cd2004-shell').evaluate(node => node.inert)
+      page.locator('.records-drawer-layer').evaluate(node => node.matches(':modal'))
     ).toBe(true);
+    await expect.poll(() => page.evaluate(() => {
+      const behind = document.querySelector('.cd2004-nav-item');
+      behind?.focus();
+      return document.activeElement === behind;
+    })).toBe(false);
     await expect(page.locator('[data-records-filter="draft"]')).toBeVisible();
     // The records list is a centred modal selection window, not an edge
     // drawer, so the contract is that it sits centred in its layer - equal
@@ -202,9 +212,9 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
-    await expect.poll(() =>
-      page.locator('.cd2004-shell').evaluate(node => node.inert)
-    ).toBe(false);
+    // No inverse focusability probe here: focusing a background control to
+    // prove it is reachable would itself steal the focus that the next
+    // assertion checks was restored to the launcher.
     await expect(drawerLauncher).toBeFocused();
     expect(pageErrors).toEqual([]);
   });
@@ -508,10 +518,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(drawer).toBeVisible();
     expect(await maxMotionMilliseconds(drawer, 'transitionDuration'))
       .toBeLessThanOrEqual(1);
-    expect(await maxMotionMilliseconds(
-      page.locator('.records-drawer-scrim'),
-      'transitionDuration'
-    )).toBeLessThanOrEqual(1);
+    // The hand-rolled scrim element is gone: the dialog's ::backdrop is the
+    // platform's, and a pseudo-element cannot be measured through a locator.
+    // The window itself carries the motion contract.
+    expect(await maxMotionMilliseconds(drawer, 'animationDuration'))
+      .toBeLessThanOrEqual(1);
     await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
     await expect(recordsButton).toBeFocused();

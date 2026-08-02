@@ -33,14 +33,32 @@
      panel in from the right over a dimmed page is a phone/SaaS idiom; the
      period-correct equivalent of "pick a saved encounter" is a modal window
      with a titlebar, search criteria, a column list, and a button bar. */
-  .records-drawer-layer:not([hidden]) {
+  /* `[open]`, not `:not([hidden])`: this is a <dialog> now, and an author
+     `display` declaration would otherwise beat the UA rule that hides a
+     closed dialog - the same trap the [hidden] layers hit. */
+  .records-drawer-layer:not([open]) {
+    display: none;
+  }
+
+  .records-drawer-layer[open] {
     position: fixed;
     inset: 0;
     z-index: 14500;
     display: grid;
     place-items: center;
+    max-width: none;
+    max-height: none;
+    width: 100%;
+    height: 100%;
     padding: 12px;
+    margin: 0;
+    background: transparent;
+    border: 0;
     isolation: isolate;
+  }
+
+  .records-drawer-layer::backdrop {
+    background: rgb(8 17 34 / 42%);
   }
 
   .records-drawer {
