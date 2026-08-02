@@ -1,3 +1,104 @@
+/*
+ * Screen-side hiding for the two legacy-owned subtrees. These were previously
+ * hidden only incidentally, by legacy.css's own `.panel{display:none}` - now
+ * that legacy.css is print-only (see index.html), they need an explicit rule
+ * or the hidden legacy markup and the print sheets would both render on screen.
+ *
+ * Scoped to `screen` so print is completely untouched: during print neither
+ * rule applies, and legacy.css governs those subtrees exactly as it does today.
+ */
+@media screen {
+  #legacy-staging,
+  #print-root {
+    display: none;
+  }
+}
+
+/*
+ * Structural base for the two body-appended legacy surfaces (records drawer,
+ * injection-completion receipt). legacy.css owned their layout - position,
+ * flex/grid structure, width - while the redesign only ever restyled their
+ * appearance on top. With legacy.css print-only they need a real structural
+ * base or they render unpositioned.
+ *
+ * Interim: these are rebuilt as real dialog-based components in a later phase,
+ * at which point this block and classic-workflows.css both go away.
+ */
+@media screen {
+  /* `:not([hidden])` matters: an author `display` declaration would otherwise
+     override the UA `[hidden]{display:none}` rule and pin these layers open. */
+  .records-drawer-layer:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 14500;
+    display: flex;
+    justify-content: flex-end;
+    isolation: isolate;
+  }
+
+  .records-drawer {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+    width: min(470px, 100%);
+    height: 100%;
+  }
+
+  .inj-completion-overlay:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    background: rgb(25 37 58 / 42%);
+  }
+
+  .inj-completion-card {
+    position: relative;
+    width: min(400px, 100%);
+  }
+}
+
+/*
+ * Document-level base. legacy.css was silently providing this too (its own
+ * reset plus `body{font-family:'Inter';font-size:14px}`), so with it off the
+ * screen cascade the document would otherwise fall back to UA defaults -
+ * Times New Roman at 16px. Screen-scoped for the same reason as above: print
+ * layout stays entirely legacy.css's business.
+ */
+@media screen {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    color: #101828;
+    background: #c6ccd4;
+    font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  /*
+   * Form-control sizing base. legacy.css set `input,select{width:100%}`
+   * globally, which happened to mask the fact that a <select> carries a
+   * min-content width from its longest <option>. Without it, controls inside
+   * flex/grid tracks refuse to shrink and overflow their container at narrow
+   * (Tebra side-by-side) widths. `min-width:0` restores shrinkability -
+   * the standard fix - and max-width keeps them inside their track.
+   */
+  input,
+  select,
+  textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 .cd2004-shell {
   --cd-navy: #0a246a;
   --cd-navy-dark: #061a50;

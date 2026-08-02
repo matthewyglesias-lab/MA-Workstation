@@ -26,6 +26,7 @@
 
 .cd2004-shell .wfp-summary-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 4px 7px;
