@@ -25,7 +25,28 @@ import { clickLegacyControl } from "../legacy-mirror";
 import { mirrorUdsEncounterToLegacyDom, mirrorUdsSignatureToggle } from "./uds-legacy-mirror";
 import type { PatientContext } from "../../types";
 
-type UdsTab = "collection" | "results" | "review";
+type UdsTab = "specimen" | "results" | "interpretation";
+
+// A point-of-care immunoassay report has three parts in every lab system that
+// ever rendered one: what was collected, what the analyzer said, and what a
+// human made of it. The tabs are those parts.
+const UDS_TAB_LABEL: Record<UdsTab, string> = {
+  specimen: "Specimen",
+  results: "Results",
+  interpretation: "Interpretation",
+};
+
+// Result flags are *derived* from the four states the panel already captures -
+// no new clinical data is introduced. Old lab reports carried a one- or
+// two-letter flag column beside the value; abnormal was the only thing that
+// earned ink.
+const UDS_RESULT_FLAG: Record<UdsResultState, { flag: string; status: string; abnormal: boolean }> =
+  {
+    nt: { flag: "", status: "Not performed", abnormal: false },
+    neg: { flag: "", status: "Preliminary", abnormal: false },
+    pos: { flag: "A", status: "Preliminary", abnormal: true },
+    invalid: { flag: "INV", status: "Invalid", abnormal: true },
+  };
 
 interface UdsPanelProps {
   initialEncounter: UdsEncounter;
@@ -79,25 +100,27 @@ function OptionList<T extends string>({
   options,
   inline,
 }: OptionListProps<T>) {
+  // Native <select> rather than a custom radio-row list: the OS draws the
+  // popup, keyboard type-ahead comes for free, and a closed control costs one
+  // line instead of one per option. The selected option's description stays
+  // visible beneath it - clinical guidance should not hide inside a tooltip.
+  const selected = options.find((option) => option.key === value);
   return (
-    <div class={`wfp-option-list ${inline ? "wfp-option-list-inline" : ""}`} role="radiogroup">
-      {options.map((option) => (
-        <label
-          key={option.key}
-          class={`wfp-option-row ${value === option.key ? "is-selected" : ""}`}
-        >
-          <input
-            type="radio"
-            name={name}
-            checked={value === option.key}
-            onChange={() => onChange(option.key)}
-          />
-          <span>
-            <span class="wfp-option-title">{option.label}</span>
-            {option.description && <div class="wfp-option-desc">{option.description}</div>}
-          </span>
-        </label>
-      ))}
+    <div class={`wfp-select-group ${inline ? "wfp-select-group-inline" : ""}`}>
+      <select
+        name={name}
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value as T)}
+      >
+        {options.map((option) => (
+          <option key={option.key} value={option.key} title={option.description}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {selected?.description && (
+        <small class="wfp-select-desc">{selected.description}</small>
+      )}
     </div>
   );
 }
@@ -131,7 +154,7 @@ export function UdsPanel({
 }: UdsPanelProps) {
   const [encounter, setEncounter] = useState<UdsEncounter>(initialEncounter);
   const [photoData, setPhotoData] = useState<string>("");
-  const [tab, setTab] = useState<UdsTab>("collection");
+  const [tab, setTab] = useState<UdsTab>("specimen");
   // Seeded from whatever the hidden legacy checkbox already holds at mount
   // (its own boot-time default) rather than forced, so a fresh encounter
   // doesn't silently flip the print report's signature-block default.
@@ -253,10 +276,10 @@ export function UdsPanel({
           type="button"
           role="tab"
           class="wfp-tab"
-          aria-selected={tab === "collection"}
-          onClick={() => setTab("collection")}
+          aria-selected={tab === "specimen"}
+          onClick={() => setTab("specimen")}
         >
-          Collection
+          {UDS_TAB_LABEL.specimen}
         </button>
         <button
           type="button"
@@ -265,7 +288,7 @@ export function UdsPanel({
           aria-selected={tab === "results"}
           onClick={() => setTab("results")}
         >
-          Results
+          {UDS_TAB_LABEL.results}
           <span class="wfp-tab-badge wfp-tab-badge-muted">
             {testedCount}/{UDS_PANELS.length}
           </span>
@@ -274,18 +297,27 @@ export function UdsPanel({
           type="button"
           role="tab"
           class="wfp-tab"
-          aria-selected={tab === "review"}
-          onClick={() => setTab("review")}
+          aria-selected={tab === "interpretation"}
+          onClick={() => setTab("interpretation")}
         >
-          Review
+          {UDS_TAB_LABEL.interpretation}
         </button>
       </div>
 
-      {tab === "collection" && (
+      {tab === "specimen" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
-            <div class="wfp-section-head">UDS encounter</div>
+            <div class="wfp-section-head">Specimen &amp; collection</div>
             <div class="wfp-section-body">
+              {/* Source and method are fixed for this workflow, but a lab
+                  report always states them - a result with no named specimen
+                  is not a result. */}
+              <dl class="wfp-report-meta">
+                <dt>Specimen</dt>
+                <dd>Urine, random collection</dd>
+                <dt>Method</dt>
+                <dd>Point-of-care immunoassay (waived)</dd>
+              </dl>
               <div class="wfp-row">
                 <Field label="Patient name">
                   <input
@@ -340,7 +372,7 @@ export function UdsPanel({
           </div>
 
           <div class="wfp-section">
-            <div class="wfp-section-head">Device</div>
+            <div class="wfp-section-head">Device &amp; quality control</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Device">
@@ -441,8 +473,19 @@ export function UdsPanel({
       {tab === "results" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
-            <div class="wfp-section-head">Results</div>
+            <div class="wfp-section-head">Result detail</div>
             <div class="wfp-section-body">
+              {/* Every point-of-care immunoassay result is presumptive until a
+                  confirmatory method says otherwise. Old lab reports carried
+                  that as a banner on the report itself, not as fine print
+                  three screens away. */}
+              <p class="wfp-report-status">
+                <strong>PRELIMINARY</strong>
+                <span>
+                  Presumptive screen. Confirmation by a definitive method (GC/MS or LC-MS/MS)
+                  is required before a result is treated as diagnostic.
+                </span>
+              </p>
               <div class="wfp-actions">
                 <button
                   type="button"
@@ -507,13 +550,16 @@ export function UdsPanel({
                       Group not tested
                     </button>
                   </div>
-                  <div class="wfp-grid">
+                  <div class="wfp-grid wfp-grid-lab">
                     <div class="wfp-grid-head">
                       <span>Analyte</span>
                       <span>Result</span>
+                      <span>Flag</span>
+                      <span>Status</span>
                     </div>
                     {group.panels.map((panel) => {
                       const state = encounter.results[panel] ?? "nt";
+                      const derived = UDS_RESULT_FLAG[state];
                       return (
                         <div class="wfp-grid-row" key={panel}>
                           <span class="wfp-grid-cell">
@@ -531,6 +577,12 @@ export function UdsPanel({
                               </button>
                             ))}
                           </span>
+                          <span
+                            class={`wfp-grid-cell wfp-result-flag ${derived.abnormal ? "is-abnormal" : ""}`}
+                          >
+                            {derived.flag}
+                          </span>
+                          <span class="wfp-grid-cell wfp-result-status">{derived.status}</span>
                         </div>
                       );
                     })}
@@ -548,10 +600,10 @@ export function UdsPanel({
         </div>
       )}
 
-      {tab === "review" && (
+      {tab === "interpretation" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
-            <div class="wfp-section-head">Review</div>
+            <div class="wfp-section-head">Interpretation &amp; review</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Validity markers">

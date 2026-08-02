@@ -41,7 +41,7 @@ async function preparePrintableInjection(page) {
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Injection');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
   await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
-  await panel.getByText('PRN / ordered', { exact: true }).click();
+  await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
   await panel.getByRole('tab', { name: 'Medication', exact: true }).click();
   await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: 'Other' });

@@ -321,6 +321,55 @@
   border-right: none;
 }
 
+/* Native select groups — the period-correct control for single choice */
+
+.cd2004-shell .wfp-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-select-group select {
+  padding: 3px 4px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 1px solid;
+  border-color: var(--cd-border-mid) var(--cd-border-light) var(--cd-border-light)
+    var(--cd-border-mid);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+  font: inherit;
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-select-group select:focus-visible {
+  outline: 2px solid var(--cd-focus);
+  outline-offset: -1px;
+}
+
+/* The description of the *chosen* option, not a tooltip: text like
+   "Prior dose tolerated well per pt report" is clinical content and has to
+   stay readable without hovering. */
+.cd2004-shell .wfp-select-desc {
+  padding-left: 1px;
+  color: var(--cd-ink-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+/* `inline` meant "lay the radio rows out horizontally". A native select is
+   already compact, so it now means "size to content" — the period-correct
+   look for short enumerations. Never a flex basis: these groups sit in a
+   flex *column*, where a basis would set height and stretch the box. */
+.cd2004-shell .wfp-select-group-inline {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.cd2004-shell .wfp-select-group-inline select {
+  min-width: 150px;
+}
+
 /* Live preview */
 
 .cd2004-shell .wfp-preview {
@@ -400,12 +449,95 @@
   display: flex;
   align-items: center;
   align-self: stretch;
+  /* The cell is a flex container, so whitespace between the analyte code and
+     its name collapses ("BUPBuprenorphine"). gap restores the separation. */
+  gap: 5px;
   padding-right: 7px;
   border-right: 1px solid var(--cd-chrome);
 }
 
 .cd2004-shell .wfp-grid-head > span:first-child {
   border-right-color: var(--cd-border-mid);
+}
+
+/* Lab-report result table: Analyte | Result | Flag | Status. The Flag and
+   Status columns are derived from the four states already captured — they add
+   no data, they just say what a lab report has always said out loud. */
+
+/* The result column is pinned rather than `auto`: head and row are separate
+   grids, so `auto` sizes the header to the word "Result" (36px) and the body
+   to the toggle strip (387px), and the columns drift apart. */
+.cd2004-shell .wfp-grid-lab .wfp-grid-head,
+.cd2004-shell .wfp-grid-lab .wfp-grid-row {
+  grid-template-columns: minmax(0, 1fr) 392px 30px 74px;
+}
+
+/* Toggles keep their natural widths inside that pinned column — equalising
+   them clips "PRELIMINARY POSITIVE", and these labels are the domain's own
+   result vocabulary, which print depends on. */
+.cd2004-shell .wfp-grid-lab .wfp-grid-toggle {
+  flex: 0 0 auto;
+}
+
+.cd2004-shell .wfp-result-flag {
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cd2004-shell .wfp-result-flag.is-abnormal {
+  color: var(--cd-red);
+}
+
+.cd2004-shell .wfp-result-status {
+  color: var(--cd-ink-muted);
+  font-size: 10px;
+}
+
+/* The preliminary banner. A point-of-care immunoassay is presumptive, and the
+   report says so on its face rather than in a footnote. */
+.cd2004-shell .wfp-report-status {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 8px;
+  background: var(--cd-chrome-light);
+  border: 1px solid var(--cd-border-mid);
+  border-left: 4px solid var(--cd-amber);
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-report-status strong {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.cd2004-shell .wfp-report-status span {
+  color: var(--cd-ink-muted);
+}
+
+/* Fixed specimen/method identification, the way a report header states it. */
+.cd2004-shell .wfp-report-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1px 8px;
+  margin: 0;
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-report-meta dt {
+  color: var(--cd-ink-muted);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-report-meta dd {
+  margin: 0;
+  font-size: 11px;
 }
 
 .cd2004-shell .wfp-grid-cell-actions {

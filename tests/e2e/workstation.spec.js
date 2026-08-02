@@ -97,7 +97,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="Last, First"]').fill(patient);
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill(dob);
     await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
-    await panel.getByText('PRN / ordered', { exact: true }).click();
+    await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
     await openInjectionTab(page, 'Medication');
     await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: medication });
@@ -1089,7 +1089,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openWorkflow(page, 'forms');
     const panel = page.locator('.wfp-panel');
     await panel.locator('input').first().fill('QA, Explicit Forms');
-    await panel.getByText('Provider review', { exact: true }).click();
+    await panel.locator('select[name="forms-status"]').selectOption({ label: 'Provider review' });
 
     const preview = panel.locator('.wfp-tabpanel .wfp-preview').first();
     await expect(preview).toContainText('Status: Provider review');
@@ -1114,7 +1114,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Paired Initiation');
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
     await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
-    await panel.getByText('Initiation', { exact: true }).click();
+    await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
 
     await openInjectionTab(page, 'Medication');
     await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: 'Abilify Maintena' });
@@ -1141,7 +1141,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.wfp-field:has-text("Component 2 — Exp") input').fill('2026-06');
     await panel.getByText('Exact product and dose verified against the active order', { exact: true }).click();
     await panel.getByText('Injection component 2 was actually administered today', { exact: true }).click();
-    await panel.getByText('Administered today', { exact: true }).click();
+    await panel.locator('select[name="init-oral"]').selectOption({ label: 'Administered today' });
     await expect(initiation).toContainText(
       /2 protocol items still need documentation/
     );

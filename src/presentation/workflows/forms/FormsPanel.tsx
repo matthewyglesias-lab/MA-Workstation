@@ -82,25 +82,27 @@ function OptionList<T extends string>({
   options,
   inline,
 }: OptionListProps<T>) {
+  // Native <select> rather than a custom radio-row list: the OS draws the
+  // popup, keyboard type-ahead comes for free, and a closed control costs one
+  // line instead of one per option. The selected option's description stays
+  // visible beneath it - clinical guidance should not hide inside a tooltip.
+  const selected = options.find((option) => option.key === value);
   return (
-    <div class={`wfp-option-list ${inline ? "wfp-option-list-inline" : ""}`} role="radiogroup">
-      {options.map((option) => (
-        <label
-          key={option.key}
-          class={`wfp-option-row ${value === option.key ? "is-selected" : ""}`}
-        >
-          <input
-            type="radio"
-            name={name}
-            checked={value === option.key}
-            onChange={() => onChange(option.key)}
-          />
-          <span>
-            <span class="wfp-option-title">{option.label}</span>
-            {option.description && <div class="wfp-option-desc">{option.description}</div>}
-          </span>
-        </label>
-      ))}
+    <div class={`wfp-select-group ${inline ? "wfp-select-group-inline" : ""}`}>
+      <select
+        name={name}
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value as T)}
+      >
+        {options.map((option) => (
+          <option key={option.key} value={option.key} title={option.description}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {selected?.description && (
+        <small class="wfp-select-desc">{selected.description}</small>
+      )}
     </div>
   );
 }
