@@ -2968,6 +2968,64 @@
   letter-spacing: 0.03em;
 }
 
+/* Column headers for the record list. Shares the row's exact track sizing so
+   the labels stay locked to their columns, and carries the sunken/raised Win32
+   header-button treatment that made list headers look clickable. */
+.records-drawer-columns {
+  display: grid;
+  /* No column gap: percentage tracks already total 100%, so any gap pushes
+     the header past the window edge. Win32 list headers butt together
+     anyway - the button borders are the separator. */
+  grid-template-columns: 30% 38% 32%;
+  padding: 0 7px;
+  background: var(--cd-util-face);
+  border-bottom: 1px solid #818c97;
+}
+
+.records-drawer-columns button {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+  height: 18px;
+  padding: 0 4px;
+  color: #23303f !important;
+  background: var(--cd-util-face) !important;
+  border: 1px solid !important;
+  border-color: #fff #97a1ab #97a1ab #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font: 700 9px Tahoma, Verdana, sans-serif !important;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.records-drawer-columns button:hover {
+  background: #e4e8ec !important;
+}
+
+.records-drawer-columns button:active {
+  border-color: #97a1ab #fff #fff #97a1ab !important;
+}
+
+.records-drawer-columns button:focus-visible {
+  outline: 2px solid #ffb400;
+  outline-offset: -2px;
+}
+
+/* The sort marker is a plain triangle, drawn in text rather than an icon. */
+.records-drawer-columns button.is-sorted::after {
+  content: "\25B2";
+  color: #4a5665;
+  font-size: 7px;
+}
+
+.records-drawer-columns button.is-sorted.is-desc::after {
+  content: "\25BC";
+}
+
 .records-drawer-results {
   min-width: 0;
   min-height: 0;
@@ -2992,7 +3050,7 @@
   grid-template-columns: 30% 38% 32%;
   align-items: center;
   min-width: 0;
-  gap: 0 8px !important;
+  gap: 0 !important;
   padding: 0 7px !important;
   min-height: 20px;
   color: #273548 !important;
@@ -3022,6 +3080,10 @@
   gap: 6px;
   align-items: center;
   min-width: 0;
+}
+
+.records-drawer-row > * {
+  padding-right: 8px;
 }
 
 .records-drawer-row-title,

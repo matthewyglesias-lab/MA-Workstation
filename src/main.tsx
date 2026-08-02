@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import { installRecordsWindowEnhancements } from './presentation/records-window';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   ClinicalDesktopShell,
@@ -614,6 +615,7 @@ async function boot(): Promise<void> {
 
   const runtime = await loadLegacyRuntime();
   installLegacyDocumentationAdapter();
+  installRecordsWindowEnhancements();
   render(<LegacyDesktopApp runtime={runtime} />, app);
   window.setTimeout(() => {
     runtime.staging.hidden = true;
