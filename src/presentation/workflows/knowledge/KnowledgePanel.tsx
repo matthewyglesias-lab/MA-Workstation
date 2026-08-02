@@ -109,6 +109,9 @@ export function KnowledgePanel() {
           </div>
         </div>
 
+        {/* List left, detail right - a reference lookup should not make you
+            scroll past every entry to read the one you picked. */}
+        <div class="wfp-lookup">
         <div class="wfp-section">
           <div class="wfp-section-head">
             Entries
@@ -153,6 +156,7 @@ export function KnowledgePanel() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

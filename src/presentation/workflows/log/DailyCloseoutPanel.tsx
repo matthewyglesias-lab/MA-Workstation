@@ -83,11 +83,11 @@ export function DailyCloseoutPanel() {
       <div class="wfp-section">
         <div class="wfp-section-head">Today's summary</div>
         <div class="wfp-section-body">
-          <div class="wfp-row">
+          <div class="wfp-kpi-row">
             {KPI_LABELS.map((item) => (
               <div key={item.key}>
-                <div class="wfp-option-title">{stats[item.key]}</div>
-                <div class="wfp-option-desc">{item.label}</div>
+                <div class="wfp-kpi-value">{stats[item.key]}</div>
+                <div class="wfp-kpi-label">{item.label}</div>
               </div>
             ))}
           </div>

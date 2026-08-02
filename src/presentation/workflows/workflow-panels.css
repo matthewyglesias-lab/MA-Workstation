@@ -166,28 +166,111 @@
   text-transform: uppercase;
 }
 
+/* Empty state. A dashed outline around centred copy is a modern
+   "drop things here" idiom; a period application just says what is not there,
+   on one line, where the missing rows would have started. */
 .cd2004-shell .wfp-wall {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px 12px;
+  gap: 3px;
+  padding: 7px 9px;
   color: var(--cd-ink-muted);
-  text-align: center;
-  background: var(--cd-chrome-light);
-  border: 1px dashed var(--cd-border-mid);
+  text-align: left;
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-mid);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
 }
 
 .cd2004-shell .wfp-wall-title {
   color: var(--cd-ink);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
+/* Status/count strip - one row of equal cells however many counters there
+   are. `.wfp-row`'s auto-fit gave six columns at this width, so the seventh
+   counter wrapped onto its own ragged line. */
+.cd2004-shell .wfp-kpi-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border: 1px solid var(--cd-border-mid);
+  background: var(--cd-white);
+}
+
+.cd2004-shell .wfp-kpi-row > * {
+  min-width: 0;
+  padding: 4px 8px;
+  border-right: 1px solid var(--cd-chrome);
+}
+
+.cd2004-shell .wfp-kpi-row > *:last-child {
+  border-right: none;
+}
+
+.cd2004-shell .wfp-kpi-value {
+  color: var(--cd-ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.cd2004-shell .wfp-kpi-label {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .cd2004-shell .wfp-wall p {
-  max-width: 46ch;
-  margin-inline: auto;
-  font-size: 11px;
-  line-height: 1.5;
+  max-width: 70ch;
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* Reference lookup: entry list on the left, the selected entry's detail on
+   the right, the way a clinical reference viewer has always been laid out.
+   The list scrolls inside its own box so the detail stays on screen. */
+.cd2004-shell .wfp-lookup {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-lookup > .wfp-section {
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-lookup .wfp-option-list {
+  max-height: 460px;
+  overflow-y: auto;
+  border: none;
+  scrollbar-width: thin;
+}
+
+/* Denser rows: 33 entries at the default row height is a lot of scrolling. */
+.cd2004-shell .wfp-lookup .wfp-option-row {
+  gap: 6px;
+  padding: 3px 6px;
+}
+
+.cd2004-shell .wfp-lookup .wfp-option-desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .cd2004-shell .wfp-lookup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cd2004-shell .wfp-lookup .wfp-option-list {
+    max-height: 240px;
+  }
 }
 
 .cd2004-shell .wfp-tabpanel {
