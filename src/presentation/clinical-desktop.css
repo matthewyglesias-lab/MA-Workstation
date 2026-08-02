@@ -15,14 +15,16 @@
 }
 
 /*
- * Structural base for the two body-appended legacy surfaces (records drawer,
- * injection-completion receipt). legacy.css owned their layout - position,
- * flex/grid structure, width - while the redesign only ever restyled their
- * appearance on top. With legacy.css print-only they need a real structural
- * base or they render unpositioned.
+ * Structural base for the body-appended legacy surfaces (records drawer,
+ * injection-completion receipt, toast). legacy.css owned their layout -
+ * position, flex/grid structure, width - while the redesign only ever
+ * restyled their appearance on top. With legacy.css print-only they need a
+ * real structural base or they render unpositioned.
  *
  * Interim: these are rebuilt as real dialog-based components in a later phase,
- * at which point this block and classic-workflows.css both go away.
+ * at which point this block goes away. (classic-workflows.css is already
+ * gone - a per-rule liveness audit showed 148 of its 150 rules matched
+ * nothing at all once every workflow became a Preact panel.)
  */
 @media screen {
   /* `:not([hidden])` matters: an author `display` declaration would otherwise
@@ -58,6 +60,51 @@
   .inj-completion-card {
     position: relative;
     width: min(400px, 100%);
+  }
+
+  /* The app-wide toast (legacy `toast()` / `toastSafe()`, still the only
+     transient-feedback channel) was another surface legacy.css owned outright.
+     With that sheet print-only, the toast had no screen styling left at all -
+     it rendered as a static, transparent, full-width 1460px block below the
+     fold. It is styled here as a flat status strip rather than the original
+     rounded, soft-shadowed popup: hidden until `toast()` adds `.show`. */
+  .toast {
+    position: fixed;
+    /* Clears the 22px status bar and the bottom workflow tab strip, so
+       transient feedback never covers the navigator. */
+    bottom: 62px;
+    left: 50%;
+    z-index: 20000;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    max-width: min(460px, calc(100vw - 32px));
+    padding: 7px 14px;
+    transform: translate(-50%, 8px);
+    /* Literal colours, not `--cd-*`: those tokens are declared on
+       `.cd2004-shell`, and the toast is appended to <body> outside it. */
+    color: #ffffff;
+    background: #101828;
+    border: 1px solid #000;
+    box-shadow: 3px 3px 0 rgb(0 0 0 / 35%);
+    opacity: 0;
+    font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    pointer-events: none;
+  }
+
+  /* The check glyph carries no width/height attributes and legacy.css was
+     sizing it; unsized it defaults to 84px square and inflates the strip. */
+  .toast svg {
+    flex: none;
+    width: 13px;
+    height: 13px;
+  }
+
+  .toast.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
   }
 }
 
@@ -2666,6 +2713,11 @@
 }
 
 .records-drawer-scrim {
+  /* legacy.css owned the scrim's geometry as well as its tint. Without the
+     position/inset it is a zero-height static div, so the drawer opened over
+     an undimmed shell with nothing to click away on. */
+  position: absolute;
+  inset: 0;
   background: rgb(8 17 34 / 42%) !important;
   backdrop-filter: none !important;
   opacity: 0;
@@ -2791,6 +2843,7 @@
 }
 
 .records-drawer-search {
+  position: relative;
   min-width: 0;
   margin: 0 !important;
   padding: 8px 9px 7px;
@@ -2813,6 +2866,27 @@
     inset -1px -1px #eef1f4 !important;
   outline: 0;
   font: 11px Tahoma, Verdana, sans-serif !important;
+}
+
+/* The input already reserves 31px of right padding for this glyph; legacy.css
+   was supplying the absolute placement and the SVG's size. Unpositioned it
+   dropped below the field at its 84px intrinsic default. */
+.records-drawer-search > span {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  display: block;
+  width: 13px;
+  height: 13px;
+  color: #5c6673;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.records-drawer-search > span svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .records-drawer-search input:focus {

@@ -41,7 +41,6 @@ import {
   readLegacyShellSnapshot,
   type LegacyShellSnapshot,
 } from './legacy/shell-state';
-import classicWorkflowCss from './presentation/classic-workflows.css?inline';
 
 declare global {
   interface Window {
@@ -615,10 +614,6 @@ async function boot(): Promise<void> {
 
   const runtime = await loadLegacyRuntime();
   installLegacyDocumentationAdapter();
-  const classicStyles = document.createElement('style');
-  classicStyles.id = 'cd2004-classic-workflow-styles';
-  classicStyles.textContent = classicWorkflowCss;
-  document.head.appendChild(classicStyles);
   render(<LegacyDesktopApp runtime={runtime} />, app);
   window.setTimeout(() => {
     runtime.staging.hidden = true;

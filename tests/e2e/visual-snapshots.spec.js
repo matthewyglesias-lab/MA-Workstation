@@ -208,13 +208,8 @@ async function bootDeterministicWorkstation(page, viewport) {
 async function openWorkflow(page, workflow) {
   const spec = WORKFLOWS[workflow];
   if (workflow !== 'home') {
-    const navButton = page.locator(
-      `.cd2004-nav-item[title="${spec.label}"]`
-    );
-    if (!await navButton.isVisible()) {
-      await page.getByRole('tab', { name: 'NAV', exact: true }).click();
-    }
-    await navButton.click();
+    // Bottom-docked strip: every nav item is reachable at every width.
+    await page.locator(`.cd2004-nav-item[title="${spec.label}"]`).click();
   }
 
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(

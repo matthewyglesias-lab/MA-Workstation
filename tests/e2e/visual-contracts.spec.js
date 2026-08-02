@@ -34,16 +34,11 @@ async function openWorkflow(page, workflow) {
     return;
   }
 
-  const navButton = page.locator(
+  // The workflow strip is docked along the bottom at every width, so every
+  // nav item is directly clickable - there is no NAV pane to switch to first.
+  await page.locator(
     `.cd2004-nav-item[title="${WORKFLOWS[workflow].label}"]`
-  );
-  if (!await navButton.isVisible()) {
-    const navTab = page.getByRole('tab', { name: 'NAV', exact: true });
-    await expect(navTab).toBeVisible();
-    await navTab.click();
-  }
-
-  await navButton.click();
+  ).click();
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
     'data-active-workflow',
     workflow
