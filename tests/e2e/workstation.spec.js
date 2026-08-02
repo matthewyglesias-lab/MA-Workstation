@@ -14,13 +14,10 @@ test.describe('MA Workstation browser journeys', () => {
 
   async function openWorkflow(page, workflow) {
     const shell = page.locator('.cd2004-shell');
+    // The workflow tab strip is docked along the bottom edge at every width,
+    // so a tab is always directly clickable - no pane switching required.
     const navButton = page.locator(`.cd2004-nav-item[title="${workflowLabels[workflow]}"]`);
-    if (!await navButton.isVisible()) {
-      const navSwitcher = page.getByRole('tab', { name: 'NAV', exact: true });
-      await expect(navSwitcher).toBeVisible();
-      await navSwitcher.click();
-      await expect(navButton).toBeVisible();
-    }
+    await navButton.scrollIntoViewIfNeeded();
     await navButton.click();
     await expect(shell).toHaveAttribute('data-active-workflow', workflow);
     if (
@@ -271,12 +268,14 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('keeps the navigator, work, and note panels fixed and simultaneously visible', async ({ page }) => {
     await page.goto('/');
-    const navigator = page.locator('.cd2004-navigator-window');
+    // The navigator is the CPRS-style workflow tab strip along the bottom
+    // edge, not a pane - but the contract is unchanged: it is always present.
+    const navigator = page.locator('.cd2004-navigator');
     const work = page.locator('.cd2004-work-window');
     const inspector = page.locator('.cd2004-inspector-window');
 
-    // The desktop layout is fixed: every panel a workflow needs is always in
-    // its place, with no minimize/maximize/close controls to hide it.
+    // The layout is fixed: every surface a workflow needs is always in its
+    // place, with no minimize/maximize/close controls to hide it.
     await expect(navigator).toBeVisible();
     await expect(work).toBeVisible();
     await expect(inspector).toBeVisible();
@@ -502,18 +501,20 @@ test.describe('MA Workstation browser journeys', () => {
     await page.goto('/');
     await expectNoHorizontalPageOverflow(page);
 
+    // Two panes now (WORK / NOTE): the workflow tab strip is docked along the
+    // bottom edge at every width, so it never needs a switcher slot of its own.
     const switcher = page.locator('.cd2004-mobile-switcher');
     await expect(switcher).toBeVisible();
-    await expect(switcher.getByRole('tab')).toHaveCount(3);
+    await expect(switcher.getByRole('tab')).toHaveCount(2);
     const workTab = switcher.getByRole('tab', { name: 'WORK', exact: true });
     const noteTab = switcher.getByRole('tab', { name: 'NOTE', exact: true });
     await expect(workTab).toHaveAttribute('aria-selected', 'true');
     await expect(workTab).toHaveAttribute('aria-controls', 'cd2004-pane-work');
     await expect(workTab).toHaveAttribute('tabindex', '0');
     await expect(page.locator('.cd2004-work-window')).toBeVisible();
-    await expect(page.locator('.cd2004-navigator-window')).toBeHidden();
     await expect(page.locator('.cd2004-inspector-window')).toBeHidden();
     await expect(page.locator('.cd2004-patient-field').first()).toBeVisible();
+    await expect(page.locator('.cd2004-navigator')).toBeVisible();
     expect(await page.locator('.cd2004-status-message').evaluate(node =>
       getComputedStyle(node).display
     )).not.toBe('none');
@@ -527,9 +528,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(workTab).toHaveAttribute('aria-selected', 'true');
     await expect(workTab).toBeFocused();
 
-    await switcher.getByRole('tab', { name: 'NAV', exact: true }).click();
-    await expect(page.locator('.cd2004-navigator-window')).toBeVisible();
-    await expect(page.locator('.cd2004-work-window')).toBeHidden();
+    // The bottom tab strip stays reachable at phone width, so switching
+    // workflows never requires leaving the work pane.
     await openWorkflow(page, 'samples');
     await expect(page.locator('.cd2004-work-window')).toBeVisible();
     await expect(switcher.getByRole('tab', { name: 'WORK', exact: true }))
@@ -571,22 +571,23 @@ test.describe('MA Workstation browser journeys', () => {
       expect(shellBox.x).toBeGreaterThanOrEqual(0);
       expect(shellBox.width).toBeLessThanOrEqual(width);
 
+      // Two panes now - work plus the note dock. The workflow tab strip is
+      // docked along the bottom at every width rather than occupying a pane.
       const visibleWindows = page.locator('.cd2004-workspace .cd2004-window:visible');
+      await expect(page.locator('.cd2004-navigator')).toBeVisible();
       if (width <= 700) {
         await expect(page.locator('.cd2004-mobile-switcher')).toBeVisible();
         await expect(visibleWindows).toHaveCount(1);
       } else {
         await expect(page.locator('.cd2004-mobile-switcher')).toBeHidden();
-        await expect(visibleWindows).toHaveCount(3);
+        await expect(visibleWindows).toHaveCount(2);
       }
 
       if (width === 1181) {
-        const [navBox, workBox, inspectorBox] = await Promise.all([
-          page.locator('.cd2004-navigator-window').boundingBox(),
+        const [workBox, inspectorBox] = await Promise.all([
           page.locator('.cd2004-work-window').boundingBox(),
           page.locator('.cd2004-inspector-window').boundingBox()
         ]);
-        expect(navBox.x + navBox.width).toBeLessThanOrEqual(workBox.x + 1);
         expect(workBox.x + workBox.width).toBeLessThanOrEqual(inspectorBox.x + 1);
       }
 

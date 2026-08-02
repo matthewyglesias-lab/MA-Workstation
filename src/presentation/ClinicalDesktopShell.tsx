@@ -8,6 +8,7 @@ import { NoteInspector } from "./NoteInspector";
 import { StartCenter } from "./StartCenter";
 import {
   WORKFLOW_LABELS,
+  WORKFLOW_ORDER,
   LOCKED_RECORD_ACTION_SELECTOR,
   type ClinicalDesktopShellProps,
   type DesktopPane,
@@ -23,18 +24,6 @@ const shortcutWorkflows: WorkflowId[] = [
   "forms",
   "reference",
   "log",
-];
-
-const navigatorGroups: Array<{
-  label: string;
-  workflows: WorkflowId[];
-}> = [
-  {
-    label: "Documentation",
-    workflows: ["home", "administer", "uds", "samples", "forms"],
-  },
-  { label: "Utilities", workflows: ["reference", "log"] },
-  { label: "Future", workflows: ["tms"] },
 ];
 
 function normalizedPatientValue(value?: string) {
@@ -602,7 +591,7 @@ export function ClinicalDesktopShell({
         role="tablist"
         aria-label="Desktop section switcher"
       >
-        {(["navigator", "work", "inspector"] as DesktopPane[]).map((pane) => (
+        {(["work", "inspector"] as DesktopPane[]).map((pane) => (
           <button
             key={pane}
             type="button"
@@ -626,11 +615,7 @@ export function ClinicalDesktopShell({
                 return;
               }
               event.preventDefault();
-              const panes = [
-                "navigator",
-                "work",
-                "inspector",
-              ] as DesktopPane[];
+              const panes = ["work", "inspector"] as DesktopPane[];
               const current = panes.indexOf(pane);
               const next: DesktopPane =
                 event.key === "Home"
@@ -653,11 +638,7 @@ export function ClinicalDesktopShell({
               }, 0);
             }}
           >
-            {pane === "navigator"
-              ? "NAV"
-              : pane === "work"
-                ? "WORK"
-                : "NOTE"}
+            {pane === "work" ? "WORK" : "NOTE"}
           </button>
         ))}
       </div>
@@ -667,60 +648,6 @@ export function ClinicalDesktopShell({
         id="cd2004-work-area"
         data-mobile-pane={mobilePane}
       >
-        <Panel
-          pane="navigator"
-          title="Navigator"
-          active={focusedPane === "navigator"}
-          mobileActive={mobilePane === "navigator"}
-          onActivate={setFocusedPane}
-        >
-          <nav class="cd2004-navigator" aria-label="Clinical modules">
-            {navigatorGroups.map((group) => (
-              <div key={group.label} class="cd2004-nav-group">
-                <div class="cd2004-nav-group-label">{group.label}</div>
-                {group.workflows.map((workflow, index) => {
-                  const summary = workflowSummaries[workflow];
-                  return (
-                    <button
-                      key={workflow}
-                      type="button"
-                      class={[
-                        "cd2004-nav-item",
-                        selectedWorkflow === workflow ? "is-selected" : "",
-                        `is-${summary?.state ?? "idle"}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      aria-current={
-                        selectedWorkflow === workflow ? "page" : undefined
-                      }
-                      title={WORKFLOW_LABELS[workflow]}
-                      onClick={() => openWorkflow(workflow)}
-                    >
-                      <DesktopIcon name={workflow} />
-                      <span>{WORKFLOW_LABELS[workflow]}</span>
-                      {workflow !== "tms" && (
-                        <kbd>
-                          {workflow === "home"
-                            ? "1"
-                            : shortcutWorkflows.indexOf(workflow) + 1 || index + 1}
-                        </kbd>
-                      )}
-                      {summary?.count ? (
-                        <em aria-label={`${summary.count} items`}>{summary.count}</em>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-          <div class="cd2004-navigator-foot">
-            <strong>LOCAL</strong>
-            <span>No server synchronization</span>
-          </div>
-        </Panel>
-
         <Panel
           pane="work"
           title={windowTitle}
@@ -795,30 +722,69 @@ export function ClinicalDesktopShell({
         </Panel>
       </main>
 
-      <footer class="cd2004-taskbar cd2004-print-exclude">
-        <button
-          type="button"
-          class="cd2004-start-button"
-          onClick={() => openWorkflow("home")}
-        >
-          <span class="cd2004-start-flag" aria-hidden="true">
-            ◆
-          </span>
-          Start
-        </button>
+      {/*
+        Workflow tab strip along the bottom edge - the VistA/CPRS signature.
+        This IS the navigator, relocated: it keeps the `.cd2004-navigator`
+        landmark and the `.cd2004-nav-item[title]` handles the whole test suite
+        navigates by, while freeing the entire left edge for clinical content.
+      */}
+      <nav
+        class="cd2004-navigator cd2004-print-exclude"
+        aria-label="Clinical modules"
+      >
+        {WORKFLOW_ORDER.map((workflow) => {
+          const summary = workflowSummaries[workflow];
+          const accelerator = shortcutWorkflows.indexOf(workflow) + 1;
+          return (
+            <button
+              key={workflow}
+              type="button"
+              class={[
+                "cd2004-nav-item",
+                selectedWorkflow === workflow ? "is-selected" : "",
+                `is-${summary?.state ?? "idle"}`,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-current={selectedWorkflow === workflow ? "page" : undefined}
+              title={WORKFLOW_LABELS[workflow]}
+              onClick={() => openWorkflow(workflow)}
+            >
+              <DesktopIcon name={workflow} />
+              <span>{WORKFLOW_LABELS[workflow]}</span>
+              {accelerator > 0 && <kbd>{accelerator}</kbd>}
+              {summary?.count ? (
+                <em aria-label={`${summary.count} items`}>{summary.count}</em>
+              ) : null}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/*
+        Segmented status bar. Replaces the taskbar/Start button, which emulated
+        the Windows shell rather than an EHR application. `.cd2004-status-message`
+        keeps its live-region contract and exact strings.
+      */}
+      <footer class="cd2004-statusbar cd2004-print-exclude">
+        <div class="cd2004-status-message" aria-live="polite" aria-atomic="true">
+          {effectiveStatus}
+        </div>
+        <div class="cd2004-status-segment" title="Signed-in staff">
+          {staffLabel?.trim() ? staffLabel : "No staff sign-in"}
+        </div>
+        <div class="cd2004-status-segment" title="Visit location">
+          {locationLabel?.trim() ? locationLabel : "No location"}
+        </div>
         <div
-          class={`cd2004-storage-status ${localStorageAvailable ? "is-online" : "is-error"}`}
+          class={`cd2004-status-segment ${localStorageAvailable ? "is-online" : "is-error"}`}
           title={
             localStorageAvailable
               ? "Records save only in this browser"
               : "Browser storage is unavailable"
           }
         >
-          <span aria-hidden="true">{localStorageAvailable ? "●" : "×"}</span>
           {localStorageAvailable ? "LOCAL" : "STORAGE ERROR"}
-        </div>
-        <div class="cd2004-status-message" aria-live="polite" aria-atomic="true">
-          {effectiveStatus}
         </div>
       </footer>
 

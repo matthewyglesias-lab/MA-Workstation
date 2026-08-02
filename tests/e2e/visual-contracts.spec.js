@@ -130,8 +130,10 @@ async function collectVisualContract(page, workflow) {
         rect: rectOf(element)
       }));
     const visiblePanes = panes.filter(pane => pane.visible);
+    // Two panes on desktop: the work area and the note dock. The navigator is
+    // the bottom-docked workflow tab strip, not a tiled pane.
     const desktopTiling =
-      visiblePanes.length === 3 &&
+      visiblePanes.length === 2 &&
       visiblePanes.every((pane, index) =>
         index === 0 ||
         (
@@ -339,13 +341,12 @@ function expectedContract(workflow, viewport) {
       }
     },
     panes: {
-      visible: desktop ? ['navigator', 'work', 'inspector'] : ['work'],
+      visible: desktop ? ['work', 'inspector'] : ['work'],
       desktopTiling: desktop,
       mobileSwitcherVisible: !desktop,
       mobileTabs: desktop
         ? []
         : [
-            { label: 'NAV', selected: 'false' },
             { label: 'WORK', selected: 'true' },
             { label: 'NOTE', selected: 'false' }
           ],

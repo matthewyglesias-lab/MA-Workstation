@@ -130,8 +130,13 @@
   --cd-speed: 120ms;
   --cd-speed-post: 180ms;
   box-sizing: border-box;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) 32px;
+  /*
+   * Flex column rather than fixed grid tracks: the mobile switcher toggles
+   * display:none at the breakpoint, which would shift grid-row placement for
+   * every sibling below it. Flex simply skips absent children.
+   */
+  display: flex;
+  flex-direction: column;
   width: 100%;
   min-width: 0;
   height: 100vh;
@@ -569,8 +574,13 @@
 .cd2004-workspace {
   position: relative;
   z-index: 1;
+  /*
+   * Two panes now: full-width work area plus the note dock. The navigator
+   * moved to the bottom tab strip, reclaiming its 214px column outright.
+   */
+  flex: 1 1 auto;
   display: grid;
-  grid-template-columns: 214px minmax(440px, 1fr) minmax(310px, 390px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 372px);
   grid-template-rows: minmax(0, 1fr);
   gap: 4px;
   min-width: 0;
@@ -701,16 +711,12 @@
   grid-template-rows: auto auto minmax(0, 1fr);
 }
 
-.cd2004-navigator-window {
+.cd2004-work-window {
   grid-column: 1;
 }
 
-.cd2004-work-window {
-  grid-column: 2;
-}
-
 .cd2004-inspector-window {
-  grid-column: 3;
+  grid-column: 2;
 }
 
 .cd2004-mobile-switcher {
@@ -743,73 +749,69 @@
 
 /* Navigator */
 
-.cd2004-navigator-window .cd2004-window-body {
-  display: flex;
-  flex-direction: column;
-  background: #e9edf2;
-}
-
+/*
+ * Bottom workflow tab strip - the VistA/CPRS signature. Folder tabs hang off
+ * the bottom edge of the workspace, so the selected tab reads as joined to the
+ * content above it (border-top removed on the selected tab, raised 1px).
+ */
 .cd2004-navigator {
-  display: grid;
-  gap: 5px;
-  align-content: start;
-  padding: 5px;
-}
-
-.cd2004-nav-group {
-  display: grid;
-  gap: 1px;
-}
-
-.cd2004-nav-group-label {
-  padding: 4px 6px 3px;
-  color: #4b596a;
-  border-bottom: 1px solid #aab3bd;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--cd-face);
+  border-top: 1px solid var(--cd-border-dark);
+  scrollbar-color: #aab2bc #e4e8eb;
+  scrollbar-width: thin;
 }
 
 .cd2004-nav-item {
   position: relative;
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto auto;
+  top: 0;
+  flex: 0 1 auto;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  width: 100%;
+  gap: 5px;
   min-width: 0;
-  min-height: 28px;
-  padding: 3px 6px;
+  min-height: 24px;
+  padding: 3px 9px;
+  color: var(--cd-ink-muted);
   text-align: left;
-  background: transparent;
-  border: 1px solid transparent;
-  transition:
-    background-color var(--cd-speed-fast) linear,
-    border-color var(--cd-speed-fast) linear;
+  white-space: nowrap;
+  background: var(--cd-chrome-light);
+  border: 1px solid var(--cd-border-mid);
+  border-top: none;
 }
 
 .cd2004-nav-item:hover {
+  color: var(--cd-ink);
   background: #f8fafc;
-  border-color: #9ca9b7;
 }
 
+/* Selected folder tab drops its top border so it reads as joined to the
+   workspace above, and sits 1px higher - the classic tab-folder cue. */
 .cd2004-nav-item.is-selected {
-  color: #fff;
-  background: var(--cd-navy);
-  border-color: var(--cd-navy-dark);
-  box-shadow: inset 1px 1px #547ab4;
+  top: -1px;
+  color: var(--cd-ink);
+  background: var(--cd-paper);
+  border-color: var(--cd-border-dark);
+  border-top: 2px solid var(--cd-paper);
+  font-weight: 700;
 }
 
 .cd2004-nav-item svg {
-  width: 18px;
-  height: 18px;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
 }
 
 .cd2004-nav-item span {
   min-width: 0;
   overflow: hidden;
-  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -823,7 +825,7 @@
 }
 
 .cd2004-nav-item.is-selected kbd {
-  color: #dce8fa;
+  color: var(--cd-ink-muted);
 }
 
 .cd2004-nav-item em {
@@ -838,23 +840,6 @@
   font-size: 9px;
   font-style: normal;
   font-weight: 700;
-}
-
-.cd2004-navigator-foot {
-  display: grid;
-  gap: 2px;
-  margin-top: auto;
-  padding: 7px;
-  color: #4a5664;
-  background: #d9dee5;
-  border-top: 1px solid #9fa8b2;
-  box-shadow: inset 0 1px #fff;
-  font-size: 9px;
-}
-
-.cd2004-navigator-foot strong {
-  color: var(--cd-green);
-  letter-spacing: 0.1em;
 }
 
 /* Start center */
@@ -1847,82 +1832,62 @@
   font-size: 9px;
 }
 
-/* Bottom task and status bar */
+/*
+ * Segmented status bar. Replaces the taskbar/Start button - those emulated the
+ * Windows shell, not an EHR application. Segments are sunken Win32-style panes:
+ * the live status message takes the flexible first segment, fixed-content
+ * segments sit to its right.
+ */
 
-.cd2004-taskbar {
+.cd2004-statusbar {
   position: relative;
   z-index: 20;
-  display: grid;
-  grid-template-columns: 66px auto minmax(130px, 1fr);
+  flex: 0 0 auto;
+  display: flex;
   align-items: stretch;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
-  height: 32px;
+  height: 22px;
   padding: 2px 3px;
   background: var(--cd-face);
   border-top: 1px solid #f8fafc;
   box-shadow: inset 0 1px #fff;
 }
 
-.cd2004-start-button {
-  min-width: 0;
-  padding: 2px 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: var(--cd-face);
-  border: 1px solid;
-  border-color: #fff #4e5863 #4e5863 #fff;
-  box-shadow:
-    inset 1px 1px #e9edf1,
-    inset -1px -1px #87919b;
-  font-weight: 700;
-}
-
-.cd2004-start-button:active {
-  background: #b7bec6;
-  border-color: #4e5863 #fff #fff #4e5863;
-  box-shadow: inset 1px 1px #87919b;
-}
-
-.cd2004-start-flag {
-  margin-right: 4px;
-  color: var(--cd-navy);
-}
-
-.cd2004-storage-status {
+.cd2004-status-message,
+.cd2004-status-segment {
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-width: 72px;
-  padding: 2px 7px;
-  color: #263342;
-  background: #cbd1d7;
-  border: 1px solid;
-  border-color: #7c8791 #f5f7f9 #f5f7f9 #7c8791;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.cd2004-storage-status.is-online > span {
-  color: var(--cd-green);
-}
-
-.cd2004-storage-status.is-error {
-  color: var(--cd-red);
-  background: var(--cd-red-soft);
-}
-
-.cd2004-status-message {
-  align-self: center;
   min-width: 0;
   padding: 0 6px;
   overflow: hidden;
   color: #3e4a59;
-  font-size: 10px;
+  background: var(--cd-face);
+  border: 1px solid;
+  border-color: #7c8791 #f5f7f9 #f5f7f9 #7c8791;
+  font-size: 9px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cd2004-status-message {
+  flex: 1 1 auto;
+}
+
+.cd2004-status-segment {
+  flex: 0 1 auto;
+  max-width: 190px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.cd2004-status-segment.is-online {
+  color: var(--cd-green);
+}
+
+.cd2004-status-segment.is-error {
+  color: var(--cd-red);
+  background: var(--cd-red-soft);
 }
 
 /* Modal and shortcut reference */
@@ -2065,53 +2030,16 @@
 
 @media (max-width: 1181px) {
   .cd2004-workspace {
-    grid-template-columns: 61px minmax(430px, 1fr) minmax(290px, 350px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 336px);
   }
 
-  .cd2004-navigator-window {
-    grid-column: 1;
-  }
-
-  .cd2004-work-window {
-    grid-column: 2;
-  }
-
-  .cd2004-inspector-window {
-    grid-column: 3;
-  }
-
-  .cd2004-nav-group-label,
-  .cd2004-nav-item span,
-  .cd2004-nav-item kbd,
-  .cd2004-nav-item em,
-  .cd2004-navigator-foot span {
+  /* Tabs shed their accelerator hints first, then their labels below. */
+  .cd2004-nav-item kbd {
     display: none;
   }
 
-  .cd2004-navigator {
-    gap: 5px;
-    padding: 4px;
-  }
-
-  .cd2004-nav-group {
-    gap: 2px;
-  }
-
   .cd2004-nav-item {
-    grid-template-columns: 1fr;
-    place-items: center;
-    min-height: 38px;
-    padding: 4px;
-  }
-
-  .cd2004-nav-item svg {
-    width: 21px;
-    height: 21px;
-  }
-
-  .cd2004-navigator-foot {
-    place-items: center;
-    padding: 5px 2px;
+    padding: 3px 7px;
   }
 
   .cd2004-patient-banner {
@@ -2154,22 +2082,17 @@
 
 @media (max-width: 1040px) {
   .cd2004-workspace {
-    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(330px, 1fr) minmax(230px, 38%);
   }
 
-  .cd2004-navigator-window {
-    grid-column: 1;
-    grid-row: 1 / -1;
-  }
-
   .cd2004-work-window {
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 1;
   }
 
   .cd2004-inspector-window {
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 2;
   }
 
@@ -2483,27 +2406,36 @@
     min-height: 34px;
   }
 
-  .cd2004-taskbar {
-    grid-template-columns: 58px auto minmax(0, 1fr);
-    height: 34px;
+  /*
+   * Narrow: the live status message is the primary feedback channel, so it
+   * keeps the bar - the staff/location segments drop instead.
+   */
+  .cd2004-statusbar {
+    height: 20px;
   }
 
-  .cd2004-status-message {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    white-space: nowrap;
-    clip: rect(0, 0, 0, 0);
-    clip-path: inset(50%);
+  .cd2004-status-segment {
+    display: none;
   }
 
-  .cd2004-storage-status {
-    min-width: 56px;
-    padding: 2px 4px;
+  .cd2004-status-segment.is-online,
+  .cd2004-status-segment.is-error {
+    display: flex;
+    padding: 0 4px;
     font-size: 8px;
+  }
+
+  /* Tab labels give way to icons; the title attribute still names each tab. */
+  .cd2004-nav-item span {
+    display: none;
+  }
+
+  .cd2004-nav-item {
+    padding: 3px 8px;
+  }
+
+  .cd2004-nav-item.is-selected span {
+    display: inline;
   }
 }
 
@@ -2599,20 +2531,9 @@
     padding-inline: 3px;
   }
 
-  .cd2004-taskbar {
-    grid-template-columns: 53px minmax(0, 1fr) 50px;
-  }
-
-  .cd2004-start-button {
-    padding-inline: 3px;
-  }
-
-  .cd2004-start-flag {
-    display: none;
-  }
-
-  .cd2004-storage-status {
-    min-width: 48px;
+  .cd2004-status-segment.is-online,
+  .cd2004-status-segment.is-error {
+    max-width: 62px;
     overflow: hidden;
   }
 }
@@ -3464,7 +3385,8 @@
   .cd2004-window-titlebar,
   .cd2004-window-toolbar,
   .cd2004-window-footer,
-  .cd2004-navigator-window,
+  .cd2004-navigator,
+  .cd2004-statusbar,
   .cd2004-inspector-window,
   .cd2004-posting-strip,
   .cd2004-work-locked-banner {
