@@ -233,6 +233,23 @@
   line-height: 1.4;
 }
 
+/* Affirmative completion line. The counterpart to a stop: when nothing is
+   outstanding but the finishing action is not the obvious one, say so. */
+.cd2004-shell .wfp-done-line {
+  margin: 0;
+  padding: 5px 8px;
+  color: #06421f;
+  background: var(--cd-green-soft);
+  border: 1px solid var(--cd-green);
+  border-left-width: 4px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.cd2004-shell .wfp-done-line strong {
+  font-size: 11px;
+}
+
 /* Exception block. Checkboxes that *raise* a hold must not wear the same
    clothes as checkboxes that confirm a step was done - amber edge, amber
    header, and a lead line stating the polarity outright. */

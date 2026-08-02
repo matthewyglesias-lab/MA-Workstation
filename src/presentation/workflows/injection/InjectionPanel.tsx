@@ -1593,6 +1593,19 @@ export function InjectionPanel({
                   </div>
                 </div>
               )}
+              {/* A handoff is finished by logging it, not by locking an
+                  administration record, so Review / Complete stays disabled -
+                  correctly, but silently. A greyed button and no confirmation
+                  is how staff conclude they are stuck. Say it outright, from
+                  the engine's own record status rather than a second guess at
+                  the same condition. */}
+              {evaluation?.output.recordStatus === "handoff-ready" && (
+                <p class="wfp-done-line">
+                  <strong>Handoff documented.</strong> Choose <em>Add to log</em> at the top of this
+                  worksheet to finish. Review / Complete stays unavailable because no medication was
+                  administered.
+                </p>
+              )}
             </div>
           </div>
 
