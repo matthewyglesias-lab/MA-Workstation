@@ -1719,11 +1719,16 @@ export const InjectionEngine: ClinicalEngine<
           );
         }
         (encounter.activeSafetyConcerns ?? []).forEach((concern) => {
+          // Name the trigger the way the checkbox names it. Interpolating the
+          // raw key put "nms" / "eps" / "site" in front of staff, who then
+          // cannot tell which box to clear to release the hold.
+          const triggerLabel =
+            INJECTION_SAFETY_TRIGGERS.find((trigger) => trigger.key === concern)?.label ?? concern;
           stops.push(
             issue(
               "stop",
               `safety.concern.${concern}`,
-              `Provider-review trigger selected: ${concern}. Administration cannot be finalized while it remains active.`,
+              `Provider-review trigger selected: ${triggerLabel}. Administration cannot be finalized while it remains active.`,
               "activeSafetyConcerns",
               "safety",
             ),

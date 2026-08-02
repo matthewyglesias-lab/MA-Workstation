@@ -1432,9 +1432,19 @@ export function InjectionPanel({
                 />
                 <label for="inj-safety-none">No acute concerns today confirmed</label>
               </div>
+              {/* These have the opposite polarity to every other checkbox on
+                  this tab: the attestations above are "confirm you did it",
+                  these are "the patient reports it", and ticking one holds the
+                  injection. Identical checkbox styling next to each other is
+                  how staff tick one by accident and then cannot tell which box
+                  is blocking them. It reads as an exception block. */}
               {safetyTriggers.length > 0 && (
-                <>
+                <div class="wfp-exception-block">
                   <div class="wfp-section-head">Provider review triggers</div>
+                  <p class="wfp-exception-lead">
+                    Tick only what the patient actually reports. Any tick here holds the
+                    injection for provider review — leave them clear for a routine dose.
+                  </p>
                   <CheckList
                     items={safetyTriggers.map((trigger) => ({
                       key: trigger.key,
@@ -1444,7 +1454,7 @@ export function InjectionPanel({
                     checked={(key) => activeSafetyConcerns.has(key)}
                     onToggle={toggleSafetyConcern}
                   />
-                </>
+                </div>
               )}
             </div>
           </div>

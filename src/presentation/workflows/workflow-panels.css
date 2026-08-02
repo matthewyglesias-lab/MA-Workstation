@@ -233,6 +233,36 @@
   line-height: 1.4;
 }
 
+/* Exception block. Checkboxes that *raise* a hold must not wear the same
+   clothes as checkboxes that confirm a step was done - amber edge, amber
+   header, and a lead line stating the polarity outright. */
+.cd2004-shell .wfp-exception-block {
+  border: 1px solid var(--cd-amber);
+  border-left-width: 4px;
+}
+
+.cd2004-shell .wfp-exception-block .wfp-section-head {
+  color: #4a2d00;
+  background: var(--cd-amber-soft);
+  border-bottom: 1px solid var(--cd-amber);
+}
+
+.cd2004-shell .wfp-exception-lead {
+  margin: 0;
+  padding: 5px 7px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-white);
+  border-bottom: 1px solid var(--cd-chrome);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* A raised hold is the one thing on this tab that should catch the eye. */
+.cd2004-shell .wfp-exception-block .wfp-option-row.is-selected {
+  color: #4a2d00;
+  background: var(--cd-amber-soft);
+}
+
 /* Reference lookup: entry list on the left, the selected entry's detail on
    the right, the way a clinical reference viewer has always been laid out.
    The list scrolls inside its own box so the detail stays on screen. */
