@@ -1,5 +1,12 @@
 import type { ComponentChildren, TargetedMouseEvent } from "preact";
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { createContext } from "preact";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 import "./clinical-desktop.css";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
@@ -15,6 +22,16 @@ import {
   type PatientContext,
   type WorkflowId,
 } from "./types";
+
+/** Menu bar order, with the Alt access key for each. */
+const MENU_IDS: string[] = ["file", "chart", "workflows", "tools", "help"];
+const MENU_MNEMONICS: Record<string, string> = {
+  f: "file",
+  c: "chart",
+  w: "workflows",
+  t: "tools",
+  h: "help",
+};
 
 const shortcutWorkflows: WorkflowId[] = [
   "home",
@@ -96,6 +113,7 @@ export function ClinicalDesktopShell({
   const [mobilePane, setMobilePane] = useState<DesktopPane>("work");
   const [internalStatus, setInternalStatus] = useState<string | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const workHostRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -159,76 +177,10 @@ export function ClinicalDesktopShell({
     setInternalStatus(null);
   }, [postState, selectedWorkflow, statusMessage]);
 
-  useEffect(() => {
-    if (!showShortcutHelp) return;
-    const shell = shellRef.current;
-    const backdrop = shell?.querySelector<HTMLElement>(
-      ".cd2004-modal-backdrop",
-    );
-    const dialog = backdrop?.querySelector<HTMLElement>(
-      ".cd2004-help-dialog",
-    );
-    if (!shell || !backdrop || !dialog) return;
-
-    const isolatedSiblings = [...shell.children]
-      .filter((element) => element !== backdrop)
-      .map((element) => ({
-        element: element as HTMLElement,
-        inert: Boolean((element as HTMLElement).inert),
-        ariaHidden: element.getAttribute("aria-hidden"),
-      }));
-    const returnFocus = previousFocusRef.current;
-    isolatedSiblings.forEach(({ element }) => {
-      element.inert = true;
-      element.setAttribute("aria-hidden", "true");
-    });
-
-    const focusableControls = () =>
-      [
-        ...dialog.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
-        ),
-      ].filter(
-        (control) =>
-          control.offsetParent !== null &&
-          control.getAttribute("aria-hidden") !== "true",
-      );
-    const containFocus = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
-      const focusable = focusableControls();
-      if (!focusable.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", containFocus, true);
-    const focusFrame = globalThis.requestAnimationFrame(() => {
-      focusableControls()[0]?.focus({ preventScroll: true });
-    });
-    return () => {
-      globalThis.cancelAnimationFrame(focusFrame);
-      document.removeEventListener("keydown", containFocus, true);
-      isolatedSiblings.forEach(({ element, inert, ariaHidden }) => {
-        element.inert = inert;
-        if (ariaHidden === null) element.removeAttribute("aria-hidden");
-        else element.setAttribute("aria-hidden", ariaHidden);
-      });
-      globalThis.setTimeout(
-        () => returnFocus?.focus({ preventScroll: true }),
-        0,
-      );
-    };
-  }, [showShortcutHelp]);
+  // The keyboard-reference dialog is a native <dialog> opened with showModal(),
+  // so the platform supplies the focus trap, Escape handling, focus
+  // restoration, and inerting of the rest of the shell. The hand-rolled
+  // sibling-isolation effect and Tab trap that used to live here are gone.
 
   useLayoutEffect(() => {
     const scrollBody = shellRef.current?.querySelector<HTMLElement>(
@@ -352,6 +304,23 @@ export function ClinicalDesktopShell({
         return;
       }
 
+      // Alt+access key opens the matching menu, as a native menu bar does.
+      if (event.altKey && !event.ctrlKey && !event.metaKey) {
+        const target = MENU_MNEMONICS[key];
+        if (target) {
+          event.preventDefault();
+          setOpenMenu(target);
+          globalThis.setTimeout(() => {
+            shellRef.current
+              ?.querySelector<HTMLElement>(
+                `.cd2004-menu[data-menu="${target}"] .cd2004-menu-title`,
+              )
+              ?.focus({ preventScroll: true });
+          }, 0);
+          return;
+        }
+      }
+
       if (event.key === "F6") {
         event.preventDefault();
         if (onOpenRecords) {
@@ -394,6 +363,21 @@ export function ClinicalDesktopShell({
       }
 
       if (event.key === "Escape") {
+        // An open menu consumes Escape first and returns focus to its title,
+        // without disturbing the shell-level Escape handling below it.
+        if (openMenu) {
+          event.preventDefault();
+          const id = openMenu;
+          setOpenMenu(null);
+          globalThis.setTimeout(() => {
+            shellRef.current
+              ?.querySelector<HTMLElement>(
+                `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
+              )
+              ?.focus({ preventScroll: true });
+          }, 0);
+          return;
+        }
         if (showShortcutHelp) {
           event.preventDefault();
           setShowShortcutHelp(false);
@@ -417,7 +401,55 @@ export function ClinicalDesktopShell({
     reviewActionMode,
     selectedWorkflow,
     showShortcutHelp,
+    openMenu,
   ]);
+
+  // Clicking anywhere outside the menu bar dismisses an open menu, without
+  // stealing focus - matching native menu behavior.
+  useEffect(() => {
+    if (!openMenu) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && !(target as Element).closest?.(".cd2004-menu")) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [openMenu]);
+
+  const menuBar: MenuBarContextValue = {
+    openMenu,
+    open: (id) => setOpenMenu(id),
+    close: (restoreFocus = false) => {
+      const id = openMenu;
+      setOpenMenu(null);
+      if (restoreFocus && id) {
+        globalThis.setTimeout(() => {
+          shellRef.current
+            ?.querySelector<HTMLElement>(
+              `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
+            )
+            ?.focus({ preventScroll: true });
+        }, 0);
+      }
+    },
+    moveMenu: (from, direction) => {
+      const index = MENU_IDS.indexOf(from);
+      if (index < 0) return;
+      const next =
+        MENU_IDS[(index + direction + MENU_IDS.length) % MENU_IDS.length]!;
+      setOpenMenu(next);
+      globalThis.setTimeout(() => {
+        shellRef.current
+          ?.querySelector<HTMLElement>(
+            `.cd2004-menu[data-menu="${next}"] .cd2004-menu-title`,
+          )
+          ?.focus({ preventScroll: true });
+      }, 0);
+    },
+  };
 
   const windowTitle =
     selectedWorkflow === "home"
@@ -464,8 +496,13 @@ export function ClinicalDesktopShell({
           <span class="cd2004-app-environment">LOCAL WORKSTATION</span>
         </div>
 
-        <nav class="cd2004-menu-bar" aria-label="Application menu">
-          <DesktopMenu label="File">
+        <nav
+          class="cd2004-menu-bar"
+          role="menubar"
+          aria-label="Application menu"
+        >
+          <MenuBarContext.Provider value={menuBar}>
+          <DesktopMenu id="file" label="File" mnemonic="F">
             <MenuCommand
               label="Save Draft"
               shortcut="Ctrl+S"
@@ -479,7 +516,7 @@ export function ClinicalDesktopShell({
               onInvoke={onOpenRecords}
             />
           </DesktopMenu>
-          <DesktopMenu label="Chart">
+          <DesktopMenu id="chart" label="Chart" mnemonic="C">
             <MenuCommand
               label="Use Workflow Patient"
               disabled={!isMismatch || !onUseWorkflowPatient}
@@ -492,7 +529,7 @@ export function ClinicalDesktopShell({
               onInvoke={onOpenRecords}
             />
           </DesktopMenu>
-          <DesktopMenu label="Workflows">
+          <DesktopMenu id="workflows" label="Workflows" mnemonic="W">
             {shortcutWorkflows.map((workflow, index) => (
               <MenuCommand
                 key={workflow}
@@ -502,7 +539,7 @@ export function ClinicalDesktopShell({
               />
             ))}
           </DesktopMenu>
-          <DesktopMenu label="Tools">
+          <DesktopMenu id="tools" label="Tools" mnemonic="T">
             <MenuCommand
               label="Knowledge Base"
               disabled={!onOpenKnowledge}
@@ -514,7 +551,7 @@ export function ClinicalDesktopShell({
               onInvoke={onOpenCloseout}
             />
           </DesktopMenu>
-          <DesktopMenu label="Help">
+          <DesktopMenu id="help" label="Help" mnemonic="H">
             <MenuCommand
               label="Keyboard Reference"
               onInvoke={(returnFocus) => {
@@ -525,6 +562,7 @@ export function ClinicalDesktopShell({
               }}
             />
           </DesktopMenu>
+          </MenuBarContext.Provider>
         </nav>
 
         <div class="cd2004-toolbar" role="toolbar" aria-label="Clinical commands">
@@ -789,22 +827,15 @@ export function ClinicalDesktopShell({
       </footer>
 
       {showShortcutHelp && (
-        <div
+        <ModalDialog
           class="cd2004-modal-backdrop cd2004-print-exclude"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target) {
-              setShowShortcutHelp(false);
-              restorePreviousFocus();
-            }
+          labelledBy="cd2004ShortcutTitle"
+          onDismiss={() => {
+            setShowShortcutHelp(false);
+            restorePreviousFocus();
           }}
         >
-          <section
-            class="cd2004-help-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cd2004ShortcutTitle"
-          >
+          <section class="cd2004-help-dialog">
             <div class="cd2004-window-titlebar">
               <span class="cd2004-window-mark" aria-hidden="true" />
               <strong id="cd2004ShortcutTitle">Keyboard Reference</strong>
@@ -842,7 +873,7 @@ export function ClinicalDesktopShell({
               </button>
             </footer>
           </section>
-        </div>
+        </ModalDialog>
       )}
 
       <span class="cd2004-visually-hidden">
@@ -998,61 +1029,235 @@ function PatientBanner({
   );
 }
 
-interface DesktopMenuProps {
-  label: string;
+/**
+ * Thin wrapper over the native <dialog> element. showModal() supplies the top
+ * layer, ::backdrop, Escape-to-cancel, focus trapping, focus restoration, and
+ * inerting of everything behind it - replacing the hand-rolled backdrop div,
+ * Tab trap, and sibling-isolation effect this shell used to carry.
+ */
+function ModalDialog({
+  class: className,
+  labelledBy,
+  onDismiss,
+  children,
+}: {
+  class?: string;
+  labelledBy: string;
+  onDismiss: () => void;
   children: ComponentChildren;
-}
-
-function DesktopMenu({ label, children }: DesktopMenuProps) {
-  const detailsRef = useRef<HTMLDetailsElement>(null);
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    const details = detailsRef.current;
-    if (!details) return;
-    const summary = details.querySelector<HTMLElement>("summary");
-    const close = (restoreFocus = false) => {
-      if (!details.open) return;
-      details.open = false;
-      if (restoreFocus) summary?.focus({ preventScroll: true });
-    };
-    const handleToggle = () => {
-      if (!details.open) return;
-      document
-        .querySelectorAll<HTMLDetailsElement>(".cd2004-menu[open]")
-        .forEach((other) => {
-          if (other !== details) other.open = false;
-        });
-    };
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        details.open &&
-        event.target instanceof Node &&
-        !details.contains(event.target)
-      ) {
-        close();
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || !details.open) return;
-      event.preventDefault();
-      event.stopPropagation();
-      close(true);
-    };
-    details.addEventListener("toggle", handleToggle);
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    document.addEventListener("keydown", handleKeyDown, true);
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) return;
+    dialog.showModal();
     return () => {
-      details.removeEventListener("toggle", handleToggle);
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleKeyDown, true);
+      if (dialog.open) dialog.close();
     };
   }, []);
 
   return (
-    <details ref={detailsRef} class="cd2004-menu">
-      <summary>{label}</summary>
-      <div class="cd2004-menu-popup">{children}</div>
-    </details>
+    <dialog
+      ref={dialogRef}
+      class={className}
+      aria-labelledby={labelledBy}
+      onCancel={(event) => {
+        event.preventDefault();
+        onDismiss();
+      }}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) onDismiss();
+      }}
+    >
+      {children}
+    </dialog>
+  );
+}
+
+/**
+ * Menu-tracking context. A real Windows menu bar behaves as one unit: once any
+ * menu is open the bar is in "tracking mode", so simply *hovering* a sibling
+ * switches to it without a second click. That requires the open state to live
+ * above the individual menus, which is why it is threaded through context
+ * rather than owned by each menu.
+ */
+interface MenuBarContextValue {
+  openMenu: string | null;
+  open: (id: string) => void;
+  close: (restoreFocus?: boolean) => void;
+  moveMenu: (from: string, direction: -1 | 1) => void;
+}
+
+const MenuBarContext = createContext<MenuBarContextValue | null>(null);
+
+/** Provided by each menu so its items can dismiss it and restore focus. */
+const MenuContext = createContext<{ dismiss: (restoreFocus?: boolean) => void } | null>(
+  null,
+);
+
+/** Splits a label at its access key so the mnemonic can be underlined. */
+function renderMnemonic(label: string, mnemonic: string) {
+  const index = label.toLocaleLowerCase().indexOf(mnemonic.toLocaleLowerCase());
+  if (index < 0) return label;
+  return (
+    <>
+      {label.slice(0, index)}
+      <u>{label.slice(index, index + 1)}</u>
+      {label.slice(index + 1)}
+    </>
+  );
+}
+
+interface DesktopMenuProps {
+  id: string;
+  label: string;
+  mnemonic: string;
+  children: ComponentChildren;
+}
+
+function DesktopMenu({ id, label, mnemonic, children }: DesktopMenuProps) {
+  const bar = useContext(MenuBarContext);
+  const titleRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const isOpen = bar?.openMenu === id;
+  const isTracking = Boolean(bar?.openMenu);
+  // Set when hover-tracking opened this menu, so the click that necessarily
+  // follows the pointer landing here is absorbed rather than toggling it shut.
+  const openedByHoverRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) openedByHoverRef.current = false;
+  }, [isOpen]);
+
+  const dismiss = (restoreFocus = false) => {
+    bar?.close(false);
+    if (restoreFocus) titleRef.current?.focus({ preventScroll: true });
+  };
+
+  // Opening by keyboard puts focus on the first command, matching Windows.
+  useEffect(() => {
+    if (!isOpen) return;
+    const frame = globalThis.requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active === titleRef.current) return;
+      if (popupRef.current?.contains(active)) return;
+    });
+    return () => globalThis.cancelAnimationFrame(frame);
+  }, [isOpen]);
+
+  const focusCommand = (offset: number, absolute?: "first" | "last") => {
+    const commands = Array.from(
+      popupRef.current?.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitem"]:not([disabled])',
+      ) ?? [],
+    );
+    if (commands.length === 0) return;
+    const current = commands.indexOf(document.activeElement as HTMLButtonElement);
+    const next =
+      absolute === "first"
+        ? 0
+        : absolute === "last"
+          ? commands.length - 1
+          : (current + offset + commands.length) % commands.length;
+    commands[next]?.focus({ preventScroll: true });
+  };
+
+  return (
+    <div class="cd2004-menu" data-menu={id}>
+      <button
+        ref={titleRef}
+        type="button"
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        class="cd2004-menu-title"
+        onClick={() => {
+          if (openedByHoverRef.current) {
+            openedByHoverRef.current = false;
+            return;
+          }
+          if (isOpen) dismiss(true);
+          else bar?.open(id);
+        }}
+        onPointerEnter={() => {
+          // Menu tracking: hovering a sibling while any menu is open switches
+          // to it, exactly as a native menu bar does.
+          if (isTracking && !isOpen) {
+            openedByHoverRef.current = true;
+            bar?.open(id);
+          }
+        }}
+        onKeyDown={(event) => {
+          switch (event.key) {
+            case "ArrowDown":
+            case "Enter":
+            case " ":
+              event.preventDefault();
+              if (!isOpen) bar?.open(id);
+              globalThis.setTimeout(() => focusCommand(0, "first"), 0);
+              break;
+            case "ArrowUp":
+              event.preventDefault();
+              if (!isOpen) bar?.open(id);
+              globalThis.setTimeout(() => focusCommand(0, "last"), 0);
+              break;
+            case "ArrowRight":
+              event.preventDefault();
+              bar?.moveMenu(id, 1);
+              break;
+            case "ArrowLeft":
+              event.preventDefault();
+              bar?.moveMenu(id, -1);
+              break;
+            default:
+              break;
+          }
+        }}
+      >
+        {renderMnemonic(label, mnemonic)}
+      </button>
+      {isOpen && (
+        <div
+          ref={popupRef}
+          class="cd2004-menu-popup"
+          role="menu"
+          aria-label={label}
+          onKeyDown={(event) => {
+            switch (event.key) {
+              case "ArrowDown":
+                event.preventDefault();
+                focusCommand(1);
+                break;
+              case "ArrowUp":
+                event.preventDefault();
+                focusCommand(-1);
+                break;
+              case "Home":
+                event.preventDefault();
+                focusCommand(0, "first");
+                break;
+              case "End":
+                event.preventDefault();
+                focusCommand(0, "last");
+                break;
+              case "ArrowRight":
+                event.preventDefault();
+                bar?.moveMenu(id, 1);
+                break;
+              case "ArrowLeft":
+                event.preventDefault();
+                bar?.moveMenu(id, -1);
+                break;
+              default:
+                break;
+            }
+          }}
+        >
+          <MenuContext.Provider value={{ dismiss }}>{children}</MenuContext.Provider>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1069,16 +1274,19 @@ function MenuCommand({
   disabled = false,
   onInvoke,
 }: MenuCommandProps) {
+  const menu = useContext(MenuContext);
   return (
     <button
       type="button"
+      role="menuitem"
       disabled={disabled}
       onClick={(event) => {
-        const details = event.currentTarget.closest("details");
         const returnFocus =
-          details?.querySelector<HTMLElement>("summary") ?? undefined;
+          event.currentTarget
+            .closest(".cd2004-menu")
+            ?.querySelector<HTMLElement>(".cd2004-menu-title") ?? undefined;
         onInvoke?.(returnFocus);
-        details?.removeAttribute("open");
+        menu?.dismiss(false);
       }}
     >
       <span>{label}</span>

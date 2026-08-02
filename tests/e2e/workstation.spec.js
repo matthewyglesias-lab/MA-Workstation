@@ -245,25 +245,54 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('keeps desktop menus single-open and restores focus on escape', async ({ page }) => {
     await page.goto('/');
-    const fileMenu = page.locator('.cd2004-menu').filter({ hasText: 'File' });
-    const chartMenu = page.locator('.cd2004-menu').filter({ hasText: 'Chart' });
-    const fileSummary = fileMenu.locator('summary');
-    const chartSummary = chartMenu.locator('summary');
+    // Real ARIA menubar rather than <details>: open state is aria-expanded on
+    // each menu's title button, so the whole bar can act as one tracking unit.
+    const fileTitle = page.locator('.cd2004-menu[data-menu="file"] .cd2004-menu-title');
+    const chartTitle = page.locator('.cd2004-menu[data-menu="chart"] .cd2004-menu-title');
+    const openTitles = page.locator('.cd2004-menu-title[aria-expanded="true"]');
 
-    await fileSummary.click();
-    await expect(fileMenu).toHaveAttribute('open', '');
-    await chartSummary.click();
-    await expect(chartMenu).toHaveAttribute('open', '');
-    await expect(fileMenu).not.toHaveAttribute('open', '');
-    await expect(page.locator('.cd2004-menu[open]')).toHaveCount(1);
+    await fileTitle.click();
+    await expect(fileTitle).toHaveAttribute('aria-expanded', 'true');
+    await chartTitle.click();
+    await expect(chartTitle).toHaveAttribute('aria-expanded', 'true');
+    await expect(fileTitle).toHaveAttribute('aria-expanded', 'false');
+    await expect(openTitles).toHaveCount(1);
 
     await page.keyboard.press('Escape');
-    await expect(chartMenu).not.toHaveAttribute('open', '');
-    await expect(chartSummary).toBeFocused();
+    await expect(chartTitle).toHaveAttribute('aria-expanded', 'false');
+    await expect(chartTitle).toBeFocused();
 
-    await fileSummary.click();
+    await fileTitle.click();
     await page.locator('.cd2004-app-title').click();
-    await expect(fileMenu).not.toHaveAttribute('open', '');
+    await expect(fileTitle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('tracks the menu bar: hovering a sibling switches menus once open', async ({ page }) => {
+    await page.goto('/');
+    const fileTitle = page.locator('.cd2004-menu[data-menu="file"] .cd2004-menu-title');
+    const chartTitle = page.locator('.cd2004-menu[data-menu="chart"] .cd2004-menu-title');
+
+    // Hovering alone does nothing while the bar is idle.
+    await chartTitle.hover();
+    await expect(chartTitle).toHaveAttribute('aria-expanded', 'false');
+
+    // Once any menu is open the bar is in tracking mode, so hovering a
+    // sibling switches to it without a second click - native menu behavior.
+    await fileTitle.click();
+    await chartTitle.hover();
+    await expect(chartTitle).toHaveAttribute('aria-expanded', 'true');
+    await expect(fileTitle).toHaveAttribute('aria-expanded', 'false');
+
+    // Alt+access key opens a menu directly; arrows move along the bar.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Alt+t');
+    await expect(
+      page.locator('.cd2004-menu[data-menu="tools"] .cd2004-menu-title')
+    ).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('ArrowRight');
+    await expect(
+      page.locator('.cd2004-menu[data-menu="help"] .cd2004-menu-title')
+    ).toHaveAttribute('aria-expanded', 'true');
   });
 
   test('keeps the navigator, work, and note panels fixed and simultaneously visible', async ({ page }) => {
@@ -433,15 +462,23 @@ test.describe('MA Workstation browser journeys', () => {
     );
     expect(Math.max(...transitionSeconds)).toBeLessThanOrEqual(0.001);
 
-    const helpSummary = page.locator('.cd2004-menu').filter({ hasText: 'Help' }).locator('summary');
+    const helpSummary = page.locator('.cd2004-menu[data-menu="help"] .cd2004-menu-title');
     await helpSummary.click();
-    await page.getByRole('button', { name: 'Keyboard Reference' }).click();
+    // Menu commands are menuitems now, not plain buttons - role="menuitem"
+    // overrides the implicit button role, which is the correct ARIA for a menu.
+    await page.getByRole('menuitem', { name: 'Keyboard Reference' }).click();
     const dialog = page.getByRole('dialog', { name: 'Keyboard Reference' });
     await expect(dialog).toBeVisible();
-    await expect(page.locator('.cd2004-shell > header')).toHaveAttribute(
-      'aria-hidden',
-      'true'
-    );
+    // Opened with the native showModal(), so the platform puts it in the top
+    // layer and inerts everything behind it. That is a stronger guarantee than
+    // the aria-hidden juggling this previously hand-rolled, and it is what
+    // :modal proves - the shell chrome genuinely cannot be reached or focused.
+    expect(await dialog.evaluate(node => node.matches(':modal'))).toBe(true);
+    expect(await page.evaluate(() => {
+      const target = document.querySelector('.cd2004-shell > header button');
+      target?.focus();
+      return document.activeElement === target;
+    })).toBe(false);
     const animationSeconds = await dialog.evaluate(node => {
       const value = getComputedStyle(node).animationDuration;
       return Number.parseFloat(value) * (value.includes('ms') ? 0.001 : 1);
@@ -450,10 +487,12 @@ test.describe('MA Workstation browser journeys', () => {
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     await expect(helpSummary).toBeFocused();
-    await expect(page.locator('.cd2004-shell > header')).not.toHaveAttribute(
-      'aria-hidden',
-      'true'
-    );
+    // ...and the shell chrome is reachable again once the dialog closes.
+    expect(await page.evaluate(() => {
+      const target = document.querySelector('.cd2004-shell > header button');
+      target?.focus();
+      return document.activeElement === target;
+    })).toBe(true);
 
     const recordsButton = page.locator(
       '.cd2004-toolbar-button[aria-label="Injection Records"]'
@@ -544,7 +583,8 @@ test.describe('MA Workstation browser journeys', () => {
     const bounds = await drawer.boundingBox();
     expect(bounds).not.toBeNull();
     expect(bounds.x).toBeGreaterThanOrEqual(0);
-    expect(bounds.width).toBeLessThanOrEqual(390);
+    // Tolerance for sub-pixel layout rounding, as elsewhere in this file.
+    expect(bounds.width).toBeLessThanOrEqual(391);
 
     await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
