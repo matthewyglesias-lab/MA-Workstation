@@ -29,12 +29,17 @@
 @media screen {
   /* `:not([hidden])` matters: an author `display` declaration would otherwise
      override the UA `[hidden]{display:none}` rule and pin these layers open. */
+  /* A centred modal record-selection window, not an edge drawer. Sliding a
+     panel in from the right over a dimmed page is a phone/SaaS idiom; the
+     period-correct equivalent of "pick a saved encounter" is a modal window
+     with a titlebar, search criteria, a column list, and a button bar. */
   .records-drawer-layer:not([hidden]) {
     position: fixed;
     inset: 0;
     z-index: 14500;
-    display: flex;
-    justify-content: flex-end;
+    display: grid;
+    place-items: center;
+    padding: 12px;
     isolation: isolate;
   }
 
@@ -43,8 +48,8 @@
     z-index: 1;
     display: grid;
     grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
-    width: min(470px, 100%);
-    height: 100%;
+    width: min(720px, 100%);
+    max-height: min(560px, 100%);
   }
 
   .inj-completion-overlay:not([hidden]) {
@@ -2729,26 +2734,24 @@
 }
 
 .records-drawer {
-  width: min(480px, 100vw) !important;
   min-width: 0;
-  height: 100%;
   padding: 0 !important;
   overflow: hidden !important;
   color: var(--cd-util-ink) !important;
   background: var(--cd-util-face) !important;
-  border: 0 !important;
-  border-left: 2px solid var(--cd-util-white) !important;
+  /* Raised Win32 window edge, and a hard offset drop shadow rather than a
+     diffuse one - the same treatment the shell's own dialogs use. */
+  border: 1px solid #000 !important;
+  border-top-color: var(--cd-util-white) !important;
+  border-left-color: var(--cd-util-white) !important;
   border-radius: 0 !important;
   box-shadow:
-    -1px 0 var(--cd-util-line),
-    -7px 0 0 rgb(4 12 26 / 13%) !important;
-  transform: translateX(100%);
-  transition: transform 180ms linear !important;
+    inset 1px 1px var(--cd-util-white),
+    inset -1px -1px #7a838d,
+    4px 4px 0 rgb(0 0 0 / 35%) !important;
+  transform: none !important;
+  transition: none !important;
   font-family: Tahoma, Verdana, "Segoe UI", sans-serif !important;
-}
-
-.records-drawer-layer.is-open .records-drawer {
-  transform: translateX(0);
 }
 
 .records-drawer-head {
@@ -2758,8 +2761,9 @@
   align-items: start !important;
   gap: 8px !important;
   min-width: 0;
-  min-height: 75px;
-  padding: 8px 7px 9px 10px !important;
+  align-content: center !important;
+  min-height: 0;
+  padding: 3px 3px 3px 6px !important;
   color: #fff;
   background: linear-gradient(
     90deg,
@@ -2773,6 +2777,11 @@
   min-width: 0;
 }
 
+.records-drawer-kicker,
+.records-drawer-head p {
+  display: none;
+}
+
 .records-drawer-kicker {
   overflow: hidden;
   color: #cbdaf0 !important;
@@ -2784,10 +2793,10 @@
 }
 
 .records-drawer-head h2 {
-  margin: 2px 0 1px !important;
+  margin: 0 !important;
   overflow: hidden;
   color: #fff !important;
-  font: 700 14px/1.2 Tahoma, Verdana, sans-serif !important;
+  font: 700 11px/1.2 Tahoma, Verdana, sans-serif !important;
   letter-spacing: 0 !important;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2806,11 +2815,11 @@
 .records-drawer-close {
   display: grid;
   place-items: center;
-  width: 25px !important;
-  height: 23px !important;
-  min-width: 25px !important;
-  min-height: 23px !important;
-  padding: 3px !important;
+  width: 16px !important;
+  height: 14px !important;
+  min-width: 16px !important;
+  min-height: 14px !important;
+  padding: 2px !important;
   color: #111c2b !important;
   background: var(--cd-util-face) !important;
   border: 1px solid !important;
@@ -2970,41 +2979,48 @@
   scrollbar-width: thin;
 }
 
+/* One record per line, in columns - Patient / Medication / Last activity /
+   Action - the way an encounter-selection list has always read. Stacked
+   "cards" with a chevron are a touch-target idiom, not a records list. */
 .records-drawer-row {
   display: grid;
+  /* Percentages, and an explicit full width: each row is its own grid
+     container, so `fr` units resolve against that row's own content and the
+     columns come out ragged from line to line. Percentages resolve against
+     the same container width for every row, so the columns line up. */
+  width: 100%;
+  grid-template-columns: 30% 38% 32%;
+  align-items: center;
   min-width: 0;
-  gap: 2px !important;
-  padding: 5px 7px !important;
+  gap: 0 8px !important;
+  padding: 0 7px !important;
+  min-height: 20px;
   color: #273548 !important;
-  background: #fff !important;
-  border: 1px solid #818c97 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid #d7dce1 !important;
   border-radius: 0 !important;
-  box-shadow: inset 1px 1px #fff !important;
+  box-shadow: none !important;
   transform: none !important;
-  transition:
-    background-color 80ms linear,
-    border-color 80ms linear !important;
+  transition: none !important;
+  text-align: left;
+}
+
+.records-drawer-row:nth-child(even) {
+  background: #eef1f4 !important;
 }
 
 .records-drawer-row:hover {
   color: #132746 !important;
   background: var(--cd-util-selection) !important;
-  border-color: #355782 !important;
-  box-shadow: inset 1px 1px #fff !important;
+  box-shadow: none !important;
   transform: none !important;
 }
 
-.records-drawer-row.locked {
-  padding-left: 7px !important;
-  border-left: 4px solid var(--cd-util-green) !important;
-}
-
-.records-drawer-row.draft {
-  padding-left: 7px !important;
-  border-left: 4px solid #bd7a0d !important;
-}
-
 .records-drawer-row-top {
+  display: flex;
+  gap: 6px;
+  align-items: center;
   min-width: 0;
 }
 
@@ -3035,7 +3051,8 @@
 }
 
 .records-drawer-row-badge {
-  padding: 2px 4px !important;
+  flex: none;
+  padding: 0 3px !important;
   color: #39495d !important;
   background: #e7ebef !important;
   border: 1px solid #919ba5 !important;
@@ -3055,14 +3072,12 @@
   border-color: #b68935 !important;
 }
 
+/* No per-row action column. Repeating "Resume draft" / "View locked snapshot"
+   on every line is a touch-target habit: the Status badge already says which
+   a record is, and the row's own aria-label still carries the action for
+   assistive tech. Dropping it gives the three real columns room to breathe. */
 .records-drawer-row-action {
-  color: var(--cd-util-navy) !important;
-  font: 700 9px Tahoma, Verdana, sans-serif !important;
-}
-
-.records-drawer-row-action svg {
-  width: 10px;
-  height: 10px;
+  display: none;
 }
 
 .records-drawer-empty {

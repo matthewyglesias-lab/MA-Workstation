@@ -159,10 +159,15 @@ test.describe('MA Workstation browser journeys', () => {
       page.locator('.cd2004-shell').evaluate(node => node.inert)
     ).toBe(true);
     await expect(page.locator('[data-records-filter="draft"]')).toBeVisible();
+    // The records list is a centred modal selection window, not an edge
+    // drawer, so the contract is that it sits centred in its layer - equal
+    // gap on both sides - rather than flush to the right edge.
     await expect.poll(() => drawer.evaluate(node => {
       const bounds = node.getBoundingClientRect();
       const layerBounds = node.parentElement.getBoundingClientRect();
-      return Math.round(layerBounds.right - bounds.right);
+      const leftGap = bounds.left - layerBounds.left;
+      const rightGap = layerBounds.right - bounds.right;
+      return Math.round(Math.abs(leftGap - rightGap));
     })).toBeLessThanOrEqual(1);
 
     const drawerVisual = await drawer.evaluate(node => {
