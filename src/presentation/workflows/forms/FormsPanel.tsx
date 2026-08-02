@@ -110,10 +110,15 @@ function OptionList<T extends string>({
 function Field({
   label,
   hint,
+  width,
   children,
 }: {
   label: string;
   hint?: string;
+  /** Sizes the control to its content. Free-text fields that hold a fixed
+   * shape - a date typed as MM/DD/YYYY, a short code - should not stretch to
+   * a full grid column just because the grid offers one. */
+  width?: "date" | "short";
   children: ComponentChildren;
 }) {
   // Requirement is marked on the field itself - a red asterisk on the caption
@@ -130,7 +135,9 @@ function Field({
       ? hint.replace(/^(required|optional)[;:,]?\s*/i, "")
       : "";
   return (
-    <div class={`wfp-field ${required ? "is-required" : ""}`}>
+    <div
+      class={`wfp-field ${required ? "is-required" : ""} ${width ? `is-w-${width}` : ""}`}
+    >
       <label>
         <span class="wfp-field-caption">{label}</span>
         {required && (
@@ -283,7 +290,7 @@ export function FormsPanel({
                     onInput={(event) => patchPatient({ name: event.currentTarget.value })}
                   />
                 </Field>
-                <Field label="DOB">
+                <Field label="DOB" width="date">
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"

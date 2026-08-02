@@ -405,6 +405,22 @@
   max-width: 190px;
 }
 
+/* Explicit width hints, for free-text fields whose content has a fixed shape
+   and so should not stretch to whatever the grid offers. */
+.cd2004-shell .wfp-field.is-w-date > input {
+  max-width: 130px;
+}
+
+.cd2004-shell .wfp-field.is-w-short > input {
+  max-width: 180px;
+}
+
+/* A dropdown is as wide as its longest option, not as wide as the panel. The
+   request-type select was spanning 1002px for "Work / school letter". */
+.cd2004-shell .wfp-select-group select {
+  max-width: 340px;
+}
+
 .cd2004-shell .wfp-field input,
 .cd2004-shell .wfp-field select,
 .cd2004-shell .wfp-field textarea {
