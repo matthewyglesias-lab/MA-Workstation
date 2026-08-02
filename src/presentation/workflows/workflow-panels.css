@@ -12,6 +12,10 @@
   gap: 7px;
   min-width: 0;
   padding: 8px;
+  /* The panel's own base size. Without it anything unstyled - buttons in
+     particular - inherits the document's 12px and sits a step above the 11px
+     body text beside it. A period form runs on one size. */
+  font-size: 11px;
 }
 
 /* Safety net: legacy.css's unscoped `input,select,textarea{border-radius:...}`
@@ -324,12 +328,43 @@
   min-width: 0;
 }
 
+/* Field labels read as labels, not eyebrows. A bold 10px uppercase
+   micro-label with letter-spacing is a modern form idiom; a period clinical
+   form put the caption in ordinary mixed case at body size with a colon,
+   distinguished from its value by weight and tone rather than by shouting.
+   The colon comes from CSS so it stays out of the accessible name and out of
+   the selectors the tests match on. */
 .cd2004-shell .wfp-field label {
   color: var(--cd-ink-muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.cd2004-shell .wfp-field label::after {
+  content: ":";
+}
+
+/* Checkbox and radio captions are sentences, not captions - no colon. */
+.cd2004-shell .wfp-checkbox-row label::after,
+.cd2004-shell .wfp-option-row label::after {
+  content: none;
+}
+
+/* 2. Inputs are sized to what they hold. A date field the width of a patient
+   name is a fluid-web habit; period forms gave each control its content's
+   width, which is also what makes a dense form scannable. */
+.cd2004-shell .wfp-field input[type="date"],
+.cd2004-shell .wfp-field input[type="month"],
+.cd2004-shell .wfp-field input[type="time"] {
+  max-width: 140px;
+}
+
+.cd2004-shell .wfp-field input[type="datetime-local"] {
+  max-width: 200px;
+}
+
+.cd2004-shell .wfp-field input.mono {
+  max-width: 190px;
 }
 
 .cd2004-shell .wfp-field input,
