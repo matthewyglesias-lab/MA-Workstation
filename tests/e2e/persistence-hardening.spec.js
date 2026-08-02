@@ -58,7 +58,7 @@ for (const fixture of malformedInjectionRecords) {
 
     await page.goto('/');
     await openWorkflow(page, 'administer');
-    const panel = await openInjectionTab(page, 'Encounter');
+    const panel = await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill(`QA, ${fixture.name}`);
 
     await expect(page.locator('#injRecordStatus')).toHaveText('Save failed');
@@ -90,13 +90,13 @@ test('failed non-administration handoff logging rolls back and never announces s
 
   await page.goto('/');
   await openWorkflow(page, 'administer');
-  let panel = await openInjectionTab(page, 'Encounter');
+  let panel = await openInjectionTab(page, 'Order');
   await panel.locator('input[placeholder="Last, First"]').fill('QA, Handoff Rollback');
 
-  panel = await openInjectionTab(page, 'Medication');
-  await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: 'Other' });
+  panel = await openInjectionTab(page, 'Order');
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
 
-  panel = await openInjectionTab(page, 'Disposition');
+  panel = await openInjectionTab(page, 'Outcome');
   await panel.getByText('Held', { exact: true }).click();
   await panel.locator('.wfp-field:has-text("Provider / recipient") input').fill('QA Provider, MD');
   await panel.locator('.wfp-field:has-text("Contact / decision time") input').fill('2026-07-30T10:15');

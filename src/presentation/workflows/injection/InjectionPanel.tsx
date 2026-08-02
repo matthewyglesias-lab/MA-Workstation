@@ -1,5 +1,5 @@
 import type { ComponentChildren, Ref } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "../workflow-panels.css";
 import {
   INJECTION_ATTESTATION_OPTIONS,
@@ -33,52 +33,66 @@ import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { clickLegacyControl, setLegacyFieldValue } from "../legacy-mirror";
 import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
+import { SiteHistoryRepository } from "../../../persistence/site-history";
+import { browserSafeStorage } from "../../../persistence/storage";
 import type { PatientContext } from "../../types";
 
-type InjectionTab = "encounter" | "medication" | "traceability" | "safety" | "response" | "disposition";
+// The tabs are the blocks of a medication administration record, not a
+// decomposition of the form. A MAR is organised around the administration
+// event: what authorises this dose, when it is due, what was actually given,
+// what product it came from, what was verified first, and what happened after.
+type InjectionTab =
+  | "order"
+  | "schedule"
+  | "administration"
+  | "product"
+  | "verification"
+  | "outcome";
 
 const INJECTION_TABS: Array<[InjectionTab, string]> = [
-  ["encounter", "Encounter"],
-  ["medication", "Medication"],
-  ["traceability", "Traceability"],
-  ["safety", "Safety"],
-  ["response", "Response"],
-  ["disposition", "Disposition"],
+  ["order", "Order"],
+  ["schedule", "Schedule"],
+  ["administration", "Administration"],
+  ["product", "Product"],
+  ["verification", "Verification"],
+  ["outcome", "Outcome"],
 ];
 
 const INJECTION_TAB_LABELS = Object.fromEntries(INJECTION_TABS) as Record<InjectionTab, string>;
 
-// "details.*" is the one field prefix that doesn't map to a single tab -
-// its sub-fields are split across Traceability (product/prep/waste/product
-// issue) and Response (volume/device/site condition/administration
+// "details.*" is the one field prefix that doesn't map to a single tab - its
+// sub-fields are split across Product (source/prep/waste/product issue),
+// Administration (volume/device/site condition) and Outcome (administration
 // exception). Everything else maps by top-level field name/prefix alone.
 const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
-  purpose: "encounter",
-  productSource: "traceability",
-  productSourceOther: "traceability",
-  preparation: "traceability",
-  preparationOther: "traceability",
-  waste: "traceability",
-  wasteAmount: "traceability",
-  wasteWitness: "traceability",
-  productIssue: "traceability",
-  productIssueDetail: "traceability",
-  productIssueAction: "traceability",
-  productIssueRecipient: "traceability",
-  productIssueNotificationTime: "traceability",
-  productIssueDirection: "traceability",
-  productIssueNextStep: "traceability",
-  volume: "response",
-  volumeUnit: "response",
-  device: "response",
-  deviceOther: "response",
-  siteCondition: "response",
-  siteConditionOther: "response",
-  administrationException: "response",
-  exceptionSummary: "response",
-  exceptionRecipient: "response",
-  exceptionTime: "response",
-  exceptionOutcome: "response",
+  purpose: "order",
+  productSource: "product",
+  productSourceOther: "product",
+  preparation: "product",
+  preparationOther: "product",
+  waste: "product",
+  wasteAmount: "product",
+  wasteWitness: "product",
+  productIssue: "product",
+  productIssueDetail: "product",
+  productIssueAction: "product",
+  productIssueRecipient: "product",
+  productIssueNotificationTime: "product",
+  productIssueDirection: "product",
+  productIssueNextStep: "product",
+  // Dose actually delivered and the device it came through are part of the
+  // administration event, not the outcome of it.
+  volume: "administration",
+  volumeUnit: "administration",
+  device: "administration",
+  deviceOther: "administration",
+  siteCondition: "administration",
+  siteConditionOther: "administration",
+  administrationException: "outcome",
+  exceptionSummary: "outcome",
+  exceptionRecipient: "outcome",
+  exceptionTime: "outcome",
+  exceptionOutcome: "outcome",
 };
 
 /**
@@ -90,43 +104,47 @@ const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
 function tabForInjectionField(field?: string): InjectionTab {
   const [head, sub] = (field ?? "").split(".");
   switch (head) {
+    // What authorises this dose: who ordered it, why, and the exact product,
+    // dose, route and interval the order specifies.
     case "patient":
     case "orderingProvider":
     case "reason":
-      return "encounter";
     case "medicationKey":
     case "customMedication":
     case "dose":
     case "route":
-    case "site":
     case "intervalKey":
     case "technique":
+      return "order";
+    // When it is due, and the multi-dose protocol that sets the schedule.
+    case "priorDoseDate":
+    case "priorSite":
+    case "administrationDate":
+    case "nextDoseDate":
     case "initiation":
-      return "medication";
+      return "schedule";
+    // The administration event itself.
+    case "site":
+    case "administeredBy":
+    case "administrationTime":
+    case "secondAdministrationTime":
+      return "administration";
     case "traceability":
-      return "traceability";
+      return "product";
     case "attestations":
     case "verifications":
     case "vitals":
     case "allergies":
     case "acuteSafetyScreenConfirmed":
     case "activeSafetyConcerns":
-      return "safety";
+      return "verification";
     case "response":
-    case "administeredBy":
-    case "administrationTime":
-    case "secondAdministrationTime":
-      return "response";
     case "disposition":
-    case "priorDoseDate":
-    case "priorSite":
-    case "administrationDate":
-    case "nextDoseDate":
-      return "disposition";
+      return "outcome";
     case "details":
-      return (sub && INJECTION_DETAILS_FIELD_TAB[sub]) || "response";
+      return (sub && INJECTION_DETAILS_FIELD_TAB[sub]) || "outcome";
     default:
-      return "encounter";
+      return "order";
   }
 }
 
@@ -264,7 +282,7 @@ export function InjectionPanel({
   locked,
 }: InjectionPanelProps) {
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
-  const [tab, setTab] = useState<InjectionTab>("encounter");
+  const [tab, setTab] = useState<InjectionTab>("order");
   const mirroredOnMount = useRef(false);
   // Addenda are a record-lifecycle concept, not part of the typed
   // InjectionEncounter - staffSignInValue seeds the author field, then this
@@ -407,6 +425,19 @@ export function InjectionPanel({
     ? evaluation.output.allowedSites
     : [...ALL_INJECTION_SITES];
   const recommendedSite = evaluation?.output.recommendedSite ?? "";
+
+  // The dose-history grid — the most recognisably-MAR artifact, and the one
+  // that makes LAI site rotation legible at a glance. Read-only, and read
+  // through the typed repository rather than reaching into localStorage: it
+  // is the same store the live app already writes on every completed
+  // administration, so this shows real history, not a placeholder.
+  const doseHistory = useMemo(() => {
+    const result = new SiteHistoryRepository(browserSafeStorage()).list(
+      encounter.patient.name,
+      encounter.patient.dob,
+    );
+    return result.ok ? [...result.value].reverse() : [];
+  }, [encounter.patient.name, encounter.patient.dob]);
   const repeatsPreviousSite = evaluation?.output.repeatsPreviousSite ?? false;
   const safetyTriggers = INJECTION_SAFETY_TRIGGERS.filter(
     (trigger) =>
@@ -520,10 +551,11 @@ export function InjectionPanel({
       )}
 
       <fieldset disabled={locked} style="border:none;padding:0;margin:0;display:contents">
-      {tab === "encounter" && (
+
+      {tab === "order" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
-            <div class="wfp-section-head">Encounter</div>
+            <div class="wfp-section-head">Patient &amp; ordering provider</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Patient name">
@@ -566,17 +598,14 @@ export function InjectionPanel({
               </Field>
             </div>
           </div>
-        </div>
-      )}
 
-      {tab === "medication" && (
-        <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
-            <div class="wfp-section-head">Medication</div>
+            <div class="wfp-section-head">Ordered medication</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Drug" hint="required">
                   <select
+                    name="inj-medication"
                     value={encounter.medicationKey}
                     onChange={(event) =>
                       onMedicationChange(event.currentTarget.value as InjectionMedicationKey | "")
@@ -602,12 +631,17 @@ export function InjectionPanel({
                 <Field label="Dose" hint="required">
                   {encounter.medicationKey === "other" ? (
                     <input
+                      name="inj-dose"
                       value={encounter.dose}
                       placeholder="Exact ordered dose"
                       onInput={(event) => patch({ dose: event.currentTarget.value })}
                     />
                   ) : (
-                    <select value={encounter.dose} onChange={(event) => patch({ dose: event.currentTarget.value })}>
+                    <select
+                      name="inj-dose"
+                      value={encounter.dose}
+                      onChange={(event) => patch({ dose: event.currentTarget.value })}
+                    >
                       <option value="">Select dose</option>
                       {doseOptions.map((dose) => (
                         <option key={dose} value={dose}>
@@ -619,6 +653,7 @@ export function InjectionPanel({
                 </Field>
                 <Field label="Route">
                   <input
+                    name="inj-route"
                     value={encounter.route}
                     placeholder="IM / SubQ"
                     onInput={(event) => patch({ route: event.currentTarget.value })}
@@ -626,6 +661,7 @@ export function InjectionPanel({
                 </Field>
                 <Field label="Interval">
                   <select
+                    name="inj-interval"
                     value={encounter.intervalKey}
                     onChange={(event) =>
                       patch({ intervalKey: event.currentTarget.value as InjectionIntervalKey | "" })
@@ -649,32 +685,117 @@ export function InjectionPanel({
               </Field>
             </div>
           </div>
+        </div>
+      )}
+
+      {tab === "schedule" && (
+        <div class="wfp-tabpanel" role="tabpanel">
+          <div class="wfp-section">
+            <div class="wfp-section-head">Schedule &amp; next dose</div>
+            <div class="wfp-section-body">
+              <div class="wfp-row">
+                <Field label="Prior dose" hint="optional">
+                  <input
+                    type="date"
+                    value={encounter.priorDoseDate}
+                    onInput={(event) => patch({ priorDoseDate: event.currentTarget.value })}
+                  />
+                </Field>
+                <Field label="Prior site" hint="optional">
+                  <select
+                    value={encounter.priorSite ?? ""}
+                    onChange={(event) => patch({ priorSite: event.currentTarget.value })}
+                  >
+                    <option value="">—</option>
+                    {ALL_INJECTION_SITES.map((site) => (
+                      <option key={site} value={site}>
+                        {site}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Administered">
+                  <input
+                    type="date"
+                    value={encounter.administrationDate}
+                    onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
+                  />
+                </Field>
+                <Field label="Next dose" hint="required">
+                  <input
+                    type="date"
+                    value={encounter.nextDoseDate}
+                    onInput={(event) => patch({ nextDoseDate: event.currentTarget.value })}
+                  />
+                </Field>
+              </div>
+              {/* The due line a MAR carries: how long since the last dose and
+                  what window this one falls in. Every value here is read
+                  straight off the engine's own timing evaluation — this
+                  surfaces what it already computed and adds no gating of its
+                  own. The engine raises the stop or warning itself. */}
+              {evaluation && (
+                <dl class={`wfp-report-meta wfp-due-line is-${evaluation.output.timing.state}`}>
+                  <dt>Days since prior</dt>
+                  <dd>
+                    {evaluation.output.timing.daysSincePrior === null
+                      ? "—"
+                      : `${evaluation.output.timing.daysSincePrior} day(s)`}
+                  </dd>
+                  {evaluation.output.timing.earliestDay !== null &&
+                    evaluation.output.timing.latestDay !== null && (
+                      <>
+                        <dt>Permitted window</dt>
+                        <dd>
+                          Day {evaluation.output.timing.earliestDay}–
+                          {evaluation.output.timing.latestDay}
+                        </dd>
+                      </>
+                    )}
+                  <dt>Timing</dt>
+                  <dd>{evaluation.output.timing.message}</dd>
+                </dl>
+              )}
+            </div>
+          </div>
 
           <div class="wfp-section">
             <div class="wfp-section-head">
-              Administration site
-              {recommendedSite && (
-                <span class="wfp-tab-badge wfp-tab-badge-muted">rotate: {recommendedSite}</span>
+              Dose history
+              {doseHistory.length > 0 && (
+                <span class="wfp-tab-badge wfp-tab-badge-muted">{doseHistory.length}</span>
               )}
             </div>
             <div class="wfp-section-body">
-              {repeatsPreviousSite && (
+              {doseHistory.length === 0 ? (
                 <p class="wfp-field-hint">
-                  Today's selected site repeats the prior documented site; consider rotation when clinically
-                  appropriate.
+                  No prior administrations recorded for this patient on this workstation.
                 </p>
+              ) : (
+                <div class="wfp-grid wfp-grid-mar">
+                  <div class="wfp-grid-head">
+                    <span>Date</span>
+                    <span>Medication</span>
+                    <span>Route</span>
+                    <span>Site</span>
+                  </div>
+                  {doseHistory.map((entry) => (
+                    <div class="wfp-grid-row" key={`${entry.fingerprint}${entry.storedAt}`}>
+                      <span class="wfp-grid-cell mono">{entry.date}</span>
+                      <span class="wfp-grid-cell">
+                        {INJECTION_MEDICATIONS[entry.medKey as InjectionMedicationKey]?.label ??
+                          entry.medKey}
+                      </span>
+                      <span class="wfp-grid-cell">{entry.route}</span>
+                      <span class="wfp-grid-cell">{entry.site}</span>
+                    </div>
+                  ))}
+                </div>
               )}
-              <div class="wfp-option-list">
-                {allowedSites.map((site) => (
-                  <label key={site} class={`wfp-option-row ${encounter.site === site ? "is-selected" : ""}`}>
-                    <input type="radio" name="inj-site" checked={encounter.site === site} onChange={() => patch({ site })} />
-                    <span>
-                      <span class="wfp-option-title">{site}</span>
-                      {site === recommendedSite && <div class="wfp-option-desc">Suggested rotation site</div>}
-                    </span>
-                  </label>
-                ))}
-              </div>
+              <p class="wfp-field-hint">
+                Read-only rotation history from this workstation's local records. It informs site
+                selection; it never gates it.
+              </p>
             </div>
           </div>
 
@@ -900,7 +1021,131 @@ export function InjectionPanel({
         </div>
       )}
 
-      {tab === "traceability" && (
+      {tab === "administration" && (
+        <div class="wfp-tabpanel" role="tabpanel">
+          <div class="wfp-section">
+            <div class="wfp-section-head">
+              Administration site
+              {recommendedSite && (
+                <span class="wfp-tab-badge wfp-tab-badge-muted">rotate: {recommendedSite}</span>
+              )}
+            </div>
+            <div class="wfp-section-body">
+              {repeatsPreviousSite && (
+                <p class="wfp-field-hint">
+                  Today's selected site repeats the prior documented site; consider rotation when clinically
+                  appropriate.
+                </p>
+              )}
+              <div class="wfp-option-list">
+                {allowedSites.map((site) => (
+                  <label key={site} class={`wfp-option-row ${encounter.site === site ? "is-selected" : ""}`}>
+                    <input type="radio" name="inj-site" checked={encounter.site === site} onChange={() => patch({ site })} />
+                    <span>
+                      <span class="wfp-option-title">{site}</span>
+                      {site === recommendedSite && <div class="wfp-option-desc">Suggested rotation site</div>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div class="wfp-section">
+            <div class="wfp-section-head">Given by / time</div>
+            <div class="wfp-section-body">
+              <div class="wfp-row">
+                <Field label="Administered by" hint="required">
+                  <input
+                    value={encounter.administeredBy}
+                    placeholder="J. Doe, LVN"
+                    onInput={(event) => patch({ administeredBy: event.currentTarget.value })}
+                  />
+                </Field>
+                <Field label="Actual administration time" hint="required">
+                  <input
+                    type="time"
+                    value={encounter.administrationTime}
+                    onInput={(event) => patch({ administrationTime: event.currentTarget.value })}
+                  />
+                </Field>
+                {encounter.initiation?.protocol && (
+                  <Field label="Component 2 actual time" hint="required for paired protocols">
+                    <input
+                      type="time"
+                      value={encounter.secondAdministrationTime ?? ""}
+                      onInput={(event) => patch({ secondAdministrationTime: event.currentTarget.value })}
+                    />
+                  </Field>
+                )}
+              </div>
+
+              <div class="wfp-section-head">Dose delivered &amp; device</div>
+              <div class="wfp-row">
+                <Field label="Administration amount" hint="optional">
+                  <input
+                    value={encounter.details?.volume ?? ""}
+                    placeholder="e.g., 2"
+                    onInput={(event) => patchDetails({ volume: event.currentTarget.value })}
+                  />
+                </Field>
+                <Field label="Unit">
+                  <select
+                    value={encounter.details?.volumeUnit ?? ""}
+                    onChange={(event) => patchDetails({ volumeUnit: event.currentTarget.value })}
+                  >
+                    <option value="">Select unit</option>
+                    <option value="mL">mL (volume)</option>
+                    <option value="mg">mg (dose amount)</option>
+                  </select>
+                </Field>
+                <Field label="Delivery device" hint="optional">
+                  <select
+                    value={encounter.details?.device ?? ""}
+                    onChange={(event) => patchDetails({ device: event.currentTarget.value })}
+                  >
+                    <option value="">Not separately documented</option>
+                    <option value="Needle and syringe">Needle and syringe</option>
+                    <option value="Prefilled syringe">Prefilled syringe</option>
+                    <option value="Autoinjector">Autoinjector</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </Field>
+                {encounter.details?.device === "Other" && (
+                  <Field label="Device detail" hint="required">
+                    <input
+                      value={encounter.details?.deviceOther ?? ""}
+                      onInput={(event) => patchDetails({ deviceOther: event.currentTarget.value })}
+                    />
+                  </Field>
+                )}
+                <Field label="Site condition" hint="optional">
+                  <select
+                    value={encounter.details?.siteCondition ?? ""}
+                    onChange={(event) => patchDetails({ siteCondition: event.currentTarget.value })}
+                  >
+                    <option value="">Not separately documented</option>
+                    <option value="Skin/site intact before administration">
+                      Skin/site intact before administration
+                    </option>
+                    <option value="Other">Other finding / condition</option>
+                  </select>
+                </Field>
+                {encounter.details?.siteCondition === "Other" && (
+                  <Field label="Site condition detail" hint="required">
+                    <input
+                      value={encounter.details?.siteConditionOther ?? ""}
+                      onInput={(event) => patchDetails({ siteConditionOther: event.currentTarget.value })}
+                    />
+                  </Field>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "product" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
             <div class="wfp-section-head">Lot &amp; traceability</div>
@@ -1073,7 +1318,7 @@ export function InjectionPanel({
         </div>
       )}
 
-      {tab === "safety" && (
+      {tab === "verification" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
             <div class="wfp-section-head">Verification &amp; safety</div>
@@ -1178,7 +1423,7 @@ export function InjectionPanel({
         </div>
       )}
 
-      {tab === "response" && (
+      {tab === "outcome" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
             <div class="wfp-section-head">Response &amp; follow-up</div>
@@ -1202,92 +1447,6 @@ export function InjectionPanel({
                   />
                 </Field>
               )}
-              <div class="wfp-row">
-                <Field label="Administered by" hint="required">
-                  <input
-                    value={encounter.administeredBy}
-                    placeholder="J. Doe, LVN"
-                    onInput={(event) => patch({ administeredBy: event.currentTarget.value })}
-                  />
-                </Field>
-                <Field label="Actual administration time" hint="required">
-                  <input
-                    type="time"
-                    value={encounter.administrationTime}
-                    onInput={(event) => patch({ administrationTime: event.currentTarget.value })}
-                  />
-                </Field>
-                {encounter.initiation?.protocol && (
-                  <Field label="Component 2 actual time" hint="required for paired protocols">
-                    <input
-                      type="time"
-                      value={encounter.secondAdministrationTime ?? ""}
-                      onInput={(event) => patch({ secondAdministrationTime: event.currentTarget.value })}
-                    />
-                  </Field>
-                )}
-              </div>
-
-              <div class="wfp-section-head">Administration detail</div>
-              <div class="wfp-row">
-                <Field label="Administration amount" hint="optional">
-                  <input
-                    value={encounter.details?.volume ?? ""}
-                    placeholder="e.g., 2"
-                    onInput={(event) => patchDetails({ volume: event.currentTarget.value })}
-                  />
-                </Field>
-                <Field label="Unit">
-                  <select
-                    value={encounter.details?.volumeUnit ?? ""}
-                    onChange={(event) => patchDetails({ volumeUnit: event.currentTarget.value })}
-                  >
-                    <option value="">Select unit</option>
-                    <option value="mL">mL (volume)</option>
-                    <option value="mg">mg (dose amount)</option>
-                  </select>
-                </Field>
-                <Field label="Delivery device" hint="optional">
-                  <select
-                    value={encounter.details?.device ?? ""}
-                    onChange={(event) => patchDetails({ device: event.currentTarget.value })}
-                  >
-                    <option value="">Not separately documented</option>
-                    <option value="Needle and syringe">Needle and syringe</option>
-                    <option value="Prefilled syringe">Prefilled syringe</option>
-                    <option value="Autoinjector">Autoinjector</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </Field>
-                {encounter.details?.device === "Other" && (
-                  <Field label="Device detail" hint="required">
-                    <input
-                      value={encounter.details?.deviceOther ?? ""}
-                      onInput={(event) => patchDetails({ deviceOther: event.currentTarget.value })}
-                    />
-                  </Field>
-                )}
-                <Field label="Site condition" hint="optional">
-                  <select
-                    value={encounter.details?.siteCondition ?? ""}
-                    onChange={(event) => patchDetails({ siteCondition: event.currentTarget.value })}
-                  >
-                    <option value="">Not separately documented</option>
-                    <option value="Skin/site intact before administration">
-                      Skin/site intact before administration
-                    </option>
-                    <option value="Other">Other finding / condition</option>
-                  </select>
-                </Field>
-                {encounter.details?.siteCondition === "Other" && (
-                  <Field label="Site condition detail" hint="required">
-                    <input
-                      value={encounter.details?.siteConditionOther ?? ""}
-                      onInput={(event) => patchDetails({ siteConditionOther: event.currentTarget.value })}
-                    />
-                  </Field>
-                )}
-              </div>
 
               <div class="wfp-checkbox-row">
                 <input
@@ -1334,11 +1493,7 @@ export function InjectionPanel({
               )}
             </div>
           </div>
-        </div>
-      )}
 
-      {tab === "disposition" && (
-        <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section">
             <div class="wfp-section-head">Clinical disposition</div>
             <div class="wfp-section-body">
@@ -1404,51 +1559,6 @@ export function InjectionPanel({
           </div>
 
           <div class="wfp-section">
-            <div class="wfp-section-head">Return date</div>
-            <div class="wfp-section-body">
-              <div class="wfp-row">
-                <Field label="Prior dose" hint="optional">
-                  <input
-                    type="date"
-                    value={encounter.priorDoseDate}
-                    onInput={(event) => patch({ priorDoseDate: event.currentTarget.value })}
-                  />
-                </Field>
-                <Field label="Prior site" hint="optional">
-                  <select
-                    value={encounter.priorSite ?? ""}
-                    onChange={(event) => patch({ priorSite: event.currentTarget.value })}
-                  >
-                    <option value="">—</option>
-                    {ALL_INJECTION_SITES.map((site) => (
-                      <option key={site} value={site}>
-                        {site}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Administered">
-                  <input
-                    type="date"
-                    value={encounter.administrationDate}
-                    onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
-                  />
-                </Field>
-                <Field label="Next dose" hint="required">
-                  <input
-                    type="date"
-                    value={encounter.nextDoseDate}
-                    onInput={(event) => patch({ nextDoseDate: event.currentTarget.value })}
-                  />
-                </Field>
-              </div>
-              {evaluation && (
-                <p class="wfp-field-hint">{evaluation.output.timing.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div class="wfp-section">
             <div class="wfp-section-head">Administration note</div>
             <div class="wfp-section-body">
               <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
@@ -1488,6 +1598,7 @@ export function InjectionPanel({
           </div>
         </div>
       )}
+
       </fieldset>
 
       {locked && (

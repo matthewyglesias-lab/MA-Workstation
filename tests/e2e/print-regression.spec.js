@@ -43,29 +43,32 @@ async function preparePrintableInjection(page) {
   await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
-  await panel.getByRole('tab', { name: 'Medication', exact: true }).click();
-  await panel.locator('.wfp-field:has-text("Drug") select').selectOption({ label: 'Other' });
-  await panel.locator('.wfp-field:has-text("Dose") input').fill('100 mg');
-  await panel.locator('input[placeholder="IM / SubQ"]').fill('IM');
-  await panel.getByText('R deltoid', { exact: true }).click();
-  await panel.locator('.wfp-field:has-text("Interval") select').selectOption('q4wk');
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+  await panel.locator('input[name="inj-dose"]').fill('100 mg');
+  await panel.locator('input[name="inj-route"]').fill('IM');
+  await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
-  await panel.getByRole('tab', { name: 'Traceability', exact: true }).click();
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.getByText('R deltoid', { exact: true }).click();
+
+  await panel.getByRole('tab', { name: 'Product', exact: true }).click();
   await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-01');
   await panel.locator('input[placeholder="LOT123"]').fill('PRINT-LOT-001');
   await panel.locator('input[type="month"]').first().fill('2027-12');
 
-  await panel.getByRole('tab', { name: 'Safety', exact: true }).click();
+  await panel.getByRole('tab', { name: 'Verification', exact: true }).click();
   await panel.locator('input[placeholder*="Verify in active record"]').fill('NKDA verified in active record');
   await panel.getByText('No acute concerns today confirmed', { exact: true }).click();
 
-  await panel.getByRole('tab', { name: 'Response', exact: true }).click();
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.locator('input[type="time"]').first().fill('09:41');
   await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
 
-  await panel.getByRole('tab', { name: 'Disposition', exact: true }).click();
+  await panel.getByRole('tab', { name: 'Schedule', exact: true }).click();
   await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
   await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+
+  await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
 
   const administered = page.locator(
     '#clinicalDisposition [data-disposition="administered"]'

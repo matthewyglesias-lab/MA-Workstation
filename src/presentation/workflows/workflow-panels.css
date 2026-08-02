@@ -144,6 +144,21 @@
   text-align: center;
 }
 
+/* Counts in a section head read as a chip, same as they do on a tab. */
+.cd2004-shell .wfp-section-head .wfp-tab-badge {
+  min-width: 14px;
+  padding: 0 3px;
+  color: #fff;
+  background: var(--cd-red);
+  font-size: 9px;
+  text-align: center;
+}
+
+.cd2004-shell .wfp-section-head .wfp-tab-badge-muted {
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome);
+}
+
 .cd2004-shell .wfp-tab .wfp-tab-badge.wfp-tab-badge-muted {
   color: var(--cd-ink-muted);
   background: var(--cd-chrome);
@@ -193,6 +208,9 @@
 }
 
 .cd2004-shell .wfp-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 3px 7px;
   color: var(--cd-ink);
   background: var(--cd-face);
@@ -493,6 +511,32 @@
 .cd2004-shell .wfp-result-status {
   color: var(--cd-ink-muted);
   font-size: 10px;
+}
+
+/* The MAR due line. Colour tracks the engine's own timing state; it is a
+   readout, never a gate — the engine raises the stop or warning itself. */
+.cd2004-shell .wfp-due-line {
+  padding: 4px 7px;
+  border: 1px solid var(--cd-border-mid);
+  border-left: 4px solid var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-due-line.is-ok {
+  border-left-color: var(--cd-green);
+}
+
+.cd2004-shell .wfp-due-line.is-warning {
+  border-left-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-due-line.is-stop {
+  border-left-color: var(--cd-red);
+}
+
+/* Dose-history MAR grid: Date | Medication | Route | Site. Read-only. */
+.cd2004-shell .wfp-grid-mar .wfp-grid-head,
+.cd2004-shell .wfp-grid-mar .wfp-grid-row {
+  grid-template-columns: 90px minmax(0, 1fr) 60px 116px;
 }
 
 /* The preliminary banner. A point-of-care immunoassay is presumptive, and the
