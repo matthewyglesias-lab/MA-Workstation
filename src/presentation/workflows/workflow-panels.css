@@ -335,13 +335,51 @@
    The colon comes from CSS so it stays out of the accessible name and out of
    the selectors the tests match on. */
 .cd2004-shell .wfp-field label {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
   color: var(--cd-ink-muted);
   font-size: 11px;
   font-weight: 400;
 }
 
-.cd2004-shell .wfp-field label::after {
+/* The colon belongs to the caption, not the label - otherwise it lands after
+   the required asterisk ("Ordering provider *:"). */
+.cd2004-shell .wfp-field-caption::after {
   content: ":";
+}
+
+/* Requirement marking, the way a clinical form has always done it: a red
+   asterisk on the caption and a filled control, so a glance down the form
+   shows what still has to be answered. The fill is persistent rather than
+   clearing on entry — it marks "this is required", not "this is missing";
+   the engine's outstanding-requirements list is what tracks missing. */
+.cd2004-shell .wfp-req {
+  color: var(--cd-red);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  cursor: help;
+}
+
+.cd2004-shell .wfp-opt {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+  font-style: italic;
+}
+
+.cd2004-shell .wfp-field.is-required > input,
+.cd2004-shell .wfp-field.is-required > select,
+.cd2004-shell .wfp-field.is-required > textarea,
+.cd2004-shell .wfp-field.is-required .wfp-select-group select {
+  background: var(--cd-amber-soft);
+}
+
+.cd2004-shell .wfp-field.is-required > input:focus-visible,
+.cd2004-shell .wfp-field.is-required > select:focus-visible,
+.cd2004-shell .wfp-field.is-required > textarea:focus-visible {
+  background: var(--cd-white);
 }
 
 /* Checkbox and radio captions are sentences, not captions - no colon. */

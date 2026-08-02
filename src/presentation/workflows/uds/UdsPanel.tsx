@@ -134,11 +134,32 @@ function Field({
   hint?: string;
   children: ComponentChildren;
 }) {
+  // Requirement is marked on the field itself - a red asterisk on the caption
+  // and a filled control - rather than as a word of helper text underneath.
+  // Only the bare "required"/"optional" markers are replaced; a hint carrying
+  // real content ("required for Other") keeps its explanatory line.
+  const required = hint?.startsWith("required") ?? false;
+  const optional = hint?.startsWith("optional") ?? false;
+  // A hint that only says "required"/"optional" is fully replaced by the
+  // marker. One that qualifies it keeps the qualifier, minus the leading word
+  // the marker already carries, so it does not read "optional ... optional".
+  const detail =
+    hint && hint !== "required" && hint !== "optional"
+      ? hint.replace(/^(required|optional)[;:,]?\s*/i, "")
+      : "";
   return (
-    <div class="wfp-field">
-      <label>{label}</label>
+    <div class={`wfp-field ${required ? "is-required" : ""}`}>
+      <label>
+        <span class="wfp-field-caption">{label}</span>
+        {required && (
+          <abbr class="wfp-req" title="Required">
+            *
+          </abbr>
+        )}
+        {optional && <span class="wfp-opt">optional</span>}
+      </label>
       {children}
-      {hint && <span class="wfp-field-hint">{hint}</span>}
+      {detail && <span class="wfp-field-hint">{detail}</span>}
     </div>
   );
 }
