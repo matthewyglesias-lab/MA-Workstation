@@ -1,35 +1,53 @@
 import { render } from 'preact';
+import { RecordsWindow } from './presentation/RecordsWindow';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   ClinicalDesktopShell,
   ContextDialog,
+  LegacyWorkflowHost,
+  WORKFLOW_LABELS,
   type ClinicOption,
   type LegacyPanelAdapter,
   type PatientContext,
   type ReadinessItem,
   type ToolbarAction,
   type WorkflowId,
+  type WorkflowRenderContext,
   type WorkQueueItem,
   type InjectionRecordRow,
 } from './presentation';
+import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
+import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
+import { InjectionPanel } from './presentation/workflows/injection/InjectionPanel';
+import { SamplesPanel } from './presentation/workflows/samples/SamplesPanel';
+import { TmsPanel } from './presentation/workflows/tms/TmsPanel';
+import { KnowledgePanel } from './presentation/workflows/knowledge/KnowledgePanel';
+import { DailyCloseoutPanel } from './presentation/workflows/log/DailyCloseoutPanel';
 import {
   createClinicalCoordinator,
   selectClinicalEvaluation,
   selectClinicalMirrorAgreement,
   type ApplicationWorkflow,
   type ClinicalCoordinatorSnapshot,
+  type ClinicalEncounterSource,
   type ClinicalWorkflow,
 } from './application';
 import { loadLegacyRuntime, type LegacyRuntime } from './legacy/loader';
 import { installLegacyDocumentationAdapter } from './legacy/documentation-adapter';
 import { createLegacyClinicalSource } from './legacy/clinical-source';
+import type { InjectionEncounter } from './domain/injection';
 import {
   copyAllLegacyNotes,
   copyLegacyNoteSection,
   readLegacyShellSnapshot,
   type LegacyShellSnapshot,
 } from './legacy/shell-state';
-import classicWorkflowCss from './presentation/classic-workflows.css?inline';
+
+declare global {
+  interface Window {
+    ipmgInjectionRecordGeneration?: () => number;
+  }
+}
 
 type ContextEditor = 'staff' | 'location' | null;
 
@@ -143,16 +161,28 @@ function activeStaffValue(): string {
   return input?.value ?? '';
 }
 
+// Reads the injection encounter straight from the legacy DOM, bypassing the
+// coordinator's cross-workflow active-patient inheritance in synchronize().
+// That inheritance is right for switching between workflows mid-visit, but
+// wrong for InjectionPanel's own remount after "+ New"/open-a-different-
+// record: legacy's own newInjection() clears #ptName with no auto-refill, so
+// the panel's fresh mount must see that same genuinely-blank patient instead
+// of picking up a stale still-active patient from another workflow.
+function rawInjectionEncounter(source: ClinicalEncounterSource): InjectionEncounter {
+  return source.read('injection').encounter as InjectionEncounter;
+}
+
 function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const [snapshot, setSnapshot] = useState<LegacyShellSnapshot>(() =>
     readLegacyShellSnapshot(runtime),
   );
+  const clinicalSource = useMemo(() => createLegacyClinicalSource(), [runtime]);
   const coordinator = useMemo(
     () =>
       createClinicalCoordinator({
-        source: createLegacyClinicalSource(),
+        source: clinicalSource,
       }),
-    [runtime],
+    [clinicalSource],
   );
   const [clinical, setClinical] = useState<ClinicalCoordinatorSnapshot>(() => {
     coordinator.navigate(DESKTOP_TO_APPLICATION[runtime.activeWorkflow()]);
@@ -162,6 +192,18 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const [posting, setPosting] = useState(false);
   const refreshTimer = useRef<number | null>(null);
   const snapshotRef = useRef(snapshot);
+  const formsPanelRef = useRef<HTMLDivElement | null>(null);
+  const udsPanelRef = useRef<HTMLDivElement | null>(null);
+  const injectionPanelRef = useRef<HTMLDivElement | null>(null);
+  const samplesPanelRef = useRef<HTMLDivElement | null>(null);
+  // Bumped only when the active injection record genuinely changes (opening
+  // a different saved record, or starting a new one) - not when a fresh
+  // draft's first autosave silently assigns it an id - so InjectionPanel's
+  // internal typed state can be reset via `key` without discarding in-flight
+  // typing on every autosave tick.
+  const [injectionRecordEpoch, setInjectionRecordEpoch] = useState(0);
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const injectionRecordGenerationRef = useRef(0);
 
   const refresh = () => {
     if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
@@ -179,6 +221,18 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       if (!sameSnapshot(snapshotRef.current, next)) {
         snapshotRef.current = next;
         setSnapshot(next);
+      }
+      const nextRecordGeneration = window.ipmgInjectionRecordGeneration?.() ?? 0;
+      if (nextRecordGeneration !== injectionRecordGenerationRef.current) {
+        injectionRecordGenerationRef.current = nextRecordGeneration;
+        setInjectionRecordEpoch((value) => value + 1);
+        // A genuine record switch (opening a different saved record, or
+        // starting a new one) must not let the coordinator's cross-workflow
+        // active-patient inheritance resurrect the previous record's
+        // patient into the freshly (un)loaded one - sync the active patient
+        // to match whatever the newly active record itself holds, same as
+        // legacy's own newInjection()/openRecord() (no ambient inheritance).
+        coordinator.setActivePatient(rawInjectionEncounter(clinicalSource).patient);
       }
       setPosting(false);
     }, 55);
@@ -255,14 +309,29 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     () =>
       Object.fromEntries(
         (Object.keys(runtime.panels) as WorkflowId[])
-          .filter((workflow) => workflow !== 'home')
+          // 'forms', 'uds', 'administer' (injection), and 'samples' are
+          // migrated to new panels; their legacy panels stay loaded
+          // (hidden) only as a print/readiness compatibility mirror. 'tms',
+          // 'reference' (Knowledge), and 'log' (Daily Closeout) are also
+          // migrated; none of the three has any print/readiness dependency
+          // on its own panel being mounted (Daily Closeout's print sheet
+          // reads directly from the in-memory activity log, not from the
+          // panel DOM), so their legacy panels are simply never mounted.
+          .filter(
+            (workflow) =>
+              workflow !== 'home' &&
+              workflow !== 'forms' &&
+              workflow !== 'uds' &&
+              workflow !== 'administer' &&
+              workflow !== 'samples' &&
+              workflow !== 'tms' &&
+              workflow !== 'reference' &&
+              workflow !== 'log',
+          )
           .map((workflow) => [
             workflow,
             {
-              selector:
-                workflow === 'reference'
-                  ? '#panel-reference'
-                  : `#panel-${workflow}`,
+              selector: `#panel-${workflow}`,
               resolve: () => runtime.panels[workflow],
               mountedClassName: 'cd2004-legacy-panel-mounted',
               onMount: (panel: HTMLElement) => {
@@ -274,6 +343,72 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       ) as Partial<Record<WorkflowId, LegacyPanelAdapter>>,
     [runtime],
   );
+
+  const renderWorkflow = (
+    workflow: WorkflowId,
+    context: WorkflowRenderContext,
+  ) => {
+    if (workflow === 'forms') {
+      return (
+        <FormsPanel
+          initialEncounter={clinical.state.workflows.forms.encounter}
+          activePatient={context.patient}
+          evaluation={selectClinicalEvaluation(clinical, 'forms')}
+          staffSignInValue={activeStaffValue()}
+          previewRef={formsPanelRef}
+        />
+      );
+    }
+    if (workflow === 'uds') {
+      return (
+        <UdsPanel
+          initialEncounter={clinical.state.workflows.uds.encounter}
+          activePatient={context.patient}
+          evaluation={selectClinicalEvaluation(clinical, 'uds')}
+          staffSignInValue={activeStaffValue()}
+          previewRef={udsPanelRef}
+        />
+      );
+    }
+    if (workflow === 'administer') {
+      return (
+        <InjectionPanel
+          key={injectionRecordEpoch}
+          initialEncounter={rawInjectionEncounter(clinicalSource)}
+          activePatient={context.patient}
+          evaluation={selectClinicalEvaluation(clinical, 'injection')}
+          staffSignInValue={activeStaffValue()}
+          previewRef={injectionPanelRef}
+          locked={snapshot.postState === 'posted'}
+        />
+      );
+    }
+    if (workflow === 'samples') {
+      return (
+        <SamplesPanel
+          initialEncounter={clinical.state.workflows.samples.encounter}
+          activePatient={context.patient}
+          evaluation={selectClinicalEvaluation(clinical, 'samples')}
+          staffSignInValue={activeStaffValue()}
+          previewRef={samplesPanelRef}
+        />
+      );
+    }
+    if (workflow === 'tms') {
+      return <TmsPanel />;
+    }
+    if (workflow === 'reference') {
+      return <KnowledgePanel />;
+    }
+    if (workflow === 'log') {
+      return <DailyCloseoutPanel />;
+    }
+    const adapter = legacyPanels[workflow];
+    if (adapter) {
+      return <LegacyWorkflowHost adapter={adapter} label={WORKFLOW_LABELS[workflow]} />;
+    }
+    return undefined;
+  };
 
   const openWorkflow = (workflow: WorkflowId) => {
     coordinator.navigate(DESKTOP_TO_APPLICATION[workflow]);
@@ -298,14 +433,14 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         id: 'staff',
         label: 'Edit staff sign-in',
         shortLabel: 'Staff',
-        icon: 'S',
+        icon: 'staff',
         onInvoke: () => setContextEditor('staff'),
       },
       {
         id: 'location',
         label: 'Select visit location',
         shortLabel: 'Location',
-        icon: 'L',
+        icon: 'location',
         onInvoke: () => setContextEditor('location'),
       },
     ],
@@ -343,6 +478,21 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     activeWorkflow === 'samples' ||
     activeWorkflow === 'forms';
   const reviewOrComplete = () => {
+    if (activeWorkflow === 'forms') {
+      formsPanelRef.current?.focus({ preventScroll: false });
+      formsPanelRef.current?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (activeWorkflow === 'uds') {
+      udsPanelRef.current?.focus({ preventScroll: false });
+      udsPanelRef.current?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (activeWorkflow === 'samples') {
+      samplesPanelRef.current?.focus({ preventScroll: false });
+      samplesPanelRef.current?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
     if (isReviewWorkflow) {
       runtime.focusOutput();
       refresh();
@@ -400,6 +550,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             : snapshot.noteSubtitle
         }
         legacyPanels={legacyPanels}
+        renderWorkflow={renderWorkflow}
         toolbarActions={toolbarActions}
         postState={effectivePostState}
         postMessage={
@@ -423,7 +574,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             : undefined
         }
         onReviewComplete={reviewOrComplete}
-        onOpenRecords={() => runtime.openRecords()}
+        onOpenRecords={() => setRecordsOpen(true)}
         onOpenKnowledge={() => openWorkflow('reference')}
         onOpenCloseout={() => openWorkflow('log')}
         onCopyNoteSection={(section) =>
@@ -434,6 +585,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         onRecordOpen={openRecord}
         onEscape={() => setContextEditor(null)}
       />
+      <RecordsWindow open={recordsOpen} onClose={() => setRecordsOpen(false)} />
       {contextEditor && (
         <ContextDialog
           kind={contextEditor}
@@ -463,12 +615,15 @@ async function boot(): Promise<void> {
   const app = document.getElementById('app');
   if (!app) throw new Error('Missing application mount point.');
 
+  // Claim the records window before the legacy runtime boots. Its
+  // ensureRecordsDrawer() rebuilds the drawer layer whenever it is missing and
+  // runs from five call sites, so removing the element is not enough - it has
+  // to be told to stand down, or two dialogs answer to #recordsDrawerLayer.
+  (window as unknown as { IPMG_RECORDS_WINDOW_OWNED?: boolean })
+    .IPMG_RECORDS_WINDOW_OWNED = true;
+
   const runtime = await loadLegacyRuntime();
   installLegacyDocumentationAdapter();
-  const classicStyles = document.createElement('style');
-  classicStyles.id = 'cd2004-classic-workflow-styles';
-  classicStyles.textContent = classicWorkflowCss;
-  document.head.appendChild(classicStyles);
   render(<LegacyDesktopApp runtime={runtime} />, app);
   window.setTimeout(() => {
     runtime.staging.hidden = true;

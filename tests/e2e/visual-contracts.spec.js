@@ -17,73 +17,12 @@ const WORKFLOWS = {
       '.cd2004-launcher'
     ]
   },
-  administer: {
-    label: 'Injection',
-    headingText: 'Injection documentation, from order to closeout.',
-    panel: '#panel-administer',
-    layout: '#panel-administer .layout',
-    heading:
-      '#panel-administer .inj-modern-hero h1, #panel-administer .inj-modern-hero h2, #panel-administer .card-head h2',
-    representative: '#panel-administer .card-encounter',
-    control: '#panel-administer #ptName',
-    hero: '#panel-administer .inj-modern-hero',
-    landmarks: [
-      '#panel-administer .card-encounter',
-      '#panel-administer .card-medication',
-      '#panel-administer .card-trace',
-      '#panel-administer .note'
-    ]
-  },
-  uds: {
-    label: 'UDS',
-    headingText: 'Point-of-care UDS, documented with clear guardrails.',
-    panel: '#panel-uds',
-    layout: '#panel-uds .layout',
-    heading:
-      '#panel-uds .uds-modern-hero h1, #panel-uds .uds-modern-hero h2, #panel-uds .card-head h2',
-    representative: '#panel-uds .card',
-    control: '#panel-uds #udsPtName',
-    hero: '#panel-uds .uds-modern-hero',
-    landmarks: [
-      '#panel-uds #udsPtName',
-      '#panel-uds #udsDevice',
-      '#panel-uds #udsResultGrid',
-      '#panel-uds .uds-note'
-    ]
-  },
-  samples: {
-    label: 'Samples',
-    headingText: 'Document exactly what was dispensed.',
-    panel: '#panel-samples',
-    layout: '#panel-samples .layout',
-    heading: '#panel-samples .sample-hero-title, #panel-samples .card-head h2',
-    representative: '#panel-samples .card',
-    control: '#panel-samples #samplePtName',
-    hero: '#panel-samples .sample-module-hero',
-    landmarks: [
-      '#panel-samples #samplePtName',
-      '#panel-samples #samplePackageTraceability',
-      '#panel-samples #sampleReviewedToday',
-      '#panel-samples #samplePreview'
-    ]
-  },
-  forms: {
-    label: 'Forms',
-    headingText:
-      'Track paperwork, draft letters, and keep release steps clear.',
-    panel: '#panel-forms',
-    layout: '#panel-forms .forms-layout',
-    heading: '#panel-forms .forms-title, #panel-forms .card-head h2',
-    representative: '#panel-forms .card',
-    control: '#panel-forms #formsPtName',
-    hero: '#panel-forms .forms-hero',
-    landmarks: [
-      '#panel-forms #formsPtName',
-      '#panel-forms #formsTypeGrid',
-      '#panel-forms .letter-builder-card',
-      '#panel-forms #formsNotePreview'
-    ]
-  }
+  // 'forms', 'uds', 'administer' (injection), and 'samples' are
+  // intentionally not covered here: they've been migrated to real new
+  // panels (`.wfp-panel`) with a fundamentally different structure from the
+  // shared legacy card/chip contract this suite validates for the still
+  // legacy-hosted workflows. A dedicated visual contract for the new panels
+  // is a follow-up, not part of this generic legacy contract.
 };
 
 async function openWorkflow(page, workflow) {
@@ -95,16 +34,11 @@ async function openWorkflow(page, workflow) {
     return;
   }
 
-  const navButton = page.locator(
+  // The workflow strip is docked along the bottom at every width, so every
+  // nav item is directly clickable - there is no NAV pane to switch to first.
+  await page.locator(
     `.cd2004-nav-item[title="${WORKFLOWS[workflow].label}"]`
-  );
-  if (!await navButton.isVisible()) {
-    const navTab = page.getByRole('tab', { name: 'NAV', exact: true });
-    await expect(navTab).toBeVisible();
-    await navTab.click();
-  }
-
-  await navButton.click();
+  ).click();
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
     'data-active-workflow',
     workflow
@@ -173,7 +107,6 @@ async function collectVisualContract(page, workflow) {
     const activeWindowTitlebar = activeWindow?.querySelector(
       ':scope > .cd2004-window-titlebar'
     );
-    const captionButton = activeWindow?.querySelector('.cd2004-caption-button');
     const recordTableWrap = document.querySelector(
       '.cd2004-start-bottom .cd2004-table-wrap'
     );
@@ -192,8 +125,10 @@ async function collectVisualContract(page, workflow) {
         rect: rectOf(element)
       }));
     const visiblePanes = panes.filter(pane => pane.visible);
+    // Two panes on desktop: the work area and the note dock. The navigator is
+    // the bottom-docked workflow tab strip, not a tiled pane.
     const desktopTiling =
-      visiblePanes.length === 3 &&
+      visiblePanes.length === 2 &&
       visiblePanes.every((pane, index) =>
         index === 0 ||
         (
@@ -220,6 +155,7 @@ async function collectVisualContract(page, workflow) {
       'boxShadow'
     ]);
     const activeTitlebarStyle = styleOf(activeWindowTitlebar, [
+      'backgroundColor',
       'backgroundImage',
       'color',
       'minHeight'
@@ -249,7 +185,12 @@ async function collectVisualContract(page, workflow) {
           'overflow'
         ]),
         applicationTitlebar: {
-          ...styleOf(appTitlebar, ['color', 'height', 'backgroundImage']),
+          ...styleOf(appTitlebar, [
+            'color',
+            'height',
+            'backgroundColor',
+            'backgroundImage'
+          ]),
           usesGradient: getComputedStyle(appTitlebar).backgroundImage.includes(
             'linear-gradient'
           )
@@ -264,13 +205,7 @@ async function collectVisualContract(page, workflow) {
           titlebarMinHeight: activeTitlebarStyle?.minHeight,
           titlebarUsesGradient:
             activeTitlebarStyle?.backgroundImage.includes('linear-gradient'),
-          titlebarUsesNavy:
-            activeTitlebarStyle?.backgroundImage.includes('rgb(10, 36, 106)')
-        },
-        captionButton: {
-          ...rectOf(captionButton),
-          borderRadius: getComputedStyle(captionButton).borderRadius,
-          minHeight: getComputedStyle(captionButton).minHeight
+          titlebarUsesNavy: activeTitlebarStyle?.backgroundColor === 'rgb(10, 36, 106)'
         }
       },
       panes: {
@@ -367,12 +302,12 @@ function expectedContract(workflow, viewport) {
       tag: isHome ? 'H1' : 'H2',
       style: {
         color: isHome ? 'rgb(16, 35, 66)' : 'rgb(16, 42, 86)',
-        fontSize: isHome && desktop ? '18px' : '16px',
+        fontSize: isHome ? (desktop ? '15px' : '14px') : '16px',
         fontWeight: '700',
         lineHeight: isHome
           ? desktop
-            ? '19.8px'
-            : '17.6px'
+            ? '16.5px'
+            : '15.4px'
           : '18.4px'
       }
     },
@@ -386,10 +321,9 @@ function expectedContract(workflow, viewport) {
       applicationTitlebar: {
         color: 'rgb(255, 255, 255)',
         height: titlebarHeight,
-        backgroundImage: expect.stringMatching(
-          /linear-gradient.*rgb\(10, 36, 106\)/
-        ),
-        usesGradient: true
+        backgroundColor: 'rgb(10, 36, 106)',
+        backgroundImage: 'none',
+        usesGradient: false
       },
       activeWindow: {
         borderRadius: '0px',
@@ -397,28 +331,17 @@ function expectedContract(workflow, viewport) {
         borderRightWidth: '2px',
         titlebarColor: 'rgb(255, 255, 255)',
         titlebarMinHeight: windowTitlebarMinHeight,
-        titlebarUsesGradient: true,
+        titlebarUsesGradient: false,
         titlebarUsesNavy: true
-      },
-      captionButton: {
-        x: expect.any(Number),
-        y: expect.any(Number),
-        width: desktop ? 20 : 26,
-        height: desktop ? 19 : 23,
-        right: expect.any(Number),
-        bottom: expect.any(Number),
-        borderRadius: '0px',
-        minHeight: '0px'
       }
     },
     panes: {
-      visible: desktop ? ['navigator', 'work', 'inspector'] : ['work'],
+      visible: desktop ? ['work', 'inspector'] : ['work'],
       desktopTiling: desktop,
       mobileSwitcherVisible: !desktop,
       mobileTabs: desktop
         ? []
         : [
-            { label: 'NAV', selected: 'false' },
             { label: 'WORK', selected: 'true' },
             { label: 'NOTE', selected: 'false' }
           ],

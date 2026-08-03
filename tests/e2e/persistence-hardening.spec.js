@@ -11,24 +11,15 @@ async function openWorkflow(page, workflow) {
   );
   await navButton.click();
   await expect(shell).toHaveAttribute('data-active-workflow', workflow);
-  await expect(page.locator(`#panel-${workflow}`)).toBeVisible();
+  // Injection is migrated to a real panel; #panel-administer stays loaded
+  // hidden as a print/readiness compatibility mirror only.
+  await expect(page.locator('.wfp-panel')).toBeVisible();
 }
 
-async function openInjectionCard(page, cardClass) {
-  const card = page.locator(`#panel-administer .${cardClass}`);
-  await expect(card).toBeVisible();
-  const isCollapsed = () => card.evaluate(node =>
-    node.classList.contains('rc530-collapsed') ||
-    node.classList.contains('rc526-collapsed')
-  );
-  if (await isCollapsed()) {
-    const receipt = card.locator(
-      '.rc530-summary:visible, .rc526-summary:visible'
-    ).first();
-    if (await receipt.count()) await receipt.click();
-    else await card.locator('.card-head').click();
-  }
-  await expect.poll(isCollapsed).toBe(false);
+async function openInjectionTab(page, tabName) {
+  const panel = page.locator('.wfp-panel');
+  await panel.getByRole('tab', { name: tabName, exact: true }).click();
+  return panel;
 }
 
 const malformedInjectionRecords = [
@@ -67,8 +58,8 @@ for (const fixture of malformedInjectionRecords) {
 
     await page.goto('/');
     await openWorkflow(page, 'administer');
-    await openInjectionCard(page, 'card-encounter');
-    await page.locator('#ptName').fill(`QA, ${fixture.name}`);
+    const panel = await openInjectionTab(page, 'Order');
+    await panel.locator('input[placeholder="Last, First"]').fill(`QA, ${fixture.name}`);
 
     await expect(page.locator('#injRecordStatus')).toHaveText('Save failed');
     await expect(page.locator('#injRecordWorkspace .inj-record-status')).toHaveText(
@@ -99,20 +90,17 @@ test('failed non-administration handoff logging rolls back and never announces s
 
   await page.goto('/');
   await openWorkflow(page, 'administer');
-  await openInjectionCard(page, 'card-encounter');
-  await page.locator('#ptName').fill('QA, Handoff Rollback');
+  let panel = await openInjectionTab(page, 'Order');
+  await panel.locator('input[placeholder="Last, First"]').fill('QA, Handoff Rollback');
 
-  await openInjectionCard(page, 'card-medication');
-  await page.locator('#medChips').getByRole(
-    'button',
-    { name: 'Other', exact: true }
-  ).click();
+  panel = await openInjectionTab(page, 'Order');
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
 
-  const disposition = page.locator('#clinicalDisposition');
-  await disposition.locator('[data-disposition="held"]').click();
-  await page.locator('#clinicalDispositionProvider').fill('QA Provider, MD');
-  await page.locator('#clinicalDispositionTime').fill('2026-07-30T10:15');
-  await page.locator('#clinicalDispositionOutcome').fill(
+  panel = await openInjectionTab(page, 'Outcome');
+  await panel.getByText('Held', { exact: true }).click();
+  await panel.locator('.wfp-field:has-text("Provider / recipient") input').fill('QA Provider, MD');
+  await panel.locator('.wfp-field:has-text("Contact / decision time") input').fill('2026-07-30T10:15');
+  await panel.locator('.wfp-field:has-text("Direction / outcome") textarea').fill(
     'Hold medication; provider will reassess before any administration.'
   );
   await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
@@ -120,7 +108,7 @@ test('failed non-administration handoff logging rolls back and never announces s
   );
 
   const logCountBefore = await page.locator('#logCount').textContent();
-  await page.locator('#addLog').click();
+  await panel.getByText('Add to log', { exact: true }).click();
 
   await expect(page.locator('#toastMsg')).toHaveText(
     /could not be saved to the activity log/i

@@ -11,8 +11,20 @@ export type WorkflowId =
   | "tms";
 
 export type DesktopPane = "navigator" | "work" | "inspector";
-export type WindowMode = "normal" | "minimized" | "maximized" | "closed";
 export type ClinicalTone = "neutral" | "ready" | "warning" | "stop" | "info";
+
+export type DesktopIconName =
+  | WorkflowId
+  | "save"
+  | "records"
+  | "note"
+  | "print"
+  | "reset"
+  | "patient"
+  | "staff"
+  | "location"
+  | "alert"
+  | "check";
 
 export interface PatientContext {
   name?: string;
@@ -76,7 +88,7 @@ export interface ToolbarAction {
   label: string;
   shortLabel?: string;
   shortcut?: string;
-  icon?: string;
+  icon: DesktopIconName;
   disabled?: boolean;
   pressed?: boolean;
   onInvoke: () => void;

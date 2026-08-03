@@ -1,26 +1,37 @@
 import type { ComponentChildren, TargetedMouseEvent } from "preact";
+import { createContext } from "preact";
 import {
+  useContext,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
 } from "preact/hooks";
 import "./clinical-desktop.css";
-import { ClassicWindow } from "./ClassicWindow";
+import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
 import { LegacyWorkflowHost } from "./LegacyWorkflowHost";
 import { NoteInspector } from "./NoteInspector";
 import { StartCenter } from "./StartCenter";
 import {
   WORKFLOW_LABELS,
+  WORKFLOW_ORDER,
   LOCKED_RECORD_ACTION_SELECTOR,
   type ClinicalDesktopShellProps,
   type DesktopPane,
   type PatientContext,
-  type WindowMode,
   type WorkflowId,
 } from "./types";
+
+/** Menu bar order, with the Alt access key for each. */
+const MENU_IDS: string[] = ["file", "chart", "workflows", "tools", "help"];
+const MENU_MNEMONICS: Record<string, string> = {
+  f: "file",
+  c: "chart",
+  w: "workflows",
+  t: "tools",
+  h: "help",
+};
 
 const shortcutWorkflows: WorkflowId[] = [
   "home",
@@ -31,24 +42,6 @@ const shortcutWorkflows: WorkflowId[] = [
   "reference",
   "log",
 ];
-
-const navigatorGroups: Array<{
-  label: string;
-  workflows: WorkflowId[];
-}> = [
-  {
-    label: "Documentation",
-    workflows: ["home", "administer", "uds", "samples", "forms"],
-  },
-  { label: "Utilities", workflows: ["reference", "log"] },
-  { label: "Future", workflows: ["tms"] },
-];
-
-const initialWindowModes: Record<DesktopPane, WindowMode> = {
-  navigator: "normal",
-  work: "normal",
-  inspector: "normal",
-};
 
 function normalizedPatientValue(value?: string) {
   return (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -116,12 +109,11 @@ export function ClinicalDesktopShell({
 }: ClinicalDesktopShellProps) {
   const [internalWorkflow, setInternalWorkflow] =
     useState<WorkflowId>(defaultActiveWorkflow);
-  const [windowModes, setWindowModes] =
-    useState<Record<DesktopPane, WindowMode>>(initialWindowModes);
-  const [activePane, setActivePane] = useState<DesktopPane>("work");
+  const [focusedPane, setFocusedPane] = useState<DesktopPane>("work");
   const [mobilePane, setMobilePane] = useState<DesktopPane>("work");
   const [internalStatus, setInternalStatus] = useState<string | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const workHostRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -135,21 +127,6 @@ export function ClinicalDesktopShell({
   const effectiveStatus =
     internalStatus ?? statusMessage ?? "Ready. Select a workflow to begin.";
 
-  const visiblePanes = useMemo(
-    () => {
-      const panes = ["navigator", "work", "inspector"] as DesktopPane[];
-      const maximized = panes.find(
-        (pane) => windowModes[pane] === "maximized",
-      );
-      if (maximized) return [maximized];
-      return panes.filter(
-        (pane) =>
-          windowModes[pane] !== "closed" && windowModes[pane] !== "minimized",
-      );
-    },
-    [windowModes],
-  );
-
   const openWorkflow = (workflow: WorkflowId) => {
     const scrollBody = shellRef.current?.querySelector<HTMLElement>(
       ".cd2004-work-window .cd2004-window-body",
@@ -161,57 +138,8 @@ export function ClinicalDesktopShell({
     }
     if (activeWorkflow === undefined) setInternalWorkflow(workflow);
     onWorkflowChange?.(workflow);
-    setWindowModes((current) => ({ ...current, work: "normal" }));
-    setActivePane("work");
     setMobilePane("work");
     setInternalStatus(`${WORKFLOW_LABELS[workflow]} opened.`);
-  };
-
-  const setWindowMode = (pane: DesktopPane, mode: WindowMode) => {
-    const panes = ["navigator", "work", "inspector"] as DesktopPane[];
-    const next = { ...windowModes };
-    if (mode === "maximized") {
-      panes.forEach((key) => {
-        if (next[key] === "maximized") next[key] = "normal";
-      });
-    }
-    next[pane] = mode;
-
-    let focusPane = pane;
-    if (mode !== "normal" && mode !== "maximized") {
-      focusPane =
-        panes.find(
-          (candidate) =>
-            candidate !== pane &&
-            next[candidate] !== "closed" &&
-            next[candidate] !== "minimized",
-        ) ?? "work";
-      if (
-        next[focusPane] === "closed" ||
-        next[focusPane] === "minimized"
-      ) {
-        next[focusPane] = "normal";
-      }
-    }
-
-    setWindowModes(next);
-    setActivePane(focusPane);
-    setMobilePane(focusPane);
-    globalThis.setTimeout(() => {
-      shellRef.current
-        ?.querySelector<HTMLElement>(
-          `.cd2004-window[data-pane="${focusPane}"]`,
-        )
-        ?.focus({ preventScroll: true });
-    }, 0);
-  };
-
-  const resetLayout = () => {
-    setWindowModes(initialWindowModes);
-    setActivePane("work");
-    setMobilePane("work");
-    setShowShortcutHelp(false);
-    setInternalStatus("Window layout restored.");
   };
 
   const focusInspector = () => {
@@ -219,8 +147,7 @@ export function ClinicalDesktopShell({
       typeof document !== "undefined"
         ? (document.activeElement as HTMLElement | null)
         : null;
-    setWindowModes((current) => ({ ...current, inspector: "normal" }));
-    setActivePane("inspector");
+    setFocusedPane("inspector");
     setMobilePane("inspector");
     globalThis.setTimeout(() => {
       const inspectorWindow = shellRef.current?.querySelector<HTMLElement>(
@@ -250,76 +177,10 @@ export function ClinicalDesktopShell({
     setInternalStatus(null);
   }, [postState, selectedWorkflow, statusMessage]);
 
-  useEffect(() => {
-    if (!showShortcutHelp) return;
-    const shell = shellRef.current;
-    const backdrop = shell?.querySelector<HTMLElement>(
-      ".cd2004-modal-backdrop",
-    );
-    const dialog = backdrop?.querySelector<HTMLElement>(
-      ".cd2004-help-dialog",
-    );
-    if (!shell || !backdrop || !dialog) return;
-
-    const isolatedSiblings = [...shell.children]
-      .filter((element) => element !== backdrop)
-      .map((element) => ({
-        element: element as HTMLElement,
-        inert: Boolean((element as HTMLElement).inert),
-        ariaHidden: element.getAttribute("aria-hidden"),
-      }));
-    const returnFocus = previousFocusRef.current;
-    isolatedSiblings.forEach(({ element }) => {
-      element.inert = true;
-      element.setAttribute("aria-hidden", "true");
-    });
-
-    const focusableControls = () =>
-      [
-        ...dialog.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
-        ),
-      ].filter(
-        (control) =>
-          control.offsetParent !== null &&
-          control.getAttribute("aria-hidden") !== "true",
-      );
-    const containFocus = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
-      const focusable = focusableControls();
-      if (!focusable.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", containFocus, true);
-    const focusFrame = globalThis.requestAnimationFrame(() => {
-      focusableControls()[0]?.focus({ preventScroll: true });
-    });
-    return () => {
-      globalThis.cancelAnimationFrame(focusFrame);
-      document.removeEventListener("keydown", containFocus, true);
-      isolatedSiblings.forEach(({ element, inert, ariaHidden }) => {
-        element.inert = inert;
-        if (ariaHidden === null) element.removeAttribute("aria-hidden");
-        else element.setAttribute("aria-hidden", ariaHidden);
-      });
-      globalThis.setTimeout(
-        () => returnFocus?.focus({ preventScroll: true }),
-        0,
-      );
-    };
-  }, [showShortcutHelp]);
+  // The keyboard-reference dialog is a native <dialog> opened with showModal(),
+  // so the platform supplies the focus trap, Escape handling, focus
+  // restoration, and inerting of the rest of the shell. The hand-rolled
+  // sibling-isolation effect and Tab trap that used to live here are gone.
 
   useLayoutEffect(() => {
     const scrollBody = shellRef.current?.querySelector<HTMLElement>(
@@ -443,6 +304,23 @@ export function ClinicalDesktopShell({
         return;
       }
 
+      // Alt+access key opens the matching menu, as a native menu bar does.
+      if (event.altKey && !event.ctrlKey && !event.metaKey) {
+        const target = MENU_MNEMONICS[key];
+        if (target) {
+          event.preventDefault();
+          setOpenMenu(target);
+          globalThis.setTimeout(() => {
+            shellRef.current
+              ?.querySelector<HTMLElement>(
+                `.cd2004-menu[data-menu="${target}"] .cd2004-menu-title`,
+              )
+              ?.focus({ preventScroll: true });
+          }, 0);
+          return;
+        }
+      }
+
       if (event.key === "F6") {
         event.preventDefault();
         if (onOpenRecords) {
@@ -484,37 +362,26 @@ export function ClinicalDesktopShell({
         return;
       }
 
-      if (event.ctrlKey && event.key === "Tab") {
-        event.preventDefault();
-        const panes = visiblePanes.length ? visiblePanes : (["work"] as DesktopPane[]);
-        const currentIndex = panes.indexOf(activePane);
-        const direction = event.shiftKey ? -1 : 1;
-        const nextIndex = (currentIndex + direction + panes.length) % panes.length;
-        const nextPane = panes[nextIndex] ?? "work";
-        setActivePane(nextPane);
-        setMobilePane(nextPane);
-        const nextWindow = shellRef.current?.querySelector<HTMLElement>(
-          `.cd2004-window[data-pane="${nextPane}"]`,
-        );
-        const focusTarget =
-          nextWindow?.querySelector<HTMLElement>(
-            'button:not([disabled]), [tabindex="0"]',
-          ) ?? nextWindow;
-        focusTarget?.focus();
-        return;
-      }
-
       if (event.key === "Escape") {
-        const maximized = (
-          Object.keys(windowModes) as DesktopPane[]
-        ).find((pane) => windowModes[pane] === "maximized");
+        // An open menu consumes Escape first and returns focus to its title,
+        // without disturbing the shell-level Escape handling below it.
+        if (openMenu) {
+          event.preventDefault();
+          const id = openMenu;
+          setOpenMenu(null);
+          globalThis.setTimeout(() => {
+            shellRef.current
+              ?.querySelector<HTMLElement>(
+                `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
+              )
+              ?.focus({ preventScroll: true });
+          }, 0);
+          return;
+        }
         if (showShortcutHelp) {
           event.preventDefault();
           setShowShortcutHelp(false);
           restorePreviousFocus();
-        } else if (maximized) {
-          event.preventDefault();
-          setWindowMode(maximized, "normal");
         } else {
           onEscape?.();
           restorePreviousFocus();
@@ -525,7 +392,6 @@ export function ClinicalDesktopShell({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
-    activePane,
     canComplete,
     canReview,
     onOpenRecords,
@@ -535,9 +401,55 @@ export function ClinicalDesktopShell({
     reviewActionMode,
     selectedWorkflow,
     showShortcutHelp,
-    visiblePanes,
-    windowModes,
+    openMenu,
   ]);
+
+  // Clicking anywhere outside the menu bar dismisses an open menu, without
+  // stealing focus - matching native menu behavior.
+  useEffect(() => {
+    if (!openMenu) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && !(target as Element).closest?.(".cd2004-menu")) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [openMenu]);
+
+  const menuBar: MenuBarContextValue = {
+    openMenu,
+    open: (id) => setOpenMenu(id),
+    close: (restoreFocus = false) => {
+      const id = openMenu;
+      setOpenMenu(null);
+      if (restoreFocus && id) {
+        globalThis.setTimeout(() => {
+          shellRef.current
+            ?.querySelector<HTMLElement>(
+              `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
+            )
+            ?.focus({ preventScroll: true });
+        }, 0);
+      }
+    },
+    moveMenu: (from, direction) => {
+      const index = MENU_IDS.indexOf(from);
+      if (index < 0) return;
+      const next =
+        MENU_IDS[(index + direction + MENU_IDS.length) % MENU_IDS.length]!;
+      setOpenMenu(next);
+      globalThis.setTimeout(() => {
+        shellRef.current
+          ?.querySelector<HTMLElement>(
+            `.cd2004-menu[data-menu="${next}"] .cd2004-menu-title`,
+          )
+          ?.focus({ preventScroll: true });
+      }, 0);
+    },
+  };
 
   const windowTitle =
     selectedWorkflow === "home"
@@ -562,16 +474,11 @@ export function ClinicalDesktopShell({
     onRecordOpen,
   });
 
-  const anyMaximized = (Object.keys(windowModes) as DesktopPane[]).find(
-    (pane) => windowModes[pane] === "maximized",
-  );
-
   return (
     <div
       ref={shellRef}
       class={`cd2004-shell ${className}`.trim()}
       data-active-workflow={selectedWorkflow}
-      data-maximized-pane={anyMaximized ?? ""}
       data-post-state={postState}
     >
       <a class="cd2004-skip-link" href="#cd2004-work-area">
@@ -589,8 +496,13 @@ export function ClinicalDesktopShell({
           <span class="cd2004-app-environment">LOCAL WORKSTATION</span>
         </div>
 
-        <nav class="cd2004-menu-bar" aria-label="Application menu">
-          <DesktopMenu label="File">
+        <nav
+          class="cd2004-menu-bar"
+          role="menubar"
+          aria-label="Application menu"
+        >
+          <MenuBarContext.Provider value={menuBar}>
+          <DesktopMenu id="file" label="File" mnemonic="F">
             <MenuCommand
               label="Save Draft"
               shortcut="Ctrl+S"
@@ -604,7 +516,7 @@ export function ClinicalDesktopShell({
               onInvoke={onOpenRecords}
             />
           </DesktopMenu>
-          <DesktopMenu label="Chart">
+          <DesktopMenu id="chart" label="Chart" mnemonic="C">
             <MenuCommand
               label="Use Workflow Patient"
               disabled={!isMismatch || !onUseWorkflowPatient}
@@ -617,7 +529,7 @@ export function ClinicalDesktopShell({
               onInvoke={onOpenRecords}
             />
           </DesktopMenu>
-          <DesktopMenu label="Workflows">
+          <DesktopMenu id="workflows" label="Workflows" mnemonic="W">
             {shortcutWorkflows.map((workflow, index) => (
               <MenuCommand
                 key={workflow}
@@ -627,8 +539,7 @@ export function ClinicalDesktopShell({
               />
             ))}
           </DesktopMenu>
-          <DesktopMenu label="Tools">
-            <MenuCommand label="Reset Layout" onInvoke={resetLayout} />
+          <DesktopMenu id="tools" label="Tools" mnemonic="T">
             <MenuCommand
               label="Knowledge Base"
               disabled={!onOpenKnowledge}
@@ -640,7 +551,7 @@ export function ClinicalDesktopShell({
               onInvoke={onOpenCloseout}
             />
           </DesktopMenu>
-          <DesktopMenu label="Help">
+          <DesktopMenu id="help" label="Help" mnemonic="H">
             <MenuCommand
               label="Keyboard Reference"
               onInvoke={(returnFocus) => {
@@ -651,6 +562,7 @@ export function ClinicalDesktopShell({
               }}
             />
           </DesktopMenu>
+          </MenuBarContext.Provider>
         </nav>
 
         <div class="cd2004-toolbar" role="toolbar" aria-label="Clinical commands">
@@ -694,21 +606,11 @@ export function ClinicalDesktopShell({
               onClick={action.onInvoke}
             >
               <span class="cd2004-toolbar-glyph" aria-hidden="true">
-                {action.icon ?? "▪"}
+                <DesktopIcon name={action.icon} />
               </span>
               <span>{action.shortLabel ?? action.label}</span>
             </button>
           ))}
-          <span class="cd2004-toolbar-spacer" />
-          <button
-            type="button"
-            class="cd2004-toolbar-button"
-            onClick={resetLayout}
-            title="Reset window layout"
-          >
-            <DesktopIcon name="reset" />
-            <span>Reset Layout</span>
-          </button>
         </div>
 
         <PatientBanner
@@ -725,9 +627,9 @@ export function ClinicalDesktopShell({
       <div
         class="cd2004-mobile-switcher cd2004-print-exclude"
         role="tablist"
-        aria-label="Desktop window switcher"
+        aria-label="Desktop section switcher"
       >
-        {(["navigator", "work", "inspector"] as DesktopPane[]).map((pane) => (
+        {(["work", "inspector"] as DesktopPane[]).map((pane) => (
           <button
             key={pane}
             type="button"
@@ -738,9 +640,8 @@ export function ClinicalDesktopShell({
             tabIndex={mobilePane === pane ? 0 : -1}
             class={mobilePane === pane ? "is-active" : ""}
             onClick={() => {
-              setWindowMode(pane, "normal");
               setMobilePane(pane);
-              setActivePane(pane);
+              setFocusedPane(pane);
             }}
             onKeyDown={(event) => {
               if (
@@ -752,11 +653,7 @@ export function ClinicalDesktopShell({
                 return;
               }
               event.preventDefault();
-              const panes = [
-                "navigator",
-                "work",
-                "inspector",
-              ] as DesktopPane[];
+              const panes = ["work", "inspector"] as DesktopPane[];
               const current = panes.indexOf(pane);
               const next: DesktopPane =
                 event.key === "Home"
@@ -769,7 +666,7 @@ export function ClinicalDesktopShell({
                           panes.length) %
                           panes.length
                       ]!;
-              setWindowMode(next, "normal");
+              setMobilePane(next);
               globalThis.setTimeout(() => {
                 shellRef.current
                   ?.querySelector<HTMLElement>(
@@ -779,11 +676,7 @@ export function ClinicalDesktopShell({
               }, 0);
             }}
           >
-            {pane === "navigator"
-              ? "NAV"
-              : pane === "work"
-                ? "WORK"
-                : "NOTE"}
+            {pane === "work" ? "WORK" : "NOTE"}
           </button>
         ))}
       </div>
@@ -793,81 +686,15 @@ export function ClinicalDesktopShell({
         id="cd2004-work-area"
         data-mobile-pane={mobilePane}
       >
-        <ClassicWindow
-          pane="navigator"
-          title="Navigator"
-          mode={windowModes.navigator}
-          active={activePane === "navigator"}
-          mobileActive={mobilePane === "navigator"}
-          onActivate={setActivePane}
-          onModeChange={setWindowMode}
-        >
-          <nav class="cd2004-navigator" aria-label="Clinical modules">
-            {navigatorGroups.map((group) => (
-              <div key={group.label} class="cd2004-nav-group">
-                <div class="cd2004-nav-group-label">{group.label}</div>
-                {group.workflows.map((workflow, index) => {
-                  const summary = workflowSummaries[workflow];
-                  return (
-                    <button
-                      key={workflow}
-                      type="button"
-                      class={[
-                        "cd2004-nav-item",
-                        selectedWorkflow === workflow ? "is-selected" : "",
-                        `is-${summary?.state ?? "idle"}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      aria-current={
-                        selectedWorkflow === workflow ? "page" : undefined
-                      }
-                      title={WORKFLOW_LABELS[workflow]}
-                      onClick={() => openWorkflow(workflow)}
-                    >
-                      <DesktopIcon name={workflow} />
-                      <span>{WORKFLOW_LABELS[workflow]}</span>
-                      {workflow !== "tms" && (
-                        <kbd>
-                          {workflow === "home"
-                            ? "1"
-                            : shortcutWorkflows.indexOf(workflow) + 1 || index + 1}
-                        </kbd>
-                      )}
-                      {summary?.count ? (
-                        <em aria-label={`${summary.count} items`}>{summary.count}</em>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-          <div class="cd2004-navigator-foot">
-            <strong>LOCAL</strong>
-            <span>No server synchronization</span>
-          </div>
-        </ClassicWindow>
-
-        <ClassicWindow
+        <Panel
           pane="work"
           title={windowTitle}
           subtitle={
             selectedWorkflow === "home" ? "Local workstation overview" : "Active encounter"
           }
-          mode={windowModes.work}
-          active={activePane === "work"}
+          active={focusedPane === "work"}
           mobileActive={mobilePane === "work"}
-          canClose={selectedWorkflow !== "home"}
-          onActivate={setActivePane}
-          onModeChange={(pane, mode) => {
-            if (mode === "closed") {
-              openWorkflow("home");
-              setWindowMode("work", "normal");
-            } else {
-              setWindowMode(pane, mode);
-            }
-          }}
+          onActivate={setFocusedPane}
           toolbar={
             selectedWorkflow !== "home" ? (
               <div class="cd2004-work-context-strip">
@@ -906,17 +733,15 @@ export function ClinicalDesktopShell({
             )}
             {workflowContent}
           </div>
-        </ClassicWindow>
+        </Panel>
 
-        <ClassicWindow
+        <Panel
           pane="inspector"
           title="Note / Readiness"
           subtitle={WORKFLOW_LABELS[selectedWorkflow]}
-          mode={windowModes.inspector}
-          active={activePane === "inspector"}
+          active={focusedPane === "inspector"}
           mobileActive={mobilePane === "inspector"}
-          onActivate={setActivePane}
-          onModeChange={setWindowMode}
+          onActivate={setFocusedPane}
         >
           <NoteInspector
             title={noteTitle ?? `${WORKFLOW_LABELS[selectedWorkflow]} note`}
@@ -932,82 +757,85 @@ export function ClinicalDesktopShell({
             onCopyAll={onCopyAllNotes}
             onComplete={onReviewComplete}
           />
-        </ClassicWindow>
+        </Panel>
       </main>
 
-      <footer class="cd2004-taskbar cd2004-print-exclude">
-        <button
-          type="button"
-          class="cd2004-start-button"
-          onClick={() => openWorkflow("home")}
-        >
-          <span class="cd2004-start-flag" aria-hidden="true">
-            ◆
-          </span>
-          Start
-        </button>
-        <div class="cd2004-task-buttons" aria-label="Open desktop windows">
-          {(["navigator", "work", "inspector"] as DesktopPane[]).map((pane) => (
+      {/*
+        Workflow tab strip along the bottom edge - the VistA/CPRS signature.
+        This IS the navigator, relocated: it keeps the `.cd2004-navigator`
+        landmark and the `.cd2004-nav-item[title]` handles the whole test suite
+        navigates by, while freeing the entire left edge for clinical content.
+      */}
+      <nav
+        class="cd2004-navigator cd2004-print-exclude"
+        aria-label="Clinical modules"
+      >
+        {WORKFLOW_ORDER.map((workflow) => {
+          const summary = workflowSummaries[workflow];
+          const accelerator = shortcutWorkflows.indexOf(workflow) + 1;
+          return (
             <button
-              key={pane}
+              key={workflow}
               type="button"
               class={[
-                activePane === pane ? "is-active" : "",
-                windowModes[pane] === "closed" ||
-                windowModes[pane] === "minimized"
-                  ? "is-minimized"
-                  : "",
+                "cd2004-nav-item",
+                selectedWorkflow === workflow ? "is-selected" : "",
+                `is-${summary?.state ?? "idle"}`,
               ]
                 .filter(Boolean)
                 .join(" ")}
-              onClick={() => {
-                setWindowMode(pane, "normal");
-                setActivePane(pane);
-                setMobilePane(pane);
-              }}
+              aria-current={selectedWorkflow === workflow ? "page" : undefined}
+              title={WORKFLOW_LABELS[workflow]}
+              onClick={() => openWorkflow(workflow)}
             >
-              <span class="cd2004-task-mark" aria-hidden="true" />
-              {pane === "navigator"
-                ? "Navigator"
-                : pane === "work"
-                  ? windowTitle
-                  : "Note / Readiness"}
+              <DesktopIcon name={workflow} />
+              <span>{WORKFLOW_LABELS[workflow]}</span>
+              {accelerator > 0 && <kbd>{accelerator}</kbd>}
+              {summary?.count ? (
+                <em aria-label={`${summary.count} items`}>{summary.count}</em>
+              ) : null}
             </button>
-          ))}
+          );
+        })}
+      </nav>
+
+      {/*
+        Segmented status bar. Replaces the taskbar/Start button, which emulated
+        the Windows shell rather than an EHR application. `.cd2004-status-message`
+        keeps its live-region contract and exact strings.
+      */}
+      <footer class="cd2004-statusbar cd2004-print-exclude">
+        <div class="cd2004-status-message" aria-live="polite" aria-atomic="true">
+          {effectiveStatus}
+        </div>
+        <div class="cd2004-status-segment" title="Signed-in staff">
+          {staffLabel?.trim() ? staffLabel : "No staff sign-in"}
+        </div>
+        <div class="cd2004-status-segment" title="Visit location">
+          {locationLabel?.trim() ? locationLabel : "No location"}
         </div>
         <div
-          class={`cd2004-storage-status ${localStorageAvailable ? "is-online" : "is-error"}`}
+          class={`cd2004-status-segment ${localStorageAvailable ? "is-online" : "is-error"}`}
           title={
             localStorageAvailable
               ? "Records save only in this browser"
               : "Browser storage is unavailable"
           }
         >
-          <span aria-hidden="true">{localStorageAvailable ? "●" : "×"}</span>
           {localStorageAvailable ? "LOCAL" : "STORAGE ERROR"}
-        </div>
-        <div class="cd2004-status-message" aria-live="polite" aria-atomic="true">
-          {effectiveStatus}
         </div>
       </footer>
 
       {showShortcutHelp && (
-        <div
+        <ModalDialog
           class="cd2004-modal-backdrop cd2004-print-exclude"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target) {
-              setShowShortcutHelp(false);
-              restorePreviousFocus();
-            }
+          labelledBy="cd2004ShortcutTitle"
+          onDismiss={() => {
+            setShowShortcutHelp(false);
+            restorePreviousFocus();
           }}
         >
-          <section
-            class="cd2004-help-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cd2004ShortcutTitle"
-          >
+          <section class="cd2004-help-dialog">
             <div class="cd2004-window-titlebar">
               <span class="cd2004-window-mark" aria-hidden="true" />
               <strong id="cd2004ShortcutTitle">Keyboard Reference</strong>
@@ -1030,7 +858,6 @@ export function ClinicalDesktopShell({
               <ShortcutRow keys="F6" label="Open injection records" />
               <ShortcutRow keys="F8" label="Focus note and readiness" />
               <ShortcutRow keys="F10" label="Review or complete" />
-              <ShortcutRow keys="Ctrl+Tab" label="Cycle open desktop windows" />
               <ShortcutRow keys="Esc" label="Close utility or restore focus" />
             </div>
             <footer>
@@ -1046,7 +873,7 @@ export function ClinicalDesktopShell({
               </button>
             </footer>
           </section>
-        </div>
+        </ModalDialog>
       )}
 
       <span class="cd2004-visually-hidden">
@@ -1202,61 +1029,235 @@ function PatientBanner({
   );
 }
 
-interface DesktopMenuProps {
-  label: string;
+/**
+ * Thin wrapper over the native <dialog> element. showModal() supplies the top
+ * layer, ::backdrop, Escape-to-cancel, focus trapping, focus restoration, and
+ * inerting of everything behind it - replacing the hand-rolled backdrop div,
+ * Tab trap, and sibling-isolation effect this shell used to carry.
+ */
+function ModalDialog({
+  class: className,
+  labelledBy,
+  onDismiss,
+  children,
+}: {
+  class?: string;
+  labelledBy: string;
+  onDismiss: () => void;
   children: ComponentChildren;
-}
-
-function DesktopMenu({ label, children }: DesktopMenuProps) {
-  const detailsRef = useRef<HTMLDetailsElement>(null);
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    const details = detailsRef.current;
-    if (!details) return;
-    const summary = details.querySelector<HTMLElement>("summary");
-    const close = (restoreFocus = false) => {
-      if (!details.open) return;
-      details.open = false;
-      if (restoreFocus) summary?.focus({ preventScroll: true });
-    };
-    const handleToggle = () => {
-      if (!details.open) return;
-      document
-        .querySelectorAll<HTMLDetailsElement>(".cd2004-menu[open]")
-        .forEach((other) => {
-          if (other !== details) other.open = false;
-        });
-    };
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        details.open &&
-        event.target instanceof Node &&
-        !details.contains(event.target)
-      ) {
-        close();
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || !details.open) return;
-      event.preventDefault();
-      event.stopPropagation();
-      close(true);
-    };
-    details.addEventListener("toggle", handleToggle);
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    document.addEventListener("keydown", handleKeyDown, true);
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) return;
+    dialog.showModal();
     return () => {
-      details.removeEventListener("toggle", handleToggle);
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleKeyDown, true);
+      if (dialog.open) dialog.close();
     };
   }, []);
 
   return (
-    <details ref={detailsRef} class="cd2004-menu">
-      <summary>{label}</summary>
-      <div class="cd2004-menu-popup">{children}</div>
-    </details>
+    <dialog
+      ref={dialogRef}
+      class={className}
+      aria-labelledby={labelledBy}
+      onCancel={(event) => {
+        event.preventDefault();
+        onDismiss();
+      }}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) onDismiss();
+      }}
+    >
+      {children}
+    </dialog>
+  );
+}
+
+/**
+ * Menu-tracking context. A real Windows menu bar behaves as one unit: once any
+ * menu is open the bar is in "tracking mode", so simply *hovering* a sibling
+ * switches to it without a second click. That requires the open state to live
+ * above the individual menus, which is why it is threaded through context
+ * rather than owned by each menu.
+ */
+interface MenuBarContextValue {
+  openMenu: string | null;
+  open: (id: string) => void;
+  close: (restoreFocus?: boolean) => void;
+  moveMenu: (from: string, direction: -1 | 1) => void;
+}
+
+const MenuBarContext = createContext<MenuBarContextValue | null>(null);
+
+/** Provided by each menu so its items can dismiss it and restore focus. */
+const MenuContext = createContext<{ dismiss: (restoreFocus?: boolean) => void } | null>(
+  null,
+);
+
+/** Splits a label at its access key so the mnemonic can be underlined. */
+function renderMnemonic(label: string, mnemonic: string) {
+  const index = label.toLocaleLowerCase().indexOf(mnemonic.toLocaleLowerCase());
+  if (index < 0) return label;
+  return (
+    <>
+      {label.slice(0, index)}
+      <u>{label.slice(index, index + 1)}</u>
+      {label.slice(index + 1)}
+    </>
+  );
+}
+
+interface DesktopMenuProps {
+  id: string;
+  label: string;
+  mnemonic: string;
+  children: ComponentChildren;
+}
+
+function DesktopMenu({ id, label, mnemonic, children }: DesktopMenuProps) {
+  const bar = useContext(MenuBarContext);
+  const titleRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const isOpen = bar?.openMenu === id;
+  const isTracking = Boolean(bar?.openMenu);
+  // Set when hover-tracking opened this menu, so the click that necessarily
+  // follows the pointer landing here is absorbed rather than toggling it shut.
+  const openedByHoverRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) openedByHoverRef.current = false;
+  }, [isOpen]);
+
+  const dismiss = (restoreFocus = false) => {
+    bar?.close(false);
+    if (restoreFocus) titleRef.current?.focus({ preventScroll: true });
+  };
+
+  // Opening by keyboard puts focus on the first command, matching Windows.
+  useEffect(() => {
+    if (!isOpen) return;
+    const frame = globalThis.requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active === titleRef.current) return;
+      if (popupRef.current?.contains(active)) return;
+    });
+    return () => globalThis.cancelAnimationFrame(frame);
+  }, [isOpen]);
+
+  const focusCommand = (offset: number, absolute?: "first" | "last") => {
+    const commands = Array.from(
+      popupRef.current?.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitem"]:not([disabled])',
+      ) ?? [],
+    );
+    if (commands.length === 0) return;
+    const current = commands.indexOf(document.activeElement as HTMLButtonElement);
+    const next =
+      absolute === "first"
+        ? 0
+        : absolute === "last"
+          ? commands.length - 1
+          : (current + offset + commands.length) % commands.length;
+    commands[next]?.focus({ preventScroll: true });
+  };
+
+  return (
+    <div class="cd2004-menu" data-menu={id}>
+      <button
+        ref={titleRef}
+        type="button"
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        class="cd2004-menu-title"
+        onClick={() => {
+          if (openedByHoverRef.current) {
+            openedByHoverRef.current = false;
+            return;
+          }
+          if (isOpen) dismiss(true);
+          else bar?.open(id);
+        }}
+        onPointerEnter={() => {
+          // Menu tracking: hovering a sibling while any menu is open switches
+          // to it, exactly as a native menu bar does.
+          if (isTracking && !isOpen) {
+            openedByHoverRef.current = true;
+            bar?.open(id);
+          }
+        }}
+        onKeyDown={(event) => {
+          switch (event.key) {
+            case "ArrowDown":
+            case "Enter":
+            case " ":
+              event.preventDefault();
+              if (!isOpen) bar?.open(id);
+              globalThis.setTimeout(() => focusCommand(0, "first"), 0);
+              break;
+            case "ArrowUp":
+              event.preventDefault();
+              if (!isOpen) bar?.open(id);
+              globalThis.setTimeout(() => focusCommand(0, "last"), 0);
+              break;
+            case "ArrowRight":
+              event.preventDefault();
+              bar?.moveMenu(id, 1);
+              break;
+            case "ArrowLeft":
+              event.preventDefault();
+              bar?.moveMenu(id, -1);
+              break;
+            default:
+              break;
+          }
+        }}
+      >
+        {renderMnemonic(label, mnemonic)}
+      </button>
+      {isOpen && (
+        <div
+          ref={popupRef}
+          class="cd2004-menu-popup"
+          role="menu"
+          aria-label={label}
+          onKeyDown={(event) => {
+            switch (event.key) {
+              case "ArrowDown":
+                event.preventDefault();
+                focusCommand(1);
+                break;
+              case "ArrowUp":
+                event.preventDefault();
+                focusCommand(-1);
+                break;
+              case "Home":
+                event.preventDefault();
+                focusCommand(0, "first");
+                break;
+              case "End":
+                event.preventDefault();
+                focusCommand(0, "last");
+                break;
+              case "ArrowRight":
+                event.preventDefault();
+                bar?.moveMenu(id, 1);
+                break;
+              case "ArrowLeft":
+                event.preventDefault();
+                bar?.moveMenu(id, -1);
+                break;
+              default:
+                break;
+            }
+          }}
+        >
+          <MenuContext.Provider value={{ dismiss }}>{children}</MenuContext.Provider>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1273,16 +1274,19 @@ function MenuCommand({
   disabled = false,
   onInvoke,
 }: MenuCommandProps) {
+  const menu = useContext(MenuContext);
   return (
     <button
       type="button"
+      role="menuitem"
       disabled={disabled}
       onClick={(event) => {
-        const details = event.currentTarget.closest("details");
         const returnFocus =
-          details?.querySelector<HTMLElement>("summary") ?? undefined;
+          event.currentTarget
+            .closest(".cd2004-menu")
+            ?.querySelector<HTMLElement>(".cd2004-menu-title") ?? undefined;
         onInvoke?.(returnFocus);
-        details?.removeAttribute("open");
+        menu?.dismiss(false);
       }}
     >
       <span>{label}</span>

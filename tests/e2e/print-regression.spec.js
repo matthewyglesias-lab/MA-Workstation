@@ -29,77 +29,52 @@ async function openWorkflow(page, title, workflow) {
     .toHaveAttribute('data-active-workflow', workflow);
 }
 
-async function openInjectionCard(page, cardClass) {
-  const card = page.locator(`#panel-administer .${cardClass}`);
-  await expect(card).toBeVisible();
-  const isCollapsed = () => card.evaluate(node =>
-    node.classList.contains('rc530-collapsed') ||
-    node.classList.contains('rc526-collapsed')
-  );
-  if (await isCollapsed()) {
-    const summary = card.locator(
-      '.rc530-summary:visible, .rc526-summary:visible'
-    ).first();
-    if (await summary.count()) {
-      await summary.click();
-    } else {
-      await card.locator('.card-head').click();
-    }
-  }
-  await expect.poll(isCollapsed).toBe(false);
-  return card;
-}
-
 async function preparePrintableInjection(page) {
   await bootWorkstation(page);
   await openWorkflow(page, 'Injection', 'administer');
-  await expect(page.locator('#injRecordWorkspace')).toBeVisible();
+  const panel = page.locator('.wfp-panel');
+  await expect(panel).toBeVisible();
 
-  await openInjectionCard(page, 'card-encounter');
-  await page.locator('#ptName').fill('Print, Injection');
-  await page.locator('#ptDOB').fill('01/02/1990');
-  await page.locator('#orderingProvider').fill('Print Ordering Provider');
-  await openInjectionCard(page, 'card-encounter');
-  await page.locator('#reasonChips')
-    .getByRole('button', { name: 'PRN / ordered', exact: true })
-    .click();
+  // Injection is migrated to a real panel; fields are set through it so the
+  // hidden legacy mirror ends up with the exact same values (and therefore
+  // the exact same byte-pinned print output) as the pre-migration fixture.
+  await panel.locator('input[placeholder="Last, First"]').fill('Print, Injection');
+  await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
+  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
-  await openInjectionCard(page, 'card-medication');
-  await page.locator('#medChips')
-    .getByRole('button', { name: 'Other', exact: true })
-    .click();
-  await page.locator('#doseChips input').fill('100 mg');
-  await page.locator('#routeChips')
-    .getByRole('button', { name: 'IM', exact: true })
-    .click();
-  await page.locator('#bodyMap [data-site="R deltoid"]').click();
-  await openInjectionCard(page, 'card-medication');
-  await page.locator('#intChips')
-    .getByRole('button', { name: 'q4 wk', exact: true })
-    .click();
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+  await panel.locator('input[name="inj-dose"]').fill('100 mg');
+  await panel.locator('input[name="inj-route"]').fill('IM');
+  await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
-  await openInjectionCard(page, 'card-trace');
-  await page.locator('#ndc').fill('00000-0000-01');
-  await page.locator('#lot').fill('PRINT-LOT-001');
-  await page.locator('#exp').fill('2027-12');
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.getByText('R deltoid', { exact: true }).click();
 
-  await openInjectionCard(page, 'card-safety');
-  await page.locator('#allergies').fill('NKDA verified in active record');
-  await page.locator('[data-rc530-noacute]').click();
+  await panel.getByRole('tab', { name: 'Product', exact: true }).click();
+  await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-01');
+  await panel.locator('input[placeholder="LOT123"]').fill('PRINT-LOT-001');
+  await panel.locator('input[type="month"]').first().fill('2027-12');
 
-  await openInjectionCard(page, 'card-response');
-  await page.locator('#adminDate').fill('2026-07-30');
-  await page.locator('#injAdminTime').fill('09:41');
-  await page.locator('#admin').fill('Print QA, MA');
+  await panel.getByRole('tab', { name: 'Verification', exact: true }).click();
+  await panel.locator('input[placeholder*="Verify in active record"]').fill('NKDA verified in active record');
+  await panel.getByText('No acute concerns today confirmed', { exact: true }).click();
 
-  await openInjectionCard(page, 'card-return');
-  await page.locator('#nextDate').fill('2026-08-27');
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.locator('input[type="time"]').first().fill('09:41');
+  await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
+
+  await panel.getByRole('tab', { name: 'Schedule', exact: true }).click();
+  await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
+  await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+
+  await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
 
   const administered = page.locator(
     '#clinicalDisposition [data-disposition="administered"]'
   );
   await expect(administered).toBeEnabled();
-  await administered.click();
+  await panel.getByText('Review complete — document administration', { exact: true }).click();
   await expect(page.locator('#clinicalDispositionBadge'))
     .toHaveText('Administration documented');
 }

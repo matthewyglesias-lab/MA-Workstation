@@ -36,6 +36,7 @@ import type {
   FormRequestStatus,
   FormRequestType,
   FormsEncounter,
+  LetterSignatureMode,
   LetterType,
 } from "../domain/forms";
 import type { PatientIdentity } from "../domain/contracts";
@@ -152,6 +153,11 @@ const LETTER_TYPES = new Set<LetterType>([
   "return",
   "restrictions",
   "custom",
+]);
+const LETTER_SIGNATURE_MODES = new Set<LetterSignatureMode>([
+  "wet",
+  "electronic",
+  "none",
 ]);
 
 const asString = (value: unknown): string =>
@@ -312,6 +318,7 @@ export function createLegacyClinicalSource(
       administrationTime: value("injAdminTime"),
       secondAdministrationTime: value("injSecondAdminTime"),
       allergies: value("allergies"),
+      technique: value("tech"),
       traceability: {
         ndc: value("ndc"),
         lot: value("lot"),
@@ -504,6 +511,7 @@ export function createLegacyClinicalSource(
           : "unavailable",
       results,
       labPlan: asString(raw.labPlan) || value("udsLab"),
+      comment: value("udsComment"),
     };
     return {
       workflow: "uds",
@@ -588,6 +596,8 @@ export function createLegacyClinicalSource(
           }))
         : [],
       extra: hasMeaningfulEntry ? value("sampleExtra") : "",
+      handoutStatus: hasMeaningfulEntry ? value("sampleHandoutStatus") : "",
+      followUp: hasMeaningfulEntry ? value("sampleFollowUp") : "",
       review: { confirmedAt: "", fingerprint: "" },
     };
     let reviewCurrent = false;
@@ -626,6 +636,7 @@ export function createLegacyClinicalSource(
     const letterType = LETTER_TYPES.has(raw.letterType as LetterType)
       ? (raw.letterType as LetterType)
       : "dx";
+    const signatureMode = value("letterSignatureMode");
     const encounter: FormsEncounter = {
       patient,
       requestType,
@@ -639,6 +650,8 @@ export function createLegacyClinicalSource(
       deliveryMethod: value("formsDelivery"),
       notificationStatus: value("formsNotified"),
       notes: value("formsNotes"),
+      actionNotes: value("formsAction"),
+      followUpNotes: value("formsFollowUp"),
       diagnosisWording: value("letterDx"),
       restrictions: value("letterRestrictions"),
       offWorkStart: value("letterOffStart"),
@@ -646,6 +659,18 @@ export function createLegacyClinicalSource(
       returnDate: value("letterReturn"),
       providerApprovalConfirmed:
         value("formsApproval") === "Provider approved for release",
+      letterProviderName: value("letterProvider"),
+      letterCredentials: value("letterCreds"),
+      letterDate: value("letterDate"),
+      letterRecipient: value("letterRecipient"),
+      letterRecipientAddress: value("letterRecipientAddress"),
+      letterSubject: value("letterSubject"),
+      letterSignatureMode: LETTER_SIGNATURE_MODES.has(
+        signatureMode as LetterSignatureMode,
+      )
+        ? (signatureMode as LetterSignatureMode)
+        : "wet",
+      letterPreparedBy: value("letterPreparedBy"),
     };
     const started = Boolean(
       patient.name ||

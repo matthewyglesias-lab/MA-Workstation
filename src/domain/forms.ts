@@ -19,6 +19,7 @@ export type FormRequestStatus =
   | "notified"
   | "completed";
 export type LetterType = "dx" | "offwork" | "return" | "restrictions" | "custom";
+export type LetterSignatureMode = "wet" | "electronic" | "none";
 
 export interface FormsEncounter {
   patient: PatientIdentity;
@@ -33,12 +34,25 @@ export interface FormsEncounter {
   deliveryMethod: string;
   notificationStatus: string;
   notes?: string;
+  actionNotes?: string;
+  followUpNotes?: string;
   diagnosisWording?: string;
   restrictions?: string;
   offWorkStart?: string;
   offWorkEnd?: string;
   returnDate?: string;
   providerApprovalConfirmed?: boolean;
+  /** Letter-specific provider/signature name; falls back to `provider` when blank. */
+  letterProviderName?: string;
+  letterCredentials?: string;
+  letterDate?: string;
+  letterRecipient?: string;
+  letterRecipientAddress?: string;
+  /** Custom subject override; falls back to a per-letterType default when blank. */
+  letterSubject?: string;
+  letterSignatureMode?: LetterSignatureMode;
+  /** Falls back to `staff` when blank. */
+  letterPreparedBy?: string;
 }
 
 export interface FormsEngineContext {
@@ -200,6 +214,52 @@ export const FormsEngine: ClinicalEngine<
   },
 };
 
+export const FORM_REQUEST_TYPE_OPTIONS: ReadonlyArray<{
+  key: FormRequestType;
+  label: string;
+  description: string;
+}> = [
+  { key: "work", label: "Work / school letter", description: "Work note, school note, accommodation wording." },
+  { key: "disability", label: "Disability / EDD form", description: "Provider-completed form or supplemental paperwork." },
+  { key: "fmla", label: "FMLA / leave paperwork", description: "Leave, intermittent leave, employer forms." },
+  { key: "records", label: "Records / release", description: "Copy request, ROI, outside provider paperwork." },
+  { key: "med", label: "Medication / treatment letter", description: "Medication list, treatment participation, clearance-style request." },
+  { key: "other", label: "Other paperwork", description: "Custom form, letter, or administrative request." },
+];
+
+export const FORM_STATUS_OPTIONS: ReadonlyArray<{
+  key: FormRequestStatus;
+  label: string;
+}> = [
+  { key: "received", label: "Received" },
+  { key: "provider_review", label: "Provider review" },
+  { key: "fee_pending", label: "Fee pending" },
+  { key: "in_progress", label: "In progress" },
+  { key: "ready", label: "Ready" },
+  { key: "notified", label: "Patient notified" },
+  { key: "completed", label: "Completed" },
+];
+
+export const LETTER_TYPE_OPTIONS: ReadonlyArray<{
+  key: LetterType;
+  label: string;
+}> = [
+  { key: "dx", label: "Diagnosis / treatment verification" },
+  { key: "offwork", label: "Off-work letter" },
+  { key: "return", label: "Return-to-work letter" },
+  { key: "restrictions", label: "Restrictions / accommodations" },
+  { key: "custom", label: "Custom provider letter" },
+];
+
+export const formRequestTypeLabel = (key: FormRequestType): string =>
+  FORM_REQUEST_TYPE_OPTIONS.find((option) => option.key === key)?.label ?? key;
+
+export const formStatusLabel = (key: FormRequestStatus): string =>
+  FORM_STATUS_OPTIONS.find((option) => option.key === key)?.label ?? key;
+
+export const letterTypeLabel = (key: LetterType): string =>
+  LETTER_TYPE_OPTIONS.find((option) => option.key === key)?.label ?? key;
+
 export const emptyFormsEncounter = (): FormsEncounter => ({
   patient: { name: "", dob: "" },
   requestType: "work",
@@ -213,10 +273,20 @@ export const emptyFormsEncounter = (): FormsEncounter => ({
   deliveryMethod: "Patient pickup",
   notificationStatus: "Not yet notified",
   notes: "",
+  actionNotes: "",
+  followUpNotes: "",
   diagnosisWording: "",
   restrictions: "",
   offWorkStart: "",
   offWorkEnd: "",
   returnDate: "",
   providerApprovalConfirmed: false,
+  letterProviderName: "",
+  letterCredentials: "",
+  letterDate: "",
+  letterRecipient: "To Whom It May Concern",
+  letterRecipientAddress: "",
+  letterSubject: "",
+  letterSignatureMode: "wet",
+  letterPreparedBy: "",
 });

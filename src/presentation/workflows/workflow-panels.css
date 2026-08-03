@@ -1,0 +1,966 @@
+/*
+ * Shared structural patterns for migrated workflow panels: dense,
+ * utilitarian, tab-folder navigation and sunken field groups in the same
+ * late-90s clinical-terminal idiom as the shell chrome (clinical-desktop.css)
+ * — native form controls and list-style pickers instead of the legacy app's
+ * rounded "chip" buttons. Reuses the --cd-* tokens defined on .cd2004-shell.
+ */
+
+.cd2004-shell .wfp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px;
+  /* The panel's own base size. Without it anything unstyled - buttons in
+     particular - inherits the document's 12px and sits a step above the 11px
+     body text beside it. A period form runs on one size. */
+  font-size: 11px;
+}
+
+/* Safety net: legacy.css's unscoped `input,select,textarea{border-radius:...}`
+   rule otherwise wins on every native form control anywhere in a migrated
+   panel (not just ones wrapped in .wfp-field, e.g. .wfp-table cell inputs),
+   since nothing else in this file's cascade happens to out-rank it. */
+.cd2004-shell .wfp-panel input,
+.cd2004-shell .wfp-panel select,
+.cd2004-shell .wfp-panel textarea {
+  border-radius: 0 !important;
+}
+
+.cd2004-shell .wfp-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 7px;
+  background: var(--cd-face);
+  border: 1px solid;
+  border-color: var(--cd-border-light) var(--cd-border-dark) var(--cd-border-dark)
+    var(--cd-border-light);
+}
+
+.cd2004-shell .wfp-summary-bar strong {
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-summary-spacer {
+  flex: 1 1 auto;
+}
+
+.cd2004-shell .wfp-status-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-status-flag::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgb(0 0 0 / 35%);
+}
+
+.cd2004-shell .wfp-status-flag.is-ready {
+  color: var(--cd-green);
+  background: var(--cd-green-soft);
+  border-color: var(--cd-green);
+}
+.cd2004-shell .wfp-status-flag.is-ready::before {
+  background: var(--cd-green);
+}
+
+.cd2004-shell .wfp-status-flag.is-warning {
+  color: var(--cd-amber);
+  background: var(--cd-amber-soft);
+  border-color: var(--cd-amber);
+}
+.cd2004-shell .wfp-status-flag.is-warning::before {
+  background: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-status-flag.is-stop {
+  color: var(--cd-red);
+  background: var(--cd-red-soft);
+  border-color: var(--cd-red);
+}
+.cd2004-shell .wfp-status-flag.is-stop::before {
+  background: var(--cd-red);
+}
+
+.cd2004-shell .wfp-status-flag.is-idle {
+  color: var(--cd-ink-muted);
+  background: var(--cd-face);
+  border-color: var(--cd-border-mid);
+}
+.cd2004-shell .wfp-status-flag.is-idle::before {
+  background: var(--cd-border-mid);
+}
+
+/* Tab-folder */
+
+.cd2004-shell .wfp-tabbar {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  padding-inline: 2px;
+  border-bottom: 2px solid var(--cd-border-dark);
+}
+
+.cd2004-shell .wfp-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 7px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome-light);
+  border: 1px solid var(--cd-border-mid);
+  border-bottom: none;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-tab[aria-selected="true"] {
+  position: relative;
+  top: 2px;
+  color: var(--cd-ink);
+  background: var(--cd-paper);
+  border-color: var(--cd-border-dark);
+  border-bottom: 2px solid var(--cd-paper);
+}
+
+.cd2004-shell .wfp-tab .wfp-tab-badge {
+  display: inline-block;
+  min-width: 14px;
+  margin-left: 6px;
+  padding: 0 3px;
+  color: #fff;
+  background: var(--cd-red);
+  font-size: 9px;
+  text-align: center;
+}
+
+/* Counts in a section head read as a chip, same as they do on a tab. */
+.cd2004-shell .wfp-section-head .wfp-tab-badge {
+  min-width: 14px;
+  padding: 0 3px;
+  color: #fff;
+  background: var(--cd-red);
+  font-size: 9px;
+  text-align: center;
+}
+
+.cd2004-shell .wfp-section-head .wfp-tab-badge-muted {
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome);
+}
+
+.cd2004-shell .wfp-tab .wfp-tab-badge.wfp-tab-badge-muted {
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Empty state. A dashed outline around centred copy is a modern
+   "drop things here" idiom; a period application just says what is not there,
+   on one line, where the missing rows would have started. */
+.cd2004-shell .wfp-wall {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 9px;
+  color: var(--cd-ink-muted);
+  text-align: left;
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-mid);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
+}
+
+.cd2004-shell .wfp-wall-title {
+  color: var(--cd-ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Status/count strip - one row of equal cells however many counters there
+   are. `.wfp-row`'s auto-fit gave six columns at this width, so the seventh
+   counter wrapped onto its own ragged line. */
+.cd2004-shell .wfp-kpi-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border: 1px solid var(--cd-border-mid);
+  background: var(--cd-white);
+}
+
+.cd2004-shell .wfp-kpi-row > * {
+  min-width: 0;
+  padding: 4px 8px;
+  border-right: 1px solid var(--cd-chrome);
+}
+
+.cd2004-shell .wfp-kpi-row > *:last-child {
+  border-right: none;
+}
+
+.cd2004-shell .wfp-kpi-value {
+  color: var(--cd-ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.cd2004-shell .wfp-kpi-label {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-wall p {
+  max-width: 70ch;
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* Affirmative completion line. The counterpart to a stop: when nothing is
+   outstanding but the finishing action is not the obvious one, say so. */
+.cd2004-shell .wfp-done-line {
+  margin: 0;
+  padding: 5px 8px;
+  color: #06421f;
+  background: var(--cd-green-soft);
+  border: 1px solid var(--cd-green);
+  border-left-width: 4px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.cd2004-shell .wfp-done-line strong {
+  font-size: 11px;
+}
+
+/* Exception block. Checkboxes that *raise* a hold must not wear the same
+   clothes as checkboxes that confirm a step was done - amber edge, amber
+   header, and a lead line stating the polarity outright. */
+.cd2004-shell .wfp-exception-block {
+  border: 1px solid var(--cd-amber);
+  border-left-width: 4px;
+}
+
+.cd2004-shell .wfp-exception-block .wfp-section-head {
+  color: #4a2d00;
+  background: var(--cd-amber-soft);
+  border-bottom: 1px solid var(--cd-amber);
+}
+
+.cd2004-shell .wfp-exception-lead {
+  margin: 0;
+  padding: 5px 7px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-white);
+  border-bottom: 1px solid var(--cd-chrome);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* A raised hold is the one thing on this tab that should catch the eye. */
+.cd2004-shell .wfp-exception-block .wfp-option-row.is-selected {
+  color: #4a2d00;
+  background: var(--cd-amber-soft);
+}
+
+/* Reference lookup: entry list on the left, the selected entry's detail on
+   the right, the way a clinical reference viewer has always been laid out.
+   The list scrolls inside its own box so the detail stays on screen. */
+.cd2004-shell .wfp-lookup {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-lookup > .wfp-section {
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-lookup .wfp-option-list {
+  max-height: 460px;
+  overflow-y: auto;
+  border: none;
+  scrollbar-width: thin;
+}
+
+/* Denser rows: 33 entries at the default row height is a lot of scrolling. */
+.cd2004-shell .wfp-lookup .wfp-option-row {
+  gap: 6px;
+  padding: 3px 6px;
+}
+
+.cd2004-shell .wfp-lookup .wfp-option-desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .cd2004-shell .wfp-lookup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cd2004-shell .wfp-lookup .wfp-option-list {
+    max-height: 240px;
+  }
+}
+
+.cd2004-shell .wfp-tabpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  background: var(--cd-paper);
+  border: 1px solid var(--cd-border-dark);
+  border-top: none;
+}
+
+/* Field groups */
+
+.cd2004-shell .wfp-section {
+  border: 1px solid var(--cd-border-mid);
+  box-shadow: inset 1px 1px var(--cd-border-light);
+}
+
+.cd2004-shell .wfp-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px;
+  color: var(--cd-ink);
+  background: var(--cd-face);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px;
+}
+
+.cd2004-shell .wfp-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px;
+}
+
+.cd2004-shell .wfp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Field labels read as labels, not eyebrows. A bold 10px uppercase
+   micro-label with letter-spacing is a modern form idiom; a period clinical
+   form put the caption in ordinary mixed case at body size with a colon,
+   distinguished from its value by weight and tone rather than by shouting.
+   The colon comes from CSS so it stays out of the accessible name and out of
+   the selectors the tests match on. */
+.cd2004-shell .wfp-field label {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+  color: var(--cd-ink-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* The colon belongs to the caption, not the label - otherwise it lands after
+   the required asterisk ("Ordering provider *:"). */
+.cd2004-shell .wfp-field-caption::after {
+  content: ":";
+}
+
+/* Requirement marking, the way a clinical form has always done it: a red
+   asterisk on the caption and a filled control, so a glance down the form
+   shows what still has to be answered. The fill is persistent rather than
+   clearing on entry — it marks "this is required", not "this is missing";
+   the engine's outstanding-requirements list is what tracks missing. */
+.cd2004-shell .wfp-req {
+  color: var(--cd-red);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  cursor: help;
+}
+
+.cd2004-shell .wfp-opt {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+  font-style: italic;
+}
+
+.cd2004-shell .wfp-field.is-required > input,
+.cd2004-shell .wfp-field.is-required > select,
+.cd2004-shell .wfp-field.is-required > textarea,
+.cd2004-shell .wfp-field.is-required .wfp-select-group select {
+  background: var(--cd-amber-soft);
+}
+
+.cd2004-shell .wfp-field.is-required > input:focus-visible,
+.cd2004-shell .wfp-field.is-required > select:focus-visible,
+.cd2004-shell .wfp-field.is-required > textarea:focus-visible {
+  background: var(--cd-white);
+}
+
+/* Checkbox and radio captions are sentences, not captions - no colon. */
+.cd2004-shell .wfp-checkbox-row label::after,
+.cd2004-shell .wfp-option-row label::after {
+  content: none;
+}
+
+/* 2. Inputs are sized to what they hold. A date field the width of a patient
+   name is a fluid-web habit; period forms gave each control its content's
+   width, which is also what makes a dense form scannable. */
+.cd2004-shell .wfp-field input[type="date"],
+.cd2004-shell .wfp-field input[type="month"],
+.cd2004-shell .wfp-field input[type="time"] {
+  max-width: 140px;
+}
+
+.cd2004-shell .wfp-field input[type="datetime-local"] {
+  max-width: 200px;
+}
+
+.cd2004-shell .wfp-field input.mono {
+  max-width: 190px;
+}
+
+/* Explicit width hints, for free-text fields whose content has a fixed shape
+   and so should not stretch to whatever the grid offers. */
+.cd2004-shell .wfp-field.is-w-date > input {
+  max-width: 130px;
+}
+
+.cd2004-shell .wfp-field.is-w-short > input {
+  max-width: 180px;
+}
+
+/* A dropdown is as wide as its longest option, not as wide as the panel. The
+   request-type select was spanning 1002px for "Work / school letter". */
+.cd2004-shell .wfp-select-group select {
+  max-width: 340px;
+}
+
+.cd2004-shell .wfp-field input,
+.cd2004-shell .wfp-field select,
+.cd2004-shell .wfp-field textarea {
+  padding: 4px 6px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 1px solid;
+  border-color: var(--cd-border-mid) var(--cd-border-light) var(--cd-border-light)
+    var(--cd-border-mid);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+  font: inherit;
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-field input:focus-visible,
+.cd2004-shell .wfp-field select:focus-visible,
+.cd2004-shell .wfp-field textarea:focus-visible {
+  outline: 2px solid var(--cd-focus);
+  outline-offset: -1px;
+}
+
+.cd2004-shell .wfp-field textarea {
+  min-height: 52px;
+  resize: vertical;
+}
+
+.cd2004-shell .wfp-field-hint {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+}
+
+/* Dense radio-style option list — replaces legacy "chip" grids */
+
+.cd2004-shell .wfp-option-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-option-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 4px 7px;
+  border-bottom: 1px solid var(--cd-chrome);
+  cursor: pointer;
+}
+
+.cd2004-shell .wfp-option-row:last-child {
+  border-bottom: none;
+}
+
+.cd2004-shell .wfp-option-row:hover {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-option-row.is-selected {
+  background: var(--cd-selection);
+}
+
+.cd2004-shell .wfp-option-row input[type="radio"] {
+  margin-top: 2px;
+}
+
+.cd2004-shell .wfp-option-title {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-option-desc {
+  color: var(--cd-ink-muted);
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-option-list.wfp-option-list-inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.cd2004-shell .wfp-option-list-inline .wfp-option-row {
+  flex: 1 1 140px;
+  border-bottom: none;
+  border-right: 1px solid var(--cd-chrome);
+}
+
+.cd2004-shell .wfp-option-list-inline .wfp-option-row:last-child {
+  border-right: none;
+}
+
+/* Native select groups — the period-correct control for single choice */
+
+.cd2004-shell .wfp-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-select-group select {
+  padding: 3px 4px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 1px solid;
+  border-color: var(--cd-border-mid) var(--cd-border-light) var(--cd-border-light)
+    var(--cd-border-mid);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+  font: inherit;
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-select-group select:focus-visible {
+  outline: 2px solid var(--cd-focus);
+  outline-offset: -1px;
+}
+
+/* The description of the *chosen* option, not a tooltip: text like
+   "Prior dose tolerated well per pt report" is clinical content and has to
+   stay readable without hovering. */
+.cd2004-shell .wfp-select-desc {
+  padding-left: 1px;
+  color: var(--cd-ink-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+/* `inline` meant "lay the radio rows out horizontally". A native select is
+   already compact, so it now means "size to content" — the period-correct
+   look for short enumerations. Never a flex basis: these groups sit in a
+   flex *column*, where a basis would set height and stretch the box. */
+.cd2004-shell .wfp-select-group-inline {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.cd2004-shell .wfp-select-group-inline select {
+  min-width: 150px;
+}
+
+/* Live preview */
+
+.cd2004-shell .wfp-preview {
+  padding: 9px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-mid);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
+  font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.cd2004-shell .wfp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cd2004-shell .wfp-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+/* Dense result grid — one row per analyte/item, replaces legacy chip grids */
+
+.cd2004-shell .wfp-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.cd2004-shell .wfp-grid-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 2px 7px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-face);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-grid-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 19px;
+  padding: 1px 7px;
+  border-bottom: 1px solid var(--cd-chrome);
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-grid-row:last-child {
+  border-bottom: none;
+}
+
+.cd2004-shell .wfp-grid-row:nth-child(even) {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-grid-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-grid-head > span:first-child,
+.cd2004-shell .wfp-grid-row .wfp-grid-cell:first-child {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  /* The cell is a flex container, so whitespace between the analyte code and
+     its name collapses ("BUPBuprenorphine"). gap restores the separation. */
+  gap: 5px;
+  padding-right: 7px;
+  border-right: 1px solid var(--cd-chrome);
+}
+
+.cd2004-shell .wfp-grid-head > span:first-child {
+  border-right-color: var(--cd-border-mid);
+}
+
+/* Lab-report result table: Analyte | Result | Flag | Status. The Flag and
+   Status columns are derived from the four states already captured — they add
+   no data, they just say what a lab report has always said out loud. */
+
+/* The result column is pinned rather than `auto`: head and row are separate
+   grids, so `auto` sizes the header to the word "Result" (36px) and the body
+   to the toggle strip (387px), and the columns drift apart. */
+.cd2004-shell .wfp-grid-lab .wfp-grid-head,
+.cd2004-shell .wfp-grid-lab .wfp-grid-row {
+  grid-template-columns: minmax(0, 1fr) 392px 30px 74px;
+}
+
+/* Toggles keep their natural widths inside that pinned column — equalising
+   them clips "PRELIMINARY POSITIVE", and these labels are the domain's own
+   result vocabulary, which print depends on. */
+.cd2004-shell .wfp-grid-lab .wfp-grid-toggle {
+  flex: 0 0 auto;
+}
+
+.cd2004-shell .wfp-result-flag {
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cd2004-shell .wfp-result-flag.is-abnormal {
+  color: var(--cd-red);
+}
+
+.cd2004-shell .wfp-result-status {
+  color: var(--cd-ink-muted);
+  font-size: 10px;
+}
+
+/* The MAR due line. Colour tracks the engine's own timing state; it is a
+   readout, never a gate — the engine raises the stop or warning itself. */
+.cd2004-shell .wfp-due-line {
+  padding: 4px 7px;
+  border: 1px solid var(--cd-border-mid);
+  border-left: 4px solid var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-due-line.is-ok {
+  border-left-color: var(--cd-green);
+}
+
+.cd2004-shell .wfp-due-line.is-warning {
+  border-left-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-due-line.is-stop {
+  border-left-color: var(--cd-red);
+}
+
+/* Dose-history MAR grid: Date | Medication | Route | Site. Read-only. */
+.cd2004-shell .wfp-grid-mar .wfp-grid-head,
+.cd2004-shell .wfp-grid-mar .wfp-grid-row {
+  grid-template-columns: 90px minmax(0, 1fr) 60px 116px;
+}
+
+/* The preliminary banner. A point-of-care immunoassay is presumptive, and the
+   report says so on its face rather than in a footnote. */
+.cd2004-shell .wfp-report-status {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 8px;
+  background: var(--cd-chrome-light);
+  border: 1px solid var(--cd-border-mid);
+  border-left: 4px solid var(--cd-amber);
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-report-status strong {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.cd2004-shell .wfp-report-status span {
+  color: var(--cd-ink-muted);
+}
+
+/* Fixed specimen/method identification, the way a report header states it. */
+.cd2004-shell .wfp-report-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1px 8px;
+  margin: 0;
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-report-meta dt {
+  color: var(--cd-ink-muted);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-report-meta dd {
+  margin: 0;
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-grid-cell-actions {
+  display: flex;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-grid-toggle {
+  padding: 2px 7px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-mid);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.cd2004-shell .wfp-grid-toggle:hover {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected {
+  color: var(--cd-ink);
+  border-color: var(--cd-border-dark);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 12%);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected.is-neg {
+  color: #fff;
+  background: var(--cd-green);
+  border-color: var(--cd-green);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected.is-pos {
+  color: #fff;
+  background: var(--cd-red);
+  border-color: var(--cd-red);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected.is-invalid {
+  color: #fff;
+  background: var(--cd-amber);
+  border-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-grid-toggle.is-selected.is-nt {
+  color: var(--cd-ink);
+  background: var(--cd-chrome);
+  border-color: var(--cd-border-dark);
+}
+
+.cd2004-shell .wfp-group-action {
+  margin-left: 10px;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+/* Multi-column dense table - for tabular data too wide for the two-column
+   wfp-grid pattern (e.g. Daily Closeout's activity log). */
+
+.cd2004-shell .wfp-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-table th {
+  padding: 3px 5px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-face);
+  border-right: 1px solid var(--cd-border-mid);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-table td {
+  padding: 3px 5px;
+  border-right: 1px solid var(--cd-chrome);
+  border-bottom: 1px solid var(--cd-chrome);
+  vertical-align: top;
+}
+
+.cd2004-shell .wfp-table th:last-child,
+.cd2004-shell .wfp-table td:last-child {
+  border-right: none;
+}
+
+.cd2004-shell .wfp-table tbody tr:nth-child(even) {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-table-delete {
+  padding: 0 3px;
+  color: var(--cd-red);
+  background: transparent;
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Clickable outstanding-requirements list - each row jumps straight to the
+   tab that owns the still-unmet field, instead of leaving staff to hunt
+   across every tab for whatever is blocking a stop. */
+
+.cd2004-shell .wfp-issue-section .wfp-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd2004-shell .wfp-issue-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.cd2004-shell .wfp-issue-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 7px;
+  color: var(--cd-ink);
+  background: var(--cd-paper);
+  border: none;
+  border-bottom: 1px solid var(--cd-chrome);
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cd2004-shell .wfp-issue-row:last-child {
+  border-bottom: none;
+}
+
+.cd2004-shell .wfp-issue-row:hover {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-issue-tab {
+  flex: 0 0 auto;
+  min-width: 82px;
+  color: var(--cd-red);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-issue-message {
+  flex: 1 1 auto;
+}

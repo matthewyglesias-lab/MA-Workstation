@@ -9,7 +9,21 @@
     />
     <title>IPMG MA Workstation</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/legacy/legacy.css" />
+    <!--
+      Print-only. This file is not really a stylesheet - it is a scraped HTML
+      document (with <html>/<head>/<title> and several <style> blocks) renamed
+      to .css, carrying the entire pre-redesign design system: the periwinkle
+      brand accent (--lav:#6B5CA5), 16px radii, pill shapes, diffuse shadows,
+      and an Inter/Plus Jakarta Sans type stack. Loading it on screen made it
+      the base layer of the cascade on every page, which is why the redesign
+      needed ~900 !important declarations to fight it.
+
+      The 8 print sheets (.beauty-*) are styled EXCLUSIVELY here, so the file
+      still has to load for print - but only for print. media="print" keeps
+      print output byte-identical while giving the screen a clean cascade.
+      Do not edit public/legacy/legacy.css; print parity depends on it.
+    -->
+    <link rel="stylesheet" href="/legacy/legacy.css" media="print" />
   </head>
   <body>
     <div id="app"></div>

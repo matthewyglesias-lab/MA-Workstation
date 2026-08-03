@@ -10,19 +10,19 @@ const WORKFLOWS = {
   },
   administer: {
     label: 'Injection',
-    panel: '#panel-administer'
+    panel: '.wfp-panel'
   },
   uds: {
     label: 'UDS',
-    panel: '#panel-uds'
+    panel: '.wfp-panel'
   },
   samples: {
     label: 'Samples',
-    panel: '#panel-samples'
+    panel: '.wfp-panel'
   },
   forms: {
     label: 'Forms',
-    panel: '#panel-forms'
+    panel: '.wfp-panel'
   }
 };
 
@@ -208,13 +208,8 @@ async function bootDeterministicWorkstation(page, viewport) {
 async function openWorkflow(page, workflow) {
   const spec = WORKFLOWS[workflow];
   if (workflow !== 'home') {
-    const navButton = page.locator(
-      `.cd2004-nav-item[title="${spec.label}"]`
-    );
-    if (!await navButton.isVisible()) {
-      await page.getByRole('tab', { name: 'NAV', exact: true }).click();
-    }
-    await navButton.click();
+    // Bottom-docked strip: every nav item is reachable at every width.
+    await page.locator(`.cd2004-nav-item[title="${spec.label}"]`).click();
   }
 
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(

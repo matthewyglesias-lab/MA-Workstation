@@ -21,6 +21,24 @@ export const INJECTION_INTERVAL_DAYS: Record<InjectionIntervalKey, number> = {
   once: 0,
 };
 
+export const INJECTION_INTERVAL_OPTIONS: ReadonlyArray<{
+  key: InjectionIntervalKey;
+  label: string;
+}> = [
+  { key: "q1wk", label: "q1 wk" },
+  { key: "q2wk", label: "q2 wk" },
+  { key: "q3wk", label: "q3 wk" },
+  { key: "q4wk", label: "q4 wk" },
+  { key: "q6wk", label: "q6 wk" },
+  { key: "q8wk", label: "q8 wk" },
+  { key: "q12wk", label: "q3 mo" },
+  { key: "q26wk", label: "q6 mo" },
+  { key: "once", label: "one-time" },
+];
+
+export const injectionIntervalLabel = (key: InjectionIntervalKey): string =>
+  INJECTION_INTERVAL_OPTIONS.find((option) => option.key === key)?.label ?? key;
+
 export const IM_SITES = [
   "R deltoid",
   "L deltoid",

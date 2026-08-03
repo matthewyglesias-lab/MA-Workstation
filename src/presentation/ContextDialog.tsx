@@ -16,6 +16,12 @@ interface ContextDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Built on the native <dialog> element with showModal(). The platform supplies
+ * the top layer, the ::backdrop, Escape-to-cancel, the focus trap, focus
+ * restoration on close, and inerting of everything behind it - all of which
+ * this component previously hand-rolled against a custom backdrop div.
+ */
 export function ContextDialog({
   kind,
   staffValue = '',
@@ -28,68 +34,19 @@ export function ContextDialog({
 }: ContextDialogProps) {
   const [staff, setStaff] = useState(staffValue);
   const [location, setLocation] = useState(locationValue);
-  const layerRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const staffControlRef = useRef<HTMLInputElement>(null);
   const locationControlRef = useRef<HTMLSelectElement>(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
 
   useEffect(() => {
-    const previousFocus = document.activeElement as HTMLElement | null;
-    const shell = document.querySelector<HTMLElement>('.cd2004-shell');
-    const shellWasInert = Boolean(shell?.inert);
-    const shellAriaHidden = shell?.getAttribute('aria-hidden');
-    if (shell) {
-      shell.inert = true;
-      shell.setAttribute('aria-hidden', 'true');
-    }
-
-    (kind === 'staff'
-      ? staffControlRef.current
-      : locationControlRef.current
-    )?.focus();
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = [
-        ...(layerRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
-        ) ?? []),
-      ].filter(
-        (control) =>
-          control.offsetParent !== null &&
-          control.getAttribute('aria-hidden') !== 'true',
-      );
-      if (!focusable.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', handleKey, true);
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) return;
+    dialog.showModal();
+    // showModal() focuses the first focusable control; steer it to the one the
+    // clinician actually came here to edit.
+    (kind === 'staff' ? staffControlRef.current : locationControlRef.current)?.focus();
     return () => {
-      document.removeEventListener('keydown', handleKey, true);
-      if (shell) {
-        shell.inert = shellWasInert;
-        if (shellAriaHidden == null) shell.removeAttribute('aria-hidden');
-        else shell.setAttribute('aria-hidden', shellAriaHidden);
-      }
-      globalThis.setTimeout(() => {
-        if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
-      }, 0);
+      if (dialog.open) dialog.close();
     };
   }, [kind]);
 
@@ -101,19 +58,22 @@ export function ContextDialog({
   };
 
   return (
-    <div ref={layerRef} class="cd2004-dialog-layer" role="presentation">
-      <button
-        type="button"
-        class="cd2004-dialog-scrim"
-        aria-label="Close context editor"
-        onClick={onClose}
-      />
-      <section
-        class="cd2004-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cd2004-context-title"
-      >
+    <dialog
+      ref={dialogRef}
+      class="cd2004-dialog-layer cd2004-dialog"
+      aria-labelledby="cd2004-context-title"
+      onCancel={(event) => {
+        // Owned by the parent's state, so intercept the native Escape close.
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        // A click landing on the dialog element itself is a backdrop click:
+        // the content sits in an inner wrapper, so it never targets the host.
+        if (event.target === dialogRef.current) onClose();
+      }}
+    >
+      <div class="cd2004-dialog-frame">
         <div class="cd2004-dialog-titlebar">
           <span id="cd2004-context-title">
             {kind === 'staff' ? 'Staff Sign-In' : 'Visit Location'}
@@ -178,7 +138,7 @@ export function ContextDialog({
             </button>
           </div>
         </form>
-      </section>
-    </div>
+      </div>
+    </dialog>
   );
 }
