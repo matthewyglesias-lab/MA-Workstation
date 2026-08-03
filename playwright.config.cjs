@@ -2,7 +2,10 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
-  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}{ext}',
+  // Chromium text rasterization differs between Windows workstations and the
+  // Linux GitHub runner. Keep strict visual comparison within each platform
+  // instead of widening the tolerance enough to hide real layout regressions.
+  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{platform}/{arg}{ext}',
   timeout: 60_000,
   expect: { timeout: 7_000 },
   fullyParallel: true,
