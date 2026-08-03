@@ -1,4 +1,5 @@
 import { INJECTION_SAFETY_TRIGGERS, type InjectionEncounter } from "../../../domain/injection";
+import type { InjectionDocumentationMetadata } from "../../../domain/injection-ndc";
 import { setLegacyCheckboxValue, setLegacyFieldValue } from "../legacy-mirror";
 
 declare global {
@@ -40,6 +41,7 @@ declare global {
         time?: string;
         outcome?: string;
       };
+      documentation?: InjectionDocumentationMetadata;
     }) => void;
   }
 }
@@ -113,6 +115,13 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
 
   const initiation = encounter.initiation;
   const disposition = encounter.disposition;
+  const documentation: InjectionDocumentationMetadata = {
+    ...(details.clinicalReferenceVersion
+      ? { clinicalReferenceVersion: details.clinicalReferenceVersion }
+      : {}),
+    ...(details.ndcSelection ? { ndcSelection: details.ndcSelection } : {}),
+    ...(details.nextDose ? { nextDose: details.nextDose } : {}),
+  };
 
   window.ipmgSetInjectionChipState?.({
     medicationKey: encounter.medicationKey,
@@ -153,5 +162,6 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
       time: disposition.time,
       outcome: disposition.outcome,
     },
+    documentation,
   });
 }

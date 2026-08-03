@@ -418,6 +418,8 @@ export function SamplesPanel({
 
   const stops = evaluation?.stops ?? [];
   const stopsByTab = countStopsByTab(stops, tabForSamplesField);
+  const canFinalizeSampleLog =
+    evaluation?.output.finalizedOutputAllowed ?? false;
 
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
@@ -452,9 +454,15 @@ export function SamplesPanel({
         <button
           type="button"
           class="cd2004-command-button"
+          disabled={!canFinalizeSampleLog}
+          title={
+            canFinalizeSampleLog
+              ? "Add the completed sample dispense to today's local activity log."
+              : "Complete the documented safety, traceability, and final review requirements before logging this dispense."
+          }
           onClick={() => clickLegacyControl("sampleAddLog")}
         >
-          Add to log
+          Finalize dispense &amp; add to daily log
         </button>
       </div>
 

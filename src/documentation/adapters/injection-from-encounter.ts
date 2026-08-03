@@ -274,7 +274,14 @@ export function injectionEncounterToDocumentationInput(
 
   const primary = primaryMedicationComponent(encounter, evaluation, administered);
 
-  const initiationSnapshot = initiationSnapshotFrom(encounter);
+  // A legacy draft can retain an old initiation payload after staff switch
+  // the visit back to routine maintenance. The evaluator has already decided
+  // that those controls are not applicable, so do not mirror that stale
+  // payload into a new clinical note or create a phantom second component.
+  const initiationSnapshot =
+    evaluation.output.phase === "initiation" || evaluation.output.phase === "reinitiation"
+      ? initiationSnapshotFrom(encounter)
+      : undefined;
   const primaryMedicationName =
     encounter.medicationKey === "other"
       ? trimmed(encounter.customMedication) || "Other"

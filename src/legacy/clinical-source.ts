@@ -15,6 +15,11 @@ import {
   type MedicationVerificationKey,
 } from "../domain/injection-catalog";
 import type {
+  InjectionDocumentationMetadata,
+  InjectionNdcSelection,
+  InjectionNextDoseProvenance,
+} from "../domain/injection-ndc";
+import type {
   InjectionDisposition,
   InjectionEncounter,
   InjectionInitiationProtocol,
@@ -57,6 +62,7 @@ interface LegacyClinicalBridgeSnapshot {
     safetyConcerns?: Record<string, unknown>;
     initiation?: Record<string, unknown>;
     disposition?: Record<string, unknown>;
+    documentation?: Record<string, unknown>;
   };
   uds?: {
     reason?: string;
@@ -163,6 +169,74 @@ const LETTER_SIGNATURE_MODES = new Set<LetterSignatureMode>([
 
 const asString = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
+const asRawString = (value: unknown): string =>
+  typeof value === "string" ? value : "";
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+const normalizeNdcSelection = (value: unknown): InjectionNdcSelection | undefined => {
+  const raw = asRecord(value);
+  if (!raw) return undefined;
+  const source = raw.source;
+  const medicationKey = asString(raw.medicationKey);
+  const normalized = {
+    ndc: asRawString(raw.ndc),
+    source:
+      source === "bundled" || source === "remote" || source === "custom"
+        ? source
+        : undefined,
+    packageLabel: asString(raw.packageLabel),
+    package: asString(raw.package),
+    labeler: asString(raw.labeler),
+    packageKind:
+      raw.packageKind === "commercial" || raw.packageKind === "sample"
+        ? raw.packageKind
+        : undefined,
+    medicationKey: Object.hasOwn(INJECTION_MEDICATIONS, medicationKey)
+      ? (medicationKey as InjectionMedicationKey)
+      : undefined,
+    dose: asString(raw.dose),
+    referenceVersion: asString(raw.referenceVersion),
+  } satisfies InjectionNdcSelection;
+  return Object.values(normalized).some(Boolean) ? normalized : undefined;
+};
+
+const normalizeDocumentation = (value: unknown): InjectionDocumentationMetadata => {
+  const raw = asRecord(value);
+  if (!raw) return {};
+  const rawNdcSelection = asRecord(raw.ndcSelection);
+  const primary = normalizeNdcSelection(rawNdcSelection?.primary);
+  const pairedSecond = normalizeNdcSelection(rawNdcSelection?.pairedSecond);
+  const rawNextDose = asRecord(raw.nextDose);
+  const nextDoseSource: InjectionNextDoseProvenance["source"] =
+    rawNextDose?.source === "calculated" || rawNextDose?.source === "manual"
+      ? rawNextDose.source
+      : undefined;
+  const nextDose = rawNextDose
+    ? {
+        value: asString(rawNextDose.value),
+        source: nextDoseSource,
+        calculatedFrom: asString(rawNextDose.calculatedFrom),
+      }
+    : undefined;
+  return {
+    ...(asString(raw.clinicalReferenceVersion)
+      ? { clinicalReferenceVersion: asString(raw.clinicalReferenceVersion) }
+      : {}),
+    ...(primary || pairedSecond
+      ? {
+          ndcSelection: {
+            ...(primary ? { primary } : {}),
+            ...(pairedSecond ? { pairedSecond } : {}),
+          },
+        }
+      : {}),
+    ...(nextDose && Object.values(nextDose).some(Boolean) ? { nextDose } : {}),
+  };
+};
 
 const boolRecord = <T extends string>(
   source: Record<string, unknown> | undefined,
@@ -198,6 +272,10 @@ export function createLegacyClinicalSource(
       | HTMLTextAreaElement
       | null;
   const value = (id: string): string => String(control(id)?.value ?? "").trim();
+  // A custom NDC is documentation, not a normalized identifier. Keep the
+  // staff-entered text byte-for-byte when reading the legacy bridge so an
+  // unmatched scanner/paste value is never silently rewritten.
+  const rawValue = (id: string): string => String(control(id)?.value ?? "");
   const checked = (id: string): boolean =>
     Boolean((control(id) as HTMLInputElement | null)?.checked);
   const bridge = (): LegacyClinicalBridgeSnapshot => {
@@ -295,6 +373,7 @@ export function createLegacyClinicalSource(
       ? (raw.response as InjectionResponse["kind"])
       : "";
     const rawDisposition = raw.disposition ?? {};
+    const documentation = normalizeDocumentation(raw.documentation);
     const dispositionKind = ["", "administered", "held", "escalated", "provider"].includes(
       asString(rawDisposition.kind),
     )
@@ -321,7 +400,7 @@ export function createLegacyClinicalSource(
       allergies: value("allergies"),
       technique: value("tech"),
       traceability: {
-        ndc: value("ndc"),
+        ndc: rawValue("ndc"),
         lot: value("lot"),
         expiration: value("exp"),
       },
@@ -404,6 +483,7 @@ export function createLegacyClinicalSource(
         exceptionRecipient: value("injExceptionRecipient"),
         exceptionTime: value("injExceptionTime"),
         exceptionOutcome: value("injExceptionOutcome"),
+        ...documentation,
       },
     };
     const started = Boolean(

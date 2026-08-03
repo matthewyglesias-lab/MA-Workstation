@@ -209,6 +209,7 @@ export function FormsPanel({
     ? (evaluation?.stops.filter(isLetterIssue).length ?? 0) +
       (evaluation?.warnings.filter(isLetterIssue).length ?? 0)
     : 0;
+  const formsLogCompleted = evaluation?.output.activityStatus === "completed";
 
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
@@ -245,9 +246,14 @@ export function FormsPanel({
         <button
           type="button"
           class="cd2004-command-button"
+          title={
+            formsLogCompleted
+              ? "Add the completed forms task to today's local activity log."
+              : "Add this forms task to today's local activity log as needs review; this does not release a letter."
+          }
           onClick={() => clickLegacyControl("formsAddLog")}
         >
-          Add to log
+          {formsLogCompleted ? "Log completed task" : "Log as needs review"}
         </button>
       </div>
 

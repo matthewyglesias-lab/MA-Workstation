@@ -10,6 +10,7 @@ import printBaseline from "../fixtures/print-baseline-v1.json";
 const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
 const sha256 = (value: string) =>
   createHash("sha256").update(value).digest("hex");
+const canonicalGitText = (value: string) => value.replace(/\r\n/g, "\n");
 
 function baselineCommitIsAvailable(): boolean {
   try {
@@ -48,11 +49,15 @@ describe("pre-cutover print baseline", () => {
   });
 
   it("keeps the extracted legacy stylesheet byte-identical to production", () => {
-    const css = readFileSync(
-      fileURLToPath(
-        new URL("../../public/legacy/legacy.css", import.meta.url),
+    // Git may translate LF to CRLF in an existing Windows worktree. The
+    // protected invariant is the canonical text stored in the repository.
+    const css = canonicalGitText(
+      readFileSync(
+        fileURLToPath(
+          new URL("../../public/legacy/legacy.css", import.meta.url),
+        ),
+        "utf8",
       ),
-      "utf8",
     );
     expect(Buffer.byteLength(css)).toBe(printBaseline.legacyCss.bytes);
     expect(sha256(css)).toBe(printBaseline.legacyCss.sha256);

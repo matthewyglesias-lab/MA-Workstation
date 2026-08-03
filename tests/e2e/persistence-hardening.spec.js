@@ -75,19 +75,9 @@ for (const fixture of malformedInjectionRecords) {
   });
 }
 
-test('failed non-administration handoff logging rolls back and never announces success', async ({
+test('non-administration handoff does not expose an early injection closeout path', async ({
   page
 }) => {
-  await page.addInitScript(() => {
-    const nativeSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function(key, value) {
-      if (String(key).startsWith('ipmgMedAssistActivityLog_')) {
-        throw new DOMException('Activity log blocked for test', 'QuotaExceededError');
-      }
-      return nativeSetItem.call(this, key, value);
-    };
-  });
-
   await page.goto('/');
   await openWorkflow(page, 'administer');
   let panel = await openInjectionTab(page, 'Order');
@@ -107,21 +97,16 @@ test('failed non-administration handoff logging rolls back and never announces s
     'Handoff complete'
   );
 
-  const logCountBefore = await page.locator('#logCount').textContent();
-  await panel.getByText('Add to log', { exact: true }).click();
-
-  await expect(page.locator('#toastMsg')).toHaveText(
-    /could not be saved to the activity log/i
-  );
-  await expect(page.locator('#toastMsg')).not.toHaveText(
-    /added to activity log/i
-  );
-  await expect(page.locator('#logCount')).toHaveText(logCountBefore || '0');
-  await expect.poll(() => page.evaluate(() =>
-    Object.keys(localStorage).filter(key =>
-      key.startsWith('ipmgMedAssistActivityLog_')
-    )
-  )).toEqual([]);
+  // Injection closeout has one owner: the explicit local attestation action
+  // in the lifecycle strip, which remains unavailable until every required
+  // administration condition is complete. A non-admin handoff cannot claim
+  // completion through the retired daily-activity path.
+  await expect(
+    panel.getByRole('button', { name: 'Add to daily activity', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.locator('[data-injection-record-actions] [data-injection-finish]')
+  ).toBeDisabled();
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
     'data-active-workflow',
     'administer'

@@ -5,6 +5,7 @@ import {
   type InjectionMedicationKey,
   type InjectionIntervalKey,
 } from "./injection-catalog";
+import { INJECTION_CLINICAL_REFERENCE_BUNDLE } from "./injection-clinical-reference";
 
 /**
  * A single labeled fact within a knowledge entry. Faithfully mirrors the
@@ -49,115 +50,6 @@ const facts = (label: string, items: Array<{ term: string; detail: string }>): K
   items,
 });
 
-/**
- * Fields legacy's MEDS array captures that the typed InjectionMedication
- * (src/domain/injection-catalog.ts) doesn't need for clinical evaluation -
- * drug class, technique, prep/storage, and MA caution text are reference-
- * only, so they live here rather than expanding the already-shipped
- * Injection domain model. Ported verbatim from public/legacy/legacy-
- * runtime.js's MEDS array.
- */
-const MEDICATION_KNOWLEDGE_SUPPLEMENT: Record<
-  Exclude<InjectionMedicationKey, "other">,
-  { cls: string; tech: string; recon: string; storage: string; caution: string }
-> = {
-  aristada: {
-    cls: "Atypical antipsychotic LAI",
-    tech: "Use the kit/PI dose- and site-specific needle; tap, shake ≥30 seconds, and re-shake if delayed before injection.",
-    recon: "Prefilled syringe — tap and shake vigorously ≥ 30 s.",
-    storage: "Room temp; protect from light.",
-    caution:
-      "Establish tolerability with oral aripiprazole first. 441 mg deltoid or gluteal; higher doses gluteal. Confirm the interval selected matches the ordered dose — 882 mg is the only strength valid on both the q4wk and q6wk schedules; 1064 mg is q8wk (every 2 months) only.",
-  },
-  initio: {
-    cls: "LAI initiation kit",
-    tech: "shake vigorously 30s",
-    recon: "Prefilled syringe — shake vigorously 30 s.",
-    storage: "Room temp; protect from light.",
-    caution: "Give with a single 30 mg oral aripiprazole. Not a maintenance dose.",
-  },
-  sustenna: {
-    cls: "Atypical antipsychotic LAI (monthly)",
-    tech: "23G 1\" (deltoid) / 22G 1.5\" (gluteal), shake ≥15s",
-    recon: "Prefilled syringe — shake vigorously ≥ 15 s within 5 min of injecting.",
-    storage: "Room temp ≤30°C.",
-    caution:
-      "Verify the active initiation, maintenance, or re-initiation plan against the current PI and renal-status guidance before administration.",
-  },
-  erzofri: {
-    cls: "Atypical antipsychotic LAI (monthly)",
-    tech: "Deltoid: 23G 1\" if <90 kg or 22G 1.5\" if ≥90 kg; gluteal: 22G 1.5\". Shake vigorously ≥10 sec.",
-    recon: "Prefilled syringe — shake vigorously for at least 10 seconds until homogeneous; visually inspect before use.",
-    storage: "Room temp; protect from light. Do not freeze.",
-    caution:
-      "Verify active initiation, maintenance, or re-initiation plan against the current PI and renal-status guidance before administration.",
-  },
-  trinza: {
-    cls: "Atypical antipsychotic LAI (q3 mo)",
-    tech: "22G 1.5\" gluteal / 22G 1\" deltoid, shake 15s",
-    recon: "Prefilled syringe — shake vigorously ≥ 15 s.",
-    storage: "Room temp ≤30°C.",
-    caution:
-      "Only after ≥4 months on Sustenna; dose = 3.5× the prior monthly Sustenna dose. Conversion from the 39 mg Sustenna dose was not studied.",
-  },
-  hafyera: {
-    cls: "Atypical antipsychotic LAI (q6 mo)",
-    tech: "20G 1.5\" gluteal, shake vigorously",
-    recon: "Prefilled syringe — shake vigorously ~15 s.",
-    storage: "Room temp ≤30°C.",
-    caution:
-      "Only after ≥4 months on Sustenna (last 2 cycles same strength) or ≥1 cycle of Trinza. Gluteal only.",
-  },
-  uzedy: {
-    cls: "Atypical antipsychotic LAI (SubQ)",
-    tech: "supplied syringe, SubQ abdomen or upper arm",
-    recon: "Prefilled syringe — no reconstitution; mix per label.",
-    storage: "Refrigerate 2–8°C; may be kept at room temp limited time — check label.",
-    caution:
-      "SubQ only — abdomen or upper arm. Once-monthly (50/75/100/125 mg) and once-every-2-months (100/150/200/250 mg) are distinct regimens — confirm the interval selected matches the ordered dose; 100 mg is the only strength valid on either schedule.",
-  },
-  maintena: {
-    cls: "Atypical antipsychotic LAI (monthly)",
-    tech: "23G 1\" deltoid / 22G 1.5\" gluteal",
-    recon: "Reconstitute lyophilized vial with SWFI per kit (or use prefilled dual-chamber syringe).",
-    storage: "Room temp; protect from light.",
-    caution:
-      "Verify the prescribed initiation or re-initiation plan against the current PI; label-supported one-day and 14-day initiation pathways differ. Do not give sooner than 26 days after the previous injection.",
-  },
-  asimtufii: {
-    cls: "Atypical antipsychotic LAI (q2 mo)",
-    tech: "Gluteal IM only. Non-obese: 22G 1.5\"; obese: 21G 2\". Tap syringe 10x and shake ≥10 sec; do not massage site.",
-    recon:
-      "Prefilled syringe — tap at least 10 times and shake vigorously at least 10 seconds until uniform; visually inspect before use.",
-    storage: "Room temp; store in original package. Do not freeze.",
-    caution:
-      "Gluteal IM only. Establish oral aripiprazole tolerability when applicable; verify the exact initiation, transition, or re-initiation plan against the active provider order and current PI.",
-  },
-  vivitrol: {
-    cls: "Opioid antagonist LAI (monthly)",
-    tech: "Use kit-supplied customized needle selected by body habitus; deep gluteal IM only, alternate sides.",
-    recon: "Reconstitute powder with supplied diluent; suspend fully; administer immediately.",
-    storage: "Refrigerate 2–8°C; may be at room temp ≤7 days before use. Do not freeze.",
-    caution:
-      "Deep gluteal IM only with kit-supplied needle/body-habitus selection. Verify current opioid-risk and contraindication review per provider plan; do not use a generic timing window as clearance.",
-  },
-  haldol: {
-    cls: "Typical antipsychotic LAI",
-    tech: "21G+ needle, deep IM gluteal, Z-track",
-    recon: "Oil solution — ready to use; allow to reach room temp.",
-    storage: "Room temp; protect from light. Oil-based.",
-    caution:
-      "Deep IM gluteal, Z-track. Do not exceed 100 mg as a single initial injection — if the calculated dose is higher, give 100 mg first and the remainder 3–7 days later.",
-  },
-  prolixin: {
-    cls: "Typical antipsychotic LAI",
-    tech: "21G needle, IM or deep SubQ",
-    recon: "Oil solution — ready to use.",
-    storage: "Room temp; protect from light. Oil-based.",
-    caution: "IM or deep SubQ, gluteal.",
-  },
-};
-
 const medDoseSummary = (med: InjectionMedication): string => {
   if (med.dosesByInterval) {
     return Object.entries(med.dosesByInterval)
@@ -199,7 +91,15 @@ const medicationKnowledgeEntries = (): KnowledgeEntry[] =>
     .filter((key): key is Exclude<InjectionMedicationKey, "other"> => key !== "other")
     .map((key) => {
       const med = INJECTION_MEDICATIONS[key];
-      const supplement = MEDICATION_KNOWLEDGE_SUPPLEMENT[key];
+      // Keep the reference panel on the same versioned source as evaluation.
+      const reference = INJECTION_CLINICAL_REFERENCE_BUNDLE.medications[key];
+      const supplement = {
+        cls: reference.knowledge.className,
+        tech: reference.knowledge.technique,
+        recon: reference.knowledge.preparation,
+        storage: reference.knowledge.storage,
+        caution: reference.knowledge.staffGuardrail,
+      };
       return {
         id: `lai-${key}`,
         category: "lai",
@@ -221,6 +121,10 @@ const medicationKnowledgeEntries = (): KnowledgeEntry[] =>
             "MA guardrail",
             supplement.caution ||
               "Verify active order, tolerability, lot/exp/NDC, and site/route before documenting.",
+          ),
+          text(
+            "Reference",
+            `${reference.source.title}; ${reference.source.labelRevision}; reviewed ${reference.source.reviewedOn}.`,
           ),
         ],
       };

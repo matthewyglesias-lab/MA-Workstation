@@ -106,11 +106,11 @@ try {
 
       await verifyNoPageOverflow(page, "Desktop");
 
-      const injectionLauncher = page
-        .locator(".cd2004-launcher")
-        .filter({ hasText: "Injection" })
-        .first();
-      await injectionLauncher.click();
+      const startNewInjection = page.getByRole("button", {
+        name: "Start new injection",
+        exact: true,
+      });
+      await startNewInjection.click();
       await page
         .locator('.cd2004-shell[data-active-workflow="administer"]')
         .waitFor({ state: "visible", timeout: 10_000 });

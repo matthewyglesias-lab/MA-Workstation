@@ -3,33 +3,18 @@ const { test, expect } = require('@playwright/test');
 const FIXED_NOW = new Date('2026-07-30T10:30:00-07:00');
 const FIXED_DATE_KEY = '2026-07-30';
 
-const WORKFLOWS = {
-  home: {
-    label: 'Start Center',
-    panel: '.cd2004-start-center'
-  },
-  administer: {
-    label: 'Injection',
-    panel: '.wfp-panel'
-  },
-  uds: {
-    label: 'UDS',
-    panel: '.wfp-panel'
-  },
-  samples: {
-    label: 'Samples',
-    panel: '.wfp-panel'
-  },
-  forms: {
-    label: 'Forms',
-    panel: '.wfp-panel'
-  }
+// These are intentionally state-oriented instead of a workflow-by-workflow
+// grid. The workstation's meaningful visual changes are its chart and record
+// lifecycle states: no active chart, an editable local draft, a record ready
+// for local attestation, and a locked local record. Together the captures
+// cover every supported desktop width plus the compact command surface without
+// multiplying nearly identical baselines.
+const VIEWPORTS = {
+  desktop1024: { name: '1024x768', width: 1024, height: 768 },
+  desktop1366: { name: '1366x768', width: 1366, height: 768 },
+  desktop1440: { name: '1440x900', width: 1440, height: 900 },
+  compact: { name: '390x844', width: 390, height: 844 }
 };
-
-const VIEWPORTS = [
-  { name: 'desktop', width: 1440, height: 900 },
-  { name: '390', width: 390, height: 844 }
-];
 
 const SNAPSHOT_OPTIONS = {
   animations: 'disabled',
@@ -144,6 +129,8 @@ const FIXED_LOCAL_DATA = {
           site: 'Left deltoid'
         },
         fields: {
+          ptName: 'Rivera, Jordan',
+          ptDOB: '06/14/1989',
           lot: 'FIXED-2407',
           adminDate: FIXED_DATE_KEY
         }
@@ -168,6 +155,8 @@ const FIXED_LOCAL_DATA = {
           site: 'Right deltoid'
         },
         fields: {
+          ptName: 'Patel, Rowan',
+          ptDOB: '11/03/1994',
           lot: 'FIXED-DRAFT',
           adminDate: FIXED_DATE_KEY
         }
@@ -192,6 +181,16 @@ async function bootDeterministicWorkstation(page, viewport) {
   });
   await page.clock.setFixedTime(FIXED_NOW);
   await page.addInitScript(({ data, dateKey }) => {
+    // The ready-to-attest path creates a local record identifier from both
+    // Date.now() and Math.random(). Freeze the latter here too so identifier
+    // text in the chart banner and record rail cannot make screenshots flaky.
+    // This runs only in the visual-regression browser context.
+    let visualRandomState = 0x2f6e2b1;
+    Math.random = () => {
+      visualRandomState = (visualRandomState * 1664525 + 1013904223) >>> 0;
+      return visualRandomState / 0x100000000;
+    };
+
     localStorage.clear();
     sessionStorage.clear();
     localStorage.setItem('ipmgMedAssistStaff', data.staff);
@@ -217,17 +216,111 @@ async function bootDeterministicWorkstation(page, viewport) {
 }
 
 async function openWorkflow(page, workflow) {
-  const spec = WORKFLOWS[workflow];
+  const label = workflow === 'administer' ? 'Injection' : 'Start Center';
   if (workflow !== 'home') {
     // Bottom-docked strip: every nav item is reachable at every width.
-    await page.locator(`.cd2004-nav-item[title="${spec.label}"]`).click();
+    await page.locator(`.cd2004-nav-item[title="${label}"]`).click();
   }
 
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
     'data-active-workflow',
     workflow
   );
-  await expect(page.locator(spec.panel)).toBeVisible();
+  await expect(page.locator(workflow === 'home' ? '.cd2004-start-center' : '.wfp-panel')).toBeVisible();
+}
+
+async function openFixtureDraft(page) {
+  await openWorkflow(page, 'administer');
+  const railLauncher = page.getByRole('button', { name: /Open saved local records \(F11\)/ });
+  const compactLauncher = page
+    .locator('.meditech-mobile-command-surface')
+    .getByRole('button', { name: /Record List/ });
+  if (await railLauncher.isVisible()) {
+    await railLauncher.click();
+  } else {
+    await compactLauncher.click();
+  }
+  await page
+    .getByRole('button', { name: 'Resume draft for Patel, Rowan', exact: true })
+    .click();
+  await expect(page.locator('dialog.records-drawer-layer')).toBeHidden();
+  await expect(page.locator('.cd2004-patient-primary')).toContainText('Patel, Rowan');
+  await expect(page.locator('[data-injection-record-actions]')).toContainText('SAVED LOCAL DRAFT');
+}
+
+async function selectInjectionTab(page, name) {
+  await page.locator('.wfp-panel').getByRole('tab', { name, exact: true }).click();
+}
+
+async function prepareReadyInjection(page) {
+  await openWorkflow(page, 'administer');
+  const panel = page.locator('.wfp-panel');
+
+  await selectInjectionTab(page, 'Order');
+  await panel.locator('input[placeholder="Last, First"]').fill('Snapshot, Ready');
+  await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
+  await panel.locator('input[placeholder="Provider name"]').fill('Snapshot Provider');
+  await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+  await panel.locator('input[name="inj-dose"]').fill('100 mg');
+  await panel.locator('input[name="inj-route"]').fill('IM');
+  await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+
+  await selectInjectionTab(page, 'Schedule');
+  await panel.locator('input[type="date"]').nth(1).fill(FIXED_DATE_KEY);
+  await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+
+  await selectInjectionTab(page, 'Administration');
+  await panel.getByText('R deltoid', { exact: true }).click();
+  await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Alex Rivera, MA');
+  await panel.locator('input[type="time"]').first().fill('10:30');
+
+  await selectInjectionTab(page, 'Product');
+  await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
+  await panel.locator('input[placeholder="LOT123"]').fill('READY-2407');
+  await panel.locator('input[type="month"]').first().fill('2027-12');
+
+  await selectInjectionTab(page, 'Verification');
+  const requiredAttestations = [
+    'Two-identifier ID',
+    'Medication ‘rights’',
+    'Allergies reviewed',
+    'Consent reaffirmed',
+    'No contraindications',
+    'Aseptic technique'
+  ];
+  for (const name of requiredAttestations) {
+    await panel.getByRole('checkbox', { name }).check();
+  }
+  await panel
+    .locator('input[placeholder*="allergy / ADR status"]')
+    .fill('NKDA verified in local record');
+  await panel.getByRole('checkbox', { name: 'No acute concerns today confirmed' }).check();
+
+  await selectInjectionTab(page, 'Outcome');
+  await panel
+    .getByRole('radio', { name: 'Review complete — document administration', exact: true })
+    .check();
+
+  const recordActions = page.locator('[data-injection-record-actions]');
+  await expect(recordActions.locator('[data-injection-finish]')).toBeEnabled();
+}
+
+async function lockReadyInjection(page) {
+  const recordActions = page.locator('[data-injection-record-actions]');
+  await recordActions.locator('[data-injection-finish]').click();
+  const dialog = page.getByRole('dialog', { name: 'Attest & lock local record' });
+  await expect(dialog).toBeVisible();
+  await dialog
+    .getByRole('checkbox', {
+      name: /^I attest that I reviewed this local record before locking it\./
+    })
+    .check();
+  await dialog
+    .getByRole('button', { name: 'Attest & lock local record', exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+  await expect(recordActions).toContainText('LOCAL RECORD LOCKED');
 }
 
 async function settleForCapture(page) {
@@ -248,21 +341,80 @@ async function settleForCapture(page) {
   });
 }
 
-test.describe('classic workstation visual snapshots', () => {
-  for (const viewport of VIEWPORTS) {
-    for (const workflow of Object.keys(WORKFLOWS)) {
-      test(`${WORKFLOWS[workflow].label} at ${viewport.width}px`, async ({
-        page
-      }) => {
-        await bootDeterministicWorkstation(page, viewport);
-        await openWorkflow(page, workflow);
-        await settleForCapture(page);
+test.describe('Client/Server workstation visual snapshots', () => {
+  test('empty chart at 1024 x 768', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.desktop1024);
+    await openWorkflow(page, 'administer');
+    await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/is-no-active-chart/);
+    await expect(page.locator('.cd2004-patient-primary')).toContainText('NO ACTIVE CHART');
+    await settleForCapture(page);
 
-        await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
-          `${workflow}-${viewport.name}.png`,
-          SNAPSHOT_OPTIONS
-        );
-      });
-    }
-  }
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'empty-chart-1024x768.png',
+      SNAPSHOT_OPTIONS
+    );
+  });
+
+  test('current worklist at 1366 x 768', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.desktop1366);
+    await openWorkflow(page, 'home');
+    await expect(page.getByRole('heading', { name: 'Current Worklist' })).toBeVisible();
+    await settleForCapture(page);
+
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'current-worklist-1366x768.png',
+      SNAPSHOT_OPTIONS
+    );
+  });
+
+  test('active Injection draft at 1366 x 768', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.desktop1366);
+    await openFixtureDraft(page);
+    await settleForCapture(page);
+
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'active-injection-draft-1366x768.png',
+      SNAPSHOT_OPTIONS
+    );
+  });
+
+  test('ready-to-attest and locked local records at 1440 x 900', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.desktop1440);
+    await prepareReadyInjection(page);
+    await settleForCapture(page);
+
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'ready-to-attest-1440x900.png',
+      SNAPSHOT_OPTIONS
+    );
+
+    await lockReadyInjection(page);
+    await settleForCapture(page);
+
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'locked-local-record-1440x900.png',
+      SNAPSHOT_OPTIONS
+    );
+  });
+
+  test('compact active Injection draft at 390 px', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.compact);
+    await openFixtureDraft(page);
+    await expect(page.locator('.meditech-command-deck')).toBeHidden();
+    await expect(page.locator('.meditech-mobile-command-surface')).toBeVisible();
+    // On compact screens the labelled mobile command surface supplements the
+    // worksheet; it must not cover the actual record lifecycle controls.
+    const recordActions = page.locator('[data-injection-record-actions]');
+    await expect(recordActions).toBeVisible();
+    await expect(recordActions.locator('[data-injection-save]')).toBeVisible();
+    await expect(recordActions.locator('[data-injection-finish]')).toBeVisible();
+    await expect(recordActions.locator('[data-injection-new]')).toBeVisible();
+    await expect(recordActions.locator('[data-injection-discard]')).toBeVisible();
+    await settleForCapture(page);
+
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'compact-active-injection-draft-390x844.png',
+      SNAPSHOT_OPTIONS
+    );
+  });
 });

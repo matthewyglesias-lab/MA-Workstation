@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   InjectionEngine,
   emptyInjectionEncounter,
+  emptyInjectionInitiation,
   injectionInitiationConfig,
   injectionInitiationOptions,
   type InjectionEncounter,
@@ -86,6 +87,21 @@ describe("injectionEncounterToDocumentationInput", () => {
 
     const note = DocumentationEngine.format("injection", input!, evaluation);
     expect(note.text).toBeTruthy();
+  });
+
+  it("does not put a stale initiation payload into a routine-maintenance note", () => {
+    const encounter = routineInjection();
+    encounter.initiation = {
+      ...emptyInjectionInitiation(),
+      protocol: "aristada-21day",
+      oralStatus: "verified",
+    };
+    const evaluation = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+
+    expect(evaluation.output.administrationDocumented).toBe(true);
+    const input = injectionEncounterToDocumentationInput(encounter, evaluation);
+    expect(input?.initiation).toBeUndefined();
+    expect(input?.components).toHaveLength(1);
   });
 
   it("removes the generic allergy-review fact once explicit allergy text is documented", () => {

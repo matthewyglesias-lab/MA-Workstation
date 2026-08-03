@@ -18,6 +18,8 @@ import {
   INJECTION_INTERVAL_DAYS,
   INJECTION_MEDICATIONS,
   allowedDosesForInterval,
+  calculateNextInjectionDate,
+  effectiveInjectionCadence,
   effectiveInjectionWindow,
   injectionMuscleKey,
   normalizeInjectionSite,
@@ -27,6 +29,18 @@ import {
   type InjectionMedicationKey,
   type MedicationVerificationKey,
 } from "./injection-catalog";
+import {
+  INJECTION_CLINICAL_REFERENCE_VERSION,
+  conditionalRequirementsForEncounter,
+  injectionClinicalPhaseForReason,
+  medicationVerificationsForPhase,
+  type ClinicalReferenceClassification,
+  type InjectionClinicalPhase,
+} from "./injection-clinical-reference";
+import type {
+  InjectionNdcSelectionMetadata,
+  InjectionNextDoseProvenance,
+} from "./injection-ndc";
 
 export type InjectionReason = "scheduled" | "initiation" | "reinit" | "loading" | "prn";
 export type InjectionDispositionKind = "" | "administered" | "held" | "escalated" | "provider";
@@ -127,6 +141,12 @@ export interface InjectionAdministrationDetails {
   exceptionRecipient?: string;
   exceptionTime?: string;
   exceptionOutcome?: string;
+  /** Product-reference provenance; the plain traceability NDC remains canonical documentation. */
+  ndcSelection?: InjectionNdcSelectionMetadata;
+  /** Calculated/manual origin of the editable next-dose date. */
+  nextDose?: InjectionNextDoseProvenance;
+  /** Version of the deterministic, locally bundled clinical reference shown to staff. */
+  clinicalReferenceVersion?: string;
 }
 
 export interface InjectionEncounter {
@@ -172,7 +192,29 @@ export interface InjectionTimingEvaluation {
   daysSincePrior: number | null;
   earliestDay: number | null;
   latestDay: number | null;
+  expectedDate?: string;
+  earliestDate?: string;
+  latestDate?: string;
+  cadenceLabel?: string;
   message: string;
+}
+
+export type InjectionRequirementState = "required" | "optional" | "hidden";
+
+export interface InjectionRequirement {
+  state: InjectionRequirementState;
+  section: string;
+  /** Brief explanation for a visible marker; never a clinical conclusion. */
+  reason?: string;
+}
+
+export interface InjectionGuidanceCard {
+  key: string;
+  section: string;
+  title: string;
+  message: string;
+  classification: ClinicalReferenceClassification;
+  action?: string;
 }
 
 export interface InjectionEvaluationOutput {
@@ -186,6 +228,12 @@ export interface InjectionEvaluationOutput {
   canFinalize: boolean;
   recordStatus: "draft" | "ready-to-lock" | "handoff-ready";
   initiationProtocol: InjectionInitiationProtocol;
+  phase: InjectionClinicalPhase;
+  requiredVerifications: MedicationVerificationKey[];
+  requirements: Record<string, InjectionRequirement>;
+  guidance: InjectionGuidanceCard[];
+  expectedNextDoseDate: string;
+  clinicalReferenceVersion?: string;
 }
 
 const pairedProtocols = new Set<InjectionInitiationProtocol>([
@@ -262,52 +310,44 @@ export const INJECTION_ATTESTATION_OPTIONS: ReadonlyArray<{
   key: keyof InjectionEncounter["attestations"];
   label: string;
   description: string;
-  required: boolean;
 }> = [
   {
     key: "id2",
     label: "Two-identifier ID",
     description: "Pt identity verified using two identifiers (full name & DOB).",
-    required: true,
   },
   {
     key: "rights",
     label: "Medication ‘rights’",
     description:
       "Med verified against active order — right pt, right drug, right dose, right route, right time, right documentation.",
-    required: true,
   },
   {
     key: "allergy",
     label: "Allergies reviewed",
     description: "Verified allergy status is documented in the Safety section.",
-    required: true,
   },
   {
     key: "consent",
     label: "Consent reaffirmed",
     description: "Consent for injection obtained and reaffirmed prior to administration.",
-    required: true,
   },
   {
     key: "prior",
     label: "Prior dose tolerated",
     description: "Prior dose tolerated well per pt report; no new or unresolved s/e.",
-    required: false,
   },
   {
     key: "screen",
     label: "No contraindications",
     description:
       "No acute s/e or contraindications to administration noted on pre-injection screening.",
-    required: true,
   },
   {
     key: "hygiene",
     label: "Aseptic technique",
     description:
       "Hand hygiene performed and gloves donned; injection site cleansed w/ alcohol and allowed to dry.",
-    required: true,
   },
 ];
 
@@ -869,6 +909,171 @@ const evaluateTiming = (
   };
 };
 
+/**
+ * Product-aware timing.  Order-verification products receive an expected date
+ * as an operational aid but deliberately never get an automatic within-window
+ * clearance.  Calendar-month products calculate from calendar dates instead
+ * of 84/182-day approximations.
+ */
+const evaluateTimingWithCadence = (
+  encounter: InjectionEncounter,
+  medication: InjectionMedication,
+): InjectionTimingEvaluation => {
+  if (encounter.intervalKey === "once" || medication.intervalKey === "once") {
+    return {
+      state: "ok",
+      daysSincePrior: null,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate: "",
+      earliestDate: "",
+      latestDate: "",
+      cadenceLabel: "one-time",
+      message: "One-time initiation/loading dose; routine interval spacing does not apply.",
+    };
+  }
+  if (!encounter.intervalKey) {
+    return {
+      state: "idle",
+      daysSincePrior: null,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate: "",
+      earliestDate: "",
+      latestDate: "",
+      cadenceLabel: "",
+      message: "Set a dosing interval to evaluate timing.",
+    };
+  }
+
+  const cadence = effectiveInjectionCadence(medication, encounter.intervalKey);
+  if (!encounter.priorDoseDate) {
+    return {
+      state: "idle",
+      daysSincePrior: null,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate: "",
+      earliestDate: "",
+      latestDate: "",
+      cadenceLabel: cadence.label,
+      message:
+        medication.timingMode === "orderVerify"
+          ? "Enter the prior injection date and verify timing against the active order and current product information."
+          : "Enter the prior injection date to evaluate the dosing window.",
+    };
+  }
+
+  const daysSincePrior = differenceInCalendarDays(
+    encounter.priorDoseDate,
+    encounter.administrationDate,
+  );
+  const expectedDate = calculateNextInjectionDate(
+    medication,
+    encounter.intervalKey,
+    encounter.priorDoseDate,
+  );
+  if (daysSincePrior === null || !expectedDate) {
+    return {
+      state: "warning",
+      daysSincePrior: null,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate,
+      earliestDate: "",
+      latestDate: "",
+      cadenceLabel: cadence.label,
+      message: "Verify the prior-dose and administration dates.",
+    };
+  }
+  if (daysSincePrior < 0) {
+    return {
+      state: "stop",
+      daysSincePrior,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate,
+      earliestDate: "",
+      latestDate: "",
+      cadenceLabel: cadence.label,
+      message: "The administration date is before the prior-dose date; verify the dates.",
+    };
+  }
+  if (medication.timingMode === "orderVerify") {
+    return {
+      state: "warning",
+      daysSincePrior,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate,
+      earliestDate: "",
+      latestDate: "",
+      cadenceLabel: cadence.label,
+      message: `${daysSincePrior} day(s) since the prior dose. Expected ${cadence.label} date: ${expectedDate}. Verify timing and any re-initiation decision against the active provider order and current product information.`,
+    };
+  }
+
+  const window = effectiveInjectionWindow(medication, encounter.intervalKey);
+  const earliestDate = addCalendarDays(expectedDate, -window.windowBefore);
+  const latestDate = addCalendarDays(expectedDate, window.windowAfter);
+  const earliestDay = differenceInCalendarDays(encounter.priorDoseDate, earliestDate);
+  const latestDay = differenceInCalendarDays(encounter.priorDoseDate, latestDate);
+  if (earliestDay === null || latestDay === null) {
+    return {
+      state: "warning",
+      daysSincePrior,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate,
+      earliestDate,
+      latestDate,
+      cadenceLabel: cadence.label,
+      message: "Verify the prior-dose date before using displayed timing guidance.",
+    };
+  }
+  if (encounter.administrationDate < earliestDate) {
+    return {
+      state: "warning",
+      daysSincePrior,
+      earliestDay,
+      latestDay,
+      expectedDate,
+      earliestDate,
+      latestDate,
+      cadenceLabel: cadence.label,
+      message: `Given ${daysSincePrior} day(s) after the prior dose; earlier than the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}). Confirm provider direction.`,
+    };
+  }
+  if (encounter.administrationDate <= latestDate) {
+    return {
+      state: "ok",
+      daysSincePrior,
+      earliestDay,
+      latestDay,
+      expectedDate,
+      earliestDate,
+      latestDate,
+      cadenceLabel: cadence.label,
+      message: `Given ${daysSincePrior} day(s) after the prior dose; within the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}).`,
+    };
+  }
+  const daysPastExpected = differenceInCalendarDays(expectedDate, encounter.administrationDate) ?? 0;
+  const farLate = daysPastExpected > Math.max(window.windowAfter * 2, 28);
+  return {
+    state: "stop",
+    daysSincePrior,
+    earliestDay,
+    latestDay,
+    expectedDate,
+    earliestDate,
+    latestDate,
+    cadenceLabel: cadence.label,
+    message: `Given ${daysSincePrior} day(s) after the prior dose; beyond the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}).${
+      farLate ? " A gap this long may require re-initiation/loading." : ""
+    } Confirm timing and dosing with the provider.`,
+  };
+};
+
 const initiationOralSatisfied = (encounter: InjectionEncounter): boolean =>
   Boolean(encounter.initiation?.oralStatus || encounter.verifications.oralOverlap);
 
@@ -1413,10 +1618,286 @@ const hasStarted = (encounter: InjectionEncounter): boolean =>
   Boolean(
     encounter.patient.name.trim() ||
       encounter.patient.dob.trim() ||
+      encounter.disposition.kind ||
       encounter.medicationKey ||
       encounter.dose.trim() ||
       encounter.traceability.lot.trim(),
   );
+
+const buildRequirementProjection = (
+  encounter: InjectionEncounter,
+  medication: InjectionMedication | null,
+  administrationPath: boolean,
+  phase: InjectionClinicalPhase,
+  requiredVerifications: readonly MedicationVerificationKey[],
+): Record<string, InjectionRequirement> => {
+  const requirements: Record<string, InjectionRequirement> = {};
+  const set = (
+    field: string,
+    state: InjectionRequirementState,
+    section: string,
+    reason?: string,
+  ) => {
+    requirements[field] = { state, section, ...(reason ? { reason } : {}) };
+  };
+  const started = hasStarted(encounter);
+  // The order workspace must be usable before staff select the medication.
+  // Product-dependent controls stay out of the way until then, while core
+  // patient/order fields remain visible and become required as soon as the
+  // local record has meaningful documentation.
+  const administrationDocumented = administrationPath && Boolean(medication);
+  const orderDocumentStarted = administrationPath && started;
+  // A stored protocol is meaningful only for an encounter explicitly marked
+  // as initiation or re-initiation.  This keeps a stale legacy protocol from
+  // turning an otherwise routine maintenance administration into a second,
+  // unrelated checklist.
+  const initiationPath =
+    administrationDocumented && (phase === "initiation" || phase === "reinitiation");
+
+  set("patient.name", started ? "required" : "optional", "patient");
+  set("patient.dob", started ? "required" : "optional", "patient");
+  set("disposition.kind", started ? "required" : "optional", "disposition");
+  set("orderingProvider", orderDocumentStarted ? "required" : "optional", "order");
+  set("details.purpose", "optional", "order");
+  set("reason", "optional", "order");
+  set("medicationKey", started ? "required" : "optional", "medication");
+  set(
+    "customMedication",
+    medication?.key === "other" && administrationDocumented ? "required" : "hidden",
+    "medication",
+  );
+  set("dose", administrationDocumented ? "required" : "hidden", "medication");
+  set("route", administrationDocumented ? "required" : "hidden", "administration");
+  set("intervalKey", administrationDocumented ? "required" : "hidden", "medication");
+  set("technique", administrationDocumented ? "optional" : "hidden", "administration");
+  set(
+    "priorDoseDate",
+    administrationDocumented
+      ? encounter.reason === "scheduled"
+        ? "required"
+        : "optional"
+      : "hidden",
+    "timing",
+  );
+  set("priorSite", administrationDocumented ? "optional" : "hidden", "timing");
+  set("administrationDate", administrationDocumented ? "required" : "hidden", "administration");
+  set(
+    "nextDoseDate",
+    administrationDocumented && encounter.intervalKey && encounter.intervalKey !== "once" ? "required" : "hidden",
+    "follow-up",
+    encounter.intervalKey === "once" ? "One-time product; no routine follow-up date is required." : undefined,
+  );
+  set("site", administrationDocumented ? "required" : "hidden", "administration");
+  set("administeredBy", administrationDocumented ? "required" : "hidden", "administration");
+  set("administrationTime", administrationDocumented ? "required" : "hidden", "administration");
+  set("response", administrationDocumented ? "required" : "hidden", "response");
+  set(
+    "response.custom",
+    administrationDocumented && encounter.response.kind === "custom" ? "required" : "hidden",
+    "response",
+  );
+  set("traceability.ndc", administrationDocumented ? "required" : "hidden", "traceability");
+  set("traceability.lot", administrationDocumented ? "required" : "hidden", "traceability");
+  set("traceability.expiration", administrationDocumented ? "required" : "hidden", "traceability");
+  set("allergies", administrationDocumented ? "required" : "hidden", "safety");
+  set("acuteSafetyScreenConfirmed", administrationDocumented ? "required" : "hidden", "safety");
+  set("activeSafetyConcerns", administrationDocumented ? "optional" : "hidden", "safety");
+  requiredAttestations.forEach(([key]) =>
+    set(`attestations.${String(key)}`, administrationDocumented ? "required" : "hidden", "safety"),
+  );
+  set("attestations.prior", administrationDocumented ? "optional" : "hidden", "safety");
+
+  (medication?.verifications ?? []).forEach((key) => {
+    set(
+      `verifications.${key}`,
+      administrationDocumented && requiredVerifications.includes(key) ? "required" : "hidden",
+      "medication",
+    );
+  });
+
+  const hasInitiationOptions = Boolean(medication && injectionInitiationOptions(medication.key).length);
+  set(
+    "initiation.protocol",
+    initiationPath && hasInitiationOptions ? "optional" : "hidden",
+    "initiation",
+    "Select only when the active plan uses a structured initiation/re-initiation pathway.",
+  );
+  const protocol = encounter.initiation?.protocol ?? "";
+  const structuredInitiation = initiationPath && Boolean(protocol);
+  set("initiation.planVerified", structuredInitiation ? "required" : "hidden", "initiation");
+  const oralProtocol =
+    pairedProtocols.has(protocol) ||
+    ["maintena-14day", "asimtufii-14day", "aristada-21day"].includes(protocol);
+  const providerProtocol = [
+    "maintena-provider",
+    "asimtufii-provider",
+    "aristada-provider",
+    "sustenna-provider",
+  ].includes(protocol);
+  const sustennaProtocol = protocol === "sustenna-day1" || protocol === "sustenna-day8";
+  set("initiation.oralStatus", oralProtocol ? "required" : "hidden", "initiation");
+  set("initiation.providerNote", providerProtocol ? "required" : "hidden", "initiation");
+  set("initiation.sustennaOrder", sustennaProtocol ? "required" : "hidden", "initiation");
+  set("initiation.day1Date", protocol === "sustenna-day8" ? "required" : "hidden", "initiation");
+  const paired = structuredInitiation && pairedProtocols.has(protocol);
+  ["dose", "site", "ndc", "lot", "expiration", "given", "orderVerified"].forEach((field) =>
+    set(`initiation.second.${field}`, paired ? "required" : "hidden", "initiation"),
+  );
+  set("secondAdministrationTime", paired ? "required" : "hidden", "administration");
+
+  set("details.volume", administrationDocumented ? "optional" : "hidden", "administration");
+  set("details.volumeUnit", administrationDocumented ? "optional" : "hidden", "administration");
+  set("details.device", administrationDocumented ? "optional" : "hidden", "administration");
+  set(
+    "details.deviceOther",
+    administrationDocumented && encounter.details?.device === "Other" ? "required" : "hidden",
+    "administration",
+  );
+  set("details.siteCondition", administrationDocumented ? "optional" : "hidden", "administration");
+  set(
+    "details.siteConditionOther",
+    administrationDocumented && encounter.details?.siteCondition === "Other" ? "required" : "hidden",
+    "administration",
+  );
+  set("details.productSource", administrationDocumented ? "optional" : "hidden", "traceability");
+  set(
+    "details.productSourceOther",
+    administrationDocumented && encounter.details?.productSource === "Other" ? "required" : "hidden",
+    "traceability",
+  );
+  set("details.preparation", administrationDocumented ? "optional" : "hidden", "traceability");
+  set(
+    "details.preparationOther",
+    administrationDocumented && encounter.details?.preparation === "Other" ? "required" : "hidden",
+    "traceability",
+  );
+  set("details.waste", administrationDocumented ? "optional" : "hidden", "traceability");
+  set(
+    "details.wasteAmount",
+    administrationDocumented && encounter.details?.waste ? "required" : "hidden",
+    "traceability",
+  );
+  set(
+    "details.wasteWitness",
+    administrationDocumented && encounter.details?.waste ? "required" : "hidden",
+    "traceability",
+  );
+  set("details.productIssue", administrationDocumented ? "optional" : "hidden", "traceability");
+  [
+    "productIssueDetail",
+    "productIssueAction",
+    "productIssueRecipient",
+    "productIssueNotificationTime",
+    "productIssueDirection",
+    "productIssueNextStep",
+  ].forEach((field) =>
+    set(
+      `details.${field}`,
+      administrationDocumented && encounter.details?.productIssue ? "required" : "hidden",
+      "traceability",
+    ),
+  );
+  set("details.administrationException", administrationDocumented ? "optional" : "hidden", "administration");
+  ["exceptionSummary", "exceptionRecipient", "exceptionTime", "exceptionOutcome"].forEach((field) =>
+    set(
+      `details.${field}`,
+      administrationDocumented && encounter.details?.administrationException ? "required" : "hidden",
+      "administration",
+    ),
+  );
+
+  const nonAdministration = Boolean(encounter.disposition.kind && encounter.disposition.kind !== "administered");
+  set("disposition.provider", nonAdministration ? "required" : "hidden", "disposition");
+  set("disposition.time", nonAdministration ? "required" : "hidden", "disposition");
+  set("disposition.outcome", nonAdministration ? "required" : "hidden", "disposition");
+  return requirements;
+};
+
+const buildGuidanceProjection = (
+  medication: InjectionMedication | null,
+  timing: InjectionTimingEvaluation,
+  requiredVerifications: readonly MedicationVerificationKey[],
+  allowedRoutes: readonly string[],
+  allowedSites: readonly string[],
+  expectedNextDoseDate: string,
+  nonAdministration: boolean,
+): InjectionGuidanceCard[] => {
+  if (!medication?.clinicalReference) return [];
+  const reference = medication.clinicalReference;
+  const cards: InjectionGuidanceCard[] = [
+    {
+      key: `${medication.key}-active-order`,
+      section: "order",
+      title: "Active order",
+      message:
+        "Document the exact ordered strength, route, and cadence. Reference defaults do not replace the active order.",
+      classification: "order-dependent review",
+    },
+    {
+      key: `${medication.key}-schedule`,
+      section: "timing",
+      title: "Expected next due",
+      message: expectedNextDoseDate
+        ? `${expectedNextDoseDate} is calculated from the documented administration date and selected cadence. Confirm or revise it for the actual follow-up plan.`
+        : "Enter the actual administration date and ordered cadence to calculate an expected next due date.",
+      classification: "local policy",
+    },
+    {
+      key: `${medication.key}-administration`,
+      section: "administration",
+      title: "Route / location",
+      message:
+        allowedSites.length > 0
+          ? `Reference route${allowedRoutes.length > 1 ? "s" : ""}: ${allowedRoutes.join(" / ")}. Select the actual site after checking the active order.`
+          : "Document the actual route and administration location from the active order; this product has no cataloged anatomical default.",
+      classification: "label constraint",
+    },
+    {
+      key: `${medication.key}-product`,
+      section: "traceability",
+      title: "Product traceability",
+      message:
+        "Choose the scanned or known package NDC when available, then document the dispensed lot and expiration. A different package NDC remains valid documentation and needs package verification.",
+      classification: "local policy",
+    },
+    {
+      key: `${medication.key}-disposition`,
+      section: "disposition",
+      title: nonAdministration ? "Handoff documentation" : "Final documentation choice",
+      message: nonAdministration
+        ? "No medication administration is being documented. Record the recipient, decision time, and concise direction; administration and product details are not applicable."
+        : "Select administration only after the actual event is documented. Use a handoff disposition when medication was not administered.",
+      classification: "local policy",
+    },
+  ];
+  cards.push(...reference.facts.map((entry, index) => ({
+    key: `${medication.key}-${entry.id}`,
+    section: entry.classification === "label constraint" ? "administration" : "timing",
+    title: index === 0 ? "Product guidance" : "Order review",
+    message: entry.statement,
+    classification: entry.classification,
+  })));
+  if (timing.message && timing.state !== "idle") {
+    cards.push({
+      key: `${medication.key}-timing`,
+      section: "timing",
+      title: "Schedule",
+      message: timing.message,
+      classification:
+        medication.timingMode === "orderVerify" ? "order-dependent review" : "label constraint",
+    });
+  }
+  cards.push({
+    key: `${medication.key}-verification`,
+    section: "safety",
+    title: requiredVerifications.length ? "Required medication checks" : "Safety review",
+    message: requiredVerifications.length
+      ? requiredVerifications.map((key) => verificationLabels[key]).join("; ")
+      : "Complete the applicable safety review and record an exception only when it is actually present.",
+    classification: "label constraint",
+  });
+  return cards;
+};
 
 export const InjectionEngine: ClinicalEngine<
   InjectionEncounter,
@@ -1437,6 +1918,9 @@ export const InjectionEngine: ClinicalEngine<
       : null;
     const dispositionKind = encounter.disposition?.kind ?? "";
     const administrationPath = dispositionKind === "" || dispositionKind === "administered";
+    const phase = injectionClinicalPhaseForReason(encounter.reason);
+    let requiredVerifications: MedicationVerificationKey[] = [];
+    let expectedNextDoseDate = "";
 
     if (!medication) {
       if (started) {
@@ -1524,6 +2008,9 @@ export const InjectionEngine: ClinicalEngine<
     let repeatsPreviousSite = false;
 
     if (medication) {
+      requiredVerifications = medication.clinicalReference
+        ? medicationVerificationsForPhase(medication.clinicalReference, phase)
+        : medication.verifications;
       const rule = medication.administrationRule(encounter.dose);
       allowedRoutes = rule.routes;
       allowedSites = rule.sites;
@@ -1553,6 +2040,17 @@ export const InjectionEngine: ClinicalEngine<
       }
 
       if (administrationPath) {
+        if (medication.key === "other" && !encounter.customMedication?.trim()) {
+          stops.push(
+            issue(
+              "stop",
+              "medication.other-name",
+              "Document the medication name for an Other medication.",
+              "customMedication",
+              "medication",
+            ),
+          );
+        }
         if (!encounter.dose.trim()) {
           stops.push(
             issue("stop", "dose.required", "Select or enter the ordered dose.", "dose", "medication"),
@@ -1603,7 +2101,7 @@ export const InjectionEngine: ClinicalEngine<
               "administration",
             ),
           );
-        } else if (!rule.sites.includes(normalizedSite)) {
+        } else if (rule.sites.length > 0 && !rule.sites.includes(normalizedSite)) {
           stops.push(
             issue(
               "stop",
@@ -1646,6 +2144,16 @@ export const InjectionEngine: ClinicalEngine<
               "administration",
             ),
           );
+        }
+        if (encounter.administrationDate && encounter.intervalKey) {
+          expectedNextDoseDate = calculateNextInjectionDate(
+            medication,
+            encounter.intervalKey,
+            encounter.administrationDate,
+          );
+          if (expectedNextDoseDate) {
+            calculatedDates.expectedNextDoseDate = expectedNextDoseDate;
+          }
         }
         if (encounter.intervalKey && encounter.intervalKey !== "once" && !encounter.nextDoseDate) {
           stops.push(
@@ -1734,7 +2242,7 @@ export const InjectionEngine: ClinicalEngine<
             ),
           );
         });
-        medication.verifications.forEach((verification) => {
+        requiredVerifications.forEach((verification) => {
           if (!verificationSatisfied(encounter, verification)) {
             stops.push(
               issue(
@@ -1799,7 +2307,7 @@ export const InjectionEngine: ClinicalEngine<
         const vitalEvaluation = evaluateVitals(encounter);
         stops.push(...vitalEvaluation.stops);
         warnings.push(...vitalEvaluation.warnings);
-        timing = evaluateTiming(encounter, medication);
+        timing = evaluateTimingWithCadence(encounter, medication);
         if (timing.state === "stop") {
           stops.push(issue("stop", "timing.outside-window", timing.message, "priorDoseDate", "timing"));
         } else if (timing.state === "warning") {
@@ -1807,12 +2315,39 @@ export const InjectionEngine: ClinicalEngine<
             issue("warning", "timing.review", timing.message, "priorDoseDate", "timing"),
           );
         }
-        evaluateInitiation(
-          encounter,
-          stops,
-          calculatedDates,
-          encounter.administrationDate || context.today || localIsoDate(),
-        );
+        // The initiation state is not a generic maintenance checklist.  A
+        // draft can carry an older protocol value after staff change the visit
+        // reason, so run these controls only for an explicitly documented
+        // initiation/re-initiation encounter.
+        if (phase === "initiation" || phase === "reinitiation") {
+          evaluateInitiation(
+            encounter,
+            stops,
+            calculatedDates,
+            encounter.administrationDate || context.today || localIsoDate(),
+          );
+        }
+        if (medication.clinicalReference) {
+          conditionalRequirementsForEncounter(
+            medication.clinicalReference,
+            phase,
+            encounter.dose,
+          ).forEach((requirement) => {
+            const target =
+              requirement.severity === "stop"
+                ? stops
+                : warnings;
+            target.push(
+              issue(
+                requirement.severity,
+                requirement.code,
+                requirement.message,
+                requirement.field,
+                requirement.section,
+              ),
+            );
+          });
+        }
       }
     }
 
@@ -1838,6 +2373,22 @@ export const InjectionEngine: ClinicalEngine<
       Boolean(dispositionKind && dispositionKind !== "administered") && uniqueStops.length === 0;
     const canFinalize = administrationDocumented || handoffReady;
     const readiness = readinessFrom(started, uniqueStops, uniqueWarnings);
+    const requirements = buildRequirementProjection(
+      encounter,
+      medication,
+      administrationPath,
+      phase,
+      requiredVerifications,
+    );
+    const guidance = buildGuidanceProjection(
+      medication,
+      timing,
+      requiredVerifications,
+      allowedRoutes,
+      allowedSites,
+      expectedNextDoseDate,
+      Boolean(dispositionKind && dispositionKind !== "administered"),
+    );
 
     return {
       workflow: "injection",
@@ -1861,6 +2412,14 @@ export const InjectionEngine: ClinicalEngine<
             ? "handoff-ready"
             : "draft",
         initiationProtocol: encounter.initiation?.protocol ?? "",
+        phase,
+        requiredVerifications,
+        requirements,
+        guidance,
+        expectedNextDoseDate,
+        ...(medication?.clinicalReference
+          ? { clinicalReferenceVersion: INJECTION_CLINICAL_REFERENCE_VERSION }
+          : {}),
       },
     };
   },

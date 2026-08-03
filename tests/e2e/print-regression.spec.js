@@ -57,8 +57,8 @@ async function preparePrintableInjection(page) {
   await panel.locator('input[type="month"]').first().fill('2027-12');
 
   await panel.getByRole('tab', { name: 'Verification', exact: true }).click();
-  await panel.locator('input[placeholder*="Verify in active record"]').fill('NKDA verified in active record');
-  await panel.getByText('No acute concerns today confirmed', { exact: true }).click();
+  await panel.locator('input[placeholder*="allergy / ADR status"]').fill('NKDA verified in active record');
+  await panel.locator('label[for="inj-safety-none"]').click();
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.locator('input[type="time"]').first().fill('09:41');

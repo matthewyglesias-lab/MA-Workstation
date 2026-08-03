@@ -30,6 +30,11 @@ export interface PatientContext {
   name?: string;
   dob?: string;
   medicalRecordNumber?: string;
+  /** Browser-local record identity; never presented as a server MRN. */
+  localRecordId?: string;
+  visitLabel?: string;
+  medicationLabel?: string;
+  allergyStatus?: string;
   sourceWorkflow?: WorkflowId;
 }
 
@@ -58,15 +63,6 @@ export interface WorkQueueItem {
   actionLabel?: string;
 }
 
-export interface ActivityItem {
-  id: string;
-  workflow: WorkflowId;
-  label: string;
-  detail?: string;
-  timeLabel?: string;
-  tone?: ClinicalTone;
-}
-
 export interface InjectionRecordRow {
   id: string;
   patientLabel: string;
@@ -83,15 +79,27 @@ export interface NoteSection {
   destination?: string;
 }
 
-export interface ToolbarAction {
-  id: string;
-  label: string;
-  shortLabel?: string;
-  shortcut?: string;
-  icon: DesktopIconName;
-  disabled?: boolean;
-  pressed?: boolean;
-  onInvoke: () => void;
+/** The persistence/lock state of the active local injection record. */
+export type InjectionRecordLifecycle =
+  | "new"
+  | "draft"
+  | "locked"
+  | "saving"
+  | "error";
+
+/**
+ * Injection lifecycle controls have one visible home in the worksheet. The
+ * menu, toolbar, and function keys accelerate these same actions; they are
+ * not alternate record-management surfaces.
+ */
+export interface InjectionRecordActions {
+  lifecycle: InjectionRecordLifecycle;
+  detail?: string;
+  /** First typed clinical blocker, when one exists. */
+  blockingDetail?: string;
+  canDiscard: boolean;
+  onStartNew: () => void;
+  onDiscard: () => void;
 }
 
 export interface LegacyPanelAdapter {
@@ -115,7 +123,6 @@ export interface WorkflowRenderContext {
 }
 
 export interface ClinicalDesktopShellProps {
-  appName?: string;
   organizationName?: string;
   versionLabel?: string;
   activeWorkflow?: WorkflowId;
@@ -130,7 +137,6 @@ export interface ClinicalDesktopShellProps {
   workflowSummaries?: Partial<Record<WorkflowId, WorkflowSummary>>;
   needsReview?: WorkQueueItem[];
   todayQueue?: WorkQueueItem[];
-  recentActivity?: ActivityItem[];
   injectionRecords?: InjectionRecordRow[];
   readiness?: ReadinessItem[];
   noteSections?: NoteSection[];
@@ -142,16 +148,21 @@ export interface ClinicalDesktopShellProps {
     workflow: WorkflowId,
     context: WorkflowRenderContext,
   ) => ComponentChildren;
-  toolbarActions?: ToolbarAction[];
   postState?: "idle" | "posting" | "posted" | "error";
   postMessage?: string;
   canComplete?: boolean;
-  canReview?: boolean;
-  reviewActionMode?: "complete" | "review";
   statusMessage?: string;
   onSaveDraft?: () => void;
   onReviewComplete?: () => void;
+  injectionRecordActions?: InjectionRecordActions;
+  onStartNewInjection?: () => void;
   onOpenRecords?: () => void;
+  /** A truthful, local contextual lookup (currently the local Record List). */
+  onLookup?: () => void;
+  /** Opens the local documenting-staff sign-in dialog. */
+  onOpenStaff?: () => void;
+  /** Opens the local visit-location dialog. */
+  onOpenLocation?: () => void;
   onOpenKnowledge?: () => void;
   onOpenCloseout?: () => void;
   onCopyNoteSection?: (section: NoteSection) => void;
@@ -187,6 +198,6 @@ export const WORKFLOW_LABELS: Record<WorkflowId, string> = {
 
 /**
  * Add this attribute to the first action that should receive focus after a
- * permanent record is posted (for example, “Open read-only record”).
+ * browser-local record is locked (for example, “Open read-only record”).
  */
 export const LOCKED_RECORD_ACTION_SELECTOR = "[data-locked-record-action]";

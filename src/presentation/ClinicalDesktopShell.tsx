@@ -1,6 +1,7 @@
-import type { ComponentChildren, TargetedMouseEvent } from "preact";
+import type { ComponentChildren } from "preact";
 import { createContext } from "preact";
 import {
+  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -8,17 +9,28 @@ import {
   useState,
 } from "preact/hooks";
 import "./clinical-desktop.css";
+import "./meditech-workstation.css";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
+import {
+  MeditechCommandDeck,
+  MeditechRecordRail,
+} from "./MeditechChrome";
+import {
+  FUNCTION_KEY_PROFILE,
+  getFunctionKeyCommand,
+  resolveFunctionKeyCommand,
+  type FunctionKeyActions,
+} from "./FunctionKeyProfile";
 import { LegacyWorkflowHost } from "./LegacyWorkflowHost";
 import { NoteInspector } from "./NoteInspector";
 import { StartCenter } from "./StartCenter";
 import {
   WORKFLOW_LABELS,
-  WORKFLOW_ORDER,
   LOCKED_RECORD_ACTION_SELECTOR,
   type ClinicalDesktopShellProps,
   type DesktopPane,
+  type InjectionRecordActions as InjectionRecordActionsConfig,
   type PatientContext,
   type WorkflowId,
 } from "./types";
@@ -57,15 +69,14 @@ function contextsMismatch(
   const activeDob = normalizedPatientValue(activePatient.dob);
   const workflowDob = normalizedPatientValue(workflowPatient.dob);
   return Boolean(
-    (activeName && workflowName && activeName !== workflowName) ||
-      (activeDob && workflowDob && activeDob !== workflowDob),
+    (workflowName && activeName !== workflowName) ||
+      (workflowDob && activeDob !== workflowDob),
   );
 }
 
 export function ClinicalDesktopShell({
-  appName = "IPMG Clinical Workstation",
   organizationName = "Integrated Psychiatric Medical Group",
-  versionLabel = "Clinical Desktop 2004",
+  versionLabel = "MAGIC Ambulatory",
   activeWorkflow,
   defaultActiveWorkflow = "home",
   onWorkflowChange,
@@ -78,7 +89,6 @@ export function ClinicalDesktopShell({
   workflowSummaries = {},
   needsReview = [],
   todayQueue = [],
-  recentActivity = [],
   injectionRecords = [],
   readiness = [],
   noteSections = [],
@@ -87,16 +97,18 @@ export function ClinicalDesktopShell({
   workflowSlots = {},
   legacyPanels = {},
   renderWorkflow,
-  toolbarActions = [],
   postState = "idle",
   postMessage,
   canComplete = false,
-  canReview = false,
-  reviewActionMode = "complete",
   statusMessage,
   onSaveDraft,
   onReviewComplete,
+  injectionRecordActions,
+  onStartNewInjection,
   onOpenRecords,
+  onLookup,
+  onOpenStaff,
+  onOpenLocation,
   onOpenKnowledge,
   onOpenCloseout,
   onCopyNoteSection,
@@ -118,6 +130,10 @@ export function ClinicalDesktopShell({
   const workHostRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const selectedWorkflow = activeWorkflow ?? internalWorkflow;
+  const helpCommand = getFunctionKeyCommand("help");
+  const fileCommand = getFunctionKeyCommand("file");
+  const lookupCommand = getFunctionKeyCommand("lookup");
+  const localEmrCommand = getFunctionKeyCommand("local-emr");
   const previousWorkflowRef = useRef<WorkflowId>(selectedWorkflow);
   const workflowScrollPositionsRef = useRef<
     Partial<Record<WorkflowId, number>>
@@ -142,28 +158,156 @@ export function ClinicalDesktopShell({
     setInternalStatus(`${WORKFLOW_LABELS[workflow]} opened.`);
   };
 
-  const focusInspector = () => {
+  const restorePreviousFocus = () => {
+    globalThis.setTimeout(() => previousFocusRef.current?.focus(), 0);
+  };
+
+  const openShortcutHelp = useCallback(() => {
     previousFocusRef.current =
       typeof document !== "undefined"
         ? (document.activeElement as HTMLElement | null)
         : null;
-    setFocusedPane("inspector");
-    setMobilePane("inspector");
-    globalThis.setTimeout(() => {
-      const inspectorWindow = shellRef.current?.querySelector<HTMLElement>(
-        ".cd2004-inspector-window",
-      );
-      const focusTarget =
-        inspectorWindow?.querySelector<HTMLElement>(
-          "button:not([disabled]), [tabindex='0']",
-        ) ?? inspectorWindow;
-      focusTarget?.focus();
-    }, 0);
-  };
+    setShowShortcutHelp(true);
+  }, []);
 
-  const restorePreviousFocus = () => {
-    globalThis.setTimeout(() => previousFocusRef.current?.focus(), 0);
-  };
+  const requestDraftSave = useCallback(() => {
+    if (onSaveDraft) {
+      onSaveDraft();
+      setInternalStatus("Draft save requested.");
+    } else {
+      setInternalStatus("Draft saving is unavailable in this workflow.");
+    }
+  }, [onSaveDraft]);
+
+  const focusWorksheetSection = useCallback((direction: 1 | -1) => {
+    const worksheet = workHostRef.current;
+    if (!worksheet) return false;
+    const sections = Array.from(
+      worksheet.querySelectorAll<HTMLElement>(
+        ".wfp-section, [data-workflow-section]",
+      ),
+    );
+    if (!sections.length) return false;
+    const active = document.activeElement as HTMLElement | null;
+    const current = sections.findIndex((section) => section.contains(active));
+    const next =
+      current < 0
+        ? direction > 0
+          ? 0
+          : sections.length - 1
+        : (current + direction + sections.length) % sections.length;
+    const target = sections[next]!;
+    target.tabIndex = -1;
+    target.scrollIntoView({ block: "center" });
+    const focusTarget =
+      target.querySelector<HTMLElement>(
+        "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex='0']",
+      ) ?? target;
+    focusTarget.focus({ preventScroll: true });
+    setFocusedPane("work");
+    setMobilePane("work");
+    setInternalStatus(`${direction > 0 ? "Next" : "Previous"} worksheet section focused.`);
+    return true;
+  }, []);
+
+  const focusWorksheetPage = useCallback((direction: 1 | -1) => {
+    const worksheet = workHostRef.current;
+    if (!worksheet) return false;
+    const tabs = Array.from(
+      worksheet.querySelectorAll<HTMLButtonElement>("[role='tab']:not([disabled])"),
+    );
+    if (!tabs.length) return focusWorksheetSection(direction);
+    const active = document.activeElement as HTMLElement | null;
+    const current = tabs.findIndex(
+      (tab) => tab.getAttribute("aria-selected") === "true" || tab === active,
+    );
+    const next =
+      current < 0
+        ? direction > 0
+          ? 0
+          : tabs.length - 1
+        : (current + direction + tabs.length) % tabs.length;
+    const target = tabs[next]!;
+    target.click();
+    target.focus({ preventScroll: true });
+    setFocusedPane("work");
+    setMobilePane("work");
+    setInternalStatus(`${direction > 0 ? "Next" : "Previous"} worksheet page focused.`);
+    return true;
+  }, [focusWorksheetSection]);
+
+  const cycleFocusZone = useCallback(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const zones = [
+      workHostRef.current,
+      shell.querySelector<HTMLElement>(".meditech-record-list"),
+      shell.querySelector<HTMLElement>(".meditech-command-deck"),
+    ].filter(
+      (element): element is HTMLElement =>
+        Boolean(element && element.getClientRects().length),
+    );
+    if (!zones.length) return;
+    const active = document.activeElement as HTMLElement | null;
+    const current = zones.findIndex((zone) => zone.contains(active));
+    const target = zones[(current + 1 + zones.length) % zones.length]!;
+    const focusTarget =
+      target.querySelector<HTMLElement>(
+        "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [role='tab'][aria-selected='true'], [tabindex='0']",
+      ) ?? target;
+    focusTarget.focus({ preventScroll: true });
+    if (target === workHostRef.current) {
+      setFocusedPane("work");
+      setMobilePane("work");
+      setInternalStatus("Worksheet zone focused.");
+    } else if (target.classList.contains("meditech-record-list")) {
+      setInternalStatus("Record List zone focused.");
+    } else {
+      setInternalStatus("Command zone focused.");
+    }
+  }, []);
+
+  const openContextualLookup = useCallback(() => {
+    const active = document.activeElement as HTMLElement | null;
+    const select = active?.closest<HTMLSelectElement>("select:not([disabled])");
+    if (select) {
+      select.focus({ preventScroll: true });
+      select.click();
+      setInternalStatus("Local field lookup opened.");
+      return;
+    }
+    if (onLookup) {
+      onLookup();
+      setInternalStatus("Local Record List opened.");
+      return;
+    }
+    setInternalStatus("No local lookup is available in this context.");
+  }, [onLookup]);
+
+  const safeBack = useCallback(() => {
+    // Menus own the first Escape. Nothing here navigates away from a draft or
+    // destroys local work; callers may only dismiss a local utility.
+    if (openMenu) {
+      const id = openMenu;
+      setOpenMenu(null);
+      globalThis.setTimeout(() => {
+        shellRef.current
+          ?.querySelector<HTMLElement>(
+            `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
+          )
+          ?.focus({ preventScroll: true });
+      }, 0);
+      return;
+    }
+    if (showShortcutHelp) {
+      setShowShortcutHelp(false);
+      restorePreviousFocus();
+      return;
+    }
+    onEscape?.();
+    restorePreviousFocus();
+    setInternalStatus("Back: no draft was discarded.");
+  }, [onEscape, openMenu, showShortcutHelp]);
 
   useEffect(() => {
     onWorkAreaReady?.(workHostRef.current);
@@ -274,7 +418,8 @@ export function ClinicalDesktopShell({
       const modalOwnsKeyboard = Boolean(
         showShortcutHelp ||
           shellRef.current?.inert ||
-          eventTarget?.closest('[aria-modal="true"]'),
+          document.querySelector("dialog[open]") ||
+          eventTarget?.closest('dialog[open], [aria-modal="true"]'),
       );
       if (modalOwnsKeyboard) {
         if (!(showShortcutHelp && event.key === "Escape")) return;
@@ -288,12 +433,7 @@ export function ClinicalDesktopShell({
       const key = event.key.toLocaleLowerCase();
       if ((event.ctrlKey || event.metaKey) && key === "s") {
         event.preventDefault();
-        if (onSaveDraft) {
-          onSaveDraft();
-          setInternalStatus("Draft save requested.");
-        } else {
-          setInternalStatus("Draft saving is unavailable in this workflow.");
-        }
+        requestDraftSave();
         return;
       }
 
@@ -321,87 +461,60 @@ export function ClinicalDesktopShell({
         }
       }
 
-      if (event.key === "F6") {
-        event.preventDefault();
-        if (onOpenRecords) {
-          onOpenRecords();
-          setInternalStatus("Injection records opened.");
-        } else {
-          setInternalStatus("Injection records are unavailable.");
-        }
-        return;
-      }
-
-      if (event.key === "F8") {
-        event.preventDefault();
-        focusInspector();
-        setInternalStatus("Note and readiness window focused.");
-        return;
-      }
-
-      if (event.key === "F10") {
-        event.preventDefault();
-        if (
-          (canComplete || canReview) &&
-          postState !== "posting" &&
-          onReviewComplete
-        ) {
-          onReviewComplete();
-          setInternalStatus(
-            reviewActionMode === "review"
-              ? "Current note and readiness focused for review."
-              : "Record validation requested.",
-          );
-        } else {
-          setInternalStatus(
-            reviewActionMode === "review"
-              ? "Review is unavailable in this workflow."
-              : "Record is not ready to complete.",
-          );
-        }
-        return;
-      }
-
-      if (event.key === "Escape") {
-        // An open menu consumes Escape first and returns focus to its title,
-        // without disturbing the shell-level Escape handling below it.
-        if (openMenu) {
-          event.preventDefault();
-          const id = openMenu;
-          setOpenMenu(null);
-          globalThis.setTimeout(() => {
-            shellRef.current
-              ?.querySelector<HTMLElement>(
-                `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
-              )
-              ?.focus({ preventScroll: true });
-          }, 0);
+      const command = resolveFunctionKeyCommand(event.key, event.shiftKey);
+      if (!command) return;
+      event.preventDefault();
+      switch (command.id) {
+        case "help":
+          openShortcutHelp();
           return;
-        }
-        if (showShortcutHelp) {
-          event.preventDefault();
-          setShowShortcutHelp(false);
-          restorePreviousFocus();
-        } else {
-          onEscape?.();
-          restorePreviousFocus();
-        }
+        case "next-section":
+          focusWorksheetSection(1);
+          return;
+        case "previous-section":
+          focusWorksheetSection(-1);
+          return;
+        case "next-page":
+          focusWorksheetPage(1);
+          return;
+        case "previous-page":
+          focusWorksheetPage(-1);
+          return;
+        case "focus-next-zone":
+          cycleFocusZone();
+          return;
+        case "lookup":
+          openContextualLookup();
+          return;
+        case "local-emr":
+          if (onOpenRecords) {
+            onOpenRecords();
+            setInternalStatus("Local EMR / Record List opened.");
+          } else {
+            setInternalStatus("Local Record List is unavailable.");
+          }
+          return;
+        case "file":
+          requestDraftSave();
+          return;
+        case "back":
+          safeBack();
+          return;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
-    canComplete,
-    canReview,
+    cycleFocusZone,
+    focusWorksheetPage,
+    focusWorksheetSection,
+    openContextualLookup,
     onOpenRecords,
-    onReviewComplete,
-    onSaveDraft,
-    postState,
-    reviewActionMode,
-    selectedWorkflow,
+    openShortcutHelp,
+    requestDraftSave,
+    safeBack,
     showShortcutHelp,
-    openMenu,
   ]);
 
   // Clicking anywhere outside the menu bar dismisses an open menu, without
@@ -467,12 +580,34 @@ export function ClinicalDesktopShell({
     summaries: workflowSummaries,
     needsReview,
     todayQueue,
-    recentActivity,
     injectionRecords,
     onWorkflowOpen: openWorkflow,
     onQueueItemOpen,
     onRecordOpen,
+    onStartNewInjection,
   });
+
+  const inspectorPanel = (
+    <Panel
+      pane="inspector"
+      title="Document / Status"
+      subtitle={WORKFLOW_LABELS[selectedWorkflow]}
+      active={focusedPane === "inspector"}
+      mobileActive={mobilePane === "inspector"}
+      onActivate={setFocusedPane}
+    >
+      <NoteInspector
+        title={noteTitle ?? `${WORKFLOW_LABELS[selectedWorkflow]} note`}
+        subtitle={noteSubtitle}
+        readiness={readiness}
+        sections={noteSections}
+        postState={postState}
+        postMessage={postMessage}
+        onCopySection={onCopyNoteSection}
+        onCopyAll={onCopyAllNotes}
+      />
+    </Panel>
+  );
 
   return (
     <div
@@ -491,9 +626,14 @@ export function ClinicalDesktopShell({
             <DesktopIcon name="administer" />
           </span>
           <span class="cd2004-app-title">
-            {appName} — {versionLabel}
+            <b>MA</b>
+            <span>MEDICATION ADMINISTRATION</span>
+            <small>{versionLabel}</small>
           </span>
-          <span class="cd2004-app-environment">LOCAL WORKSTATION</span>
+          <span class="cd2004-app-environment">
+            <b>LOCAL / TRAINING</b>
+            <small>{staffLabel || "NO STAFF"} · {locationLabel || "NO FACILITY"}</small>
+          </span>
         </div>
 
         <nav
@@ -504,29 +644,29 @@ export function ClinicalDesktopShell({
           <MenuBarContext.Provider value={menuBar}>
           <DesktopMenu id="file" label="File" mnemonic="F">
             <MenuCommand
-              label="Save Draft"
-              shortcut="Ctrl+S"
+              label="File local draft"
+              shortcut={fileCommand.keyLabel}
               disabled={!onSaveDraft}
-              onInvoke={onSaveDraft}
+              onInvoke={requestDraftSave}
             />
             <MenuCommand
-              label="Open Injection Records"
-              shortcut="F6"
+              label="Local EMR / Record List"
+              shortcut={localEmrCommand.keyLabel}
               disabled={!onOpenRecords}
               onInvoke={onOpenRecords}
             />
           </DesktopMenu>
           <DesktopMenu id="chart" label="Chart" mnemonic="C">
             <MenuCommand
-              label="Use Workflow Patient"
+              label="Use local workflow patient"
               disabled={!isMismatch || !onUseWorkflowPatient}
               onInvoke={() => onUseWorkflowPatient?.(selectedWorkflow)}
             />
             <MenuCommand
-              label="Injection Records"
-              shortcut="F6"
-              disabled={!onOpenRecords}
-              onInvoke={onOpenRecords}
+              label="Lookup local record"
+              shortcut={lookupCommand.keyLabel}
+              disabled={!onLookup}
+              onInvoke={openContextualLookup}
             />
           </DesktopMenu>
           <DesktopMenu id="workflows" label="Workflows" mnemonic="W">
@@ -541,6 +681,16 @@ export function ClinicalDesktopShell({
           </DesktopMenu>
           <DesktopMenu id="tools" label="Tools" mnemonic="T">
             <MenuCommand
+              label="Staff sign-in…"
+              disabled={!onOpenStaff}
+              onInvoke={onOpenStaff}
+            />
+            <MenuCommand
+              label="Visit location…"
+              disabled={!onOpenLocation}
+              onInvoke={onOpenLocation}
+            />
+            <MenuCommand
               label="Knowledge Base"
               disabled={!onOpenKnowledge}
               onInvoke={onOpenKnowledge}
@@ -554,6 +704,7 @@ export function ClinicalDesktopShell({
           <DesktopMenu id="help" label="Help" mnemonic="H">
             <MenuCommand
               label="Keyboard Reference"
+              shortcut={helpCommand.keyLabel}
               onInvoke={(returnFocus) => {
                 previousFocusRef.current =
                   returnFocus ??
@@ -565,54 +716,6 @@ export function ClinicalDesktopShell({
           </MenuBarContext.Provider>
         </nav>
 
-        <div class="cd2004-toolbar" role="toolbar" aria-label="Clinical commands">
-          <ToolbarButton
-            label="Save Draft"
-            shortLabel="Save"
-            shortcut="Ctrl+S"
-            icon="save"
-            disabled={!onSaveDraft}
-            onClick={onSaveDraft}
-          />
-          <ToolbarButton
-            label="Injection Records"
-            shortLabel="Records"
-            shortcut="F6"
-            icon="records"
-            disabled={!onOpenRecords}
-            onClick={onOpenRecords}
-          />
-          <ToolbarButton
-            label="Note / Readiness"
-            shortLabel="Note"
-            shortcut="F8"
-            icon="note"
-            onClick={focusInspector}
-          />
-          <span class="cd2004-toolbar-separator" aria-hidden="true" />
-          {toolbarActions.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              class={`cd2004-toolbar-button ${action.pressed ? "is-pressed" : ""}`}
-              aria-label={action.label}
-              aria-pressed={action.pressed}
-              title={
-                action.shortcut
-                  ? `${action.label} (${action.shortcut})`
-                  : action.label
-              }
-              disabled={action.disabled}
-              onClick={action.onInvoke}
-            >
-              <span class="cd2004-toolbar-glyph" aria-hidden="true">
-                <DesktopIcon name={action.icon} />
-              </span>
-              <span>{action.shortLabel ?? action.label}</span>
-            </button>
-          ))}
-        </div>
-
         <PatientBanner
           patient={patient}
           workflowPatient={workflowPatient}
@@ -621,6 +724,7 @@ export function ClinicalDesktopShell({
           staffLabel={staffLabel}
           locationLabel={locationLabel}
           onUseWorkflowPatient={onUseWorkflowPatient}
+          onSelectLocalRecord={onOpenRecords}
         />
       </header>
 
@@ -682,9 +786,10 @@ export function ClinicalDesktopShell({
       </div>
 
       <main
-        class="cd2004-workspace"
+        class={`cd2004-workspace ${selectedWorkflow === "administer" ? "has-central-preview" : ""}`}
         id="cd2004-work-area"
         data-mobile-pane={mobilePane}
+        data-workflow={selectedWorkflow}
       >
         <Panel
           pane="work"
@@ -699,12 +804,15 @@ export function ClinicalDesktopShell({
             selectedWorkflow !== "home" ? (
               <div class="cd2004-work-context-strip">
                 <span>
-                  <strong>Module:</strong> {WORKFLOW_LABELS[selectedWorkflow]}
+                  <strong>Document:</strong>{" "}
+                  {selectedWorkflow === "administer"
+                    ? "Medication administration"
+                    : WORKFLOW_LABELS[selectedWorkflow]}
                 </span>
                 <span>
-                  <strong>State:</strong>{" "}
+                  <strong>Local state:</strong>{" "}
                   {postState === "posted"
-                    ? "Locked"
+                    ? "Locked local record"
                     : workflowSummaries[selectedWorkflow]?.state ?? "Draft"}
                 </span>
                 {isMismatch && <span class="is-warning">Patient mismatch</span>}
@@ -721,83 +829,81 @@ export function ClinicalDesktopShell({
             {postState === "posting" && (
               <div class="cd2004-posting-strip" role="status">
                 <span aria-hidden="true" />
-                Validating required fields and writing permanent record…
+                Validating required fields and writing local record…
               </div>
             )}
             {postState === "posted" && selectedWorkflow === "administer" && (
               <div class="cd2004-work-locked-banner" role="status">
                 <DesktopIcon name="check" />
-                <strong>INJECTION POSTED · RECORD LOCKED</strong>
+                <strong>LOCAL RECORD LOCKED</strong>
                 <span>Read-only actions and addenda remain available.</span>
               </div>
+            )}
+            {selectedWorkflow === "administer" && injectionRecordActions && (
+              <InjectionRecordActions
+                actions={injectionRecordActions}
+                canComplete={canComplete}
+                blockerCount={
+                  readiness.filter((item) => item.state === "stop").length
+                }
+                posting={postState === "posting"}
+                onSaveDraft={onSaveDraft}
+                onFinish={onReviewComplete}
+              />
             )}
             {workflowContent}
           </div>
         </Panel>
 
-        <Panel
-          pane="inspector"
-          title="Note / Readiness"
-          subtitle={WORKFLOW_LABELS[selectedWorkflow]}
-          active={focusedPane === "inspector"}
-          mobileActive={mobilePane === "inspector"}
-          onActivate={setFocusedPane}
-        >
-          <NoteInspector
-            title={noteTitle ?? `${WORKFLOW_LABELS[selectedWorkflow]} note`}
-            subtitle={noteSubtitle}
-            readiness={readiness}
-            sections={noteSections}
-            postState={postState}
-            postMessage={postMessage}
-            canComplete={canComplete && Boolean(onReviewComplete)}
-            canReview={canReview && Boolean(onReviewComplete)}
-            actionMode={reviewActionMode}
-            onCopySection={onCopyNoteSection}
-            onCopyAll={onCopyAllNotes}
-            onComplete={onReviewComplete}
+        {selectedWorkflow === "administer" && inspectorPanel}
+
+        <aside class="meditech-context-rail">
+          <MeditechRecordRail
+            selectedWorkflow={selectedWorkflow}
+            summaries={workflowSummaries}
+            patient={patient}
+            onWorkflowOpen={openWorkflow}
+            onOpenRecords={onOpenRecords}
           />
-        </Panel>
+          {selectedWorkflow !== "administer" && inspectorPanel}
+        </aside>
       </main>
 
-      {/*
-        Workflow tab strip along the bottom edge - the VistA/CPRS signature.
-        This IS the navigator, relocated: it keeps the `.cd2004-navigator`
-        landmark and the `.cd2004-nav-item[title]` handles the whole test suite
-        navigates by, while freeing the entire left edge for clinical content.
-      */}
-      <nav
-        class="cd2004-navigator cd2004-print-exclude"
-        aria-label="Clinical modules"
+      <MeditechCommandDeck
+        selectedWorkflow={selectedWorkflow}
+        actions={{
+          help: { onInvoke: openShortcutHelp },
+          "next-section": { onInvoke: () => focusWorksheetSection(1) },
+          "previous-section": { onInvoke: () => focusWorksheetSection(-1) },
+          "next-page": { onInvoke: () => focusWorksheetPage(1) },
+          "previous-page": { onInvoke: () => focusWorksheetPage(-1) },
+          "focus-next-zone": { onInvoke: cycleFocusZone },
+          lookup: { onInvoke: openContextualLookup },
+          "local-emr": {
+            onInvoke: onOpenRecords,
+            disabled: !onOpenRecords,
+          },
+          file: {
+            onInvoke: requestDraftSave,
+            disabled: !onSaveDraft,
+          },
+          back: { onInvoke: safeBack },
+        } satisfies FunctionKeyActions}
+      />
+
+      <div
+        class="meditech-mobile-command-surface cd2004-print-exclude"
+        role="toolbar"
+        aria-label="Local mobile commands"
       >
-        {WORKFLOW_ORDER.map((workflow) => {
-          const summary = workflowSummaries[workflow];
-          const accelerator = shortcutWorkflows.indexOf(workflow) + 1;
-          return (
-            <button
-              key={workflow}
-              type="button"
-              class={[
-                "cd2004-nav-item",
-                selectedWorkflow === workflow ? "is-selected" : "",
-                `is-${summary?.state ?? "idle"}`,
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              aria-current={selectedWorkflow === workflow ? "page" : undefined}
-              title={WORKFLOW_LABELS[workflow]}
-              onClick={() => openWorkflow(workflow)}
-            >
-              <DesktopIcon name={workflow} />
-              <span>{WORKFLOW_LABELS[workflow]}</span>
-              {accelerator > 0 && <kbd>{accelerator}</kbd>}
-              {summary?.count ? (
-                <em aria-label={`${summary.count} items`}>{summary.count}</em>
-              ) : null}
-            </button>
-          );
-        })}
-      </nav>
+        <strong>LOCAL COMMANDS</strong>
+        <button type="button" disabled={!onOpenRecords} onClick={onOpenRecords}>
+          Record List <kbd>F11</kbd>
+        </button>
+        <button type="button" onClick={openShortcutHelp}>
+          Help <kbd>F1</kbd>
+        </button>
+      </div>
 
       {/*
         Segmented status bar. Replaces the taskbar/Start button, which emulated
@@ -853,12 +959,14 @@ export function ClinicalDesktopShell({
               </button>
             </div>
             <div class="cd2004-help-body">
-              <ShortcutRow keys="Ctrl+S" label="Save the current draft" />
+              {FUNCTION_KEY_PROFILE.map((command) => (
+                <ShortcutRow
+                  key={command.id}
+                  keys={command.keyLabel}
+                  label={command.description}
+                />
+              ))}
               <ShortcutRow keys="Alt+1–7" label="Switch major modules" />
-              <ShortcutRow keys="F6" label="Open injection records" />
-              <ShortcutRow keys="F8" label="Focus note and readiness" />
-              <ShortcutRow keys="F10" label="Review or complete" />
-              <ShortcutRow keys="Esc" label="Close utility or restore focus" />
             </div>
             <footer>
               <button
@@ -894,11 +1002,143 @@ interface RenderWorkflowOptions {
   summaries: NonNullable<ClinicalDesktopShellProps["workflowSummaries"]>;
   needsReview: NonNullable<ClinicalDesktopShellProps["needsReview"]>;
   todayQueue: NonNullable<ClinicalDesktopShellProps["todayQueue"]>;
-  recentActivity: NonNullable<ClinicalDesktopShellProps["recentActivity"]>;
   injectionRecords: NonNullable<ClinicalDesktopShellProps["injectionRecords"]>;
   onWorkflowOpen: (workflow: WorkflowId) => void;
   onQueueItemOpen?: ClinicalDesktopShellProps["onQueueItemOpen"];
   onRecordOpen?: ClinicalDesktopShellProps["onRecordOpen"];
+  onStartNewInjection?: ClinicalDesktopShellProps["onStartNewInjection"];
+}
+
+interface InjectionRecordActionsProps {
+  actions: InjectionRecordActionsConfig;
+  canComplete: boolean;
+  blockerCount: number;
+  posting: boolean;
+  onSaveDraft?: () => void;
+  onFinish?: () => void;
+}
+
+/**
+ * The only visible source of truth for the active injection record's
+ * lifecycle. Shell commands remain accelerators for these actions, rather
+ * than forcing staff to discover Save/New/Finish through a menu or F-key.
+ */
+function InjectionRecordActions({
+  actions,
+  canComplete,
+  blockerCount,
+  posting,
+  onSaveDraft,
+  onFinish,
+}: InjectionRecordActionsProps) {
+  const locked = actions.lifecycle === "locked";
+  const lifecycleLabel = {
+    new: "NEW LOCAL DRAFT",
+    draft: "SAVED LOCAL DRAFT",
+    locked: "LOCAL RECORD LOCKED",
+    saving: "SAVING LOCAL DRAFT",
+    error: "SAVE ATTENTION REQUIRED",
+  }[actions.lifecycle];
+  const defaultDetail = {
+    new: "Enter encounter details to begin a local draft.",
+    draft: "Draft saved in this browser. Finish only when the disposition is final.",
+    locked: "This browser-local record is read-only. Corrections require a dated addendum.",
+    saving: "Writing the latest encounter changes to this browser.",
+    error: "The local draft needs storage attention before you leave this encounter.",
+  }[actions.lifecycle];
+  const saveDisabled =
+    locked || posting || !actions.canDiscard || !onSaveDraft;
+  const finishDisabled = locked || posting || !canComplete || !onFinish;
+  const discardDisabled = locked || posting || !actions.canDiscard;
+
+  return (
+    <section
+      class={`cd2004-record-actions is-${actions.lifecycle}`}
+      aria-label="Injection record actions"
+      data-injection-record-actions
+    >
+      <div class="cd2004-record-actions-state">
+        <span>INJECTION RECORD</span>
+        <strong>{lifecycleLabel}</strong>
+        <small role="status" aria-live="polite">
+          {actions.detail ?? defaultDetail}
+        </small>
+      </div>
+
+      <div class="cd2004-record-actions-buttons">
+        {!locked && (
+          <>
+            <button
+              type="button"
+              data-injection-save
+              disabled={saveDisabled}
+              title={
+                saveDisabled
+                  ? "Enter encounter details before saving a local draft."
+                  : "Save this editable injection draft locally (F12)."
+              }
+              onClick={onSaveDraft}
+            >
+              Save local draft <kbd>F12</kbd>
+            </button>
+            <button
+              type="button"
+              class="is-primary"
+              data-injection-finish
+              disabled={finishDisabled}
+              title={
+                finishDisabled
+                  ? actions.blockingDetail
+                    ? actions.blockingDetail
+                    : blockerCount
+                    ? `Complete ${blockerCount} required clinical ${blockerCount === 1 ? "field" : "fields"} before attesting and locking this local record.`
+                    : "Complete the required clinical fields before finishing and locking this record."
+                  : "Review the local attestation before locking this browser-local record."
+              }
+              onClick={onFinish}
+            >
+              Attest &amp; lock local record
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          data-injection-new
+          disabled={posting}
+          title="Start a blank injection. Any current editable work is saved as a local draft first."
+          onClick={actions.onStartNew}
+        >
+          Start new injection
+        </button>
+        {!locked && (
+          <button
+            type="button"
+            class="is-danger"
+            data-injection-discard
+            disabled={discardDisabled}
+            title={
+              discardDisabled
+                ? "There is no editable local draft to discard."
+                : "Discard this editable local draft. This cannot be undone."
+            }
+            onClick={actions.onDiscard}
+          >
+            Discard local draft...
+          </button>
+        )}
+      </div>
+
+      <p class="cd2004-record-actions-guidance">
+        {locked
+          ? "Start a new injection for another encounter; this record remains locked."
+          : actions.blockingDetail
+            ? `First blocker: ${actions.blockingDetail} Start new retains the current draft.`
+            : blockerCount
+              ? `${blockerCount} required ${blockerCount === 1 ? "field needs" : "fields need"} attention before local attestation is available. Start new retains the current draft.`
+            : "Start new retains the current draft. Discard permanently removes only this editable local draft."}
+      </p>
+    </section>
+  );
 }
 
 function renderWorkflowContent({
@@ -912,11 +1152,11 @@ function renderWorkflowContent({
   summaries,
   needsReview,
   todayQueue,
-  recentActivity,
   injectionRecords,
   onWorkflowOpen,
   onQueueItemOpen,
   onRecordOpen,
+  onStartNewInjection,
 }: RenderWorkflowOptions): ComponentChildren {
   if (workflow === "home") {
     return (
@@ -924,11 +1164,11 @@ function renderWorkflowContent({
         summaries={summaries}
         needsReview={needsReview}
         todayQueue={todayQueue}
-        recentActivity={recentActivity}
         injectionRecords={injectionRecords}
         onWorkflowOpen={onWorkflowOpen}
         onQueueItemOpen={onQueueItemOpen}
         onRecordOpen={onRecordOpen}
+        onStartNewInjection={onStartNewInjection}
       />
     );
   }
@@ -972,6 +1212,7 @@ interface PatientBannerProps {
   staffLabel: string;
   locationLabel: string;
   onUseWorkflowPatient?: (workflow: WorkflowId) => void;
+  onSelectLocalRecord?: () => void;
 }
 
 function PatientBanner({
@@ -982,23 +1223,40 @@ function PatientBanner({
   staffLabel,
   locationLabel,
   onUseWorkflowPatient,
+  onSelectLocalRecord,
 }: PatientBannerProps) {
+  // A typed name alone is not a selected chart. The banner changes to the
+  // pale-green chart context only once a truthful local record, visit, or MRN
+  // is present; until then the worksheet owns the unsaved draft details.
+  const hasActiveChart = Boolean(
+    patient.localRecordId?.trim() ||
+      patient.visitLabel?.trim() ||
+      patient.medicalRecordNumber?.trim(),
+  );
   return (
-    <div class={`cd2004-patient-banner ${mismatch ? "has-mismatch" : ""}`}>
+    <div
+      class={`cd2004-patient-banner ${
+        hasActiveChart ? "has-active-chart" : "is-no-active-chart"
+      } ${mismatch ? "has-mismatch" : ""}`}
+    >
       <div class="cd2004-patient-primary">
-        <DesktopIcon name={mismatch ? "alert" : "patient"} />
+        <DesktopIcon name={mismatch ? "alert" : hasActiveChart ? "patient" : "records"} />
         <span>
-          <small>Active patient</small>
-          <strong>{patient.name?.trim() || "NO PATIENT SELECTED"}</strong>
+          <small>{hasActiveChart ? "Local chart" : "Chart context"}</small>
+          <strong>
+            {hasActiveChart
+              ? patient.name?.trim() || "LOCAL CHART"
+              : "NO ACTIVE CHART"}
+          </strong>
         </span>
       </div>
       <div class="cd2004-patient-field">
         <small>DOB</small>
-        <strong>{patient.dob || "—"}</strong>
+        <strong>{hasActiveChart ? patient.dob || "—" : "—"}</strong>
       </div>
       <div class="cd2004-patient-field">
-        <small>MRN / ID</small>
-        <strong>{patient.medicalRecordNumber || "Not entered"}</strong>
+        <small>Local visit / record</small>
+        <strong>{patient.visitLabel || patient.localRecordId || "Not selected"}</strong>
       </div>
       <div class="cd2004-patient-field cd2004-banner-location">
         <small>Clinic</small>
@@ -1007,6 +1265,25 @@ function PatientBanner({
       <div class="cd2004-patient-field cd2004-banner-staff">
         <small>Staff</small>
         <strong>{staffLabel}</strong>
+      </div>
+      <div class="meditech-patient-safety">
+        <strong>ALLERGY / ADR STATUS:</strong>
+        <b>
+          {hasActiveChart
+            ? patient.allergyStatus || "Not available in this local record"
+            : "No local record selected"}
+        </b>
+        {hasActiveChart ? (
+          <small>
+            {patient.medicationLabel
+              ? `MEDICATION: ${patient.medicationLabel}`
+              : `WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`}
+          </small>
+        ) : (
+          <button type="button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>
+            Select local record
+          </button>
+        )}
       </div>
       {mismatch && (
         <div class="cd2004-context-mismatch" role="status">
@@ -1291,39 +1568,6 @@ function MenuCommand({
     >
       <span>{label}</span>
       {shortcut && <kbd>{shortcut}</kbd>}
-    </button>
-  );
-}
-
-interface ToolbarButtonProps {
-  label: string;
-  shortLabel: string;
-  shortcut?: string;
-  icon: "save" | "records" | "note" | "print" | "reset";
-  disabled?: boolean;
-  onClick?: (event: TargetedMouseEvent<HTMLButtonElement>) => void;
-}
-
-function ToolbarButton({
-  label,
-  shortLabel,
-  shortcut,
-  icon,
-  disabled,
-  onClick,
-}: ToolbarButtonProps) {
-  return (
-    <button
-      type="button"
-      class="cd2004-toolbar-button"
-      aria-label={label}
-      aria-keyshortcuts={shortcut?.replace("+", "+")}
-      title={shortcut ? `${label} (${shortcut})` : label}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      <DesktopIcon name={icon} />
-      <span>{shortLabel}</span>
     </button>
   );
 }

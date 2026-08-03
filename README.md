@@ -1,6 +1,6 @@
-# Clinical Desktop 2004
+# IPMG MAGIC Ambulatory Workstation
 
-Clinical Desktop 2004 is a frontend-only clinical workstation for Injection, UDS, Samples, and Forms workflows. The production interface is built with TypeScript, Vite, and Preact and keeps its records in the current browser.
+The IPMG MAGIC Ambulatory Workstation is a frontend-only, MEDITECH-inspired clinical workstation for Injection, UDS, Samples, and Forms workflows. Its dense client-server chrome, persistent Record List/function rail, chart context, and fixed function-key command deck are built with TypeScript, Vite, and Preact. Records remain in the current browser.
 
 ## Local development
 
@@ -56,7 +56,7 @@ node scripts/generate-print-baseline-fixture.mjs --write
 - `src/domain/` contains presentation-independent clinical rules and workflow engines.
 - `src/application/` contains commands, selectors, encounter coordination, and the unidirectional store.
 - `src/persistence/` contains local-storage repositories and compatibility codecs.
-- `src/presentation/` contains the classic EHR shell, workflow windows, note preview, and print integration.
+- `src/presentation/` contains the MEDITECH-style EHR shell, Record List/function rail, workflow windows, note preview, and print integration.
 - `public/legacy/` contains compatibility assets extracted from the previous standalone application.
 
 During the parity cutover, a production clinical coordinator observes the live
@@ -101,7 +101,7 @@ The workflow requires this GitHub Actions secret:
 AZURE_STATIC_WEB_APPS_API_TOKEN
 ```
 
-Pull requests receive Azure preview environments. Merges to `main` deploy production only after every validation job passes. Because storage keys and record formats remain compatible, rollback is performed by redeploying the previous production commit.
+Every pull request runs static, unit, browser, visual, storage, and print validation. Pull requests into `main` additionally receive Azure preview environments; only a push to `main` can deploy production. The workflow can also be launched manually from GitHub Actions to test a branch without deploying it. Because storage keys and record formats remain compatible, rollback is performed by redeploying the previous production commit.
 
 ## Data responsibility
 

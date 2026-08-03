@@ -677,13 +677,25 @@ const projectInjection = (
 ) => {
   const result = InjectionEngine.evaluate(encounter, context);
   const medication = result.output.medication;
+  // The pre-cutover parity golden deliberately records the legacy timing
+  // shape. Calendar-cadence dates and clinical-reference metadata are covered
+  // by the new Injection unit suite rather than mutating that historical
+  // comparison fixture.
+  const {
+    expectedDate: _expectedDate,
+    earliestDate: _earliestDate,
+    latestDate: _latestDate,
+    cadenceLabel: _cadenceLabel,
+    ...timing
+  } = result.output.timing;
+  const { expectedNextDoseDate: _expectedNextDoseDate, ...calculatedDates } = result.calculatedDates;
   return {
     workflow: result.workflow,
     readiness: result.readiness,
     stops: result.stops,
     warnings: result.warnings,
     recommendations: result.recommendations,
-    calculatedDates: result.calculatedDates,
+    calculatedDates,
     decisions: {
       medication: medication
         ? {
@@ -693,7 +705,7 @@ const projectInjection = (
             timingMode: medication.timingMode ?? "window",
           }
         : null,
-      timing: result.output.timing,
+      timing,
       allowedRoutes: result.output.allowedRoutes,
       allowedSites: result.output.allowedSites,
       recommendedSite: result.output.recommendedSite,

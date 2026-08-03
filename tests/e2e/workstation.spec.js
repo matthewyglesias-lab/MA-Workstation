@@ -67,17 +67,36 @@ test.describe('MA Workstation browser journeys', () => {
     return panel;
   }
 
-  // The records workspace (Save draft / Complete & lock / New) lives inside
-  // the hidden legacy #panel-administer mirror with no equivalent control in
-  // the new panel, so its buttons are triggered with a plain DOM click
-  // (bypassing Playwright's visibility requirement) rather than simulating a
-  // pointer click on an element the user can no longer see.
-  async function clickInjectionRecordAction(page, selector) {
-    await page.evaluate((sel) => {
-      const button = document.querySelector(sel);
-      if (!button) throw new Error(`Missing injection record action: ${sel}`);
-      button.click();
-    }, selector);
+  async function confirmLocalAttestation(page) {
+    const dialog = page.getByRole('dialog', { name: 'Attest & lock local record' });
+    const acknowledgement = dialog.getByRole('checkbox', {
+      name: /^I attest that I reviewed this local record before locking it\./
+    });
+    const confirm = dialog.getByRole('button', {
+      name: 'Attest & lock local record',
+      exact: true
+    });
+
+    await expect(dialog).toBeVisible();
+    // The safe route is the initial focus; attesting is deliberately gated.
+    await expect(dialog.getByRole('button', { name: 'Back to editing', exact: true }))
+      .toBeFocused();
+    await expect(confirm).toBeDisabled();
+    await acknowledgement.check();
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+    await expect(dialog).toBeHidden();
+  }
+
+  async function signInLocalStaff(page, staff = 'QA Staff, MA') {
+    await page.locator('.cd2004-menu[data-menu="tools"] .cd2004-menu-title').click();
+    await page.getByRole('menuitem', { name: 'Staff sign-in…', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Staff Sign-In' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('textbox', { name: 'Name or initials' }).fill(staff);
+    await dialog.getByRole('button', { name: 'Use for encounter', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('.cd2004-banner-staff')).toContainText(staff);
   }
 
   async function prepareRoutineInjection(page, options = {}) {
@@ -90,6 +109,7 @@ test.describe('MA Workstation browser journeys', () => {
     } = options;
 
     await page.goto('/');
+    await signInLocalStaff(page);
     await openWorkflow(page, 'administer');
     const panel = page.locator('.wfp-panel');
 
@@ -109,9 +129,15 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
     await openInjectionTab(page, 'Administration');
-    await panel
-      .getByText(medication === 'Other' ? 'R deltoid' : 'R ventrogluteal', { exact: true })
-      .click();
+    if (medication === 'Haldol Dec.' || medication === 'Prolixin Dec.') {
+      await panel
+        .locator('input[placeholder="Actual site / location per active order"]')
+        .fill('R ventrogluteal per active order');
+    } else {
+      await panel
+        .getByText(medication === 'Other' ? 'R deltoid' : 'R ventrogluteal', { exact: true })
+        .click();
+    }
 
     await openInjectionTab(page, 'Product');
     await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
@@ -119,11 +145,19 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[type="month"]').first().fill('2027-12');
 
     await openInjectionTab(page, 'Verification');
-    if (medication !== 'Other') {
-      await panel.getByText('Ordered route / technique verified', { exact: true }).click();
+    // A medication-specific verification is only rendered where its current
+    // reference applies. Haldol/Prolixin intentionally do not carry the
+    // retired blanket Z-track verification in the new clinical bundle.
+    const orderedTechnique = panel.getByText('Ordered route / technique verified', { exact: true });
+    if (await orderedTechnique.first().isVisible()) {
+      await orderedTechnique.first().click();
     }
-    await panel.locator('input[placeholder*="Verify in active record"]').fill('NKDA verified in active record');
-    await panel.getByText('No acute concerns today confirmed', { exact: true }).click();
+    await panel
+      .locator('.wfp-field:has-text("Allergy status") input')
+      .fill('NKDA confirmed in this local record');
+    await panel
+      .locator('.wfp-checkbox-row label', { hasText: 'No acute concerns today confirmed' })
+      .click();
 
     await openInjectionTab(page, 'Administration');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
@@ -137,18 +171,28 @@ test.describe('MA Workstation browser journeys', () => {
     return panel;
   }
 
-  test('boots without page errors and exposes the local injection-record drawer', async ({ page }) => {
+  test('boots in a clearly local environment and exposes the local EMR record list', async ({ page }) => {
     const pageErrors = [];
     page.on('pageerror', error => pageErrors.push(error.message));
 
     await page.goto('/');
     await expect(page.locator('.cd2004-shell')).toBeVisible();
-    await expect(page.locator('.cd2004-app-title')).toContainText('Clinical Desktop 2004');
+    await expect(page.locator('.cd2004-app-title')).toContainText('MEDICATION ADMINISTRATION');
+    await expect(page.locator('.cd2004-app-environment')).toContainText('LOCAL / TRAINING');
+    await expect(page.locator('.cd2004-app-environment')).not.toContainText('LIVE');
+    const chartBanner = page.locator('.cd2004-patient-banner');
+    await expect(chartBanner).toHaveClass(/is-no-active-chart/);
+    await expect(chartBanner).not.toHaveClass(/has-active-chart/);
+    await expect(chartBanner).toContainText('NO ACTIVE CHART');
+    await expect(chartBanner.getByRole('button', { name: 'Select local record' })).toBeVisible();
     await openWorkflow(page, 'administer');
 
-    const drawerLauncher = page.locator(
-      '.cd2004-toolbar-button[aria-label="Injection Records"]'
-    );
+    // The persistent Record List rail is the one compact navigator. There is
+    // intentionally no duplicate top Save / Records / Note command toolbar.
+    await expect(page.locator('[role="toolbar"][aria-label="Clinical commands"]')).toHaveCount(0);
+    const drawerLauncher = page.getByRole('button', {
+      name: /Open saved local records \(F11\)/
+    });
     await expect(drawerLauncher).toBeVisible();
     await drawerLauncher.click();
 
@@ -158,8 +202,7 @@ test.describe('MA Workstation browser journeys', () => {
     // The records window is a native <dialog> opened with showModal(), so the
     // platform inerts the background instead of an author setting .inert on
     // the shell. Assert the guarantee itself: it is the modal, and a control
-    // behind it genuinely cannot take focus. (The injection-completion overlay
-    // below is still legacy-driven and keeps its own .inert assertion.)
+    // behind it genuinely cannot take focus.
     await expect.poll(() =>
       page.locator('.records-drawer-layer').evaluate(node => node.matches(':modal'))
     ).toBe(true);
@@ -197,7 +240,7 @@ test.describe('MA Workstation browser journeys', () => {
     expect(drawerVisual.borderRadius).toBeLessThanOrEqual(2);
     expect(drawerVisual.searchRadius).toBeLessThanOrEqual(2);
     expect(drawerVisual.fontFamily).toContain('Tahoma');
-    expect(drawerVisual.headerBackground).toContain('rgb(10, 36, 106)');
+    expect(drawerVisual.headerBackground).toContain('linear-gradient');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
     expect(await maxMotionMilliseconds(drawer, 'transitionDuration'))
       .toBeLessThanOrEqual(180);
@@ -219,14 +262,17 @@ test.describe('MA Workstation browser journeys', () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test('uses the classic keyboard-accessible navigator, launchers, and workflow routing', async ({ page }) => {
+  test('uses the keyboard-accessible MEDITECH record list, launchers, and workflow routing', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
     const navigator = page.locator('.cd2004-navigator');
     const home = page.locator('.cd2004-nav-item[title="Start Center"]');
     const administer = page.locator('.cd2004-nav-item[title="Injection"]');
 
-    await expect(navigator).toHaveAttribute('aria-label', 'Clinical modules');
+    await expect(navigator).toHaveAttribute(
+      'aria-label',
+      'Record List and clinical functions'
+    );
     await expect(navigator.locator('.cd2004-nav-item')).toHaveCount(8);
     await expect(home).toHaveAttribute('aria-current', 'page');
 
@@ -241,7 +287,7 @@ test.describe('MA Workstation browser journeys', () => {
       document.addEventListener('ipmg:tabchange', () => { window.__ipmgTabChanges += 1; });
     });
     await openWorkflow(page, 'home');
-    await page.locator('.cd2004-launcher').filter({ hasText: 'UDS' }).click();
+    await page.locator('.cd2004-nav-item[title="UDS"]').click();
     await expect(shell).toHaveAttribute('data-active-workflow', 'uds');
     await expect.poll(() => page.evaluate(() => window.__ipmgTabChanges)).toBe(2);
 
@@ -257,6 +303,53 @@ test.describe('MA Workstation browser journeys', () => {
     await expect.poll(() =>
       workBody.evaluate((node, expected) => Math.abs(node.scrollTop - expected), savedScroll)
     ).toBeLessThan(80);
+  });
+
+  test('keeps each local activity in one Start Center queue register', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-08-03T10:30:00-07:00'));
+    await page.addInitScript(() => {
+      localStorage.clear();
+      localStorage.setItem(
+        'ipmgMedAssistActivityLog_2026-08-03',
+        JSON.stringify([
+          {
+            time: '9:18 AM',
+            type: 'injection',
+            status: 'completed',
+            pt: 'Rivera, Jordan',
+            summary: 'Routine administration completed'
+          },
+          {
+            time: '9:42 AM',
+            type: 'uds',
+            status: 'needs_review',
+            pt: 'Chen, Avery',
+            summary: 'Preliminary result requires review'
+          },
+          {
+            time: '10:06 AM',
+            type: 'sample',
+            status: 'completed',
+            pt: 'Morgan, Casey',
+            summary: 'Package traceability complete'
+          }
+        ])
+      );
+    });
+    await page.goto('/');
+
+    const workQueue = page.locator('.cd2004-worklist-table');
+    await expect(page.getByRole('heading', { name: 'Current Worklist' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /All Work/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Needs Review/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Today/ })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Saved Drafts/ })).toBeVisible();
+    await expect(workQueue.getByText('Chen, Avery', { exact: true })).toHaveCount(1);
+    await expect(workQueue.locator('tbody tr')).toHaveCount(3);
+    await page.getByRole('tab', { name: /Needs Review/ }).click();
+    await expect(workQueue.locator('tbody tr')).toHaveCount(1);
+    await expect(workQueue.getByRole('button', { name: 'Review', exact: true })).toBeVisible();
+    await expect(page.locator('.cd2004-activity-list')).toHaveCount(0);
   });
 
   test('keeps desktop menus single-open and restores focus on escape', async ({ page }) => {
@@ -332,45 +425,122 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(inspector).toBeVisible();
   });
 
-  test('supports core desktop shortcuts and moves focus into the note panel', async ({ page }) => {
+  test('routes the Client/Server function-key profile without unsafe global shortcuts', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
+    const deck = page.locator('[role="toolbar"][aria-label="MEDITECH function key commands"]');
 
-    await page.keyboard.press('F8');
-    await expect(page.locator('.cd2004-inspector-window')).toHaveClass(/is-active/);
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.cd2004-inspector-window'))
-    )).toBe(true);
+    await expect(deck).toBeVisible();
+    await expect(deck).toContainText('F1');
+    await expect(deck).toContainText('F6');
+    await expect(deck).toContainText('F7');
+    await expect(deck).toContainText('F8');
+    await expect(deck).toContainText('F9');
+    await expect(deck).toContainText('F11');
+    await expect(deck).toContainText('F12');
+    await expect(deck).toContainText('Esc');
+    await expect(deck).not.toContainText('F3');
+    await expect(deck).not.toContainText('F4');
+    await expect(deck).not.toContainText('F10');
+
+    await page.keyboard.press('F1');
+    const helpDialog = page.getByRole('dialog', { name: 'Keyboard Reference' });
+    await expect(helpDialog).toBeVisible();
+    await expect(helpDialog).toContainText(/next section/i);
+    await expect(helpDialog).toContainText(/previous section/i);
+    await expect(helpDialog).toContainText(/next page/i);
+    await expect(helpDialog).toContainText(/previous page/i);
+    await expect(helpDialog).toContainText(/local record list/i);
+    await page.keyboard.press('Escape');
+    await expect(helpDialog).toBeHidden();
 
     await page.keyboard.press('Alt+2');
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
     const injectionPanel = page.locator('.wfp-panel');
-    await expect(injectionPanel).toBeVisible();
-
-    await injectionPanel.locator('input[placeholder="Last, First"]').fill('QA, Shortcut');
+    const patientName = injectionPanel.locator('input[placeholder="Last, First"]');
+    await patientName.fill('QA, Shortcut');
+    await injectionPanel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
     await injectionPanel.locator('input[placeholder="Provider name"]').fill('QA Provider');
-    await page.keyboard.press('Control+S');
-    await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
-    await page.keyboard.press('F8');
-    await expect(page.locator('.cd2004-inspector-window')).toHaveClass(/is-active/);
+    // F6 / Shift+F6 move through the current worksheet's sections, rather
+    // than opening records as the retired key map did.
+    await patientName.focus();
+    const sectionBefore = await page.evaluate(() =>
+      document.activeElement?.closest('.wfp-section')
+        ?.querySelector('.wfp-section-head')?.textContent?.trim()
+    );
+    await page.keyboard.press('F6');
+    const sectionAfter = await page.evaluate(() =>
+      document.activeElement?.closest('.wfp-section')
+        ?.querySelector('.wfp-section-head')?.textContent?.trim()
+    );
+    expect(sectionAfter).not.toBe(sectionBefore);
+    await page.keyboard.press('Shift+F6');
     await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.cd2004-inspector-window'))
+      document.activeElement?.closest('.wfp-section')
+        ?.querySelector('.wfp-section-head')?.textContent?.trim()
+    )).toBe(sectionBefore);
+
+    // F7 / Shift+F7 cycle the selected worksheet page (tab).
+    await expect(injectionPanel.getByRole('tab', { name: 'Order', exact: true }))
+      .toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('F7');
+    await expect(injectionPanel.getByRole('tab', { name: 'Schedule', exact: true }))
+      .toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Shift+F7');
+    await expect(injectionPanel.getByRole('tab', { name: 'Order', exact: true }))
+      .toHaveAttribute('aria-selected', 'true');
+
+    // F8 cycles worksheet → Record List rail → command deck, never a hidden
+    // note-pane-only shortcut.
+    await patientName.focus();
+    await page.keyboard.press('F8');
+    await expect.poll(() => page.evaluate(() =>
+      Boolean(document.activeElement?.closest('.meditech-record-list'))
+    )).toBe(true);
+    await page.keyboard.press('F8');
+    await expect.poll(() => page.evaluate(() =>
+      Boolean(document.activeElement?.closest('.meditech-command-deck'))
+    )).toBe(true);
+    await page.keyboard.press('F8');
+    await expect.poll(() => page.evaluate(() =>
+      Boolean(document.activeElement?.closest('.cd2004-work-window'))
     )).toBe(true);
 
-    await page.keyboard.press('F6');
-    const drawer = page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]');
+    // F9 provides the truthful contextual local lookup; F11 is the direct
+    // Local EMR / Record List accelerator.
+    await patientName.focus();
+    await page.keyboard.press('F9');
+    const drawer = page.locator('.records-drawer-layer');
     await expect(drawer).toBeVisible();
     await expect(page.locator('#recordsDrawerSearch')).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
+    await page.keyboard.press('F11');
+    await expect(drawer).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(drawer).toBeHidden();
 
-    await page.keyboard.press('Alt+4');
-    await expect(shell).toHaveAttribute('data-active-workflow', 'samples');
-    await expect(page.locator('.wfp-panel')).toBeVisible();
+    await patientName.focus();
+    await page.keyboard.press('F12');
+    await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+
+    // Retired global F3/F4/F10 bindings must be inert; Finish is only the
+    // explicit worksheet lifecycle action. Escape cannot navigate home or
+    // discard this editable local draft.
+    await page.keyboard.press('F3');
+    await page.keyboard.press('F4');
+    await page.keyboard.press('F10');
+    await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
+    await expect(page.getByRole('dialog', { name: 'Attest & lock local record' }))
+      .toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
+    await expect(patientName).toHaveValue('QA, Shortcut');
+    await expect(page.locator('[data-injection-record-actions]')).toContainText('SAVED LOCAL DRAFT');
   });
 
-  test('routes live workflows through the clinical coordinator and keeps review shortcuts non-destructive', async ({ page }) => {
+  test('routes typed workflows through the clinical coordinator and files only editable injection drafts', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('body')).toHaveAttribute(
       'data-clinical-coordinator',
@@ -382,20 +552,6 @@ test.describe('MA Workstation browser journeys', () => {
     );
 
     await openWorkflow(page, 'uds');
-    await expect(page.locator('.cd2004-complete-button')).toHaveText(
-      /REVIEW CURRENT NOTE/
-    );
-    await page.evaluate(() => {
-      window.__qaReviewActionClicks = 0;
-      document
-        .querySelectorAll('.wfp-panel [data-complete], .wfp-panel .primary')
-        .forEach(control => {
-          control.addEventListener('click', () => {
-            window.__qaReviewActionClicks += 1;
-          });
-        });
-    });
-
     const storageBefore = await page.evaluate(() =>
       JSON.stringify(
         Object.fromEntries(
@@ -407,17 +563,11 @@ test.describe('MA Workstation browser journeys', () => {
       )
     );
     await page.keyboard.press('F10');
-    // UDS is migrated to a real panel; F10 focuses the panel root instead of
-    // the legacy hidden mirror's .preview-col.
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.wfp-panel'))
-    )).toBe(true);
-    expect(await page.evaluate(() => window.__qaReviewActionClicks)).toBe(0);
-    await expect(page.locator('.cd2004-status-message')).toHaveText(
-      'Current note and readiness focused for review.'
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'uds'
     );
-
-    await page.keyboard.press('Control+S');
+    await page.keyboard.press('F12');
     await expect(page.locator('.cd2004-status-message')).toHaveText(
       'Draft saving is unavailable in this workflow.'
     );
@@ -433,12 +583,69 @@ test.describe('MA Workstation browser journeys', () => {
     )).toBe(storageBefore);
   });
 
+  test('keeps non-injection activity logging distinct from the injection lifecycle', async ({ page }) => {
+    await page.goto('/');
+
+    await openWorkflow(page, 'uds');
+    await expect(
+      page.locator('.wfp-panel').getByRole('button', { name: 'Log as needs review', exact: true })
+    ).toBeVisible();
+
+    await openWorkflow(page, 'samples');
+    const sampleLog = page.locator('.wfp-panel').getByRole('button', {
+      name: 'Finalize dispense & add to daily log',
+      exact: true,
+    });
+    await expect(sampleLog).toBeDisabled();
+    await expect(sampleLog).toHaveAttribute('title', /Complete the documented safety/i);
+
+    await openWorkflow(page, 'forms');
+    await expect(
+      page.locator('.wfp-panel').getByRole('button', { name: 'Log as needs review', exact: true })
+    ).toBeVisible();
+
+    await openWorkflow(page, 'administer');
+    await expect(
+      page.locator('.wfp-panel').getByRole('button', { name: 'Add to daily activity', exact: true })
+    ).toHaveCount(0);
+    await expect(page.locator('[data-injection-record-actions]')).toContainText(
+      'First blocker:'
+    );
+  });
+
+  test('projects untouched typed workflows as pending instead of falsely confirmed', async ({ page }) => {
+    await page.goto('/');
+    const inspector = page.locator('.cd2004-inspector-window');
+
+    for (const workflow of ['administer', 'uds', 'samples', 'forms']) {
+      await openWorkflow(page, workflow);
+      const readiness = inspector.locator('.cd2004-readiness-list');
+      await expect(readiness.locator('.cd2004-readiness-item')).not.toHaveCount(0);
+      await expect(readiness.locator('.cd2004-readiness-item.is-pending')).not.toHaveCount(0);
+      await expect(readiness.locator('.cd2004-readiness-item.is-complete')).toHaveCount(0);
+      await expect(readiness).not.toContainText('Typed engine shadow');
+    }
+
+    await openWorkflow(page, 'administer');
+    await expect(page.locator('[data-injection-record-actions]')).toContainText(
+      'First blocker:'
+    );
+    await expect(page.locator('[data-injection-record-actions] [data-injection-finish]'))
+      .toBeDisabled();
+  });
+
   test('soft-syncs empty workflows and never overwrites a started patient context', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'administer');
     const injectionPanel = page.locator('.wfp-panel');
     await injectionPanel.locator('input[placeholder="Last, First"]').fill('Alpha, Patient');
     await injectionPanel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
+    // A typed draft alone is not a selected chart. Filing a local draft gives
+    // the banner a truthful local record context and only then turns it green.
+    await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/is-no-active-chart/);
+    await page.keyboard.press('F12');
+    await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+    await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/has-active-chart/);
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Alpha, Patient');
 
     await openWorkflow(page, 'samples');
@@ -452,7 +659,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(mismatch).toBeVisible();
     await expect(mismatch).toContainText('Bravo, Patient');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
-    await expect(page.locator('.cd2004-patient-primary')).toContainText('Bravo, Patient');
+    await expect(page.locator('.cd2004-patient-banner')).toContainText('NO ACTIVE CHART');
 
     await openWorkflow(page, 'uds');
     await expect(page.locator('#udsPtName')).toHaveValue('Bravo, Patient');
@@ -461,7 +668,12 @@ test.describe('MA Workstation browser journeys', () => {
     await openWorkflow(page, 'administer');
     await expect(page.locator('#ptName')).toHaveValue('Alpha, Patient');
     await expect(page.locator('#ptDOB')).toHaveValue('01/02/1990');
-    await expect(page.locator('.cd2004-context-mismatch')).toContainText('Alpha, Patient');
+    // Returning to the saved Injection draft restores its own local chart
+    // context. There is no longer a competing global-context warning once
+    // this record is the active local record.
+    await expect(page.locator('.cd2004-context-mismatch')).toHaveCount(0);
+    await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/has-active-chart/);
+    await expect(page.locator('.cd2004-patient-primary')).toContainText('Alpha, Patient');
   });
 
   test('honors reduced-motion while preserving all desktop commands', async ({ page }) => {
@@ -471,7 +683,7 @@ test.describe('MA Workstation browser journeys', () => {
       matchMedia('(prefers-reduced-motion: reduce)').matches
     )).toBe(true);
 
-    const transitionSeconds = await page.locator('.cd2004-launcher').first().evaluate(node =>
+    const transitionSeconds = await page.locator('.meditech-command-deck button').first().evaluate(node =>
       getComputedStyle(node).transitionDuration
         .split(',')
         .map(value => Number.parseFloat(value) * (value.includes('ms') ? 0.001 : 1))
@@ -510,9 +722,9 @@ test.describe('MA Workstation browser journeys', () => {
       return document.activeElement === target;
     })).toBe(true);
 
-    const recordsButton = page.locator(
-      '.cd2004-toolbar-button[aria-label="Injection Records"]'
-    );
+    const recordsButton = page.getByRole('button', {
+      name: /Open saved local records \(F11\)/
+    });
     await recordsButton.click();
     const drawer = page.locator('.records-drawer');
     await expect(drawer).toBeVisible();
@@ -591,10 +803,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(switcher.getByRole('tab', { name: 'WORK', exact: true }))
       .toHaveAttribute('aria-selected', 'true');
 
-    const recordsButton = page.locator(
-      '.cd2004-toolbar-button[aria-label="Injection Records"]'
-    );
-    await recordsButton.click();
+    await expect(page.locator('.meditech-command-deck')).toBeHidden();
+    const mobileCommands = page.locator('[role="toolbar"][aria-label="Local mobile commands"]');
+    await expect(mobileCommands).toBeVisible();
+    await expect(mobileCommands).toContainText('Record List');
+    await page.keyboard.press('F11');
     const drawer = page.locator('.records-drawer');
     await expect(drawer).toBeVisible();
     const bounds = await drawer.boundingBox();
@@ -605,7 +818,6 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
-    await expect(recordsButton).toBeFocused();
   });
 
   test('keeps every clinical workspace contained in side-by-side Tebra widths', async ({ page }) => {
@@ -628,8 +840,9 @@ test.describe('MA Workstation browser journeys', () => {
       expect(shellBox.x).toBeGreaterThanOrEqual(0);
       expect(shellBox.width).toBeLessThanOrEqual(width);
 
-      // Two panes now - work plus the note dock. The workflow tab strip is
-      // docked along the bottom at every width rather than occupying a pane.
+      // Work stays beside the MEDITECH context rail until the phone-width
+      // single-window switcher takes over. The clinical navigator is the
+      // persistent Record List/function rail, not a bottom CPRS tab strip.
       const visibleWindows = page.locator('.cd2004-workspace .cd2004-window:visible');
       await expect(page.locator('.cd2004-navigator')).toBeVisible();
       if (width <= 700) {
@@ -653,7 +866,7 @@ test.describe('MA Workstation browser journeys', () => {
           page.locator('.cd2004-work-window').boundingBox(),
           page.locator('.cd2004-inspector-window').boundingBox()
         ]);
-        expect(workBox.y + workBox.height).toBeLessThanOrEqual(inspectorBox.y + 1);
+        expect(workBox.x + workBox.width).toBeLessThanOrEqual(inspectorBox.x + 1);
       }
 
       for (const [tab, selector] of workflows) {
@@ -969,7 +1182,6 @@ test.describe('MA Workstation browser journeys', () => {
       patient: 'QA, Formatted Note',
       medication: 'Haldol Dec.'
     });
-    const disposition = page.locator('#clinicalDisposition');
 
     await openInjectionTab(page, 'Order');
     await panel.locator('.wfp-field:has-text("Verified active-order purpose") input').fill('Active order follow-up context');
@@ -986,9 +1198,11 @@ test.describe('MA Workstation browser journeys', () => {
       .selectOption({ label: 'Skin/site intact before administration' });
 
     await openInjectionTab(page, 'Outcome');
-    const administered = disposition.locator('[data-disposition="administered"]');
+    const administered = panel
+      .locator('label.wfp-option-row', { hasText: 'Review complete' })
+      .locator('input[type="radio"]');
     await expect(administered).toBeEnabled();
-    await panel.getByText('Review complete — document administration', { exact: true }).click();
+    await administered.check();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
     await expect(page.locator('#outCC')).toContainText('Purpose: Active order follow-up context');
     await expect(page.locator('#outPL')).toContainText('MEDICATION ADMINISTRATION');
@@ -1017,62 +1231,48 @@ test.describe('MA Workstation browser journeys', () => {
     const copiedNote = await page.evaluate(() => navigator.clipboard.readText());
     expect(copiedNote).not.toMatch(/(?:^|\n)(?:CC|ASSESSMENT|PLAN):/);
 
-    const complete = page.locator('.cd2004-complete-button');
-    await expect(complete).toBeEnabled();
-    await complete.click();
-    const completionOverlay = page.locator('#injCompletionOverlay');
-    const completionCard = completionOverlay.locator('.inj-completion-card');
-    await expect(completionOverlay).toBeVisible();
-    await expect(completionOverlay.locator('button')).toBeFocused();
-    await expect.poll(() =>
-      page.locator('.cd2004-shell').evaluate(node => node.inert)
-    ).toBe(true);
-
-    const completionVisual = await completionCard.evaluate(node => {
-      const style = getComputedStyle(node);
-      const bounds = node.getBoundingClientRect();
-      const buttonStyle = getComputedStyle(node.querySelector('button'));
-      const receipt = node.querySelector('.inj-completion-receipt');
-      return {
-        borderRadius: Number.parseFloat(style.borderRadius),
-        buttonRadius: Number.parseFloat(buttonStyle.borderRadius),
-        fontFamily: style.fontFamily,
-        horizontalOverflow: node.scrollWidth - node.clientWidth,
-        receiptOverflow: receipt.scrollWidth - receipt.clientWidth,
-        insideViewport:
-          bounds.left >= 0 &&
-          bounds.top >= 0 &&
-          bounds.right <= innerWidth &&
-          bounds.bottom <= innerHeight
-      };
+    // Only the worksheet lifecycle strip can begin the lock. The preview is
+    // read-only, and a local attestation confirms the exact record context.
+    await expect(
+      page.locator('.cd2004-inspector-window [data-injection-finish]')
+    ).toHaveCount(0);
+    const finish = page.locator('[data-injection-record-actions] [data-injection-finish]');
+    await expect(finish).toBeEnabled();
+    await finish.click();
+    const attestationDialog = page.getByRole('dialog', {
+      name: 'Attest & lock local record'
     });
-    expect(completionVisual.borderRadius).toBeLessThanOrEqual(2);
-    expect(completionVisual.buttonRadius).toBeLessThanOrEqual(2);
-    expect(completionVisual.fontFamily).toContain('Tahoma');
-    expect(completionVisual.horizontalOverflow).toBeLessThanOrEqual(1);
-    expect(completionVisual.receiptOverflow).toBeLessThanOrEqual(1);
-    expect(completionVisual.insideViewport).toBe(true);
-    expect(await maxMotionMilliseconds(completionOverlay, 'animationDuration'))
-      .toBeLessThanOrEqual(180);
-    expect(await maxMotionMilliseconds(completionCard, 'animationDuration'))
-      .toBeLessThanOrEqual(180);
-
-    await page.keyboard.press('Escape');
-    await expect(completionOverlay).toBeHidden();
-    await expect.poll(() =>
-      page.locator('.cd2004-shell').evaluate(node => node.inert)
-    ).toBe(false);
+    await expect(attestationDialog).toContainText('QA, Formatted Note');
+    await expect(attestationDialog).toContainText(/Haldol Dec/i);
+    await expect(attestationDialog).toContainText('QA Staff, MA');
+    await expect(
+      attestationDialog.getByRole('button', { name: 'Attest & lock local record', exact: true })
+    ).toBeDisabled();
+    await attestationDialog.getByRole('button', { name: 'Back to editing', exact: true }).click();
+    await expect(attestationDialog).toBeHidden();
+    await expect(finish).toBeEnabled();
+    await finish.click();
+    await confirmLocalAttestation(page);
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
     const postedStamp = page.locator('.cd2004-post-stamp');
-    await expect(postedStamp).toContainText('POSTED · RECORD LOCKED');
+    await expect(postedStamp).toContainText('LOCAL RECORD LOCKED');
     await expect(page.locator('.cd2004-work-locked-banner'))
-      .toContainText('INJECTION POSTED · RECORD LOCKED');
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.cd2004-post-stamp, [data-locked-record-action]'))
-    )).toBe(true);
+      .toContainText('LOCAL RECORD LOCKED');
+    await expect(page.locator('#injCompletionOverlay')).toBeHidden();
+    await expect.poll(() => page.evaluate(() => {
+      const records = JSON.parse(localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]');
+      return records.find(record => record?.patient?.name === 'QA, Formatted Note')?.attestation;
+    })).toMatchObject({
+      staff: 'QA Staff, MA',
+      statementVersion: 'local-attestation-v1'
+    });
     await expect(page.locator('#panel-administer')).toHaveClass(/record-readonly/);
     await expect(page.locator('#rc526Flow .rc526-mode b')).toHaveText('Locked injection record');
-    await expect(page.locator('#injRecordWorkspace [data-inj-new]')).toHaveAttribute('aria-label', 'Start a new injection');
+    const lockedStartNew = page.locator(
+      '[data-injection-record-actions] [data-injection-new]'
+    );
+    await expect(lockedStartNew).toBeVisible();
+    await expect(lockedStartNew).toHaveText('Start new injection');
     await expect(page.locator('#ptName')).toBeDisabled();
     await expect(page.locator('#medClear')).toHaveAttribute('aria-disabled', 'true');
     await expect(panel.getByText('Record locked', { exact: true })).toBeVisible();
@@ -1096,7 +1296,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.record-addenda-item').first()).toContainText('Saved clarification by the current reviewer.');
 
     await addendumTextField.fill('Pending clarification that must not be abandoned.');
-    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-new]');
+    await lockedStartNew.click();
     await expect(addendumTextField).toHaveValue('Pending clarification that must not be abandoned.');
     await expect(page.locator('#ptName')).toHaveValue('QA, Formatted Note');
   });
@@ -1121,9 +1321,10 @@ test.describe('MA Workstation browser journeys', () => {
     ).toBe('QA, Explicit Forms');
   });
 
-  test('locks a paired aripiprazole initiation with both injection components in the completion receipt', async ({ page }) => {
+  test('locks a paired aripiprazole initiation while retaining both components in the local record', async ({ page }) => {
     test.setTimeout(90000);
     await page.goto('/');
+    await signInLocalStaff(page);
     await openWorkflow(page, 'administer');
     const panel = page.locator('.wfp-panel');
 
@@ -1159,8 +1360,8 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.wfp-field:has-text("Component 2 — NDC") input').fill('00000-0000-22');
     await panel.locator('.wfp-field:has-text("Component 2 — Lot") input').fill('PAIR-LOT-2');
     await panel.locator('.wfp-field:has-text("Component 2 — Exp") input').fill('2026-06');
-    await panel.getByText('Exact product and dose verified against the active order', { exact: true }).click();
-    await panel.getByText('Injection component 2 was actually administered today', { exact: true }).click();
+    await panel.locator('label[for="init-second-order"]').click();
+    await panel.locator('label[for="init-second-given"]').click();
     await panel.locator('select[name="init-oral"]').selectOption({ label: 'Administered today' });
     await expect(initiation).toContainText(
       /2 protocol items still need documentation/
@@ -1172,10 +1373,20 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[type="month"]').first().fill('2028-05');
 
     await openInjectionTab(page, 'Verification');
-    await panel.getByText('Suspension inspected and mixed', { exact: true }).click();
-    await panel.getByText('Ordered oral initiation plan documented', { exact: true }).click();
-    await panel.locator('input[placeholder*="Verify in active record"]').fill('NKDA verified in active record');
-    await panel.getByText('No acute concerns today confirmed', { exact: true }).click();
+    await panel
+      .locator('label.wfp-option-row')
+      .filter({ hasText: /^Suspension inspected and mixed/ })
+      .click();
+    await panel
+      .locator('label.wfp-option-row')
+      .filter({ hasText: /^Ordered oral initiation plan documented/ })
+      .click();
+    await panel
+      .locator('.wfp-field:has-text("Allergy status") input')
+      .fill('NKDA confirmed in this local record');
+    await panel
+      .locator('.wfp-checkbox-row label', { hasText: 'No acute concerns today confirmed' })
+      .click();
 
     await openInjectionTab(page, 'Administration');
     await panel.locator('input[type="time"]').first().fill('10:15');
@@ -1209,7 +1420,12 @@ test.describe('MA Workstation browser journeys', () => {
 
     await panel.locator('.wfp-field:has-text("Component 2 — Exp") input').fill('2028-06');
     await panel.locator('.wfp-field:has-text("Component 2 — Exp") input').press('Tab');
-    await expect(initiation).toContainText('Protocol fields complete');
+    // Changing the exact component strength deliberately clears its package
+    // traceability; the old NDC could refer to the prior 300 mg component.
+    await panel.locator('#inj-component2-ndc').fill('00000-0000-22');
+    await expect(page.locator('#clinicalDisposition')).not.toContainText(
+      'Document the NDC for injection component 2.'
+    );
     await expect(page.locator('#clinicalDisposition')).not.toContainText(
       'Injection component 2 expiration appears past; obtain in-date product before documenting administration.'
     );
@@ -1218,58 +1434,18 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.getByText('Review complete — document administration', { exact: true }).click();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
 
-    const complete = page.locator('.cd2004-complete-button');
-    await expect(complete).toBeEnabled();
-    await page.keyboard.press('F10');
-    const receipt = page.locator('#injCompletionOverlay .inj-completion-receipt');
-    await expect(receipt).toContainText('Component 1');
-    await expect(receipt).toContainText('400 mg · IM · R deltoid · at 10:15');
-    await expect(receipt).toContainText('NDC 00000-0000-11 · Lot PAIR-LOT-1 · Exp 2028-05');
-    await expect(receipt).toContainText('Component 2 · Abilify Maintena');
-    await expect(receipt).toContainText('400 mg · IM · L deltoid · at 10:18');
-    await expect(receipt).toContainText('NDC 00000-0000-22 · Lot PAIR-LOT-2 · Exp 2028-06');
-    const pairedReceiptGeometry = await receipt.evaluate(node => {
-      const bounds = node.getBoundingClientRect();
-      return {
-        columns: getComputedStyle(node).gridTemplateColumns
-          .split(' ')
-          .filter(Boolean).length,
-        overflow: node.scrollWidth - node.clientWidth,
-        insideViewport:
-          bounds.left >= 0 &&
-          bounds.right <= innerWidth &&
-          bounds.top >= 0 &&
-          bounds.bottom <= innerHeight
-      };
-    });
-    expect(pairedReceiptGeometry.columns).toBe(2);
-    expect(pairedReceiptGeometry.overflow).toBeLessThanOrEqual(1);
-    expect(pairedReceiptGeometry.insideViewport).toBe(true);
-
-    await page.setViewportSize({ width: 320, height: 700 });
-    const narrowCompletionGeometry = await page.locator(
-      '#injCompletionOverlay .inj-completion-card'
-    ).evaluate(node => {
-      const overlayBounds = node.parentElement.getBoundingClientRect();
-      const bounds = node.getBoundingClientRect();
-      const receipt = node.querySelector('.inj-completion-receipt');
-      return {
-        columns: getComputedStyle(receipt).gridTemplateColumns
-          .split(' ')
-          .filter(Boolean).length,
-        cardOverflow: node.scrollWidth - node.clientWidth,
-        receiptOverflow: receipt.scrollWidth - receipt.clientWidth,
-        insideOverlay:
-          bounds.left >= overlayBounds.left &&
-          bounds.right <= overlayBounds.right &&
-          bounds.top >= overlayBounds.top &&
-          bounds.bottom <= overlayBounds.bottom
-      };
-    });
-    expect(narrowCompletionGeometry.columns).toBe(1);
-    expect(narrowCompletionGeometry.cardOverflow).toBeLessThanOrEqual(1);
-    expect(narrowCompletionGeometry.receiptOverflow).toBeLessThanOrEqual(1);
-    expect(narrowCompletionGeometry.insideOverlay).toBe(true);
+    const finish = page.locator('[data-injection-record-actions] [data-injection-finish]');
+    await expect(finish).toBeEnabled();
+    await finish.click();
+    await confirmLocalAttestation(page);
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
+    // The worksheet preview remains the meaningful source for each component;
+    // no legacy completion receipt or global F10 action owns this transition.
+    await expect(page.locator('#outPL')).toContainText('Component 1');
+    await expect(page.locator('#outPL')).toContainText('400 mg');
+    await expect(page.locator('#outPL')).toContainText('Component 2');
+    await expect(page.locator('#outPL')).toContainText('L deltoid');
+    await expect(page.locator('#injCompletionOverlay')).toBeHidden();
     await expectNoHorizontalPageOverflow(page);
   });
 
@@ -1283,39 +1459,141 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/03/1991');
     await panel.locator('input[placeholder="Provider name"]').fill('QA Draft Provider');
     await panel.locator('.wfp-field:has-text("Verified active-order purpose") input').fill('Draft order-linked encounter context');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+    await panel.locator('input[name="inj-dose"]').fill('100 mg');
+    await panel.locator('input[name="inj-route"]').fill('IM');
+    await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
     await openInjectionTab(page, 'Administration');
     await panel.locator('input[type="time"]').first().fill('14:06');
 
-    // Switch immediately: the record lifecycle must flush the pending sub-700 ms
-    // autosave instead of losing the most recent structured fields.
-    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-new]');
+    // Switch immediately through the visible lifecycle control: it must flush
+    // the pending sub-700 ms autosave instead of losing structured fields.
+    await page.locator('[data-injection-record-actions] [data-injection-new]').click();
     await expect(page.locator('#ptName')).toHaveValue('');
     // The new panel must reset its own typed state too, not just the hidden
     // legacy mirror fields, when the active record genuinely changes.
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
 
-    await page.locator(
-      '.cd2004-toolbar-button[aria-label="Injection Records"]'
-    ).click();
+    await page.keyboard.press('F11');
     await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
     await page.locator('#recordsDrawerSearch').fill('QA, Draft Detail');
     await page.locator('[data-records-open]').click();
 
     await expect(page.locator('#ptName')).toHaveValue('QA, Draft Detail');
-    await expect(page.locator('#injOrderPurpose')).toHaveValue('Draft order-linked encounter context');
-    await expect(page.locator('#injAdminTime')).toHaveValue('14:06');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('QA, Draft Detail');
     await expect(
       panel.locator('.wfp-field:has-text("Verified active-order purpose") input')
     ).toHaveValue('Draft order-linked encounter context');
+    await openInjectionTab(page, 'Administration');
+    await expect(panel.locator('input[type="time"]').first()).toHaveValue('14:06');
   });
 
-  test('preserves unknown historical record fields through open, save, and completion', async ({ page }) => {
-    const patient = 'QA, Compatibility Fields';
-    await prepareRoutineInjection(page, { patient });
-    const disposition = page.locator('#clinicalDisposition');
+  test('keeps visible injection actions explicit and distinguishes new from discard', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+    const actions = page.locator('[data-injection-record-actions]');
+    const save = actions.locator('[data-injection-save]');
+    const finish = actions.locator('[data-injection-finish]');
+    const startNew = actions.locator('[data-injection-new]');
+    const discard = actions.locator('[data-injection-discard]');
 
-    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-save]');
+    await expect(actions).toContainText('INJECTION RECORD');
+    await expect(actions).toContainText('NEW LOCAL DRAFT');
+    await expect(save).toBeDisabled();
+    await expect(finish).toBeDisabled();
+    await expect(startNew).toBeEnabled();
+    await expect(discard).toBeDisabled();
+
+    await openInjectionTab(page, 'Order');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Visible Lifecycle');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Lifecycle Provider');
+
+    await expect(save).toBeEnabled();
+    await expect(discard).toBeEnabled();
+    await save.click();
+    await expect(actions).toContainText('SAVED LOCAL DRAFT');
+    await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+
+    // New is safe navigation: it retains the saved draft rather than deleting it.
+    await startNew.click();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
+    await expect(actions).toContainText('NEW LOCAL DRAFT');
+    await expect.poll(() => page.evaluate(() =>
+      JSON.parse(localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]')
+        .some(record => record?.patient?.name === 'QA, Visible Lifecycle')
+    )).toBe(true);
+
+    await openInjectionTab(page, 'Order');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Discard Me');
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Lifecycle Provider');
+    await expect(discard).toBeEnabled();
+    await discard.click();
+    const discardDialog = page.getByRole('dialog', { name: 'Discard Local Draft' });
+    await expect(discardDialog).toBeVisible();
+    await expect(discardDialog).toContainText('QA, Discard Me');
+    await discardDialog.getByRole('button', { name: 'Keep editing', exact: true }).click();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('QA, Discard Me');
+
+    await discard.click();
+    await discardDialog.getByRole('button', { name: 'Discard draft', exact: true }).click();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
+    await expect.poll(() => page.evaluate(() =>
+      JSON.parse(localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]')
+        .some(record => record?.patient?.name === 'QA, Discard Me')
+    )).toBe(false);
+  });
+
+  test('opens a saved injection record through the Start Center local worklist', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+    const actions = page.locator('[data-injection-record-actions]');
+
+    await openInjectionTab(page, 'Order');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Start Center Open');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('05/06/1994');
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Start Center Provider');
+    await actions.locator('[data-injection-save]').click();
+    await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+
+    await openWorkflow(page, 'home');
+    const records = page.locator('.cd2004-worklist-table');
+    await expect(records).toContainText('QA, Start Center Open');
+    await records.getByRole('button', { name: 'Resume', exact: true }).click();
+
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
+    await expect(page.locator('#ptName')).toHaveValue('QA, Start Center Open');
+    await expect(panel.locator('input[placeholder="Provider name"]')).toHaveValue(
+      'QA Start Center Provider',
+    );
+  });
+
+  test('keeps an editable injection draft in place when Escape is pressed', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+
+    await openInjectionTab(page, 'Order');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Safe Exit');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('06/07/1995');
+    await panel.locator('input[placeholder="Provider name"]').fill('QA Safe Exit Provider');
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('QA, Safe Exit');
+    await expect(page.locator('[data-injection-record-actions]')).not.toContainText(
+      'LOCAL RECORD LOCKED'
+    );
+  });
+
+  test('opens a legacy local lock without migrating unknown historical fields', async ({ page }) => {
+    const patient = 'QA, Compatibility Fields';
+    // Preserve payload compatibility without turning a historical lock into a new workflow.
+    await prepareRoutineInjection(page, { patient });
+
+    await page.locator('[data-injection-record-actions] [data-injection-save]').click();
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
     // Reload first to cancel any pending fixture-entry autosave before replacing
@@ -1354,6 +1632,11 @@ test.describe('MA Workstation browser journeys', () => {
           nested: { preserve: 'protocol-value' }
         }
       };
+      // A historical lock has no new local-attestation payload. It must still
+      // render safely as a read-only legacy lock rather than being forced
+      // through the modern typed readiness/attestation flow.
+      record.status = 'completed';
+      record.completedAt = '2026-07-30T09:41:00.000Z';
       localStorage.setItem(key, JSON.stringify(records));
       return record.id;
     }, patient);
@@ -1361,13 +1644,17 @@ test.describe('MA Workstation browser journeys', () => {
     // Reload so the seeded historical payload becomes the live in-memory record.
     await page.reload();
     await openWorkflow(page, 'administer');
-    await page.locator(
-      '.cd2004-toolbar-button[aria-label="Injection Records"]'
-    ).click();
+    await page.keyboard.press('F11');
     await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
     await page.locator('#recordsDrawerSearch').fill(patient);
+    await expect(page.locator(`[data-records-open="${recordId}"]`)).toContainText('Legacy lock');
     await page.locator(`[data-records-open="${recordId}"]`).click();
     await expect(page.locator('#ptName')).toHaveValue(patient);
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
+    await expect(page.locator('#panel-administer')).toHaveClass(/record-readonly/);
+    await expect(
+      page.locator('[data-injection-record-actions] [data-injection-new]')
+    ).toBeVisible();
 
     const readStoredRecord = () => page.evaluate(id => {
       const records = JSON.parse(
@@ -1376,14 +1663,11 @@ test.describe('MA Workstation browser journeys', () => {
       return records.find(item => item?.id === id);
     }, recordId);
 
-    // Opening is read-only with respect to persistence; migration happens only
-    // when staff explicitly saves the historical draft.
+    // Opening a legacy lock is read-only with respect to persistence. It must
+    // neither migrate the historical snapshot nor invent an attestation.
     const opened = await readStoredRecord();
     expect(opened.snapshot.version).toBe(3);
     expect(opened.snapshot.futureSnapshot.nested.preserve).toBe('snapshot-value');
-
-    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-save]');
-    await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
     const expectedUnknownFields = {
       futureRecord: {
@@ -1396,7 +1680,7 @@ test.describe('MA Workstation browser journeys', () => {
         }
       },
       snapshot: {
-        version: 4,
+        version: 3,
         futureSnapshot: {
           nested: { preserve: 'snapshot-value' },
           sequence: ['one', { preserve: 'array-value' }]
@@ -1425,20 +1709,10 @@ test.describe('MA Workstation browser journeys', () => {
     };
     expect(await readStoredRecord()).toMatchObject(expectedUnknownFields);
 
-    const administered = disposition.locator('[data-disposition="administered"]');
-    await expect(administered).toBeEnabled();
-    await openInjectionTab(page, 'Outcome');
-    await page.locator('.wfp-panel').getByText('Review complete — document administration', { exact: true }).click();
-    await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
-
-    await expect(page.locator('.cd2004-complete-button')).toBeEnabled();
-    await page.locator('.cd2004-complete-button').click();
-    await expect(page.locator('#injCompletionOverlay')).toBeVisible();
-
-    const completed = await readStoredRecord();
-    expect(completed.status).toBe('completed');
-    expect(completed.snapshot.version).toBe(4);
-    expect(completed).toMatchObject(expectedUnknownFields);
+    // A legacy local lock is deliberately not reopened as an editable modern
+    // attestation flow.
+    expect(opened.status).toBe('completed');
+    expect(opened.attestation).toBeUndefined();
   });
 
   test('resets vitals for a new injection and restores them with its draft', async ({ page }) => {
@@ -1461,28 +1735,23 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.wfp-field:has-text("RR") input').fill('10');
     await panel.locator('.wfp-field:has-text("SpO2") input').fill('93');
 
-    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-save]');
+    const actions = page.locator('[data-injection-record-actions]');
+    await actions.locator('[data-injection-save]').click();
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
-    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-new]');
+    await actions.locator('[data-injection-new]').click();
     await expect(page.locator('#ptName')).toHaveValue('');
-    await expect(page.locator('#rr')).toHaveValue('');
-    await expect(page.locator('#spo2')).toHaveValue('');
     await openInjectionTab(page, 'Order');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
     await openInjectionTab(page, 'Verification');
     await expect(panel.locator('.wfp-field:has-text("RR") input')).toHaveValue('');
     await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveValue('');
 
-    await page.locator(
-      '.cd2004-toolbar-button[aria-label="Injection Records"]'
-    ).click();
+    await page.keyboard.press('F11');
     await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
     await page.locator('#recordsDrawerSearch').fill('QA, Smart Vitals Draft');
     await page.locator('[data-records-open]').click();
 
-    await expect(page.locator('#rr')).toHaveValue('10');
-    await expect(page.locator('#spo2')).toHaveValue('93');
     await openInjectionTab(page, 'Verification');
     await expect(panel.locator('.wfp-field:has-text("RR") input')).toHaveValue('10');
     await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveValue('93');
@@ -1529,7 +1798,7 @@ test.describe('MA Workstation browser journeys', () => {
     await persistencePanel.locator('input[placeholder="MM/DD/YYYY"]').fill('03/04/1992');
     await persistencePanel.locator('input[placeholder="Provider name"]').fill('QA Provider');
 
-    await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-new]');
+    await page.locator('[data-injection-record-actions] [data-injection-new]').click();
     await expect(page.locator('#ptName')).toHaveValue('QA, Persistence Guard');
     await expect(page.locator('#injRecordStatus')).toHaveText('Save failed');
     await expect(page.locator('#injRecordStatus')).toHaveAttribute('role', 'status');
@@ -1561,7 +1830,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.wfp-field:has-text("Prior site") select').selectOption('R deltoid');
 
     await openInjectionTab(page, 'Administration');
-    await expect(panel.locator('.wfp-section-head', { hasText: 'Administration site' })).toContainText(
+    await expect(panel.locator('.wfp-section-head', { hasText: 'Actual administration location' })).toContainText(
       'rotate: L deltoid'
     );
     await expect(panel.locator('.wfp-option-row.is-selected')).toHaveCount(0);
@@ -1620,6 +1889,26 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
   });
 
+  test('renders the UDS clinician view as a dense preliminary laboratory report', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    await page.getByRole('tab', { name: 'Interpretation' }).click();
+
+    const report = page.locator('.meditech-lab-sheet');
+    await expect(report).toBeVisible();
+    await expect(report).toContainText('POINT OF CARE LABORATORY');
+    await expect(report).toContainText('PRELIMINARY / PRESUMPTIVE');
+    await expect(report.locator('.meditech-lab-results tbody tr')).toHaveCount(14);
+    await expect(report.locator('th')).toHaveText([
+      'TEST / ANALYTE',
+      'RESULT',
+      'FLAG',
+      'EXPECTED',
+      'STATUS'
+    ]);
+    await expect(page.getByRole('button', { name: 'Print clinician report' })).toBeVisible();
+  });
+
   test('lets an uncatalogued point-of-care cup reach a finishable screen', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'uds');
@@ -1666,7 +1955,7 @@ test.describe('MA Workstation browser journeys', () => {
     );
   });
 
-  test('marks prior dose required only when the visit reason makes it a stop, and computes the next dose', async ({ page }) => {
+  test('marks prior dose required only when the visit reason makes it a stop, and calculates the next due date', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'administer');
     const panel = page.locator('.wfp-panel');
@@ -1692,21 +1981,17 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(priorDose.locator('.wfp-req')).toHaveCount(0);
     await expect(priorDose.locator('.wfp-opt')).toHaveCount(1);
 
-    // The next-dose date is administration date plus the ordered interval.
-    // Offered as one click rather than written automatically - and it
-    // disappears once the field already holds it.
-    const nextDose = panel.locator('.wfp-field').filter({ hasText: 'Next dose' });
-    const administered = await panel.locator('.wfp-field')
-      .filter({ hasText: 'Administered' }).locator('input').inputValue();
-    const suggestion = nextDose.locator('.wfp-field-action');
-    await expect(suggestion).toHaveCount(1);
-    await suggestion.click();
-
-    const expected = new Date(`${administered}T00:00:00`);
-    expected.setDate(expected.getDate() + 28);
-    await expect(nextDose.locator('input')).toHaveValue(
-      expected.toISOString().slice(0, 10)
-    );
-    await expect(nextDose.locator('.wfp-field-action')).toHaveCount(0);
+    // Expected next due is a visible calculation from the actual date and
+    // selected cadence. Staff can still override it explicitly when the
+    // active order says otherwise.
+    const actualDate = panel
+      .locator('.wfp-field', { hasText: 'Actual administration date' })
+      .locator('input[type="date"]');
+    const nextDue = panel
+      .locator('.wfp-field', { hasText: 'Expected next due' });
+    await actualDate.fill('2026-07-30');
+    await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-27');
+    await expect(nextDue.locator('.wfp-calculated-value')).toBeVisible();
+    await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);
   });
 });

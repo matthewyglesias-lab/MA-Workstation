@@ -3,18 +3,18 @@ const { test, expect } = require('@playwright/test');
 const WORKFLOWS = {
   home: {
     label: 'Start Center',
-    headingText: 'Select a workflow',
+    headingText: 'Current Worklist',
     panel: '.cd2004-start-center',
     layout: '.cd2004-start-center',
-    heading: '.cd2004-section-heading h1',
-    representative: '.cd2004-launcher',
-    control: '.cd2004-launcher',
-    hero: '.cd2004-start-launchers',
+    heading: '#currentWorklistTitle',
+    representative: '.cd2004-worklist-new',
+    control: '.cd2004-worklist-new',
+    hero: '.cd2004-worklist-header',
     landmarks: [
-      '.cd2004-start-launchers',
-      '.cd2004-start-ledger',
-      '.cd2004-start-bottom',
-      '.cd2004-launcher'
+      '.cd2004-worklist-header',
+      '.cd2004-worklist-tabs',
+      '.cd2004-worklist-sheet',
+      '.cd2004-worklist-table'
     ]
   },
   // 'forms', 'uds', 'administer' (injection), and 'samples' are
@@ -107,9 +107,7 @@ async function collectVisualContract(page, workflow) {
     const activeWindowTitlebar = activeWindow?.querySelector(
       ':scope > .cd2004-window-titlebar'
     );
-    const recordTableWrap = document.querySelector(
-      '.cd2004-start-bottom .cd2004-table-wrap'
-    );
+    const recordTableWrap = document.querySelector('.cd2004-worklist-sheet');
     const mobileSwitcher = document.querySelector('.cd2004-mobile-switcher');
     const panel = pick(spec.panel);
     const layout = pick(spec.layout);
@@ -118,15 +116,15 @@ async function collectVisualContract(page, workflow) {
     const control = pick(spec.control);
     const hero = pick(spec.hero);
 
-    const panes = [...document.querySelectorAll('.cd2004-workspace > .cd2004-window')]
+    const panes = [...document.querySelectorAll('.cd2004-workspace .cd2004-window')]
       .map(element => ({
         pane: element.getAttribute('data-pane'),
         visible: visible(element),
         rect: rectOf(element)
       }));
     const visiblePanes = panes.filter(pane => pane.visible);
-    // Two panes on desktop: the work area and the note dock. The navigator is
-    // the bottom-docked workflow tab strip, not a tiled pane.
+    // Two panes on desktop: the work area and the note dock nested inside the
+    // persistent MEDITECH Record List/function rail.
     const desktopTiling =
       visiblePanes.length === 2 &&
       visiblePanes.every((pane, index) =>
@@ -290,8 +288,8 @@ function expectedContract(workflow, viewport) {
   const desktop = viewport === 'desktop';
   const module = WORKFLOWS[workflow];
   const isHome = workflow === 'home';
-  const titlebarHeight = desktop ? '27px' : '29px';
-  const windowTitlebarMinHeight = desktop ? '24px' : '27px';
+  const titlebarHeight = desktop ? '30px' : '29px';
+  const windowTitlebarMinHeight = desktop ? '22px' : '25px';
 
   return {
     workflow,
@@ -301,43 +299,39 @@ function expectedContract(workflow, viewport) {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
       style: {
-        color: isHome ? 'rgb(16, 35, 66)' : 'rgb(16, 42, 86)',
-        fontSize: isHome ? (desktop ? '15px' : '14px') : '16px',
+        color: isHome ? 'rgb(16, 43, 86)' : 'rgb(16, 42, 86)',
+        fontSize: '16px',
         fontWeight: '700',
-        lineHeight: isHome
-          ? desktop
-            ? '16.5px'
-            : '15.4px'
-          : '18.4px'
+        lineHeight: isHome ? '17.6px' : '18.4px'
       }
     },
     chrome: {
       shell: {
-        backgroundColor: 'rgb(127, 140, 153)',
+        backgroundColor: 'rgb(184, 188, 229)',
         fontFamily: expect.stringMatching(/^Tahoma,/),
-        fontSize: '12px',
+        fontSize: '11px',
         overflow: 'hidden'
       },
       applicationTitlebar: {
         color: 'rgb(255, 255, 255)',
         height: titlebarHeight,
-        backgroundColor: 'rgb(10, 36, 106)',
-        backgroundImage: 'none',
-        usesGradient: false
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        backgroundImage: expect.stringMatching(/^linear-gradient/),
+        usesGradient: true
       },
       activeWindow: {
         borderRadius: '0px',
-        borderTopWidth: '2px',
-        borderRightWidth: '2px',
+        borderTopWidth: '1px',
+        borderRightWidth: '1px',
         titlebarColor: 'rgb(255, 255, 255)',
         titlebarMinHeight: windowTitlebarMinHeight,
-        titlebarUsesGradient: false,
-        titlebarUsesNavy: true
+        titlebarUsesGradient: true,
+        titlebarUsesNavy: false
       }
     },
     panes: {
       visible: desktop ? ['work', 'inspector'] : ['work'],
-      desktopTiling: desktop,
+      desktopTiling: false,
       mobileSwitcherVisible: !desktop,
       mobileTabs: desktop
         ? []
@@ -350,25 +344,25 @@ function expectedContract(workflow, viewport) {
     surface: {
       panelVisible: true,
       layoutDisplay: 'grid',
-      topLevelColumns: isHome && desktop ? 2 : 1,
+      topLevelColumns: 1,
       horizontalOverflow: false,
       panelHorizontalOverflow: false,
       hero: {
         backgroundColor: isHome
-          ? 'rgb(248, 249, 247)'
+          ? 'rgb(243, 243, 255)'
           : 'rgb(219, 228, 238)',
         borderBottomColor: isHome
-          ? 'rgb(92, 104, 116)'
+          ? 'rgb(89, 100, 128)'
           : 'rgb(124, 137, 150)',
         borderRadius: '0px',
         boxShadow: expect.any(String),
         hasRelief: true
       },
       representativeSquare: true,
-      representativeFlat: !isHome,
-      representativeHasRelief: isHome,
+      representativeFlat: false,
+      representativeHasRelief: true,
       controlSquare: true,
-      focusedControlBorder: 'rgb(255, 180, 0)',
+      focusedControlBorder: 'rgb(245, 179, 0)',
       focusedControlHasGlow: false,
       recordLedgerHorizontalOverflow: false,
       usesTahomaFirst: true,

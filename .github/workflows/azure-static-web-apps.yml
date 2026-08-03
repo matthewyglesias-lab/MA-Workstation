@@ -1,17 +1,16 @@
 name: Azure Static Web Apps CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
   pull_request:
     types: [opened, synchronize, reopened, closed]
-    branches:
-      - main
 
 jobs:
   static_checks:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     name: Type, static, unit, and production build
     steps:
@@ -47,7 +46,7 @@ jobs:
           retention-days: 7
 
   browser_and_print_e2e:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     needs: static_checks
     runs-on: ubuntu-latest
     name: Test the exact production artifact
@@ -84,7 +83,7 @@ jobs:
           if-no-files-found: ignore
 
   build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.base_ref == 'main')
     needs: [static_checks, browser_and_print_e2e]
     runs-on: ubuntu-latest
     name: Build and Deploy
@@ -128,7 +127,7 @@ jobs:
         run: npm run smoke:browser
 
   close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.base_ref == 'main'
     runs-on: ubuntu-latest
     name: Close Pull Request
     steps:
