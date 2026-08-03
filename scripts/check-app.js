@@ -10,8 +10,10 @@ const appPath = path.join(root, 'index.html');
 const legacyMarkupPath = path.join(root, 'src', 'legacy', 'legacy-markup.html');
 const legacyRuntimePath = path.join(root, 'public', 'legacy', 'legacy-runtime.js');
 const legacyStylePath = path.join(root, 'public', 'legacy', 'legacy.css');
-const classicWorkflowStylePath = path.join(root, 'src', 'presentation', 'classic-workflows.css');
 const desktopStylePath = path.join(root, 'src', 'presentation', 'clinical-desktop.css');
+const panelStylePath = path.join(
+  root, 'src', 'presentation', 'workflows', 'workflow-panels.css',
+);
 const configPath = path.join(root, 'staticwebapp.config.json');
 const workflowPath = path.join(root, '.github', 'workflows', 'azure-static-web-apps.yml');
 const smokePath = path.join(root, 'scripts', 'smoke-deployment.mjs');
@@ -21,8 +23,8 @@ assert.ok(fs.existsSync(appPath), 'index.html is missing');
 assert.ok(fs.existsSync(legacyMarkupPath), 'Legacy clinical markup is missing');
 assert.ok(fs.existsSync(legacyRuntimePath), 'Legacy clinical runtime is missing');
 assert.ok(fs.existsSync(legacyStylePath), 'Legacy clinical styles are missing');
-assert.ok(fs.existsSync(classicWorkflowStylePath), 'Classic workflow adapter styles are missing');
 assert.ok(fs.existsSync(desktopStylePath), 'Clinical desktop styles are missing');
+assert.ok(fs.existsSync(panelStylePath), 'Workflow panel styles are missing');
 JSON.parse(fs.readFileSync(configPath, 'utf8'));
 assert.ok(fs.existsSync(workflowPath), 'Azure Static Web Apps workflow is missing');
 assert.ok(fs.existsSync(smokePath), 'Azure deployment smoke script is missing');
@@ -32,8 +34,8 @@ const shellHtml = fs.readFileSync(appPath, 'utf8');
 const legacyMarkup = fs.readFileSync(legacyMarkupPath, 'utf8');
 const legacyRuntime = fs.readFileSync(legacyRuntimePath, 'utf8');
 const legacyStyle = fs.readFileSync(legacyStylePath, 'utf8');
-const classicWorkflowStyle = fs.readFileSync(classicWorkflowStylePath, 'utf8');
 const desktopStyle = fs.readFileSync(desktopStylePath, 'utf8');
+const panelStyle = fs.readFileSync(panelStylePath, 'utf8');
 const html = [shellHtml, legacyMarkup, legacyStyle, legacyRuntime].join('\n');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 const smoke = fs.readFileSync(smokePath, 'utf8');
@@ -208,9 +210,17 @@ assert.match(html, /recordsDrawerState=\{query:'',filter:'all',lastFocus:null,cl
 assert.match(html, /localDay\(review\.confirmedAt\)===localDay\(new Date\(\)\)/, 'Reviewed-today confirmation must expire on the next local calendar day');
 assert.match(html, /overlay\.setAttribute\('aria-labelledby','injCompletionTitle'\)/, 'The completion dialog must expose a labelled modal contract');
 assert.match(html, /event\.key==='Escape'\)\{event\.preventDefault\(\);close\(\)/, 'The completion dialog must close with Escape');
-assert.match(classicWorkflowStyle, /\.panel :where\([\s\S]*?\) \{[^}]*border-radius: 0 !important;/, 'Mounted workflows must use the square classic-EHR surface treatment');
+// classic-workflows.css is gone: it restyled legacy workflow markup mounted
+// inside the shell, and no workflow mounts legacy markup any more - all eight
+// are typed panels. The square-surface guarantee it used to encode now lives
+// in the panel library, so assert it there instead of on a deleted file.
+assert.match(panelStyle, /border-radius: 0 !important;/, 'Migrated workflow panels must keep the square classic-EHR surface treatment');
 assert.match(desktopStyle, /\.records-drawer \{[^}]*border-radius: 0 !important;/, 'The global records drawer must use the classic-EHR treatment');
-assert.match(desktopStyle, /\.inj-completion-card \{[^}]*border-radius: 1px !important;/, 'The completion receipt must use the classic-EHR treatment');
+// Was `1px`. The receipt was flattened to a true square edge during the
+// old-EHR polish pass - it had been the last nonzero radius left in either
+// stylesheet - and this assertion was not updated with it. It went unnoticed
+// because check:static only runs on pull requests against `main`.
+assert.match(desktopStyle, /\.inj-completion-card \{[^}]*border-radius: 0 !important;/, 'The completion receipt must use the classic-EHR treatment');
 assert.match(html, /id="injAdminTime" data-injection-field="admin-time"/, 'Injection completion must capture the actual administration time');
 assert.match(html, /window\.ipmgInjectionDetailReview=detailReview/, 'Conditional injection documentation must expose a shared finalization review');
 assert.match(html, /Document both the administration amount and its unit/, 'Partial structured administration details must block finalization');
