@@ -118,15 +118,15 @@ async function collectVisualContract(page, workflow) {
     const control = pick(spec.control);
     const hero = pick(spec.hero);
 
-    const panes = [...document.querySelectorAll('.cd2004-workspace > .cd2004-window')]
+    const panes = [...document.querySelectorAll('.cd2004-workspace .cd2004-window')]
       .map(element => ({
         pane: element.getAttribute('data-pane'),
         visible: visible(element),
         rect: rectOf(element)
       }));
     const visiblePanes = panes.filter(pane => pane.visible);
-    // Two panes on desktop: the work area and the note dock. The navigator is
-    // the bottom-docked workflow tab strip, not a tiled pane.
+    // Two panes on desktop: the work area and the note dock nested inside the
+    // persistent MEDITECH Record List/function rail.
     const desktopTiling =
       visiblePanes.length === 2 &&
       visiblePanes.every((pane, index) =>
@@ -290,8 +290,8 @@ function expectedContract(workflow, viewport) {
   const desktop = viewport === 'desktop';
   const module = WORKFLOWS[workflow];
   const isHome = workflow === 'home';
-  const titlebarHeight = desktop ? '27px' : '29px';
-  const windowTitlebarMinHeight = desktop ? '24px' : '27px';
+  const titlebarHeight = desktop ? '30px' : '29px';
+  const windowTitlebarMinHeight = desktop ? '22px' : '25px';
 
   return {
     workflow,
@@ -313,31 +313,31 @@ function expectedContract(workflow, viewport) {
     },
     chrome: {
       shell: {
-        backgroundColor: 'rgb(127, 140, 153)',
+        backgroundColor: 'rgb(96, 114, 119)',
         fontFamily: expect.stringMatching(/^Tahoma,/),
-        fontSize: '12px',
+        fontSize: '11px',
         overflow: 'hidden'
       },
       applicationTitlebar: {
         color: 'rgb(255, 255, 255)',
         height: titlebarHeight,
-        backgroundColor: 'rgb(10, 36, 106)',
-        backgroundImage: 'none',
-        usesGradient: false
+        backgroundColor: 'rgb(0, 59, 71)',
+        backgroundImage: expect.stringContaining('linear-gradient'),
+        usesGradient: true
       },
       activeWindow: {
         borderRadius: '0px',
-        borderTopWidth: '2px',
-        borderRightWidth: '2px',
+        borderTopWidth: '1px',
+        borderRightWidth: '1px',
         titlebarColor: 'rgb(255, 255, 255)',
         titlebarMinHeight: windowTitlebarMinHeight,
-        titlebarUsesGradient: false,
-        titlebarUsesNavy: true
+        titlebarUsesGradient: true,
+        titlebarUsesNavy: false
       }
     },
     panes: {
       visible: desktop ? ['work', 'inspector'] : ['work'],
-      desktopTiling: desktop,
+      desktopTiling: false,
       mobileSwitcherVisible: !desktop,
       mobileTabs: desktop
         ? []
@@ -355,10 +355,10 @@ function expectedContract(workflow, viewport) {
       panelHorizontalOverflow: false,
       hero: {
         backgroundColor: isHome
-          ? 'rgb(248, 249, 247)'
+          ? 'rgb(246, 247, 243)'
           : 'rgb(219, 228, 238)',
         borderBottomColor: isHome
-          ? 'rgb(92, 104, 116)'
+          ? 'rgb(86, 108, 109)'
           : 'rgb(124, 137, 150)',
         borderRadius: '0px',
         boxShadow: expect.any(String),
@@ -368,7 +368,7 @@ function expectedContract(workflow, viewport) {
       representativeFlat: !isHome,
       representativeHasRelief: isHome,
       controlSquare: true,
-      focusedControlBorder: 'rgb(255, 180, 0)',
+      focusedControlBorder: 'rgb(245, 179, 0)',
       focusedControlHasGlow: false,
       recordLedgerHorizontalOverflow: false,
       usesTahomaFirst: true,

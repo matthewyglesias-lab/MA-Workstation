@@ -143,7 +143,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.goto('/');
     await expect(page.locator('.cd2004-shell')).toBeVisible();
-    await expect(page.locator('.cd2004-app-title')).toContainText('Clinical Desktop 2004');
+    await expect(page.locator('.cd2004-app-title')).toContainText('MAGIC Ambulatory');
     await openWorkflow(page, 'administer');
 
     const drawerLauncher = page.locator(
@@ -219,14 +219,17 @@ test.describe('MA Workstation browser journeys', () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test('uses the classic keyboard-accessible navigator, launchers, and workflow routing', async ({ page }) => {
+  test('uses the keyboard-accessible MEDITECH record list, launchers, and workflow routing', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
     const navigator = page.locator('.cd2004-navigator');
     const home = page.locator('.cd2004-nav-item[title="Start Center"]');
     const administer = page.locator('.cd2004-nav-item[title="Injection"]');
 
-    await expect(navigator).toHaveAttribute('aria-label', 'Clinical modules');
+    await expect(navigator).toHaveAttribute(
+      'aria-label',
+      'Record List and clinical functions'
+    );
     await expect(navigator.locator('.cd2004-nav-item')).toHaveCount(8);
     await expect(home).toHaveAttribute('aria-current', 'page');
 
@@ -628,8 +631,9 @@ test.describe('MA Workstation browser journeys', () => {
       expect(shellBox.x).toBeGreaterThanOrEqual(0);
       expect(shellBox.width).toBeLessThanOrEqual(width);
 
-      // Two panes now - work plus the note dock. The workflow tab strip is
-      // docked along the bottom at every width rather than occupying a pane.
+      // Work stays beside the MEDITECH context rail until the phone-width
+      // single-window switcher takes over. The clinical navigator is the
+      // persistent Record List/function rail, not a bottom CPRS tab strip.
       const visibleWindows = page.locator('.cd2004-workspace .cd2004-window:visible');
       await expect(page.locator('.cd2004-navigator')).toBeVisible();
       if (width <= 700) {
@@ -653,7 +657,7 @@ test.describe('MA Workstation browser journeys', () => {
           page.locator('.cd2004-work-window').boundingBox(),
           page.locator('.cd2004-inspector-window').boundingBox()
         ]);
-        expect(workBox.y + workBox.height).toBeLessThanOrEqual(inspectorBox.y + 1);
+        expect(workBox.x + workBox.width).toBeLessThanOrEqual(inspectorBox.x + 1);
       }
 
       for (const [tab, selector] of workflows) {
@@ -1368,6 +1372,12 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('#recordsDrawerSearch').fill(patient);
     await page.locator(`[data-records-open="${recordId}"]`).click();
     await expect(page.locator('#ptName')).toHaveValue(patient);
+    // Wait for the keyed typed panel to observe the record-generation change,
+    // not just the immediately restored compatibility field behind it.
+    await openInjectionTab(page, 'Order');
+    await expect(
+      page.locator('.wfp-panel input[placeholder="Last, First"]')
+    ).toHaveValue(patient);
 
     const readStoredRecord = () => page.evaluate(id => {
       const records = JSON.parse(
@@ -1384,6 +1394,9 @@ test.describe('MA Workstation browser journeys', () => {
 
     await clickInjectionRecordAction(page, '#injRecordWorkspace [data-inj-save]');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+    await expect(
+      page.locator('.wfp-panel input[placeholder="Last, First"]')
+    ).toHaveValue(patient);
 
     const expectedUnknownFields = {
       futureRecord: {
@@ -1428,7 +1441,12 @@ test.describe('MA Workstation browser journeys', () => {
     const administered = disposition.locator('[data-disposition="administered"]');
     await expect(administered).toBeEnabled();
     await openInjectionTab(page, 'Outcome');
-    await page.locator('.wfp-panel').getByText('Review complete — document administration', { exact: true }).click();
+    const administeredChoice = page.getByLabel(
+      'Review complete — document administration',
+      { exact: true }
+    );
+    await administeredChoice.check();
+    await expect(administeredChoice).toBeChecked();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
 
     await expect(page.locator('.cd2004-complete-button')).toBeEnabled();
@@ -1618,6 +1636,26 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.getByRole('button', { name: 'THC positive · rest negative' }).click();
     await expect(omittedRow).toContainText('Not on this cup');
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
+  });
+
+  test('renders the UDS clinician view as a dense preliminary laboratory report', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    await page.getByRole('tab', { name: 'Interpretation' }).click();
+
+    const report = page.locator('.meditech-lab-sheet');
+    await expect(report).toBeVisible();
+    await expect(report).toContainText('POINT OF CARE LABORATORY');
+    await expect(report).toContainText('PRELIMINARY / PRESUMPTIVE');
+    await expect(report.locator('.meditech-lab-results tbody tr')).toHaveCount(14);
+    await expect(report.locator('th')).toHaveText([
+      'TEST / ANALYTE',
+      'RESULT',
+      'FLAG',
+      'EXPECTED',
+      'STATUS'
+    ]);
+    await expect(page.getByRole('button', { name: 'Print clinician report' })).toBeVisible();
   });
 
   test('lets an uncatalogued point-of-care cup reach a finishable screen', async ({ page }) => {

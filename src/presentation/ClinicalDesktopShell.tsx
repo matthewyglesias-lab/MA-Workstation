@@ -8,14 +8,18 @@ import {
   useState,
 } from "preact/hooks";
 import "./clinical-desktop.css";
+import "./meditech-workstation.css";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
+import {
+  MeditechCommandDeck,
+  MeditechRecordRail,
+} from "./MeditechChrome";
 import { LegacyWorkflowHost } from "./LegacyWorkflowHost";
 import { NoteInspector } from "./NoteInspector";
 import { StartCenter } from "./StartCenter";
 import {
   WORKFLOW_LABELS,
-  WORKFLOW_ORDER,
   LOCKED_RECORD_ACTION_SELECTOR,
   type ClinicalDesktopShellProps,
   type DesktopPane,
@@ -65,7 +69,7 @@ function contextsMismatch(
 export function ClinicalDesktopShell({
   appName = "IPMG Clinical Workstation",
   organizationName = "Integrated Psychiatric Medical Group",
-  versionLabel = "Clinical Desktop 2004",
+  versionLabel = "MAGIC Ambulatory",
   activeWorkflow,
   defaultActiveWorkflow = "home",
   onWorkflowChange,
@@ -491,9 +495,15 @@ export function ClinicalDesktopShell({
             <DesktopIcon name="administer" />
           </span>
           <span class="cd2004-app-title">
-            {appName} — {versionLabel}
+            <b>MAGIC</b>
+            <span>{appName}</span>
+            <small>{versionLabel}</small>
           </span>
-          <span class="cd2004-app-environment">LOCAL WORKSTATION</span>
+          <span class="cd2004-app-environment">
+            <b>AMB</b>
+            <span>LIVE</span>
+            <small>LOCAL WORKSTATION</small>
+          </span>
         </div>
 
         <nav
@@ -735,69 +745,56 @@ export function ClinicalDesktopShell({
           </div>
         </Panel>
 
-        <Panel
-          pane="inspector"
-          title="Note / Readiness"
-          subtitle={WORKFLOW_LABELS[selectedWorkflow]}
-          active={focusedPane === "inspector"}
-          mobileActive={mobilePane === "inspector"}
-          onActivate={setFocusedPane}
-        >
-          <NoteInspector
-            title={noteTitle ?? `${WORKFLOW_LABELS[selectedWorkflow]} note`}
-            subtitle={noteSubtitle}
-            readiness={readiness}
-            sections={noteSections}
-            postState={postState}
-            postMessage={postMessage}
-            canComplete={canComplete && Boolean(onReviewComplete)}
-            canReview={canReview && Boolean(onReviewComplete)}
-            actionMode={reviewActionMode}
-            onCopySection={onCopyNoteSection}
-            onCopyAll={onCopyAllNotes}
-            onComplete={onReviewComplete}
+        <aside class="meditech-context-rail">
+          <MeditechRecordRail
+            selectedWorkflow={selectedWorkflow}
+            summaries={workflowSummaries}
+            needsReview={needsReview}
+            todayQueue={todayQueue}
+            onWorkflowOpen={openWorkflow}
+            onQueueItemOpen={onQueueItemOpen}
           />
-        </Panel>
+
+          <Panel
+            pane="inspector"
+            title="Document / Status"
+            subtitle={WORKFLOW_LABELS[selectedWorkflow]}
+            active={focusedPane === "inspector"}
+            mobileActive={mobilePane === "inspector"}
+            onActivate={setFocusedPane}
+          >
+            <NoteInspector
+              title={noteTitle ?? `${WORKFLOW_LABELS[selectedWorkflow]} note`}
+              subtitle={noteSubtitle}
+              readiness={readiness}
+              sections={noteSections}
+              postState={postState}
+              postMessage={postMessage}
+              canComplete={canComplete && Boolean(onReviewComplete)}
+              canReview={canReview && Boolean(onReviewComplete)}
+              actionMode={reviewActionMode}
+              onCopySection={onCopyNoteSection}
+              onCopyAll={onCopyAllNotes}
+              onComplete={onReviewComplete}
+            />
+          </Panel>
+        </aside>
       </main>
 
-      {/*
-        Workflow tab strip along the bottom edge - the VistA/CPRS signature.
-        This IS the navigator, relocated: it keeps the `.cd2004-navigator`
-        landmark and the `.cd2004-nav-item[title]` handles the whole test suite
-        navigates by, while freeing the entire left edge for clinical content.
-      */}
-      <nav
-        class="cd2004-navigator cd2004-print-exclude"
-        aria-label="Clinical modules"
-      >
-        {WORKFLOW_ORDER.map((workflow) => {
-          const summary = workflowSummaries[workflow];
-          const accelerator = shortcutWorkflows.indexOf(workflow) + 1;
-          return (
-            <button
-              key={workflow}
-              type="button"
-              class={[
-                "cd2004-nav-item",
-                selectedWorkflow === workflow ? "is-selected" : "",
-                `is-${summary?.state ?? "idle"}`,
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              aria-current={selectedWorkflow === workflow ? "page" : undefined}
-              title={WORKFLOW_LABELS[workflow]}
-              onClick={() => openWorkflow(workflow)}
-            >
-              <DesktopIcon name={workflow} />
-              <span>{WORKFLOW_LABELS[workflow]}</span>
-              {accelerator > 0 && <kbd>{accelerator}</kbd>}
-              {summary?.count ? (
-                <em aria-label={`${summary.count} items`}>{summary.count}</em>
-              ) : null}
-            </button>
-          );
-        })}
-      </nav>
+      <MeditechCommandDeck
+        selectedWorkflow={selectedWorkflow}
+        canSave={Boolean(onSaveDraft)}
+        canOpenRecords={Boolean(onOpenRecords)}
+        canReview={(canComplete || canReview) && postState !== "posting"}
+        reviewLabel={reviewActionMode === "review" ? "Review" : "Complete"}
+        onHelp={() => setShowShortcutHelp(true)}
+        onWorkflowOpen={openWorkflow}
+        onOpenRecords={onOpenRecords}
+        onFocusInspector={focusInspector}
+        onReview={onReviewComplete}
+        onSave={onSaveDraft}
+        onEscape={onEscape}
+      />
 
       {/*
         Segmented status bar. Replaces the taskbar/Start button, which emulated

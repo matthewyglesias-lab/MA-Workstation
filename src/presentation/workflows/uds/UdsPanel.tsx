@@ -208,6 +208,171 @@ function Field({
 
 const RESULT_CYCLE: UdsResultState[] = ["nt", "neg", "pos", "invalid"];
 
+function ClinicianLabSheet({
+  encounter,
+  omittedPanel,
+  includeSignatureFields,
+}: {
+  encounter: UdsEncounter;
+  omittedPanel?: UdsPanelKey;
+  includeSignatureFields: boolean;
+}) {
+  const collected = encounter.collectionDateTime
+    ? new Date(encounter.collectionDateTime).toLocaleString(undefined, {
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "NOT ENTERED";
+  const reported = encounter.collectionDateTime ? collected : "PENDING";
+
+  return (
+    <section class="meditech-lab-sheet" aria-label="UDS clinician laboratory report preview">
+      <header class="meditech-lab-header">
+        <div>
+          <strong>INTEGRATED PSYCHIATRIC MEDICAL GROUP</strong>
+          <span>POINT OF CARE LABORATORY</span>
+        </div>
+        <div>
+          <b>UDS SCREEN</b>
+          <span>CLINICIAN RESULT REPORT</span>
+        </div>
+      </header>
+
+      <div class="meditech-lab-status">
+        <strong>PRELIMINARY / PRESUMPTIVE</strong>
+        <span>Confirm unexpected findings by definitive laboratory method.</span>
+      </div>
+
+      <dl class="meditech-lab-demographics">
+        <div>
+          <dt>PATIENT</dt>
+          <dd>{encounter.patient.name || "NO PATIENT ENTERED"}</dd>
+        </div>
+        <div>
+          <dt>DOB</dt>
+          <dd>{encounter.patient.dob || "—"}</dd>
+        </div>
+        <div>
+          <dt>ACCESSION</dt>
+          <dd>POC-UDS / OPEN</dd>
+        </div>
+        <div>
+          <dt>COLLECTED</dt>
+          <dd>{collected}</dd>
+        </div>
+        <div>
+          <dt>REPORTED</dt>
+          <dd>{reported}</dd>
+        </div>
+        <div>
+          <dt>COLLECTOR</dt>
+          <dd>{encounter.collector || "—"}</dd>
+        </div>
+      </dl>
+
+      <dl class="meditech-lab-device">
+        <div>
+          <dt>SPECIMEN</dt>
+          <dd>Urine, random</dd>
+        </div>
+        <div>
+          <dt>DEVICE / METHOD</dt>
+          <dd>{encounter.device || "Device not entered"} · waived immunoassay</dd>
+        </div>
+        <div>
+          <dt>LOT / EXP</dt>
+          <dd>{encounter.lot || "—"} / {encounter.expiration || "—"}</dd>
+        </div>
+        <div>
+          <dt>CONTROL</dt>
+          <dd>{encounter.control}</dd>
+        </div>
+        <div>
+          <dt>TEMPERATURE</dt>
+          <dd>{encounter.temperature}</dd>
+        </div>
+      </dl>
+
+      <table class="meditech-lab-results">
+        <thead>
+          <tr>
+            <th>TEST / ANALYTE</th>
+            <th>RESULT</th>
+            <th>FLAG</th>
+            <th>EXPECTED</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {UDS_PANELS.map((panel) => {
+            const notOnCup = panel === omittedPanel;
+            const state: UdsResultState = notOnCup
+              ? "nt"
+              : encounter.results[panel] ?? "nt";
+            const derived = UDS_RESULT_FLAG[state];
+            const result = notOnCup
+              ? "NOT ON DEVICE"
+              : state === "pos"
+                ? "PRESUMPTIVE POS"
+                : state === "neg"
+                  ? "NEGATIVE"
+                  : state === "invalid"
+                    ? "INVALID"
+                    : "NOT TESTED";
+            return (
+              <tr class={derived.abnormal ? "is-abnormal" : ""} key={panel}>
+                <td>
+                  <b>{panel}</b>
+                  <span>{udsPanelName(panel)}</span>
+                </td>
+                <td>{result}</td>
+                <td>{notOnCup ? "" : derived.flag}</td>
+                <td>NEGATIVE</td>
+                <td>{notOnCup ? "Not on cup" : derived.status}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div class="meditech-lab-interpretation">
+        <div>
+          <b>VALIDITY</b>
+          <span>{encounter.validity}</span>
+        </div>
+        <div>
+          <b>MEDICATION ALIGNMENT</b>
+          <span>{encounter.medicationAlignment}</span>
+        </div>
+        <div>
+          <b>OUTSIDE LAB</b>
+          <span>{encounter.labPlan ?? "provider to decide"}</span>
+        </div>
+        {encounter.comment?.trim() && (
+          <p>
+            <b>COMMENT:</b> {encounter.comment}
+          </p>
+        )}
+      </div>
+
+      <footer class="meditech-lab-footer">
+        <p>
+          Results are qualitative screening findings and are not diagnostic. Clinical correlation is required.
+        </p>
+        {includeSignatureFields && (
+          <div class="meditech-lab-signatures">
+            <span>REVIEWED BY</span>
+            <span>DATE / TIME</span>
+          </div>
+        )}
+      </footer>
+    </section>
+  );
+}
+
 export function UdsPanel({
   initialEncounter,
   activePatient,
@@ -787,8 +952,14 @@ export function UdsPanel({
           </div>
 
           <div class="wfp-section">
-            <div class="wfp-section-head">UDS note</div>
+            <div class="wfp-section-head">Clinician result report</div>
             <div class="wfp-section-body">
+              <ClinicianLabSheet
+                encounter={encounter}
+                omittedPanel={omittedPanel || undefined}
+                includeSignatureFields={includeSignatureFields}
+              />
+              <div class="meditech-lab-note-heading">TEBRA NARRATIVE</div>
               <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
               <div class="wfp-actions">
                 <button

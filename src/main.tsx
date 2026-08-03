@@ -524,7 +524,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       <ClinicalDesktopShell
         appName="IPMG MA Workstation"
         organizationName="Integrated Psychiatric Medical Group"
-        versionLabel="Clinical Desktop 2004 · v6.0"
+        versionLabel="MAGIC Ambulatory · v6.0"
         activeWorkflow={activeWorkflow}
         onWorkflowChange={openWorkflow}
         patient={patient}
