@@ -1576,4 +1576,137 @@ test.describe('MA Workstation browser journeys', () => {
     // the actual-time field is reachable without leaving the tab.
     await expect(panel.locator('input[type="time"]').first()).toBeVisible();
   });
+
+  // Fills the UDS specimen block for a given device. Everything below is the
+  // documentation any point-of-care screen needs regardless of which cup was
+  // used, so each device scenario starts from the same place.
+  async function fillUdsSpecimen(page, panel, device) {
+    const field = (label) => panel.locator('.wfp-field').filter({ hasText: label });
+    await panel.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('06/11/1988');
+    await panel.locator('input[placeholder="Staff initials / name"]').fill('A. Rivera, MA');
+    await panel.locator('input[type="datetime-local"]').fill('2026-08-03T09:15');
+    await panel.locator('select[name="uds-temperature"]').selectOption('acceptable');
+    await field('Device').locator('select').selectOption(device);
+    await panel.locator('input[placeholder="LOT123"]').fill('UDS4471');
+    await panel.locator('input[type="month"]').fill('2027-04');
+    await panel.locator('select[name="uds-control"]').selectOption('valid');
+  }
+
+  test('keeps the analyte a 13-panel cup omits out of every bulk result action', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 13-Panel Cup');
+    await panel.locator('.wfp-field').filter({ hasText: 'Panel not on this' })
+      .locator('select').selectOption('PPX');
+    await page.locator('#uds-readings-verified').check();
+
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    const omittedRow = panel.locator('.wfp-grid-row', { hasText: 'Propoxyphene' });
+    // The cup physically has no PPX window, so the row carries no result
+    // control at all - there is nothing to click into a stop.
+    await expect(omittedRow).toHaveClass(/is-not-on-cup/);
+    await expect(omittedRow.locator('.wfp-grid-toggle')).toHaveCount(0);
+
+    // The obvious shortcut has to leave the encounter finishable. Before this
+    // guard it wrote a negative into the omitted analyte and immediately
+    // blocked the screen on a stop the operator never chose.
+    await panel.getByRole('button', { name: 'All tested negative' }).click();
+    await expect(panel.locator('.wfp-status-flag')).toHaveText('Ready');
+
+    await panel.getByRole('button', { name: 'THC positive · rest negative' }).click();
+    await expect(omittedRow).toContainText('Not on this cup');
+    await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
+  });
+
+  test('lets an uncatalogued point-of-care cup reach a finishable screen', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'Other point-of-care UDS cup');
+
+    // Both confirmations the engine gates an uncatalogued device on must be
+    // reachable. The readings confirmation used to render only for the two
+    // catalogued cups, and the panel-set confirmation never survived the
+    // round-trip through the legacy mirror, so this path could not finish.
+    await page.locator('#uds-custom-panel-verified').check();
+    await page.locator('#uds-readings-verified').check();
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    await panel.getByRole('button', { name: 'All tested negative' }).click();
+
+    await expect(panel.locator('.wfp-status-flag')).toHaveText('Ready');
+    await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
+  });
+
+  test('lists outstanding requirements and jumps to the tab that owns each one', async ({ page }) => {
+    await page.goto('/');
+
+    // A bare stop count leaves staff opening every tab to find what is
+    // missing. Each row names its tab and navigates straight to it.
+    await openWorkflow(page, 'uds');
+    const uds = page.locator('.wfp-panel');
+    await uds.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
+    const udsRows = uds.locator('.wfp-issue-row');
+    await expect(udsRows.first()).toBeVisible();
+    await expect(uds.locator('.wfp-issue-row', { hasText: 'at least one result' })
+      .locator('.wfp-issue-tab')).toHaveText('Results');
+    await uds.locator('.wfp-issue-row', { hasText: 'at least one result' }).click();
+    await expect(uds.getByRole('tab', { name: /^Results/ })).toHaveAttribute('aria-selected', 'true');
+
+    await openWorkflow(page, 'samples');
+    const samples = page.locator('.wfp-panel');
+    await samples.locator('input[placeholder="Last, First"]').fill('Okafor, Ben');
+    const educationRow = samples.locator('.wfp-issue-row', { hasText: 'patient education status' });
+    await expect(educationRow.locator('.wfp-issue-tab')).toHaveText('Safety / review');
+    await educationRow.click();
+    await expect(samples.getByRole('tab', { name: /^Safety/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+  });
+
+  test('marks prior dose required only when the visit reason makes it a stop, and computes the next dose', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+
+    await panel.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
+    await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+
+    await panel.getByRole('tab', { name: /^Schedule/ }).click();
+    const priorDose = panel.locator('.wfp-field').filter({ hasText: 'Prior dose' });
+
+    // A scheduled dose stops on the prior-dose date, because that date is the
+    // engine's only input for the dosing window. The field has to say so -
+    // labelling a blocking field "optional" is what sends staff hunting.
+    await expect(priorDose.locator('.wfp-req')).toHaveCount(1);
+    await expect(priorDose.locator('.wfp-opt')).toHaveCount(0);
+
+    // A PRN dose has no window to evaluate, so the same field is genuinely
+    // optional and must stop claiming otherwise.
+    await panel.getByRole('tab', { name: /^Order/ }).click();
+    await panel.locator('select[name="inj-reason"]').selectOption('prn');
+    await panel.getByRole('tab', { name: /^Schedule/ }).click();
+    await expect(priorDose.locator('.wfp-req')).toHaveCount(0);
+    await expect(priorDose.locator('.wfp-opt')).toHaveCount(1);
+
+    // The next-dose date is administration date plus the ordered interval.
+    // Offered as one click rather than written automatically - and it
+    // disappears once the field already holds it.
+    const nextDose = panel.locator('.wfp-field').filter({ hasText: 'Next dose' });
+    const administered = await panel.locator('.wfp-field')
+      .filter({ hasText: 'Administered' }).locator('input').inputValue();
+    const suggestion = nextDose.locator('.wfp-field-action');
+    await expect(suggestion).toHaveCount(1);
+    await suggestion.click();
+
+    const expected = new Date(`${administered}T00:00:00`);
+    expected.setDate(expected.getDate() + 28);
+    await expect(nextDose.locator('input')).toHaveValue(
+      expected.toISOString().slice(0, 10)
+    );
+    await expect(nextDose.locator('.wfp-field-action')).toHaveCount(0);
+  });
 });

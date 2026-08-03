@@ -22,6 +22,7 @@ import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { DocumentationEngine } from "../../../documentation";
 import { udsEncounterToDocumentationInput } from "../../../documentation/adapters/uds-from-encounter";
 import { clickLegacyControl } from "../legacy-mirror";
+import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { mirrorUdsEncounterToLegacyDom, mirrorUdsSignatureToggle } from "./uds-legacy-mirror";
 import type { PatientContext } from "../../types";
 
@@ -35,6 +36,40 @@ const UDS_TAB_LABEL: Record<UdsTab, string> = {
   results: "Results",
   interpretation: "Interpretation",
 };
+
+/**
+ * Maps a ClinicalIssue's `field` back to the tab that edits it, so an
+ * outstanding stop becomes a direct jump instead of a hunt across three tabs.
+ */
+function tabForUdsField(field?: string): UdsTab {
+  const head = (field ?? "").split(".")[0];
+  switch (head) {
+    // What was collected, on what device, under what quality control.
+    case "patient":
+    case "collectionDateTime":
+    case "collector":
+    case "temperature":
+    case "reason":
+    case "device":
+    case "omittedPanel":
+    case "customPanelSetVerified":
+    case "physicalReadingsVerified":
+    case "lot":
+    case "expiration":
+    case "control":
+      return "specimen";
+    case "results":
+      return "results";
+    // What a human made of it.
+    case "validity":
+    case "medicationAlignment":
+    case "labPlan":
+    case "comment":
+      return "interpretation";
+    default:
+      return "specimen";
+  }
+}
 
 // Result flags are *derived* from the four states the panel already captures -
 // no new clinical data is introduced. Old lab reports carried a one- or
@@ -221,9 +256,17 @@ export function UdsPanel({
     patch({ results: { ...encounter.results, [panel]: state } });
   };
 
+  // A 13-panel cup physically does not display the omitted analyte, and the
+  // engine stops on any result recorded against it. Every bulk action has to
+  // honour that, or the obvious shortcut ("All tested negative") immediately
+  // creates a stop that staff then have to hunt down and undo.
+  const omittedPanel =
+    profileFor(encounter.device) === "13" ? (encounter.omittedPanel ?? "") : "";
+
   const setAllPanels = (panels: readonly UdsPanelKey[], state: UdsResultState) => {
     const results = { ...encounter.results };
     panels.forEach((panel) => {
+      if (panel === omittedPanel) return;
       results[panel] = state;
     });
     patch({ results });
@@ -260,13 +303,16 @@ export function UdsPanel({
   const positiveCount = UDS_PANELS.filter((panel) => encounter.results[panel] === "pos").length;
   const invalidCount = UDS_PANELS.filter((panel) => encounter.results[panel] === "invalid").length;
 
+  const stops = evaluation?.stops ?? [];
+  const stopsByTab = countStopsByTab(stops, tabForUdsField);
+
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <div class="wfp-summary-bar">
         <strong>UDS screen</strong>
         <StatusFlag
           idle={(evaluation?.readiness ?? "idle") === "idle"}
-          stopCount={evaluation?.stops.length ?? 0}
+          stopCount={stops.length}
           warningCount={evaluation?.warnings.length ?? 0}
         />
         <span class="wfp-summary-spacer" />
@@ -308,6 +354,11 @@ export function UdsPanel({
           onClick={() => setTab("specimen")}
         >
           {UDS_TAB_LABEL.specimen}
+          {(stopsByTab.get("specimen") ?? 0) > 0 && (
+            <span class="wfp-tab-badge" aria-hidden="true">
+              {stopsByTab.get("specimen")}
+            </span>
+          )}
         </button>
         <button
           type="button"
@@ -317,6 +368,11 @@ export function UdsPanel({
           onClick={() => setTab("results")}
         >
           {UDS_TAB_LABEL.results}
+          {(stopsByTab.get("results") ?? 0) > 0 && (
+            <span class="wfp-tab-badge" aria-hidden="true">
+              {stopsByTab.get("results")}
+            </span>
+          )}
           <span class="wfp-tab-badge wfp-tab-badge-muted">
             {testedCount}/{UDS_PANELS.length}
           </span>
@@ -329,8 +385,20 @@ export function UdsPanel({
           onClick={() => setTab("interpretation")}
         >
           {UDS_TAB_LABEL.interpretation}
+          {(stopsByTab.get("interpretation") ?? 0) > 0 && (
+            <span class="wfp-tab-badge" aria-hidden="true">
+              {stopsByTab.get("interpretation")}
+            </span>
+          )}
         </button>
       </div>
+
+      <OutstandingRequirements<UdsTab>
+        stops={stops}
+        tabForField={tabForUdsField}
+        tabLabels={UDS_TAB_LABEL}
+        onNavigate={setTab}
+      />
 
       {tab === "specimen" && (
         <div class="wfp-tabpanel" role="tabpanel">
@@ -464,7 +532,11 @@ export function UdsPanel({
                   </label>
                 </div>
               )}
-              {(profile === "13" || profile === "14") && (
+              {/* The engine requires this confirmation for every named device,
+                  not just the two catalogued cups. Rendering it only for 13/14
+                  made "Other point-of-care UDS cup" unfinishable: the stop
+                  fired with no control anywhere in the UI that could clear it. */}
+              {profile !== "none" && (
                 <div class="wfp-checkbox-row">
                   <input
                     type="checkbox"
@@ -535,6 +607,7 @@ export function UdsPanel({
                   onClick={() => {
                     const results = { ...encounter.results };
                     UDS_PANELS.forEach((panel) => {
+                      if (panel === omittedPanel) return;
                       results[panel] = panel === "THC" ? "pos" : "neg";
                     });
                     patch({ results });
@@ -549,7 +622,7 @@ export function UdsPanel({
                     const results = { ...encounter.results };
                     UDS_PANELS.forEach((panel) => {
                       if (results[panel] === "pos" || results[panel] === "invalid") {
-                        results[panel] = "neg";
+                        results[panel] = panel === omittedPanel ? "nt" : "neg";
                       }
                     });
                     patch({ results });
@@ -588,29 +661,40 @@ export function UdsPanel({
                     {group.panels.map((panel) => {
                       const state = encounter.results[panel] ?? "nt";
                       const derived = UDS_RESULT_FLAG[state];
+                      // The analyte named as absent from a 13-panel cup has no
+                      // result to record - the device never displayed one. A
+                      // lab report says so on the line itself rather than
+                      // offering buttons that only produce a stop.
+                      const notOnCup = panel === omittedPanel;
                       return (
-                        <div class="wfp-grid-row" key={panel}>
+                        <div class={`wfp-grid-row ${notOnCup ? "is-not-on-cup" : ""}`} key={panel}>
                           <span class="wfp-grid-cell">
                             <strong>{panel}</strong> {udsPanelName(panel)}
                           </span>
                           <span class="wfp-grid-cell wfp-grid-cell-actions">
-                            {RESULT_CYCLE.map((candidate) => (
-                              <button
-                                key={candidate}
-                                type="button"
-                                class={`wfp-grid-toggle ${state === candidate ? "is-selected" : ""} is-${candidate}`}
-                                onClick={() => setPanelResult(panel, candidate)}
-                              >
-                                {UDS_RESULT_LABEL[candidate]}
-                              </button>
-                            ))}
+                            {notOnCup ? (
+                              <span class="wfp-grid-note">Not on this cup</span>
+                            ) : (
+                              RESULT_CYCLE.map((candidate) => (
+                                <button
+                                  key={candidate}
+                                  type="button"
+                                  class={`wfp-grid-toggle ${state === candidate ? "is-selected" : ""} is-${candidate}`}
+                                  onClick={() => setPanelResult(panel, candidate)}
+                                >
+                                  {UDS_RESULT_LABEL[candidate]}
+                                </button>
+                              ))
+                            )}
                           </span>
                           <span
                             class={`wfp-grid-cell wfp-result-flag ${derived.abnormal ? "is-abnormal" : ""}`}
                           >
-                            {derived.flag}
+                            {notOnCup ? "" : derived.flag}
                           </span>
-                          <span class="wfp-grid-cell wfp-result-status">{derived.status}</span>
+                          <span class="wfp-grid-cell wfp-result-status">
+                            {notOnCup ? "Not on device" : derived.status}
+                          </span>
                         </div>
                       );
                     })}

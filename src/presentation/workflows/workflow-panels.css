@@ -716,6 +716,28 @@
   flex: 0 0 auto;
 }
 
+/* A one-click default offered beneath its field - the computed value the
+   operator would otherwise work out by hand. Sits where a hint would, so it
+   reads as guidance attached to the control rather than a command. */
+.cd2004-shell .wfp-field-action {
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 10px;
+}
+
+/* An analyte the physical cup does not carry. The row stays on the report -
+   a 13-panel result should still say which analyte was unavailable - but it
+   offers nothing to click, so it reads as reference text, not as a control. */
+.cd2004-shell .wfp-grid-row.is-not-on-cup {
+  color: var(--cd-ink-muted);
+}
+
+.cd2004-shell .wfp-grid-note {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--cd-ink-muted);
+}
+
 .cd2004-shell .wfp-result-flag {
   font-family: "Courier New", Consolas, monospace;
   font-size: 11px;

@@ -21,6 +21,7 @@ import {
 } from "../../../domain/injection";
 import {
   ALL_INJECTION_SITES,
+  INJECTION_INTERVAL_DAYS,
   INJECTION_INTERVAL_OPTIONS,
   INJECTION_MEDICATIONS,
   allowedDosesForInterval,
@@ -31,7 +32,9 @@ import {
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
+import { addCalendarDays } from "../../../domain/dates";
 import { clickLegacyControl, setLegacyFieldValue } from "../legacy-mirror";
+import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
@@ -477,11 +480,17 @@ export function InjectionPanel({
   const administered = encounter.disposition.kind === "administered";
 
   const stops = evaluation?.stops ?? [];
-  const stopsByTab = new Map<InjectionTab, number>();
-  stops.forEach((stop) => {
-    const stopTab = tabForInjectionField(stop.field);
-    stopsByTab.set(stopTab, (stopsByTab.get(stopTab) ?? 0) + 1);
-  });
+  const stopsByTab = countStopsByTab(stops, tabForInjectionField);
+
+  // Administration date plus the ordered interval. Display-only arithmetic
+  // over values already captured - it adds no gating and decides nothing.
+  const intervalDays = encounter.intervalKey
+    ? INJECTION_INTERVAL_DAYS[encounter.intervalKey]
+    : 0;
+  const suggestedNextDose =
+    intervalDays > 0 && encounter.administrationDate
+      ? addCalendarDays(encounter.administrationDate, intervalDays)
+      : "";
 
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
@@ -553,29 +562,14 @@ export function InjectionPanel({
         </div>
       )}
 
-      {!locked && stops.length > 0 && (
-        <div class="wfp-section wfp-issue-section">
-          <div class="wfp-section-head">
-            Outstanding requirements
-            <span class="wfp-tab-badge">{stops.length}</span>
-          </div>
-          <div class="wfp-issue-list">
-            {stops.map((stop) => {
-              const stopTab = tabForInjectionField(stop.field);
-              return (
-                <button
-                  key={`${stop.code}-${stop.field ?? ""}`}
-                  type="button"
-                  class="wfp-issue-row"
-                  onClick={() => setTab(stopTab)}
-                >
-                  <span class="wfp-issue-tab">{INJECTION_TAB_LABELS[stopTab]}</span>
-                  <span class="wfp-issue-message">{stop.message}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      {/* A locked record is read-only, so there is nothing to act on. */}
+      {!locked && (
+        <OutstandingRequirements<InjectionTab>
+          stops={stops}
+          tabForField={tabForInjectionField}
+          tabLabels={INJECTION_TAB_LABELS}
+          onNavigate={setTab}
+        />
       )}
 
       <fieldset disabled={locked} style="border:none;padding:0;margin:0;display:contents">
@@ -722,7 +716,16 @@ export function InjectionPanel({
             <div class="wfp-section-head">Schedule &amp; next dose</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
-                <Field label="Prior dose" hint="optional">
+                {/* Required for a scheduled dose, and not as paperwork: it is
+                    the sole input to the engine's dosing-window evaluation, so
+                    without it the interval and Sustenna Day 1/8 checks do not
+                    run at all. The marker has to follow the visit reason -
+                    labelling it "optional" while it blocks is what sends staff
+                    hunting. */}
+                <Field
+                  label="Prior dose"
+                  hint={encounter.reason === "scheduled" ? "required" : "optional"}
+                >
                   <input
                     type="date"
                     value={encounter.priorDoseDate}
@@ -755,6 +758,21 @@ export function InjectionPanel({
                     value={encounter.nextDoseDate}
                     onInput={(event) => patch({ nextDoseDate: event.currentTarget.value })}
                   />
+                  {/* The workstation already knows the administration date and
+                      the ordered interval, so making staff do this arithmetic
+                      by hand is pure delay. Offered as one click rather than
+                      written automatically: the follow-up date is scheduling
+                      the clinic owns, and the engine's requirement is that a
+                      human confirm it, not that a field be non-empty. */}
+                  {suggestedNextDose && suggestedNextDose !== encounter.nextDoseDate && (
+                    <button
+                      type="button"
+                      class="cd2004-link-button wfp-field-action"
+                      onClick={() => patch({ nextDoseDate: suggestedNextDose })}
+                    >
+                      Use {suggestedNextDose}
+                    </button>
+                  )}
                 </Field>
               </div>
               {/* The due line a MAR carries: how long since the last dose and

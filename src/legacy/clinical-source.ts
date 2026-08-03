@@ -82,6 +82,7 @@ declare global {
     __IPMG_RC538_UDS_PROFILE__?: {
       omitted?: string;
       readingsVerified?: boolean;
+      customPanelSetVerified?: boolean;
     };
     samplePackageTraceEntries?: () => Array<{
       id?: string;
@@ -479,7 +480,7 @@ export function createLegacyClinicalSource(
       device,
       omittedPanel: omitted,
       physicalReadingsVerified: Boolean(profile.readingsVerified),
-      customPanelSetVerified: false,
+      customPanelSetVerified: Boolean(profile.customPanelSetVerified),
       lot: value("udsLot"),
       expiration: value("udsExp"),
       collector: value("udsCollector"),
