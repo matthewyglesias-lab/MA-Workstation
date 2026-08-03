@@ -2,6 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
+  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}{ext}',
   timeout: 60_000,
   expect: { timeout: 7_000 },
   fullyParallel: true,
@@ -14,12 +15,13 @@ module.exports = defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:4173',
     viewport: { width: 1440, height: 1000 },
+    timezoneId: 'America/Los_Angeles',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'
   },
   webServer: {
-    command: 'node scripts/static-server.js --port 4173',
+    command: 'npm run preview',
     url: 'http://127.0.0.1:4173',
     timeout: 120_000,
     reuseExistingServer: !process.env.CI

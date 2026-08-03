@@ -1,0 +1,902 @@
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="leaf"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 9-9 13-13 13"/><path d="M5 18c0-7 5-13 14-13 0 0-1 8-8 11"/></svg></div>
+      <div><h1>Injection &amp; Medication Assistant</h1><div class="sub">IPMG · administer · UDS · schedule · reference · log</div></div>
+    </div>
+    <div class="pill"><span class="dot"></span> Tebra-ready</div>
+  </div>
+
+  <div class="staffbar" aria-label="Staff sign in">
+    <div class="staff-chip">
+      <span class="staff-dot"></span>
+      <div>
+        <div class="staff-label">Staff sign-in</div>
+        <div class="staff-help">Auto-fills administered by / collected by</div>
+      </div>
+    </div>
+    <div class="staff-field">
+      <input id="staffSignIn" list="staffNameSuggestions" placeholder="Name or initials" autocomplete="off" />
+      <datalist id="staffNameSuggestions">
+        <option value="J. Doe, LVN"></option>
+        <option value="M. Staff, MA"></option>
+        <option value="IPMG Staff"></option>
+      </datalist>
+    </div>
+    <button class="staff-apply" id="staffApply" type="button">Use for this encounter</button>
+    <button class="staff-clear" id="staffClear" type="button" title="Clear saved staff">Clear</button>
+    <div class="staff-current" id="staffCurrent">Not signed in</div>
+  </div>
+
+
+
+  <div class="command-center" id="commandCenter" aria-label="Encounter command center">
+    <div class="cmd-top">
+      <div>
+        <div class="cmd-kicker">Encounter command center</div>
+        <div class="cmd-title" id="cmdPatient">No patient selected</div>
+        <div class="cmd-sub" id="cmdSub">Use this as the quick safety/readiness snapshot before copying notes, logging, or printing.</div>
+      </div>
+      <div class="cmd-next">
+        <div class="label">Next best action</div>
+        <div class="text" id="cmdNext">Start with the patient name and today’s workflow.</div>
+      </div>
+    </div>
+    <div class="cmd-grid">
+      <div class="cmd-card idle" id="cmdInjectionCard" data-jump-tab="administer"><div class="head"><span class="dot"></span><span class="name">Injection</span><span class="status">Idle</span></div><div class="detail">Pick a medication to build the note and AVS.</div></div>
+      <div class="cmd-card idle" id="cmdUdsCard" data-jump-tab="uds"><div class="head"><span class="dot"></span><span class="name">UDS</span><span class="status">Idle</span></div><div class="detail">Document point-of-care urine screen when applicable.</div></div>
+      <div class="cmd-card idle" id="cmdSampleCard" data-jump-tab="samples"><div class="head"><span class="dot"></span><span class="name">Samples</span><span class="status">Idle</span></div><div class="detail">Build sample handout when medication samples are dispensed.</div></div>
+      <div class="cmd-card idle" id="cmdFormsCard" data-jump-tab="forms"><div class="head"><span class="dot"></span><span class="name">Forms</span><span class="status">Idle</span></div><div class="detail">Track paperwork and patient notification.</div></div>
+    </div>
+    <div class="cmd-actions" id="cmdActions"></div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab on" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg> Dashboard</button>
+    <button type="button" class="tab" data-tab="administer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4"/><path d="M19 9 8.7 19.3a2.4 2.4 0 0 1-3.4 0l-.6-.6a2.4 2.4 0 0 1 0-3.4L15 5"/><path d="m9 11 4 4"/></svg> Administer</button>
+    <button type="button" class="tab" data-tab="uds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.2L5.4 17.1A2.6 2.6 0 0 0 7.7 21h8.6a2.6 2.6 0 0 0 2.3-3.9L14 9.2V3"/><path d="M8 15h8"/></svg> UDS</button>
+    <button type="button" class="tab" data-tab="samples"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21h4"/><path d="M8 3h8l1 5-3 10h-4L7 8z"/><path d="M8 8h8"/></svg> Samples</button>
+    <button type="button" class="tab" data-tab="forms"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg> Forms</button>
+    <button type="button" class="tab" data-tab="tms"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a7 7 0 0 0-7 7v3a4 4 0 0 0 4 4h1"/><path d="M12 3a7 7 0 0 1 7 7v3a4 4 0 0 1-4 4h-1"/><path d="M9 21h6"/><path d="M12 17v4"/></svg> TMS</button>
+    <button type="button" class="tab" data-tab="reference"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Knowledge base</button>
+    <button type="button" class="tab" data-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg> Today's log <span class="count" id="logCount">0</span></button>
+  </div>
+
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <div class="panel on home-panel" id="panel-home">
+    <div class="home-hero">
+      <div class="home-hero-inner">
+        <div>
+          <div class="home-kicker">IPMG Medical Assistant Workstation</div>
+          <h2 class="home-title">Start the encounter from one clean dashboard.</h2>
+          <p class="home-subtitle">Choose today’s workflow, check readiness, print patient-friendly handouts, and close out the day without hunting through the app.</p>
+          <div class="home-badges">
+            <span class="home-badge"><span class="dot"></span> Notes</span>
+            <span class="home-badge"><span class="dot"></span> Patient handouts</span>
+            <span class="home-badge"><span class="dot"></span> Safety checks</span>
+            <span class="home-badge"><span class="dot"></span> Daily closeout</span>
+          </div>
+        </div>
+        <div class="home-status-card">
+          <div class="label">Current encounter</div>
+          <div class="patient" id="homePatient">No patient selected</div>
+          <div class="meta" id="homeMeta">Enter a patient in any module, then use the dashboard to move through the workflow.</div>
+          <div class="mini-row">
+            <div class="home-mini"><div class="n" id="homeTodayTotal">0</div><div class="t">Today</div></div>
+            <div class="home-mini"><div class="n" id="homeNeedsReview">0</div><div class="t">Needs review</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-grid">
+      <button class="home-action" type="button" data-jump-tab="administer">
+        <div class="top"><div class="big-ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4"/><path d="M19 9 8.7 19.3a2.4 2.4 0 0 1-3.4 0l-.6-.6a2.4 2.4 0 0 1 0-3.4L15 5"/><path d="m9 11 4 4"/></svg></div><h3>Injection</h3></div>
+        <p>Build an LAI note, run safety guards, calculate the next dose, and print the patient AVS.</p>
+        <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="home-action" type="button" data-jump-tab="uds">
+        <div class="top"><div class="big-ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.2L5.4 17.1A2.6 2.6 0 0 0 7.7 21h8.6a2.6 2.6 0 0 0 2.3-3.9L14 9.2V3"/><path d="M8 15h8"/></svg></div><h3>UDS</h3></div>
+        <p>Document point-of-care results, surface clinician attention items, and print lab-style or patient summaries.</p>
+        <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="home-action" type="button" data-jump-tab="samples">
+        <div class="top"><div class="big-ico mint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21h4"/><path d="M8 3h8l1 5-3 10h-4L7 8z"/><path d="M8 8h8"/></svg></div><h3>Samples</h3></div>
+        <p>Create soft patient instructions, handle multiple strengths, track packages, and copy dispensing notes.</p>
+        <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="home-action" type="button" data-jump-tab="forms">
+        <div class="top"><div class="big-ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg></div><h3>Forms</h3></div>
+        <p>Track letters, forms, fees, provider assignment, pickup status, and patient notification.</p>
+        <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="home-action" type="button" data-jump-tab="tms">
+        <div class="top"><div class="big-ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a7 7 0 0 0-7 7v3a4 4 0 0 0 4 4h1"/><path d="M12 3a7 7 0 0 1 7 7v3a4 4 0 0 1-4 4h-1"/><path d="M9 21h6"/><path d="M12 17v4"/></svg></div><h3>TMS</h3></div>
+        <p>Coming soon placeholder for treatment-session support, safety checks, and rating scales.</p>
+        <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="home-action" type="button" data-jump-tab="log">
+        <div class="top"><div class="big-ico amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div><h3>Closeout</h3></div>
+        <p>Review today’s activity, unresolved items, CSV export, and save the daily closeout PDF.</p>
+        <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+    </div>
+
+    <div class="home-row">
+      <div class="home-card">
+        <div class="home-card-head"><div class="tiny-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><h2>Readiness snapshot</h2><span class="hint">updates as you work</span></div>
+        <div class="home-checks" id="homeReadiness">
+          <div class="home-check"><span class="marker"></span><span class="txt"><b>Start an encounter</b>Select a workflow above or enter patient details in a module.</span></div>
+        </div>
+      </div>
+      <div class="home-card">
+        <div class="home-card-head"><div class="tiny-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><h2>Quick actions</h2></div>
+        <div class="home-quick-actions">
+          <button type="button" class="home-quick" data-home-action="copy-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy active note</button>
+          <button type="button" class="home-quick" data-home-action="packet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Patient printout</button>
+          <button type="button" class="home-quick" data-jump-tab="reference"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Knowledge base</button>
+          <button type="button" class="home-quick" data-jump-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Daily closeout</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-qa">
+      <div class="home-card">
+        <div class="home-card-head"><div class="tiny-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-5"/></svg></div><h2>Production workflow QA</h2><span class="hint">real-world MA paths</span></div>
+        <div id="workflowQaGrid" class="workflow-qa-grid"></div>
+        <div class="workflow-qa-foot">Use this as a live pre-closeout checklist: each card checks whether the workflow has enough information to print, copy, log, and hand off cleanly.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== ADMINISTER ===================== -->
+  <div class="panel" id="panel-administer">
+  <div class="layout">
+    <div class="form-col">
+
+      <div class="card inj-card card-encounter">
+        <div class="card-head">
+          <div class="ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></div>
+          <div><h2>Encounter</h2><div class="hint">First CC line becomes your note-list preview</div></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>Patient name</label><input id="ptName" placeholder="Last, First" /></div>
+          <div class="field"><label>DOB</label><input id="ptDOB" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" /></div>
+          <div class="field"><label>Ordering provider <span class="req">*</span></label><input id="orderingProvider" placeholder="Provider name" /></div>
+        </div>
+        <div class="field inj-order-purpose">
+          <label>Verified active-order purpose <span class="auto-tag">optional</span></label>
+          <input id="injOrderPurpose" data-injection-field="order-purpose" placeholder="Encounter context from the active order — do not enter a diagnosis unless ordered/documented" autocomplete="off" />
+        </div>
+        <div class="grp" style="margin-top:14px"><div class="gl">Visit reason</div><div class="chips" id="reasonChips"></div></div>
+      </div>
+
+      <div class="card inj-card card-medication">
+        <div class="card-head">
+          <div class="ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3a2.4 2.4 0 0 1-3.4 0l-.6-.6a2.4 2.4 0 0 1 0-3.4L15 5"/><path d="m9 11 4 4"/></svg></div>
+          <div><h2>Medication</h2><div class="hint">Pick the drug — dose, site, interval &amp; safety reconfigure</div></div>
+        </div>
+        <div class="grp" id="medChipsGrp"><div class="gl">Drug <span class="req">*</span></div><div class="chips" id="medChips"></div></div>
+        <div class="medhdr" id="medHdr">
+          <div><div class="mn" id="medHdrName">—</div><div class="mg" id="medHdrGen">—</div></div>
+          <span class="clr" id="medClear">Change</span>
+        </div>
+        <div id="medDetail" class="hidden">
+          <div class="grp"><div class="gl">Dose <span class="req">*</span></div><div class="chips" id="doseChips"></div></div>
+          <div class="grp admin-site-grp"><div class="gl">Administration site <span class="req">*</span> <span class="auto-tag" id="siteAuto">auto</span></div>
+            <div class="admin-guide" id="adminGuide">
+              <div class="admin-guide-top">
+                <div>
+                  <div class="admin-guide-kicker">Medication-aware guidance</div>
+                  <div class="admin-guide-title" id="adminGuideTitle">Select a medication</div>
+                  <div class="admin-guide-sub" id="adminGuideSub">Allowed route and sites will appear here.</div>
+                </div>
+                <div class="admin-route-pill" id="adminRoutePill">Route</div>
+              </div>
+              <div class="admin-guide-summary hidden" id="adminGuideSummary">
+                <div class="admin-guide-summary-copy">
+                  <div class="admin-guide-kicker">Selected administration</div>
+                  <div class="admin-guide-summary-line" id="adminGuideSummaryLine">—</div>
+                  <div class="admin-guide-summary-sub" id="adminGuideSummarySub">Review route and site selection.</div>
+                </div>
+                <button type="button" class="admin-guide-edit" id="adminGuideEdit" aria-controls="adminGuideDetail" aria-expanded="true">Review / change</button>
+              </div>
+              <div class="admin-guide-detail" id="adminGuideDetail">
+                <div class="admin-guide-body">
+                  <div class="body-map" id="bodyMap" aria-label="Injection site selector"></div>
+                  <div class="admin-side-panel">
+                    <div class="admin-panel-grid">
+                      <section class="admin-panel-card admin-panel-card-sites">
+                        <div class="admin-mini-label">Allowed sites</div>
+                        <div class="admin-allowed" id="adminAllowedText">—</div>
+                      </section>
+                      <section class="admin-panel-card admin-panel-card-selected">
+                        <div class="admin-mini-label">Selected administration</div>
+                        <div class="admin-selected" id="adminSelectedText">—</div>
+                      </section>
+                      <section class="admin-panel-card admin-panel-card-status">
+                        <div class="admin-mini-label">Alignment status</div>
+                        <div class="admin-status" id="adminStatusText">Pick a site to confirm route/site alignment.</div>
+                      </section>
+                    </div>
+                  </div>
+                </div>
+                <div class="admin-chip-label">Quick site chips</div>
+                <div class="chips admin-site-chips" id="siteChips"></div>
+                <div class="needle-guide-wrap">
+                  <button type="button" class="needle-guide-toggle" id="needleGuideToggle">
+                    <span>Needle placement &amp; angle</span>
+                    <span class="needle-guide-pill" id="needleGuidePill">Hidden</span>
+                  </button>
+                  <div class="needle-guide hidden" id="needleGuide">
+                    <div class="needle-guide-grid">
+                      <div class="needle-guide-diagram" id="needleGuideDiagram"></div>
+                      <div class="needle-guide-copy">
+                        <div class="needle-guide-mini">Technique overview</div>
+                        <div class="needle-guide-title" id="needleGuideTitle">Injection guidance</div>
+                        <div class="needle-guide-meta" id="needleGuideMeta"></div>
+                        <div class="needle-guide-note" id="needleGuideNote">Select a medication and site to personalize this guidance.</div>
+                        <ul class="needle-guide-list" id="needleGuideList"></ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row2 inj-plan-row">
+            <div class="grp plan-grp"><div class="gl">Route</div><div class="chips" id="routeChips"></div></div>
+            <div class="grp plan-grp"><div class="gl">Interval <span class="auto-tag" id="intAuto">auto</span></div><div class="chips" id="intChips"></div></div>
+          </div>
+          <div class="grp tech-grp"><div class="gl">Needle / technique</div><input id="tech" placeholder="auto-filled from drug — editable" /></div>
+          <div class="tip" id="medTip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span id="medTipTxt"></span></div>
+        </div>
+      </div>
+
+      <div class="card inj-card card-trace">
+        <div class="card-head">
+          <div class="ico amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8v8M11 8v8M15 8v4M19 8v8"/></svg></div>
+          <div><h2>Lot &amp; traceability</h2><div class="hint">Read off the vial / kit each visit</div></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>NDC <span class="req">*</span></label><input class="mono" id="ndc" placeholder="00000-0000-00" /></div>
+          <div class="field"><label>Lot # <span class="req">*</span></label><input class="mono" id="lot" placeholder="LOT123" /></div>
+          <div class="field"><label>Exp <span class="req">*</span></label><input class="mono" id="exp" type="month" /></div>
+        </div>
+        <div class="inj-detail-disclosure" id="injHandlingDisclosure">
+          <button type="button" class="inj-detail-toggle" id="injHandlingToggle" aria-controls="injHandlingFields" aria-expanded="false">
+            <span><b>Product handling &amp; trace exceptions</b><small>Source, preparation, waste, or a product/device issue — only when applicable</small></span>
+            <span class="inj-detail-toggle-meta">Optional <i aria-hidden="true">⌄</i></span>
+          </button>
+          <div class="inj-detail-body" id="injHandlingFields" hidden>
+            <div class="row2">
+              <div class="field">
+                <label>Medication source <span class="auto-tag">optional</span></label>
+                <select id="injProductSource" data-injection-field="product-source">
+                  <option value="">Not separately documented</option>
+                  <option value="Clinic stock">Clinic stock</option>
+                  <option value="Patient-supplied medication">Patient-supplied medication</option>
+                  <option value="Specialty-pharmacy shipment">Specialty-pharmacy shipment</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="field" id="injProductSourceOtherWrap" hidden>
+                <label>Medication source detail <span class="req">*</span></label>
+                <input id="injProductSourceOther" data-injection-field="product-source-other" placeholder="Document source" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label>Preparation / reconstitution <span class="auto-tag">optional</span></label>
+                <select id="injPreparation" data-injection-field="preparation">
+                  <option value="">Not separately documented</option>
+                  <option value="Preparation/reconstitution verified per current product instructions">Verified per current product instructions</option>
+                  <option value="Other">Other preparation / reconstitution detail</option>
+                </select>
+              </div>
+              <div class="field" id="injPreparationDetailWrap" hidden>
+                <label>Preparation detail <span class="req">*</span></label>
+                <input id="injPreparationDetail" data-injection-field="preparation-detail" placeholder="What was prepared / reconstituted" autocomplete="off" />
+              </div>
+            </div>
+            <div class="inj-detail-checkrow">
+              <label class="inj-detail-check"><input id="injWasteToggle" data-injection-field="waste-toggle" type="checkbox" /> <span>Document medication waste</span></label>
+              <label class="inj-detail-check"><input id="injProductIssueToggle" data-injection-field="product-issue-toggle" type="checkbox" /> <span>Document product or device issue</span></label>
+            </div>
+            <div class="inj-detail-inline" id="injWasteFields" hidden>
+              <div class="field"><label>Waste amount / unit <span class="req">*</span></label><input id="injWasteAmount" data-injection-field="waste-amount" placeholder="e.g., 0.4 mL" autocomplete="off" /></div>
+              <div class="field"><label>Waste witness <span class="req">*</span></label><input id="injWasteWitness" data-injection-field="waste-witness" placeholder="Name / initials" autocomplete="off" /></div>
+            </div>
+            <div class="inj-detail-issue" id="injProductIssueFields" hidden>
+              <div class="field"><label>Product / device issue <span class="req">*</span></label><textarea id="injProductIssueDetail" data-injection-field="product-issue-detail" placeholder="Issue or product condition observed"></textarea></div>
+              <div class="field"><label>Immediate action / product disposition <span class="req">*</span></label><textarea id="injProductIssueAction" data-injection-field="product-issue-action" placeholder="Containment, quarantine, return, replacement, or other immediate action"></textarea></div>
+              <div class="field"><label>Recipient notified, or why notification was not needed <span class="req">*</span></label><input id="injProductIssueRecipient" data-injection-field="product-issue-recipient" placeholder="Name / role or documented rationale" autocomplete="off" /></div>
+              <div class="field"><label>Notification / decision time <span class="req">*</span></label><input id="injProductIssueNotificationTime" data-injection-field="product-issue-notification-time" type="datetime-local" /></div>
+              <div class="field"><label>Direction received <span class="req">*</span></label><textarea id="injProductIssueDirection" data-injection-field="product-issue-direction" placeholder="Direction received or documented decision"></textarea></div>
+              <div class="field"><label>Next step / owner / timing <span class="req">*</span></label><textarea id="injProductIssueNextStep" data-injection-field="product-issue-next-step" placeholder="Follow-up owner, timing, and next action"></textarea></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card inj-card card-safety">
+        <div class="card-head">
+          <div class="ico mint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg></div>
+          <div><h2>Verification &amp; safety</h2><div class="hint">Routine review: standard checks are preselected. Tap off exceptions; final documentation still requires completion.</div></div>
+        </div>
+        <div class="chips" id="attChips"></div>
+        <div class="medspec-wrap" id="medSpecWrap">
+          <div class="divider"></div>
+          <div class="ms-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg> <span id="msTitle">Drug-specific safety</span></div>
+          <div class="chips" id="medSpecChips"></div>
+        </div>
+        <div class="row3" style="margin-top:14px">
+          <div class="field"><label>Allergy status <span class="req">*</span></label><input id="allergies" placeholder="Verify in active record; enter NKDA only if confirmed" /></div>
+          <div class="field"><label>BP</label><input id="bp" placeholder="124/78" /></div>
+          <div class="field"><label>HR</label><input id="hr" placeholder="72" /></div>
+          <div class="field"><label>Temp</label><input id="temp" placeholder="98.6" /></div>
+        </div>
+        <div class="grp" style="margin-top:14px">
+          <div class="gl">Provider review triggers <span class="auto-tag">tap if present</span></div>
+          <div class="chips" id="injSafetyChips"></div>
+        </div>
+      </div>
+
+      <div class="card inj-card card-return">
+        <div class="card-head">
+          <div class="ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+          <div><h2>Return date</h2><div class="hint">Computed from interval — override anytime</div></div>
+        </div>
+        <div class="inj-admin-date-grid" style="margin-bottom:14px">
+          <div class="field"><label>Prior dose <span class="auto-tag" style="margin-left:4px">optional</span></label><input id="priorDose" type="date" /></div>
+          <div class="field"><label>Administered</label><input id="adminDate" type="date" /></div>
+          <div class="field"><label>Actual administration time <span class="req">*</span></label><input id="injAdminTime" data-injection-field="admin-time" type="time" /></div>
+          <div class="field"><label>Next dose <span class="req">*</span></label><input id="nextDate" type="date" /></div>
+        </div>
+        <div class="row2" style="margin-bottom:14px">
+          <div class="field" style="grid-column:1/-1;max-width:340px"><label>Prior site <span class="auto-tag" style="margin-left:4px">optional</span></label><select id="priorSite"><option value="">—</option></select></div>
+        </div>
+        <div class="inj-timing" id="injTiming"></div>
+        <div class="retbox">
+          <div class="big"><span class="d" id="retBig">—</span><span class="dow" id="retDow"></span></div>
+          <div class="win" id="retWin">Pick a drug &amp; interval to compute the window.</div>
+          <div class="snaprow" id="snapRow"></div>
+        </div>
+        <button class="smsbtn" id="smsToggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Reminder SMS (EN / ES)</button>
+        <div class="smswrap" id="smsWrap">
+          <div class="field" style="margin:12px 0"><label>Clinic (for call-back line)</label>
+            <select id="clinic"><option value="">— none —</option></select>
+          </div>
+          <div class="smscard"><div class="lh"><span class="flag">English</span><button type="button" class="cp" data-sms="en"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div class="body" id="smsEN"></div></div>
+          <div class="smscard"><div class="lh"><span class="flag">Español</span><button type="button" class="cp" data-sms="es"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div class="body" id="smsES"></div></div>
+        </div>
+      </div>
+
+      <div class="card inj-card card-response">
+        <div class="card-head">
+          <div class="ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
+          <div><h2>Response &amp; follow-up</h2><div class="hint">Tolerance, education, who administered</div></div>
+        </div>
+        <div class="grp"><div class="gl">Patient response</div><div class="chips" id="respChips"></div></div>
+        <div class="grp hidden" id="respCustomWrap"><input id="respCustom" placeholder="Describe response" /></div>
+        <div class="field"><label>Administered by <span class="req">*</span></label><input id="admin" placeholder="J. Doe, LVN" /></div>
+        <div class="inj-detail-disclosure inj-admin-disclosure" id="injAdminDetailDisclosure">
+          <button type="button" class="inj-detail-toggle" id="injAdminDetailToggle" aria-controls="injAdminDetailFields" aria-expanded="false">
+            <span><b>Administration detail</b><small>Amount, device, and site condition — document only what applies</small></span>
+            <span class="inj-detail-toggle-meta">Optional <i aria-hidden="true">⌄</i></span>
+          </button>
+          <div class="inj-detail-body" id="injAdminDetailFields" hidden>
+            <div class="inj-admin-detail-grid">
+              <div class="field"><label>Administration amount <span class="auto-tag">optional</span></label><input id="injVolume" data-injection-field="administration-amount" inputmode="decimal" placeholder="e.g., 2" autocomplete="off" /></div>
+              <div class="field"><label>Unit</label><select id="injVolumeUnit" data-injection-field="administration-amount-unit"><option value="">Select unit</option><option value="mL">mL (volume)</option><option value="mg">mg (dose amount)</option></select></div>
+              <div class="field"><label>Delivery device <span class="auto-tag">optional</span></label><select id="injDevice" data-injection-field="device"><option value="">Not separately documented</option><option value="Needle and syringe">Needle and syringe</option><option value="Prefilled syringe">Prefilled syringe</option><option value="Autoinjector">Autoinjector</option><option value="Other">Other</option></select></div>
+              <div class="field" id="injDeviceOtherWrap" hidden><label>Device detail <span class="req">*</span></label><input id="injDeviceOther" data-injection-field="device-other" placeholder="Describe device" autocomplete="off" /></div>
+            </div>
+            <div class="row2" style="margin-top:10px">
+              <div class="field"><label>Site condition <span class="auto-tag">optional</span></label><select id="injSiteCondition" data-injection-field="site-condition"><option value="">Not separately documented</option><option value="Skin/site intact before administration">Skin/site intact before administration</option><option value="Other">Other finding / condition</option></select></div>
+              <div class="field" id="injSiteConditionDetailWrap" hidden><label>Site condition detail <span class="req">*</span></label><input id="injSiteConditionDetail" data-injection-field="site-condition-detail" placeholder="Document finding / condition" autocomplete="off" /></div>
+            </div>
+            <div class="field" id="injSecondAdminTimeWrap" hidden style="margin-top:10px;max-width:270px"><label>Component 2 actual time <span class="req">*</span></label><input id="injSecondAdminTime" data-injection-field="second-admin-time" type="time" /></div>
+          </div>
+        </div>
+        <div class="inj-exception-disclosure" id="injExceptionDisclosure">
+          <label class="inj-exception-toggle"><input id="injExceptionToggle" data-injection-field="exception-toggle" type="checkbox" /> <span><b>Administration exception / escalation</b><small>Use only when something changed after or during the administered encounter</small></span></label>
+          <div class="inj-exception-fields" id="injExceptionFields" hidden>
+            <div class="field"><label>What changed / what was observed <span class="req">*</span></label><textarea id="injExceptionSummary" data-injection-field="exception-summary" placeholder="Concise administered-encounter exception"></textarea></div>
+            <div class="inj-exception-grid">
+              <div class="field"><label>Recipient notified, or why notification was not needed <span class="req">*</span></label><input id="injExceptionRecipient" data-injection-field="exception-recipient" placeholder="Name / role or rationale" autocomplete="off" /></div>
+              <div class="field"><label>Notification / decision time <span class="req">*</span></label><input id="injExceptionTime" data-injection-field="exception-time" type="datetime-local" /></div>
+            </div>
+            <div class="field"><label>Direction, action, and next step <span class="req">*</span></label><textarea id="injExceptionOutcome" data-injection-field="exception-outcome" placeholder="Direction received, action taken, follow-up owner / timing"></textarea></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="preview-col">
+      <div class="scanrow">
+        <div class="lbl"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg> Note-list preview</div>
+        <div class="row"><div class="av" id="scanAv">—</div><div class="rtext"><div class="nm" id="scanName">Patient name</div><div class="pv" id="scanPrev">CC first line shows here…</div></div></div>
+      </div>
+      <div class="qa-panel" id="injQa"></div>
+      <div class="note">
+        <div class="note-top">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B5CA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>
+          <span class="ttl">Administration note</span><span class="badge">Live</span>
+        </div>
+        <div class="note-body">
+          <div class="sect"><div class="sh"><span class="tag">CC</span><button type="button" class="cp" data-copy="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="outCC"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">Assessment</span><button type="button" class="cp" data-copy="as"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="outAS"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">Plan</span><button type="button" class="cp" data-copy="pl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="outPL"></div></div>
+        </div>
+        <div class="actions">
+          <button class="btn ghost" id="resetBtn" title="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+          <button class="btn primary" id="copyAll" title="Copies the three Tebra section blocks without duplicate section headings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copy Tebra blocks</button>
+        </div>
+      </div>
+      <div class="btnbar" style="margin-top:14px">
+        <button class="btn mint" id="addLog" style="flex:1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add to today's log</button>
+        <button class="btn ghost" id="printAVS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg> Print AVS</button>
+        <button class="btn ghost" id="injWorksheetPrint" type="button">Print injection worksheet</button>
+        <button class="btn ghost" id="injWorksheetBlank" type="button">Blank worksheet</button>
+      </div>
+      <div class="foot">Drug defaults &amp; windows are editable guidance — verify against the active Rx, current PI, and site protocol. Add package NDCs in the code to auto-fill that field.</div>
+    </div>
+  </div>
+  </div>
+
+
+  <!-- ===================== UDS ===================== -->
+  <div class="panel" id="panel-uds">
+  <div class="layout">
+    <div class="form-col">
+
+      <div class="card">
+        <div class="card-head">
+          <div class="ico mint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.2L5.4 17.1A2.6 2.6 0 0 0 7.7 21h8.6a2.6 2.6 0 0 0 2.3-3.9L14 9.2V3"/><path d="M8 15h8"/></svg></div>
+          <div><h2>UDS encounter</h2><div class="hint">Point-of-care urine drug screen documentation</div></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>Patient name</label><input id="udsPtName" placeholder="Last, First" /></div>
+          <div class="field"><label>DOB</label><input id="udsDOB" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" /></div>
+          <div class="field"><label>Collected by <span class="req">*</span></label><input id="udsCollector" placeholder="Staff initials / name" /></div>
+        </div>
+        <div class="row2" style="margin-top:13px">
+          <div class="field"><label>Collection date / time</label><input id="udsDateTime" type="datetime-local" /></div>
+          <div class="field"><label>Specimen temperature</label><div class="chips" id="udsTempChips"></div></div>
+        </div>
+        <div class="btnbar" style="margin-top:13px"><button class="btn ghost" id="udsUsePatient" type="button">Use current patient</button><button class="btn ghost" id="udsUseStaff" type="button">Use signed-in staff</button></div>
+        <div class="grp" style="margin-top:14px"><div class="gl">Reason</div><div class="chips" id="udsReasonChips"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="ico amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+          <div><h2>Device</h2><div class="hint">Cup, lot, expiration, and control-line validity</div></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>Device <span class="req">*</span></label><select id="udsDevice"><option value="">Select cup/device</option><option>SAFE life 13-Panel Cup</option><option>SAFE life 14-Panel Cup</option><option>Other point-of-care UDS cup</option></select></div>
+          <div class="field"><label>Lot # <span class="req">*</span></label><input class="mono" id="udsLot" placeholder="LOT123" /></div>
+          <div class="field"><label>Exp <span class="req">*</span></label><input class="mono" id="udsExp" type="month" /></div>
+        </div>
+        <div class="grp" style="margin-top:14px"><div class="gl">Control line</div><div class="chips" id="udsControlChips"></div></div>
+        <div class="field uds-photo"><label>Device photo <span style="color:var(--ink-faint);font-weight:500">(optional for report)</span></label>
+          <div class="uds-photo-box" id="udsPhotoBox">
+            <input id="udsPhoto" type="file" accept="image/*" />
+            <div class="uds-photo-empty" id="udsPhotoEmpty">Attach a clear cup/photo strip image for the printed UDS report.</div>
+            <img id="udsPhotoPreview" class="uds-photo-preview hidden" alt="UDS cup photo preview" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="5" rx="1"/><rect x="12" y="8" width="3" height="8" rx="1"/><rect x="17" y="13" width="3" height="3" rx="1"/></svg></div>
+          <div><h2>Results</h2><div class="hint">Tap each panel: negative, preliminary positive, or invalid</div></div>
+        </div>
+        <div class="uds-attention" id="udsAttention"></div>
+        <div class="uds-quickbar">
+          <button type="button" class="mini" id="udsAllNeg">All tested negative</button>
+          <button type="button" class="mini" id="udsAllNt">Mark all not tested</button>
+          <button type="button" class="mini" id="udsThcPos">THC positive · rest negative</button>
+          <button type="button" class="mini" id="udsClearFlags">Clear positives / invalids</button>
+        </div>
+        <div class="uds-grid" id="udsResultGrid"></div>
+        <div class="uds-hint"><b>Reading helper:</b> Negative = C + T lines visible. Preliminary positive = C line visible, T line absent/faint. Invalid = C line missing or unreadable. Not tested = panel not included, not read, or intentionally not documented.</div>
+        <div class="uds-summary" id="udsSummaryBadges"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg></div>
+          <div><h2>Review</h2><div class="hint">Clinical context and follow-up wording</div></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>Validity markers</label><select id="udsValidity"><option value="acceptable">Acceptable</option><option value="needs review">Needs review</option><option value="not documented">Not documented</option></select></div>
+          <div class="field"><label>Medication alignment</label><select id="udsConsistent"><option value="no unexpected">No unexpected findings noted by staff</option><option value="not aligned">Not readily explained by available med list</option><option value="needs review">Provider review requested</option><option value="patient explanation">Patient reports prescribed/known explanation</option><option value="unavailable">Medication list unavailable / not reviewed</option></select></div>
+          <div class="field"><label>Outside lab</label><select id="udsLab"><option value="provider to decide">Provider to decide</option><option value="not needed">Not needed</option><option value="ordered">Outside lab order placed</option><option value="recommended">Recommended if clinically indicated</option></select></div>
+        </div>
+        <div class="uds-recon" id="udsReconWrap"></div>
+        <div class="field" style="margin-top:13px"><label>Patient comment / context</label><textarea id="udsComment" placeholder="Optional: patient explanation, prescribed meds, provider instruction, or follow-up context"></textarea></div>
+      </div>
+
+    </div>
+
+    <div class="preview-col">
+      <div class="scanrow">
+        <div class="lbl"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg> UDS note-list preview</div>
+        <div class="row"><div class="av" id="udsScanAv">—</div><div class="rtext"><div class="nm" id="udsScanName">Patient name</div><div class="pv" id="udsScanPrev">UDS snapshot shows here…</div></div></div>
+      </div>
+      <div class="qa-panel" id="udsQa"></div>
+      <div class="note uds-note">
+        <div class="note-top">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F9E76" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.2L5.4 17.1A2.6 2.6 0 0 0 7.7 21h8.6a2.6 2.6 0 0 0 2.3-3.9L14 9.2V3"/></svg>
+          <span class="ttl">UDS note</span><span class="badge">Live</span>
+        </div>
+        <div class="note-body">
+          <div class="sect"><div class="sh"><span class="tag">First line</span><button type="button" class="cp" data-udscopy="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="udsOutCC"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">Handoff body</span><button type="button" class="cp" data-udscopy="as"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="udsOutAS"></div></div>
+          <div class="sect"><div class="sh"><span class="tag">Footer details</span><button type="button" class="cp" data-udscopy="pl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button></div><div id="udsOutPL"></div></div>
+        </div>
+        <div class="actions">
+          <button class="btn ghost" id="udsReset" title="Clear UDS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+          <button class="btn mint" id="addUdsLog" style="flex:1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add UDS to log</button>
+          <button class="btn ghost" id="printUdsReport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg> Print clinician report</button>
+          <button class="btn ghost" id="printUdsPatient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg> Patient summary</button>
+          <button class="btn primary" id="udsCopyAll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copy Tebra UDS note</button>
+        </div>
+      </div>
+      <div class="report-options">
+        <div class="opt-title">Clinician report options</div>
+        <label><input type="checkbox" id="udsSigToggle" checked /> Include review / signature fields on clinician report</label>
+        <div class="opt-sub">Turn this off when the report is routed electronically and a wet-signature area is not needed.</div>
+      </div>
+      <div class="foot">UDS results are point-of-care preliminary screening only. Provider reviews results in clinical context; outside lab order may be placed when clinically indicated.</div>
+    </div>
+  </div>
+  </div>
+
+
+  <!-- ===================== ORAL SAMPLES ===================== -->
+  <div class="panel" id="panel-samples">
+    <div class="layout">
+      <div class="form-col">
+        <div class="card">
+          <div class="card-head">
+            <div class="ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21h4"/><path d="M8 3h8l1 5-3 10h-4L7 8z"/><path d="M8 8h8"/></svg></div>
+            <div><h2>Oral sample encounter</h2><div class="hint">Patient handout + sample log note. Prescriber directions remain the source of truth.</div></div>
+          </div>
+          <div class="row3">
+            <div class="field"><label>Patient name</label><input id="samplePtName" placeholder="Last, First" /></div>
+            <div class="field"><label>DOB</label><input id="sampleDOB" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" /></div>
+            <div class="field"><label>Prescriber</label><input id="samplePrescriber" placeholder="Provider name" /></div>
+          </div>
+          <div class="row3" style="margin-top:13px">
+            <div class="field"><label>Dispensed by</label><input id="sampleStaff" placeholder="Staff name" /></div>
+            <div class="field"><label>Date dispensed</label><input id="sampleDate" type="date" /></div>
+            <div class="field"><label>Purpose</label><select id="samplePurpose"><option>Medication sample start</option><option>Titration / starter pack</option><option>Bridge until pharmacy fill</option><option>Dose change sample</option><option>Tolerability trial</option><option>Continuation sample</option></select></div>
+          </div>
+          <div class="btnbar" style="margin-top:13px"><button class="btn ghost" id="sampleUsePatient" type="button">Use current patient</button><button class="btn ghost" id="sampleUseStaff" type="button">Use signed-in staff</button></div>
+          <div class="sample-intent-box">
+            <div class="intent-head"><div><div class="sample-intent-title">Prescriber intent</div><div class="sample-intent-help">Sets the tone of the handout. Staff can still edit the instructions below.</div></div></div>
+            <div class="sample-intent-chips" id="sampleIntentChips"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21h4"/><path d="M8 3h8l1 5-3 10h-4L7 8z"/><path d="M12 11v4"/><path d="M10 13h4"/></svg></div>
+            <div><h2>Medication sample</h2><div class="hint">Select the medication, add the physical package(s) handed out, then verify the patient directions.</div></div>
+          </div>
+          <div class="sample-workflow-strip">
+            <div class="sample-workflow-step"><b>1. Select med</b><span>Pick the sample medication and strength.</span></div>
+            <div class="sample-workflow-step"><b>2. Add package</b><span>Tap the actual box, card, kit, or pack handed out.</span></div>
+            <div class="sample-workflow-step"><b>3. Build steps</b><span>Add another strength only when the prescriber gave a sequence.</span></div>
+            <div class="sample-workflow-step"><b>4. Verify</b><span>Confirm sig, lot/exp, prescriber, and print handout.</span></div>
+          </div>
+          <div class="grp"><div class="gl">Clinic sample medication</div><div class="chips" id="sampleMedChips"></div></div>
+          <div class="sample-medbox">
+            <div class="field"><label>Primary medication / strength</label><input id="sampleMedLabel" placeholder="Medication and strength" /></div>
+            <div class="field sample-qty-field"><label>Primary package handed out</label>
+              <div class="qty-wrap"><button class="qty-step" id="sampleQtyMinus" type="button" title="Decrease package count">−</button><input id="sampleQty" placeholder="Tap a package below or type exact package" /><button class="qty-step" id="sampleQtyPlus" type="button" title="Increase package count">+</button></div>
+              <div class="qty-tools"><button class="qty-mini" id="sampleQtySame" type="button">+ Add current package to list</button><button class="qty-mini" id="sampleQtyClear" type="button">Clear package</button></div>
+              <div class="qty-meta" id="sampleQtyMeta">Tap a physical package below; use +/- only after selecting a package.</div>
+            </div>
+            <div class="sample-packbox" id="samplePackageBox">
+              <div class="pack-head"><div><div class="pack-title">Physical package options</div><div class="pack-help">Tap what was actually handed to the patient. If a primary package already exists, the option is added to the samples-provided list.</div></div></div>
+              <div class="sample-pack-buttons" id="samplePackageButtons"></div>
+            </div>
+            <section class="sample-package-trace full" id="samplePackageTraceability" aria-labelledby="samplePackageTraceTitle">
+              <div class="sample-package-trace-head">
+                <div><div class="sample-package-trace-title" id="samplePackageTraceTitle">Package traceability <span class="req">*</span></div><div class="sample-package-trace-help">Record the lot and expiration printed on each physical package. One row may group packages only after you visually verify they match.</div></div>
+                <button class="sample-trace-copy" id="sampleTraceCopyPrimary" type="button" title="Use only after visually verifying the added package labels match the primary package">Copy primary trace to added packages</button>
+              </div>
+              <div class="sample-package-trace-primary">
+                <div class="field"><label>Primary package lot #</label><input id="sampleLot" class="mono" placeholder="Lot" /></div>
+                <div class="field"><label>Primary package exp</label><input id="sampleExp" type="month" class="mono" /></div>
+              </div>
+              <div class="sample-package-trace-list" id="samplePackageTraceList" aria-live="polite"></div>
+            </section>
+            <div class="field"><label>Start date</label><input id="sampleStart" type="date" /></div>
+            <div class="field"><label>Food timing</label><select id="sampleFood"><option value="auto">Auto from medication</option><option value="with or without food">With or without food</option><option value="with food">Take with food</option><option value="empty stomach">Empty stomach</option><option value="custom">See prescriber instructions</option></select></div>
+            <div class="field full"><label>Patient instructions <span class="req">*</span></label><textarea id="sampleSig" placeholder="Example: Take 1 capsule by mouth every morning. Follow the prescriber's titration schedule. Do not change dose unless instructed."></textarea></div>
+            <div class="sample-sigbox" id="sampleSigSuggestions"></div>
+            <div class="sample-dose-builder">
+              <div class="sample-dose-top">
+                <div><div class="sample-dose-title">Samples provided / step plan</div><div class="sample-dose-help">Use this list for additional packages or medication sequences, such as Vraylar 1.5 mg first, then 3 mg. Single-package samples can stay in the primary package field.</div></div>
+                <button class="sample-add-dose" id="sampleAddDose" type="button">+ Manual package/step</button>
+              </div>
+              <div class="sample-dose-rows" id="sampleDoseRows"></div>
+            </div>
+            <div class="field full"><label>Titration / prescriber intent</label><textarea id="sampleTitration" placeholder="Optional: Day 1–7..., then Day 8..., increase only if tolerated, bridge until pharmacy fill, etc."></textarea></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="ico mint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9C7.5 19.5 4 17 4 12V6l8-3 8 3z"/></svg></div>
+            <div><h2>Safety handoff</h2><div class="hint">Plain language for the patient; more detailed note for staff/Tebra.</div></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Medication list / interaction check</label><select id="sampleMedCheck"><option>Prescriber reviewed / ok to dispense</option><option>Pending provider confirmation</option><option>Medication list not available</option><option>Patient counseled to ask pharmacist before starting</option><option value="not documented">Not documented</option></select></div>
+            <div class="field"><label>Patient education</label><select id="sampleEdu"><option>Reviewed with patient</option><option>Reviewed with caregiver</option><option>Written instructions only</option><option>Needs additional counseling</option><option value="not documented">Not documented</option></select></div>
+          </div>
+          <div class="field" style="margin-top:13px"><label>Extra patient-friendly note</label><textarea id="sampleExtra" placeholder="Optional: call if nausea is severe, take at bedtime if provider instructed, pharmacy prior auth pending, etc."></textarea></div>
+          <div class="row2" style="margin-top:13px">
+            <div class="field"><label>Patient handout status <span class="auto-tag">optional</span></label><select id="sampleHandoutStatus"><option value="">Not separately documented</option><option>Printed and provided</option><option>Electronic copy provided</option><option>Patient declined</option><option>Not provided â€” follow-up needed</option></select></div>
+            <div class="field"><label>Follow-up <span class="auto-tag">optional</span></label><textarea id="sampleFollowUp" placeholder="Owner, timing, pharmacy access, callback, or other next step"></textarea></div>
+          </div>
+          <section class="sample-reviewed-today" id="sampleReviewedTodayCard" aria-labelledby="sampleReviewedTodayTitle">
+            <div class="sample-reviewed-today-copy"><div class="sample-reviewed-today-title" id="sampleReviewedTodayTitle">Final dispense review</div><div>When the current patient/date, package labels, directions, medication review, and education status are correct, make one explicit confirmation before printing or logging the dispense.</div></div>
+            <button class="sample-reviewed-today-button" id="sampleReviewedToday" type="button" aria-pressed="false"><span class="sample-reviewed-today-icon" aria-hidden="true">✓</span><span><b>Mark reviewed today</b><small>One-tap final confirmation</small></span></button>
+            <div class="sample-reviewed-today-status" id="sampleReviewedTodayStatus" role="status" aria-live="polite">Not confirmed yet — output remains a documentation draft.</div>
+          </section>
+        </div>
+      </div>
+
+      <div class="preview-col">
+        <div class="scanrow">
+          <div class="lbl">Sample handout readiness</div>
+          <div id="sampleReadiness" class="qa-list"></div>
+        </div>
+        <div class="note">
+          <div class="note-top"><span class="ttl">Oral sample handout</span><span class="badge">Live</span></div>
+          <div class="note-body">
+            <div class="sample-summary">
+              <div class="sample-stat"><div class="k">Medication</div><div class="v" id="samplePrevMed">—</div></div>
+              <div class="sample-stat"><div class="k">Direction</div><div class="v" id="samplePrevSig">—</div></div>
+            </div>
+            <div class="sample-handout" id="samplePreview"></div>
+          </div>
+          <div class="actions">
+            <button class="btn ghost" id="sampleReset" type="button">Reset</button>
+            <button class="btn primary" id="sampleCopy" type="button">Copy Tebra sample note</button>
+          </div>
+        </div>
+        <div class="btnbar" style="margin-top:14px">
+          <button class="btn mint" id="sampleAddLog" style="flex:1" type="button">Add sample to log</button>
+          <button class="btn ghost" id="samplePrint" type="button">Print patient handout</button>
+          <button class="btn ghost" id="sampleWorksheetPrint" type="button">Print clinician worksheet</button>
+          <button class="btn ghost" id="sampleWorksheetBlank" type="button">Blank worksheet</button>
+        </div>
+        <div class="foot">Sample handouts support prescriber instructions. They do not replace medication guides, pharmacy counseling, or the prescriber's final directions.</div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ===================== FORMS / LETTERS ===================== -->
+  <div class="panel" id="panel-forms">
+    <div class="forms-layout">
+      <div class="form-col">
+        <div class="card">
+          <div class="card-head">
+            <div class="ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg></div>
+            <div><h2>Forms / letters request</h2><div class="hint">A lightweight tracker for paperwork, fees, pickup, and patient notification.</div></div>
+          </div>
+          <div class="row3">
+            <div class="field"><label>Patient name</label><input id="formsPtName" placeholder="Last, First" /></div>
+            <div class="field"><label>DOB</label><input id="formsDOB" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" /></div>
+            <div class="field"><label>Requested date</label><input id="formsDate" type="date" /></div>
+          </div>
+          <div class="btnbar" style="margin-top:13px"><button class="btn ghost" id="formsUsePatient" type="button">Use current patient</button><button class="btn ghost" id="formsUseStaff" type="button">Use signed-in staff</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+            <div><h2>Request details</h2><div class="hint">Pick the closest type, then add the provider/staff details.</div></div>
+          </div>
+          <div class="grp"><div class="gl">Type of request</div><div class="forms-kind-grid" id="formsTypeGrid"></div></div>
+          <div class="row3" style="margin-top:13px">
+            <div class="field"><label>Assigned provider</label><input id="formsProvider" placeholder="Provider" /></div>
+            <div class="field"><label>Assigned staff</label><input id="formsStaff" placeholder="Staff" /></div>
+            <div class="field"><label>Due / target date</label><input id="formsDue" type="date" /></div>
+          </div>
+          <div class="row3" style="margin-top:13px">
+            <div class="field"><label>Fee status</label><select id="formsFee"><option>No fee / not applicable</option><option>Fee quoted</option><option>Fee collected</option><option>Fee pending</option><option>Waived by provider/manager</option></select></div>
+            <div class="field"><label>Delivery / pickup</label><select id="formsDelivery"><option>Patient pickup</option><option>Portal / electronic copy</option><option>Fax to third party</option><option>Mail</option><option>Provider to advise</option></select></div>
+            <div class="field"><label>Patient notified</label><select id="formsNotified"><option>Not yet notified</option><option>Left voicemail</option><option>Spoke with patient</option><option>SMS sent</option><option>Portal message sent</option><option>Not applicable</option></select></div>
+          </div>
+          <div class="field" style="margin-top:13px"><label>Request notes / special instructions</label><textarea id="formsNotes" placeholder="Example: patient requesting work accommodation letter; provider to review wording before release."></textarea></div>
+          <div class="row3" style="margin-top:13px">
+            <div class="field"><label>Approval / release status <span class="auto-tag">optional</span></label><select id="formsApproval"><option value="">Not separately documented</option><option>Provider approval pending</option><option>Provider approved for release</option><option>No provider approval required for this request</option><option>Release held</option></select></div>
+            <div class="field"><label>Action completed / current task <span class="auto-tag">optional</span></label><textarea id="formsAction" placeholder="Prepared draft, requested records, routed to provider, collected fee, etc."></textarea></div>
+            <div class="field"><label>Follow-up / next owner <span class="auto-tag">optional</span></label><textarea id="formsFollowUp" placeholder="Next step, responsible person, and timing"></textarea></div>
+          </div>
+        </div>
+
+        <div class="card letter-builder-card">
+          <div class="card-head">
+            <div class="ico amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+            <div><h2>Letter builder</h2><div class="hint">Draft provider-reviewed letters for diagnosis verification, work excuse, or return-to-work needs.</div></div>
+          </div>
+          <div class="grp"><div class="gl">Letter purpose</div><div class="letter-chipbar" id="letterTypeChips"></div></div>
+          <div class="row3" style="margin-top:13px">
+            <div class="field"><label>Recipient</label><input id="letterRecipient" value="To Whom It May Concern" /></div>
+            <div class="field"><label>Provider name / signature</label><input id="letterProvider" placeholder="Provider" /></div>
+            <div class="field"><label>Letter date</label><input id="letterDate" type="date" /></div>
+          </div>
+          <div class="row3" style="margin-top:13px">
+            <div class="field"><label>Provider credentials</label><input id="letterCreds" placeholder="MD, PMHNP-BC, PA-C, etc." /></div>
+            <div class="field"><label>Subject line</label><input id="letterSubject" placeholder="Auto-generated if blank" /></div>
+            <div class="field"><label>Signature mode</label><select id="letterSignatureMode"><option value="wet">Signature line</option><option value="electronic">Electronic approval text</option><option value="none">No signature field</option></select></div>
+          </div>
+          <div class="letter-options-grid">
+            <div class="field"><label>Recipient address / fax / organization <span style="color:var(--ink-faint);font-weight:500">optional</span></label><textarea class="letter-address" id="letterRecipientAddress" placeholder="Employer, school, agency, fax number, or address if needed."></textarea></div>
+            <div class="field"><label>Prepared by / internal note <span style="color:var(--ink-faint);font-weight:500">optional</span></label><textarea class="letter-address" id="letterPreparedBy" placeholder="Prepared by staff, release instructions, or internal reference. Not shown in letter body unless used in footer/prepared line."></textarea></div>
+          </div>
+          <div class="row3" style="margin-top:13px">
+            <div class="field"><label>Off work from</label><input id="letterOffStart" type="date" /></div>
+            <div class="field"><label>Through</label><input id="letterOffEnd" type="date" /></div>
+            <div class="field"><label>Return date</label><input id="letterReturn" type="date" /></div>
+          </div>
+          <div class="row2" style="margin-top:13px">
+            <div class="field"><label>Diagnosis / clinical wording <span style="color:var(--ink-faint);font-weight:500">provider-approved</span></label><textarea id="letterDx" placeholder="Example: patient is under care for a psychiatric condition. Use exact diagnosis only if provider approved release."></textarea></div>
+            <div class="field"><label>Restrictions / accommodations / notes</label><textarea id="letterRestrictions" placeholder="Example: may return without restrictions; or provider-approved restrictions/accommodations."></textarea></div>
+          </div>
+          <div class="letter-mini-note"><b>Safety note:</b> Staff should treat this as a draft. Diagnosis details, work status, restrictions, and release wording require provider approval before giving the letter to the patient or third party.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="ico mint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+            <div><h2>Status</h2><div class="hint">Used for the log and closeout queue.</div></div>
+          </div>
+          <div class="form-status-bar" id="formsStatusChips"></div>
+        </div>
+      </div>
+
+      <div class="preview-col forms-preview-col">
+        <div class="scanrow"><div class="lbl">Forms readiness</div><div id="formsReadiness" class="qa-list"></div></div>
+        <div class="note">
+          <div class="note-top"><span class="ttl">Forms handoff note</span><span class="badge">Live</span></div>
+          <div class="note-body"><div class="forms-note-preview" id="formsNotePreview"></div></div>
+          <div class="actions"><button class="btn ghost" id="formsReset" type="button">Reset</button><button class="btn primary" id="formsCopy" type="button">Copy forms note</button></div>
+        </div>
+        <div class="note" style="margin-top:14px">
+          <div class="note-top"><span class="ttl">Letter draft</span><span class="badge">Provider review</span></div>
+          <div class="note-body"><div class="letter-preview" id="letterPreview"></div></div>
+          <div class="actions"><button class="btn ghost" id="letterPrint" type="button">Print / save PDF</button><button class="btn primary" id="letterCopy" type="button">Copy letter text</button></div><div class="letter-actions-hint">Use Print / save PDF, then choose “Save as PDF” in the browser print dialog. Add the IPMG logo later for a full letterhead.</div>
+        </div>
+        <div class="btnbar" style="margin-top:14px"><button class="btn mint" id="formsAddLog" style="flex:1" type="button">Add forms item to log</button></div>
+        <div class="foot">This module tracks operational status only. Provider determines wording, completion, and release of clinical/legal letters or forms.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TMS PLACEHOLDER ===================== -->
+  <div class="panel" id="panel-tms">
+    <div class="tms-hero">
+      <div class="inner">
+        <div>
+          <div class="kicker">Coming soon</div>
+          <h2>TMS treatment support</h2>
+          <p>This placeholder is ready for your future TMS workflow. Once your team confirms the device, protocol, and documentation requirements, this can become a session-by-session assistant for technicians and MAs.</p>
+        </div>
+        <div><span class="tms-pill">Future module · not active yet</span></div>
+      </div>
+    </div>
+    <div class="tms-grid">
+      <div class="tms-card"><h3>Planned session note</h3><p>Patient, treatment number, protocol, motor-threshold date, session parameters, tolerance, side effects, and next session.</p></div>
+      <div class="tms-card"><h3>Safety checklist</h3><p>Seizure-risk screen, medication changes, sleep/alcohol changes, new neurologic symptoms, pain/headache, and provider-review triggers.</p></div>
+      <div class="tms-card"><h3>Progress tracking</h3><p>PHQ-9 / GAD-7 cadence, response/remission markers, missed-session tracking, and technician initials.</p></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><div class="ico lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div><div><h2>Draft future note style</h2><div class="hint">Placeholder only — refine after protocol is confirmed.</div></div></div>
+      <div class="forms-note-preview">TMS session completed today per protocol. Patient tolerated treatment without acute complication. No new safety concern reported during session. Treatment parameters documented in the TMS record. Next session to continue as scheduled.</div>
+    </div>
+  </div>
+
+  <!-- ===================== CLINICAL KNOWLEDGE BASE ===================== -->
+  <div class="panel" id="panel-reference">
+    <div class="kb-hero">
+      <div>
+        <h2>Clinical knowledge base</h2>
+        <p>Fast MA-facing reference for injections, UDS, oral samples, TMS setup, and common psych-office safety reminders. Designed for handoff support — not a replacement for the prescriber, protocol, package insert, or lab policy.</p>
+      </div>
+      <span class="kb-badge">Psych MA quick reference</span>
+    </div>
+    <div class="kb-tools">
+      <div class="refsearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="refSearch" placeholder="Search LAIs, UDS panels, samples, TMS, safety…" />
+      </div>
+      <div class="kb-filters" id="kbFilters"></div>
+    </div>
+    <div class="kb-grid" id="refGrid"></div>
+    <div class="foot">Knowledge-base entries are operational guidance only. Confirm dosing, safety, contraindications, lab interpretation, and treatment parameters against current prescribing information, clinic protocol, and provider direction.</div>
+  </div>
+
+  <!-- ===================== LOG ===================== -->
+  <div class="panel" id="panel-log">
+    <div class="card">
+      <div class="card-head">
+        <div class="ico mint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+        <div><h2>Today's activity</h2><div class="hint">Unified session log for injections and point-of-care UDS</div></div>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost" id="copyLog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copy table</button>
+          <button class="btn ghost" id="clearLog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Clear</button>
+        </div>
+      </div>
+      <div class="closeout-grid">
+        <div class="closeout-card">
+          <div class="closeout-head">
+            <div><div class="closeout-title">Daily closeout</div><div class="closeout-sub">Quick end-of-day summary from today’s activity log</div></div>
+          </div>
+          <div class="closeout-kpis" id="closeoutKpis"></div>
+          <div class="closeout-actions">
+            <button class="btn ghost" id="copyDailySummary">Copy summary</button>
+            <button class="btn ghost" id="exportDailyCsv">Export CSV</button>
+            <button class="btn ghost" id="printDailyLog">Print daily log</button><button class="btn primary" id="saveDailyPdf" type="button">Save closeout PDF</button>
+          </div>
+        </div>
+        <div class="closeout-card">
+          <div class="closeout-head">
+            <div><div class="closeout-title">Needs-review queue</div><div class="closeout-sub">Items that should not disappear into the day</div></div>
+          </div>
+          <div id="needsReviewList" class="review-list"></div>
+        </div>
+      </div>
+      <div class="activity-filters" id="logFilters"></div>
+      <div class="logwrap">
+        <table class="logtable" id="logTable">
+          <thead><tr><th>#</th><th>Time</th><th>Type</th><th>Patient</th><th>Summary</th><th>Details</th><th>Traceability</th><th>Follow-up</th><th>By</th><th></th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+      <div class="logempty" id="logEmpty">No activity logged yet. Add an injection or UDS entry from its workflow.</div>
+    </div>
+  </div>
+
+</div>
+
+<div id="avsSheet"></div>
+<div id="letterSheet"></div>
+<div id="udsSheet"></div>
+<div id="udsPatientSheet"></div>
+<div id="dailySheet"></div>
+<div id="sampleSheet"></div>
+<div id="sampleWorksheetSheet"></div>
+<div id="injWorksheetSheet"></div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span id="toastMsg">Copied</span></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ===================== RC5.25: SMART VITALS ENTRY + ABNORMAL DOUBLE-CHECK ===================== -->

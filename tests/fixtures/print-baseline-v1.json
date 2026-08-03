@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "bc4a255d351793b59184760b537c7aef9abcf0bb",
+  "baselineIndexBlob": "2db13bcc1d79374f40364d22ef2fe675881ddef9",
+  "baselineIndexSha256": "328d50a9efbb7a2a5407470a0819db5968551af6b092df05a54fa3db821e3edd",
+  "fixedClock": "2026-07-30T12:00:00.000Z",
+  "captureMethod": "Each renderer was executed in Chromium against index.html loaded directly from the named production commit. The resulting print-root innerHTML was whitespace-canonicalized and SHA-256 hashed. PDF bytes are deliberately excluded because Chromium PDF metadata and object ordering are platform-dependent.",
+  "legacyCss": {
+    "sha256": "8e17bc737abdd2d65f8532b4ea5027c94f5894773b1f123deb7d188f4a7f21ea",
+    "bytes": 683885
+  },
+  "outputs": {
+    "avsSheet": {
+      "sha256": "316d95979e5cd33136a523e64f93ec5cf5a1f110263c8114198b18b023f74a49",
+      "bytes": 2676,
+      "topLevelClass": "beauty-page beauty-avs"
+    },
+    "injWorksheetSheet": {
+      "sha256": "b0edc70d9f4cbded0b3b3979484488aa968b81c0df8e8648d8124e0fc2fd6380",
+      "bytes": 9504,
+      "topLevelClass": "iw-page ws-modern iw-injection"
+    },
+    "udsSheet": {
+      "sha256": "f5b698b573816f6da47531d7b2ccf5a4e291cd40f2de85b2daefd6fd3fd38786",
+      "bytes": 5007,
+      "topLevelClass": "report-shell lab-modern"
+    },
+    "udsPatientSheet": {
+      "sha256": "cd84d30859f36a1f65bed3bf9b9458e56feb625c445f84b682147f6d10ddce34",
+      "bytes": 3302,
+      "topLevelClass": "beauty-page beauty-uds"
+    },
+    "sampleSheet": {
+      "sha256": "6b91be5ec1f86402031bab824aa8260627f59f01d281ae11df1ba261b5cc140e",
+      "bytes": 2838,
+      "topLevelClass": "beauty-page beauty-sample"
+    },
+    "sampleWorksheetSheet": {
+      "sha256": "d0da64a4360869497f5b42cbdf538a8840d40bc2aa4eaa9747a5a99f2de51a70",
+      "bytes": 9155,
+      "topLevelClass": "sw-page ws-modern sw-sample"
+    },
+    "letterSheet": {
+      "sha256": "59164d49d7704a868054c0c04f2ff393a1168f0fe4f586465239b8a8281ba53d",
+      "bytes": 1308,
+      "topLevelClass": "letter-page-print"
+    },
+    "dailySheet": {
+      "sha256": "068d1ce6a82be6dafcfb05baf2053230bbf137de7a37c419b257170b50f142de",
+      "bytes": 1800,
+      "topLevelClass": "daily-pdf"
+    }
+  }
+}

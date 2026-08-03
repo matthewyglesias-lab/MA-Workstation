@@ -1,0 +1,3779 @@
+/*
+ * Screen-side hiding for the two legacy-owned subtrees. These were previously
+ * hidden only incidentally, by legacy.css's own `.panel{display:none}` - now
+ * that legacy.css is print-only (see index.html), they need an explicit rule
+ * or the hidden legacy markup and the print sheets would both render on screen.
+ *
+ * Scoped to `screen` so print is completely untouched: during print neither
+ * rule applies, and legacy.css governs those subtrees exactly as it does today.
+ */
+@media screen {
+  #legacy-staging,
+  #print-root {
+    display: none;
+  }
+}
+
+/*
+ * Structural base for the body-appended legacy surfaces (records drawer,
+ * injection-completion receipt, toast). legacy.css owned their layout -
+ * position, flex/grid structure, width - while the redesign only ever
+ * restyled their appearance on top. With legacy.css print-only they need a
+ * real structural base or they render unpositioned.
+ *
+ * Interim: these are rebuilt as real dialog-based components in a later phase,
+ * at which point this block goes away. (classic-workflows.css is already
+ * gone - a per-rule liveness audit showed 148 of its 150 rules matched
+ * nothing at all once every workflow became a Preact panel.)
+ */
+@media screen {
+  /* `:not([hidden])` matters: an author `display` declaration would otherwise
+     override the UA `[hidden]{display:none}` rule and pin these layers open. */
+  /* A centred modal record-selection window, not an edge drawer. Sliding a
+     panel in from the right over a dimmed page is a phone/SaaS idiom; the
+     period-correct equivalent of "pick a saved encounter" is a modal window
+     with a titlebar, search criteria, a column list, and a button bar. */
+  /* `[open]`, not `:not([hidden])`: this is a <dialog> now, and an author
+     `display` declaration would otherwise beat the UA rule that hides a
+     closed dialog - the same trap the [hidden] layers hit. */
+  .records-drawer-layer:not([open]) {
+    display: none;
+  }
+
+  .records-drawer-layer[open] {
+    position: fixed;
+    inset: 0;
+    z-index: 14500;
+    display: grid;
+    place-items: center;
+    max-width: none;
+    max-height: none;
+    width: 100%;
+    height: 100%;
+    padding: 12px;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    isolation: isolate;
+  }
+
+  .records-drawer-layer::backdrop {
+    background: rgb(8 17 34 / 42%);
+  }
+
+  .records-drawer {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+    width: min(720px, 100%);
+    max-height: min(560px, 100%);
+  }
+
+  .inj-completion-overlay:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    background: rgb(25 37 58 / 42%);
+  }
+
+  .inj-completion-card {
+    position: relative;
+    width: min(400px, 100%);
+  }
+
+  /* The app-wide toast (legacy `toast()` / `toastSafe()`, still the only
+     transient-feedback channel) was another surface legacy.css owned outright.
+     With that sheet print-only, the toast had no screen styling left at all -
+     it rendered as a static, transparent, full-width 1460px block below the
+     fold. It is styled here as a flat status strip rather than the original
+     rounded, soft-shadowed popup: hidden until `toast()` adds `.show`. */
+  .toast {
+    position: fixed;
+    /* Clears the 22px status bar and the bottom workflow tab strip, so
+       transient feedback never covers the navigator. */
+    bottom: 62px;
+    left: 50%;
+    z-index: 20000;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    max-width: min(460px, calc(100vw - 32px));
+    padding: 7px 14px;
+    transform: translate(-50%, 8px);
+    /* Literal colours, not `--cd-*`: those tokens are declared on
+       `.cd2004-shell`, and the toast is appended to <body> outside it. */
+    color: #ffffff;
+    background: #101828;
+    border: 1px solid #000;
+    box-shadow: 3px 3px 0 rgb(0 0 0 / 35%);
+    opacity: 0;
+    font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    pointer-events: none;
+  }
+
+  /* The check glyph carries no width/height attributes and legacy.css was
+     sizing it; unsized it defaults to 84px square and inflates the strip. */
+  .toast svg {
+    flex: none;
+    width: 13px;
+    height: 13px;
+  }
+
+  .toast.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+/*
+ * Document-level base. legacy.css was silently providing this too (its own
+ * reset plus `body{font-family:'Inter';font-size:14px}`), so with it off the
+ * screen cascade the document would otherwise fall back to UA defaults -
+ * Times New Roman at 16px. Screen-scoped for the same reason as above: print
+ * layout stays entirely legacy.css's business.
+ */
+@media screen {
+  /*
+   * legacy.css set `*{box-sizing:border-box}` globally. `.cd2004-shell *`
+   * covers the app, but the records drawer and completion receipt are
+   * body-appended and sit outside it - without this they size content-box and
+   * overflow their own width at narrow viewports.
+   */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    color: #101828;
+    background: #c6ccd4;
+    font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  /*
+   * Form-control sizing base. legacy.css set `input,select{width:100%}`
+   * globally, which happened to mask the fact that a <select> carries a
+   * min-content width from its longest <option>. Without it, controls inside
+   * flex/grid tracks refuse to shrink and overflow their container at narrow
+   * (Tebra side-by-side) widths. `min-width:0` restores shrinkability -
+   * the standard fix - and max-width keeps them inside their track.
+   */
+  input,
+  select,
+  textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+.cd2004-shell {
+  --cd-navy: #0a246a;
+  --cd-navy-dark: #061a50;
+  --cd-navy-light: #31599c;
+  --cd-selection: #dbe8fb;
+  --cd-selection-strong: #bed1ee;
+  --cd-chrome: #c6ccd4;
+  --cd-chrome-light: #e9edf2;
+  --cd-face: #d9dee5;
+  --cd-face-warm: #ece9df;
+  --cd-workspace: #7f8c99;
+  --cd-paper: #fffef8;
+  --cd-white: #ffffff;
+  --cd-ink: #101828;
+  --cd-ink-muted: #465365;
+  --cd-border-dark: #3f4a56;
+  --cd-border-mid: #88929d;
+  --cd-border-light: #f8fafc;
+  --cd-green: #08713c;
+  --cd-green-soft: #dff1e5;
+  --cd-amber: #8a5600;
+  --cd-amber-soft: #fff2c2;
+  --cd-red: #a31212;
+  --cd-red-soft: #fee2e2;
+  --cd-info: #0a4d8c;
+  --cd-info-soft: #dfecfb;
+  --cd-focus: #ffb400;
+  --cd-speed-fast: 80ms;
+  --cd-speed: 120ms;
+  --cd-speed-post: 180ms;
+  box-sizing: border-box;
+  /*
+   * Flex column rather than fixed grid tracks: the mobile switcher toggles
+   * display:none at the breakpoint, which would shift grid-row placement for
+   * every sibling below it. Flex simply skips absent children.
+   */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--cd-ink);
+  background: var(--cd-workspace);
+  font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  color-scheme: light;
+  text-rendering: optimizeLegibility;
+}
+
+.cd2004-shell *,
+.cd2004-shell *::before,
+.cd2004-shell *::after {
+  box-sizing: border-box;
+}
+
+.cd2004-shell button,
+.cd2004-shell input,
+.cd2004-shell select,
+.cd2004-shell textarea {
+  font: inherit;
+  min-height: 0;
+  border-radius: 0;
+}
+
+.cd2004-shell button {
+  color: inherit;
+}
+
+.cd2004-shell button,
+.cd2004-shell summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cd2004-shell button:focus-visible,
+.cd2004-shell summary:focus-visible,
+.cd2004-shell a:focus-visible,
+.cd2004-shell input:focus-visible,
+.cd2004-shell select:focus-visible,
+.cd2004-shell textarea:focus-visible,
+.cd2004-shell [tabindex="0"]:focus-visible {
+  outline: 2px solid var(--cd-focus);
+  outline-offset: 1px;
+  border-color: var(--cd-focus) !important;
+  box-shadow: none !important;
+}
+
+.cd2004-skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 4px;
+  left: 4px;
+  padding: 7px 10px;
+  color: #fff;
+  background: #000;
+  border: 1px solid #fff;
+  transform: translateY(-150%);
+}
+
+.cd2004-skip-link:focus {
+  transform: translateY(0);
+}
+
+.cd2004-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Application chrome */
+
+.cd2004-application-header {
+  position: relative;
+  z-index: 10;
+  min-width: 0;
+  border-bottom: 1px solid var(--cd-border-dark);
+  background: var(--cd-face);
+  box-shadow:
+    inset 0 1px var(--cd-border-light),
+    inset 0 -1px #9ca6b0;
+}
+
+.cd2004-app-titlebar {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 27px;
+  padding: 3px 6px;
+  color: #fff;
+  background: var(--cd-navy);
+  border-bottom: 1px solid var(--cd-navy-dark);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.cd2004-app-logo {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 19px;
+  margin-right: 6px;
+  color: var(--cd-navy);
+  background: #f7f7f0;
+  border: 1px solid #091744;
+  box-shadow: inset 1px 1px #fff;
+}
+
+.cd2004-app-logo svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cd2004-app-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-app-environment {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-left: 12px;
+  color: #eff8ff;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.cd2004-menu-bar {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 25px;
+  padding: 1px 4px 0;
+  overflow: visible;
+  background: var(--cd-face);
+  border-bottom: 1px solid #a6afb8;
+}
+
+.cd2004-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.cd2004-menu-title {
+  min-width: 42px;
+  padding: 4px 8px 5px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  cursor: default;
+  user-select: none;
+}
+
+/* Access-key underline, as a native menu bar shows. */
+.cd2004-menu-title u {
+  text-decoration: underline;
+  text-underline-offset: 1px;
+}
+
+.cd2004-menu-title[aria-expanded="true"],
+.cd2004-menu-title:hover {
+  color: #fff;
+  background: var(--cd-navy);
+}
+
+.cd2004-menu-popup {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% - 1px);
+  left: 1px;
+  display: grid;
+  min-width: 224px;
+  padding: 3px;
+  color: var(--cd-ink);
+  background: var(--cd-face);
+  border: 1px solid var(--cd-border-dark);
+  box-shadow:
+    inset 1px 1px var(--cd-border-light),
+    inset -1px -1px var(--cd-border-mid);
+}
+
+.cd2004-menu-popup button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  width: 100%;
+  min-height: 26px;
+  padding: 4px 8px 4px 24px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.cd2004-menu-popup button:hover:not(:disabled),
+.cd2004-menu-popup button:focus-visible:not(:disabled) {
+  color: #fff;
+  background: var(--cd-navy);
+}
+
+.cd2004-menu-popup button:disabled {
+  color: #7c8490;
+  text-shadow: 1px 1px #fff;
+}
+
+.cd2004-menu-popup kbd {
+  align-self: center;
+  font: inherit;
+  color: inherit;
+}
+
+.cd2004-toolbar {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  height: 42px;
+  padding: 3px 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--cd-face);
+  border-bottom: 1px solid #78838d;
+  box-shadow: inset 0 1px #fff;
+  scrollbar-color: #aab2bc #e4e8eb;
+  scrollbar-width: thin;
+}
+
+.cd2004-toolbar-button {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 20px auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 60px;
+  min-height: 34px;
+  padding: 2px 6px;
+  color: #162336;
+  background: transparent;
+  border: 1px solid transparent;
+  transition:
+    background-color var(--cd-speed-fast) linear,
+    border-color var(--cd-speed-fast) linear,
+    transform var(--cd-speed-fast) linear;
+}
+
+.cd2004-toolbar-button:hover:not(:disabled) {
+  background: #edf3fb;
+  border-color: #8092a8;
+  box-shadow: inset 1px 1px #fff;
+}
+
+.cd2004-toolbar-button:active:not(:disabled),
+.cd2004-toolbar-button.is-pressed {
+  background: var(--cd-selection-strong);
+  border-color: #4b6077;
+  box-shadow: inset 1px 1px #8291a2;
+  transform: translate(1px, 1px);
+}
+
+.cd2004-toolbar-button:disabled {
+  color: #9aa2ab;
+}
+
+.cd2004-toolbar-button svg,
+.cd2004-toolbar-glyph {
+  width: 19px;
+  height: 19px;
+}
+
+.cd2004-toolbar-glyph {
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cd2004-toolbar-separator {
+  flex: 0 0 2px;
+  width: 2px;
+  margin: 2px 5px;
+  background:
+    linear-gradient(
+      90deg,
+      #89939d 0,
+      #89939d 1px,
+      #f4f6f8 1px,
+      #f4f6f8 2px
+    );
+}
+
+.cd2004-toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 12px;
+}
+
+/* Patient context band */
+
+.cd2004-patient-banner {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1.4fr)
+    minmax(110px, 0.55fr)
+    minmax(120px, 0.65fr)
+    minmax(150px, 0.8fr)
+    minmax(160px, 0.9fr);
+  min-width: 0;
+  min-height: 53px;
+  color: #172235;
+  background: #e7edf5;
+  border-top: 1px solid #f9fbff;
+  border-bottom: 1px solid #5c6874;
+}
+
+.cd2004-patient-primary,
+.cd2004-patient-field {
+  min-width: 0;
+  padding: 7px 10px;
+  border-right: 1px solid #adb7c2;
+  box-shadow: inset -1px 0 #f8fafc;
+}
+
+.cd2004-patient-primary {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  background: #d9e4f2;
+}
+
+.cd2004-patient-primary > svg {
+  width: 25px;
+  height: 25px;
+  color: var(--cd-navy);
+}
+
+.cd2004-patient-primary span,
+.cd2004-patient-field {
+  display: grid;
+  align-content: center;
+}
+
+.cd2004-patient-banner small {
+  display: block;
+  color: #58687b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.cd2004-patient-banner strong {
+  min-width: 0;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #11213a;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-patient-primary strong {
+  font-size: 12px;
+  letter-spacing: 0.015em;
+}
+
+.cd2004-patient-banner.has-mismatch {
+  grid-template-columns:
+    minmax(200px, 1.2fr)
+    minmax(90px, 0.45fr)
+    minmax(100px, 0.5fr)
+    minmax(120px, 0.62fr)
+    minmax(130px, 0.68fr)
+    minmax(270px, 1.3fr);
+  border-bottom-color: #a56a00;
+}
+
+.cd2004-patient-banner.has-mismatch .cd2004-patient-primary {
+  background: #fff0c7;
+}
+
+.cd2004-context-mismatch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 8px;
+  color: #4a3000;
+  background: var(--cd-amber-soft);
+  border-left: 1px solid #a46b00;
+}
+
+.cd2004-context-mismatch span {
+  min-width: 0;
+}
+
+.cd2004-context-mismatch strong,
+.cd2004-context-mismatch small {
+  display: block;
+}
+
+.cd2004-context-mismatch button,
+.cd2004-command-button,
+.cd2004-link-button {
+  min-height: 25px;
+  padding: 3px 8px;
+  background: var(--cd-face);
+  border: 1px solid var(--cd-border-dark);
+  box-shadow:
+    inset 1px 1px var(--cd-white),
+    inset -1px -1px var(--cd-border-mid);
+}
+
+.cd2004-context-mismatch button:active,
+.cd2004-command-button:active:not(:disabled),
+.cd2004-link-button:active:not(:disabled) {
+  padding: 4px 7px 2px 9px;
+  box-shadow:
+    inset 1px 1px var(--cd-border-mid),
+    inset -1px -1px var(--cd-white);
+}
+
+/* Workspace and window frames */
+
+.cd2004-workspace {
+  position: relative;
+  z-index: 1;
+  /*
+   * Two panes now: full-width work area plus the note dock. The navigator
+   * moved to the bottom tab strip, reclaiming its 214px column outright.
+   */
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 372px);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 4%) 25%, transparent 25%) 0 0 /
+      12px 12px,
+    var(--cd-workspace);
+}
+
+.cd2004-window {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--cd-face);
+  border: 2px solid;
+  border-color: var(--cd-border-light) var(--cd-border-dark)
+    var(--cd-border-dark) var(--cd-border-light);
+  box-shadow:
+    inset 1px 1px #dfe4e9,
+    inset -1px -1px #737d88,
+    1px 1px 1px rgb(0 0 0 / 24%);
+}
+
+
+.cd2004-window-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 24px;
+  padding: 2px 2px 2px 4px;
+  color: #eef4ff;
+  background: #6b7885;
+  border-bottom: 1px solid #424e5a;
+  font-weight: 700;
+  user-select: none;
+}
+
+.cd2004-window.is-active > .cd2004-window-titlebar,
+.cd2004-help-dialog > .cd2004-window-titlebar {
+  color: #fff;
+  background: var(--cd-navy);
+}
+
+.cd2004-window-mark {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  background: #f6f5e9;
+  border: 1px solid #233244;
+  box-shadow: inset 2px 2px #8ca0b6;
+}
+
+.cd2004-window-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-window-title small {
+  margin-left: 7px;
+  color: #e0e6ef;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.cd2004-caption-button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 20px;
+  height: 19px;
+  padding: 0;
+  color: #111;
+  background: var(--cd-face);
+  border: 1px solid;
+  border-color: #f6f8fa #303841 #303841 #f6f8fa;
+  box-shadow:
+    inset 1px 1px #dfe3e8,
+    inset -1px -1px #79828c;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cd2004-caption-button:active {
+  border-color: #303841 #f6f8fa #f6f8fa #303841;
+  box-shadow: inset 1px 1px #79828c;
+  transform: translate(1px, 1px);
+}
+
+.cd2004-caption-close {
+  margin-left: 1px;
+}
+
+.cd2004-window-toolbar {
+  min-width: 0;
+  min-height: 25px;
+  color: #223147;
+  background: #dfe4ea;
+  border-bottom: 1px solid #8e98a4;
+}
+
+.cd2004-window-body {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #f5f7f8;
+  scrollbar-color: #aab2bc #e4e8eb;
+  scrollbar-width: thin;
+}
+
+.cd2004-window-footer {
+  min-height: 22px;
+  padding: 3px 6px;
+  border-top: 1px solid var(--cd-border-mid);
+}
+
+.cd2004-work-window {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.cd2004-work-window {
+  grid-column: 1;
+}
+
+.cd2004-inspector-window {
+  grid-column: 2;
+}
+
+.cd2004-mobile-switcher {
+  display: none;
+}
+
+.cd2004-work-context-strip {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-height: 25px;
+  padding: 3px 7px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.cd2004-work-context-strip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cd2004-work-context-strip .is-warning {
+  margin-left: auto;
+  padding: 1px 6px;
+  color: #4b3000;
+  background: var(--cd-amber-soft);
+  border: 1px solid #bd8a20;
+  font-weight: 700;
+}
+
+/* Navigator */
+
+/*
+ * Bottom workflow tab strip - the VistA/CPRS signature. Folder tabs hang off
+ * the bottom edge of the workspace, so the selected tab reads as joined to the
+ * content above it (border-top removed on the selected tab, raised 1px).
+ */
+.cd2004-navigator {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--cd-face);
+  border-top: 1px solid var(--cd-border-dark);
+  scrollbar-color: #aab2bc #e4e8eb;
+  scrollbar-width: thin;
+}
+
+.cd2004-nav-item {
+  position: relative;
+  top: 0;
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 24px;
+  padding: 3px 9px;
+  color: var(--cd-ink-muted);
+  text-align: left;
+  white-space: nowrap;
+  background: var(--cd-chrome-light);
+  border: 1px solid var(--cd-border-mid);
+  border-top: none;
+}
+
+.cd2004-nav-item:hover {
+  color: var(--cd-ink);
+  background: #f8fafc;
+}
+
+/* Selected folder tab drops its top border so it reads as joined to the
+   workspace above, and sits 1px higher - the classic tab-folder cue. */
+.cd2004-nav-item.is-selected {
+  top: -1px;
+  color: var(--cd-ink);
+  background: var(--cd-paper);
+  border-color: var(--cd-border-dark);
+  border-top: 2px solid var(--cd-paper);
+  font-weight: 700;
+}
+
+.cd2004-nav-item svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+}
+
+.cd2004-nav-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-nav-item kbd {
+  color: #5a6878;
+  background: transparent;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.cd2004-nav-item.is-selected kbd {
+  color: var(--cd-ink-muted);
+}
+
+.cd2004-nav-item em {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 17px;
+  padding: 0 4px;
+  color: #fff;
+  background: #8c1b1b;
+  border: 1px solid #5d0808;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* Start center */
+
+.cd2004-start-center {
+  display: grid;
+  grid-template-columns: minmax(380px, 0.95fr) minmax(310px, 0.7fr);
+  gap: 7px;
+  min-width: 0;
+  min-height: 100%;
+  padding: 7px;
+  background: #d7dde4;
+}
+
+.cd2004-start-launchers,
+.cd2004-start-ledger,
+.cd2004-data-group {
+  min-width: 0;
+  background: #f8f9f7;
+  border: 1px solid #5c6874;
+  box-shadow:
+    inset 1px 1px #fff,
+    inset -1px -1px #b4bcc4;
+}
+
+.cd2004-start-launchers {
+  padding: 9px;
+}
+
+.cd2004-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 3px 8px;
+  border-bottom: 2px solid var(--cd-navy);
+}
+
+.cd2004-eyebrow {
+  color: #53657a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cd2004-section-heading h1 {
+  margin: 2px 0 0;
+  color: #102342;
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.cd2004-counter {
+  padding: 2px 5px;
+  color: #38485b;
+  background: #e8ebee;
+  border: 1px solid #8c98a4;
+  font-size: 10px;
+}
+
+.cd2004-launcher-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding-top: 7px;
+}
+
+.cd2004-launcher {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 63px;
+  padding: 6px;
+  text-align: left;
+  background: #f4f6f8;
+  border: 1px solid #6e7985;
+  box-shadow:
+    inset 1px 1px #fff,
+    inset -1px -1px #c0c7cf;
+  transition:
+    background-color var(--cd-speed) linear,
+    border-color var(--cd-speed) linear,
+    transform var(--cd-speed-fast) linear;
+}
+
+.cd2004-launcher:hover {
+  background: var(--cd-selection);
+  border-color: #355782;
+}
+
+.cd2004-launcher:active {
+  box-shadow: inset 1px 1px #8793a0;
+  transform: translate(1px, 1px);
+}
+
+.cd2004-launcher-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 38px;
+  color: var(--cd-navy);
+  background: #dce5f0;
+  border: 1px solid #7e8da0;
+  box-shadow: inset 1px 1px #fff;
+}
+
+.cd2004-launcher-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.cd2004-launcher-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.cd2004-launcher-copy strong {
+  overflow: hidden;
+  color: #132746;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-launcher-copy small {
+  display: -webkit-box;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #536170;
+  font-size: 10px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cd2004-access-key {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  margin-right: 4px;
+  color: #fff;
+  background: var(--cd-navy);
+  font-size: 9px;
+}
+
+.cd2004-launcher-state {
+  align-self: start;
+  padding: 2px 4px;
+  color: #4d5b6a;
+  background: #edf0f2;
+  border: 1px solid #a4adb7;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.cd2004-launcher.is-ready .cd2004-launcher-state,
+.cd2004-launcher.is-locked .cd2004-launcher-state {
+  color: #064b27;
+  background: var(--cd-green-soft);
+  border-color: #5a9e78;
+}
+
+.cd2004-launcher.is-attention .cd2004-launcher-state {
+  color: #583900;
+  background: var(--cd-amber-soft);
+  border-color: #b88a32;
+}
+
+.cd2004-local-notice {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 7px;
+  color: #374558;
+  background: #edf2f7;
+  border: 1px solid #8c9aaa;
+}
+
+.cd2004-local-notice svg {
+  width: 21px;
+  height: 21px;
+  color: #365f91;
+}
+
+.cd2004-local-notice strong {
+  display: block;
+  color: #1c3558;
+}
+
+.cd2004-start-ledger {
+  display: grid;
+  grid-template-rows: auto minmax(0, auto) minmax(0, 1fr);
+  gap: 6px;
+  align-content: start;
+  padding: 7px;
+}
+
+.cd2004-metric-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.cd2004-metric {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  min-width: 0;
+  padding: 6px 7px;
+  color: #1a314e;
+  background: #e1e9f3;
+  border: 1px solid #8190a1;
+  box-shadow: inset 1px 1px #fff;
+}
+
+.cd2004-metric > span {
+  font-weight: 700;
+}
+
+.cd2004-metric > strong {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  padding-left: 8px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.cd2004-metric > small {
+  color: #526377;
+  font-size: 9px;
+}
+
+.cd2004-metric.has-warning {
+  color: #563500;
+  background: var(--cd-amber-soft);
+  border-color: #a87920;
+}
+
+.cd2004-ledger {
+  min-width: 0;
+  border: 1px solid #7e8995;
+  background: #fff;
+}
+
+.cd2004-ledger-heading,
+.cd2004-data-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 26px;
+  padding: 4px 6px;
+  color: #fff;
+  background: #55687e;
+  border-bottom: 1px solid #2c3d50;
+}
+
+.cd2004-ledger-heading span,
+.cd2004-data-title span {
+  padding: 1px 5px;
+  color: #26374b;
+  background: #e8ecf1;
+  border: 1px solid #fff;
+  font-size: 9px;
+}
+
+.cd2004-ledger ul,
+.cd2004-activity-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.cd2004-ledger li + li,
+.cd2004-activity-list li + li {
+  border-top: 1px solid #c6ccd2;
+}
+
+.cd2004-ledger li.is-warning {
+  border-left: 4px solid #b36b00;
+}
+
+.cd2004-ledger li.is-stop {
+  border-left: 4px solid var(--cd-red);
+}
+
+.cd2004-ledger li.is-ready {
+  border-left: 4px solid var(--cd-green);
+}
+
+.cd2004-ledger li > button {
+  display: grid;
+  grid-template-columns: 45px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 43px;
+  padding: 4px 5px;
+  text-align: left;
+  background: #fff;
+  border: 0;
+}
+
+.cd2004-ledger li > button:hover {
+  background: var(--cd-selection);
+}
+
+.cd2004-ledger li > button:disabled {
+  color: inherit;
+  cursor: default;
+  opacity: 1;
+}
+
+.cd2004-ledger li > button:disabled:hover {
+  background: #fff;
+}
+
+.cd2004-link-button:disabled {
+  color: #727b85;
+  cursor: default;
+  text-decoration: none;
+  text-shadow: 1px 1px #fff;
+}
+
+.cd2004-ledger-time {
+  color: #4e5c6c;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+}
+
+.cd2004-ledger-main {
+  display: grid;
+  min-width: 0;
+}
+
+.cd2004-ledger-main strong,
+.cd2004-ledger-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-ledger-main small {
+  color: #596777;
+  font-size: 10px;
+}
+
+.cd2004-ledger-workflow {
+  color: #405165;
+  font-size: 9px;
+}
+
+.cd2004-ledger-action {
+  padding: 2px 4px;
+  color: var(--cd-navy);
+  border: 1px solid #8b9aab;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.cd2004-empty-row {
+  padding: 11px 8px;
+  color: #677382;
+  background: #f9fafb;
+  font-size: 10px;
+  text-align: center;
+}
+
+.cd2004-start-bottom {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.65fr) minmax(480px, 1.35fr);
+  gap: 7px;
+  min-width: 0;
+}
+
+.cd2004-data-group {
+  min-width: 0;
+}
+
+.cd2004-activity-list li {
+  display: grid;
+  grid-template-columns: 55px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 35px;
+  padding: 4px 6px;
+}
+
+.cd2004-activity-list li > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+}
+
+.cd2004-activity-list li > span:last-child,
+.cd2004-activity-time {
+  color: #566477;
+  font-size: 9px;
+}
+
+.cd2004-activity-list small {
+  overflow: hidden;
+  color: #657181;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.cd2004-record-table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.cd2004-record-table th,
+.cd2004-record-table td {
+  height: 27px;
+  padding: 3px 5px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-right: 1px solid #bdc5cd;
+  border-bottom: 1px solid #c9d0d7;
+}
+
+.cd2004-record-table th {
+  color: #26364a;
+  background: #dce2e8;
+  border-bottom-color: #697683;
+  font-size: 10px;
+}
+
+.cd2004-record-table tbody tr:nth-child(even) {
+  background: #f2f5f7;
+}
+
+.cd2004-record-table tbody tr:hover {
+  background: var(--cd-selection);
+}
+
+.cd2004-record-table th:nth-child(1) {
+  width: 22%;
+}
+
+.cd2004-record-table th:nth-child(2) {
+  width: 28%;
+}
+
+.cd2004-record-table th:nth-child(3) {
+  width: 20%;
+}
+
+.cd2004-record-table th:nth-child(4) {
+  width: 18%;
+}
+
+.cd2004-record-table th:last-child {
+  width: 60px;
+}
+
+.cd2004-state-text {
+  font-weight: 700;
+}
+
+.cd2004-state-text.is-ready {
+  color: var(--cd-green);
+}
+
+.cd2004-state-text.is-warning {
+  color: var(--cd-amber);
+}
+
+.cd2004-state-text.is-stop {
+  color: var(--cd-red);
+}
+
+.cd2004-link-button {
+  min-height: 21px;
+  padding: 1px 6px;
+  color: #053e80;
+  font-size: 10px;
+  text-decoration: underline;
+}
+
+/* Workflow host and legacy bridge */
+
+.cd2004-workflow-slot,
+.cd2004-legacy-host {
+  min-width: 0;
+  min-height: 100%;
+}
+
+.cd2004-workflow-slot {
+  position: relative;
+  background: #f2f4f6;
+}
+
+.cd2004-legacy-host {
+  padding: 6px;
+}
+
+.cd2004-legacy-panel-mounted {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.cd2004-legacy-panel-mounted > .layout {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.cd2004-workflow-slot :where(input, select, textarea) {
+  max-width: 100%;
+}
+
+.cd2004-workflow-placeholder {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  min-height: 280px;
+  padding: 28px;
+  color: #566273;
+  text-align: center;
+}
+
+.cd2004-workflow-placeholder > svg {
+  width: 38px;
+  height: 38px;
+  color: var(--cd-navy);
+}
+
+.cd2004-workflow-placeholder strong {
+  color: #142c4c;
+  font-size: 14px;
+}
+
+.cd2004-workflow-placeholder code {
+  margin-top: 5px;
+  padding: 3px 6px;
+  color: #2d3b4d;
+  background: #e2e6ea;
+  border: 1px solid #a7afb8;
+  font-family: "Courier New", monospace;
+}
+
+.cd2004-system-message {
+  display: grid;
+  gap: 2px;
+  max-width: 560px;
+  padding: 8px;
+  margin: 10px auto;
+  border: 1px solid #8f6500;
+}
+
+.cd2004-system-message.is-error {
+  color: #621313;
+  background: var(--cd-red-soft);
+  border-color: var(--cd-red);
+}
+
+.cd2004-posting-strip {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 8px;
+  color: #fff;
+  background: var(--cd-navy);
+  border-bottom: 1px solid #07143c;
+  font-weight: 700;
+}
+
+.cd2004-posting-strip span {
+  width: 58px;
+  height: 8px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #fff 0 8px,
+      #7ea0d1 8px 16px
+    );
+  border: 1px solid #fff;
+  animation: cd2004-progress var(--cd-speed-post) steps(2, end) infinite;
+}
+
+.cd2004-work-locked-banner {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  display: grid;
+  grid-template-columns: 22px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 5px 8px;
+  color: #063b20;
+  background: #d9efdf;
+  border: 1px solid #26734a;
+  box-shadow: inset 1px 1px #fff;
+  animation: cd2004-lock-in var(--cd-speed-post) steps(3, end) both;
+}
+
+.cd2004-work-locked-banner svg {
+  width: 19px;
+  height: 19px;
+}
+
+.cd2004-work-locked-banner strong {
+  letter-spacing: 0.045em;
+}
+
+.cd2004-work-locked-banner span {
+  color: #346047;
+}
+
+/* Readiness and note inspector */
+
+.cd2004-inspector-window .cd2004-window-body {
+  background: #eef1f4;
+}
+
+.cd2004-inspector {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.cd2004-readiness-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 7px;
+  color: #122b4b;
+  background: #dce6f2;
+  border-bottom: 1px solid #8896a7;
+}
+
+.cd2004-readiness-score {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  justify-content: start;
+  gap: 8px;
+}
+
+.cd2004-readiness-score span {
+  font-weight: 700;
+}
+
+.cd2004-readiness-score strong {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.cd2004-readiness-flags {
+  display: flex;
+  gap: 4px;
+}
+
+.cd2004-readiness-flags span {
+  padding: 2px 4px;
+  color: #445466;
+  background: #eef1f4;
+  border: 1px solid #a0aab4;
+  font-size: 9px;
+}
+
+.cd2004-readiness-flags .has-stop {
+  color: #6f0c0c;
+  background: var(--cd-red-soft);
+  border-color: #b43c3c;
+}
+
+.cd2004-readiness-flags .has-warning {
+  color: #5b3900;
+  background: var(--cd-amber-soft);
+  border-color: #b18026;
+}
+
+.cd2004-readiness-list {
+  max-height: 190px;
+  overflow: auto;
+  background: #fff;
+  border-bottom: 1px solid #798692;
+}
+
+.cd2004-readiness-item {
+  display: grid;
+  grid-template-columns: 19px minmax(0, 1fr);
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #d0d5db;
+}
+
+.cd2004-readiness-marker {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  color: #fff;
+  background: #7d8791;
+  border: 1px solid #4f5861;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cd2004-readiness-item.is-complete .cd2004-readiness-marker {
+  background: var(--cd-green);
+  border-color: #044d29;
+}
+
+.cd2004-readiness-item.is-warning .cd2004-readiness-marker {
+  color: #392200;
+  background: #f5c44e;
+  border-color: #946100;
+}
+
+.cd2004-readiness-item.is-stop .cd2004-readiness-marker {
+  background: var(--cd-red);
+  border-color: #6d0909;
+}
+
+.cd2004-readiness-item strong,
+.cd2004-readiness-item small {
+  display: block;
+}
+
+.cd2004-readiness-item small {
+  margin-top: 1px;
+  color: #657181;
+  font-size: 9px;
+}
+
+.cd2004-note-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  padding: 6px;
+  background: #d8dde3;
+  border-bottom: 1px solid #89939e;
+}
+
+.cd2004-note-heading > div {
+  display: grid;
+  min-width: 0;
+}
+
+.cd2004-note-heading > div > span {
+  color: #5a6571;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cd2004-note-heading strong,
+.cd2004-note-heading small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-note-heading small {
+  color: #616e7e;
+  font-size: 9px;
+}
+
+.cd2004-command-button {
+  flex: 0 0 auto;
+}
+
+.cd2004-command-button:disabled,
+.cd2004-complete-button:disabled {
+  color: #737c86;
+  cursor: not-allowed;
+  text-shadow: 1px 1px #fff;
+}
+
+.cd2004-note-sections {
+  flex: 1 1 auto;
+  min-height: 160px;
+  overflow: auto;
+  background: var(--cd-paper);
+  font: 11px/1.48 "Courier New", Courier, monospace;
+}
+
+.cd2004-note-section {
+  margin: 0;
+}
+
+.cd2004-note-section + .cd2004-note-section {
+  border-top: 1px dashed #b7bec6;
+}
+
+.cd2004-note-section > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px 0;
+  color: #3a4552;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cd2004-note-section > header small {
+  margin-left: 6px;
+  color: #7a8493;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cd2004-note-section > header .cd2004-link-button {
+  padding: 0;
+  color: #173a69;
+  background: transparent;
+  border: 0;
+  font-size: 9px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-transform: none;
+}
+
+.cd2004-note-section pre {
+  max-height: 260px;
+  padding: 4px 8px 10px;
+  margin: 0;
+  overflow: auto;
+  color: #172231;
+  background: transparent;
+  font: inherit;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cd2004-note-empty {
+  padding: 8px;
+  color: #697583;
+  font: 11px/1.48 "Courier New", Courier, monospace;
+}
+
+.cd2004-note-empty svg {
+  display: none;
+}
+
+.cd2004-note-empty strong {
+  display: block;
+  color: #172231;
+  font-weight: 400;
+}
+
+.cd2004-note-empty strong::before {
+  content: "[ ";
+}
+
+.cd2004-note-empty strong::after {
+  content: " ]";
+}
+
+.cd2004-note-empty span {
+  display: block;
+  margin-top: 2px;
+  color: #7a8493;
+  font-size: 10px;
+}
+
+.cd2004-post-zone {
+  flex: 0 0 auto;
+  padding: 6px;
+  background: #d9dee4;
+  border-top: 1px solid #717d89;
+}
+
+.cd2004-complete-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 7px;
+  color: #fff;
+  background: linear-gradient(#315f9a, #0a3472);
+  border: 1px solid #031f4c;
+  box-shadow:
+    inset 1px 1px #6f95c8,
+    inset -1px -1px #00183d;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  text-align: left;
+}
+
+.cd2004-complete-button span {
+  padding: 1px 4px;
+  color: #183559;
+  background: #edf1f5;
+  border: 1px solid #fff;
+  font-size: 9px;
+}
+
+.cd2004-complete-button:active:not(:disabled) {
+  background: #092d61;
+  box-shadow: inset 1px 1px #00183d;
+  transform: translate(1px, 1px);
+}
+
+.cd2004-complete-button:disabled {
+  background: #aeb5bd;
+  border-color: #77818b;
+  box-shadow: inset 1px 1px #dce0e4;
+}
+
+.cd2004-post-stamp,
+.cd2004-post-error {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 6px;
+}
+
+.cd2004-post-stamp {
+  color: #063d21;
+  background: var(--cd-green-soft);
+  border: 2px double #216c43;
+  animation: cd2004-stamp var(--cd-speed-post) steps(3, end) both;
+}
+
+.cd2004-post-error {
+  color: #651111;
+  background: var(--cd-red-soft);
+  border: 2px double var(--cd-red);
+}
+
+.cd2004-post-stamp svg,
+.cd2004-post-error svg {
+  width: 25px;
+  height: 25px;
+}
+
+.cd2004-post-stamp span,
+.cd2004-post-error span {
+  display: grid;
+}
+
+.cd2004-post-stamp strong,
+.cd2004-post-error strong {
+  letter-spacing: 0.045em;
+}
+
+.cd2004-post-stamp small,
+.cd2004-post-error small {
+  margin-top: 1px;
+  font-size: 9px;
+}
+
+/*
+ * Segmented status bar. Replaces the taskbar/Start button - those emulated the
+ * Windows shell, not an EHR application. Segments are sunken Win32-style panes:
+ * the live status message takes the flexible first segment, fixed-content
+ * segments sit to its right.
+ */
+
+.cd2004-statusbar {
+  position: relative;
+  z-index: 20;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  height: 22px;
+  padding: 2px 3px;
+  background: var(--cd-face);
+  border-top: 1px solid #f8fafc;
+  box-shadow: inset 0 1px #fff;
+}
+
+.cd2004-status-message,
+.cd2004-status-segment {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  color: #3e4a59;
+  background: var(--cd-face);
+  border: 1px solid;
+  border-color: #7c8791 #f5f7f9 #f5f7f9 #7c8791;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-status-message {
+  flex: 1 1 auto;
+}
+
+.cd2004-status-segment {
+  flex: 0 1 auto;
+  max-width: 190px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.cd2004-status-segment.is-online {
+  color: var(--cd-green);
+}
+
+.cd2004-status-segment.is-error {
+  color: var(--cd-red);
+  background: var(--cd-red-soft);
+}
+
+/* Modal and shortcut reference */
+
+/*
+ * Native <dialog> host for the keyboard reference. The browser owns the top
+ * layer, so the element is reset to a transparent full-viewport box and the
+ * shading moves to ::backdrop.
+ */
+.cd2004-modal-backdrop {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  padding: 18px;
+  overflow: auto;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  place-items: center;
+}
+
+.cd2004-modal-backdrop[open] {
+  display: grid;
+}
+
+.cd2004-modal-backdrop::backdrop {
+  background: rgb(14 25 40 / 45%);
+}
+
+.cd2004-help-dialog {
+  width: min(430px, 100%);
+  background: var(--cd-face);
+  border: 2px solid;
+  border-color: #fff var(--cd-border-dark) var(--cd-border-dark) #fff;
+  box-shadow: 5px 6px 0 rgb(0 0 0 / 25%);
+  animation: cd2004-dialog-in var(--cd-speed) steps(2, end) both;
+}
+
+.cd2004-help-dialog > .cd2004-window-titlebar strong {
+  min-width: 0;
+  margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-help-body {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  background: #edf0f3;
+  border-bottom: 1px solid #919aa4;
+}
+
+.cd2004-shortcut-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  min-height: 28px;
+  padding: 3px 5px;
+  background: #fff;
+  border: 1px solid #bdc4cb;
+}
+
+.cd2004-shortcut-row kbd {
+  justify-self: start;
+  min-width: 62px;
+  padding: 2px 5px;
+  color: #102f5c;
+  background: #e4e8ec;
+  border: 1px solid;
+  border-color: #fff #69737e #69737e #fff;
+  font-family: Tahoma, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cd2004-help-dialog > footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 7px;
+}
+
+.cd2004-help-dialog > footer .cd2004-command-button {
+  min-width: 80px;
+}
+
+@keyframes cd2004-progress {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 16px 0;
+  }
+}
+
+@keyframes cd2004-lock-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cd2004-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(0.985);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cd2004-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(4px, 4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+/* Compact three-pane clinic widths. */
+
+@media (min-width: 1182px) and (max-width: 1399px) {
+  .cd2004-start-center {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cd2004-launcher-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cd2004-start-bottom {
+    grid-column: 1;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1181px) {
+  .cd2004-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 336px);
+  }
+
+  /* Tabs shed their accelerator hints first, then their labels below. */
+  .cd2004-nav-item kbd {
+    display: none;
+  }
+
+  .cd2004-nav-item {
+    padding: 3px 7px;
+  }
+
+  .cd2004-patient-banner {
+    grid-template-columns:
+      minmax(190px, 1.3fr)
+      minmax(92px, 0.55fr)
+      minmax(105px, 0.6fr)
+      minmax(130px, 0.75fr)
+      minmax(140px, 0.8fr);
+  }
+
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns:
+      minmax(180px, 1.2fr)
+      minmax(80px, 0.45fr)
+      minmax(90px, 0.5fr)
+      minmax(110px, 0.62fr)
+      minmax(110px, 0.62fr)
+      minmax(240px, 1.2fr);
+  }
+
+  .cd2004-start-center {
+    grid-template-columns: minmax(350px, 1fr) minmax(290px, 0.72fr);
+  }
+
+  .cd2004-launcher-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cd2004-launcher {
+    min-height: 52px;
+  }
+
+  .cd2004-start-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dock the inspector when three readable columns no longer fit. */
+
+@media (max-width: 1040px) {
+  .cd2004-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(330px, 1fr) minmax(230px, 38%);
+  }
+
+  .cd2004-work-window {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cd2004-inspector-window {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .cd2004-inspector {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.65fr) minmax(300px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 0;
+  }
+
+  .cd2004-readiness-summary {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cd2004-readiness-list {
+    grid-column: 1;
+    grid-row: 2 / span 2;
+    max-height: none;
+    border-right: 1px solid #798692;
+    border-bottom: 0;
+  }
+
+  .cd2004-note-heading {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cd2004-note-sections {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .cd2004-post-zone {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .cd2004-note-section pre {
+    max-height: 170px;
+  }
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns:
+      minmax(200px, 1.25fr)
+      minmax(90px, 0.48fr)
+      minmax(100px, 0.52fr)
+      minmax(130px, 0.68fr)
+      minmax(130px, 0.68fr);
+  }
+
+  .cd2004-patient-banner.has-mismatch .cd2004-context-mismatch {
+    grid-column: 1 / -1;
+    min-height: 40px;
+    border-top: 1px solid #a46b00;
+    border-left: 0;
+  }
+
+  .cd2004-start-center {
+    grid-template-columns: 1fr;
+  }
+
+  .cd2004-launcher-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cd2004-start-bottom {
+    grid-column: 1;
+  }
+}
+
+/* One active desktop window with a task switcher. */
+
+@media (max-width: 700px) {
+  .cd2004-shell {
+    grid-template-rows: auto auto minmax(0, 1fr) 34px;
+    font-size: 12px;
+  }
+
+  .cd2004-app-titlebar {
+    height: 29px;
+  }
+
+  .cd2004-app-environment {
+    display: none;
+  }
+
+  .cd2004-menu-bar {
+    min-height: 29px;
+  }
+
+  .cd2004-menu-title {
+    min-height: 28px;
+    padding: 6px 9px;
+  }
+
+  .cd2004-menu-popup {
+    position: fixed;
+    top: 58px;
+    right: 4px;
+    left: 4px;
+    max-height: calc(100dvh - 88px);
+    overflow: auto;
+  }
+
+  .cd2004-menu-popup button {
+    min-height: 40px;
+    padding: 8px 10px 8px 20px;
+  }
+
+  .cd2004-toolbar {
+    height: 45px;
+    padding: 3px;
+  }
+
+  .cd2004-toolbar-button {
+    grid-template-columns: 22px;
+    place-items: center;
+    min-width: 43px;
+    min-height: 38px;
+    padding: 3px;
+  }
+
+  .cd2004-toolbar-button > span:not(.cd2004-toolbar-glyph) {
+    display: none;
+  }
+
+  .cd2004-toolbar-spacer {
+    min-width: 2px;
+  }
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    min-height: 49px;
+  }
+
+  .cd2004-patient-primary {
+    padding: 5px 7px;
+  }
+
+  .cd2004-patient-primary strong {
+    font-size: 12px;
+  }
+
+  .cd2004-patient-field {
+    padding: 5px 7px;
+  }
+
+  .cd2004-patient-field:nth-of-type(3),
+  .cd2004-banner-location,
+  .cd2004-banner-staff {
+    display: none;
+  }
+
+  .cd2004-patient-banner.has-mismatch .cd2004-context-mismatch {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+
+  .cd2004-context-mismatch button {
+    min-height: 34px;
+  }
+
+  .cd2004-mobile-switcher {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+    padding: 3px;
+    background: var(--cd-face);
+    border-bottom: 1px solid var(--cd-border-dark);
+  }
+
+  .cd2004-mobile-switcher button {
+    min-width: 0;
+    min-height: 32px;
+    padding: 4px;
+    overflow: hidden;
+    color: #314154;
+    background: #dfe3e8;
+    border: 1px solid;
+    border-color: #fff #68737e #68737e #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+  }
+
+  .cd2004-mobile-switcher button.is-active {
+    color: #fff;
+    background: var(--cd-navy);
+    border-color: #031942 #6e91c2 #6e91c2 #031942;
+  }
+
+  .cd2004-workspace {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    padding: 3px;
+  }
+
+  .cd2004-workspace .cd2004-window {
+    display: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  .cd2004-workspace .cd2004-window.is-mobile-active {
+    display: grid;
+  }
+
+  .cd2004-window-titlebar {
+    min-height: 27px;
+  }
+
+  .cd2004-caption-button {
+    width: 26px;
+    height: 23px;
+  }
+
+  .cd2004-start-center {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 5px;
+  }
+
+  .cd2004-start-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .cd2004-launcher-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cd2004-launcher {
+    min-height: 58px;
+  }
+
+  .cd2004-inspector {
+    display: flex;
+    min-height: 100%;
+  }
+
+  .cd2004-readiness-list {
+    max-height: 210px;
+    border-right: 0;
+    border-bottom: 1px solid #798692;
+  }
+
+  .cd2004-note-sections {
+    min-height: 150px;
+  }
+
+  .cd2004-note-section pre {
+    max-height: 260px;
+  }
+
+  .cd2004-record-table {
+    min-width: 0;
+  }
+
+  .cd2004-record-table thead {
+    display: none;
+  }
+
+  .cd2004-record-table tbody,
+  .cd2004-record-table tr,
+  .cd2004-record-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .cd2004-record-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 5px;
+    border-bottom: 1px solid #7c8792;
+  }
+
+  .cd2004-record-table td {
+    height: auto;
+    min-width: 0;
+    padding: 3px;
+    white-space: normal;
+    border: 0;
+  }
+
+  .cd2004-record-table td::before {
+    display: block;
+    color: #687482;
+    content: attr(data-label);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .cd2004-record-table td:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .cd2004-record-table td:last-child::before {
+    display: none;
+  }
+
+  .cd2004-record-table .cd2004-link-button {
+    width: 100%;
+    min-height: 34px;
+  }
+
+  /*
+   * Narrow: the live status message is the primary feedback channel, so it
+   * keeps the bar - the staff/location segments drop instead.
+   */
+  .cd2004-statusbar {
+    height: 20px;
+  }
+
+  .cd2004-status-segment {
+    display: none;
+  }
+
+  .cd2004-status-segment.is-online,
+  .cd2004-status-segment.is-error {
+    display: flex;
+    padding: 0 4px;
+    font-size: 8px;
+  }
+
+  /* Tab labels give way to icons; the title attribute still names each tab. */
+  .cd2004-nav-item span {
+    display: none;
+  }
+
+  .cd2004-nav-item {
+    padding: 3px 8px;
+  }
+
+  .cd2004-nav-item.is-selected span {
+    display: inline;
+  }
+}
+
+@media (max-width: 390px) {
+  .cd2004-app-title {
+    font-size: 11px;
+  }
+
+  .cd2004-app-logo {
+    width: 18px;
+    margin-right: 4px;
+  }
+
+  .cd2004-toolbar-separator {
+    margin-inline: 2px;
+  }
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns: minmax(0, 1fr) 74px;
+  }
+
+  .cd2004-context-mismatch {
+    grid-template-columns: 1fr;
+  }
+
+  .cd2004-context-mismatch button {
+    width: 100%;
+  }
+
+  .cd2004-section-heading h1 {
+    font-size: 14px;
+  }
+
+  .cd2004-counter {
+    display: none;
+  }
+
+  .cd2004-launcher {
+    grid-template-columns: 32px minmax(0, 1fr);
+    min-height: 58px;
+  }
+
+  .cd2004-launcher-icon {
+    width: 31px;
+    height: 35px;
+  }
+
+  .cd2004-launcher-state {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: -1px;
+  }
+
+  .cd2004-launcher-copy small {
+    -webkit-line-clamp: 1;
+  }
+
+  .cd2004-metric-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cd2004-ledger li > button {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+  }
+
+  .cd2004-ledger-workflow {
+    display: none;
+  }
+
+  .cd2004-ledger-action {
+    font-size: 0;
+  }
+
+  .cd2004-ledger-action::after {
+    content: "›";
+    font-size: 16px;
+  }
+
+  .cd2004-activity-list li {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .cd2004-activity-list li > span:last-child {
+    display: none;
+  }
+
+  .cd2004-readiness-summary {
+    padding: 5px;
+  }
+
+  .cd2004-readiness-flags span {
+    padding-inline: 3px;
+  }
+
+  .cd2004-status-segment.is-online,
+  .cd2004-status-segment.is-error {
+    max-width: 62px;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 320px) {
+  .cd2004-menu-title {
+    min-width: 38px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  .cd2004-toolbar-button {
+    min-width: 40px;
+  }
+
+  .cd2004-patient-primary {
+    grid-template-columns: 23px minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .cd2004-patient-primary > svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cd2004-patient-field {
+    padding-inline: 5px;
+  }
+
+  .cd2004-start-launchers {
+    padding: 6px;
+  }
+
+  .cd2004-local-notice {
+    grid-template-columns: 1fr;
+  }
+
+  .cd2004-local-notice svg {
+    display: none;
+  }
+
+  .cd2004-note-heading {
+    align-items: flex-start;
+  }
+
+  .cd2004-note-heading .cd2004-command-button {
+    padding-inline: 5px;
+  }
+
+  .cd2004-readiness-flags {
+    display: grid;
+  }
+}
+
+/*
+ * Body-level legacy utilities
+ *
+ * The legacy runtime appends these dialogs directly to <body>, outside the
+ * namespaced desktop tree. Keep the selectors deliberately narrow so print
+ * roots and embedded workflow surfaces retain their existing presentation.
+ */
+
+.records-drawer-layer,
+.inj-completion-overlay {
+  --cd-util-navy: #0a246a;
+  --cd-util-navy-dark: #061a50;
+  --cd-util-navy-light: #3768a8;
+  --cd-util-face: #d9dee5;
+  --cd-util-face-dark: #c5cbd2;
+  --cd-util-paper: #fffef8;
+  --cd-util-white: #ffffff;
+  --cd-util-ink: #101828;
+  --cd-util-muted: #526172;
+  --cd-util-line: #697581;
+  --cd-util-line-light: #aab3bd;
+  --cd-util-selection: #dbe8fb;
+  --cd-util-green: #08713c;
+  --cd-util-green-soft: #dff1e5;
+  --cd-util-amber: #815000;
+  --cd-util-amber-soft: #fff2c2;
+  box-sizing: border-box;
+  font-family: Tahoma, Verdana, "Segoe UI", sans-serif !important;
+  color-scheme: light;
+}
+
+.records-drawer-layer *,
+.records-drawer-layer *::before,
+.records-drawer-layer *::after,
+.inj-completion-overlay *,
+.inj-completion-overlay *::before,
+.inj-completion-overlay *::after {
+  box-sizing: border-box;
+}
+
+.records-drawer-layer {
+  background: transparent;
+}
+
+.records-drawer-scrim {
+  /* legacy.css owned the scrim's geometry as well as its tint. Without the
+     position/inset it is a zero-height static div, so the drawer opened over
+     an undimmed shell with nothing to click away on. */
+  position: absolute;
+  inset: 0;
+  background: rgb(8 17 34 / 42%) !important;
+  backdrop-filter: none !important;
+  opacity: 0;
+  transition: opacity 100ms linear !important;
+}
+
+.records-drawer-layer.is-open .records-drawer-scrim {
+  opacity: 1;
+}
+
+.records-drawer {
+  min-width: 0;
+  padding: 0 !important;
+  overflow: hidden !important;
+  color: var(--cd-util-ink) !important;
+  background: var(--cd-util-face) !important;
+  /* Raised Win32 window edge, and a hard offset drop shadow rather than a
+     diffuse one - the same treatment the shell's own dialogs use. */
+  border: 1px solid #000 !important;
+  border-top-color: var(--cd-util-white) !important;
+  border-left-color: var(--cd-util-white) !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px var(--cd-util-white),
+    inset -1px -1px #7a838d,
+    4px 4px 0 rgb(0 0 0 / 35%) !important;
+  transform: none !important;
+  transition: none !important;
+  font-family: Tahoma, Verdana, "Segoe UI", sans-serif !important;
+}
+
+.records-drawer-head {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 25px;
+  align-items: start !important;
+  gap: 8px !important;
+  min-width: 0;
+  align-content: center !important;
+  min-height: 0;
+  padding: 3px 3px 3px 6px !important;
+  color: #fff;
+  background: linear-gradient(
+    90deg,
+    var(--cd-util-navy),
+    var(--cd-util-navy-light)
+  ) !important;
+  border-bottom: 1px solid var(--cd-util-navy-dark);
+}
+
+.records-drawer-head > div {
+  min-width: 0;
+}
+
+.records-drawer-kicker,
+.records-drawer-head p {
+  display: none;
+}
+
+.records-drawer-kicker {
+  overflow: hidden;
+  color: #cbdaf0 !important;
+  font: 700 9px/1.2 Tahoma, Verdana, sans-serif !important;
+  letter-spacing: 0.1em !important;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.records-drawer-head h2 {
+  margin: 0 !important;
+  overflow: hidden;
+  color: #fff !important;
+  font: 700 11px/1.2 Tahoma, Verdana, sans-serif !important;
+  letter-spacing: 0 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-drawer-head p {
+  max-width: none !important;
+  margin: 0 !important;
+  overflow: hidden;
+  color: #e2ebf7 !important;
+  font: 10px/1.35 Tahoma, Verdana, sans-serif !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-drawer-close {
+  display: grid;
+  place-items: center;
+  width: 16px !important;
+  height: 14px !important;
+  min-width: 16px !important;
+  min-height: 14px !important;
+  padding: 2px !important;
+  color: #111c2b !important;
+  background: var(--cd-util-face) !important;
+  border: 1px solid !important;
+  border-color: #fff #303841 #303841 #fff !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px #e8ecf0,
+    inset -1px -1px #77818b !important;
+  transform: none !important;
+  transition:
+    background-color 80ms linear,
+    color 80ms linear !important;
+}
+
+.records-drawer-close:hover {
+  color: #fff !important;
+  background: #9c1f1f !important;
+  border-color: #d88989 #540b0b #540b0b #d88989 !important;
+}
+
+.records-drawer-close:active {
+  border-color: #303841 #fff #fff #303841 !important;
+  box-shadow: inset 1px 1px #77818b !important;
+  transform: translate(1px, 1px) !important;
+}
+
+.records-drawer-close svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.records-drawer-search {
+  position: relative;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 8px 9px 7px;
+  background: var(--cd-util-face);
+  border-bottom: 1px solid var(--cd-util-line);
+  box-shadow: inset 0 1px #fff;
+}
+
+.records-drawer-search input {
+  width: 100%;
+  min-width: 0;
+  height: 32px !important;
+  padding: 5px 31px 5px 7px !important;
+  color: var(--cd-util-ink) !important;
+  background: #fff !important;
+  border: 1px solid #414c58 !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px #aab2bb,
+    inset -1px -1px #eef1f4 !important;
+  outline: 0;
+  font: 11px Tahoma, Verdana, sans-serif !important;
+}
+
+/* The input already reserves 31px of right padding for this glyph; legacy.css
+   was supplying the absolute placement and the SVG's size. Unpositioned it
+   dropped below the field at its 84px intrinsic default. */
+.records-drawer-search > span {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  display: block;
+  width: 13px;
+  height: 13px;
+  color: #5c6673;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.records-drawer-search > span svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.records-drawer-search input:focus {
+  border-color: var(--cd-util-navy) !important;
+  box-shadow: inset 1px 1px #8293a5 !important;
+  outline: 2px solid #ffb400 !important;
+  outline-offset: -1px;
+}
+
+.records-drawer-search span {
+  right: 17px !important;
+  color: var(--cd-util-navy) !important;
+}
+
+.records-drawer-search span svg {
+  width: 16px;
+  height: 16px;
+}
+
+.records-drawer-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px !important;
+  min-width: 0;
+  padding: 5px 8px 6px !important;
+  background: #cfd5dc;
+  border-bottom: 1px solid var(--cd-util-line) !important;
+  box-shadow: inset 0 1px #f7f9fb;
+}
+
+.records-drawer-filters button {
+  min-width: 62px;
+  min-height: 27px !important;
+  padding: 3px 8px !important;
+  color: #334154 !important;
+  background: var(--cd-util-face) !important;
+  border: 1px solid !important;
+  border-color: #fff #4d5863 #4d5863 #fff !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px #e8ecf0,
+    inset -1px -1px #8c96a0 !important;
+  font: 700 10px Tahoma, Verdana, sans-serif !important;
+  transform: none !important;
+  transition:
+    color 80ms linear,
+    background-color 80ms linear !important;
+}
+
+.records-drawer-filters button:hover:not(.on) {
+  color: var(--cd-util-navy) !important;
+  background: #edf3fb !important;
+}
+
+.records-drawer-filters button.on {
+  color: #fff !important;
+  background: var(--cd-util-navy) !important;
+  border-color: #031942 #7491ba #7491ba #031942 !important;
+  box-shadow: inset 1px 1px #061b4f !important;
+}
+
+.records-drawer-status {
+  min-height: 27px !important;
+  align-items: center !important;
+  padding: 4px 9px !important;
+  color: #445264 !important;
+  background: #e7eaed;
+  border-bottom: 1px solid #a4adb6;
+  font: 700 9px Tahoma, Verdana, sans-serif !important;
+  letter-spacing: 0.03em;
+}
+
+/* Column headers for the record list. Shares the row's exact track sizing so
+   the labels stay locked to their columns, and carries the sunken/raised Win32
+   header-button treatment that made list headers look clickable. */
+.records-drawer-columns {
+  display: grid;
+  /* No column gap: percentage tracks already total 100%, so any gap pushes
+     the header past the window edge. Win32 list headers butt together
+     anyway - the button borders are the separator. */
+  grid-template-columns: 30% 38% 32%;
+  padding: 0 7px;
+  background: var(--cd-util-face);
+  border-bottom: 1px solid #818c97;
+}
+
+.records-drawer-columns button {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+  height: 18px;
+  padding: 0 4px;
+  color: #23303f !important;
+  background: var(--cd-util-face) !important;
+  border: 1px solid !important;
+  border-color: #fff #97a1ab #97a1ab #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font: 700 9px Tahoma, Verdana, sans-serif !important;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.records-drawer-columns button:hover {
+  background: #e4e8ec !important;
+}
+
+.records-drawer-columns button:active {
+  border-color: #97a1ab #fff #fff #97a1ab !important;
+}
+
+.records-drawer-columns button:focus-visible {
+  outline: 2px solid #ffb400;
+  outline-offset: -2px;
+}
+
+/* The sort marker is a plain triangle, drawn in text rather than an icon. */
+.records-drawer-columns button.is-sorted::after {
+  content: "\25B2";
+  color: #4a5665;
+  font-size: 7px;
+}
+
+.records-drawer-columns button.is-sorted.is-desc::after {
+  content: "\25BC";
+}
+
+.records-drawer-results {
+  min-width: 0;
+  min-height: 0;
+  gap: 2px !important;
+  padding: 5px 6px 6px !important;
+  overflow: auto;
+  background: #f2f4f5;
+  scrollbar-color: #929ca6 #e0e4e8;
+  scrollbar-width: thin;
+}
+
+/* One record per line, in columns - Patient / Medication / Last activity /
+   Action - the way an encounter-selection list has always read. Stacked
+   "cards" with a chevron are a touch-target idiom, not a records list. */
+.records-drawer-row {
+  display: grid;
+  /* Percentages, and an explicit full width: each row is its own grid
+     container, so `fr` units resolve against that row's own content and the
+     columns come out ragged from line to line. Percentages resolve against
+     the same container width for every row, so the columns line up. */
+  width: 100%;
+  grid-template-columns: 30% 38% 32%;
+  align-items: center;
+  min-width: 0;
+  gap: 0 !important;
+  padding: 0 7px !important;
+  min-height: 20px;
+  color: #273548 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid #d7dce1 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: none !important;
+  text-align: left;
+}
+
+.records-drawer-row:nth-child(even) {
+  background: #eef1f4 !important;
+}
+
+.records-drawer-row:hover {
+  color: #132746 !important;
+  background: var(--cd-util-selection) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.records-drawer-row-top {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.records-drawer-row > * {
+  padding-right: 8px;
+}
+
+.records-drawer-row-title,
+.records-drawer-row-summary,
+.records-drawer-row-meta {
+  min-width: 0;
+  overflow: hidden;
+  font-family: Tahoma, Verdana, sans-serif !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-drawer-row-title {
+  color: #142942 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.records-drawer-row-summary {
+  color: #415064 !important;
+  font-size: 10px !important;
+}
+
+.records-drawer-row-meta {
+  color: #6a7582 !important;
+  font: 9px "Courier New", monospace !important;
+}
+
+.records-drawer-row-badge {
+  flex: none;
+  padding: 0 3px !important;
+  color: #39495d !important;
+  background: #e7ebef !important;
+  border: 1px solid #919ba5 !important;
+  border-radius: 0 !important;
+  font: 700 8px Tahoma, Verdana, sans-serif !important;
+}
+
+.records-drawer-row-badge.locked {
+  color: #064b27 !important;
+  background: var(--cd-util-green-soft) !important;
+  border-color: #5a9e78 !important;
+}
+
+.records-drawer-row-badge.draft {
+  color: #5a3800 !important;
+  background: var(--cd-util-amber-soft) !important;
+  border-color: #b68935 !important;
+}
+
+/* No per-row action column. Repeating "Resume draft" / "View locked snapshot"
+   on every line is a touch-target habit: the Status badge already says which
+   a record is, and the row's own aria-label still carries the action for
+   assistive tech. Dropping it gives the three real columns room to breathe. */
+.records-drawer-row-action {
+  display: none;
+}
+
+.records-drawer-empty {
+  gap: 3px !important;
+  padding: 16px 10px !important;
+  color: #627081 !important;
+  background: #fff !important;
+  border: 1px solid #8d97a1 !important;
+  border-radius: 0 !important;
+  font: 10px/1.4 Tahoma, Verdana, sans-serif !important;
+}
+
+.records-drawer-empty b {
+  color: #26384f !important;
+  font-size: 11px !important;
+}
+
+.records-drawer-foot {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0;
+  padding: 7px 8px !important;
+  background: #cfd5dc;
+  border-top: 1px solid #fff !important;
+  box-shadow: inset 0 1px #858f99;
+}
+
+.records-drawer-foot p {
+  max-width: none !important;
+  margin: 0 !important;
+  overflow: hidden;
+  color: #4c5968 !important;
+  font: 9px/1.35 Tahoma, Verdana, sans-serif !important;
+}
+
+.records-drawer-new {
+  min-height: 29px;
+  padding: 4px 9px !important;
+  color: #fff !important;
+  background: var(--cd-util-navy) !important;
+  border: 1px solid !important;
+  border-color: #6d8fbd #03183e #03183e #6d8fbd !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px #436da6,
+    inset -1px -1px #03183e !important;
+  font: 700 10px Tahoma, Verdana, sans-serif !important;
+  transform: none !important;
+  transition: background-color 80ms linear !important;
+}
+
+.records-drawer-new:hover {
+  background: #123b78 !important;
+  box-shadow:
+    inset 1px 1px #5279ad,
+    inset -1px -1px #03183e !important;
+  transform: none !important;
+}
+
+.records-drawer-new:active {
+  border-color: #03183e #6d8fbd #6d8fbd #03183e !important;
+  box-shadow: inset 1px 1px #03183e !important;
+  transform: translate(1px, 1px) !important;
+}
+
+.records-drawer-close:focus-visible,
+.records-drawer-filters button:focus-visible,
+.records-drawer-row:focus-visible,
+.records-drawer-new:focus-visible {
+  outline: 2px solid #ffb400 !important;
+  outline-offset: 1px !important;
+}
+
+/* Injection completion is a decisive classic system receipt, not a celebration. */
+
+.inj-completion-overlay {
+  padding: 12px !important;
+  overflow: auto;
+  color: var(--cd-util-ink);
+  background: rgb(8 17 34 / 46%) !important;
+  backdrop-filter: none !important;
+  animation: cd2004-utility-fade 100ms linear both !important;
+  font-family: Tahoma, Verdana, "Segoe UI", sans-serif !important;
+}
+
+.inj-completion-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: min(490px, 100%) !important;
+  max-width: 100%;
+  max-height: calc(100dvh - 24px) !important;
+  padding: 0 12px 12px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  color: var(--cd-util-ink);
+  text-align: left !important;
+  background: var(--cd-util-face) !important;
+  border: 2px solid !important;
+  border-color: #fff #39434e #39434e #fff !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px #eef1f4,
+    inset -1px -1px #78828c,
+    6px 7px 0 rgb(0 0 0 / 28%) !important;
+  animation: cd2004-utility-enter 160ms steps(3, end) both !important;
+  overscroll-behavior: contain;
+}
+
+.inj-completion-card h2 {
+  grid-row: 1;
+  min-width: 0;
+  min-height: 29px;
+  padding: 6px 8px;
+  margin: 0 -12px 10px !important;
+  overflow: hidden;
+  color: #fff !important;
+  background: linear-gradient(
+    90deg,
+    var(--cd-util-navy),
+    var(--cd-util-navy-light)
+  );
+  border-bottom: 1px solid var(--cd-util-navy-dark);
+  font: 700 12px/1.25 Tahoma, Verdana, sans-serif !important;
+  letter-spacing: 0 !important;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inj-completion-ring {
+  grid-row: 2;
+  display: grid;
+  place-items: center;
+  width: 48px !important;
+  height: 48px !important;
+  margin: 1px auto 7px !important;
+  color: var(--cd-util-green) !important;
+  background: var(--cd-util-green-soft) !important;
+  border: 2px solid !important;
+  border-color: #fff #347252 #347252 #fff !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px #f6fff9,
+    inset -1px -1px #78a98c !important;
+  animation: cd2004-utility-check 160ms steps(3, end) both !important;
+}
+
+.inj-completion-ring::after {
+  display: grid;
+  place-items: center;
+  width: 34px !important;
+  height: 34px !important;
+  color: var(--cd-util-green) !important;
+  content: "\2713" !important;
+  background: #fff !important;
+  border: 1px solid #6f9c80;
+  border-radius: 0 !important;
+  font: 700 24px/1 Arial, sans-serif !important;
+}
+
+.inj-completion-card p {
+  grid-row: 3;
+  max-width: 410px;
+  margin: 0 auto 9px !important;
+  color: #435164 !important;
+  font: 10px/1.45 Tahoma, Verdana, sans-serif !important;
+  text-align: center;
+}
+
+.inj-completion-receipt {
+  grid-row: 4;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  min-width: 0;
+  margin: 0 0 10px !important;
+  overflow: hidden;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #596572;
+}
+
+.inj-completion-receipt > div {
+  min-width: 0;
+  min-height: 48px;
+  padding: 6px 7px !important;
+  background: var(--cd-util-paper) !important;
+  border: 0 !important;
+  border-right: 1px solid #aab2bb !important;
+  border-bottom: 1px solid #aab2bb !important;
+  border-radius: 0 !important;
+}
+
+.inj-completion-receipt > div:nth-child(even) {
+  border-right: 0 !important;
+}
+
+.inj-completion-receipt > div:nth-last-child(-n + 2) {
+  border-bottom: 0 !important;
+}
+
+.inj-completion-receipt.paired > div:last-child {
+  grid-column: 1 / -1 !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+}
+
+.inj-completion-receipt.paired > div:nth-last-child(2) {
+  border-bottom: 1px solid #aab2bb !important;
+}
+
+.inj-completion-receipt span {
+  display: block;
+  overflow: hidden;
+  color: #5f6d7c !important;
+  font: 700 8px/1.25 Tahoma, Verdana, sans-serif !important;
+  letter-spacing: 0.07em !important;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inj-completion-receipt b {
+  display: block;
+  margin-top: 3px !important;
+  overflow-wrap: anywhere;
+  color: #15283e !important;
+  font: 700 10px/1.35 Tahoma, Verdana, sans-serif !important;
+}
+
+.inj-completion-card > button {
+  grid-row: 5;
+  justify-self: center;
+  min-width: 150px;
+  min-height: 31px;
+  padding: 5px 12px !important;
+  color: #fff !important;
+  background: var(--cd-util-navy) !important;
+  border: 1px solid !important;
+  border-color: #718fba #03183e #03183e #718fba !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px #5277aa,
+    inset -1px -1px #03183e !important;
+  font: 700 10px Tahoma, Verdana, sans-serif !important;
+  transition: background-color 80ms linear !important;
+}
+
+.inj-completion-card > button:hover {
+  background: #123b78 !important;
+}
+
+.inj-completion-card > button:active {
+  border-color: #03183e #718fba #718fba #03183e !important;
+  box-shadow: inset 1px 1px #03183e !important;
+  transform: translate(1px, 1px);
+}
+
+.inj-completion-card > button:focus-visible {
+  outline: 2px solid #ffb400 !important;
+  outline-offset: 2px !important;
+}
+
+.inj-completion-spark {
+  display: none !important;
+}
+
+.inj-completion-overlay.is-closing {
+  opacity: 0;
+  transition: opacity 120ms linear !important;
+}
+
+.inj-completion-overlay.is-closing .inj-completion-card {
+  transform: translate(5px, 5px) !important;
+  transition: transform 120ms steps(2, end) !important;
+}
+
+@keyframes cd2004-utility-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cd2004-utility-enter {
+  from {
+    opacity: 0;
+    transform: translate(8px, 8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes cd2004-utility-check {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  .records-drawer {
+    width: 100vw !important;
+  }
+
+  .records-drawer-head {
+    min-height: 72px;
+  }
+
+  .records-drawer-filters button {
+    flex: 1 1 calc(50% - 3px);
+    min-height: 34px !important;
+  }
+
+  .records-drawer-foot {
+    grid-template-columns: 1fr;
+  }
+
+  .records-drawer-new {
+    width: 100%;
+    min-height: 34px;
+  }
+
+  .inj-completion-overlay {
+    align-items: start !important;
+    padding: 7px !important;
+  }
+
+  .inj-completion-card {
+    width: 100% !important;
+    max-height: calc(100dvh - 14px) !important;
+    padding-inline: 8px !important;
+  }
+
+  .inj-completion-card h2 {
+    margin-inline: -8px !important;
+  }
+
+  .inj-completion-receipt {
+    grid-template-columns: 1fr !important;
+  }
+
+  .inj-completion-receipt > div,
+  .inj-completion-receipt > div:nth-child(even),
+  .inj-completion-receipt > div:nth-last-child(-n + 2),
+  .inj-completion-receipt.paired > div:nth-last-child(2) {
+    border-right: 0 !important;
+    border-bottom: 1px solid #aab2bb !important;
+  }
+
+  .inj-completion-receipt > div:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .inj-completion-card > button {
+    width: 100%;
+    min-height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .records-drawer-scrim,
+  .records-drawer,
+  .records-drawer-close,
+  .records-drawer-filters button,
+  .records-drawer-row,
+  .records-drawer-new,
+  .inj-completion-overlay,
+  .inj-completion-card,
+  .inj-completion-ring,
+  .inj-completion-overlay.is-closing,
+  .inj-completion-overlay.is-closing .inj-completion-card {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd2004-shell,
+  .cd2004-shell *,
+  .cd2004-shell *::before,
+  .cd2004-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .cd2004-shell {
+    forced-color-adjust: auto;
+  }
+
+  .cd2004-nav-item.is-selected,
+  .cd2004-mobile-switcher button.is-active,
+  .cd2004-complete-button {
+    border: 2px solid Highlight;
+  }
+
+  .cd2004-readiness-marker,
+  .cd2004-start-flag {
+    forced-color-adjust: none;
+  }
+}
+
+/*
+ * Print renderers remain responsible for their document layout. These rules only
+ * remove the new workstation chrome and expose the active workflow content.
+ */
+@media print {
+  .cd2004-print-exclude,
+  .cd2004-window-titlebar,
+  .cd2004-window-toolbar,
+  .cd2004-window-footer,
+  .cd2004-navigator,
+  .cd2004-statusbar,
+  .cd2004-inspector-window,
+  .cd2004-posting-strip,
+  .cd2004-work-locked-banner {
+    display: none !important;
+  }
+
+  .cd2004-shell,
+  .cd2004-workspace,
+  .cd2004-work-window,
+  .cd2004-work-window > .cd2004-window-body,
+  .cd2004-workflow-slot {
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
+/*
+ * Context editor on the native <dialog> element. The browser supplies the top
+ * layer and ::backdrop, so no scrim element or z-index is needed - the dialog
+ * host is reset to a bare, transparent, full-viewport box and the visible
+ * window chrome lives on the inner frame. That also makes backdrop clicks
+ * unambiguous: they land on the host, never on the content.
+ */
+.cd2004-dialog-layer {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  padding: 16px;
+  overflow: auto;
+  color: #101010;
+  background: transparent;
+  border: 0;
+  place-items: center;
+}
+
+.cd2004-dialog-layer[open] {
+  display: grid;
+}
+
+.cd2004-dialog-layer::backdrop {
+  background: rgb(8 20 48 / 32%);
+}
+
+.cd2004-dialog-frame {
+  position: relative;
+  width: min(460px, 100%);
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 28%);
+  color: #101010;
+  font: 12px Tahoma, "MS Sans Serif", Arial, sans-serif;
+  animation: cd2004-dialog-in 120ms steps(2, end);
+}
+
+.cd2004-dialog-titlebar {
+  display: flex;
+  min-height: 26px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 4px 3px 7px;
+  background: var(--cd-navy);
+  color: #fff;
+  font-weight: 700;
+}
+
+.cd2004-dialog-titlebar button {
+  display: grid;
+  width: 20px;
+  height: 19px;
+  place-items: center;
+  border: 2px outset #d4d0c8;
+  border-radius: 0 !important;
+  background: #d4d0c8;
+  color: #101010;
+  font: 700 14px/1 Tahoma, Arial, sans-serif;
+}
+
+.cd2004-dialog-body {
+  padding: 18px;
+}
+
+.cd2004-dialog-field {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.cd2004-dialog-field input,
+.cd2004-dialog-field select {
+  min-width: 0;
+  min-height: 30px;
+  border: 2px inset #d4d0c8;
+  border-radius: 0 !important;
+  background: #fff;
+  padding: 4px 6px;
+  color: #101010;
+  font: 12px Tahoma, Arial, sans-serif;
+  box-shadow: none !important;
+}
+
+.cd2004-dialog-field input:focus,
+.cd2004-dialog-field select:focus {
+  border: 2px inset #d4d0c8;
+  outline: 1px dotted #101010;
+  outline-offset: -4px;
+  box-shadow: none !important;
+}
+
+.cd2004-dialog-field small {
+  color: #4f4f4f;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.cd2004-dialog-actions {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 7px;
+  border-top: 1px solid #a0a0a0;
+  padding: 8px;
+}
+
+.cd2004-dialog-actions button {
+  min-height: 28px;
+  border: 2px outset #d4d0c8;
+  border-radius: 0 !important;
+  background: #d4d0c8;
+  padding: 3px 12px;
+  color: #101010;
+  font: 12px Tahoma, Arial, sans-serif;
+}
+
+.cd2004-dialog-actions button:active {
+  border-style: inset;
+}
+
+.cd2004-dialog-actions button.is-primary {
+  outline: 1px solid #101010;
+  outline-offset: -4px;
+  font-weight: 700;
+}
+
+@keyframes cd2004-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 390px) {
+  .cd2004-dialog-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cd2004-dialog-actions > span {
+    display: none;
+  }
+
+  .cd2004-dialog-actions button:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd2004-dialog {
+    animation: none;
+  }
+}
+
+@media print {
+  .cd2004-dialog-layer {
+    display: none !important;
+  }
+}

@@ -1,0 +1,630 @@
+{
+  "fixtureVersion": 1,
+  "fixtureId": "clinical-desktop-2004-parity-v1",
+  "baseline": {
+    "commit": "bc4a255d351793b59184760b537c7aef9abcf0bb",
+    "shortCommit": "bc4a255",
+    "indexBlob": "2db13bcc1d79374f40364d22ef2fe675881ddef9",
+    "browserTestBlob": "3e0b705308442460d87b06f518d58da2d994d6dd",
+    "branch": "origin/main",
+    "capturedAt": "2026-07-30T21:08:23.000Z",
+    "captureMethod": "Typed parity projection from the production monolith, storage records, note outputs, and print roots at the named baseline commit."
+  },
+  "scenarios": {
+    "injection": [
+      {
+        "id": "injection-routine-sustenna-day8",
+        "kind": "routine",
+        "description": "Day 8 Invega Sustenna administration on target with site rotation and complete traceability.",
+        "engine": {
+          "workflow": "injection",
+          "readiness": "ready",
+          "stops": [],
+          "warnings": [],
+          "recommendations": [
+            {
+              "code": "site.rotate",
+              "message": "Consider L deltoid based on the prior documented site.",
+              "action": "select-site"
+            }
+          ],
+          "calculatedDates": {
+            "sustennaDay8Target": "2026-01-08",
+            "sustennaDay8Early": "2026-01-04",
+            "sustennaDay8Late": "2026-01-12",
+            "sustennaMonthlyTarget": "2026-02-05"
+          },
+          "decisions": {
+            "medication": {
+              "key": "sustenna",
+              "label": "Invega Sustenna",
+              "intervalKey": "q4wk",
+              "timingMode": "window"
+            },
+            "timing": {
+              "state": "idle",
+              "daysSincePrior": null,
+              "earliestDay": null,
+              "latestDay": null,
+              "message": "Enter the prior injection date to evaluate the dosing window."
+            },
+            "allowedRoutes": [
+              "IM"
+            ],
+            "allowedSites": [
+              "R deltoid",
+              "L deltoid",
+              "R ventrogluteal",
+              "L ventrogluteal",
+              "R dorsogluteal",
+              "L dorsogluteal"
+            ],
+            "recommendedSite": "L deltoid",
+            "repeatsPreviousSite": false,
+            "administrationDocumented": true,
+            "canFinalize": true,
+            "recordStatus": "ready-to-lock",
+            "initiationProtocol": "sustenna-day8"
+          }
+        },
+        "documentation": {
+          "workflow": "injection",
+          "sections": [
+            {
+              "id": "cc",
+              "label": "CC",
+              "destination": "CC",
+              "content": "Invega Sustenna Day 8 initiation visit.\n\nVisit: LAI initiation\nPurpose: Day 8 dose per active order\nEncounter date: Jan 8, 2026"
+            },
+            {
+              "id": "assessment",
+              "label": "Assessment",
+              "destination": "Assessment",
+              "content": "PRE-ADMINISTRATION REVIEW\nActive-order purpose / encounter context: Day 8 initiation\nOrder verification: Day 1 record and active Day 8 order verified\nPrevious dose date: Jan 1, 2026\nPrevious injection site: Right deltoid\nTiming review: Scheduled on calculated Day 8 target\nAllergies: NKDA verified\nVitals: BP 118/74 · HR 72 · Temp 98.4 F\n• Patient identity and medication rights verified.\n• Left deltoid selected for site rotation."
+            },
+            {
+              "id": "plan",
+              "label": "Plan",
+              "destination": "Plan",
+              "content": "MEDICATION ADMINISTRATION\n→ Invega Sustenna\n  Medication: Invega Sustenna\n  Dose: 156 mg\n  Route: IM\n  Site: Left deltoid\n  Administration date: Jan 8, 2026\n  Actual administration time: 9:15 AM\n  Administered by: M. Staff, MA\n  Administration amount: 1 mL\n  Delivery device: Prefilled syringe\n  Site condition: Skin/site intact before administration\n  Response: Tolerated without immediate concern reported by staff.\n\nINITIATION PROTOCOL\nProtocol: Invega Sustenna Day 8 initiation\nOrder verification: Day 1 record and active Day 8 order verified\nDay 1 administration date: Jan 1, 2026\nDay 8 target: Jan 8, 2026\nPermitted window: Jan 4, 2026 → Jan 12, 2026\nScheduled / administered date: Jan 8, 2026\nTiming review: Given on target date\n\nPRODUCT TRACEABILITY\n→ Invega Sustenna\n  Medication: Invega Sustenna\n  Dose: 156 mg\n  NDC / product code: 50458-0564-01\n  Lot: SUS-A\n  Expiration: 12/2027\n  Product source: Clinic stock\n  Preparation / reconstitution: Inspected and mixed per current product instructions\n\nFOLLOW-UP\nNext dose due: Feb 5, 2026\nOrdering provider: A. Provider, PMHNP\nAppointment status: Return date reviewed with patient"
+            }
+          ]
+        }
+      },
+      {
+        "id": "injection-exception-paired-same-muscle",
+        "kind": "exceptional",
+        "description": "One-day aripiprazole initiation with two separately traced components entered in the same muscle.",
+        "engine": {
+          "workflow": "injection",
+          "readiness": "blocked",
+          "stops": [
+            {
+              "code": "initiation.second.same-muscle",
+              "message": "Paired injection components are assigned to the same muscle. Select a separate muscle/site for component 2.",
+              "severity": "stop",
+              "field": "initiation.second.site",
+              "section": "initiation"
+            }
+          ],
+          "warnings": [],
+          "recommendations": [],
+          "calculatedDates": {},
+          "decisions": {
+            "medication": {
+              "key": "maintena",
+              "label": "Abilify Maintena",
+              "intervalKey": "q4wk",
+              "timingMode": "orderVerify"
+            },
+            "timing": {
+              "state": "idle",
+              "daysSincePrior": null,
+              "earliestDay": null,
+              "latestDay": null,
+              "message": "Enter the prior injection date and verify timing against the active order and current product information."
+            },
+            "allowedRoutes": [
+              "IM"
+            ],
+            "allowedSites": [
+              "R deltoid",
+              "L deltoid",
+              "R ventrogluteal",
+              "L ventrogluteal",
+              "R dorsogluteal",
+              "L dorsogluteal"
+            ],
+            "recommendedSite": "",
+            "repeatsPreviousSite": false,
+            "administrationDocumented": false,
+            "canFinalize": false,
+            "recordStatus": "draft",
+            "initiationProtocol": "maintena-1day"
+          }
+        },
+        "documentation": {
+          "workflow": "injection",
+          "sections": [
+            {
+              "id": "cc",
+              "label": "CC",
+              "destination": "CC",
+              "content": "Aripiprazole one-day initiation requires correction."
+            },
+            {
+              "id": "assessment",
+              "label": "Assessment",
+              "destination": "Assessment",
+              "content": ""
+            },
+            {
+              "id": "plan",
+              "label": "Plan",
+              "destination": "Plan",
+              "content": "MEDICATION ADMINISTRATION\n→ Component 1: Component 1\n  Medication: Abilify Maintena\n  Dose: 400 mg\n  Route: IM\n  Site: Right deltoid\n  Actual administration time: 11:02 AM\n→ Component 2: Component 2\n  Medication: Abilify Maintena\n  Dose: 400 mg\n  Route: IM\n  Site: Right deltoid\n  Actual administration time: 11:07 AM\n\nINITIATION PROTOCOL\nProtocol: Aripiprazole one-day initiation · two separate injections\nOrder verification: One-day initiation order verified\nOrdered oral dose: Aripiprazole PO dose administered per active order\n• Both documented components currently identify the same muscle; correct the site record before finalization.\n\nPRODUCT TRACEABILITY\n→ Component 1: Component 1\n  Medication: Abilify Maintena\n  Dose: 400 mg\n  NDC / product code: 59148-0072-80\n  Lot: MAIN-A\n  Expiration: 03/2028\n→ Component 2: Component 2\n  Medication: Abilify Maintena\n  Dose: 400 mg\n  NDC / product code: 59148-0072-80\n  Lot: MAIN-B\n  Expiration: 04/2028\n\nEXCEPTION / ESCALATION\nEvent: Separate-muscle requirement is not satisfied by the entered sites.\nNotification: B. Provider, MD\nNotification / decision time: Jul 30, 2026 at 11:12 AM\nDirection / action: Hold finalization and reconcile the actual sites.\nNext step: Correct the component site documentation before locking."
+            }
+          ]
+        }
+      }
+    ],
+    "uds": [
+      {
+        "id": "uds-routine-14-panel-negative",
+        "kind": "routine",
+        "description": "Verified in-date 14-panel cup with valid control and all displayed panels negative.",
+        "engine": {
+          "workflow": "uds",
+          "readiness": "ready",
+          "stops": [],
+          "warnings": [],
+          "recommendations": [],
+          "calculatedDates": {},
+          "decisions": {
+            "negative": [
+              "BUP",
+              "MTD",
+              "MOP",
+              "OXY",
+              "PPX",
+              "BZO",
+              "BAR",
+              "TCA",
+              "AMP",
+              "MET",
+              "COC",
+              "MDMA",
+              "PCP",
+              "THC"
+            ],
+            "preliminaryPositive": [],
+            "invalid": [],
+            "notTested": [],
+            "testedCount": 14,
+            "interpretationAllowed": true,
+            "finalizedOutputAllowed": true,
+            "activityStatus": "completed",
+            "deviceProfile": "14"
+          }
+        },
+        "documentation": {
+          "workflow": "uds",
+          "sections": [
+            {
+              "id": "uds-note",
+              "label": "UDS note",
+              "destination": "Note",
+              "content": "Point-of-care UDS completed for routine monitoring.\n\nCOLLECTION / DEVICE\nPatient: PARITY, ROUTINE\nDOB: 03/03/1991\nReason: Routine monitoring\nCollected: Jul 30, 2026 at 9:00 AM\nCollected by: M. Staff, MA\nSpecimen: Urine\nDevice: SAFE life 14-Panel Cup\nLot: UDS-A\nExpiration: 06/2027\nTemperature: Acceptable\n\nCONTROL / VALIDITY\nControl: Valid control line observed\nValidity: Acceptable validity markers\n• Physical cup and displayed panel readings verified.\n\nRESULTS\n• ALL DISPLAYED PANELS — BUP: Negative · MTD: Negative · MOP: Negative · OXY: Negative · PPX: Negative · BZO: Negative · BAR: Negative · TCA: Negative · AMP: Negative · MET: Negative · COC: Negative · MDMA: Negative · PCP: Negative · THC: Negative\n\nSTAFF CONTEXT\nMedication alignment: No unexpected findings noted by staff.\n\nPLAN\n→ Route to ordering clinician for review in clinical context.\nOutside laboratory plan: Provider to decide."
+            }
+          ]
+        }
+      },
+      {
+        "id": "uds-exception-13-panel-profile",
+        "kind": "exceptional",
+        "description": "Thirteen-panel profile with an entered result for the omitted panel, a preliminary positive, and an invalid panel.",
+        "engine": {
+          "workflow": "uds",
+          "readiness": "blocked",
+          "stops": [
+            {
+              "code": "device.13.omitted-result",
+              "message": "The panel omitted from the physical 13-panel cup must remain Not tested.",
+              "severity": "stop",
+              "field": "results.PPX",
+              "section": "results"
+            }
+          ],
+          "warnings": [
+            {
+              "code": "results.invalid-panels",
+              "message": "Do not interpret invalid/unreadable panel(s): MET.",
+              "severity": "warning",
+              "field": "results",
+              "section": "results"
+            },
+            {
+              "code": "results.preliminary-positive",
+              "message": "Preliminary positive panel(s) require clinician review: THC.",
+              "severity": "warning",
+              "field": "results",
+              "section": "results"
+            },
+            {
+              "code": "reconciliation.review",
+              "message": "Medication alignment requires clinician handoff.",
+              "severity": "warning",
+              "field": "medicationAlignment",
+              "section": "reconciliation"
+            }
+          ],
+          "recommendations": [
+            {
+              "code": "uds.provider-review",
+              "message": "Route the screen to the clinician for contextual review and follow-up direction.",
+              "action": "open-handoff"
+            }
+          ],
+          "calculatedDates": {},
+          "decisions": {
+            "negative": [
+              "BUP",
+              "MTD",
+              "MOP",
+              "OXY",
+              "PPX",
+              "BZO",
+              "BAR",
+              "TCA",
+              "AMP",
+              "COC",
+              "MDMA",
+              "PCP"
+            ],
+            "preliminaryPositive": [
+              "THC"
+            ],
+            "invalid": [
+              "MET"
+            ],
+            "notTested": [],
+            "testedCount": 14,
+            "interpretationAllowed": false,
+            "finalizedOutputAllowed": false,
+            "activityStatus": "needs_review",
+            "deviceProfile": "13"
+          }
+        },
+        "documentation": {
+          "workflow": "uds",
+          "sections": [
+            {
+              "id": "uds-note",
+              "label": "UDS note",
+              "destination": "Note",
+              "content": "Point-of-care UDS requires device-profile and clinician review.\n\nCOLLECTION / DEVICE\nPatient: PARITY, EXCEPTION\nDOB: 04/04/1986\nReason: Provider ordered\nCollected: Jul 30, 2026 at 10:20 AM\nCollected by: M. Staff, MA\nSpecimen: Urine\nDevice: SAFE life 13-Panel Cup\nLot: UDS-B\nExpiration: 08/2027\nTemperature: Acceptable\n\nCONTROL / VALIDITY\nControl: Valid control line observed\nValidity: Physical panel profile does not reconcile\n• PPX is identified as omitted from the physical cup but has an entered result.\n\nRESULTS\n• FLAGGED PANELS — THC: Preliminary positive · MET: Invalid / unreadable · PPX: Entered but not present on device\n\nCLINICIAN ATTENTION\n! Preliminary THC positive requires clinician review.\n! MET is invalid and must not be interpreted.\n! Correct the omitted-panel reconciliation before finalization.\n\nSTAFF CONTEXT\nMedication alignment: Findings are not readily aligned to the available list.\nPatient / comment context: No additional patient explanation documented by staff.\n\nPLAN\n→ Route screen to the ordering clinician for interpretation.\n→ Do not finalize the 13-panel profile until PPX is marked Not tested.\nOutside laboratory plan: Confirmation recommended if clinically indicated."
+            }
+          ]
+        }
+      }
+    ],
+    "samples": [
+      {
+        "id": "samples-routine-reviewed-package",
+        "kind": "routine",
+        "description": "Single in-date physical package with medication review, counseling, and a current reviewed-today fingerprint.",
+        "engine": {
+          "workflow": "samples",
+          "readiness": "ready",
+          "stops": [],
+          "warnings": [],
+          "recommendations": [],
+          "calculatedDates": {},
+          "decisions": {
+            "reviewCurrent": true,
+            "reviewEligible": true,
+            "packageCount": 1,
+            "traceManifest": [
+              {
+                "id": "primary",
+                "label": "Starter package",
+                "medicationStrength": "Vraylar 1.5 mg",
+                "quantity": "7 capsules",
+                "lot": "SAMPLE-A",
+                "expiration": "2027-10"
+              }
+            ],
+            "finalizedOutputAllowed": true
+          }
+        },
+        "documentation": {
+          "workflow": "samples",
+          "sections": [
+            {
+              "id": "samples-note",
+              "label": "Sample note",
+              "destination": "Note",
+              "content": "Oral medication sample provided per prescriber direction.\n\nMEDICATION / SUPPLY\nPatient: PARITY, ROUTINE\nDOB: 05/05/1992\nPurpose: Starter supply\nPrescriber: A. Provider, PMHNP\nDispensed by: M. Staff, MA\n\nPACKAGE TRACEABILITY\n→ Starter package: Vraylar 1.5 mg\n  Medication: Vraylar\n  Strength: 1.5 mg\n  Dosage form: Capsules\n  Quantity / package: 7 capsules\n  Package identifier: Primary package\n  Lot: SAMPLE-A\n  Expiration: 10/2027\n\nCOUNSELING\n• Take one capsule by mouth daily as directed.\n• Medication review and patient education completed.\nPatient handout: Provided\n\nREVIEW CONFIRMATION\nReviewed today: Jul 30, 2026 at 10:00 AM\nReviewed by: M. Staff, MA\n\nFOLLOW-UP\n→ Call the clinic before changing the prescribed plan."
+            }
+          ]
+        }
+      },
+      {
+        "id": "samples-exception-expired-multistep",
+        "kind": "exceptional",
+        "description": "Two-step sample plan with an expired continuation package and stale final review.",
+        "engine": {
+          "workflow": "samples",
+          "readiness": "blocked",
+          "stops": [
+            {
+              "code": "samples.package.continuation.expired",
+              "message": "Continuation package: expired — do not dispense.",
+              "severity": "stop",
+              "field": "packages.1.expiration",
+              "section": "traceability"
+            },
+            {
+              "code": "samples.review-today",
+              "message": "Complete the one-tap final dispense review for the current patient, plan, package trace, and counseling.",
+              "severity": "stop",
+              "field": "review",
+              "section": "final-review"
+            }
+          ],
+          "warnings": [
+            {
+              "code": "samples.multi-step",
+              "message": "Multiple strengths/steps are documented; confirm the sequence with the patient.",
+              "severity": "warning",
+              "field": "plan",
+              "section": "plan"
+            }
+          ],
+          "recommendations": [],
+          "calculatedDates": {},
+          "decisions": {
+            "reviewCurrent": false,
+            "reviewEligible": false,
+            "packageCount": 2,
+            "traceManifest": [
+              {
+                "id": "starter",
+                "label": "Starter package",
+                "medicationStrength": "Vraylar 1.5 mg",
+                "quantity": "7 capsules",
+                "lot": "SAMPLE-B1",
+                "expiration": "2027-10"
+              },
+              {
+                "id": "continuation",
+                "label": "Continuation package",
+                "medicationStrength": "Vraylar 3 mg",
+                "quantity": "7 capsules",
+                "lot": "SAMPLE-B2",
+                "expiration": "2026-06"
+              }
+            ],
+            "finalizedOutputAllowed": false
+          }
+        },
+        "documentation": {
+          "workflow": "samples",
+          "sections": [
+            {
+              "id": "samples-note",
+              "label": "Sample note",
+              "destination": "Note",
+              "content": "Sample dispense remains blocked pending package and counseling review.\n\nMEDICATION / SUPPLY\nPatient: PARITY, EXCEPTION\nDOB: 06/06/1988\nPurpose: Starter titration\nPrescriber: B. Provider, MD\nDispensed by: M. Staff, MA\n\nPACKAGE TRACEABILITY\n→ Starter package: Vraylar 1.5 mg\n  Medication: Vraylar\n  Strength: 1.5 mg\n  Dosage form: Capsules\n  Quantity / package: 7 capsules\n  Package identifier: Package 1 of 2\n  Lot: SAMPLE-B1\n  Expiration: 10/2027\n→ Continuation package: Vraylar 3 mg\n  Medication: Vraylar\n  Strength: 3 mg\n  Dosage form: Capsules\n  Quantity / package: 7 capsules\n  Package identifier: Package 2 of 2\n  Lot: SAMPLE-B2\n  Expiration: 06/2026\n\nPATIENT INSTRUCTIONS\n→ Step 1: Vraylar 1.5 mg\n  Medication: Vraylar\n  Strength: 1.5 mg\n  Quantity: 7 capsules\n  Dates: Jul 31–Aug 6, 2026\n  Directions: Take one capsule daily for 7 days.\n→ Step 2: Vraylar 3 mg\n  Medication: Vraylar\n  Strength: 3 mg\n  Quantity: 7 capsules\n  Dates: Aug 7–Aug 13, 2026\n  Directions: Then take one capsule daily as directed.\n\nCOUNSELING\n• Additional counseling remains required before dispensing.\nPatient / comment context: Final reviewed-today confirmation is stale.\nPatient handout: Draft only\n\nFOLLOW-UP\n→ Replace the expired continuation package.\n→ Confirm the sequence and counseling before output."
+            }
+          ]
+        }
+      }
+    ],
+    "forms": [
+      {
+        "id": "forms-routine-approved-completed",
+        "kind": "routine",
+        "description": "Completed diagnosis-verification request with provider approval and patient notification.",
+        "engine": {
+          "workflow": "forms",
+          "readiness": "ready",
+          "stops": [],
+          "warnings": [],
+          "recommendations": [],
+          "calculatedDates": {},
+          "decisions": {
+            "trackingComplete": true,
+            "releaseAllowed": true,
+            "activityStatus": "completed",
+            "requiresTargetDate": false
+          }
+        },
+        "documentation": {
+          "workflow": "forms",
+          "sections": [
+            {
+              "id": "forms-note",
+              "label": "Forms handoff note",
+              "destination": "Note",
+              "content": "Diagnosis verification letter completed.\n\nDOCUMENT / REQUEST\nPatient: PARITY, ROUTINE\nDOB: 07/07/1989\nRequest category: Work / school\nDocument type: Diagnosis verification letter\nRequest date: Jul 29, 2026\nRequest notes: Provider-approved clinical wording used.\n\nWORKFLOW STATUS\nStatus: Completed\nAssigned provider: A. Provider, PMHNP\nAssigned staff: M. Staff, MA\nDue / target date: Jul 30, 2026\nFee status: No fee / not applicable\nDelivery / pickup: Patient portal\nPatient notification: Portal message sent\nApproval / release: Provider approval confirmed\n\nACTION / FOLLOW-UP\n→ Final letter saved for release.\n→ No additional operational follow-up documented."
+            }
+          ]
+        }
+      },
+      {
+        "id": "forms-exception-release-not-approved",
+        "kind": "exceptional",
+        "description": "Return-to-work draft marked ready but not yet approved for release by the provider.",
+        "engine": {
+          "workflow": "forms",
+          "readiness": "blocked",
+          "stops": [
+            {
+              "code": "forms.provider-approval",
+              "message": "Confirm provider approval before releasing clinical, work-status, restriction, or accommodation wording.",
+              "severity": "stop",
+              "field": "providerApprovalConfirmed",
+              "section": "release"
+            }
+          ],
+          "warnings": [],
+          "recommendations": [],
+          "calculatedDates": {},
+          "decisions": {
+            "trackingComplete": true,
+            "releaseAllowed": false,
+            "activityStatus": "needs_review",
+            "requiresTargetDate": false
+          }
+        },
+        "documentation": {
+          "workflow": "forms",
+          "sections": [
+            {
+              "id": "forms-note",
+              "label": "Forms handoff note",
+              "destination": "Note",
+              "content": "Return-to-work letter draft requires provider approval.\n\nDOCUMENT / REQUEST\nPatient: PARITY, EXCEPTION\nDOB: 08/08/1984\nRequest category: Work / school\nDocument type: Return-to-work letter\nRequest date: Jul 30, 2026\nRequest notes: Requested return date is Aug 3, 2026.\n\nWORKFLOW STATUS\nStatus: Provider review\nAssigned provider: B. Provider, MD\nAssigned staff: M. Staff, MA\nDue / target date: Jul 31, 2026\nFee status: No fee / not applicable\nDelivery / pickup: Patient portal after approval\nPatient notification: Patient advised request is under review\n\nACTION / FOLLOW-UP\n→ Draft routed to assigned provider.\n→ Release only after provider approval is documented."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "persistence": {
+    "storageKey": "ipmgMedAssistInjectionRecordsV1",
+    "openedWithoutRewrite": true,
+    "draft": {
+      "status": "draft",
+      "version": 4,
+      "createdAt": "2026-01-01T08:00:00.000Z",
+      "updatedAt": "2026-07-30T10:00:00.000Z",
+      "completedAt": "",
+      "patient": {
+        "name": "PARITY, PERSISTENCE",
+        "dob": "09/09/1979"
+      },
+      "state": {
+        "dose": "156 mg",
+        "futureStateField": {
+          "keep": "state-value"
+        },
+        "site": "L deltoid"
+      },
+      "fields": {
+        "lot": "UPDATED-LOT",
+        "futureFieldValue": 42
+      },
+      "note": {
+        "cc": "Updated CC",
+        "as": "Updated assessment",
+        "pl": "Updated plan",
+        "futureNoteField": "keep-note"
+      },
+      "futureSnapshotField": {
+        "keep": true
+      },
+      "futureRecordField": "keep-record"
+    },
+    "completed": {
+      "status": "completed",
+      "version": 4,
+      "createdAt": "2026-01-01T08:00:00.000Z",
+      "updatedAt": "2026-07-30T10:30:00.000Z",
+      "completedAt": "2026-07-30T10:30:00.000Z",
+      "futureSnapshotField": {
+        "keep": true
+      },
+      "futureRecordField": "keep-record"
+    },
+    "immutableEdit": {
+      "ok": false,
+      "code": "immutable-record",
+      "message": "Completed injection records are read-only; add a dated addendum instead."
+    },
+    "addendum": [
+      {
+        "id": "add-parity-1",
+        "createdAt": "2026-07-30T11:00:00.000Z",
+        "author": "M. Staff, MA",
+        "text": "Clarified the documented return instructions."
+      }
+    ],
+    "snapshotUnchangedAfterAddendum": true
+  },
+  "printModels": [
+    {
+      "workflow": "injection",
+      "id": "avsSheet",
+      "printClass": "print-avs",
+      "title": "Injection after-visit summary",
+      "rootPresent": true,
+      "titlePresent": true,
+      "printClassPresent": true
+    },
+    {
+      "workflow": "forms",
+      "id": "letterSheet",
+      "printClass": "print-letter",
+      "title": "Provider Letter",
+      "rootPresent": true,
+      "titlePresent": true,
+      "printClassPresent": true
+    },
+    {
+      "workflow": "uds",
+      "id": "udsSheet",
+      "printClass": "print-uds",
+      "title": "Point-of-Care Urine Drug Screen Report",
+      "rootPresent": true,
+      "titlePresent": true,
+      "printClassPresent": true
+    },
+    {
+      "workflow": "uds",
+      "id": "udsPatientSheet",
+      "printClass": "print-uds-patient",
+      "title": "Urine drug screen visit summary",
+      "rootPresent": true,
+      "titlePresent": true,
+      "printClassPresent": true
+    },
+    {
+      "workflow": "forms",
+      "id": "dailySheet",
+      "printClass": "print-daily",
+      "title": "Daily Activity Closeout",
+      "rootPresent": true,
+      "titlePresent": true,
+      "printClassPresent": true
+    },
+    {
+      "workflow": "samples",
+      "id": "sampleSheet",
+      "printClass": "print-sample",
+      "title": "Medication sample instructions",
+      "rootPresent": true,
+      "titlePresent": true,
+      "printClassPresent": true
+    },
+    {
+      "workflow": "samples",
+      "id": "sampleWorksheetSheet",
+      "printClass": "print-sample-worksheet",
+      "title": "Sample Dispensing Worksheet",
+      "rootPresent": true,
+      "titlePresent": true,
+      "printClassPresent": true
+    },
+    {
+      "workflow": "injection",
+      "id": "injWorksheetSheet",
+      "printClass": "print-inj-worksheet",
+      "title": "Injection Start Worksheet",
+      "rootPresent": true,
+      "titlePresent": true,
+      "printClassPresent": true
+    }
+  ]
+}
