@@ -4,17 +4,18 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   ClinicalDesktopShell,
   ContextDialog,
+  RecordActionDialog,
   LegacyWorkflowHost,
   WORKFLOW_LABELS,
   type ClinicOption,
   type LegacyPanelAdapter,
   type PatientContext,
-  type ReadinessItem,
-  type ToolbarAction,
+  type RecordActionKind,
   type WorkflowId,
   type WorkflowRenderContext,
   type WorkQueueItem,
   type InjectionRecordRow,
+  type LocalAttestationReview,
 } from './presentation';
 import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
 import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
@@ -26,7 +27,7 @@ import { DailyCloseoutPanel } from './presentation/workflows/log/DailyCloseoutPa
 import {
   createClinicalCoordinator,
   selectClinicalEvaluation,
-  selectClinicalMirrorAgreement,
+  projectClinicalReadiness,
   type ApplicationWorkflow,
   type ClinicalCoordinatorSnapshot,
   type ClinicalEncounterSource,
@@ -88,36 +89,27 @@ function sameSnapshot(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function paritySafeReadiness(
-  legacy: ReadinessItem[],
+function presentationReadiness(
+  legacy: LegacyShellSnapshot['readiness'],
   clinical: ClinicalCoordinatorSnapshot,
   workflow: WorkflowId,
 ): {
-  readiness: ReadinessItem[];
-  typedAggregateMatched: boolean;
+  readiness: LegacyShellSnapshot['readiness'];
+  typedReady: boolean;
+  firstBlockingDetail?: string;
 } {
   const clinicalWorkflow = DESKTOP_TO_CLINICAL[workflow];
   const evaluation = clinicalWorkflow
     ? selectClinicalEvaluation(clinical, clinicalWorkflow)
     : undefined;
-  const agreement = selectClinicalMirrorAgreement(
-    evaluation,
-    legacy.map((item) => item.state),
-  );
-  if (!agreement?.agrees || agreement.engineReadiness === 'idle') {
-    return { readiness: legacy, typedAggregateMatched: false };
+  if (!evaluation) {
+    return { readiness: legacy, typedReady: false };
   }
+  const projection = projectClinicalReadiness(workflow, evaluation);
   return {
-    readiness: [
-      ...legacy,
-      {
-        id: `${workflow}-typed-clinical-mirror`,
-        label: 'Typed engine shadow',
-        detail: agreement.detail,
-        state: agreement.state,
-      },
-    ],
-    typedAggregateMatched: true,
+    readiness: projection.items,
+    typedReady: projection.readiness === 'ready',
+    firstBlockingDetail: projection.firstBlockingDetail,
   };
 }
 
@@ -203,6 +195,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   // typing on every autosave tick.
   const [injectionRecordEpoch, setInjectionRecordEpoch] = useState(0);
   const [recordsOpen, setRecordsOpen] = useState(false);
+  const [recordAction, setRecordAction] = useState<RecordActionKind | null>(null);
   const injectionRecordGenerationRef = useRef(0);
 
   const refresh = () => {
@@ -411,41 +404,49 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   };
 
   const openWorkflow = (workflow: WorkflowId) => {
+    const currentWorkflow = runtime.activeWorkflow();
+    // Leaving an editable injection record is an explicit save boundary. This
+    // makes normal workflow navigation retain entered work just like Start New
+    // does, while keeping a storage failure on the worksheet.
+    if (currentWorkflow === 'administer' && workflow !== 'administer') {
+      const recordState = runtime.injectionRecordState();
+      if (recordState.canDiscard && !runtime.saveDraft()) {
+        coordinator.synchronize(['injection']);
+        refresh();
+        return;
+      }
+    }
     coordinator.navigate(DESKTOP_TO_APPLICATION[workflow]);
     runtime.activate(workflow);
     coordinator.synchronize();
     refresh();
   };
 
-  const openRecord = (record: InjectionRecordRow) => {
-    runtime.openRecords();
-    window.setTimeout(() => {
-      document
-        .querySelector<HTMLElement>(`[data-records-open="${CSS.escape(record.id)}"]`)
-        ?.click();
-      refresh();
-    }, 60);
+  const synchronizeInjectionRecordSwitch = () => {
+    const nextRecordGeneration = window.ipmgInjectionRecordGeneration?.() ?? 0;
+    if (nextRecordGeneration !== injectionRecordGenerationRef.current) {
+      injectionRecordGenerationRef.current = nextRecordGeneration;
+      setInjectionRecordEpoch((value) => value + 1);
+    }
+    coordinator.navigate('injection');
+    // The record switch owns the next active patient. Do this synchronously
+    // with the generation/key update so the former blank panel cannot use a
+    // newly-restored patient as a cue to mirror its old empty encounter over
+    // the restored draft before the new panel mounts.
+    coordinator.setActivePatient(rawInjectionEncounter(clinicalSource).patient);
+    coordinator.synchronize(['injection']);
+    refresh();
   };
 
-  const toolbarActions = useMemo<ToolbarAction[]>(
-    () => [
-      {
-        id: 'staff',
-        label: 'Edit staff sign-in',
-        shortLabel: 'Staff',
-        icon: 'staff',
-        onInvoke: () => setContextEditor('staff'),
-      },
-      {
-        id: 'location',
-        label: 'Select visit location',
-        shortLabel: 'Location',
-        icon: 'location',
-        onInvoke: () => setContextEditor('location'),
-      },
-    ],
-    [],
-  );
+  const openInjectionRecord = (id: string): boolean => {
+    if (!runtime.openInjectionRecord(id)) return false;
+    synchronizeInjectionRecordSwitch();
+    return true;
+  };
+
+  const openRecord = (record: InjectionRecordRow) => {
+    openInjectionRecord(record.id);
+  };
 
   const queueOpen = (item: WorkQueueItem) => openWorkflow(item.workflow);
 
@@ -453,9 +454,21 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     APPLICATION_TO_DESKTOP[clinical.state.activeWorkflow] ??
     snapshot.activeWorkflow;
   const activeClinicalWorkflow = DESKTOP_TO_CLINICAL[activeWorkflow];
+  const injectionAttestation =
+    activeWorkflow === 'administer'
+      ? runtime.injectionAttestationSummary()
+      : undefined;
+  const injectionEncounter =
+    activeWorkflow === 'administer'
+      ? rawInjectionEncounter(clinicalSource)
+      : undefined;
+  const injectionPatient = injectionEncounter?.patient;
   const patient: PatientContext = {
-    name: clinical.state.activePatient.name,
-    dob: clinical.state.activePatient.dob,
+    name: injectionPatient?.name ?? clinical.state.activePatient.name,
+    dob: injectionPatient?.dob ?? clinical.state.activePatient.dob,
+    localRecordId: injectionAttestation?.activeRecordId,
+    medicationLabel: injectionAttestation?.medication || undefined,
+    allergyStatus: injectionEncounter?.allergies.trim() || undefined,
   };
   const workflowPatient: PatientContext | undefined = activeClinicalWorkflow
     ? {
@@ -468,15 +481,76 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         sourceWorkflow: activeWorkflow,
       }
     : snapshot.workflowPatients[activeWorkflow];
-  const parityModel = paritySafeReadiness(
+  const injectionRecordState =
+    activeWorkflow === 'administer' ? runtime.injectionRecordState() : undefined;
+  const injectionRecordLabel =
+    activeWorkflow === 'administer'
+      ? injectionEncounter?.patient.name.trim() || 'this injection'
+      : 'this injection';
+  const readinessModel = presentationReadiness(
     snapshot.readiness,
     clinical,
     activeWorkflow,
   );
-  const isReviewWorkflow =
-    activeWorkflow === 'uds' ||
-    activeWorkflow === 'samples' ||
-    activeWorkflow === 'forms';
+  const localAttestationReady = Boolean(
+    injectionAttestation?.canAttest && injectionAttestation.staff.trim(),
+  );
+  const attestationBlockingDetail =
+    activeWorkflow === 'administer' && !localAttestationReady
+      ? injectionAttestation?.staff.trim()
+        ? 'The editable local record is not ready to attest and lock.'
+        : 'Enter the signed-in documenting staff before local attestation.'
+      : undefined;
+  const saveInjectionDraft = () => {
+    runtime.saveDraft();
+    coordinator.synchronize(['injection']);
+    refresh();
+  };
+  const startNewInjection = () => {
+    const started = runtime.startNewInjection();
+    if (started) {
+      synchronizeInjectionRecordSwitch();
+      return;
+    }
+    refresh();
+  };
+  const discardInjectionDraft = (): boolean => {
+    const discarded = runtime.discardInjectionDraft();
+    if (discarded) {
+      coordinator.navigate('injection');
+      coordinator.synchronize(['injection']);
+    }
+    refresh();
+    return discarded;
+  };
+  const finishInjectionRecord = (): boolean => {
+    const attestation = injectionAttestation;
+    if (
+      activeWorkflow !== 'administer' ||
+      !snapshot.canComplete ||
+      !readinessModel.typedReady ||
+      !localAttestationReady ||
+      !attestation ||
+      posting
+    ) {
+      return false;
+    }
+    setPosting(true);
+    const staff = attestation.staff.trim();
+    if (!staff) {
+      setPosting(false);
+      return false;
+    }
+    const locked = runtime.attestAndLockInjection({
+      staff,
+      timestamp: attestation.timestamp || new Date().toISOString(),
+      statementVersion: 'local-attestation-v1',
+    });
+    if (!locked) setPosting(false);
+    coordinator.synchronize(['injection']);
+    refresh();
+    return locked;
+  };
   const reviewOrComplete = () => {
     if (activeWorkflow === 'forms') {
       formsPanelRef.current?.focus({ preventScroll: false });
@@ -493,24 +567,35 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       samplesPanelRef.current?.scrollIntoView({ block: 'nearest' });
       return;
     }
-    if (isReviewWorkflow) {
-      runtime.focusOutput();
-      refresh();
-      return;
-    }
     if (
       activeWorkflow !== 'administer' ||
       !snapshot.canComplete ||
+      !readinessModel.typedReady ||
+      !localAttestationReady ||
       posting
     ) {
       return;
     }
-    setPosting(true);
-    window.setTimeout(() => {
-      if (!runtime.reviewOrComplete()) setPosting(false);
-      refresh();
-    }, 110);
+    setRecordAction('attest');
   };
+
+  const attestationReview: LocalAttestationReview | undefined = injectionAttestation
+    ? {
+        patient:
+          injectionAttestation.patient.name ||
+          injectionRecordLabel ||
+          'Not entered',
+        localRecord:
+          injectionAttestation.localRecord ||
+          injectionAttestation.activeRecordId ||
+          'Not assigned',
+        medication: injectionAttestation.medication || 'Not entered',
+        disposition: injectionAttestation.disposition || 'Not documented',
+        staff: injectionAttestation.staff || snapshot.staffLabel || 'Not signed in',
+        timestamp: injectionAttestation.timestamp || new Date().toISOString(),
+        statementVersion: 'local-attestation-v1',
+      }
+    : undefined;
 
   const effectivePostState =
     activeWorkflow === 'administer'
@@ -522,9 +607,8 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   return (
     <>
       <ClinicalDesktopShell
-        appName="IPMG MA Workstation"
         organizationName="Integrated Psychiatric Medical Group"
-        versionLabel="MAGIC Ambulatory · v6.0"
+        versionLabel="INJ"
         activeWorkflow={activeWorkflow}
         onWorkflowChange={openWorkflow}
         patient={patient}
@@ -539,42 +623,50 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         workflowSummaries={snapshot.workflowSummaries}
         needsReview={snapshot.needsReview}
         todayQueue={snapshot.todayQueue}
-        recentActivity={snapshot.recentActivity}
         injectionRecords={snapshot.injectionRecords}
-        readiness={parityModel.readiness}
+        readiness={readinessModel.readiness}
         noteSections={snapshot.noteSections}
         noteTitle={snapshot.noteTitle}
-        noteSubtitle={
-          parityModel.typedAggregateMatched
-            ? `${snapshot.noteSubtitle} Typed engine aggregate matched; compatibility workflow remains authoritative.`
-            : snapshot.noteSubtitle
-        }
+        noteSubtitle={snapshot.noteSubtitle}
         legacyPanels={legacyPanels}
         renderWorkflow={renderWorkflow}
-        toolbarActions={toolbarActions}
         postState={effectivePostState}
         postMessage={
           effectivePostState === 'posted'
-            ? 'Permanent local snapshot created. Original record is read-only.'
+            ? 'Locked browser-local record. Original record is read-only.'
             : undefined
         }
         canComplete={
-          activeWorkflow === 'administer' && snapshot.canComplete
+          activeWorkflow === 'administer' &&
+          snapshot.canComplete &&
+          readinessModel.typedReady &&
+          localAttestationReady
         }
-        canReview={isReviewWorkflow}
-        reviewActionMode={isReviewWorkflow ? 'review' : 'complete'}
         statusMessage={snapshot.statusMessage}
         onSaveDraft={
           activeWorkflow === 'administer'
-            ? () => {
-                runtime.saveDraft();
-                coordinator.synchronize(['injection']);
-                refresh();
-              }
+            ? saveInjectionDraft
             : undefined
         }
         onReviewComplete={reviewOrComplete}
+        injectionRecordActions={
+          activeWorkflow === 'administer' && injectionRecordState
+            ? {
+                lifecycle: injectionRecordState.lifecycle,
+                detail: injectionRecordState.detail,
+                blockingDetail:
+                  readinessModel.firstBlockingDetail ?? attestationBlockingDetail,
+                canDiscard: injectionRecordState.canDiscard,
+                onStartNew: startNewInjection,
+                onDiscard: () => setRecordAction('discard'),
+              }
+            : undefined
+        }
+        onStartNewInjection={startNewInjection}
+        onOpenStaff={() => setContextEditor('staff')}
+        onOpenLocation={() => setContextEditor('location')}
         onOpenRecords={() => setRecordsOpen(true)}
+        onLookup={() => setRecordsOpen(true)}
         onOpenKnowledge={() => openWorkflow('reference')}
         onOpenCloseout={() => openWorkflow('log')}
         onCopyNoteSection={(section) =>
@@ -583,9 +675,28 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         onCopyAllNotes={() => copyAllLegacyNotes(activeWorkflow)}
         onQueueItemOpen={queueOpen}
         onRecordOpen={openRecord}
-        onEscape={() => setContextEditor(null)}
+        onEscape={() => {
+          if (contextEditor) {
+            setContextEditor(null);
+            return;
+          }
+          if (recordsOpen) setRecordsOpen(false);
+        }}
       />
-      <RecordsWindow open={recordsOpen} onClose={() => setRecordsOpen(false)} />
+      <RecordsWindow
+        open={recordsOpen}
+        onClose={() => setRecordsOpen(false)}
+        onRecordOpen={openInjectionRecord}
+      />
+      {recordAction && (
+        <RecordActionDialog
+          kind={recordAction}
+          recordLabel={injectionRecordLabel}
+          attestation={recordAction === 'attest' ? attestationReview : undefined}
+          onConfirm={recordAction === 'attest' ? finishInjectionRecord : discardInjectionDraft}
+          onClose={() => setRecordAction(null)}
+        />
+      )}
       {contextEditor && (
         <ContextDialog
           kind={contextEditor}

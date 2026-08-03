@@ -161,7 +161,7 @@ assert.match(html, /<script id="rc538RecordLifecycleScript">/, 'Expected local i
 assert.match(html, /const storageKey='ipmgMedAssistInjectionRecordsV1'/, 'Injection drafts and completed snapshots must persist locally');
 assert.match(html, /function mergePreservingUnknown\(previous,next\)/, 'Injection persistence must recursively preserve unknown historical fields');
 assert.match(html, /snapshot=captureSnapshot\(existing&&existing\.snapshot\)/, 'Injection v4 snapshots must merge over the existing historical snapshot');
-assert.match(html, /const record=mergePreservingUnknown\(existing,\{/, 'Injection saves must preserve unknown nested record fields');
+assert.match(html, /const record=mergePreservingUnknown\(existing,patch\)/, 'Injection saves must preserve unknown nested record fields');
 assert.match(html, /Complete &amp; lock/, 'Injection completion must use a deliberate lock action');
 assert.match(html, /Dated addendum/, 'Completed injection records must support addenda rather than silent edits');
 assert.match(html, /function showCompletion\(record\)/, 'Completed injections must show the completion experience');

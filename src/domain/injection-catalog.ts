@@ -1,3 +1,12 @@
+import { addCalendarDays, addCalendarMonths } from "./dates";
+import {
+  INJECTION_CLINICAL_REFERENCE_BUNDLE,
+  type InjectionCadence,
+  type InjectionClinicalPhase,
+  type InjectionMedicationClinicalReference,
+  type InjectionSiteGuidance,
+} from "./injection-clinical-reference";
+
 export type InjectionIntervalKey =
   | "q1wk"
   | "q2wk"
@@ -117,234 +126,86 @@ export interface InjectionMedication {
   >;
   timingMode?: "orderVerify";
   verifications: MedicationVerificationKey[];
+  verificationRequirements?: Partial<
+    Record<InjectionClinicalPhase, MedicationVerificationKey[]>
+  >;
   missedDoseGuidance: string;
   administrationRule: (dose: string) => AdministrationRule;
+  cadenceByInterval?: Partial<Record<InjectionIntervalKey, InjectionCadence>>;
+  /** Present for supported products; `other` intentionally has no reference. */
+  clinicalReference?: InjectionMedicationClinicalReference;
 }
 
 const allIm = (): AdministrationRule => ({ routes: ["IM"], sites: [...IM_SITES] });
 const gluteal = (): AdministrationRule => ({ routes: ["IM"], sites: [...GLUTEAL_SITES] });
+const ruleForSiteGuidance = (
+  siteGuidance: InjectionSiteGuidance,
+  dose: string,
+  allowedRoutes: string[],
+): AdministrationRule => {
+  switch (siteGuidance) {
+    case "all-im":
+      return allIm();
+    case "gluteal-im":
+      return gluteal();
+    case "subq":
+      return { routes: ["SubQ"], sites: [...SUBQ_SITES] };
+    case "aristada-dose":
+      return dose === "441 mg" ? allIm() : gluteal();
+    case "erzofri-dose":
+      return dose === "351 mg"
+        ? { routes: ["IM"], sites: ["R deltoid", "L deltoid"] }
+        : allIm();
+    case "order-directed":
+      // The label permits a route but does not name anatomical sites. An empty
+      // list means "document the actual ordered site" rather than "any site is
+      // a product-approved default". The evaluator still requires site text.
+      return {
+        routes: [...allowedRoutes],
+        sites: [],
+      };
+  }
+};
+
+const buildMedication = (
+  reference: InjectionMedicationClinicalReference,
+): InjectionMedication => {
+  const catalog = reference.catalog;
+  return {
+    key: reference.key,
+    label: catalog.label,
+    name: catalog.name,
+    generic: catalog.generic,
+    route: catalog.route,
+    defaultSite: catalog.defaultSite,
+    intervalKey: catalog.intervalKey,
+    doses: [...catalog.doses],
+    ...(catalog.dosesByInterval ? { dosesByInterval: catalog.dosesByInterval } : {}),
+    windowBefore: catalog.windowBefore,
+    windowAfter: catalog.windowAfter,
+    ...(catalog.windowsByInterval ? { windowsByInterval: catalog.windowsByInterval } : {}),
+    ...(catalog.timingMode ? { timingMode: catalog.timingMode } : {}),
+    verifications: [...catalog.verifications],
+    ...(catalog.verificationRequirements
+      ? { verificationRequirements: catalog.verificationRequirements }
+      : {}),
+    missedDoseGuidance: catalog.missedDoseGuidance,
+    ...(catalog.cadenceByInterval ? { cadenceByInterval: catalog.cadenceByInterval } : {}),
+    administrationRule: (dose) =>
+      ruleForSiteGuidance(catalog.siteGuidance, dose, catalog.allowedRoutes ?? [catalog.route]),
+    clinicalReference: reference,
+  };
+};
+
+const catalogedMedications = Object.fromEntries(
+  Object.entries(INJECTION_CLINICAL_REFERENCE_BUNDLE.medications).map(([, reference]) => [
+    reference.key,
+    buildMedication(reference),
+  ]),
+) as Record<Exclude<InjectionMedicationKey, "other">, InjectionMedication>;
 
 export const INJECTION_MEDICATIONS: Record<InjectionMedicationKey, InjectionMedication> = {
-  aristada: {
-    key: "aristada",
-    label: "Aristada",
-    name: "Aristada",
-    generic: "aripiprazole lauroxil",
-    route: "IM",
-    defaultSite: "R ventrogluteal",
-    intervalKey: "q4wk",
-    doses: ["441 mg", "662 mg", "882 mg", "1064 mg"],
-    dosesByInterval: {
-      q4wk: ["441 mg", "662 mg", "882 mg"],
-      q6wk: ["882 mg"],
-      q8wk: ["1064 mg"],
-    },
-    windowBefore: 7,
-    windowAfter: 7,
-    windowsByInterval: {
-      q4wk: { windowBefore: 7, windowAfter: 7 },
-      q6wk: { windowBefore: 14, windowAfter: 14 },
-      q8wk: { windowBefore: 14, windowAfter: 14 },
-    },
-    timingMode: "orderVerify",
-    verifications: ["resuspend", "oralOverlap"],
-    missedDoseGuidance:
-      "Use the current product-specific re-initiation table and active provider/pharmacist plan.",
-    administrationRule: (dose) =>
-      dose === "441 mg" ? allIm() : { routes: ["IM"], sites: [...GLUTEAL_SITES] },
-  },
-  initio: {
-    key: "initio",
-    label: "Aristada Initio",
-    name: "Aristada Initio",
-    generic: "aripiprazole lauroxil",
-    route: "IM",
-    defaultSite: "R deltoid",
-    intervalKey: "once",
-    doses: ["675 mg"],
-    windowBefore: 0,
-    windowAfter: 0,
-    verifications: ["resuspend"],
-    missedDoseGuidance: "One-time initiation component; follow the active initiation plan.",
-    administrationRule: allIm,
-  },
-  sustenna: {
-    key: "sustenna",
-    label: "Invega Sustenna",
-    name: "Invega Sustenna",
-    generic: "paliperidone palmitate",
-    route: "IM",
-    defaultSite: "R deltoid",
-    intervalKey: "q4wk",
-    doses: ["39 mg", "78 mg", "117 mg", "156 mg", "234 mg"],
-    windowBefore: 7,
-    windowAfter: 7,
-    verifications: ["resuspend", "invegaInit"],
-    missedDoseGuidance:
-      "Use the current product-specific missed-dose table and active provider/pharmacist plan.",
-    administrationRule: allIm,
-  },
-  erzofri: {
-    key: "erzofri",
-    label: "Erzofri",
-    name: "Erzofri",
-    generic: "paliperidone palmitate",
-    route: "IM",
-    defaultSite: "R deltoid",
-    intervalKey: "q4wk",
-    doses: ["39 mg", "78 mg", "117 mg", "156 mg", "234 mg", "351 mg"],
-    windowBefore: 7,
-    windowAfter: 7,
-    verifications: ["resuspend", "paliperidoneTolerability"],
-    missedDoseGuidance:
-      "Use the current ERZOFRI missed-dose table and active provider/pharmacist plan.",
-    administrationRule: (dose) =>
-      dose === "351 mg"
-        ? { routes: ["IM"], sites: ["R deltoid", "L deltoid"] }
-        : allIm(),
-  },
-  trinza: {
-    key: "trinza",
-    label: "Invega Trinza",
-    name: "Invega Trinza",
-    generic: "paliperidone palmitate",
-    route: "IM",
-    defaultSite: "R ventrogluteal",
-    intervalKey: "q12wk",
-    doses: ["273 mg", "410 mg", "546 mg", "819 mg"],
-    windowBefore: 14,
-    windowAfter: 14,
-    verifications: ["resuspend", "stabilized"],
-    missedDoseGuidance:
-      "Use the current dose-specific INVEGA TRINZA missed-dose table and active provider/pharmacist plan.",
-    administrationRule: allIm,
-  },
-  hafyera: {
-    key: "hafyera",
-    label: "Invega Hafyera",
-    name: "Invega Hafyera",
-    generic: "paliperidone palmitate",
-    route: "IM",
-    defaultSite: "R ventrogluteal",
-    intervalKey: "q26wk",
-    doses: ["1092 mg", "1560 mg"],
-    windowBefore: 14,
-    windowAfter: 21,
-    verifications: ["resuspend", "stabilized"],
-    missedDoseGuidance:
-      "Use the current dose-specific INVEGA HAFYERA missed-dose table and active provider/pharmacist plan.",
-    administrationRule: gluteal,
-  },
-  uzedy: {
-    key: "uzedy",
-    label: "Uzedy",
-    name: "Uzedy",
-    generic: "risperidone ER",
-    route: "SubQ",
-    defaultSite: "Abdomen RUQ (SubQ)",
-    intervalKey: "q4wk",
-    doses: ["50 mg", "75 mg", "100 mg", "125 mg", "150 mg", "200 mg", "250 mg"],
-    dosesByInterval: {
-      q4wk: ["50 mg", "75 mg", "100 mg", "125 mg"],
-      q8wk: ["100 mg", "150 mg", "200 mg", "250 mg"],
-    },
-    windowBefore: 7,
-    windowAfter: 7,
-    windowsByInterval: {
-      q4wk: { windowBefore: 7, windowAfter: 7 },
-      q8wk: { windowBefore: 14, windowAfter: 14 },
-    },
-    timingMode: "orderVerify",
-    verifications: ["resuspend"],
-    missedDoseGuidance:
-      "Give the next injection as soon as possible per the active order and current product information.",
-    administrationRule: () => ({ routes: ["SubQ"], sites: [...SUBQ_SITES] }),
-  },
-  maintena: {
-    key: "maintena",
-    label: "Abilify Maintena",
-    name: "Abilify Maintena",
-    generic: "aripiprazole",
-    route: "IM",
-    defaultSite: "R ventrogluteal",
-    intervalKey: "q4wk",
-    doses: ["300 mg", "400 mg"],
-    windowBefore: 2,
-    windowAfter: 7,
-    timingMode: "orderVerify",
-    verifications: ["resuspend", "oralOverlap"],
-    missedDoseGuidance:
-      "Verify the prescribed initiation or re-initiation plan against the active order and current product information.",
-    administrationRule: allIm,
-  },
-  asimtufii: {
-    key: "asimtufii",
-    label: "Abilify Asimtufii",
-    name: "Abilify Asimtufii",
-    generic: "aripiprazole",
-    route: "IM",
-    defaultSite: "R ventrogluteal",
-    intervalKey: "q8wk",
-    doses: ["720 mg", "960 mg"],
-    windowBefore: 14,
-    windowAfter: 14,
-    verifications: [
-      "resuspend",
-      "aripiprazoleTolerability",
-      "glutealOnly",
-      "noMassage",
-    ],
-    missedDoseGuidance:
-      "Verify restart timing against the active order and current product information.",
-    administrationRule: gluteal,
-  },
-  vivitrol: {
-    key: "vivitrol",
-    label: "Vivitrol",
-    name: "Vivitrol",
-    generic: "naltrexone ER",
-    route: "IM",
-    defaultSite: "R ventrogluteal",
-    intervalKey: "q4wk",
-    doses: ["380 mg"],
-    windowBefore: 3,
-    windowAfter: 7,
-    timingMode: "orderVerify",
-    verifications: ["opioidFree", "naltrexHS", "suppliedNeedle"],
-    missedDoseGuidance:
-      "Use the active provider order and current product information; reassess current opioid-risk status.",
-    administrationRule: gluteal,
-  },
-  haldol: {
-    key: "haldol",
-    label: "Haldol Dec.",
-    name: "Haldol Decanoate",
-    generic: "haloperidol decanoate",
-    route: "IM",
-    defaultSite: "R ventrogluteal",
-    intervalKey: "q4wk",
-    doses: ["50 mg", "100 mg", "150 mg", "200 mg", "300 mg"],
-    windowBefore: 7,
-    windowAfter: 7,
-    verifications: ["deepZtrack"],
-    missedDoseGuidance: "Late-dose handling is individualized by the prescriber.",
-    administrationRule: allIm,
-  },
-  prolixin: {
-    key: "prolixin",
-    label: "Prolixin Dec.",
-    name: "Prolixin Decanoate",
-    generic: "fluphenazine decanoate",
-    route: "IM",
-    defaultSite: "R ventrogluteal",
-    intervalKey: "q3wk",
-    doses: ["12.5 mg", "25 mg", "37.5 mg", "50 mg"],
-    windowBefore: 7,
-    windowAfter: 7,
-    verifications: ["deepZtrack"],
-    missedDoseGuidance: "Late-dose handling is individualized by the prescriber.",
-    administrationRule: allIm,
-  },
+  ...catalogedMedications,
   other: {
     key: "other",
     label: "Other",
@@ -381,6 +242,37 @@ export const effectiveInjectionWindow = (
   return days > 28
     ? { windowBefore: 14, windowAfter: 14 }
     : { windowBefore: 7, windowAfter: 7 };
+};
+
+/**
+ * Product-specific cadence overrides the generic interval-key math.  Most
+ * intervals are intentionally still day based, but products described as
+ * every 2/3/6 months retain their calendar-month semantics.
+ */
+export const effectiveInjectionCadence = (
+  medication: InjectionMedication,
+  intervalKey: InjectionIntervalKey,
+): InjectionCadence => {
+  const configured = medication.cadenceByInterval?.[intervalKey];
+  if (configured) return configured;
+  if (intervalKey === "once" || medication.intervalKey === "once") {
+    return { kind: "oneTime", label: "one-time" };
+  }
+  const days = INJECTION_INTERVAL_DAYS[intervalKey];
+  return { kind: "days", days, label: injectionIntervalLabel(intervalKey) };
+};
+
+export const calculateNextInjectionDate = (
+  medication: InjectionMedication,
+  intervalKey: InjectionIntervalKey,
+  administrationDate: string,
+): string => {
+  const cadence = effectiveInjectionCadence(medication, intervalKey);
+  if (cadence.kind === "oneTime") return "";
+  if (cadence.kind === "calendarMonths") {
+    return addCalendarMonths(administrationDate, cadence.months);
+  }
+  return addCalendarDays(administrationDate, cadence.days);
 };
 
 export const allowedDosesForInterval = (

@@ -1,5 +1,4 @@
 import type {
-  ActivityItem,
   InjectionRecordRow,
   NoteSection,
   PatientContext,
@@ -54,7 +53,6 @@ export interface LegacyShellSnapshot {
   workflowSummaries: Partial<Record<DesktopWorkflowId, WorkflowSummary>>;
   needsReview: WorkQueueItem[];
   todayQueue: WorkQueueItem[];
-  recentActivity: ActivityItem[];
   injectionRecords: InjectionRecordRow[];
   readiness: ReadinessItem[];
   noteSections: NoteSection[];
@@ -161,7 +159,6 @@ function activityLabel(activity: StoredActivity): string {
 function readQueues(): {
   needsReview: WorkQueueItem[];
   todayQueue: WorkQueueItem[];
-  recentActivity: ActivityItem[];
 } {
   const activities = safeStorageArray<StoredActivity>(
     `ipmgMedAssistActivityLog_${localDateKey()}`,
@@ -183,14 +180,6 @@ function readQueues(): {
   return {
     todayQueue,
     needsReview: todayQueue.filter((item) => item.tone === 'warning'),
-    recentActivity: todayQueue.slice(0, 8).map((item) => ({
-      id: item.id,
-      workflow: item.workflow,
-      label: item.patientLabel,
-      detail: item.detail,
-      timeLabel: item.timeLabel,
-      tone: item.tone,
-    })),
   };
 }
 
@@ -397,7 +386,6 @@ export function readLegacyShellSnapshot(runtime: LegacyRuntime): LegacyShellSnap
     workflowSummaries,
     needsReview: queues.needsReview,
     todayQueue: queues.todayQueue,
-    recentActivity: queues.recentActivity,
     injectionRecords,
     readiness: readReadiness(runtime, activeWorkflow),
     noteSections: noteSectionsFor(activeWorkflow),

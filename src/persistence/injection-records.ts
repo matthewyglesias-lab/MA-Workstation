@@ -1,4 +1,5 @@
 import type { PatientIdentity } from "../domain/contracts";
+import type { InjectionDocumentationMetadata } from "../domain/injection-ndc";
 import {
   INJECTION_RECORDS_STORAGE_KEY,
 } from "./keys";
@@ -27,6 +28,8 @@ export interface InjectionSnapshotV4 extends Record<string, unknown> {
     pl: string;
     [key: string]: unknown;
   };
+  /** Optional provenance for NDC selection and expected next-dose helpers. */
+  documentation?: InjectionDocumentationMetadata & Record<string, unknown>;
 }
 
 export interface InjectionAddendum extends Record<string, unknown> {
@@ -34,6 +37,27 @@ export interface InjectionAddendum extends Record<string, unknown> {
   createdAt: string;
   author: string;
   text: string;
+}
+
+/** Optional browser-local closeout metadata. Older completed records omit it. */
+export interface InjectionLocalAttestation extends Record<string, unknown> {
+  staff: string;
+  timestamp: string;
+  statementVersion: string;
+  /** Immutable reference/product context displayed at the time of local lock. */
+  documentation?: InjectionDocumentationMetadata & Record<string, unknown>;
+}
+
+/** Append-only local audit detail for record transitions. */
+export interface InjectionRecordAuditEvent extends Record<string, unknown> {
+  id: string;
+  event: string;
+  timestamp: string;
+  staff?: string;
+  statementVersion?: string;
+  attestationTimestamp?: string;
+  /** Immutable copy of the product/schedule reference shown at local lock. */
+  documentation?: InjectionDocumentationMetadata & Record<string, unknown>;
 }
 
 export interface InjectionRecord extends Record<string, unknown> {
@@ -47,6 +71,8 @@ export interface InjectionRecord extends Record<string, unknown> {
   summary: string;
   snapshot: InjectionSnapshotV4;
   addenda: InjectionAddendum[];
+  attestation?: InjectionLocalAttestation;
+  audit?: InjectionRecordAuditEvent[];
 }
 
 export interface SaveInjectionRecordInput extends Record<string, unknown> {
@@ -99,6 +125,9 @@ const normalizeSnapshotV4 = (
     previous ? deepMergePreservingUnknown(defaults, previous) : defaults,
     update as InjectionSnapshotV4,
   );
+  const documentation = isPlainObject(merged.documentation)
+    ? (deepClone(merged.documentation) as InjectionDocumentationMetadata & Record<string, unknown>)
+    : undefined;
   return {
     ...merged,
     version: 4,
@@ -115,6 +144,7 @@ const normalizeSnapshotV4 = (
       as: String(isPlainObject(merged.note) ? merged.note.as ?? "" : ""),
       pl: String(isPlainObject(merged.note) ? merged.note.pl ?? "" : ""),
     },
+    ...(documentation ? { documentation } : {}),
   };
 };
 

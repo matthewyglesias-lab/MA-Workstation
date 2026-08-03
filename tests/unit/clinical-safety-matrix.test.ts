@@ -62,6 +62,11 @@ const issueCodes = (
 describe("InjectionEngine safety matrix", () => {
   it("distinguishes an early review window from a late stop", () => {
     const early = routineInjection();
+    // Haldol timing is now an order-dependent review rather than an invented
+    // fixed window. ERZOFRI retains a label-supported monthly timing window.
+    early.medicationKey = "erzofri";
+    early.dose = "117 mg";
+    early.verifications = { resuspend: true };
     early.administrationDate = "2026-01-19";
     early.nextDoseDate = "2026-02-16";
     const earlyResult = InjectionEngine.evaluate(early, {
@@ -74,6 +79,9 @@ describe("InjectionEngine safety matrix", () => {
     );
 
     const late = routineInjection();
+    late.medicationKey = "erzofri";
+    late.dose = "117 mg";
+    late.verifications = { resuspend: true };
     late.administrationDate = "2026-02-10";
     late.nextDoseDate = "2026-03-10";
     const lateResult = InjectionEngine.evaluate(late, {

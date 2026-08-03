@@ -24,8 +24,8 @@ type SortKey = "patient" | "medication" | "activity";
 type SortDirection = "asc" | "desc";
 
 interface LegacyRecordsBridge {
-  open: (id: string) => void;
-  create: () => void;
+  open: (id: string) => boolean | void;
+  create: () => boolean | void;
   list: () => unknown[];
   count: () => number;
   onChange: (handler: () => void) => void;
@@ -72,7 +72,7 @@ const activityText = (record: InjectionRecord): string => {
   const extra = addendaCount(record);
   const suffix = extra ? ` / ${extra} addendum${extra === 1 ? "" : "s"}` : "";
   return record.status === "completed"
-    ? `Locked ${stamp(record.completedAt || record.updatedAt)}${suffix}`
+    ? `${record.attestation ? "Attested local lock" : "Legacy local lock"} ${stamp(record.completedAt || record.updatedAt)}${suffix}`
     : `Draft updated ${stamp(record.updatedAt)}${suffix}`;
 };
 
@@ -89,9 +89,19 @@ const searchText = (record: InjectionRecord): string =>
 interface RecordsWindowProps {
   open: boolean;
   onClose: () => void;
+  /**
+   * The shell owns the active-record transition. Keeping the handoff here
+   * means a reopened draft is rehydrated before this dialog's close render can
+   * let the previous blank worksheet mirror back over its restored values.
+   */
+  onRecordOpen?: (id: string) => boolean;
 }
 
-export function RecordsWindow({ open, onClose }: RecordsWindowProps) {
+export function RecordsWindow({
+  open,
+  onClose,
+  onRecordOpen,
+}: RecordsWindowProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   // Set when the window closes because a record was opened or created: those
@@ -221,9 +231,10 @@ export function RecordsWindow({ open, onClose }: RecordsWindowProps) {
   };
 
   const openRecord = (id: string) => {
+    const opened = onRecordOpen ? onRecordOpen(id) : bridge()?.open(id);
+    if (opened === false) return;
     handedOffRef.current = true;
     onClose();
-    bridge()?.open(id);
   };
 
   return (
@@ -246,12 +257,12 @@ export function RecordsWindow({ open, onClose }: RecordsWindowProps) {
       <section class="records-drawer" role="dialog" aria-labelledby="recordsDrawerTitle">
         <div class="records-drawer-head">
           <div>
-            <h2 id="recordsDrawerTitle">Injection records</h2>
+            <h2 id="recordsDrawerTitle">Local EMR / Record List</h2>
           </div>
           <button
             type="button"
             class="records-drawer-close"
-            aria-label="Close injection records"
+            aria-label="Close Local EMR / Record List"
             onClick={onClose}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -280,7 +291,7 @@ export function RecordsWindow({ open, onClose }: RecordsWindowProps) {
           </span>
         </div>
 
-        <div class="records-drawer-filters" role="group" aria-label="Filter injection records">
+        <div class="records-drawer-filters" role="group" aria-label="Filter local injection records">
           {FILTERS.map(([key, label]) => (
             <button
               key={key}
@@ -321,11 +332,15 @@ export function RecordsWindow({ open, onClose }: RecordsWindowProps) {
                 </button>
               );
             })}
+            <span class="records-drawer-action-heading" role="columnheader">
+              Action
+            </span>
           </div>
 
           {!open ? null : visible.length ? (
             visible.map((record) => {
               const locked = record.status === "completed";
+              const attested = locked && Boolean(record.attestation);
               const action = locked ? "View locked snapshot" : "Resume draft";
               return (
                 <button
@@ -335,16 +350,18 @@ export function RecordsWindow({ open, onClose }: RecordsWindowProps) {
                   data-records-open={record.id}
                   aria-label={`${action} for ${patientOf(record)}`}
                   onClick={() => openRecord(String(record.id))}
-                  onDblClick={() => openRecord(String(record.id))}
                 >
                   <span class="records-drawer-row-top">
                     <span class="records-drawer-row-title">{patientOf(record)}</span>
                     <span class={`records-drawer-row-badge ${locked ? "locked" : "draft"}`}>
-                      {locked ? "Locked" : "Draft"}
+                      {locked ? (attested ? "Locked" : "Legacy lock") : "Draft"}
                     </span>
                   </span>
                   <span class="records-drawer-row-summary">{medicationOf(record)}</span>
                   <span class="records-drawer-row-meta">{activityText(record)}</span>
+                  <span class="records-drawer-row-action" aria-hidden="true">
+                    {locked ? "View" : "Resume"}
+                  </span>
                 </button>
               );
             })
@@ -357,19 +374,27 @@ export function RecordsWindow({ open, onClose }: RecordsWindowProps) {
         </div>
 
         <div class="records-drawer-foot">
-          <p>Saved only in this browser. Locked records remain read-only.</p>
-          <button
-            type="button"
-            class="records-drawer-new"
-            data-records-new
-            onClick={() => {
-              handedOffRef.current = true;
-              onClose();
-              bridge()?.create();
-            }}
-          >
-            + New injection
-          </button>
+          <p>
+            Saved only in this browser. Locked records remain read-only. Starting a new
+            injection retains any current local draft.
+          </p>
+          <div class="records-drawer-foot-actions">
+            <button type="button" class="records-drawer-cancel" onClick={onClose}>
+              Close
+            </button>
+            <button
+              type="button"
+              class="records-drawer-new"
+              data-records-new
+              onClick={() => {
+                handedOffRef.current = true;
+                onClose();
+                bridge()?.create();
+              }}
+            >
+              Start new blank injection
+            </button>
+          </div>
         </div>
       </section>
     </dialog>

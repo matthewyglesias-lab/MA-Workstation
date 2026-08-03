@@ -32,6 +32,49 @@ const PRINT_IDS = [
   'injWorksheetSheet',
 ] as const;
 
+export type LegacyInjectionRecordLifecycle =
+  | 'new'
+  | 'draft'
+  | 'locked'
+  | 'saving'
+  | 'error';
+
+export interface LegacyInjectionRecordState {
+  lifecycle: LegacyInjectionRecordLifecycle;
+  canDiscard: boolean;
+  activeRecordId?: string;
+  detail?: string;
+}
+
+export interface LegacyInjectionAttestation {
+  staff: string;
+  timestamp: string;
+  statementVersion: string;
+}
+
+export interface LegacyInjectionAttestationSummary {
+  lifecycle: LegacyInjectionRecordLifecycle;
+  canAttest: boolean;
+  activeRecordId?: string;
+  patient: { name: string; dob: string };
+  localRecord: string;
+  medication: string;
+  disposition: string;
+  staff: string;
+  timestamp: string;
+  attestation?: LegacyInjectionAttestation;
+  detail?: string;
+}
+
+interface LegacyRecordsBridge {
+  open: (id: string) => boolean | void;
+  create: () => boolean | void;
+  discard: () => boolean | void;
+  attestAndLock: (attestation: LegacyInjectionAttestation) => boolean | void;
+  attestationSummary: () => LegacyInjectionAttestationSummary;
+  state: () => LegacyInjectionRecordState;
+}
+
 declare global {
   interface Window {
     IPMGNavigation?: {
@@ -48,6 +91,7 @@ declare global {
     renderForms?: () => unknown;
     _note?: { cc?: string; as?: string; pl?: string };
     _udsNote?: { cc?: string; as?: string; pl?: string };
+    IPMGRecords?: LegacyRecordsBridge;
   }
 }
 
@@ -58,6 +102,12 @@ export interface LegacyRuntime {
   activate: (workflow: WorkflowId) => void;
   activeWorkflow: () => WorkflowId;
   openRecords: () => void;
+  openInjectionRecord: (id: string) => boolean;
+  startNewInjection: () => boolean;
+  discardInjectionDraft: () => boolean;
+  injectionRecordState: () => LegacyInjectionRecordState;
+  attestAndLockInjection: (attestation: LegacyInjectionAttestation) => boolean;
+  injectionAttestationSummary: () => LegacyInjectionAttestationSummary;
   saveDraft: () => boolean;
   reviewOrComplete: () => boolean;
   focusOutput: () => boolean;
@@ -133,6 +183,42 @@ function clickFirst(selectors: string[]): boolean {
   return false;
 }
 
+function fallbackInjectionRecordState(): LegacyInjectionRecordState {
+  const status = document.getElementById('injRecordStatus')?.textContent ?? '';
+  if (/completed|locked/i.test(status)) {
+    return { lifecycle: 'locked', canDiscard: false };
+  }
+  if (/saving/i.test(status)) return { lifecycle: 'saving', canDiscard: false };
+  if (/failed|could not be saved/i.test(status)) {
+    return { lifecycle: 'error', canDiscard: false };
+  }
+  if (/saved/i.test(status)) return { lifecycle: 'draft', canDiscard: true };
+  return { lifecycle: 'new', canDiscard: false };
+}
+
+function fallbackInjectionAttestationSummary(): LegacyInjectionAttestationSummary {
+  const state = fallbackInjectionRecordState();
+  const patientName = document.querySelector<HTMLInputElement>('#ptName')?.value ?? '';
+  const patientDob = document.querySelector<HTMLInputElement>('#ptDOB')?.value ?? '';
+  const staff = document.querySelector<HTMLInputElement>('#tech')?.value ?? '';
+  const medication =
+    document.querySelector<HTMLElement>('#medName')?.textContent?.trim() ?? '';
+  const disposition =
+    document.querySelector<HTMLElement>('#clinicalDispositionBadge')?.textContent?.trim() ?? '';
+  return {
+    lifecycle: state.lifecycle,
+    canAttest: false,
+    activeRecordId: state.activeRecordId,
+    patient: { name: patientName, dob: patientDob },
+    localRecord: state.activeRecordId || 'Unsaved local draft',
+    medication,
+    disposition,
+    staff,
+    timestamp: new Date().toISOString(),
+    detail: state.detail,
+  };
+}
+
 export async function loadLegacyRuntime(): Promise<LegacyRuntime> {
   const staging = requiredElement<HTMLElement>('#legacy-staging');
   staging.innerHTML = legacyMarkup;
@@ -172,9 +258,41 @@ export async function loadLegacyRuntime(): Promise<LegacyRuntime> {
         '#injRecordWorkspace [data-records-drawer-open]',
       ]);
     },
+    openInjectionRecord(id) {
+      const records = window.IPMGRecords;
+      if (!records?.open) return false;
+      return records.open(id) !== false;
+    },
+    startNewInjection() {
+      const records = window.IPMGRecords;
+      if (!records?.create) return false;
+      return records.create() !== false;
+    },
+    discardInjectionDraft() {
+      const records = window.IPMGRecords;
+      if (!records?.discard) return false;
+      return records.discard() !== false;
+    },
+    injectionRecordState() {
+      return window.IPMGRecords?.state?.() ?? fallbackInjectionRecordState();
+    },
+    attestAndLockInjection(attestation) {
+      const records = window.IPMGRecords;
+      if (!records?.attestAndLock) return false;
+      return records.attestAndLock(attestation) !== false;
+    },
+    injectionAttestationSummary() {
+      return (
+        window.IPMGRecords?.attestationSummary?.() ??
+        fallbackInjectionAttestationSummary()
+      );
+    },
     saveDraft() {
       if (currentWorkflow() !== 'administer') return false;
-      return clickFirst(['#injRecordWorkspace [data-inj-save]']);
+      const invoked = clickFirst(['#injRecordWorkspace [data-inj-save]']);
+      if (!invoked) return false;
+      const status = document.getElementById('injRecordStatus')?.textContent ?? '';
+      return !/save failed|could not be saved/i.test(status);
     },
     reviewOrComplete() {
       const workflow = currentWorkflow();

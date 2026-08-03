@@ -8,12 +8,8 @@ interface NoteInspectorProps {
   sections: NoteSection[];
   postState: "idle" | "posting" | "posted" | "error";
   postMessage?: string;
-  canComplete: boolean;
-  canReview?: boolean;
-  actionMode?: "complete" | "review";
   onCopySection?: (section: NoteSection) => void;
   onCopyAll?: () => void;
-  onComplete?: () => void;
 }
 
 export function NoteInspector({
@@ -23,12 +19,8 @@ export function NoteInspector({
   sections,
   postState,
   postMessage,
-  canComplete,
-  canReview = false,
-  actionMode = "complete",
   onCopySection,
   onCopyAll,
-  onComplete,
 }: NoteInspectorProps) {
   const completed = readiness.filter((item) => item.state === "complete").length;
   const blockers = readiness.filter((item) => item.state === "stop").length;
@@ -124,8 +116,8 @@ export function NoteInspector({
           <div class="cd2004-post-stamp" role="status" tabIndex={-1}>
             <DesktopIcon name="check" />
             <span>
-              <strong>POSTED · RECORD LOCKED</strong>
-              <small>{postMessage ?? "The permanent record is read-only."}</small>
+              <strong>LOCAL RECORD LOCKED</strong>
+              <small>{postMessage ?? "The browser-local record is read-only."}</small>
             </span>
           </div>
         )}
@@ -138,20 +130,10 @@ export function NoteInspector({
             </span>
           </div>
         )}
-        {postState !== "posted" && (
-          <button
-            type="button"
-            class="cd2004-complete-button"
-            disabled={!(canComplete || canReview) || postState === "posting"}
-            onClick={onComplete}
-          >
-            {postState === "posting"
-              ? "VALIDATING RECORD…"
-              : actionMode === "review"
-                ? "REVIEW CURRENT NOTE"
-                : "REVIEW / COMPLETE"}
-            <span>F10</span>
-          </button>
+        {postState === "posting" && (
+          <div class="cd2004-post-pending" role="status">
+            Saving and validating the local record…
+          </div>
         )}
       </div>
     </div>

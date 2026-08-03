@@ -8,40 +8,41 @@
 
 @media screen {
   .cd2004-shell {
-    --mt-teal: #075968;
-    --mt-teal-deep: #003b47;
-    --mt-teal-mid: #177586;
-    --mt-mint: #dbeee5;
-    --mt-mint-dark: #b8d8ca;
-    --mt-panel: #d7dcda;
-    --mt-paper: #fffef8;
-    --mt-line: #69797a;
-    --mt-blue-gray: #6b7d83;
-    --mt-selected: #fff4b8;
-    --mt-command: #173e75;
+    --mt-teal: #315495;
+    --mt-teal-deep: #243a79;
+    --mt-teal-mid: #7183bd;
+    --mt-lavender: #b8bce5;
+    --mt-lavender-light: #d9dbf4;
+    --mt-mint: #c8efbf;
+    --mt-mint-dark: #9ed499;
+    --mt-panel: #dedff0;
+    --mt-paper: #ffffff;
+    --mt-line: #656d98;
+    --mt-blue-gray: #8399c8;
+    --mt-selected: #fff0a5;
+    --mt-command: #244f94;
     --cd-navy: var(--mt-teal);
     --cd-navy-dark: var(--mt-teal-deep);
     --cd-navy-light: var(--mt-teal-mid);
     --cd-focus: #f5b300;
-    color: #0b2025;
-    background: #607277;
-    font-family: Tahoma, "MS Sans Serif", Verdana, sans-serif;
+    color: #101010;
+    background: var(--mt-lavender);
+    font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
     font-size: 11px;
     line-height: 1.25;
   }
 
   .cd2004-application-header {
-    border-bottom: 2px solid #364a4d;
-    background: #d9dedc;
-    box-shadow: inset 0 -1px #f5f7f5;
+    border-bottom: 2px solid #535d9b;
+    background: #d9dbf1;
+    box-shadow: inset 0 -1px #fafaff;
   }
 
   .cd2004-app-titlebar {
     height: 30px;
     padding: 3px 5px;
-    background-color: var(--mt-teal-deep);
-    background-image: linear-gradient(90deg, #003a46 0%, #0d6878 54%, #164f68 100%);
-    border-bottom: 1px solid #001f27;
+    background: linear-gradient(90deg, #243a79 0%, #405a9c 58%, #7b88c1 100%);
+    border-bottom: 1px solid #172759;
     font-size: 11px;
     letter-spacing: 0;
   }
@@ -50,9 +51,9 @@
     width: 21px;
     height: 20px;
     margin-right: 5px;
-    color: #064d59;
-    background: #e9f3ec;
-    border-color: #002f39;
+    color: #243a79;
+    background: #e9ebff;
+    border-color: #1d326b;
   }
 
   .cd2004-app-title {
@@ -62,7 +63,7 @@
   }
 
   .cd2004-app-title > b {
-    color: #fff5a8;
+    color: #fff3a5;
     font: 700 12px/1 "Arial Narrow", Tahoma, sans-serif;
     letter-spacing: 0.08em;
   }
@@ -72,7 +73,7 @@
   }
 
   .cd2004-app-title > small {
-    color: #d8f1f1;
+    color: #eef0ff;
     font-size: 9px;
     font-weight: 400;
   }
@@ -80,36 +81,34 @@
   .cd2004-app-environment {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding-left: 8px;
     letter-spacing: 0;
   }
 
-  .cd2004-app-environment b,
-  .cd2004-app-environment span {
+  .cd2004-app-environment b {
     padding: 1px 4px;
-    color: #092e35;
-    background: #cce4d8;
-    border: 1px solid #002f39;
+    color: #21315f;
+    background: #ececff;
+    border: 1px solid #1c316d;
     font-size: 8px;
-  }
-
-  .cd2004-app-environment span {
-    color: #fff;
-    background: #08713c;
   }
 
   .cd2004-app-environment small {
-    color: #d9eeee;
+    overflow: hidden;
+    max-width: 310px;
+    color: #eef0ff;
     font-size: 8px;
     letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .cd2004-menu-bar {
     min-height: 22px;
     padding: 0 3px;
-    background: #d8dddc;
-    border-bottom-color: #859291;
+    background: #d6d8ef;
+    border-bottom-color: #8790bc;
   }
 
   .cd2004-menu-title {
@@ -122,34 +121,6 @@
     background: var(--mt-teal);
   }
 
-  .cd2004-toolbar {
-    height: 35px;
-    padding: 2px 4px;
-    background: #ccd3d1;
-    border-bottom-color: #607071;
-    box-shadow: inset 0 1px #f8faf8;
-  }
-
-  .cd2004-toolbar-button {
-    grid-template-columns: 17px auto;
-    gap: 3px;
-    min-width: 53px;
-    min-height: 29px;
-    padding: 1px 5px;
-    color: #153239;
-  }
-
-  .cd2004-toolbar-button:hover:not(:disabled) {
-    background: #e3eeea;
-    border-color: #56777a;
-  }
-
-  .cd2004-toolbar-button svg,
-  .cd2004-toolbar-glyph {
-    width: 16px;
-    height: 16px;
-  }
-
   .cd2004-patient-banner {
     grid-template-columns:
       minmax(230px, 1.45fr)
@@ -157,80 +128,170 @@
       minmax(120px, 0.58fr)
       minmax(145px, 0.72fr)
       minmax(170px, 0.85fr);
-    min-height: 48px;
-    color: #0b2629;
-    background: var(--mt-mint);
-    border-top: 1px solid #f4fff9;
-    border-bottom: 2px solid #4c6b68;
+    grid-template-rows: minmax(42px, auto) 19px;
+    min-height: 63px;
+    color: #101010;
+    background: #e0e2f4;
+    border-top: 1px solid #fafaff;
+    border-bottom: 2px solid #646f9e;
   }
 
   .cd2004-patient-primary,
   .cd2004-patient-field {
-    padding: 5px 8px;
-    border-right-color: #9dbab0;
-    box-shadow: inset -1px 0 #f2fbf6;
+    padding: 4px 8px;
+    border-right-color: #9da5ca;
+    box-shadow: inset -1px 0 #f8f8ff;
   }
 
   .cd2004-patient-primary {
     grid-template-columns: 26px minmax(0, 1fr);
     gap: 5px;
-    background: #c8e3d7;
+    background: #ced1ec;
   }
 
   .cd2004-patient-primary > svg {
     width: 22px;
     height: 22px;
-    color: var(--mt-teal-deep);
+    color: #314879;
   }
 
   .cd2004-patient-banner small {
-    color: #466a62;
-    font-size: 8px;
-    letter-spacing: 0.06em;
+    color: #48527b;
+    font: 700 8px "Arial Narrow", "MS Sans Serif", sans-serif;
+    letter-spacing: 0.08em;
   }
 
   .cd2004-patient-banner strong,
   .cd2004-patient-primary strong {
-    color: #0b292d;
-    font-size: 11px;
+    color: #101010;
+    font: 700 11px "Arial Narrow", "MS Sans Serif", sans-serif;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  /* Green is reserved for a record the local workstation can actually name. */
+  .cd2004-patient-banner.has-active-chart {
+    background: var(--mt-mint);
+    border-bottom-color: #4c8551;
+  }
+
+  .cd2004-patient-banner.has-active-chart .cd2004-patient-primary {
+    background: #b9eab0;
+  }
+
+  .cd2004-patient-banner.has-active-chart .cd2004-patient-primary,
+  .cd2004-patient-banner.has-active-chart .cd2004-patient-field {
+    border-right-color: #7cb07c;
+    box-shadow: inset -1px 0 #edffea;
+  }
+
+  .cd2004-patient-banner.has-active-chart small {
+    color: #285b32;
+  }
+
+  .meditech-patient-safety {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 2px 8px;
+    background: #d0d3ed;
+    border-top: 1px solid #9aa2c9;
+    font: 700 9px "Arial Narrow", "MS Sans Serif", sans-serif;
+    letter-spacing: 0.03em;
+  }
+
+  .meditech-patient-safety strong {
+    color: #a20d0d;
+    font-size: 9px;
+  }
+
+  .meditech-patient-safety b {
+    overflow: hidden;
+    color: #27315f;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meditech-patient-safety small {
+    color: #4c567f;
+    font-size: 7px;
+    text-align: right;
+  }
+
+  .cd2004-patient-banner.has-active-chart .meditech-patient-safety {
+    background: #afe5a8;
+    border-top-color: #78b978;
+  }
+
+  .meditech-patient-safety button {
+    justify-self: end;
+    min-height: 17px;
+    padding: 1px 5px;
+    color: #23396f;
+    background: #f4f5ff;
+    border: 1px solid #6c79b0;
+    font: 700 8px Tahoma, sans-serif;
+  }
+
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns:
+      minmax(230px, 1.45fr)
+      minmax(100px, 0.48fr)
+      minmax(120px, 0.58fr)
+      minmax(145px, 0.72fr)
+      minmax(170px, 0.85fr);
+    grid-template-rows: minmax(42px, auto) 19px auto;
+    background: #fff1bc;
+    border-bottom-color: #9b6c16;
+  }
+
+  .cd2004-patient-banner.has-mismatch .meditech-patient-safety {
+    background: #ffe39a;
+    border-top-color: #c89a35;
+  }
+
+  .cd2004-patient-banner.has-mismatch .cd2004-context-mismatch {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    min-height: 29px;
+    border-top: 1px solid #b98523;
   }
 
   .cd2004-workspace {
     flex: 1 1 auto;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(286px, 318px);
+    grid-template-columns: minmax(0, 1fr) minmax(208px, 230px);
     grid-template-rows: minmax(0, 1fr);
     gap: 3px;
     padding: 3px;
-    background:
-      linear-gradient(rgb(255 255 255 / 4%) 1px, transparent 1px) 0 0 / 8px 8px,
-      #66777b;
+    background: var(--mt-lavender);
   }
 
   .cd2004-window {
     border-width: 1px;
-    border-color: #f4f7f5 #263d40 #263d40 #f4f7f5;
-    background: #d6dcda;
+    border-color: #fbfbff #4c578e #4c578e #fbfbff;
+    background: #dedff0;
     box-shadow:
-      inset 1px 1px #eef3f0,
-      inset -1px -1px #6d7b7b,
+      inset 1px 1px #f8f8ff,
+      inset -1px -1px #777fab,
       1px 1px 0 rgb(0 0 0 / 24%);
   }
 
   .cd2004-window-titlebar {
     min-height: 22px;
     padding: 2px 4px;
-    color: #eaf5f4;
-    background-color: #607176;
-    background-image: linear-gradient(90deg, #52686d, #73878a);
-    border-bottom-color: #344b4e;
+    color: #fff;
+    background: linear-gradient(90deg, #5267a7, #8290c4);
+    border-bottom-color: #394c89;
     font-size: 10px;
   }
 
   .cd2004-window.is-active > .cd2004-window-titlebar,
   .cd2004-help-dialog > .cd2004-window-titlebar {
-    background-color: var(--mt-teal);
-    background-image: linear-gradient(90deg, #004957, #137282 72%, #4a8f95);
+    background: linear-gradient(90deg, #2d4f98, #5a70b5);
   }
 
   .cd2004-window-mark {
@@ -246,8 +307,8 @@
   }
 
   .cd2004-window-toolbar {
-    background: #d5dcda;
-    border-bottom-color: #84918f;
+    background: #d7d9ee;
+    border-bottom-color: #8b94ba;
     font-size: 10px;
   }
 
@@ -257,14 +318,309 @@
   }
 
   .cd2004-work-window > .cd2004-window-body {
-    background: #edf0ee;
+    background: #f1f2fb;
+  }
+
+  /* Injection keeps its document preview in the central clinical workspace;
+     the right rail remains navigation/context instead of becoming a second
+     cramped document surface. */
+  .cd2004-workspace.has-central-preview {
+    grid-template-columns: minmax(390px, 1.18fr) minmax(310px, 0.82fr) minmax(198px, 220px);
+  }
+
+  .cd2004-workspace.has-central-preview > .cd2004-work-window {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cd2004-workspace.has-central-preview > .cd2004-inspector-window {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cd2004-workspace.has-central-preview > .meditech-context-rail {
+    grid-column: 3;
+    grid-row: 1;
+    display: block;
+  }
+
+  .cd2004-workspace.has-central-preview .meditech-record-list {
+    height: 100%;
+  }
+
+  /* One worksheet-level lifecycle surface keeps record actions explicit. */
+  .cd2004-record-actions {
+    display: grid;
+    grid-template-columns: minmax(185px, 0.68fr) minmax(0, 1.32fr);
+    grid-template-areas:
+      "state actions"
+      "guidance guidance";
+    gap: 0;
+    margin: 3px;
+    color: #101010;
+    background: #d5dcda;
+    border: 1px solid;
+    border-color: #f7faf8 #364c4f #364c4f #f7faf8;
+    box-shadow: inset 1px 1px #eef3f0;
+  }
+
+  .cd2004-record-actions-state {
+    grid-area: state;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: baseline;
+    column-gap: 6px;
+    min-width: 0;
+    padding: 4px 6px;
+    background: #c2d4d2;
+    border-right: 1px solid #718482;
+  }
+
+  .cd2004-record-actions-state > span {
+    color: #314d52;
+    font: 700 8px Tahoma, "MS Sans Serif", sans-serif;
+    letter-spacing: 0.08em;
+  }
+
+  .cd2004-record-actions-state > strong {
+    overflow: hidden;
+    color: #0d2e37;
+    font: 700 10px "Arial Narrow", Tahoma, sans-serif;
+    letter-spacing: 0.03em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-record-actions-state > small {
+    grid-column: 1 / -1;
+    display: block;
+    margin-top: 2px;
+    overflow: hidden;
+    color: #3f5150;
+    font-size: 8px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-record-actions.is-draft .cd2004-record-actions-state,
+  .cd2004-record-actions.is-saving .cd2004-record-actions-state {
+    background: #fff0a5;
+  }
+
+  .cd2004-record-actions.is-locked .cd2004-record-actions-state {
+    background: #b9f5b7;
+  }
+
+  .cd2004-record-actions.is-error .cd2004-record-actions-state {
+    background: #ffe2bf;
+  }
+
+  .cd2004-record-actions.is-error .cd2004-record-actions-state > strong {
+    color: #8f1212;
+  }
+
+  .cd2004-record-actions-buttons {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 3px;
+    min-width: 0;
+    padding: 4px 5px;
+  }
+
+  .cd2004-record-actions-buttons button {
+    min-height: 24px;
+    padding: 3px 8px;
+    color: #102a31;
+    background: #e0e4e1;
+    border: 1px solid;
+    border-color: #fff #4d6265 #4d6265 #fff;
+    box-shadow: inset 1px 1px #f8fbf9;
+    font: 700 9px Tahoma, "MS Sans Serif", sans-serif;
+    white-space: nowrap;
+  }
+
+  .cd2004-record-actions-buttons button:hover:not(:disabled) {
+    background: #f4eaa7;
+  }
+
+  .cd2004-record-actions-buttons button:active:not(:disabled) {
+    border-color: #4d6265 #fff #fff #4d6265;
+    box-shadow: inset 1px 1px #849391;
+    transform: translate(1px, 1px);
+  }
+
+  .cd2004-record-actions-buttons button:disabled {
+    color: #7c8380;
+    background: #d0d3d0;
+    border-color: #eaedeb #8f9793 #8f9793 #eaedeb;
+    cursor: not-allowed;
+  }
+
+  .cd2004-record-actions-buttons button.is-primary {
+    color: #fff;
+    background: #1b559c;
+    border-color: #d6ebff #173e7d #173e7d #d6ebff;
+  }
+
+  .cd2004-record-actions-buttons button.is-primary:hover:not(:disabled) {
+    background: #244f94;
+  }
+
+  /* A disabled lock action must not retain the blue commitment treatment.
+     It is present for orientation, but unavailable until typed readiness and
+     legacy enforcement both agree. */
+  .cd2004-record-actions-buttons button.is-primary:disabled {
+    color: #7c8380;
+    background: #d0d3d0;
+    border-color: #eaedeb #8f9793 #8f9793 #eaedeb;
+  }
+
+  .cd2004-record-actions-buttons button.is-danger {
+    color: #6c1414;
+    background: #f4d9c1;
+    border-color: #fff3e8 #935b4b #935b4b #fff3e8;
+  }
+
+  .cd2004-record-actions-buttons button.is-danger:disabled {
+    color: #7c8380;
+    background: #d0d3d0;
+    border-color: #eaedeb #8f9793 #8f9793 #eaedeb;
+  }
+
+  .cd2004-record-actions-buttons kbd {
+    margin-left: 3px;
+    padding: 0 2px;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    font: 700 8px Tahoma, sans-serif;
+  }
+
+  .cd2004-record-actions-guidance {
+    grid-area: guidance;
+    margin: 0;
+    padding: 3px 6px;
+    color: #435452;
+    background: #eff3ef;
+    border-top: 1px solid #9da9a5;
+    font-size: 8px;
+  }
+
+  .cd2004-record-action-dialog .cd2004-dialog-frame {
+    width: min(470px, 100%);
+  }
+
+  .cd2004-record-action-dialog .cd2004-dialog-body {
+    display: grid;
+    gap: 9px;
+    padding: 15px 18px;
+    background: #eff2ef;
+  }
+
+  .cd2004-record-action-dialog .cd2004-dialog-body p {
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .cd2004-record-action-dialog .cd2004-dialog-body small {
+    color: #4e5c5a;
+    font-size: 9px;
+  }
+
+  .cd2004-record-action-warning {
+    padding: 6px 7px;
+    color: #673414;
+    background: #fff0bd;
+    border: 1px solid #b98b25;
+    font-weight: 700;
+  }
+
+  .cd2004-attestation-review {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    border: 1px solid #7a83ad;
+    background: #fff;
+  }
+
+  .cd2004-attestation-review > div {
+    min-width: 0;
+    padding: 5px 6px;
+    border-right: 1px solid #c4c8df;
+    border-bottom: 1px solid #c4c8df;
+  }
+
+  .cd2004-attestation-review > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .cd2004-attestation-review > div:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .cd2004-attestation-review dt {
+    color: #4a5581;
+    font: 700 8px Tahoma, sans-serif;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .cd2004-attestation-review dd {
+    margin: 2px 0 0;
+    overflow: hidden;
+    color: #171a2e;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-attestation-acknowledgement {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 6px;
+    padding: 6px 7px;
+    color: #1e2a54;
+    background: #e6e8f7;
+    border: 1px solid #8d96be;
+    font-weight: 700;
+  }
+
+  .cd2004-attestation-acknowledgement input {
+    margin: 1px 0 0;
+  }
+
+  .cd2004-attestation-acknowledgement small {
+    display: block;
+    margin-top: 2px;
+    font-weight: 400;
+  }
+
+  .cd2004-record-action-error {
+    margin: 0;
+    padding: 6px 7px;
+    color: #7a1717;
+    background: #ffe4db;
+    border: 1px solid #b04d40;
+    font-weight: 700;
+  }
+
+  .cd2004-dialog-actions button.is-danger {
+    color: #fff;
+    background: #a83226;
+    border-color: #ffd4cd #661b14 #661b14 #ffd4cd;
+    font-weight: 700;
   }
 
   .meditech-context-rail {
     grid-column: 2;
     grid-row: 1;
     display: grid;
-    grid-template-rows: minmax(300px, 54%) minmax(220px, 46%);
+    grid-template-rows: minmax(276px, 51%) minmax(220px, 49%);
     gap: 3px;
     min-width: 0;
     min-height: 0;
@@ -278,17 +634,17 @@
 
   .cd2004-navigator.meditech-record-list {
     display: grid;
-    grid-template-rows: 23px minmax(76px, auto) 21px minmax(0, 1fr);
+    grid-template-rows: 23px 19px 21px minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
     padding: 0;
     overflow: hidden;
-    background: #d3d9d7;
+    background: #d6d8ef;
     border: 1px solid;
-    border-color: #f4f7f5 #263d40 #263d40 #f4f7f5;
+    border-color: #fbfbff #4c578e #4c578e #fbfbff;
     box-shadow:
-      inset 1px 1px #eef3f0,
-      inset -1px -1px #6d7b7b,
+      inset 1px 1px #f8f8ff,
+      inset -1px -1px #777fab,
       1px 1px 0 rgb(0 0 0 / 24%);
   }
 
@@ -300,163 +656,134 @@
     min-width: 0;
     padding: 3px 5px;
     color: #fff;
-    background: linear-gradient(90deg, #004957, #167180);
-    border-bottom: 1px solid #233f43;
+    background: #405b9f;
+    border-bottom: 1px solid #283e7b;
     font-weight: 700;
   }
 
-  .meditech-rail-title small,
-  .meditech-function-heading small {
-    color: #d4ece8;
-    font-size: 8px;
-    font-weight: 400;
-  }
-
-  .meditech-function-heading {
-    color: #173236;
-    background: #b7c9c4;
-    border-top: 1px solid #f5faf7;
-    border-bottom-color: #718582;
-    font-size: 9px;
-    letter-spacing: 0.05em;
-  }
-
-  .meditech-record-register {
-    min-height: 0;
-    padding: 2px;
-    overflow: auto;
-    background: #f5f7f4;
-    border-bottom: 1px solid #667876;
-    scrollbar-color: #829391 #d9dfdc;
-    scrollbar-width: thin;
-  }
-
-  .meditech-record-empty {
-    margin: 0;
-    padding: 9px 6px;
-    color: #667370;
-    font-size: 9px;
-  }
-
-  .meditech-record-row {
-    display: grid;
-    grid-template-columns: 22px minmax(0, 1fr) auto;
+  .meditech-rail-context {
+    display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 4px;
-    width: 100%;
-    min-height: 31px;
-    padding: 2px 4px;
-    text-align: left;
-    background: #fffef8;
-    border: 0;
-    border-bottom: 1px solid #c1cbc7;
-  }
-
-  .meditech-record-row:hover:not(:disabled) {
-    background: #fff4b8;
-  }
-
-  .meditech-record-row:disabled {
-    color: inherit;
-  }
-
-  .meditech-record-number {
-    color: #fff;
-    background: #56777b;
-    border: 1px solid #25494f;
-    font: 700 9px/16px "Courier New", monospace;
-    text-align: center;
-  }
-
-  .meditech-record-row.is-warning .meditech-record-number,
-  .meditech-record-row.is-stop .meditech-record-number {
-    background: #a45b00;
-    border-color: #623500;
-  }
-
-  .meditech-record-copy {
     min-width: 0;
+    padding: 2px 5px;
+    color: #4b557f;
+    background: #ebecf8;
+    border-bottom: 1px solid #a6add0;
+    font-size: 7px;
   }
 
-  .meditech-record-copy strong,
-  .meditech-record-copy small {
-    display: block;
+  .meditech-rail-context strong {
+    color: #2e3d72;
+    font-size: 7px;
+    letter-spacing: 0.06em;
+  }
+
+  .meditech-rail-context span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .meditech-record-copy strong {
-    color: #17353a;
-    font-size: 10px;
+  .meditech-rail-records-command {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
-  .meditech-record-copy small {
-    color: #61716f;
-    font-size: 8px;
+  .meditech-rail-records-command button {
+    display: grid;
+    width: 19px;
+    height: 17px;
+    place-items: center;
+    padding: 0;
+    color: #101010;
+    background: #e5e6f5;
+    border: 1px solid;
+    border-color: #fff #4c578e #4c578e #fff;
   }
 
-  .meditech-record-module {
-    color: #35575b;
+  .meditech-rail-records-command button:active:not(:disabled) {
+    border-color: #40546f #fff #fff #40546f;
+  }
+
+  .meditech-rail-records-command button:disabled {
+    color: #7c8387;
+  }
+
+  .meditech-rail-records-command kbd {
+    font: 700 8px/1 Tahoma, sans-serif;
+  }
+
+  .meditech-function-heading small {
+    color: #e7ebff;
     font-size: 8px;
-    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  .meditech-function-heading {
+    color: #2d3d72;
+    background: #c7cde9;
+    border-top: 1px solid #f5f6ff;
+    border-bottom-color: #6877aa;
+    font-size: 9px;
+    letter-spacing: 0.05em;
   }
 
   .meditech-function-list {
     display: grid;
-    grid-auto-rows: minmax(31px, 1fr);
+    grid-auto-rows: minmax(25px, 1fr);
     min-width: 0;
     min-height: 0;
-    padding: 2px;
+    padding: 1px;
     overflow: auto;
-    background: #e6eae7;
-    scrollbar-color: #829391 #d9dfdc;
+    background: #ced1e7;
+    scrollbar-color: #8490bc #e4e5f4;
     scrollbar-width: thin;
   }
 
   .meditech-record-list .cd2004-nav-item {
     position: static;
     display: grid;
-    grid-template-columns: 17px 17px minmax(0, 1fr) auto;
+    grid-template-columns: 16px minmax(0, 1fr) auto;
     align-items: center;
     gap: 4px;
     min-width: 0;
-    min-height: 31px;
-    padding: 2px 4px;
-    color: #254248;
-    background: #e8ece9;
-    border: 0;
-    border-bottom: 1px solid #b9c3bf;
-    box-shadow: inset 0 1px #fff;
+    min-height: 25px;
+    padding: 1px 4px;
+    color: #252d51;
+    background: #e8e9f5;
+    border: 1px solid;
+    border-color: #fff #767fab #767fab #fff;
+    box-shadow: none;
   }
 
   .meditech-record-list .cd2004-nav-item:hover {
-    background: #f5f2d5;
+    background: #fff0a5;
   }
 
   .meditech-record-list .cd2004-nav-item.is-selected {
-    color: #102f34;
+    color: #172334;
     background: var(--mt-selected);
-    border: 1px solid #8c6d19;
-    box-shadow: inset 2px 0 var(--mt-teal);
+    border-color: #857121 #fff #fff #857121;
+    box-shadow: inset 2px 0 #314f9a;
     font-weight: 700;
   }
 
   .meditech-record-list .cd2004-nav-item kbd {
     display: grid;
     place-items: center;
-    width: 15px;
-    height: 18px;
+    width: 14px;
+    height: 16px;
     color: #fff;
-    background: #385f65;
-    border: 1px solid #173d43;
+    background: #3d5eaa;
+    border: 1px solid #233d80;
     font: 700 8px Tahoma, sans-serif;
   }
 
   .meditech-record-list .cd2004-nav-item svg {
-    width: 14px;
-    height: 14px;
-    color: var(--mt-teal-deep);
+    display: none;
   }
 
   .meditech-record-list .cd2004-nav-item > span {
@@ -473,12 +800,12 @@
   }
 
   .meditech-record-list .cd2004-nav-item strong {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .meditech-record-list .cd2004-nav-item small {
-    color: #62716f;
-    font-size: 8px;
+    color: #565f84;
+    font-size: 7px;
     font-weight: 400;
     text-transform: capitalize;
   }
@@ -487,8 +814,8 @@
   .meditech-record-list .cd2004-nav-item i {
     display: grid;
     place-items: center;
-    width: 18px;
-    height: 17px;
+    width: 16px;
+    height: 15px;
     padding: 0;
     color: #fff;
     background: #8a2525;
@@ -500,8 +827,12 @@
   .meditech-record-list .cd2004-nav-item i {
     width: 7px;
     height: 7px;
-    background: #8aa29b;
-    border-color: #526c65;
+    background: #9da6c8;
+    border-color: #667099;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-idle:not(.is-selected) {
+    opacity: 0.7;
   }
 
   .meditech-command-deck {
@@ -512,10 +843,10 @@
     min-width: 0;
     height: 32px;
     padding: 2px 3px;
-    background: #bfc8c6;
-    border-top: 1px solid #f7faf8;
-    border-bottom: 1px solid #4c5e60;
-    box-shadow: inset 0 1px #eaf0ed;
+    background: #c8cbe7;
+    border-top: 1px solid #fafaff;
+    border-bottom: 1px solid #566191;
+    box-shadow: none;
   }
 
   .meditech-command-prompt {
@@ -524,9 +855,9 @@
     gap: 5px;
     min-width: 0;
     padding: 2px 5px;
-    color: #d9efed;
-    background: #143f49;
-    border: 1px solid #082a31;
+    color: #edf0ff;
+    background: #314f95;
+    border: 1px solid #213875;
   }
 
   .meditech-command-prompt strong {
@@ -548,17 +879,17 @@
     gap: 4px;
     min-width: 0;
     padding: 2px 4px;
-    color: #102e34;
-    background: #d9dfdc;
+    color: #252d51;
+    background: #e4e5f2;
     border: 1px solid;
-    border-color: #f5f8f6 #5d6c6d #5d6c6d #f5f8f6;
-    box-shadow: inset 1px 1px #edf2ef;
+    border-color: #fff #68719c #68719c #fff;
+    box-shadow: none;
   }
 
   .meditech-command-deck button:hover:not(:disabled),
   .meditech-command-deck button.is-active {
-    color: #fff;
-    background: var(--mt-teal);
+    color: #111;
+    background: var(--mt-selected);
   }
 
   .meditech-command-deck button:active:not(:disabled) {
@@ -572,8 +903,8 @@
 
   .meditech-command-deck kbd {
     color: #fff;
-    background: var(--mt-command);
-    border: 1px solid #071f43;
+    background: #3c5da7;
+    border: 1px solid #263e7d;
     font: 700 8px/15px Tahoma, sans-serif;
     text-align: center;
   }
@@ -584,6 +915,10 @@
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .meditech-mobile-command-surface {
+    display: none;
   }
 
   .cd2004-statusbar {
@@ -607,16 +942,16 @@
 
   /* Shared worksheet surfaces: dense, square, and register-like. */
   .wfp-panel {
-    color: #14282d;
-    background: #edf0ee;
+    color: #101010;
+    background: #eff0ed;
     font: 10px/1.25 Tahoma, "MS Sans Serif", Verdana, sans-serif;
   }
 
   .wfp-summary-bar {
-    min-height: 29px;
-    background: #cadbd5;
-    border-color: #829792;
-    box-shadow: inset 0 1px #f5faf7;
+    min-height: 25px;
+    background: #d3d8d5;
+    border-color: #7f8984;
+    box-shadow: none;
   }
 
   .wfp-tabbar {
@@ -625,87 +960,60 @@
   }
 
   .wfp-tab {
-    min-height: 27px;
-    color: #2d454a;
-    background: #dce2df;
-    border-color: #eff4f1 #68797a #68797a #eff4f1;
+    min-height: 24px;
+    color: #172a42;
+    background: #dde1df;
+    border-color: #fff #687681 #687681 #fff;
   }
 
   .wfp-tab[aria-selected="true"] {
     color: #fff;
-    background: var(--mt-teal);
-    border-color: #00323d;
+    background: #285b9e;
+    border-color: #173d75;
   }
 
   .wfp-section {
-    border-color: #718482;
-    background: #fffef8;
+    border-color: #717979;
+    background: #fff;
   }
 
   .wfp-section-head {
-    min-height: 21px;
-    padding: 3px 6px;
-    color: #16383d;
-    background: #c6d7d1;
-    border-bottom-color: #81938f;
+    min-height: 19px;
+    padding: 2px 6px;
+    color: #172d4c;
+    background: #c9d9ed;
+    border-bottom-color: #7b8ea5;
     font-size: 9px;
     letter-spacing: 0.025em;
   }
 
   .wfp-section-body {
-    padding: 6px;
+    padding: 4px;
   }
 
   .wfp-field input,
   .wfp-field select,
   .wfp-field textarea {
-    min-height: 24px;
-    color: #10282e;
-    background: #fffef8;
-    border-color: #7a8c8c;
+    min-height: 21px;
+    color: #101010;
+    background: #fff;
+    border-color: #7b7d78;
     font: 10px Tahoma, "MS Sans Serif", sans-serif;
   }
 
   .wfp-field input:focus,
   .wfp-field select:focus,
   .wfp-field textarea:focus {
-    background: #fff9cf;
+    background: #fff2ae;
   }
 
   .wfp-grid-head {
-    color: #fff;
-    background: #4c6d72;
+    color: #152d50;
+    background: #c8d9ec;
   }
 
   .wfp-grid-row:nth-child(even) {
-    background: #edf4f0;
-  }
-
-  .cd2004-start-center {
-    background: #c9d2cf;
-  }
-
-  .cd2004-start-launchers,
-  .cd2004-start-ledger,
-  .cd2004-start-bottom > section {
-    border-color: #566c6d;
-    background: #f6f7f3;
-  }
-
-  .cd2004-launcher {
-    background: #f0f4f0;
-    border-color: #82928f;
-  }
-
-  .cd2004-launcher:hover {
-    background: #fff4b8;
-    border-color: #7d651f;
-  }
-
-  .cd2004-section-heading,
-  .cd2004-list-heading {
-    color: #15373c;
-    border-bottom-color: var(--mt-teal);
+    background: #f0f3f5;
   }
 
   /* On-screen clinician result sheet; the protected print renderer is separate. */
@@ -726,8 +1034,8 @@
     gap: 12px;
     padding: 7px 9px;
     color: #fff;
-    background: #064e5a;
-    border-bottom: 2px solid #012e36;
+    background: #285b9e;
+    border-bottom: 2px solid #173d75;
   }
 
   .meditech-lab-header > div:last-child {
@@ -825,10 +1133,10 @@
   .meditech-lab-results th {
     height: 21px;
     padding: 3px 5px;
-    color: #fff;
-    background: #4f6f73;
-    border-right: 1px solid #8aa0a0;
-    border-bottom: 1px solid #253d40;
+    color: #152d50;
+    background: #c8d9ec;
+    border-right: 1px solid #8ea4c0;
+    border-bottom: 1px solid #405b81;
     font: 700 8px Tahoma, sans-serif;
     letter-spacing: 0.04em;
     text-align: left;
@@ -965,16 +1273,35 @@
 
 @media screen and (max-width: 1181px) {
   .cd2004-workspace {
-    grid-template-columns: minmax(0, 1fr) minmax(270px, 294px);
+    grid-template-columns: minmax(0, 1fr) 230px;
   }
 
   .meditech-context-rail {
     grid-template-rows: minmax(280px, 52%) minmax(210px, 48%);
   }
 
-  .meditech-record-copy small,
   .meditech-record-list .cd2004-nav-item small {
     display: none;
+  }
+
+  .cd2004-workspace.has-central-preview {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    grid-template-rows: minmax(0, 1fr) minmax(220px, 0.62fr);
+  }
+
+  .cd2004-workspace.has-central-preview > .cd2004-work-window {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cd2004-workspace.has-central-preview > .cd2004-inspector-window {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .cd2004-workspace.has-central-preview > .meditech-context-rail {
+    grid-column: 2;
+    grid-row: 1 / span 2;
   }
 }
 
@@ -989,14 +1316,6 @@
     grid-row: 1;
   }
 
-  .meditech-record-register {
-    display: none;
-  }
-
-  .cd2004-navigator.meditech-record-list {
-    grid-template-rows: 23px 21px minmax(0, 1fr);
-  }
-
   .meditech-command-deck {
     overflow-x: auto;
   }
@@ -1004,6 +1323,7 @@
 
 @media screen and (max-width: 700px) {
   .cd2004-shell {
+    grid-template-rows: auto auto minmax(0, 1fr) auto 20px;
     font-size: 11px;
   }
 
@@ -1030,19 +1350,26 @@
     top: 56px;
   }
 
-  .cd2004-toolbar {
-    height: 39px;
-  }
-
-  .cd2004-toolbar-button {
-    min-width: 40px;
-    min-height: 34px;
-  }
-
   .cd2004-patient-banner,
   .cd2004-patient-banner.has-mismatch {
-    min-height: 45px;
+    min-height: 61px;
     grid-template-columns: minmax(0, 1fr) 78px;
+    grid-template-rows: minmax(40px, auto) 19px auto;
+  }
+
+  .meditech-patient-safety {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 4px;
+    padding-inline: 5px;
+  }
+
+  .meditech-patient-safety small {
+    display: none;
+  }
+
+  .meditech-patient-safety button {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .cd2004-workspace {
@@ -1055,9 +1382,43 @@
     display: contents;
   }
 
+  /* The desktop Injection layout gives the Record List a full-height third
+     column. On compact screens it becomes the short bottom navigator; repeat
+     the desktop selector here so it cannot sit invisibly over the worksheet. */
+  .cd2004-workspace.has-central-preview > .meditech-context-rail {
+    display: contents;
+    min-height: 0;
+    overflow: visible;
+  }
+
   .cd2004-workspace .cd2004-window {
     width: 100%;
     height: 100%;
+  }
+
+  .cd2004-record-actions {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "state"
+      "actions"
+      "guidance";
+  }
+
+  .cd2004-record-actions-state {
+    border-right: 0;
+    border-bottom: 1px solid #718482;
+  }
+
+  .cd2004-record-actions-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cd2004-record-actions-buttons button {
+    min-width: 0;
+    min-height: 28px;
+    padding-inline: 4px;
+    white-space: normal;
   }
 
   .cd2004-navigator.meditech-record-list {
@@ -1071,8 +1432,14 @@
     border-width: 1px;
   }
 
+  .cd2004-workspace.has-central-preview .cd2004-navigator.meditech-record-list {
+    height: 37px;
+    min-height: 0;
+    max-height: 37px;
+  }
+
   .meditech-rail-title,
-  .meditech-record-register,
+  .meditech-rail-context,
   .meditech-function-heading {
     display: none;
   }
@@ -1119,35 +1486,58 @@
   }
 
   .meditech-record-list .cd2004-nav-item svg {
+    display: block;
     flex: 0 0 auto;
   }
 
   .meditech-command-deck {
-    flex-basis: 34px;
-    display: flex;
-    height: 34px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-  }
-
-  .meditech-command-prompt {
     display: none;
   }
 
-  .meditech-command-deck button {
-    flex: 0 0 62px;
-    min-height: 29px;
+  .meditech-mobile-command-surface {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 34px;
+    padding: 3px;
+    background: #c8cbe7;
+    border-top: 1px solid #fafaff;
+    border-bottom: 1px solid #566191;
   }
 
-  .meditech-command-deck button > span {
+  .meditech-mobile-command-surface > strong {
+    flex: 1 1 auto;
+    overflow: hidden;
+    padding: 0 4px;
+    color: #2d3d72;
+    font-size: 8px;
+    letter-spacing: 0.07em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meditech-mobile-command-surface button {
+    flex: 0 0 auto;
+    min-height: 27px;
+    padding: 2px 6px;
+    color: #252d51;
+    background: #e9eaf6;
+    border: 1px solid;
+    border-color: #fff #68719c #68719c #fff;
+    font: 700 9px Tahoma, sans-serif;
+  }
+
+  .meditech-mobile-command-surface kbd {
+    margin-left: 2px;
+    color: #40558f;
     font-size: 8px;
   }
 
   .cd2004-mobile-switcher {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 2px;
-    background: #bdc8c5;
+    background: #c9ccea;
   }
 
   .cd2004-mobile-switcher button.is-active {
@@ -1171,7 +1561,8 @@
 
 @media print {
   .meditech-context-rail,
-  .meditech-command-deck {
+  .meditech-command-deck,
+  .meditech-mobile-command-surface {
     display: none !important;
   }
 }

@@ -1,0 +1,2 @@
+# Keep the production-pinned print asset byte-for-byte LF text on every platform.
+public/legacy/legacy.css text eol=lf

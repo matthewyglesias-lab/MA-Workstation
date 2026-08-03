@@ -3,18 +3,18 @@ const { test, expect } = require('@playwright/test');
 const WORKFLOWS = {
   home: {
     label: 'Start Center',
-    headingText: 'Select a workflow',
+    headingText: 'Current Worklist',
     panel: '.cd2004-start-center',
     layout: '.cd2004-start-center',
-    heading: '.cd2004-section-heading h1',
-    representative: '.cd2004-launcher',
-    control: '.cd2004-launcher',
-    hero: '.cd2004-start-launchers',
+    heading: '#currentWorklistTitle',
+    representative: '.cd2004-worklist-new',
+    control: '.cd2004-worklist-new',
+    hero: '.cd2004-worklist-header',
     landmarks: [
-      '.cd2004-start-launchers',
-      '.cd2004-start-ledger',
-      '.cd2004-start-bottom',
-      '.cd2004-launcher'
+      '.cd2004-worklist-header',
+      '.cd2004-worklist-tabs',
+      '.cd2004-worklist-sheet',
+      '.cd2004-worklist-table'
     ]
   },
   // 'forms', 'uds', 'administer' (injection), and 'samples' are
@@ -107,9 +107,7 @@ async function collectVisualContract(page, workflow) {
     const activeWindowTitlebar = activeWindow?.querySelector(
       ':scope > .cd2004-window-titlebar'
     );
-    const recordTableWrap = document.querySelector(
-      '.cd2004-start-bottom .cd2004-table-wrap'
-    );
+    const recordTableWrap = document.querySelector('.cd2004-worklist-sheet');
     const mobileSwitcher = document.querySelector('.cd2004-mobile-switcher');
     const panel = pick(spec.panel);
     const layout = pick(spec.layout);
@@ -301,19 +299,15 @@ function expectedContract(workflow, viewport) {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
       style: {
-        color: isHome ? 'rgb(16, 35, 66)' : 'rgb(16, 42, 86)',
-        fontSize: isHome ? (desktop ? '15px' : '14px') : '16px',
+        color: isHome ? 'rgb(16, 43, 86)' : 'rgb(16, 42, 86)',
+        fontSize: '16px',
         fontWeight: '700',
-        lineHeight: isHome
-          ? desktop
-            ? '16.5px'
-            : '15.4px'
-          : '18.4px'
+        lineHeight: isHome ? '17.6px' : '18.4px'
       }
     },
     chrome: {
       shell: {
-        backgroundColor: 'rgb(96, 114, 119)',
+        backgroundColor: 'rgb(184, 188, 229)',
         fontFamily: expect.stringMatching(/^Tahoma,/),
         fontSize: '11px',
         overflow: 'hidden'
@@ -321,8 +315,8 @@ function expectedContract(workflow, viewport) {
       applicationTitlebar: {
         color: 'rgb(255, 255, 255)',
         height: titlebarHeight,
-        backgroundColor: 'rgb(0, 59, 71)',
-        backgroundImage: expect.stringContaining('linear-gradient'),
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        backgroundImage: expect.stringMatching(/^linear-gradient/),
         usesGradient: true
       },
       activeWindow: {
@@ -350,23 +344,23 @@ function expectedContract(workflow, viewport) {
     surface: {
       panelVisible: true,
       layoutDisplay: 'grid',
-      topLevelColumns: isHome && desktop ? 2 : 1,
+      topLevelColumns: 1,
       horizontalOverflow: false,
       panelHorizontalOverflow: false,
       hero: {
         backgroundColor: isHome
-          ? 'rgb(246, 247, 243)'
+          ? 'rgb(243, 243, 255)'
           : 'rgb(219, 228, 238)',
         borderBottomColor: isHome
-          ? 'rgb(86, 108, 109)'
+          ? 'rgb(89, 100, 128)'
           : 'rgb(124, 137, 150)',
         borderRadius: '0px',
         boxShadow: expect.any(String),
         hasRelief: true
       },
       representativeSquare: true,
-      representativeFlat: !isHome,
-      representativeHasRelief: isHome,
+      representativeFlat: false,
+      representativeHasRelief: true,
       controlSquare: true,
       focusedControlBorder: 'rgb(245, 179, 0)',
       focusedControlHasGlow: false,

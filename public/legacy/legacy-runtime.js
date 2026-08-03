@@ -120,24 +120,24 @@ const MEDS = [
     caution:"Deep gluteal IM only with kit-supplied needle/body-habitus selection. Verify current opioid-risk and contraindication review per provider plan; do not use a generic timing window as clearance.",
     tip:"Reconstitute with supplied diluent and administer immediately. Deep gluteal IM only; alternate sides. Verify current opioid-risk/provider plan and emergency overdose-reversal counseling per current PI.",
     flags:["opioidFree","naltrexHS","suppliedNeedle"]},
-  {key:"haldol", label:"Haldol Dec.", name:"Haldol Decanoate", gen:"haloperidol decanoate", cls:"Typical antipsychotic LAI", route:"IM", site:"R ventrogluteal", intervalKey:"q4wk", winB:7, winA:7,
-    tech:"21G+ needle, deep IM gluteal, Z-track",
+  {key:"haldol", label:"Haldol Dec.", name:"Haldol Decanoate", gen:"haloperidol decanoate", cls:"Typical antipsychotic LAI", route:"IM", site:"", intervalKey:"q4wk", winB:7, winA:7,
+    tech:"Document the actual ordered route, site, and technique.",
     doses:["50 mg","100 mg","150 mg","200 mg","300 mg"],
     storage:"Room temp; protect from light. Oil-based.",
     recon:"Oil solution \u2014 ready to use; allow to reach room temp.",
     missed:"Interval individualized (commonly q4 wk). Late-dose handling per prescriber.",
-    caution:"Deep IM gluteal, Z-track. Do not exceed 100 mg as a single initial injection \u2014 if the calculated dose is higher, give 100 mg first and the remainder 3\u20137 days later.",
-    tip:"Deep IM gluteal, Z-track. Initial dose = 10\u201315\u00d7 prior daily oral if \u226410 mg/day, or 10\u201320\u00d7 if >10 mg/day; do not exceed 100 mg as a single initial injection \u2014 if higher, give 100 mg first and the remainder 3\u20137 days later.",
-    flags:["deepZtrack"]},
-  {key:"prolixin", label:"Prolixin Dec.", name:"Prolixin Decanoate", gen:"fluphenazine decanoate", cls:"Typical antipsychotic LAI", route:"IM", site:"R ventrogluteal", intervalKey:"q3wk", winB:7, winA:7,
-    tech:"21G needle, IM or deep SubQ",
+    caution:"Verify the current product information and active order. This local helper does not impose a generic anatomical site or Z-track technique.",
+    tip:"Use the active order and current product information for route, site, dose, initiation, and timing decisions.",
+    flags:[]},
+  {key:"prolixin", label:"Prolixin Dec.", name:"Prolixin Decanoate", gen:"fluphenazine decanoate", cls:"Typical antipsychotic LAI", route:"IM or SubQ", site:"", intervalKey:"q3wk", winB:7, winA:7,
+    tech:"Document the actual ordered IM or subcutaneous route, site, and technique.",
     doses:["12.5 mg","25 mg","37.5 mg","50 mg"],
     storage:"Room temp; protect from light. Oil-based.",
     recon:"Oil solution \u2014 ready to use.",
     missed:"Interval individualized, commonly q2\u20134 wk. Late-dose handling per prescriber.",
-    caution:"IM or deep SubQ, gluteal.",
-    tip:"IM or deep SubQ, gluteal. Interval individualized, commonly q2\u20134 weeks.",
-    flags:["deepZtrack"]},
+    caution:"The label permits IM or subcutaneous administration. Follow the active order and document the actual route/site; this helper does not invent an anatomical default.",
+    tip:"Use the active order and current product information for route, site, dose, and timing decisions.",
+    flags:[]},
   {key:"other", label:"Other", name:"", gen:"", cls:"", route:"IM", site:"", intervalKey:"q4wk", winB:7, winA:7,
     tech:"", doses:[], storage:"", recon:"", missed:"", caution:"", tip:"Enter all fields manually for drugs not listed.", flags:[]}
 ];
@@ -3704,7 +3704,11 @@ const _ipmgPrevMedSafety=medicationSafetyItems;
 medicationSafetyItems=function medicationSafetyItems(){
   const items=_ipmgPrevMedSafety();
   if(S.med&&S.site&&S.route){
-    if(siteIsAllowed(S.site))items.unshift({level:'ok',text:'Route/site matches medication guidance'});
+    // Haldol Decanoate and Prolixin Decanoate are documented from the active
+    // order: the local catalog does not invent an anatomical default or turn
+    // an order-directed site string into a false safety stop.
+    if(['haldol','prolixin'].includes(S.med.key))items.unshift({level:'info',text:'Route/site documented per active order'});
+    else if(siteIsAllowed(S.site))items.unshift({level:'ok',text:'Route/site matches medication guidance'});
     else items.unshift({level:'danger',text:'Route/site outside usual guidance — verify provider direction'});
   }
   return items;
@@ -9252,6 +9256,36 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function meaningful(){return !!(val('ptName')||val('ptDOB')||val('orderingProvider')||val('lot')||val('ndc')||(S&&S.med)||(S&&S.dose));}
   function draftNeedsPersistence(){const record=currentRecord();return meaningful()||!!(record&&record.status==='draft');}
   function noteSnapshot(){const note=window._note||{};return {cc:String(note.cc||''),as:String(note.as||''),pl:String(note.pl||'')};}
+  /* Product/schedule provenance is kept outside visible legacy fields. It is
+     documentation context only: the plain #ndc and #nextDate values remain
+     the fields used by legacy notes, print, and readiness. */
+  function injectionDocumentationMetadata(){
+    const raw=window.__IPMG_INJECTION_DOCUMENTATION_METADATA__;
+    if(!mergeObject(raw))return {};
+    const selection=value=>{
+      if(!mergeObject(value))return null;
+      const next={};
+      if(typeof value.ndc==='string'&&value.ndc)next.ndc=value.ndc;
+      ['packageLabel','package','labeler','medicationKey','dose','referenceVersion'].forEach(key=>{if(typeof value[key]==='string'&&value[key].trim())next[key]=value[key].trim();});
+      if(['commercial','sample'].includes(value.packageKind))next.packageKind=value.packageKind;
+      if(['bundled','remote','custom'].includes(value.source))next.source=value.source;
+      return Object.keys(next).length?next:null;
+    };
+    const next={};
+    if(typeof raw.clinicalReferenceVersion==='string'&&raw.clinicalReferenceVersion.trim())next.clinicalReferenceVersion=raw.clinicalReferenceVersion.trim();
+    if(mergeObject(raw.ndcSelection)){
+      const primary=selection(raw.ndcSelection.primary),pairedSecond=selection(raw.ndcSelection.pairedSecond);
+      if(primary||pairedSecond)next.ndcSelection={...(primary?{primary}:{}),...(pairedSecond?{pairedSecond}:{})};
+    }
+    if(mergeObject(raw.nextDose)){
+      const provenance={};
+      if(typeof raw.nextDose.value==='string'&&raw.nextDose.value.trim())provenance.value=raw.nextDose.value.trim();
+      if(['calculated','manual'].includes(raw.nextDose.source))provenance.source=raw.nextDose.source;
+      if(typeof raw.nextDose.calculatedFrom==='string'&&raw.nextDose.calculatedFrom.trim())provenance.calculatedFrom=raw.nextDose.calculatedFrom.trim();
+      if(Object.keys(provenance).length)next.nextDose=provenance;
+    }
+    return next;
+  }
   function captureSnapshot(previousSnapshot){
     const fields={};fieldIds.forEach(id=>{const el=by(id);if(el&&'value' in el)fields[id]=el.type==='checkbox'?!!el.checked:el.value;});
     const root=window.__IPMG_RC530__||{};
@@ -9260,10 +9294,13 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       initiation:clone(call(window.ipmgInitiationProtocolSnapshot)||{}),
       smartVitals:clone(call(window.ipmgSmartVitalsSnapshot)||{}),
       disposition:clone(call(window.ipmgClinicalDispositionSnapshot)||{}),
-      fields,safetyNone:!!root.safetyNone,note:noteSnapshot()
+      fields,safetyNone:!!root.safetyNone,note:noteSnapshot(),documentation:injectionDocumentationMetadata()
     };
     const snapshot=mergePreservingUnknown(previousSnapshot,current);
     snapshot.version=4;
+    /* Unlike opaque future fields, this metadata must mirror current staff
+       input exactly so a cleared custom NDC cannot leave stale provenance. */
+    snapshot.documentation=current.documentation;
     return snapshot;
   }
   function recordSummary(snapshot){
@@ -9271,13 +9308,42 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const protocol=call(window.ipmgInitiationProtocolSummary)||'';
     return [med.name||med.label||'Injection',snapshot.state&&snapshot.state.dose||''].filter(Boolean).join(' ')+(protocol?` — ${protocol}`:'');
   }
-  function upsert(status){
+  function normalizedAttestation(value){
+    if(!mergeObject(value))return null;
+    const staff=String(value.staff||'').trim(),timestamp=String(value.timestamp||'').trim(),statementVersion=String(value.statementVersion||'').trim();
+    const parsed=new Date(timestamp);
+    if(!staff||!statementVersion||!timestamp||Number.isNaN(parsed.getTime()))return null;
+    return {staff,timestamp:parsed.toISOString(),statementVersion};
+  }
+  function storedAttestation(value){
+    if(!mergeObject(value))return null;
+    const staff=String(value.staff||'').trim(),timestamp=String(value.timestamp||'').trim(),statementVersion=String(value.statementVersion||'').trim();
+    return staff&&timestamp&&statementVersion?{staff,timestamp,statementVersion}:null;
+  }
+  function lockAuditEvent(timestamp,attestation,documentation){
+    return {
+      id:`audit_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+      event:'record_locked',
+      timestamp,
+      staff:attestation&&attestation.staff||'',
+      statementVersion:attestation&&attestation.statementVersion||'',
+      attestationTimestamp:attestation&&attestation.timestamp||'',
+      ...(mergeObject(documentation)&&Object.keys(documentation).length?{documentation:clone(documentation)}:{})
+    };
+  }
+  function upsert(status,options={}){
     const previousRecords=records.slice(),previousActiveId=activeId;
     const existing=currentRecord(),snapshot=captureSnapshot(existing&&existing.snapshot),time=now();
-    const record=mergePreservingUnknown(existing,{
+    const patch={
       id:existing&&existing.id||makeId(),type:'injection',status,createdAt:existing&&existing.createdAt||time,updatedAt:time,
       completedAt:status==='completed'?(existing&&existing.completedAt||time):'',patient:{name:val('ptName'),dob:val('ptDOB')},summary:recordSummary(snapshot),snapshot,addenda:clone(existing&&existing.addenda||[])
-    });
+    };
+    if(status==='completed'){
+      const audit=Array.isArray(existing&&existing.audit)?clone(existing.audit):[];
+      patch.audit=[...audit,lockAuditEvent(time,options.attestation||null,snapshot.documentation)];
+      if(options.attestation)patch.attestation={...clone(options.attestation),...(mergeObject(snapshot.documentation)&&Object.keys(snapshot.documentation).length?{documentation:clone(snapshot.documentation)}:{})};
+    }
+    const record=mergePreservingUnknown(existing,patch);
     const index=records.findIndex(item=>item.id===record.id);if(index>=0)records[index]=record;else records.unshift(record);
     activeId=record.id;
     if(!persist()){
@@ -9485,6 +9551,28 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       if(newInjection()!==false)by('ptName')?.focus({preventScroll:true});
     });
   }
+  function attestationSummary(){
+    const record=currentRecord(),snapshot=record&&record.snapshot||{},fields=snapshot.fields||{},state=snapshot.state||{};
+    const liveMedication=S&&S.med&&S.med.name||S&&S.med&&S.med.label||'';
+    const savedMedication=record&&record.summary||'';
+    const badge=by('clinicalDispositionBadge');
+    const disposition=String(badge&&badge.textContent||'').trim();
+    const status=statusCopy(record);
+    const lifecycle=saveFeedback==='error'?'error':saveFeedback==='saving'?'saving':mode==='readonly'?'locked':record?'draft':'new';
+    return {
+      lifecycle,
+      canAttest:mode==='edit'&&canComplete(),
+      activeRecordId:record&&record.id||'',
+      patient:{name:val('ptName')||record&&record.patient&&record.patient.name||'',dob:val('ptDOB')||record&&record.patient&&record.patient.dob||''},
+      localRecord:record&&record.id||'Unsaved local draft',
+      medication:liveMedication||savedMedication||snapshot.medKey||'',
+      disposition:disposition||String(state.reason||fields.injExceptionSummary||''),
+      staff:String(call(window.getStoredStaff)||val('tech')||'').trim(),
+      timestamp:now(),
+      attestation:storedAttestation(record&&record.attestation)||undefined,
+      detail:status.detail
+    };
+  }
   /* Record lifecycle for the typed records window. openRecord() restores a
      v4 snapshot into the encounter form - the one path by which a draft is
      resumed or a locked record viewed - so it is exposed rather than
@@ -9496,16 +9584,38 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
        the record. The typed window closes itself, then calls the same proven
        openRecord()/newInjection() those callbacks call. */
     open:id=>{
-      if(!records.some(record=>record.id===id))return;
+      if(!records.some(record=>record.id===id))return false;
       window.IPMGNavigation?.activate('administer',{resetScroll:true});
       if(openRecord(id)!==false){
         const workspace=by('injRecordWorkspace');
         if(workspace){workspace.tabIndex=-1;workspace.focus({preventScroll:true});}
+        return true;
       }
+      return false;
     },
     create:()=>{
       window.IPMGNavigation?.activate('administer',{resetScroll:true});
-      if(newInjection()!==false)by('ptName')?.focus({preventScroll:true});
+      const created=newInjection();
+      if(created!==false)by('ptName')?.focus({preventScroll:true});
+      return created!==false;
+    },
+    /* Discard is intentionally separate from create(): create() saves any
+       meaningful current work first, while discard removes only an editable
+       local draft after the visible workstation has obtained confirmation. */
+    discard:()=>discardInjectionDraft(),
+    attestAndLock:attestation=>{
+      const normalized=normalizedAttestation(attestation);
+      if(!normalized){
+        say('Enter the documenting staff member and accept the current local attestation statement before locking this record.');
+        return false;
+      }
+      return completeRecord(normalized,{showCompletion:false});
+    },
+    attestationSummary:()=>attestationSummary(),
+    state:()=>{
+      const record=currentRecord(),status=statusCopy(record);
+      const lifecycle=saveFeedback==='error'?'error':saveFeedback==='saving'?'saving':mode==='readonly'?'locked':record?'draft':'new';
+      return {lifecycle,canDiscard:mode==='edit'&&draftNeedsPersistence(),activeRecordId:record&&record.id||'',detail:status.detail};
     },
     list:()=>records.slice(),
     count:()=>records.length,
@@ -9518,7 +9628,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const draftText=record&&record.status==='draft'?'Save draft':'Save draft';
     workspace.innerHTML=`<div class="inj-record-head"><div><div class="inj-record-kicker">Injection record</div><div class="inj-record-title">Fast, persistent encounter state</div><div class="inj-record-sub">Draft as you go. Complete once, then keep the locked snapshot read-only.</div></div><span class="record-badge ${status.className}" id="injRecordStatus" role="status" aria-live="polite" aria-atomic="true">${safe(status.badge)}</span></div><div class="inj-record-actions"><button type="button" class="inj-record-btn" data-inj-save ${mode==='readonly'?'disabled':''}>${draftText}</button><button type="button" class="inj-record-btn complete" data-inj-complete ${complete?'':'disabled'} title="${complete?'Lock the completed injection record.':'Finish the clinical disposition and required checks first.'}">Complete &amp; lock</button><button type="button" class="inj-record-btn icon" data-inj-new title="Start a new injection" aria-label="Start a new injection">+</button></div><div class="inj-record-status">${safe(status.detail)}</div>${mode==='readonly'&&record?addendaHtml(record):''}${historyHtml()}`;
     workspace.querySelector('[data-inj-save]')?.addEventListener('click',()=>saveDraft(false));
-    workspace.querySelector('[data-inj-complete]')?.addEventListener('click',completeRecord);
+    workspace.querySelector('[data-inj-complete]')?.addEventListener('click',()=>completeRecord());
     workspace.querySelector('[data-inj-new]')?.addEventListener('click',newInjection);
     workspace.querySelectorAll('[data-record-open]').forEach(button=>button.addEventListener('click',()=>openRecord(button.dataset.recordOpen)));
     workspace.querySelector('[data-records-drawer-open]')?.addEventListener('click',openRecordsDrawer);
@@ -9565,6 +9675,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function restoreSnapshot(record){
     const snap=record&&record.snapshot||{};const state=snap.state||{};applying=true;mode='edit';applyRecordLock();
     call(window.softReset);
+    window.__IPMG_INJECTION_DOCUMENTATION_METADATA__=clone(snap.documentation||{});
     const med=MEDS.find(item=>item.key===snap.medKey);if(med)call(window.selectMed,med);
     S.dose=state.dose||'';S.site=state.site||'';S.route=state.route||'';S.intervalKey=state.intervalKey||'';S.reason=state.reason||'scheduled';S.resp=state.resp||'well';S.attest=clone(state.attest||{});S.flags=clone(state.flags||{});S.guard=clone(state.guard||{});S.retCustom=!!state.retCustom;
     call(window.restoreInitiationProtocol,snap.initiation||{});
@@ -9601,17 +9712,52 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     say(mode==='readonly'?'Completed injection record opened read-only.':'Injection draft opened for editing.');
     return true;
   }
-  function completeRecord(){
-    if(!canComplete()){say('Finish the final clinical disposition and required checks before locking this injection record.');renderWorkspace();return;}
+  function completeRecord(attestation=null,options={}){
+    if(!canComplete()){say('Finish the final clinical disposition and required checks before locking this injection record.');renderWorkspace();return false;}
     clearTimeout(autoTimer);autoTimer=null;
-    call(window.render);const record=upsert('completed');
+    call(window.render);const record=upsert('completed',{attestation});
     if(!record){
       saveFeedback='error';renderWorkspace();
       say('The completed record could not be saved, so it remains editable and was not locked.');
-      return;
+      return false;
     }
     try{if(window.recordInjectionSite&&S&&S.site)window.recordInjectionSite(val('ptName'),S.site,val('ptDOB'),{medKey:S.med&&S.med.key||'',route:S.route||'',adminDate:val('adminDate'),recordId:record.id});}catch(error){}
-    mode='readonly';saveFeedback='idle';showLockedOutput(record);renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);showCompletion(record);say('Injection record completed and locked.');
+    mode='readonly';saveFeedback='idle';showLockedOutput(record);renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);
+    if(options.showCompletion!==false)showCompletion(record);
+    say('Injection record completed and locked.');
+    return true;
+  }
+  function resetToBlankInjection(){
+    recordGeneration++;activeId='';mode='edit';saveFeedback='idle';applying=true;call(window.softReset);window.__IPMG_INJECTION_DOCUMENTATION_METADATA__={};call(window.render);applying=false;renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);
+  }
+  function discardInjectionDraft(){
+    if(blockForPendingAddendum())return false;
+    if(mode!=='edit'){
+      say('Completed injection records are locked and cannot be discarded. Start a new injection instead.');
+      return false;
+    }
+    const record=currentRecord();
+    if(!draftNeedsPersistence()){
+      say('There is no local injection draft to discard.');
+      return false;
+    }
+    if(record&&record.status!=='draft'){
+      say('Only editable local drafts can be discarded. Completed records remain locked.');
+      return false;
+    }
+    clearTimeout(autoTimer);autoTimer=null;
+    if(record){
+      const previousRecords=records.slice(),previousActiveId=activeId;
+      records=records.filter(item=>item.id!==record.id);activeId='';
+      if(!persist()){
+        records=previousRecords;activeId=previousActiveId;saveFeedback='error';renderWorkspace();
+        say('The local injection draft could not be discarded because browser storage did not accept the change. It is still open.');
+        return false;
+      }
+    }
+    resetToBlankInjection();
+    say(record?'Local injection draft discarded. A blank injection is ready.':'Entered injection details discarded. A blank injection is ready.');
+    return true;
   }
   function newInjection(){
     if(blockForPendingAddendum())return false;
@@ -9620,7 +9766,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       say('The current draft could not be saved, so the app kept it open instead of starting a new injection.');
       return false;
     }
-    recordGeneration++;activeId='';mode='edit';saveFeedback='idle';applying=true;call(window.softReset);call(window.render);applying=false;renderWorkspace();applyRecordLock();call(window.IPMGSmartWorkspace&&window.IPMGSmartWorkspace.refresh);say('New injection started. Any previous work remains available as a draft.');
+    resetToBlankInjection();say('New injection started. Any previous work remains available as a draft.');
     return true;
   }
   function saveAddendum(){
@@ -10924,7 +11070,8 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       verifications:S&&S.flags||{},
       safetyConcerns:S&&S.guard||{},
       initiation:typeof window.ipmgInitiationProtocolSnapshot==='function'?window.ipmgInitiationProtocolSnapshot():{},
-      disposition:typeof window.ipmgClinicalDispositionSnapshot==='function'?window.ipmgClinicalDispositionSnapshot():{}
+      disposition:typeof window.ipmgClinicalDispositionSnapshot==='function'?window.ipmgClinicalDispositionSnapshot():{},
+      documentation:window.__IPMG_INJECTION_DOCUMENTATION_METADATA__||{}
     },
     uds:{
       reason:UDS&&UDS.reason||'routine',
@@ -11014,6 +11161,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const ATTEST_KEYS=['id2','rights','allergy','consent','prior','screen','hygiene'];
   const VERIFICATION_KEYS=['opioidFree','naltrexHS','suppliedNeedle','resuspend','invegaInit','oralOverlap','stabilized','paliperidoneTolerability','aripiprazoleTolerability','glutealOnly','noMassage','deepZtrack'];
   const SAFETY_KEYS=['dizzy','cardiac','nms','eps','site','opioid','liver'];
+  const clone=value=>{try{return JSON.parse(JSON.stringify(value));}catch(e){return {};}};
   window.ipmgSetInjectionChipState=(patch)=>{
     if(!patch)return;
     if('medicationKey' in patch){
@@ -11054,6 +11202,12 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if('acuteSafetyScreenConfirmed' in patch){
       const store=window.__IPMG_RC530__||(window.__IPMG_RC530__={});
       store.safetyNone=Boolean(patch.acuteSafetyScreenConfirmed);
+    }
+    if('documentation' in patch){
+      /* Typed panels own this small provenance object. Keep it outside old
+         field values so legacy print/readiness retains its established input
+         contract while draft/lock snapshots can restore it losslessly. */
+      window.__IPMG_INJECTION_DOCUMENTATION_METADATA__=clone(patch.documentation||{});
     }
     renderReasons();renderMeds();renderDoses();renderIntervals();renderMedSpec();renderInjSafetyChips();renderAtt();renderResp();renderSites();renderRoutes();recalcNext();render();
     if(patch.initiation&&typeof window.restoreInitiationProtocol==='function')window.restoreInitiationProtocol(patch.initiation);

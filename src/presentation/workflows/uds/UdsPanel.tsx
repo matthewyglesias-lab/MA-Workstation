@@ -470,6 +470,10 @@ export function UdsPanel({
 
   const stops = evaluation?.stops ?? [];
   const stopsByTab = countStopsByTab(stops, tabForUdsField);
+  const udsReadyForFinalOutput = evaluation?.readiness === "ready";
+  const udsLogLabel = udsReadyForFinalOutput
+    ? "Finalize & add to daily log"
+    : "Log as needs review";
 
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
@@ -504,9 +508,14 @@ export function UdsPanel({
         <button
           type="button"
           class="cd2004-command-button"
+          title={
+            udsReadyForFinalOutput
+              ? "Add the finalized UDS documentation to today's local activity log."
+              : "Add this incomplete UDS documentation to today's local activity log as needs review."
+          }
           onClick={() => clickLegacyControl("addUdsLog")}
         >
-          Add to log
+          {udsLogLabel}
         </button>
       </div>
 
