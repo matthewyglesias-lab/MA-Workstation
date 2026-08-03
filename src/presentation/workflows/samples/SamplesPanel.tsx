@@ -22,10 +22,51 @@ import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { DocumentationEngine } from "../../../documentation";
 import { samplesEncounterToDocumentationInput } from "../../../documentation/adapters/samples-from-encounter";
 import { clickLegacyControl } from "../legacy-mirror";
+import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { mirrorSamplesEncounterToLegacyDom } from "./samples-legacy-mirror";
 import type { PatientContext } from "../../types";
 
 type SamplesTab = "order" | "medication" | "plan" | "review";
+
+const SAMPLES_TAB_LABEL: Record<SamplesTab, string> = {
+  order: "Patient / order",
+  medication: "Medication",
+  plan: "Plan & trace",
+  review: "Safety / review",
+};
+
+/**
+ * Maps a ClinicalIssue's dot-path `field` back to the tab that edits it. A
+ * sample dispense can open with seven simultaneous stops spread across all
+ * four tabs, which is exactly the case where a bare count is useless.
+ */
+function tabForSamplesField(field?: string): SamplesTab {
+  const head = (field ?? "").split(".")[0];
+  switch (head) {
+    case "patient":
+    case "prescriber":
+    case "staff":
+    case "dispenseDate":
+    case "startDate":
+    case "purpose":
+      return "order";
+    case "medication":
+    case "quantity":
+    case "directions":
+    case "titration":
+      return "medication";
+    // Package traceability and the step plan share the Plan tab.
+    case "packages":
+    case "plan":
+      return "plan";
+    case "medicationReview":
+    case "education":
+    case "review":
+      return "review";
+    default:
+      return "order";
+  }
+}
 
 interface SamplesPanelProps {
   initialEncounter: SamplesEncounter;
@@ -375,13 +416,16 @@ export function SamplesPanel({
   const rows = rowsFromEncounter(encounter);
   const primary = primaryPackage(encounter);
 
+  const stops = evaluation?.stops ?? [];
+  const stopsByTab = countStopsByTab(stops, tabForSamplesField);
+
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <div class="wfp-summary-bar">
         <strong>Oral sample encounter</strong>
         <StatusFlag
           idle={(evaluation?.readiness ?? "idle") === "idle"}
-          stopCount={evaluation?.stops.length ?? 0}
+          stopCount={stops.length}
           warningCount={evaluation?.warnings.length ?? 0}
         />
         <span class="wfp-summary-spacer" />
@@ -423,6 +467,11 @@ export function SamplesPanel({
           onClick={() => setTab("order")}
         >
           Patient / order
+          {(stopsByTab.get("order") ?? 0) > 0 && (
+            <span class="wfp-tab-badge" aria-hidden="true">
+              {stopsByTab.get("order")}
+            </span>
+          )}
         </button>
         <button
           type="button"
@@ -432,6 +481,11 @@ export function SamplesPanel({
           onClick={() => setTab("medication")}
         >
           Medication
+          {(stopsByTab.get("medication") ?? 0) > 0 && (
+            <span class="wfp-tab-badge" aria-hidden="true">
+              {stopsByTab.get("medication")}
+            </span>
+          )}
         </button>
         <button
           type="button"
@@ -441,6 +495,11 @@ export function SamplesPanel({
           onClick={() => setTab("plan")}
         >
           Plan &amp; traceability
+          {(stopsByTab.get("plan") ?? 0) > 0 && (
+            <span class="wfp-tab-badge" aria-hidden="true">
+              {stopsByTab.get("plan")}
+            </span>
+          )}
           <span class="wfp-tab-badge wfp-tab-badge-muted">{rows.length + 1}</span>
         </button>
         <button
@@ -451,8 +510,20 @@ export function SamplesPanel({
           onClick={() => setTab("review")}
         >
           Safety &amp; review
+          {(stopsByTab.get("review") ?? 0) > 0 && (
+            <span class="wfp-tab-badge" aria-hidden="true">
+              {stopsByTab.get("review")}
+            </span>
+          )}
         </button>
       </div>
+
+      <OutstandingRequirements<SamplesTab>
+        stops={stops}
+        tabForField={tabForSamplesField}
+        tabLabels={SAMPLES_TAB_LABEL}
+        onNavigate={setTab}
+      />
 
       {tab === "order" && (
         <div class="wfp-tabpanel" role="tabpanel">
@@ -825,7 +896,7 @@ export function SamplesPanel({
                     ? "Current entry confirmed."
                     : localEvaluation.output.reviewEligible
                       ? "Eligible for final review."
-                      : "Complete the required fields above before confirming review."}
+                      : "Clear the outstanding requirements listed at the top of this worksheet before confirming review."}
                 </span>
               </div>
             </div>

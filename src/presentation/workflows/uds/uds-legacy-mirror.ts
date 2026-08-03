@@ -11,6 +11,7 @@ declare global {
       photoData?: string;
       omittedPanel?: string;
       readingsVerified?: boolean;
+      customPanelSetVerified?: boolean;
     }) => void;
   }
 }
@@ -46,6 +47,10 @@ export function mirrorUdsEncounterToLegacyDom(
     photoData,
     omittedPanel: encounter.omittedPanel ?? "",
     readingsVerified: encounter.physicalReadingsVerified,
+    // Without this the shell reads the encounter back with the flag pinned
+    // false, so the "Other point-of-care UDS cup" stop could never clear no
+    // matter what the operator checked.
+    customPanelSetVerified: encounter.customPanelSetVerified ?? false,
   });
 }
 

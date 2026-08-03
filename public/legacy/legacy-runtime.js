@@ -10979,6 +10979,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const profile=window.__IPMG_RC538_UDS_PROFILE__||(window.__IPMG_RC538_UDS_PROFILE__={omitted:'',readingsVerified:false});
     if('omittedPanel' in patch)profile.omitted=UDS_PANELS.includes(patch.omittedPanel)?patch.omittedPanel:'';
     if('readingsVerified' in patch)profile.readingsVerified=Boolean(patch.readingsVerified);
+    if('customPanelSetVerified' in patch)profile.customPanelSetVerified=Boolean(patch.customPanelSetVerified);
     if(typeof renderUdsReasons==='function')renderUdsReasons();
     if(typeof renderUdsTemp==='function')renderUdsTemp();
     if(typeof renderUdsControl==='function')renderUdsControl();

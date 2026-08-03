@@ -35,10 +35,21 @@ const SNAPSHOT_OPTIONS = {
   animations: 'disabled',
   caret: 'hide',
   scale: 'css',
-  // Text rasterization differs slightly between Windows and Linux Chromium.
-  // This still fails on material chrome, spacing, color, or layout changes.
+  // `threshold` is the per-pixel color tolerance and is what absorbs text
+  // rasterization differences between machines: a pixel only counts as
+  // different when it moves more than 30% in color space, so antialiasing on
+  // glyph edges does not register.
   threshold: 0.3,
-  maxDiffPixelRatio: 0.025,
+  // `maxDiffPixelRatio` is then only a backstop for *how many* pixels may
+  // still exceed that, and it was far too generous at 0.025 - roughly 32,000
+  // pixels of a 1440x900 capture. Three consecutive runs against fresh
+  // baselines here differ by zero pixels, and 0.025 was measured letting four
+  // genuine regressions through unnoticed, the largest a whole-panel vertical
+  // shift at 0.0245. 0.0002 leaves ~259 pixels of desktop slack for a
+  // renderer that rasterizes a few glyphs differently, and still fails on
+  // every real change observed. If CI ever goes red on pure rasterization,
+  // raise this - do not raise it to hide a layout change.
+  maxDiffPixelRatio: 0.0002,
   timeout: 15_000
 };
 

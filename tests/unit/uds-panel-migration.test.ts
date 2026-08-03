@@ -4,6 +4,7 @@ import {
   applyUdsDeviceProfileDefaults,
   emptyUdsEncounter,
   UDS_PANELS,
+  UdsEngine,
   type UdsEncounter,
 } from "../../src/domain/uds";
 import { udsEncounterToDocumentationInput } from "../../src/documentation/adapters/uds-from-encounter";
@@ -142,5 +143,66 @@ describe("udsEncounterToDocumentationInput", () => {
       labPlan: "ordered",
     });
     expect(decided!.outsideLabPlan).toBe("ordered");
+  });
+});
+
+describe("UdsEngine device-profile gating", () => {
+  const ready = (encounter: UdsEncounter) =>
+    UdsEngine.evaluate(encounter, { today: "2026-08-03" });
+
+  it("clears every stop for a 13-panel cup when the omitted analyte stays not-tested", () => {
+    const results = Object.fromEntries(
+      UDS_PANELS.map((panel) => [panel, panel === "PPX" ? "nt" : "neg"]),
+    ) as UdsEncounter["results"];
+    const evaluation = ready({
+      ...baseEncounter(),
+      device: "SAFE life 13-Panel Cup",
+      omittedPanel: "PPX",
+      physicalReadingsVerified: true,
+      temperature: "acceptable",
+      control: "valid",
+      results,
+    });
+    expect(evaluation.stops).toHaveLength(0);
+  });
+
+  it("stops when a result is recorded against the analyte the 13-panel cup omits", () => {
+    // The panel's bulk actions ("All tested negative", "THC positive · rest
+    // negative") must skip the omitted analyte or they create this stop on
+    // the operator's behalf, one click into the encounter.
+    const results = Object.fromEntries(
+      UDS_PANELS.map((panel) => [panel, "neg"]),
+    ) as UdsEncounter["results"];
+    const evaluation = ready({
+      ...baseEncounter(),
+      device: "SAFE life 13-Panel Cup",
+      omittedPanel: "PPX",
+      physicalReadingsVerified: true,
+      temperature: "acceptable",
+      control: "valid",
+      results,
+    });
+    expect(evaluation.stops.map((stop) => stop.code)).toContain("device.13.omitted-result");
+  });
+
+  it("requires the readings confirmation for an uncatalogued device, not just the 13/14 cups", () => {
+    // The engine gates every named device on this flag. The panel therefore
+    // has to render the control for every named device too - rendering it
+    // only for 13/14 left "Other point-of-care UDS cup" unfinishable.
+    const results = Object.fromEntries(
+      UDS_PANELS.map((panel) => [panel, "neg"]),
+    ) as UdsEncounter["results"];
+    const other: UdsEncounter = {
+      ...baseEncounter(),
+      device: "Other point-of-care UDS cup",
+      customPanelSetVerified: true,
+      temperature: "acceptable",
+      control: "valid",
+      results,
+    };
+    expect(ready({ ...other, physicalReadingsVerified: false }).stops.map((s) => s.code)).toContain(
+      "device.readings",
+    );
+    expect(ready({ ...other, physicalReadingsVerified: true }).stops).toHaveLength(0);
   });
 });
