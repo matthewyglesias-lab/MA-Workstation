@@ -339,6 +339,20 @@ export function FormsPanel({
                 </Field>
               </div>
               <div class="wfp-row">
+                {/* Request status sits with the other request-tracking states
+                    rather than in a group box of its own. A bordered section
+                    wrapping a single dropdown is chrome without content, and
+                    it separated status from the three fields staff read it
+                    alongside. */}
+                <Field label="Status">
+                  <OptionList<FormRequestStatus>
+                    name="forms-status"
+                    value={encounter.status}
+                    onChange={(value) => patch({ status: value })}
+                    options={FORM_STATUS_OPTIONS}
+                    inline
+                  />
+                </Field>
                 <Field label="Fee status">
                   <select
                     value={encounter.feeStatus}
@@ -416,19 +430,6 @@ export function FormsPanel({
                   />
                 </Field>
               </div>
-            </div>
-          </div>
-
-          <div class="wfp-section">
-            <div class="wfp-section-head">Status</div>
-            <div class="wfp-section-body">
-              <OptionList<FormRequestStatus>
-                name="forms-status"
-                value={encounter.status}
-                onChange={(value) => patch({ status: value })}
-                options={FORM_STATUS_OPTIONS}
-                inline
-              />
             </div>
           </div>
 
