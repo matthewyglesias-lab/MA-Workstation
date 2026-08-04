@@ -2499,43 +2499,49 @@ export function InjectionPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
-            <div class="wfp-section-head">Document output</div>
-            <div class="wfp-section-body">
-              <p class="wfp-field-hint wfp-document-output-hint">
-                Review and copy the generated note in Clinical Documentation. Printing uses the same local
-                encounter snapshot.
-              </p>
-              <div class="wfp-actions">
-                <button
-                  type="button"
-                  class="cd2004-command-button"
-                  onClick={() => clickLegacyControl("printAVS")}
-                  disabled={!administered}
-                >
-                  Print AVS
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => clickLegacyControl("injWorksheetPrint")}
-                >
-                  Print injection worksheet
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => clickLegacyControl("injWorksheetBlank")}
-                >
-                  Blank worksheet
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
       </fieldset>
+
+      {/* Printing is read-only output, not an edit - it stays outside the
+          locked fieldset so a completed record's AVS/worksheet remain
+          reprintable instead of going dead the moment the record locks. */}
+      {tab === "outcome" && (
+        <div class="wfp-section">
+          <div class="wfp-section-head">Document output</div>
+          <div class="wfp-section-body">
+            <p class="wfp-field-hint wfp-document-output-hint">
+              Review and copy the generated note in Clinical Documentation. Printing uses the same local
+              encounter snapshot.
+            </p>
+            <div class="wfp-actions">
+              <button
+                type="button"
+                class="cd2004-command-button"
+                onClick={() => clickLegacyControl("printAVS")}
+                disabled={!administered}
+              >
+                Print AVS
+              </button>
+              <button
+                type="button"
+                class="cd2004-link-button"
+                onClick={() => clickLegacyControl("injWorksheetPrint")}
+              >
+                Print injection worksheet
+              </button>
+              <button
+                type="button"
+                class="cd2004-link-button"
+                onClick={() => clickLegacyControl("injWorksheetBlank")}
+              >
+                Blank worksheet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {locked && (
         <div class="wfp-section">
