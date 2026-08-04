@@ -229,11 +229,8 @@ async function collectVisualContract(page, workflow) {
         focusedControlBorder: focusedControlStyle?.borderColor,
         focusedControlHasGlow: focusedControlStyle?.boxShadow !== 'none',
         recordLedgerHorizontalOverflow: hasHorizontalOverflow(recordTableWrap),
-        // Computed style drops the quotes around a single-token font name
-        // like W95FA (they're only syntactically required for multi-word
-        // names such as "MS Sans Serif"), so match unquoted here.
-        usesW95faFirst:
-          controlStyle?.fontFamily.trim().toLowerCase().startsWith('w95fa') ??
+        usesTahomaFirst:
+          controlStyle?.fontFamily.trim().toLowerCase().startsWith('tahoma') ??
           false,
         landmarksPresent: spec.landmarks.map(selector =>
           Boolean(pick(selector, false))
@@ -303,7 +300,7 @@ function expectedContract(workflow) {
     chrome: {
       shell: {
         backgroundColor: 'rgb(184, 188, 229)',
-        fontFamily: expect.stringMatching(/^W95FA,/),
+        fontFamily: expect.stringMatching(/^Tahoma,/),
         fontSize: '11px',
         overflow: 'hidden'
       },
@@ -355,7 +352,7 @@ function expectedContract(workflow) {
       focusedControlBorder: 'rgb(245, 179, 0)',
       focusedControlHasGlow: false,
       recordLedgerHorizontalOverflow: false,
-      usesW95faFirst: true,
+      usesTahomaFirst: true,
       landmarksPresent: [true, true, true, true]
     },
     containment: {
