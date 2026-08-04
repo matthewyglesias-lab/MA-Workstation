@@ -79,10 +79,18 @@ function promptForFocusedControl(target: EventTarget | null) {
   const labelledControl = control as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
   const associatedLabel = labelledControl.labels?.[0];
   const enclosingLabel = control.closest("label");
+  const fieldCaption = control
+    .closest(".wfp-field")
+    ?.querySelector<HTMLElement>(".wfp-field-caption");
+  const legacyFieldLabel = control
+    .closest(".field, .cd2004-field")
+    ?.querySelector<HTMLElement>("label");
   const label = normalizedPromptText(
     control.getAttribute("aria-label") ??
       associatedLabel?.textContent ??
       enclosingLabel?.textContent ??
+      fieldCaption?.textContent ??
+      legacyFieldLabel?.textContent ??
       control.textContent,
   );
   if (!label) return null;
