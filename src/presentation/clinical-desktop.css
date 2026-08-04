@@ -165,6 +165,18 @@
     font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
     font-size: 12px;
     line-height: 1.35;
+    /* W95FA ships one real weight (400); every `font-weight: 700` in this
+       app asks the browser to fake bold on top of it. Browsers do that by
+       skewing/stretching the regular glyphs rather than drawing a true bold
+       stroke, and how aggressive that distortion is varies a lot by
+       browser/OS - at this app's many small sizes (7-11px) it can read as
+       stretched or smeared instead of bold. Disabling synthesis makes every
+       weight request just render at the font's one real weight, trading a
+       little less visual boldness for correct, undistorted letterforms
+       everywhere at once. The visual-regression test harness already forces
+       this off (plus a fallback font) for deterministic screenshots; this
+       is the same protection for what real users actually see. */
+    font-synthesis: none;
   }
 
   /*
