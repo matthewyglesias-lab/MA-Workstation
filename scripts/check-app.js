@@ -93,7 +93,7 @@ assert.match(medication('hafyera').missed, /current dose-specific INVEGA HAFYERA
 assert.match(medication('sustenna').missed, /current product-specific missed-dose table/i);
 assert.match(medication('erzofri').missed, /current ERZOFRI missed-dose table/i);
 
-assert.doesNotMatch(html, /<input id="allergies" value="NKDA"/i, 'Allergies must not default to NKDA');
+assert.match(html, /<input id="allergies" value="NKDA"/i, 'Allergy status must default to NKDA - staff review/edit it rather than fill a blank required field');
 assert.match(html, /resp:"well", attest:\{\}/, 'Routine injection response must start as tolerated well for quick review');
 assert.match(html, /ATTEST\.forEach\(a=>S\.attest\[a\.id\]=!a\.off&&a\.id!=="prior"\)/, 'Routine attestations must start selected while prior-dose tolerance requires current-review confirmation');
 assert.match(html, /const UDS=\{reason:"routine",temp:"acceptable",control:"valid"/, 'UDS must start as a visible routine review screen');
@@ -109,7 +109,7 @@ assert.match(html, /<select id="sampleMedCheck"><option>Prescriber reviewed \/ o
 assert.match(html, /<select id="sampleEdu"><option>Reviewed with patient<\/option>/, 'Sample education must start selected for quick review');
 assert.match(html, /<script id="rc537FastReviewScript">/, 'Expected visible fast review-by-exception controls');
 assert.match(html, /Quick review — routine injection checks are preselected\./, 'Injection workflow must explain review-by-exception');
-assert.match(html, /Verified NKDA\?<\/span><button type="button">Enter NKDA<\/button>/, 'NKDA must require an explicit quick action, not a default');
+assert.match(html, /Verified NKDA\?<\/span><button type="button">Enter NKDA<\/button>/, 'A quick action to (re-)enter NKDA must remain available for records where the default was cleared or changed');
 assert.match(html, /window\.IPMG_FAST_REVIEW&&st\.ok&&!st\.block&&!st\.review/, 'Routine workflow cards must auto-confirm once their fields are complete');
 assert.match(html, /id="udsUsePatient"/, 'UDS must support fast current-patient transfer');
 assert.match(html, /id="udsUseStaff"/, 'UDS must support fast signed-in-staff transfer');
