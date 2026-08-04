@@ -1127,6 +1127,18 @@ export function InjectionPanel({
   );
 
   const administered = encounter.disposition.kind === "administered";
+  // AVS is deliberately gated separately from `administered`: it only needs
+  // enough to describe what was given, not the final disposition choice or
+  // complete safety record. The legacy engine's own AVS-availability check
+  // (`canPrintAvs()` in the RC535 clinical-safety module) mirrors this same,
+  // narrower set of fields.
+  const hasAdministrationDetailsForAvs = Boolean(
+    encounter.medicationKey &&
+      encounter.dose.trim() &&
+      encounter.route.trim() &&
+      encounter.site.trim() &&
+      encounter.administrationDate.trim(),
+  );
   const stops = evaluation?.stops ?? [];
   const incompleteFields = useMemo(
     () => new Set(stops.flatMap((item) => (item.field ? [item.field] : []))),
@@ -2431,7 +2443,7 @@ export function InjectionPanel({
             <div class="wfp-section-body">
               <p class="wfp-field-hint">
                 Use the checked routine review items as a fast review-by-exception sheet, then make one final
-                documentation choice. An administration note and AVS remain unavailable until a complete
+                documentation choice. An administration note remains unavailable until a complete
                 administration is documented.
               </p>
               <div class="wfp-option-list wfp-option-list-inline">
@@ -2520,7 +2532,12 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-command-button"
                 onClick={() => clickLegacyControl("printAVS")}
-                disabled={!administered}
+                disabled={!hasAdministrationDetailsForAvs}
+                title={
+                  hasAdministrationDetailsForAvs
+                    ? undefined
+                    : "Available once medication, dose, route, site, and administration date are documented."
+                }
               >
                 Print AVS
               </button>
