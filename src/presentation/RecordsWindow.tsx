@@ -265,9 +265,7 @@ export function RecordsWindow({
             aria-label="Close Local EMR / Record List"
             onClick={onClose}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
+            X
           </button>
         </div>
 
@@ -392,7 +390,7 @@ export function RecordsWindow({
                 bridge()?.create();
               }}
             >
-              Start new blank injection
+              Start new injection
             </button>
           </div>
         </div>

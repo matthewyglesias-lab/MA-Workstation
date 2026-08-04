@@ -374,6 +374,10 @@
   .meditech-patient-safety strong {
     color: #a20d0d;
     font-size: 9px;
+    /* This label reads real MEDITECH's exact mixed-case wording
+       ("Allergy/AdvReac:"); the general patient-banner <strong> rule
+       upper-cases everything else in the banner, so opt back out here. */
+    text-transform: none;
   }
 
   .meditech-patient-safety b {

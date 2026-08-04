@@ -461,10 +461,9 @@ export function FormsPanel({
       {tab === "letter" && !LETTER_BUILDER_ENABLED && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-wall">
-            <div class="wfp-wall-title">Letter builder — in progress</div>
+            <div class="wfp-wall-title">Letter Builder — Module Not Installed</div>
             <p>
-              This module is being rebuilt and isn't available in this workspace yet.
-              Provider letter drafting will return here once it's ready.
+              Provider letter drafting is not available in this build.
             </p>
           </div>
         </div>

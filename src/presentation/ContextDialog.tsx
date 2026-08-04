@@ -79,7 +79,7 @@ export function ContextDialog({
             {kind === 'staff' ? 'Staff Sign-In' : 'Visit Location'}
           </span>
           <button type="button" aria-label="Close" onClick={onClose}>
-            ×
+            X
           </button>
         </div>
         <form onSubmit={submit}>

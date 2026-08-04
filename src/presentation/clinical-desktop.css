@@ -2585,6 +2585,7 @@
   transition:
     background-color 80ms linear,
     color 80ms linear !important;
+  font: 700 9px/1 Tahoma, Arial, sans-serif !important;
 }
 
 .records-drawer-close:hover {
@@ -2597,11 +2598,6 @@
   border-color: #303841 #fff #fff #303841 !important;
   box-shadow: inset 1px 1px #77818b !important;
   transform: translate(1px, 1px) !important;
-}
-
-.records-drawer-close svg {
-  width: 14px !important;
-  height: 14px !important;
 }
 
 .records-drawer-search {
