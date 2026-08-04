@@ -1496,6 +1496,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(finish).toHaveAccessibleName('Attest & lock local record');
     await expect(startNew).toHaveAccessibleName('Start new injection');
     await expect(discard).toHaveAccessibleName('Discard local draft...');
+    await startNew.focus();
+    await expect(page.locator('.cd2004-status-message')).toContainText('Start new injection');
+    await panel.locator('input[placeholder="Last, First"]').focus();
+    await expect(page.locator('.cd2004-status-message')).toContainText('Patient name');
     await expect(save).toBeDisabled();
     await expect(finish).toBeDisabled();
     await expect(startNew).toBeEnabled();
