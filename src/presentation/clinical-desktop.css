@@ -243,6 +243,16 @@
   box-sizing: border-box;
 }
 
+/* Classic Windows text selection is a solid navy fill with white text, not
+   the pale, low-contrast highlight modern browsers default to. Applied
+   document-wide, not scoped to .cd2004-shell, because the confirmation/
+   context dialogs and the injection-completion receipt render as body-
+   appended siblings of the shell, not descendants of it. */
+::selection {
+  background: var(--cd-navy, #0a246a);
+  color: #ffffff;
+}
+
 .cd2004-shell button,
 .cd2004-shell input,
 .cd2004-shell select,
@@ -250,6 +260,66 @@
   font: inherit;
   min-height: 0;
   border-radius: 0;
+}
+
+/* Native checkboxes/radios render with the current OS's modern rounded
+   theme (Windows 11/macOS accent colors) on every platform - jarring next
+   to hand-drawn beveled chrome everywhere else. Hand-paint the classic
+   sunken-box/circle instead, using the same bevel formula as sunken text
+   inputs. Unscoped (not `.cd2004-shell ...`) because these controls also
+   appear in body-appended dialogs (e.g. RecordActionDialog's attestation
+   checkbox) that render as siblings of .cd2004-shell, not descendants. */
+input[type="checkbox"],
+input[type="radio"] {
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  position: relative;
+  background: #fff;
+  border: 1px solid;
+  border-color: #6b7280 #fff #fff #6b7280;
+  box-shadow: inset 1px 1px rgb(0 0 0 / 12%);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 1px;
+  width: 6px;
+  height: 4px;
+  border: solid #101828;
+  border-width: 0 0 2px 2px;
+  transform: rotate(-45deg);
+}
+
+input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #101828;
+}
+
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2px solid var(--cd-focus, #ffb400);
+  outline-offset: 1px;
+}
+
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+  background: #e5e7eb;
+  cursor: not-allowed;
 }
 
 .cd2004-shell button {
@@ -3477,6 +3547,17 @@
   color: #101010;
   font: 12px "W95FA", Tahoma, Arial, sans-serif;
   box-shadow: none !important;
+}
+
+.cd2004-dialog-field select {
+  appearance: none;
+  padding-right: 24px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23101828'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #f4f4f4 0%, #d0d0d0 100%);
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 8px center, right 0 top 0;
+  background-size: 8px 6px, 20px 100%;
 }
 
 .cd2004-dialog-field input:focus,

@@ -2380,22 +2380,49 @@
     overflow: hidden;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections) {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre) {
     scrollbar-color: #7e88ac #d6d8ec;
     scrollbar-width: auto;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar {
     width: 15px;
     height: 15px;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar-track {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar-track {
     background: #d6d8ec;
     border: 1px solid #8a92b3;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar-thumb {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar-thumb {
+    min-height: 24px;
+    background: #aeb3d0;
+    border: 1px solid;
+    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  /* These are body-appended siblings of .cd2004-shell, not descendants of it
+     (see main.tsx: RecordActionDialog/ContextDialog/RecordsWindow render
+     alongside <ClinicalDesktopShell/>, not inside it) - the .cd2004-shell
+     scrollbar rules above cannot reach them, so they need their own copy of
+     the same treatment. */
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card) {
+    scrollbar-color: #7e88ac #d6d8ec;
+    scrollbar-width: auto;
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar {
+    width: 15px;
+    height: 15px;
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar-track {
+    background: #d6d8ec;
+    border: 1px solid #8a92b3;
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar-thumb {
     min-height: 24px;
     background: #aeb3d0;
     border: 1px solid;

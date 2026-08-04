@@ -276,7 +276,7 @@ export function FormsPanel({
           onClick={() => setTab("letter")}
         >
           Letter builder
-          {!LETTER_BUILDER_ENABLED && <span class="wfp-tab-badge wfp-tab-badge-muted">Soon</span>}
+          {!LETTER_BUILDER_ENABLED && <span class="wfp-tab-badge wfp-tab-badge-muted">N/A</span>}
           {LETTER_BUILDER_ENABLED && letterTabIssues > 0 && (
             <span class="wfp-tab-badge">{letterTabIssues}</span>
           )}

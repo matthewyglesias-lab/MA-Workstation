@@ -491,6 +491,21 @@
   font-size: 11px;
 }
 
+/* A native select's dropdown arrow is the current OS's modern flat chevron
+   on every platform - swap it for a small beveled button with a solid
+   triangle, matching the classic Windows dropdown control. */
+.cd2004-shell .wfp-field select {
+  appearance: none;
+  padding-right: 22px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23101828'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--cd-chrome-light) 0%, var(--cd-chrome) 100%);
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 7px center, right 0 top 0;
+  background-size: 8px 6px, 18px 100%;
+  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+}
+
 .cd2004-shell .wfp-field input:focus-visible,
 .cd2004-shell .wfp-field select:focus-visible,
 .cd2004-shell .wfp-field textarea:focus-visible {
@@ -586,6 +601,16 @@
   box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
   font: inherit;
   font-size: 11px;
+  /* Same classic-Windows dropdown button as .wfp-field select - see the
+     comment there for why. */
+  appearance: none;
+  padding-right: 22px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23101828'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--cd-chrome-light) 0%, var(--cd-chrome) 100%);
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 7px center, right 0 top 0;
+  background-size: 8px 6px, 18px 100%;
 }
 
 .cd2004-shell .wfp-select-group select:focus-visible {
@@ -1367,6 +1392,14 @@
     min-height: 20px;
     padding: 2px 4px;
     font-size: 10px;
+  }
+
+  /* The shorthand `padding` above resets padding-right too, which would
+     otherwise crush the dropdown-arrow space .wfp-field select and
+     .wfp-select-group select reserve. */
+  .cd2004-shell [data-workflow="administer"] .wfp-field select,
+  .cd2004-shell [data-workflow="administer"] .wfp-select-group select {
+    padding-right: 22px;
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-option-row {
