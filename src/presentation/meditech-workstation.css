@@ -3106,6 +3106,10 @@
     font: 400 10px/1 Tahoma, "MS Sans Serif", sans-serif;
   }
 
+  /* An always-visible outstanding-work count, not an alarm -- soft chip
+     rather than a solid alarm-red fill, matching the tab/section badges in
+     workflow-panels.css. Authentic MEDITECH keeps solid red for plain text
+     on genuinely critical items only, never a filled count badge. */
   .meditech-record-list .cd2004-nav-item em {
     grid-column: 2;
     display: grid;
@@ -3113,9 +3117,9 @@
     min-width: 13px;
     height: 13px;
     padding: 0 2px;
-    color: #fff;
-    background: #a72a2a;
-    border: 1px solid #671414;
+    color: var(--cd-red);
+    background: var(--cd-red-soft);
+    border: 1px solid var(--cd-red);
     font: 700 7px/1 Tahoma, sans-serif;
   }
 

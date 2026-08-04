@@ -1,6 +1,11 @@
 import type { ClinicalIssue } from "../../domain/contracts";
+import { ModalDialog } from "../ModalDialog";
 
 interface OutstandingRequirementsProps<Tab extends string> {
+  /** Whether the floating window is currently shown. */
+  open: boolean;
+  /** Dismisses the window without navigating anywhere. */
+  onClose: () => void;
   /** The engine's blocking issues for the current encounter. */
   stops: readonly ClinicalIssue[];
   /** Maps an issue's dot-path `field` to the tab that actually edits it. */
@@ -9,13 +14,13 @@ interface OutstandingRequirementsProps<Tab extends string> {
   tabLabels: Record<Tab, string>;
   /** Switches the panel to the tab owning the clicked requirement. */
   onNavigate: (tab: Tab) => void;
-  /** Injection keeps its detailed register on demand; other worksheets retain it open. */
-  collapsible?: boolean;
 }
 
 /**
  * The list of what is still blocking completion, with each row a direct jump
- * to the tab that owns the field.
+ * to the tab that owns the field. A floating window - titlebar, close box,
+ * centred over the worksheet - mirrors how MEDITECH pops a transaction's
+ * outstanding items rather than burying them in the worksheet flow.
  *
  * Without this a panel reports only a count - "5 stops" - and staff have to
  * open every tab and compare against a mental list of what the engine wants.
@@ -25,52 +30,57 @@ interface OutstandingRequirementsProps<Tab extends string> {
  * block.
  */
 export function OutstandingRequirements<Tab extends string>({
+  open,
+  onClose,
   stops,
   tabForField,
   tabLabels,
   onNavigate,
-  collapsible = false,
 }: OutstandingRequirementsProps<Tab>) {
-  if (!stops.length) return null;
-  const rows = (
-    <div class="wfp-issue-list">
-      {stops.map((stop) => {
-        const stopTab = tabForField(stop.field);
-        return (
-          <button
-            key={`${stop.code}-${stop.field ?? ""}`}
-            type="button"
-            class="wfp-issue-row"
-            onClick={() => onNavigate(stopTab)}
-          >
-            <span class="wfp-issue-tab">{tabLabels[stopTab]}</span>
-            <span class="wfp-issue-message">{stop.message}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
+  if (!open || !stops.length) return null;
 
-  if (!collapsible) {
-    return (
-      <div class="wfp-section wfp-issue-section">
-        <div class="wfp-section-head">
-          Outstanding requirements
-          <span class="wfp-tab-badge">{stops.length}</span>
-        </div>
-        {rows}
-      </div>
-    );
-  }
+  const navigate = (tab: Tab) => {
+    onNavigate(tab);
+    onClose();
+  };
 
   return (
-    <details class="wfp-section wfp-issue-section">
-      <summary class="wfp-section-head">
-        <span>View all outstanding requirements</span>
-        <span class="wfp-tab-badge">{stops.length}</span>
-      </summary>
-      {rows}
-    </details>
+    <ModalDialog
+      class="cd2004-dialog-layer cd2004-dialog cd2004-outstanding-requirements-dialog"
+      labelledBy="cd2004-outstanding-requirements-title"
+      onDismiss={onClose}
+    >
+      <div class="cd2004-dialog-frame">
+        <div class="cd2004-dialog-titlebar">
+          <span id="cd2004-outstanding-requirements-title">Outstanding requirements</span>
+          <button
+            type="button"
+            aria-label="Close outstanding requirements"
+            onClick={onClose}
+          >
+            X
+          </button>
+        </div>
+        <div class="cd2004-dialog-body">
+          <div class="wfp-issue-list">
+            {stops.map((stop) => {
+              const stopTab = tabForField(stop.field);
+              return (
+                <button
+                  key={`${stop.code}-${stop.field ?? ""}`}
+                  type="button"
+                  class="wfp-issue-row"
+                  onClick={() => navigate(stopTab)}
+                >
+                  <span class="wfp-issue-tab">{tabLabels[stopTab]}</span>
+                  <span class="wfp-issue-message">{stop.message}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </ModalDialog>
   );
 }
 

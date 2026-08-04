@@ -1330,8 +1330,9 @@ test.describe('MA Workstation browser journeys', () => {
     const initiation = page.locator('#initiationProtocolCard');
     await panel.getByText('1-day initiation', { exact: true }).click();
     // Scoped to the option row rather than a bare getByText: the same stop
-    // message also appears verbatim in the "Outstanding requirements" list
-    // once the 1-day protocol is selected but not yet plan-verified.
+    // message also appears verbatim in the "Outstanding requirements"
+    // floating window (opened from the status chip) once the 1-day protocol
+    // is selected but not yet plan-verified.
     await panel
       .locator('.wfp-checkbox-row label', { hasText: 'Active provider initiation/re-initiation order' })
       .click();
@@ -1923,27 +1924,37 @@ test.describe('MA Workstation browser journeys', () => {
     await page.goto('/');
 
     // A bare stop count leaves staff opening every tab to find what is
-    // missing. Each row names its tab and navigates straight to it.
+    // missing. The status chip opens a floating window (matching real
+    // MEDITECH's separate popups for this kind of thing); each row names
+    // its tab and navigates straight to it, closing the window on click.
     await openWorkflow(page, 'uds');
     const uds = page.locator('.wfp-panel');
     await uds.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
-    const udsRows = uds.locator('.wfp-issue-row');
+    await uds.locator('.wfp-status-flag.is-stop').click();
+    const udsDialog = page.getByRole('dialog', { name: 'Outstanding requirements' });
+    await expect(udsDialog).toBeVisible();
+    const udsRows = udsDialog.locator('.wfp-issue-row');
     await expect(udsRows.first()).toBeVisible();
-    await expect(uds.locator('.wfp-issue-row', { hasText: 'at least one result' })
+    await expect(udsDialog.locator('.wfp-issue-row', { hasText: 'at least one result' })
       .locator('.wfp-issue-tab')).toHaveText('Results');
-    await uds.locator('.wfp-issue-row', { hasText: 'at least one result' }).click();
+    await udsDialog.locator('.wfp-issue-row', { hasText: 'at least one result' }).click();
     await expect(uds.getByRole('tab', { name: /^Results/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(udsDialog).toBeHidden();
 
     await openWorkflow(page, 'samples');
     const samples = page.locator('.wfp-panel');
     await samples.locator('input[placeholder="Last, First"]').fill('Okafor, Ben');
-    const educationRow = samples.locator('.wfp-issue-row', { hasText: 'patient education status' });
+    await samples.locator('.wfp-status-flag.is-stop').click();
+    const samplesDialog = page.getByRole('dialog', { name: 'Outstanding requirements' });
+    await expect(samplesDialog).toBeVisible();
+    const educationRow = samplesDialog.locator('.wfp-issue-row', { hasText: 'patient education status' });
     await expect(educationRow.locator('.wfp-issue-tab')).toHaveText('Safety / review');
     await educationRow.click();
     await expect(samples.getByRole('tab', { name: /^Safety/ })).toHaveAttribute(
       'aria-selected',
       'true'
     );
+    await expect(samplesDialog).toBeHidden();
   });
 
   test('marks prior dose required only when the visit reason makes it a stop, and calculates the next due date', async ({ page }) => {
