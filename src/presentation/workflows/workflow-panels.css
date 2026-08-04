@@ -48,6 +48,26 @@
   flex: 1 1 auto;
 }
 
+.cd2004-shell .wfp-summary-print-avs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-summary-print-avs svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.cd2004-shell .wfp-summary-print-avs:disabled {
+  color: var(--cd-ink-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .cd2004-shell .wfp-status-flag {
   display: inline-flex;
   align-items: center;
@@ -1260,6 +1280,69 @@
   content: ":";
 }
 
+/* Site tiles: an icon+label card grid, echoing the Start Center launcher
+   tiles rather than the plain bordered option-row list used for other
+   single-select fields. The icon is a scanning aid only - the exact site
+   string stays the visible label and the only thing patch({ site }) reads,
+   so nothing about the underlying selection model changes. */
+.cd2004-shell .wfp-site-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 5px;
+}
+
+.cd2004-shell .wfp-site-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 54px;
+  padding: 6px 4px 5px;
+  background: var(--cd-paper, #fff);
+  border: 1px solid var(--cd-border-mid);
+  cursor: pointer;
+  text-align: center;
+}
+
+.cd2004-shell .wfp-site-tile input[type="radio"] {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  margin: 0;
+}
+
+.cd2004-shell .wfp-site-tile:hover {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-site-tile.is-selected {
+  background: var(--cd-selection);
+  border-color: var(--cd-ink-muted);
+}
+
+.cd2004-shell .wfp-site-tile-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cd2004-shell .wfp-site-tile-title {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.cd2004-shell .wfp-site-tile-badge {
+  color: #145b31;
+  background: var(--cd-green-soft);
+  border: 1px solid var(--cd-green);
+  padding: 0 3px;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 .cd2004-shell .wfp-site-suggestion {
   display: flex;
   flex-wrap: wrap;
@@ -1357,6 +1440,16 @@
     font-size: 8px;
   }
 
+  .cd2004-shell [data-workflow="administer"] .wfp-summary-print-avs {
+    padding: 1px 5px;
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-summary-print-avs svg {
+    width: 11px;
+    height: 11px;
+  }
+
   .cd2004-shell [data-workflow="administer"] .wfp-tabbar {
     gap: 1px;
     padding: 0 2px;
@@ -1420,6 +1513,20 @@
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-select-group,
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-ndc-picker {
     grid-column: 2;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile {
+    min-height: 46px;
+    padding: 5px 3px 4px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-title {
+    font-size: 9px;
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-field-hint,

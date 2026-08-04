@@ -72,6 +72,20 @@ const INJECTION_TABS: Array<[InjectionTab, string]> = [
 const INJECTION_TAB_LABELS = Object.fromEntries(INJECTION_TABS) as Record<InjectionTab, string>;
 
 /**
+ * Site tiles use a small region pictogram purely as a scanning aid - the
+ * exact site string (e.g. "R deltoid") remains the actual label and the
+ * only thing `patch({ site })` ever reads. Derived from the label text
+ * rather than a new catalog field so `injection-catalog.ts`'s plain
+ * string site list stays untouched.
+ */
+function siteIconName(site: string): "site-deltoid" | "site-gluteal" | "site-abdomen" | "site-arm" {
+  if (/deltoid/i.test(site)) return "site-deltoid";
+  if (/gluteal/i.test(site)) return "site-gluteal";
+  if (/abdomen/i.test(site)) return "site-abdomen";
+  return "site-arm";
+}
+
+/**
  * The evaluator owns which fields are required, optional, or not relevant to
  * this encounter. The presentation layer consumes this projection instead of
  * inferring clinical requirements from label copy. `requirements` stays
@@ -274,13 +288,13 @@ function tabForInjectionField(field?: string): InjectionTab {
     // When it is due, and the multi-dose protocol that sets the schedule.
     case "priorDoseDate":
     case "priorSite":
-    case "administrationDate":
     case "nextDoseDate":
     case "initiation":
       return "schedule";
-    // The administration event itself.
+    // The administration event itself: where, by whom, and when.
     case "site":
     case "administeredBy":
+    case "administrationDate":
     case "administrationTime":
     case "secondAdministrationTime":
       return "administration";
@@ -1336,6 +1350,24 @@ export function InjectionPanel({
             Session staff: {sessionStaff}
           </span>
         )}
+        {/* Printing is read-only output; a quick-access copy lives here so it's
+            reachable from any tab, not just Outcome's "Document output"
+            section - staff shouldn't have to navigate to the last tab just to
+            discover AVS is available once the minimal fields exist. */}
+        <button
+          type="button"
+          class="cd2004-link-button wfp-summary-print-avs"
+          onClick={() => clickLegacyControl("printAVS")}
+          disabled={!hasAdministrationDetailsForAvs}
+          title={
+            hasAdministrationDetailsForAvs
+              ? "Print the patient after-visit summary"
+              : "Available once medication, dose, route, site, and administration date are documented."
+          }
+        >
+          <DesktopIcon name="print" />
+          Print AVS
+        </button>
         <span class="wfp-summary-spacer" />
         <span class="wfp-transaction-readout" aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}>
           <b>{locked ? "REVIEW" : "ENTRY"}</b>
@@ -1578,13 +1610,6 @@ export function InjectionPanel({
                       </option>
                     ))}
                   </select>
-                </Field>
-                <Field label="Actual administration date" field="administrationDate">
-                  <input
-                    type="date"
-                    value={encounter.administrationDate}
-                    onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
-                  />
                 </Field>
                 <Field label="Expected next due" field="nextDoseDate">
                   <input
@@ -1949,14 +1974,20 @@ export function InjectionPanel({
                     {requirements.site?.state === "required" && <abbr class="wfp-req" title="Required">*</abbr>}
                     {requirements.site?.state === "optional" && <span class="wfp-opt">optional</span>}
                   </span>
-                  <div class="wfp-option-list">
+                  <div class="wfp-site-tile-grid">
                     {allowedSites.map((site) => (
-                      <label key={site} class={`wfp-option-row ${encounter.site === site ? "is-selected" : ""}`}>
+                      <label
+                        key={site}
+                        class={`wfp-site-tile ${encounter.site === site ? "is-selected" : ""}`}
+                      >
                         <input type="radio" name="inj-site" checked={encounter.site === site} onChange={() => patch({ site })} />
-                        <span>
-                          <span class="wfp-option-title">{site}</span>
-                          {site === recommendedSite && <div class="wfp-option-desc">Suggested rotation site</div>}
+                        <span class="wfp-site-tile-icon" aria-hidden="true">
+                          <DesktopIcon name={siteIconName(site)} />
                         </span>
+                        <span class="wfp-site-tile-title">{site}</span>
+                        {site === recommendedSite && (
+                          <span class="wfp-site-tile-badge">Suggested rotation site</span>
+                        )}
                       </label>
                     ))}
                   </div>
@@ -1992,6 +2023,13 @@ export function InjectionPanel({
                   {staffSignInValue.trim() && (
                     <span class="wfp-session-default">Session-derived default; editable for the documenting staff member.</span>
                   )}
+                </Field>
+                <Field label="Actual administration date" field="administrationDate">
+                  <input
+                    type="date"
+                    value={encounter.administrationDate}
+                    onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
+                  />
                 </Field>
                 <Field label="Actual administration time" field="administrationTime">
                   <input

@@ -29,7 +29,11 @@ export type DesktopIconName =
   | "staff"
   | "location"
   | "alert"
-  | "check";
+  | "check"
+  | "site-deltoid"
+  | "site-gluteal"
+  | "site-abdomen"
+  | "site-arm";
 
 export interface PatientContext {
   name?: string;

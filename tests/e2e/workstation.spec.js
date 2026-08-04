@@ -161,13 +161,13 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Administration');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
+    await panel.locator('input[type="date"]').first().fill('2026-07-30');
     if (includeAdministrationTime) {
       await panel.locator('input[type="time"]').first().fill(administrationTime);
     }
 
     await openInjectionTab(page, 'Schedule');
-    await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
-    await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+    await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
     return panel;
   }
 
@@ -1370,13 +1370,13 @@ test.describe('MA Workstation browser journeys', () => {
       .click();
 
     await openInjectionTab(page, 'Administration');
+    await panel.locator('input[type="date"]').first().fill('2026-07-30');
     await panel.locator('input[type="time"]').first().fill('10:15');
     await panel.locator('.wfp-field:has-text("Component 2 actual time") input').fill('10:18');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
 
     await openInjectionTab(page, 'Schedule');
-    await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
-    await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+    await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
 
     await openInjectionTab(page, 'Outcome');
     const administered = page.locator('#clinicalDisposition [data-disposition="administered"]');
@@ -1804,8 +1804,8 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('uses prior administration context to recommend, but never auto-select, the actual site', async ({ page }) => {
     // The legacy interactive body-map (recommended/quick-rotate CSS classes,
-    // auto-collapsing cards) has been replaced by a plain list-based site
-    // picker per the approved redesign; this test now covers that picker's
+    // auto-collapsing cards) has been replaced by an icon-tile site picker
+    // per the approved redesign; this test now covers that picker's
     // equivalent guarantees: a recommended-site badge is shown, but nothing
     // is ever pre-selected on the user's behalf.
     await page.setViewportSize({ width: 840, height: 720 });
@@ -1830,13 +1830,13 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-section-head', { hasText: 'Actual administration location' })).toContainText(
       'rotate: L deltoid'
     );
-    await expect(panel.locator('.wfp-option-row.is-selected')).toHaveCount(0);
+    await expect(panel.locator('.wfp-site-tile.is-selected')).toHaveCount(0);
 
     await panel.getByText('L deltoid', { exact: true }).click();
     await expect(
-      panel.locator('.wfp-option-row', { hasText: 'L deltoid' })
+      panel.locator('.wfp-site-tile', { hasText: 'L deltoid' })
     ).toHaveClass(/is-selected/);
-    await expect(panel.locator('.wfp-option-row.is-selected')).toHaveCount(1);
+    await expect(panel.locator('.wfp-site-tile.is-selected')).toHaveCount(1);
 
     // Site and the administration time now share the Administration block, so
     // the actual-time field is reachable without leaving the tab.
@@ -2082,13 +2082,18 @@ test.describe('MA Workstation browser journeys', () => {
 
     // Expected next due is a visible calculation from the actual date and
     // selected cadence. Staff can still override it explicitly when the
-    // active order says otherwise.
+    // active order says otherwise. Actual administration date lives on
+    // Administration (with the time it pairs with); Expected next due
+    // stays on Schedule.
+    await panel.getByRole('tab', { name: /^Administration/ }).click();
     const actualDate = panel
       .locator('.wfp-field', { hasText: 'Actual administration date' })
       .locator('input[type="date"]');
+    await actualDate.fill('2026-07-30');
+
+    await panel.getByRole('tab', { name: /^Schedule/ }).click();
     const nextDue = panel
       .locator('.wfp-field', { hasText: 'Expected next due' });
-    await actualDate.fill('2026-07-30');
     await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-27');
     await expect(nextDue.locator('.wfp-calculated-value')).toBeVisible();
     await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);

@@ -73,12 +73,16 @@ test.describe('Injection decision support', () => {
   test('keeps an explicit expected-next-due override after save and resume', async ({ page }) => {
     const panel = await openInjection(page);
     await enterRoutineOrder(panel, 'QA, Next Due');
-    await openTab(panel, 'Schedule');
 
+    // Actual administration date lives on Administration (with the time it
+    // pairs with); Expected next due, calculated from it, stays on Schedule.
+    await openTab(panel, 'Administration');
     const administrationDate = panel
       .locator('.wfp-field', { hasText: 'Actual administration date' })
       .locator('input[type="date"]');
     await administrationDate.fill('2026-07-30');
+
+    await openTab(panel, 'Schedule');
     const dueDate = panel
       .locator('.wfp-field', { hasText: 'Expected next due' })
       .locator('input[type="date"]');
@@ -119,12 +123,11 @@ test.describe('Injection decision support', () => {
     await enterRoutineOrder(panel, 'QA, Routine Bridge');
 
     await openTab(panel, 'Schedule');
-    const scheduleDates = panel.locator('input[type="date"]');
-    await scheduleDates.nth(0).fill('2026-07-02');
-    await scheduleDates.nth(1).fill('2026-07-30');
+    await panel.locator('input[type="date"]').nth(0).fill('2026-07-02');
 
     await openTab(panel, 'Administration');
     await panel.getByText('R deltoid', { exact: true }).click();
+    await panel.locator('input[type="date"]').first().fill('2026-07-30');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
     await panel.locator('input[type="time"]').fill('10:30');
 

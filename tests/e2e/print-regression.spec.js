@@ -61,12 +61,12 @@ async function preparePrintableInjection(page) {
   await panel.locator('label[for="inj-safety-none"]').click();
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.locator('input[type="date"]').first().fill('2026-07-30');
   await panel.locator('input[type="time"]').first().fill('09:41');
   await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
 
   await panel.getByRole('tab', { name: 'Schedule', exact: true }).click();
-  await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
-  await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+  await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
 
   await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
 
@@ -312,7 +312,10 @@ async function prepareMinimalAvsInjection(page) {
   await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
   // Prove the real user-facing gate: the button is reachable and enabled
   // with only the minimal fields above, matching the loosened AVS gate.
-  const printButton = panel.locator('button:has-text("Print AVS")');
+  // Scoped to the Outcome tab's "Document output" section specifically -
+  // a second, always-visible quick-access "Print AVS" now also lives in
+  // the summary bar, so a bare text match would hit both.
+  const printButton = panel.locator('.cd2004-command-button:has-text("Print AVS")');
   await expect(printButton).toBeEnabled();
 
   // The button's own click handler adds the print-avs body class, calls
