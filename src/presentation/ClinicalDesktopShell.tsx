@@ -169,7 +169,6 @@ export function ClinicalDesktopShell({
   const [internalWorkflow, setInternalWorkflow] =
     useState<WorkflowId>(defaultActiveWorkflow);
   const [focusedPane, setFocusedPane] = useState<DesktopPane>("work");
-  const [mobilePane, setMobilePane] = useState<DesktopPane>("work");
   const [internalStatus, setInternalStatus] = useState<string | null>(null);
   const [fieldPrompt, setFieldPrompt] = useState<string | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
@@ -205,7 +204,6 @@ export function ClinicalDesktopShell({
     }
     if (activeWorkflow === undefined) setInternalWorkflow(workflow);
     onWorkflowChange?.(workflow);
-    setMobilePane("work");
     setInternalStatus(`${WORKFLOW_LABELS[workflow]} opened.`);
   };
 
@@ -256,7 +254,6 @@ export function ClinicalDesktopShell({
       ) ?? target;
     focusTarget.focus({ preventScroll: true });
     setFocusedPane("work");
-    setMobilePane("work");
     setInternalStatus(`${direction > 0 ? "Next" : "Previous"} worksheet section focused.`);
     return true;
   }, []);
@@ -282,7 +279,6 @@ export function ClinicalDesktopShell({
     target.click();
     target.focus({ preventScroll: true });
     setFocusedPane("work");
-    setMobilePane("work");
     setInternalStatus(`${direction > 0 ? "Next" : "Previous"} worksheet page focused.`);
     return true;
   }, [focusWorksheetSection]);
@@ -309,7 +305,6 @@ export function ClinicalDesktopShell({
     focusTarget.focus({ preventScroll: true });
     if (target === workHostRef.current) {
       setFocusedPane("work");
-      setMobilePane("work");
       setInternalStatus("Worksheet zone focused.");
     } else if (target.classList.contains("meditech-record-list")) {
       setInternalStatus("Record List zone focused.");
@@ -434,18 +429,13 @@ export function ClinicalDesktopShell({
       const lockedAction = workHostRef.current?.querySelector<HTMLElement>(
         LOCKED_RECORD_ACTION_SELECTOR,
       );
-      const postedStatus = shellRef.current?.querySelector<HTMLElement>(
-        ".cd2004-post-stamp",
-      );
-      const focusTarget = lockedAction ?? postedStatus;
+      const focusTarget = lockedAction;
       if (!focusTarget) return;
       focusTarget.focus({ preventScroll: true });
       settled =
         focusTarget === document.activeElement ||
         Boolean(
-          document.activeElement?.closest(
-            `${LOCKED_RECORD_ACTION_SELECTOR}, .cd2004-post-stamp`,
-          ),
+          document.activeElement?.closest(LOCKED_RECORD_ACTION_SELECTOR),
         );
     };
 
@@ -627,7 +617,7 @@ export function ClinicalDesktopShell({
 
   const windowTitle =
     selectedWorkflow === "home"
-      ? "Start Center"
+      ? "Current Worklist"
       : `${WORKFLOW_LABELS[selectedWorkflow]} Worksheet`;
 
   const workflowContent = renderWorkflowContent({
@@ -651,10 +641,10 @@ export function ClinicalDesktopShell({
   const inspectorPanel = (
     <Panel
       pane="inspector"
-      title="Document / Status"
-      subtitle={WORKFLOW_LABELS[selectedWorkflow]}
+      title="Clinical Documentation"
+      subtitle={selectedWorkflow === "administer" ? undefined : WORKFLOW_LABELS[selectedWorkflow]}
+      icon="note"
       active={focusedPane === "inspector"}
-      mobileActive={mobilePane === "inspector"}
       onActivate={setFocusedPane}
     >
       <NoteInspector
@@ -789,80 +779,19 @@ export function ClinicalDesktopShell({
         />
       </header>
 
-      <div
-        class="cd2004-mobile-switcher cd2004-print-exclude"
-        role="tablist"
-        aria-label="Desktop section switcher"
-      >
-        {(selectedWorkflow === "home"
-          ? (["work"] as DesktopPane[])
-          : (["work", "inspector"] as DesktopPane[])
-        ).map((pane) => (
-          <button
-            key={pane}
-            type="button"
-            role="tab"
-            id={`cd2004-pane-tab-${pane}`}
-            aria-controls={`cd2004-pane-${pane}`}
-            aria-selected={mobilePane === pane}
-            tabIndex={mobilePane === pane ? 0 : -1}
-            class={mobilePane === pane ? "is-active" : ""}
-            onClick={() => {
-              setMobilePane(pane);
-              setFocusedPane(pane);
-            }}
-            onKeyDown={(event) => {
-              if (
-                event.key !== "ArrowLeft" &&
-                event.key !== "ArrowRight" &&
-                event.key !== "Home" &&
-                event.key !== "End"
-              ) {
-                return;
-              }
-              event.preventDefault();
-              const panes = ["work", "inspector"] as DesktopPane[];
-              const current = panes.indexOf(pane);
-              const next: DesktopPane =
-                event.key === "Home"
-                  ? panes[0]!
-                  : event.key === "End"
-                    ? panes[panes.length - 1]!
-                    : panes[
-                        (current +
-                          (event.key === "ArrowLeft" ? -1 : 1) +
-                          panes.length) %
-                          panes.length
-                      ]!;
-              setMobilePane(next);
-              globalThis.setTimeout(() => {
-                shellRef.current
-                  ?.querySelector<HTMLElement>(
-                    `#cd2004-pane-tab-${next}`,
-                  )
-                  ?.focus();
-              }, 0);
-            }}
-          >
-            {pane === "work" ? "WORK" : "NOTE"}
-          </button>
-        ))}
-      </div>
-
       <main
         class={`cd2004-workspace ${selectedWorkflow === "administer" ? "has-central-preview" : ""}`}
         id="cd2004-work-area"
-        data-mobile-pane={mobilePane}
         data-workflow={selectedWorkflow}
       >
         <Panel
           pane="work"
           title={windowTitle}
+          icon={selectedWorkflow}
           subtitle={
-            selectedWorkflow === "home" ? "Local workstation overview" : "Active encounter"
+            selectedWorkflow === "home" ? "Local records only" : "Active encounter"
           }
           active={focusedPane === "work"}
-          mobileActive={mobilePane === "work" || selectedWorkflow === "administer"}
           onActivate={setFocusedPane}
           toolbar={
             selectedWorkflow !== "home" ? (
@@ -873,12 +802,14 @@ export function ClinicalDesktopShell({
                     ? "Medication administration"
                     : WORKFLOW_LABELS[selectedWorkflow]}
                 </span>
-                <span>
-                  <strong>Local state:</strong>{" "}
-                  {postState === "posted"
-                    ? "Locked local record"
-                    : workflowSummaries[selectedWorkflow]?.state ?? "Draft"}
-                </span>
+                {selectedWorkflow !== "administer" && (
+                  <span>
+                    <strong>Local state:</strong>{" "}
+                    {postState === "posted"
+                      ? "Locked local record"
+                      : workflowSummaries[selectedWorkflow]?.state ?? "Draft"}
+                  </span>
+                )}
                 {isMismatch && <span class="is-warning">Patient mismatch</span>}
               </div>
             ) : undefined
@@ -895,19 +826,19 @@ export function ClinicalDesktopShell({
             data-workflow={selectedWorkflow}
             data-post-state={postState}
           >
-            {postState === "posting" && (
-              <div class="cd2004-posting-strip" role="status">
-                <span aria-hidden="true" />
-                Validating required fields and writing local record…
-              </div>
-            )}
-            {postState === "posted" && selectedWorkflow === "administer" && (
-              <div class="cd2004-work-locked-banner" role="status">
-                <DesktopIcon name="check" />
-                <strong>LOCAL RECORD LOCKED</strong>
-                <span>Read-only actions and addenda remain available.</span>
-              </div>
-            )}
+            <div
+              class={`cd2004-workflow-body ${
+                selectedWorkflow === "administer" ? "is-transaction-scroll" : ""
+              }`}
+            >
+              {postState === "posting" && (
+                <div class="cd2004-posting-strip" role="status">
+                  <span aria-hidden="true" />
+                  Validating required fields and writing local record…
+                </div>
+              )}
+              {workflowContent}
+            </div>
             {selectedWorkflow === "administer" && injectionRecordActions && (
               <InjectionRecordActions
                 actions={injectionRecordActions}
@@ -918,9 +849,16 @@ export function ClinicalDesktopShell({
                 posting={postState === "posting"}
                 onSaveDraft={onSaveDraft}
                 onFinish={onReviewComplete}
+                onAddendum={() => {
+                  const input = workHostRef.current?.querySelector<HTMLTextAreaElement>(
+                    "[data-addendum-input]",
+                  );
+                  input?.scrollIntoView({ block: "center" });
+                  input?.focus({ preventScroll: true });
+                  setInternalStatus("Dated addendum field focused.");
+                }}
               />
             )}
-            {workflowContent}
           </div>
           {selectedWorkflow === "administer" && (
             <div class="cd2004-document-split">{inspectorPanel}</div>
@@ -962,20 +900,6 @@ export function ClinicalDesktopShell({
         } satisfies FunctionKeyActions}
       />
 
-      <div
-        class="meditech-mobile-command-surface cd2004-print-exclude"
-        role="toolbar"
-        aria-label="Local mobile commands"
-      >
-        <strong>LOCAL COMMANDS</strong>
-        <button type="button" disabled={!onOpenRecords} onClick={onOpenRecords}>
-          Record List <kbd>F11</kbd>
-        </button>
-        <button type="button" onClick={openShortcutHelp}>
-          Help <kbd>F1</kbd>
-        </button>
-      </div>
-
       {/*
         Segmented status bar. Replaces the taskbar/Start button, which emulated
         the Windows shell rather than an EHR application. `.cd2004-status-message`
@@ -985,11 +909,8 @@ export function ClinicalDesktopShell({
         <div class="cd2004-status-message" aria-live="polite" aria-atomic="true">
           {effectiveStatus}
         </div>
-        <div class="cd2004-status-segment" title="Signed-in staff">
-          {staffLabel?.trim() ? staffLabel : "No staff sign-in"}
-        </div>
-        <div class="cd2004-status-segment" title="Visit location">
-          {locationLabel?.trim() ? locationLabel : "No location"}
+        <div class="cd2004-status-segment" title="Current record mode">
+          {postState === "posted" ? "READ ONLY" : "EDITABLE"}
         </div>
         <div
           class={`cd2004-status-segment ${localStorageAvailable ? "is-online" : "is-error"}`}
@@ -1087,6 +1008,7 @@ interface InjectionRecordActionsProps {
   posting: boolean;
   onSaveDraft?: () => void;
   onFinish?: () => void;
+  onAddendum?: () => void;
 }
 
 /**
@@ -1101,6 +1023,7 @@ function InjectionRecordActions({
   posting,
   onSaveDraft,
   onFinish,
+  onAddendum,
 }: InjectionRecordActionsProps) {
   const locked = actions.lifecycle === "locked";
   const lifecycleLabel = {
@@ -1121,13 +1044,15 @@ function InjectionRecordActions({
     locked || posting || !actions.canDiscard || !onSaveDraft;
   const finishDisabled = locked || posting || !canComplete || !onFinish;
   const discardDisabled = locked || posting || !actions.canDiscard;
-  const attentionDetail = actions.blockingDetail
-    ? `First blocker: ${actions.blockingDetail}`
-    : blockerCount
-      ? `First blocker: ${blockerCount} required ${
-          blockerCount === 1 ? "field needs" : "fields need"
-        } attention.`
-      : actions.detail ?? defaultDetail;
+  const attentionDetail = locked
+    ? actions.detail ?? defaultDetail
+    : actions.blockingDetail
+      ? `First blocker: ${actions.blockingDetail}`
+      : blockerCount
+        ? `First blocker: ${blockerCount} required ${
+            blockerCount === 1 ? "field needs" : "fields need"
+          } attention.`
+        : actions.detail ?? defaultDetail;
 
   return (
     <section
@@ -1135,7 +1060,11 @@ function InjectionRecordActions({
       aria-label="Injection record actions"
       data-injection-record-actions
     >
-      <div class="cd2004-record-actions-state">
+      <div
+        class="cd2004-record-actions-state"
+        tabIndex={locked ? -1 : undefined}
+        data-locked-record-action={locked ? true : undefined}
+      >
         <span>INJECTION RECORD</span>
         <strong>{lifecycleLabel}</strong>
         <small role="status" aria-live="polite">
@@ -1144,6 +1073,19 @@ function InjectionRecordActions({
       </div>
 
       <div class="cd2004-record-actions-buttons">
+        {locked && (
+          <button
+            type="button"
+            class="is-addendum"
+            onClick={onAddendum}
+            disabled={!onAddendum}
+          >
+            <span class="cd2004-action-glyph" aria-hidden="true">
+              <DesktopIcon name="addendum" />
+            </span>
+            Add dated addendum
+          </button>
+        )}
         {!locked && (
           <>
             <button
@@ -1158,7 +1100,9 @@ function InjectionRecordActions({
               }
               onClick={onSaveDraft}
             >
-              <span class="cd2004-action-glyph" aria-hidden="true">▣</span>
+              <span class="cd2004-action-glyph" aria-hidden="true">
+                <DesktopIcon name="save" />
+              </span>
               Save local draft <kbd>F12</kbd>
             </button>
             <button
@@ -1177,7 +1121,9 @@ function InjectionRecordActions({
               }
               onClick={onFinish}
             >
-              <span class="cd2004-action-glyph" aria-hidden="true">✓</span>
+              <span class="cd2004-action-glyph" aria-hidden="true">
+                <DesktopIcon name="lock" />
+              </span>
               Attest &amp; lock local record
             </button>
           </>
@@ -1191,7 +1137,9 @@ function InjectionRecordActions({
           title="Start a blank injection. Any current editable work is saved as a local draft first."
           onClick={actions.onStartNew}
         >
-          <span class="cd2004-action-glyph" aria-hidden="true">+</span>
+          <span class="cd2004-action-glyph" aria-hidden="true">
+            <DesktopIcon name="new" />
+          </span>
           Start new injection
         </button>
         {!locked && (
@@ -1207,7 +1155,9 @@ function InjectionRecordActions({
             }
             onClick={actions.onDiscard}
           >
-            <span class="cd2004-action-glyph" aria-hidden="true">×</span>
+            <span class="cd2004-action-glyph" aria-hidden="true">
+              <DesktopIcon name="discard" />
+            </span>
             Discard local draft...
           </button>
         )}

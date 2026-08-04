@@ -25,20 +25,21 @@ export function NoteInspector({
   const completed = readiness.filter((item) => item.state === "complete").length;
   const blockers = readiness.filter((item) => item.state === "stop").length;
   const warnings = readiness.filter((item) => item.state === "warning").length;
+  const pending = readiness.filter((item) => item.state === "pending").length;
   const readinessTotal = readiness.length;
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
       <div class="cd2004-readiness-summary">
         <div class="cd2004-readiness-score">
-          <span>Readiness</span>
-          <strong>
-            {completed}/{readinessTotal || 0}
-          </strong>
+          <span>Requirements</span>
+          <strong>{completed} OF {readinessTotal || 0}</strong>
         </div>
         <div class="cd2004-readiness-flags">
-          <span class={blockers ? "has-stop" : ""}>{blockers} incomplete</span>
-          <span class={warnings ? "has-warning" : ""}>{warnings} warnings</span>
+          <span class={blockers ? "has-stop" : ""}>
+            {blockers ? `${blockers} INCOMPLETE` : pending ? `${pending} PENDING` : "COMPLETE"}
+          </span>
+          {warnings > 0 && <span class="has-warning">{warnings} REVIEW</span>}
         </div>
       </div>
 
@@ -59,6 +60,15 @@ export function NoteInspector({
                 <strong>{item.label}</strong>
                 {item.detail && <small>{item.detail}</small>}
               </span>
+              <small class="cd2004-readiness-state">
+                {item.state === "complete"
+                  ? "Complete"
+                  : item.state === "stop"
+                    ? "Required"
+                    : item.state === "warning"
+                      ? "Review"
+                      : "Pending"}
+              </small>
             </div>
           ))
         ) : (
@@ -67,18 +77,23 @@ export function NoteInspector({
       </div>
 
       <div class="cd2004-note-heading">
-        <div>
-          <span>Document preview</span>
-          <strong>{title}</strong>
-          {subtitle && <small>{subtitle}</small>}
-        </div>
+        <DesktopIcon name="note" />
+        <strong>{title}</strong>
+        <span>REVIEW</span>
+      </div>
+
+      <div class="cd2004-note-toolbar" role="toolbar" aria-label="Document review commands">
+        <span class="cd2004-note-mode" title={subtitle}>
+          READ ONLY · LOCAL
+        </span>
         <button
           type="button"
-          class="cd2004-command-button"
+          class="cd2004-command-button cd2004-note-copy-all"
           disabled={!sections.length}
           onClick={onCopyAll}
         >
-          Copy all
+          <DesktopIcon name="copy" />
+          Copy note
         </button>
       </div>
 
@@ -87,15 +102,23 @@ export function NoteInspector({
           sections.map((section) => (
             <section key={section.id} class="cd2004-note-section">
               <header>
-                <span>
-                  {section.label}
-                  {section.destination && <small>{section.destination}</small>}
+                <span class="cd2004-note-section-id">
+                  <DesktopIcon name="note" />
+                  <b>{section.label}</b>
+                  {section.destination &&
+                    section.destination.trim().toLocaleLowerCase() !==
+                      section.label.trim().toLocaleLowerCase() && (
+                      <small>{section.destination}</small>
+                    )}
                 </span>
                 <button
                   type="button"
-                  class="cd2004-link-button"
+                  class="cd2004-command-button cd2004-note-copy"
+                  aria-label={`Copy ${section.label} section`}
+                  title={`Copy ${section.label} section`}
                   onClick={() => onCopySection?.(section)}
                 >
+                  <DesktopIcon name="copy" />
                   Copy
                 </button>
               </header>
@@ -106,21 +129,12 @@ export function NoteInspector({
           <div class="cd2004-note-empty">
             <DesktopIcon name="note" />
             <strong>Note preview is waiting.</strong>
-            <span>Document the encounter to build the Tebra-ready text.</span>
+            <span>Document the encounter to build the local note preview.</span>
           </div>
         )}
       </div>
 
       <div class="cd2004-post-zone">
-        {postState === "posted" && (
-          <div class="cd2004-post-stamp" role="status" tabIndex={-1}>
-            <DesktopIcon name="check" />
-            <span>
-              <strong>LOCAL RECORD LOCKED</strong>
-              <small>{postMessage ?? "The browser-local record is read-only."}</small>
-            </span>
-          </div>
-        )}
         {postState === "error" && (
           <div class="cd2004-post-error" role="alert">
             <DesktopIcon name="alert" />

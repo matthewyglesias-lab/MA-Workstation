@@ -3,6 +3,7 @@ import { RecordsWindow } from './presentation/RecordsWindow';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   ClinicalDesktopShell,
+  WorkstationViewportBoundary,
   ContextDialog,
   RecordActionDialog,
   LegacyWorkflowHost,
@@ -605,7 +606,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       : 'idle';
 
   return (
-    <>
+    <WorkstationViewportBoundary>
       <ClinicalDesktopShell
         organizationName="Integrated Psychiatric Medical Group"
         versionLabel="INJ"
@@ -718,7 +719,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           onClose={() => setContextEditor(null)}
         />
       )}
-    </>
+    </WorkstationViewportBoundary>
   );
 }
 

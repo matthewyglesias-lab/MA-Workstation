@@ -6,7 +6,6 @@ import {
 } from "./FunctionKeyProfile";
 import {
   WORKFLOW_LABELS,
-  WORKFLOW_ORDER,
   type PatientContext,
   type WorkflowId,
   type WorkflowSummary,
@@ -20,14 +19,28 @@ interface MeditechRecordRailProps {
   onOpenRecords?: () => void;
 }
 
-const ACCELERATOR_WORKFLOWS: WorkflowId[] = [
-  "home",
-  "administer",
-  "uds",
-  "samples",
-  "forms",
-  "reference",
-  "log",
+const RAIL_GROUPS: Array<{
+  label: string;
+  id: string;
+  workflows: WorkflowId[];
+  pinned?: boolean;
+}> = [
+  {
+    label: "Clinical Work",
+    id: "clinical",
+    workflows: ["home", "administer", "uds", "samples", "forms"],
+  },
+  {
+    label: "Reference",
+    id: "reference",
+    workflows: ["reference"],
+  },
+  {
+    label: "Closeout",
+    id: "closeout",
+    workflows: ["log", "tms"],
+    pinned: true,
+  },
 ];
 
 /**
@@ -59,64 +72,72 @@ export function MeditechRecordRail({
       class="cd2004-navigator meditech-record-list cd2004-print-exclude"
       aria-label="Record List and clinical functions"
     >
-      <div class="meditech-rail-title">
-        <span>RECORD LIST</span>
+      <button
+        type="button"
+        class="meditech-rail-title"
+        onClick={onOpenRecords}
+        disabled={!onOpenRecords}
+        aria-label={`Open saved local records (${localEmrCommand.keyLabel})`}
+        title={`${localEmrCommand.label}: open saved local records (${localEmrCommand.keyLabel})`}
+      >
+        <span>Record List</span>
         <span class="meditech-rail-records-command">
-          <button
-            type="button"
-            onClick={onOpenRecords}
-            disabled={!onOpenRecords}
-            aria-label={`Open saved local records (${localEmrCommand.keyLabel})`}
-            title={`${localEmrCommand.label}: open saved local records (${localEmrCommand.keyLabel})`}
-          >
-            <kbd>{localEmrCommand.keyLabel}</kbd>
-          </button>
+          <kbd>{localEmrCommand.keyLabel}</kbd>
+          <DesktopIcon name="records" />
         </span>
-      </div>
+      </button>
 
       <div class="meditech-rail-context" aria-label="Local chart context">
         <strong>{hasLocalChart ? "LOCAL CHART" : "NO LOCAL CHART"}</strong>
         <span>{localChartDetail}</span>
       </div>
 
-      <div class="meditech-function-heading">
-        <span>CLINICAL FUNCTIONS</span>
-        <small>SELECT</small>
-      </div>
-
       <div class="meditech-function-list">
-        {WORKFLOW_ORDER.map((workflow) => {
-          const summary = summaries[workflow];
-          const accelerator = ACCELERATOR_WORKFLOWS.indexOf(workflow) + 1;
-          return (
-            <button
-              key={workflow}
-              type="button"
-              class={[
-                "cd2004-nav-item",
-                selectedWorkflow === workflow ? "is-selected" : "",
-                `is-${summary?.state ?? "idle"}`,
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              aria-current={selectedWorkflow === workflow ? "page" : undefined}
-              title={WORKFLOW_LABELS[workflow]}
-              onClick={() => onWorkflowOpen(workflow)}
-            >
-              <kbd>{accelerator > 0 ? accelerator : "·"}</kbd>
-              <DesktopIcon name={workflow} />
-              <span>
-                <strong>{WORKFLOW_LABELS[workflow]}</strong>
-                <small>{summary?.detail ?? summary?.state ?? "Available"}</small>
-              </span>
-              {summary?.count ? (
-                <em aria-label={`${summary.count} items`}>{summary.count}</em>
-              ) : (
-                <i aria-hidden="true" />
-              )}
-            </button>
-          );
-        })}
+        {RAIL_GROUPS.map((group) => (
+          <section
+            key={group.id}
+            class={`meditech-rail-group is-${group.id} ${group.pinned ? "is-pinned" : ""}`}
+            aria-labelledby={`meditech-rail-${group.id}`}
+          >
+            <div class="meditech-function-heading" id={`meditech-rail-${group.id}`}>
+              {group.label}
+            </div>
+            {group.workflows.map((workflow) => {
+              const summary = summaries[workflow];
+              return (
+                <button
+                  key={workflow}
+                  type="button"
+                  class={[
+                    "cd2004-nav-item",
+                    selectedWorkflow === workflow ? "is-selected" : "",
+                    `is-${summary?.state ?? "idle"}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-current={selectedWorkflow === workflow ? "page" : undefined}
+                  aria-label={
+                    summary?.detail
+                      ? `${WORKFLOW_LABELS[workflow]} — ${summary.detail}`
+                      : WORKFLOW_LABELS[workflow]
+                  }
+                  title={WORKFLOW_LABELS[workflow]}
+                  onClick={() => onWorkflowOpen(workflow)}
+                >
+                  <span>
+                    <strong>{WORKFLOW_LABELS[workflow]}</strong>
+                  </span>
+                  {summary?.count ? (
+                    <em aria-label={`${summary.count} items`}>{summary.count}</em>
+                  ) : null}
+                  <span class="meditech-nav-icon" aria-hidden="true">
+                    <DesktopIcon name={workflow} />
+                  </span>
+                </button>
+              );
+            })}
+          </section>
+        ))}
       </div>
     </nav>
   );

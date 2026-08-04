@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const WORKFLOWS = {
   home: {
     label: 'Start Center',
-    headingText: 'Current Worklist',
+    headingText: 'Local records only',
     panel: '.cd2004-start-center',
     layout: '.cd2004-start-center',
     heading: '#currentWorklistTitle',
@@ -108,7 +108,6 @@ async function collectVisualContract(page, workflow) {
       ':scope > .cd2004-window-titlebar'
     );
     const recordTableWrap = document.querySelector('.cd2004-worklist-sheet');
-    const mobileSwitcher = document.querySelector('.cd2004-mobile-switcher');
     const panel = pick(spec.panel);
     const layout = pick(spec.layout);
     const heading = pick(spec.heading);
@@ -209,15 +208,9 @@ async function collectVisualContract(page, workflow) {
       panes: {
         visible: visiblePanes.map(pane => pane.pane),
         desktopTiling,
-        mobileSwitcherVisible: visible(mobileSwitcher),
-        mobileTabs: visible(mobileSwitcher)
-          ? [...mobileSwitcher.querySelectorAll('[role="tab"]')].map(tab => ({
-              label: tab.textContent.trim(),
-              selected: tab.getAttribute('aria-selected')
-            }))
-          : [],
-        singleActiveMobilePane:
-          visible(mobileSwitcher) && visiblePanes.length === 1
+        mobileSwitcherVisible: false,
+        mobileTabs: [],
+        singleActiveMobilePane: false
       },
       surface: {
         panelVisible: visible(panel),
@@ -284,29 +277,24 @@ async function collectVisualContract(page, workflow) {
   return contract;
 }
 
-function expectedContract(workflow, viewport) {
-  const desktop = viewport === 'desktop';
+function expectedContract(workflow) {
   const module = WORKFLOWS[workflow];
   const isHome = workflow === 'home';
-  const titlebarHeight = desktop ? '23px' : '29px';
-  const windowTitlebarMinHeight = desktop ? '22px' : '25px';
+  const titlebarHeight = '23px';
+  const windowTitlebarMinHeight = '22px';
 
   return {
     workflow,
     activeWorkflow: workflow,
-    workTitle: isHome ? 'Start Center' : `${module.label} Worksheet`,
+    workTitle: isHome ? 'Current Worklist' : `${module.label} Worksheet`,
     heading: {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
       style: {
-        color: isHome
-          ? desktop
-            ? 'rgb(31, 50, 100)'
-            : 'rgb(16, 43, 86)'
-          : 'rgb(16, 42, 86)',
-        fontSize: desktop && isHome ? '10px' : '16px',
+        color: isHome ? 'rgb(37, 56, 103)' : 'rgb(16, 42, 86)',
+        fontSize: isHome ? '9px' : '16px',
         fontWeight: '700',
-        lineHeight: desktop && isHome ? 'normal' : isHome ? '17.6px' : '18.4px'
+        lineHeight: isHome ? 'normal' : '18.4px'
       }
     },
     chrome: {
@@ -334,22 +322,11 @@ function expectedContract(workflow, viewport) {
       }
     },
     panes: {
-      visible: desktop
-        ? isHome
-          ? ['work']
-          : ['work', 'inspector']
-        : ['work'],
+      visible: isHome ? ['work'] : ['work', 'inspector'],
       desktopTiling: false,
-      mobileSwitcherVisible: !desktop,
-      mobileTabs: desktop
-        ? []
-        : isHome
-          ? [{ label: 'WORK', selected: 'true' }]
-          : [
-              { label: 'WORK', selected: 'true' },
-              { label: 'NOTE', selected: 'false' }
-            ],
-      singleActiveMobilePane: !desktop
+      mobileSwitcherVisible: false,
+      mobileTabs: [],
+      singleActiveMobilePane: false
     },
     surface: {
       panelVisible: true,
@@ -359,23 +336,19 @@ function expectedContract(workflow, viewport) {
       panelHorizontalOverflow: false,
       hero: {
         backgroundColor: isHome
-          ? desktop
-            ? 'rgb(238, 240, 251)'
-            : 'rgb(243, 243, 255)'
+          ? 'rgb(238, 240, 251)'
           : 'rgb(219, 228, 238)',
         borderBottomColor: isHome
-          ? desktop
-            ? 'rgb(101, 112, 154)'
-            : 'rgb(89, 100, 128)'
+          ? 'rgb(101, 112, 154)'
           : 'rgb(124, 137, 150)',
         borderRadius: '0px',
         boxShadow: expect.any(String),
         hasRelief: true
       },
-      representativeSquare: true,
+      representativeSquare: false,
       representativeFlat: false,
       representativeHasRelief: true,
-      controlSquare: true,
+      controlSquare: false,
       focusedControlBorder: 'rgb(245, 179, 0)',
       focusedControlHasGlow: false,
       recordLedgerHorizontalOverflow: false,
@@ -392,7 +365,7 @@ function expectedContract(workflow, viewport) {
 
 for (const viewport of [
   { name: 'desktop', width: 1440, height: 900 },
-  { name: 'narrow', width: 390, height: 844 }
+  { name: 'narrow-desktop', width: 840, height: 720 }
 ]) {
   test.describe(`${viewport.name} visual contracts`, () => {
     for (const workflow of Object.keys(WORKFLOWS)) {
@@ -439,7 +412,7 @@ for (const viewport of [
             `\n${viewport.name}/${workflow}\n${JSON.stringify(contract, null, 2)}`
           );
         }
-        expect(contract).toEqual(expectedContract(workflow, viewport.name));
+        expect(contract).toEqual(expectedContract(workflow));
       });
     }
   });

@@ -7,6 +7,161 @@
  */
 
 @media screen {
+  .meditech-workstation-content {
+    display: contents;
+  }
+
+  .meditech-workstation-content.is-unsupported {
+    display: none;
+  }
+
+  .meditech-workstation-gate {
+  box-sizing: border-box;
+  display: grid;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 14px;
+  color: #101010;
+  background: #b8bce5;
+  font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+  }
+
+  .meditech-workstation-gate *,
+  .meditech-workstation-gate *::before,
+  .meditech-workstation-gate *::after {
+  box-sizing: border-box;
+  }
+
+  .meditech-workstation-gate-window {
+  width: min(100%, 520px);
+  background: #d9dbef;
+  border: 1px solid #243a79;
+  box-shadow: 2px 2px 0 #626a98;
+  }
+
+  .meditech-workstation-gate-window > header {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 25px;
+  gap: 5px;
+  padding: 2px 5px;
+  color: #fff;
+  background: linear-gradient(90deg, #243a79, #5369aa 72%, #7e8ac3);
+  border-bottom: 1px solid #172759;
+  }
+
+  .meditech-workstation-gate-window > header > span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  background: #eef0fa;
+  border: 1px solid #17295e;
+  }
+
+  .meditech-workstation-gate-window > header svg {
+  width: 13px;
+  height: 13px;
+  }
+
+  .meditech-workstation-gate-window > header strong {
+  font-size: 10px;
+  }
+
+  .meditech-workstation-gate-window > header small {
+  color: #fff4a8;
+  font-size: 8px;
+  font-weight: 700;
+  }
+
+  .meditech-workstation-gate-body {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  margin: 8px;
+  padding: 12px;
+  background: #fffef8;
+  border: 1px solid;
+  border-color: #6a739a #fff #fff #6a739a;
+  }
+
+  .meditech-workstation-gate-alert {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  background: #fff0a5;
+  border: 1px solid #9a6b16;
+  }
+
+  .meditech-workstation-gate-alert svg {
+  width: 22px;
+  height: 22px;
+  }
+
+  .meditech-workstation-gate h1 {
+  margin: 0 0 6px;
+  color: #243a79;
+  font-size: 15px;
+  line-height: 1.15;
+  }
+
+  .meditech-workstation-gate p {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  }
+
+  .meditech-workstation-gate dl {
+  margin: 0;
+  background: #fff;
+  border: 1px solid #8790ad;
+  }
+
+  .meditech-workstation-gate dl > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.45fr) minmax(0, 1fr);
+  min-height: 22px;
+  border-bottom: 1px solid #c3c7d7;
+  }
+
+  .meditech-workstation-gate dl > div:last-child {
+  border-bottom: 0;
+  }
+
+  .meditech-workstation-gate dt,
+  .meditech-workstation-gate dd {
+  margin: 0;
+  padding: 4px 6px;
+  font-size: 9px;
+  }
+
+  .meditech-workstation-gate dt {
+  color: #27386f;
+  background: #dce5f2;
+  border-right: 1px solid #a2a9bf;
+  font-weight: 700;
+  }
+
+  .meditech-workstation-gate dd {
+  font-weight: 700;
+  }
+
+  .meditech-workstation-gate-window > footer {
+  min-height: 24px;
+  padding: 5px 8px;
+  color: #27345f;
+  background: #cbd0e7;
+  border-top: 1px solid #fff;
+  font-size: 9px;
+  text-align: right;
+  }
+}
+
+@media screen {
   .cd2004-shell {
     --mt-teal: #315495;
     --mt-teal-deep: #243a79;
@@ -930,10 +1085,6 @@
     white-space: nowrap;
   }
 
-  .meditech-mobile-command-surface {
-    display: none;
-  }
-
   .cd2004-statusbar {
     height: 19px;
     min-height: 19px;
@@ -1507,55 +1658,6 @@
     display: none;
   }
 
-  .meditech-mobile-command-surface {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    min-width: 0;
-    min-height: 34px;
-    padding: 3px;
-    background: #c8cbe7;
-    border-top: 1px solid #fafaff;
-    border-bottom: 1px solid #566191;
-  }
-
-  .meditech-mobile-command-surface > strong {
-    flex: 1 1 auto;
-    overflow: hidden;
-    padding: 0 4px;
-    color: #2d3d72;
-    font-size: 8px;
-    letter-spacing: 0.07em;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .meditech-mobile-command-surface button {
-    flex: 0 0 auto;
-    min-height: 27px;
-    padding: 2px 6px;
-    color: #252d51;
-    background: #e9eaf6;
-    border: 1px solid;
-    border-color: #fff #68719c #68719c #fff;
-    font: 700 9px Tahoma, sans-serif;
-  }
-
-  .meditech-mobile-command-surface kbd {
-    margin-left: 2px;
-    color: #40558f;
-    font-size: 8px;
-  }
-
-  .cd2004-mobile-switcher {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 2px;
-    background: #c9ccea;
-  }
-
-  .cd2004-mobile-switcher button.is-active {
-    background: var(--mt-teal);
-  }
 }
 
 @media screen and (max-width: 390px) {
@@ -2229,25 +2331,1204 @@
     height: 100%;
   }
 
-  .cd2004-workspace.has-central-preview[data-mobile-pane="inspector"] .cd2004-workflow-slot {
-    display: none;
-  }
-
-  .cd2004-workspace.has-central-preview[data-mobile-pane="inspector"] .cd2004-document-split {
-    display: block;
-  }
-
-  .cd2004-workspace.has-central-preview[data-mobile-pane="inspector"] .cd2004-document-split > .cd2004-inspector-window {
-    display: grid;
-    width: 100%;
-    height: 100%;
-  }
 }
 
 @media print {
   .meditech-context-rail,
-  .meditech-command-deck,
-  .meditech-mobile-command-surface {
+  .meditech-command-deck {
     display: none !important;
+  }
+}
+
+/*
+ * Workstation finish pass: one transaction, one state owner, and one command
+ * footer.  The clinical sheets remain square; only physical command keys and
+ * rail choices receive the soft relief used by the Client/Server references.
+ */
+@media screen {
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections) {
+    scrollbar-color: #7e88ac #d6d8ec;
+    scrollbar-width: auto;
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar {
+    width: 15px;
+    height: 15px;
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar-track {
+    background: #d6d8ec;
+    border: 1px solid #8a92b3;
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar-thumb {
+    min-height: 24px;
+    background: #aeb3d0;
+    border: 1px solid;
+    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  .cd2004-shell :where(
+      button,
+      input,
+      select,
+      textarea,
+      [role="tab"],
+      [role="menuitem"]
+    ):focus-visible {
+    outline: 1px dotted #101010 !important;
+    outline-offset: -3px !important;
+    box-shadow: none !important;
+  }
+
+  .cd2004-workflow-body {
+    min-width: 0;
+    min-height: 100%;
+  }
+
+  .cd2004-work-window:not(:has(> .cd2004-window-toolbar)) {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .cd2004-workflow-slot[data-workflow="home"],
+  .cd2004-workflow-slot[data-workflow="home"] > .cd2004-workflow-body,
+  .cd2004-workflow-slot[data-workflow="home"] .cd2004-start-center {
+    height: auto;
+    min-height: 0;
+  }
+
+  .cd2004-workflow-slot[data-workflow="home"] {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .cd2004-workflow-slot[data-workflow="home"] > .cd2004-workflow-body {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .cd2004-worklist-sheet {
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        #fff 0,
+        #fff 20px,
+        #e5e7f2 20px,
+        #e5e7f2 21px
+      );
+  }
+
+  .cd2004-worklist-header h1 {
+    color: #253867;
+    font-size: 9px;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+  }
+
+  .cd2004-worklist-source-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    color: #3a5592;
+    background: #edf0fb;
+    border: 1px solid #8a93b4;
+  }
+
+  .cd2004-worklist-source-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .cd2004-worklist-priority-copy {
+    min-width: 0;
+  }
+
+  .cd2004-worklist-table tbody tr:focus-within td {
+    color: #101010;
+    background: #fff0a5;
+    box-shadow: inset 0 1px #3f4d7d, inset 0 -1px #3f4d7d;
+  }
+
+  .cd2004-worklist-new,
+  .cd2004-worklist-action,
+  .meditech-record-list .cd2004-nav-item,
+  .meditech-command-deck button,
+  .cd2004-record-actions-buttons button {
+    border-radius: 3px;
+    box-shadow: inset 1px 1px #fff, inset -1px -1px #8b93ad;
+  }
+
+  .cd2004-shell .cd2004-worklist-new,
+  .cd2004-shell .cd2004-worklist-action {
+    border-radius: 3px;
+  }
+
+  .cd2004-statusbar {
+    font-size: 9px;
+  }
+
+  .cd2004-status-segment {
+    min-width: 76px;
+    font: 700 8px "Arial Narrow", Tahoma, sans-serif;
+    letter-spacing: 0.045em;
+    text-align: center;
+  }
+
+  .cd2004-attestation-review dd {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .cd2004-note-copy {
+    min-height: 17px;
+    padding: 1px 5px;
+    font-size: 8px;
+    text-decoration: none;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required:not(.is-incomplete) > input,
+  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required:not(.is-incomplete) > select,
+  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required:not(.is-incomplete) > textarea,
+  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required:not(.is-incomplete) .wfp-select-group select {
+    background: #fff;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > input,
+  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > select,
+  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > textarea,
+  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete .wfp-select-group select {
+    background: #fff0b4;
+  }
+
+  .cd2004-shell [data-workflow="administer"][data-post-state="posted"] :where(input, select, textarea):disabled {
+    color: #202020;
+    background: #f5f5ef !important;
+    opacity: 1;
+    -webkit-text-fill-color: #202020;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-document-output-hint {
+    margin: 0;
+    color: #334269;
+  }
+
+  .cd2004-post-zone:empty {
+    display: none;
+  }
+}
+
+@media screen and (min-width: 701px) {
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns:
+      minmax(250px, 1.5fr)
+      minmax(86px, 0.42fr)
+      minmax(150px, 0.72fr)
+      minmax(125px, 0.6fr)
+      minmax(175px, 0.86fr);
+  }
+
+  .cd2004-patient-banner small,
+  .meditech-patient-safety,
+  .meditech-patient-safety strong {
+    font-size: 9px;
+  }
+
+  .cd2004-patient-banner strong,
+  .cd2004-patient-primary strong {
+    font-size: 12px;
+  }
+
+  .cd2004-patient-primary strong {
+    font-size: 15px;
+  }
+
+  .cd2004-workflow-slot[data-workflow="administer"] {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    overflow: hidden !important;
+    background: #c8cbe6;
+  }
+
+  .cd2004-workflow-slot[data-workflow="administer"] > .cd2004-workflow-body {
+    min-height: 0;
+    overflow: auto;
+    background: #f4f4fb;
+  }
+
+  .cd2004-record-actions {
+    grid-template-columns: minmax(235px, 0.68fr) minmax(0, 1.32fr);
+    grid-template-areas: "state actions";
+    min-height: 42px;
+    margin: 2px 2px 0;
+    color: #172341;
+    background: #cfd2e8;
+    border-color: #fafaff #525f8f #525f8f #fafaff;
+    box-shadow: inset 1px 1px #fff;
+  }
+
+  .cd2004-record-actions-state {
+    min-height: 38px;
+    padding: 3px 6px;
+    border-right-color: #7c86a8;
+  }
+
+  .cd2004-record-actions-state > span {
+    font-size: 8px;
+  }
+
+  .cd2004-record-actions-state > strong {
+    font-size: 10px;
+  }
+
+  .cd2004-record-actions-state > small {
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-record-actions-buttons {
+    gap: 3px;
+    justify-content: flex-end;
+    padding: 5px;
+    overflow: visible;
+  }
+
+  .cd2004-record-actions-buttons button {
+    min-height: 28px;
+    padding: 3px 8px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .cd2004-record-actions-buttons button.is-new {
+    order: 1;
+    margin-left: 0;
+  }
+
+  .cd2004-record-actions-buttons button.is-danger {
+    order: 2;
+  }
+
+  .cd2004-record-action-separator {
+    order: 3;
+    margin-inline: 3px;
+  }
+
+  .cd2004-record-actions-buttons button.is-save {
+    order: 4;
+    margin-left: auto;
+  }
+
+  .cd2004-record-actions-buttons button.is-primary {
+    order: 5;
+  }
+
+  .cd2004-record-actions-buttons button.is-addendum {
+    order: 1;
+    margin-left: auto;
+    color: #1d3f74;
+  }
+
+  .cd2004-record-actions.is-locked .cd2004-record-actions-buttons button.is-new {
+    order: 2;
+  }
+
+  .cd2004-record-actions-buttons .cd2004-action-glyph {
+    width: 13px;
+    margin-right: 4px;
+  }
+
+  .meditech-function-list {
+    display: flex;
+    flex-direction: column;
+    align-content: stretch;
+    padding: 1px;
+  }
+
+  .meditech-record-list .cd2004-nav-item {
+    flex: 0 0 22px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 13px 8px;
+    gap: 4px;
+    min-height: 22px;
+    padding: 1px 4px 1px 7px;
+  }
+
+  .meditech-record-list .cd2004-nav-item kbd {
+    display: none;
+  }
+
+  .meditech-record-list .cd2004-nav-item > span {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .meditech-record-list .cd2004-nav-item svg {
+    grid-column: 2;
+    grid-row: 1;
+    width: 12px;
+    height: 12px;
+  }
+
+  .meditech-record-list .cd2004-nav-item em,
+  .meditech-record-list .cd2004-nav-item i {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .meditech-record-list .cd2004-nav-item strong {
+    font-size: 10px;
+  }
+
+  .meditech-record-list .cd2004-nav-item[title="Knowledge"] {
+    margin-top: 5px;
+  }
+
+  .meditech-record-list .cd2004-nav-item[title="Daily Closeout"] {
+    margin-top: auto;
+  }
+
+  .meditech-rail-context,
+  .meditech-rail-title,
+  .meditech-function-heading {
+    font-size: 9px;
+  }
+
+  .meditech-command-deck button > span {
+    font-size: 9px;
+  }
+
+  .cd2004-worklist-table tbody tr:not(.cd2004-worklist-empty) td:first-child {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .cd2004-worklist-table .cd2004-worklist-empty td:first-child {
+    display: table-cell;
+  }
+
+  .cd2004-worklist-table th,
+  .cd2004-worklist-table td {
+    font-size: 10px;
+  }
+
+  .cd2004-worklist-table th {
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-section-head,
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head,
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head strong,
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-action,
+  .cd2004-shell [data-workflow="administer"] .wfp-reference summary {
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-field label,
+  .cd2004-shell [data-workflow="administer"] .wfp-choice-caption,
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-row {
+    font-size: 10px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-field input,
+  .cd2004-shell [data-workflow="administer"] .wfp-field select,
+  .cd2004-shell [data-workflow="administer"] .wfp-field textarea,
+  .cd2004-shell [data-workflow="administer"] .wfp-select-group select {
+    font-size: 10px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-field-hint,
+  .cd2004-shell [data-workflow="administer"] .wfp-option-desc {
+    font-size: 9px;
+  }
+
+  .cd2004-workspace.has-central-preview .cd2004-readiness-list {
+    max-height: 118px;
+  }
+
+  .cd2004-note-sections {
+    font-size: 10px;
+  }
+}
+
+@media screen and (min-width: 701px) and (max-width: 1040px) {
+  .cd2004-inspector {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .cd2004-readiness-list {
+    grid-column: 1;
+    grid-row: 2 / span 3;
+    max-height: none;
+  }
+
+  .cd2004-note-heading {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cd2004-note-toolbar {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .cd2004-note-sections {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 0;
+  }
+
+  .cd2004-post-zone {
+    grid-column: 2;
+    grid-row: 4;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .cd2004-app-environment {
+    display: flex;
+    margin-left: auto;
+    padding-left: 3px;
+  }
+
+  .cd2004-app-environment b {
+    display: block;
+    font-size: 7px;
+    white-space: nowrap;
+  }
+
+  .cd2004-app-environment small {
+    display: none;
+  }
+
+  .cd2004-workflow-slot[data-workflow="administer"] {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    overflow: hidden;
+    background: #c8cbe6;
+  }
+
+  .cd2004-workflow-slot[data-workflow="administer"] > .cd2004-workflow-body {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .cd2004-record-actions {
+    margin: 2px 3px 0;
+    background: #cfd2e8;
+  }
+
+  .cd2004-record-actions-buttons {
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .cd2004-record-action-separator {
+    display: none;
+  }
+
+  .cd2004-record-actions-buttons button {
+    min-height: 29px;
+    padding: 3px 5px;
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  .cd2004-record-actions-buttons button.is-save {
+    order: 1;
+  }
+
+  .cd2004-record-actions-buttons button.is-primary {
+    order: 2;
+  }
+
+  .cd2004-record-actions-buttons button.is-new {
+    order: 3;
+  }
+
+  .cd2004-record-actions-buttons button.is-danger {
+    order: 4;
+  }
+
+  .cd2004-record-actions-buttons button.is-addendum {
+    order: 1;
+  }
+
+  .cd2004-record-actions.is-locked .cd2004-record-actions-buttons button.is-new {
+    order: 2;
+  }
+
+  .cd2004-record-actions-buttons .cd2004-action-glyph {
+    width: 12px;
+    margin-right: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-tabbar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    padding: 1px;
+    background: #aeb3d3;
+    border-bottom: 1px solid #4f5c8b;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-tab {
+    top: 0;
+    min-height: 23px;
+    padding: 3px 2px;
+    overflow: visible;
+    border: 1px solid #65719e;
+    border-radius: 3px;
+    font-size: 9px;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-tab[aria-selected="true"] {
+    top: 0;
+    color: #fff;
+    background: #315495;
+    border-color: #1e326c #8194c2 #8194c2 #1e326c;
+  }
+
+  .cd2004-worklist-source-icon {
+    margin-right: 5px;
+  }
+
+  .cd2004-attestation-review {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cd2004-attestation-review > div,
+  .cd2004-attestation-review > div:nth-child(2n),
+  .cd2004-attestation-review > div:nth-last-child(-n + 2) {
+    border-right: 0;
+    border-bottom: 1px solid #a6acc0;
+  }
+}
+
+/*
+ * Photo-led Client/Server refinement: a compact right-side verb strip and a
+ * recessed documentation child window.  These are deliberately visual-only
+ * changes; every command below is backed by an existing workflow action.
+ */
+@media screen {
+  .cd2004-shell {
+    --mt-icon-ink: #20356f;
+    --mt-icon-blue: #3764aa;
+    --mt-icon-blue-light: #b9d0ef;
+    --mt-icon-yellow: #f2d34a;
+    --mt-icon-paper: #fff3ad;
+    --mt-icon-red: #b52c2c;
+    --mt-icon-green: #278247;
+    --mt-icon-metal: #c8cbd6;
+  }
+
+  .cd2004-window-mark.has-icon {
+    display: grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    overflow: hidden;
+    background: #eef0fa;
+    border-color: #17295e;
+    box-shadow: inset 1px 1px #fff;
+  }
+
+  .cd2004-window-mark.has-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .cd2004-record-actions-buttons .cd2004-action-glyph {
+    display: inline-grid;
+    place-items: center;
+    vertical-align: -2px;
+  }
+
+  .cd2004-record-actions-buttons .cd2004-action-glyph svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .cd2004-navigator.meditech-record-list {
+    grid-template-rows: 24px 19px minmax(0, 1fr);
+    background: #b8bde1;
+  }
+
+  .meditech-rail-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    min-height: 24px;
+    padding: 2px 4px 2px 6px;
+    color: #1c2f67;
+    background: #e8e9f6;
+    border: 1px solid;
+    border-color: #fff #56618f #56618f #fff;
+    box-shadow: inset 1px 1px #fdfdff, inset -1px -1px #a4a9c8;
+    font: 700 10px Tahoma, "MS Sans Serif", sans-serif;
+    text-align: left;
+  }
+
+  .meditech-rail-title:hover:not(:disabled) {
+    background: #fff0a5;
+  }
+
+  .meditech-rail-title:active:not(:disabled) {
+    border-color: #56618f #fff #fff #56618f;
+    box-shadow: inset 1px 1px #858dac;
+  }
+
+  .meditech-rail-title:disabled {
+    color: #737b9b;
+  }
+
+  .meditech-rail-records-command {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .meditech-rail-records-command kbd {
+    padding: 1px 2px;
+    color: #fff;
+    background: #3c5ca3;
+    border: 1px solid #243a79;
+    font: 700 7px/1 Tahoma, sans-serif;
+  }
+
+  .meditech-rail-records-command svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .meditech-rail-context {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 19px;
+    gap: 4px;
+    padding: 2px 4px;
+    background: #dfe2f2;
+    border-bottom-color: #818bb5;
+  }
+
+  .meditech-rail-context strong,
+  .meditech-rail-context span {
+    font-size: 7px;
+  }
+
+  .meditech-function-list {
+    display: flex;
+    flex-direction: column;
+    align-content: stretch;
+    min-height: 0;
+    padding: 1px;
+    overflow: auto;
+    background: #bfc3e1;
+  }
+
+  .meditech-rail-group {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+  }
+
+  .meditech-rail-group.is-reference {
+    margin-top: 4px;
+  }
+
+  .meditech-rail-group.is-pinned {
+    margin-top: auto;
+  }
+
+  .meditech-function-heading {
+    display: flex;
+    align-items: center;
+    min-height: 17px;
+    padding: 1px 4px;
+    color: #27386f;
+    background: #cbd0ea;
+    border: 0;
+    border-top: 1px solid #f8f9ff;
+    border-bottom: 1px solid #7a84ad;
+    font: 700 9px/1.1 Tahoma, "MS Sans Serif", sans-serif;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .meditech-record-list .cd2004-nav-item {
+    flex: 0 0 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 2px;
+    min-height: 20px;
+    padding: 0 1px 0 5px;
+    color: #21305f;
+    background: #e7e8f4;
+    border-color: #fff #7079a3 #7079a3 #fff;
+    border-radius: 2px;
+    box-shadow: inset 1px 1px #fff, inset -1px -1px #a1a6c2;
+  }
+
+  .meditech-record-list .cd2004-nav-item > span:first-child {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  .meditech-record-list .cd2004-nav-item strong {
+    font: 400 10px/1 Tahoma, "MS Sans Serif", sans-serif;
+  }
+
+  .meditech-record-list .cd2004-nav-item em {
+    grid-column: 2;
+    display: grid;
+    place-items: center;
+    min-width: 13px;
+    height: 13px;
+    padding: 0 2px;
+    color: #fff;
+    background: #a72a2a;
+    border: 1px solid #671414;
+    font: 700 7px/1 Tahoma, sans-serif;
+  }
+
+  .meditech-record-list .cd2004-nav-item .meditech-nav-icon {
+    grid-column: 3;
+    display: grid;
+    place-items: center;
+    align-self: stretch;
+    width: 18px;
+    min-height: 18px;
+    background: rgb(255 255 255 / 22%);
+    border-left: 1px solid #a4aac7;
+  }
+
+  .meditech-record-list .cd2004-nav-item .meditech-nav-icon svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-idle:not(.is-selected) {
+    opacity: 1;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-selected {
+    color: #111a38;
+    background: #fff0a5;
+    border-color: #5b6387 #fff #fff #5b6387;
+    box-shadow: inset 2px 0 #31519b, inset 1px 1px #8c8051;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-selected strong {
+    font-weight: 700;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-attention .meditech-nav-icon {
+    background: #ffe2df;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-ready .meditech-nav-icon,
+  .meditech-record-list .cd2004-nav-item.is-locked .meditech-nav-icon {
+    background: #d8efd8;
+  }
+
+  .meditech-record-list .cd2004-nav-item:disabled {
+    color: #7f83a0;
+    background: #d1d3e4;
+    text-shadow: 1px 1px #f7f7ff;
+  }
+
+  .meditech-record-list .cd2004-nav-item:disabled svg {
+    filter: grayscale(1);
+    opacity: 0.35;
+  }
+
+  .cd2004-inspector-window > .cd2004-window-body {
+    overflow: hidden;
+    background: #c5c8e3;
+  }
+
+  .cd2004-inspector {
+    height: 100%;
+    min-height: 0;
+    padding: 1px;
+  }
+
+  .cd2004-readiness-summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 21px;
+    padding: 2px 4px;
+    color: #233568;
+    background: #fff1aa;
+    border: 1px solid;
+    border-color: #fffbd6 #88762b #88762b #fffbd6;
+  }
+
+  .cd2004-readiness-score {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .cd2004-readiness-score span {
+    font: 700 8px/1 Tahoma, sans-serif;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .cd2004-readiness-score strong {
+    font: 700 9px/1 Tahoma, sans-serif;
+  }
+
+  .cd2004-readiness-flags {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .cd2004-readiness-flags span,
+  .cd2004-readiness-flags .has-stop,
+  .cd2004-readiness-flags .has-warning {
+    padding: 0;
+    color: #435078;
+    background: transparent;
+    border: 0;
+    font: 700 7px/1 Tahoma, sans-serif;
+  }
+
+  .cd2004-readiness-flags .has-stop {
+    color: #9a1515;
+  }
+
+  .cd2004-readiness-flags .has-warning {
+    color: #755000;
+  }
+
+  .cd2004-readiness-list {
+    flex: 0 0 auto;
+    max-height: 118px;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #68739b;
+    border-top: 0;
+  }
+
+  .cd2004-readiness-item {
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 3px;
+    min-height: 18px;
+    padding: 1px 3px;
+    border-bottom: 1px solid #c2c8da;
+  }
+
+  .cd2004-readiness-marker {
+    align-self: center;
+    width: 11px;
+    height: 11px;
+    margin: 0;
+    font-size: 7px;
+  }
+
+  .cd2004-readiness-item > span:nth-child(2) {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .cd2004-readiness-item strong {
+    flex: 0 0 auto;
+    font-size: 8px;
+    white-space: nowrap;
+  }
+
+  .cd2004-readiness-item small:not(.cd2004-readiness-state) {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: #596583;
+    font-size: 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-readiness-state {
+    color: #596583;
+    font: 700 7px/1 Tahoma, sans-serif;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .cd2004-readiness-item.is-complete .cd2004-readiness-state {
+    color: #176336;
+  }
+
+  .cd2004-readiness-item.is-stop .cd2004-readiness-state {
+    color: #9a1515;
+  }
+
+  .cd2004-readiness-item.is-warning .cd2004-readiness-state {
+    color: #755000;
+  }
+
+  .cd2004-note-heading {
+    display: grid;
+    grid-template-columns: 15px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px;
+    min-height: 22px;
+    padding: 2px 4px;
+    color: #fff;
+    background: #405aa0;
+    border: 1px solid;
+    border-color: #7185bf #233b7a #233b7a #7185bf;
+  }
+
+  .cd2004-note-heading > svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .cd2004-note-heading > strong {
+    overflow: hidden;
+    font: 700 10px/1 Tahoma, sans-serif;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-note-heading > span {
+    color: #eef1ff;
+    font: 700 7px/1 Tahoma, sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  .cd2004-note-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 23px;
+    padding: 2px 3px;
+    color: #27345f;
+    background: #cbd0e7;
+    border: 1px solid;
+    border-color: #f9faff #727ca5 #727ca5 #f9faff;
+  }
+
+  .cd2004-note-mode {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 2px 4px;
+    overflow: hidden;
+    background: #e7e8f3;
+    border: 1px solid;
+    border-color: #7781a8 #fff #fff #7781a8;
+    font: 700 7px/1 Tahoma, sans-serif;
+    letter-spacing: 0.04em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-note-toolbar .cd2004-command-button,
+  .cd2004-note-section .cd2004-command-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    min-height: 18px;
+    padding: 1px 4px;
+    color: #1e2d59;
+    background: #e7e8f3;
+    border: 1px solid;
+    border-color: #fff #626d99 #626d99 #fff;
+    font: 700 8px/1 Tahoma, sans-serif;
+  }
+
+  .cd2004-note-toolbar .cd2004-command-button svg,
+  .cd2004-note-section .cd2004-command-button svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .cd2004-note-sections {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 1px;
+    overflow: auto;
+    color: #101010;
+    background: #fff;
+    border: 1px solid;
+    border-color: #4f597e #fff #fff #4f597e;
+    font: 10px/1.38 "Courier New", Courier, monospace;
+  }
+
+  .cd2004-note-section + .cd2004-note-section {
+    border-top: 1px solid #7782a7;
+  }
+
+  .cd2004-note-section > header {
+    align-items: center;
+    min-height: 19px;
+    padding: 1px 3px 1px 4px;
+    color: #243866;
+    background: #dce5f2;
+    border-bottom: 1px solid #9aa6bd;
+    font: 700 8px/1 Tahoma, sans-serif;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .cd2004-note-section-id {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .cd2004-note-section-id > svg {
+    flex: 0 0 auto;
+    width: 11px;
+    height: 11px;
+  }
+
+  .cd2004-note-section-id b {
+    flex: 0 0 auto;
+  }
+
+  .cd2004-note-section > header small {
+    min-width: 0;
+    margin-left: 2px;
+    overflow: hidden;
+    color: #596783;
+    font-size: 7px;
+    text-overflow: ellipsis;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  .cd2004-note-section pre {
+    max-height: none;
+    padding: 5px 6px 8px;
+    overflow: visible;
+    color: #101010;
+    background: #fff;
+    font: inherit;
+  }
+
+  .cd2004-note-empty {
+    padding: 8px;
+  }
+
+  .cd2004-note-copy {
+    flex: 0 0 auto;
+    min-height: 17px !important;
+  }
+
+  .cd2004-worklist-source-icon {
+    width: 18px;
+    height: 18px;
+    color: inherit;
+    background: transparent;
+    border: 0;
+  }
+
+  .cd2004-worklist-source-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .cd2004-worklist-new {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .cd2004-worklist-new svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+@media screen and (min-width: 701px) {
+  .cd2004-workspace,
+  .cd2004-workspace.has-central-preview {
+    grid-template-columns: minmax(0, 1fr) clamp(168px, 14vw, 188px);
+  }
+
+  .cd2004-workspace.has-central-preview .cd2004-readiness-list {
+    max-height: 118px;
+  }
+}
+
+@media screen and (min-width: 800px) and (max-width: 900px) and (min-height: 600px) {
+  .cd2004-worklist-table {
+    min-width: 0;
+  }
+
+  .cd2004-worklist-table th:nth-child(1) {
+    width: 17%;
+  }
+
+  .cd2004-worklist-table th:nth-child(2) {
+    width: 22%;
+  }
+
+  .cd2004-worklist-table th:nth-child(3) {
+    width: 31%;
+  }
+
+  .cd2004-worklist-table th:nth-child(4) {
+    width: 16%;
+  }
+
+  .cd2004-worklist-table th:last-child {
+    width: 62px;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .cd2004-readiness-summary {
+    min-height: 20px;
+  }
+
+  .cd2004-readiness-list {
+    max-height: 108px;
+  }
+
+  .cd2004-readiness-item {
+    min-height: 17px;
+  }
+
+  .cd2004-note-toolbar {
+    min-height: 24px;
   }
 }
