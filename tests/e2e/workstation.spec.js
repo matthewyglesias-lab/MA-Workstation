@@ -406,8 +406,8 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('keeps the navigator fixed and adds document context only inside a clinical workflow', async ({ page }) => {
     await page.goto('/');
-    // The navigator is the CPRS-style workflow tab strip along the bottom
-    // edge, not a pane - but the contract is unchanged: it is always present.
+    // The MEDITECH-style right verb strip is persistent; documentation stays
+    // inside the central child workspace instead of occupying that rail.
     const navigator = page.locator('.cd2004-navigator');
     const work = page.locator('.cd2004-work-window');
     const inspector = page.locator('.cd2004-inspector-window');
@@ -415,6 +415,11 @@ test.describe('MA Workstation browser journeys', () => {
     // Start Center is a single worklist surface. A clinical worksheet then
     // owns the work and document-review pair without redundant window chrome.
     await expect(navigator).toBeVisible();
+    await expect(navigator.getByText('Clinical Work', { exact: true })).toBeVisible();
+    await expect(navigator.getByText('Reference', { exact: true })).toBeVisible();
+    await expect(navigator.getByText('Closeout', { exact: true })).toBeVisible();
+    await expect(navigator.locator('.cd2004-nav-item > i')).toHaveCount(0);
+    await expect(navigator.locator('.meditech-nav-icon svg')).toHaveCount(8);
     await expect(work).toBeVisible();
     await expect(inspector).toHaveCount(0);
     await expect(page.locator('.cd2004-caption-button')).toHaveCount(0);
@@ -423,6 +428,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(navigator).toBeVisible();
     await expect(work).toBeVisible();
     await expect(inspector).toBeVisible();
+    await expect(inspector.locator('.cd2004-window-title')).toContainText(
+      'Clinical Documentation'
+    );
+    await expect(inspector.locator('.cd2004-note-mode')).toHaveText('READ ONLY · LOCAL');
+    await expect(navigator.locator('.cd2004-inspector-window')).toHaveCount(0);
   });
 
   test('routes the Client/Server function-key profile without unsafe global shortcuts', async ({ page }) => {
@@ -764,65 +774,53 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.getByRole('tabpanel')).toContainText('Final dispense review');
   });
 
-  test('keeps the single-window task switcher and records drawer contained at phone width', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  test('blocks mobile layouts without losing an in-progress workstation entry', async ({ page }) => {
+    await page.setViewportSize({ width: 840, height: 720 });
     await page.goto('/');
     await expectNoHorizontalPageOverflow(page);
 
-    // Start Center owns one worklist surface. The NOTE pane only appears after
-    // a clinical worksheet is opened, where it has real document context.
-    const switcher = page.locator('.cd2004-mobile-switcher');
-    await expect(switcher).toBeVisible();
-    await expect(switcher.getByRole('tab')).toHaveCount(1);
-    const workTab = switcher.getByRole('tab', { name: 'WORK', exact: true });
-    await expect(workTab).toHaveAttribute('aria-selected', 'true');
-    await expect(workTab).toHaveAttribute('aria-controls', 'cd2004-pane-work');
-    await expect(workTab).toHaveAttribute('tabindex', '0');
-    await expect(page.locator('.cd2004-work-window')).toBeVisible();
-    await expect(page.locator('.cd2004-inspector-window')).toBeHidden();
-    await expect(page.locator('.cd2004-patient-field').first()).toBeVisible();
-    await expect(page.locator('.cd2004-navigator')).toBeVisible();
-    expect(await page.locator('.cd2004-status-message').evaluate(node =>
-      getComputedStyle(node).display
-    )).not.toBe('none');
+    await openWorkflow(page, 'administer');
+    const patientName = page.locator('.wfp-panel input[placeholder="Last, First"]');
+    await patientName.fill('QA, Resize Safety');
+    await expect(patientName).toHaveValue('QA, Resize Safety');
+    await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
+    await expect(page.locator('.meditech-command-deck')).toBeVisible();
+    await expect(page.locator('.meditech-context-rail')).toBeVisible();
 
-    // The bottom tab strip stays reachable at phone width, so switching
-    // workflows never requires leaving the work pane.
-    await openWorkflow(page, 'samples');
-    await expect(switcher.getByRole('tab')).toHaveCount(2);
-    const noteTab = switcher.getByRole('tab', { name: 'NOTE', exact: true });
-    await expect(page.locator('.cd2004-work-window')).toBeVisible();
-    await expect(switcher.getByRole('tab', { name: 'WORK', exact: true }))
-      .toHaveAttribute('aria-selected', 'true');
-
-    await workTab.focus();
-    await page.keyboard.press('ArrowRight');
-    await expect(noteTab).toHaveAttribute('aria-selected', 'true');
-    await expect(noteTab).toBeFocused();
-    await expect(page.locator('.cd2004-inspector-window')).toBeVisible();
-    await page.keyboard.press('ArrowLeft');
-    await expect(workTab).toHaveAttribute('aria-selected', 'true');
-    await expect(workTab).toBeFocused();
-
-    await expect(page.locator('.meditech-command-deck')).toBeHidden();
-    const mobileCommands = page.locator('[role="toolbar"][aria-label="Local mobile commands"]');
-    await expect(mobileCommands).toBeVisible();
-    await expect(mobileCommands).toContainText('Record List');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const gate = page.locator('.meditech-workstation-gate');
+    await expect(gate).toBeVisible();
+    await expect(gate).toBeFocused();
+    await expect(gate).toContainText('Workstation view required');
+    await expect(gate).toContainText('800 x 600 px');
+    await expect(page.locator('.meditech-workstation-content')).toHaveAttribute('inert', '');
+    await expect(page.locator('.meditech-workstation-content')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('.cd2004-shell')).toBeHidden();
+    await expect(page.locator('.cd2004-mobile-switcher')).toHaveCount(0);
+    await expect(page.locator('.meditech-mobile-command-surface')).toHaveCount(0);
     await page.keyboard.press('F11');
-    const drawer = page.locator('.records-drawer');
-    await expect(drawer).toBeVisible();
-    const bounds = await drawer.boundingBox();
-    expect(bounds).not.toBeNull();
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
-    // Tolerance for sub-pixel layout rounding, as elsewhere in this file.
-    expect(bounds.width).toBeLessThanOrEqual(391);
+    await expect(page.locator('.records-drawer')).toBeHidden();
+    await expectNoHorizontalPageOverflow(page);
 
-    await page.keyboard.press('Escape');
-    await expect(drawer).toBeHidden();
+    // Landscape phones are blocked by the workstation's minimum height too.
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(gate).toBeVisible();
+
+    // Resizing is a display gate, not a destructive navigation event.
+    await page.setViewportSize({ width: 840, height: 720 });
+    await expect(gate).toHaveCount(0);
+    await expect(page.locator('.cd2004-shell')).toBeVisible();
+    await expect(patientName).toHaveValue('QA, Resize Safety');
   });
 
-  test('keeps every clinical workspace contained in side-by-side Tebra widths', async ({ page }) => {
-    const widths = [1181, 1040, 700, 390, 320];
+  test('keeps every clinical workspace contained at supported workstation widths', async ({ page }) => {
+    const viewports = [
+      { width: 1440, height: 900 },
+      { width: 1181, height: 900 },
+      { width: 1040, height: 900 },
+      { width: 840, height: 720 },
+      { width: 800, height: 600 }
+    ];
     const overflowFailures = [];
     const workflows = [
       ['administer', '.wfp-panel'],
@@ -831,9 +829,9 @@ test.describe('MA Workstation browser journeys', () => {
       ['forms', '.wfp-panel']
     ];
 
-    for (const width of widths) {
-      await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
-      await page.goto(`/?responsive=${width}`);
+    for (const { width, height } of viewports) {
+      await page.setViewportSize({ width, height });
+      await page.goto(`/?responsive=${width}x${height}`);
       await expectNoHorizontalPageOverflow(page);
 
       const shellBox = await page.locator('.cd2004-shell').boundingBox();
@@ -841,29 +839,22 @@ test.describe('MA Workstation browser journeys', () => {
       expect(shellBox.x).toBeGreaterThanOrEqual(0);
       expect(shellBox.width).toBeLessThanOrEqual(width);
 
-      // Start Center is deliberately one worklist window at every width.
-      // Clinical workflows add the document review window on desktop and use
-      // the single-window switcher at compact widths.
+      // Start Center owns one worklist window. Clinical workflows add the
+      // documentation child window throughout the supported desktop range.
       const visibleWindows = page.locator('.cd2004-workspace .cd2004-window:visible');
       await expect(page.locator('.cd2004-navigator')).toBeVisible();
       await expect(visibleWindows).toHaveCount(1);
-      if (width <= 700) {
-        await expect(page.locator('.cd2004-mobile-switcher')).toBeVisible();
-      } else {
-        await expect(page.locator('.cd2004-mobile-switcher')).toBeHidden();
-      }
+      await expect(page.locator('.cd2004-mobile-switcher')).toHaveCount(0);
 
       for (const [tab, selector] of workflows) {
         await openWorkflow(page, tab);
         await expect(page.locator(selector)).toBeVisible();
-        await expect(visibleWindows).toHaveCount(width <= 700 ? 1 : 2);
-        if (width > 700) {
-          const inspectorBox = await page
-            .locator('.cd2004-inspector-window')
-            .boundingBox();
-          expect(inspectorBox.x).toBeGreaterThanOrEqual(0);
-          expect(inspectorBox.x + inspectorBox.width).toBeLessThanOrEqual(width + 1);
-        }
+        await expect(visibleWindows).toHaveCount(2);
+        const inspectorBox = await page
+          .locator('.cd2004-inspector-window')
+          .boundingBox();
+        expect(inspectorBox.x).toBeGreaterThanOrEqual(0);
+        expect(inspectorBox.x + inspectorBox.width).toBeLessThanOrEqual(width + 1);
         const internalOverflow = await page.locator(selector).evaluate(node =>
           node.scrollWidth - node.clientWidth
         );
@@ -904,12 +895,6 @@ test.describe('MA Workstation browser journeys', () => {
           });
         }
         await expectNoHorizontalPageOverflow(page);
-      }
-
-      if (width <= 390) {
-        await openWorkflow(page, 'log');
-        const logHeroHeight = await page.locator('.log-hero').evaluate(node => node.getBoundingClientRect().height);
-        expect(logHeroHeight).toBeLessThan(520);
       }
 
       const titlebar = page.locator('.cd2004-app-titlebar');
@@ -1210,9 +1195,9 @@ test.describe('MA Workstation browser journeys', () => {
       /no (?:immediate complication|swelling)|without acute reaction/i
     );
 
-    const shellCopyAll = page.locator(
-      '.cd2004-inspector-window .cd2004-note-heading .cd2004-command-button'
-    );
+    const shellCopyAll = page
+      .locator('.cd2004-inspector-window')
+      .getByRole('button', { name: 'Copy note', exact: true });
     await expect(shellCopyAll).toBeEnabled();
     await shellCopyAll.click();
     await expect.poll(async () => {
@@ -1246,10 +1231,11 @@ test.describe('MA Workstation browser journeys', () => {
     await finish.click();
     await confirmLocalAttestation(page);
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
-    const postedStamp = page.locator('.cd2004-post-stamp');
-    await expect(postedStamp).toContainText('LOCAL RECORD LOCKED');
-    await expect(page.locator('.cd2004-work-locked-banner'))
-      .toContainText('LOCAL RECORD LOCKED');
+    const lockedLifecycle = page.locator('[data-injection-record-actions]');
+    await expect(lockedLifecycle).toContainText('LOCAL RECORD LOCKED');
+    await expect(lockedLifecycle.locator('[data-locked-record-action]')).toBeFocused();
+    await expect(page.locator('.cd2004-post-stamp')).toHaveCount(0);
+    await expect(page.locator('.cd2004-work-locked-banner')).toHaveCount(0);
     await expect(page.locator('#injCompletionOverlay')).toBeHidden();
     await expect.poll(() => page.evaluate(() => {
       const records = JSON.parse(localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]');
@@ -1267,7 +1253,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(lockedStartNew).toHaveAccessibleName('Start new injection');
     await expect(page.locator('#ptName')).toBeDisabled();
     await expect(page.locator('#medClear')).toHaveAttribute('aria-disabled', 'true');
-    await expect(panel.getByText('Record locked', { exact: true })).toBeVisible();
+    await expect(panel.getByText('Read only', { exact: true })).toBeVisible();
     await openInjectionTab(page, 'Order');
     await expect(panel.locator('input[placeholder="Last, First"]')).toBeDisabled();
     await openInjectionTab(page, 'Outcome');
@@ -1281,6 +1267,8 @@ test.describe('MA Workstation browser journeys', () => {
     // (outside the disabled fieldset) that mirrors into the same hidden
     // fields and record so this stays reachable by a real user.
     const addendumTextField = panel.locator('.wfp-field:has-text("Dated addendum") textarea');
+    await lockedLifecycle.getByRole('button', { name: 'Add dated addendum' }).click();
+    await expect(addendumTextField).toBeFocused();
     await panel.locator('.wfp-field:has-text("Addendum entered by") input').fill('QA Addendum Staff');
     await addendumTextField.fill('Saved clarification by the current reviewer.');
     await panel.getByText('Save addendum', { exact: true }).click();
@@ -1560,6 +1548,9 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openWorkflow(page, 'home');
     const records = page.locator('.cd2004-worklist-table');
+    const savedDraftsTab = page.getByRole('tab', { name: /Saved Drafts/ });
+    await expect(savedDraftsTab).toContainText('1');
+    await savedDraftsTab.click();
     await expect(records).toContainText('QA, Start Center Open');
     await records.getByRole('button', { name: 'Resume', exact: true }).click();
 
@@ -1811,7 +1802,7 @@ test.describe('MA Workstation browser journeys', () => {
     // picker per the approved redesign; this test now covers that picker's
     // equivalent guarantees: a recommended-site badge is shown, but nothing
     // is ever pre-selected on the user's behalf.
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 840, height: 720 });
     await page.goto('/');
     await openWorkflow(page, 'administer');
     const panel = page.locator('.wfp-panel');

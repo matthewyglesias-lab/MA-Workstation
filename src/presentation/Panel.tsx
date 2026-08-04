@@ -1,12 +1,13 @@
 import type { ComponentChildren } from "preact";
-import type { DesktopPane } from "./types";
+import { DesktopIcon } from "./DesktopIcon";
+import type { DesktopIconName, DesktopPane } from "./types";
 
 interface PanelProps {
   pane: DesktopPane;
   title: string;
+  icon?: DesktopIconName;
   subtitle?: string;
   active?: boolean;
-  mobileActive?: boolean;
   children: ComponentChildren;
   toolbar?: ComponentChildren;
   footer?: ComponentChildren;
@@ -22,9 +23,9 @@ interface PanelProps {
 export function Panel({
   pane,
   title,
+  icon,
   subtitle,
   active = false,
-  mobileActive = false,
   children,
   toolbar,
   footer,
@@ -36,21 +37,21 @@ export function Panel({
         "cd2004-window",
         `cd2004-${pane}-window`,
         active ? "is-active" : "",
-        mobileActive ? "is-mobile-active" : "",
       ]
         .filter(Boolean)
         .join(" ")}
       data-pane={pane}
       id={`cd2004-pane-${pane}`}
-      role="tabpanel"
-      aria-labelledby={`cd2004-pane-tab-${pane}`}
+      role="region"
       aria-label={`${title} panel`}
       tabIndex={-1}
       onMouseDown={() => onActivate?.(pane)}
       onFocusCapture={() => onActivate?.(pane)}
     >
       <header class="cd2004-window-titlebar">
-        <span class="cd2004-window-mark" aria-hidden="true" />
+        <span class={`cd2004-window-mark ${icon ? "has-icon" : ""}`} aria-hidden="true">
+          {icon && <DesktopIcon name={icon} />}
+        </span>
         <span class="cd2004-window-title">
           {title}
           {subtitle && <small>{subtitle}</small>}

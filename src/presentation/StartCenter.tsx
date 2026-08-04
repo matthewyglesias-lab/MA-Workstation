@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { DesktopIcon } from "./DesktopIcon";
 import {
   type ClinicalTone,
   type InjectionRecordRow,
@@ -8,7 +9,7 @@ import {
 } from "./types";
 
 type WorklistFilter = "all" | "review" | "today" | "drafts";
-type WorklistSource = "review" | "today" | "draft";
+type WorklistSource = "review" | "today" | "drafts";
 
 export interface StartCenterProps {
   /** Retained for callers that also summarize the module rail. */
@@ -89,7 +90,7 @@ function queueWorklistRow(
 function recordWorklistRow(record: InjectionRecordRow): WorklistRow {
   return {
     id: `draft:${record.id}`,
-    source: "draft",
+    source: "drafts",
     priorityLabel: "Saved draft",
     patientLabel: record.patientLabel,
     taskLabel: record.medicationLabel,
@@ -166,9 +167,9 @@ export function StartCenter({
     <section class="cd2004-start-center" aria-labelledby="currentWorklistTitle">
       <header class="cd2004-worklist-header">
         <div>
-          <span class="cd2004-worklist-kicker">Current worklist</span>
-          <h1 id="currentWorklistTitle">Current Worklist</h1>
-          <p>Local records only</p>
+          <h1 id="currentWorklistTitle" aria-label="Current Worklist">
+            Local records only
+          </h1>
         </div>
         <button
           type="button"
@@ -181,6 +182,7 @@ export function StartCenter({
           }
           onClick={() => onStartNewInjection?.()}
         >
+          <DesktopIcon name="new" />
           Start new injection
         </button>
       </header>
@@ -219,8 +221,21 @@ export function StartCenter({
             {visibleRows.map((row) => (
               <tr key={row.id} class={`is-${row.tone ?? "neutral"}`}>
                 <td data-label="Time / priority">
-                  <strong>{row.priorityLabel}</strong>
-                  {row.timeLabel && <small>{row.timeLabel}</small>}
+                  <span class="cd2004-worklist-source-icon" aria-hidden="true">
+                    <DesktopIcon
+                      name={
+                        row.source === "drafts"
+                          ? "administer"
+                          : row.tone === "warning" || row.tone === "stop"
+                            ? "alert"
+                            : "records"
+                      }
+                    />
+                  </span>
+                  <span class="cd2004-worklist-priority-copy">
+                    <strong>{row.priorityLabel}</strong>
+                    {row.timeLabel && <small>{row.timeLabel}</small>}
+                  </span>
                 </td>
                 <td data-label="Patient / visit">{row.patientLabel}</td>
                 <td data-label="Task / medication">{row.taskLabel}</td>

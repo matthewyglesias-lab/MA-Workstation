@@ -29,8 +29,6 @@ import {
   type MedicationVerificationKey,
 } from "../../../domain/injection-catalog";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
-import { DocumentationEngine } from "../../../documentation";
-import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { firstActionableClinicalIssue } from "../../../application/readiness-projection";
 import {
   createNdcOptionResolver,
@@ -102,6 +100,7 @@ type InjectionOutputWithPresentation = InjectionEvaluationOutput & {
 };
 
 const InjectionRequirementsContext = createContext<Record<string, InjectionRequirementPresentation>>({});
+const InjectionIncompleteFieldsContext = createContext<ReadonlySet<string>>(new Set());
 
 const requirement = (
   state: InjectionRequirementState,
@@ -787,9 +786,11 @@ function Field({
   children: ComponentChildren;
 }) {
   const requirements = useContext(InjectionRequirementsContext);
+  const incompleteFields = useContext(InjectionIncompleteFieldsContext);
   const projected = field ? requirements[field] : undefined;
   if (projected?.state === "hidden") return null;
   const required = projected?.state === "required";
+  const incomplete = Boolean(field && incompleteFields.has(field));
   const optional = projected?.state === "optional";
   // Legacy hints can carry contextual copy, but are never used to decide a
   // clinical requirement. That decision comes only from the projection.
@@ -799,7 +800,7 @@ function Field({
       : projected?.reason ?? "";
   return (
     <div
-      class={`wfp-field ${required ? "is-required" : ""} ${optional ? "is-optional" : ""} ${width ? `is-w-${width}` : ""}`}
+      class={`wfp-field ${required ? "is-required" : ""} ${incomplete ? "is-incomplete" : ""} ${optional ? "is-optional" : ""} ${width ? `is-w-${width}` : ""}`}
       data-requirement={projected?.state ?? "unprojected"}
     >
       <label>
@@ -1043,11 +1044,6 @@ export function InjectionPanel({
     window.setTimeout(() => setAddenda(readAddenda()), 60);
   };
 
-  const noteInput = evaluation
-    ? injectionEncounterToDocumentationInput(encounter, evaluation)
-    : null;
-  const noteText = noteInput ? DocumentationEngine.format("injection", noteInput, evaluation).text : "";
-
   const presentationOutput = evaluation?.output as InjectionOutputWithPresentation | undefined;
   const medication = encounter.medicationKey ? INJECTION_MEDICATIONS[encounter.medicationKey] : null;
   const initiationOptions = injectionInitiationOptions(encounter.medicationKey);
@@ -1118,6 +1114,10 @@ export function InjectionPanel({
 
   const administered = encounter.disposition.kind === "administered";
   const stops = evaluation?.stops ?? [];
+  const incompleteFields = useMemo(
+    () => new Set(stops.flatMap((item) => (item.field ? [item.field] : []))),
+    [stops],
+  );
   const stopsByTab = countStopsByTab(stops, tabForInjectionField);
 
   const requirements = useMemo(
@@ -1274,13 +1274,18 @@ export function InjectionPanel({
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <InjectionRequirementsContext.Provider value={requirements}>
-      <div class="wfp-summary-bar wfp-injection-context">
+        <InjectionIncompleteFieldsContext.Provider value={incompleteFields}>
+        <div class="wfp-summary-bar wfp-injection-context">
         <strong>Injection worksheet</strong>
-        <StatusFlag
-          idle={(evaluation?.readiness ?? "idle") === "idle"}
-          stopCount={stops.length}
-          warningCount={evaluation?.warnings.length ?? 0}
-        />
+        {locked ? (
+          <span class="wfp-status-flag is-idle">Read only</span>
+        ) : (
+          <StatusFlag
+            idle={(evaluation?.readiness ?? "idle") === "idle"}
+            stopCount={stops.length}
+            warningCount={evaluation?.warnings.length ?? 0}
+          />
+        )}
         {sessionStaff && (
           <span class="wfp-session-context" title="Editable documenting-staff default">
             Session staff: {sessionStaff}
@@ -1346,13 +1351,6 @@ export function InjectionPanel({
         nonAdministration={nonAdministration}
         onNavigate={setTab}
       />
-
-      {locked && (
-        <div class="wfp-summary-bar">
-          <span class="wfp-status-flag is-idle">Record locked</span>
-          <span>This encounter is completed and read-only. Use a dated addendum to add follow-up documentation.</span>
-        </div>
-      )}
 
       {/* A locked record is read-only, so there is nothing to act on. */}
       {!locked && (
@@ -2486,9 +2484,12 @@ export function InjectionPanel({
           </div>
 
           <div class="wfp-section">
-            <div class="wfp-section-head">Administration note</div>
+            <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
-              <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
+              <p class="wfp-field-hint wfp-document-output-hint">
+                Review and copy the generated note in Clinical Documentation. Printing uses the same local
+                encounter snapshot.
+              </p>
               <div class="wfp-actions">
                 <button
                   type="button"
@@ -2511,14 +2512,6 @@ export function InjectionPanel({
                   onClick={() => clickLegacyControl("injWorksheetBlank")}
                 >
                   Blank worksheet
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => navigator.clipboard?.writeText(noteText)}
-                  disabled={!noteText}
-                >
-                  Copy Tebra blocks
                 </button>
               </div>
             </div>
@@ -2552,6 +2545,7 @@ export function InjectionPanel({
             </Field>
             <Field label="Dated addendum">
               <textarea
+                data-addendum-input
                 value={addendumText}
                 placeholder="Clarification, correction, or follow-up. The original completed record remains unchanged."
                 onInput={(event) => onAddendumTextChange(event.currentTarget.value)}
@@ -2571,10 +2565,7 @@ export function InjectionPanel({
         </div>
       )}
 
-      <p class="wfp-field-hint">
-        Drug defaults &amp; windows are editable guidance — verify against the active Rx, current PI, and site
-        protocol.
-      </p>
+        </InjectionIncompleteFieldsContext.Provider>
       </InjectionRequirementsContext.Provider>
     </div>
   );

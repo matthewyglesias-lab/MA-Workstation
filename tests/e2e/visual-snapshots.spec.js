@@ -7,13 +7,15 @@ const FIXED_DATE_KEY = '2026-07-30';
 // grid. The workstation's meaningful visual changes are its chart and record
 // lifecycle states: no active chart, an editable local draft, a record ready
 // for local attestation, and a locked local record. Together the captures
-// cover every supported desktop width plus the compact command surface without
-// multiplying nearly identical baselines.
+// cover the primary desktop range, the supported narrow workstation, and the
+// explicit unsupported-mobile gate without multiplying near-identical baselines.
 const VIEWPORTS = {
   desktop1024: { name: '1024x768', width: 1024, height: 768 },
   desktop1366: { name: '1366x768', width: 1366, height: 768 },
   desktop1440: { name: '1440x900', width: 1440, height: 900 },
-  compact: { name: '390x844', width: 390, height: 844 }
+  narrowDesktop: { name: '840x720', width: 840, height: 720 },
+  minimumDesktop: { name: '800x600', width: 800, height: 600 },
+  unsupportedMobile: { name: '390x844', width: 390, height: 844 }
 };
 
 const SNAPSHOT_OPTIONS = {
@@ -232,14 +234,7 @@ async function openWorkflow(page, workflow) {
 async function openFixtureDraft(page) {
   await openWorkflow(page, 'administer');
   const railLauncher = page.getByRole('button', { name: /Open saved local records \(F11\)/ });
-  const compactLauncher = page
-    .locator('.meditech-mobile-command-surface')
-    .getByRole('button', { name: /Record List/ });
-  if (await railLauncher.isVisible()) {
-    await railLauncher.click();
-  } else {
-    await compactLauncher.click();
-  }
+  await railLauncher.click();
   await page
     .getByRole('button', { name: 'Resume draft for Patel, Rowan', exact: true })
     .click();
@@ -378,6 +373,70 @@ test.describe('Client/Server workstation visual snapshots', () => {
     );
   });
 
+  test('active Injection draft at narrow workstation width', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.narrowDesktop);
+    await openFixtureDraft(page);
+    await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
+    await expect(page.locator('.meditech-command-deck')).toBeVisible();
+    await expect(page.locator('.meditech-context-rail')).toBeVisible();
+    await expect(page.locator('.cd2004-inspector-window')).toBeVisible();
+    await expect(page.locator('[data-injection-record-actions]')).toBeVisible();
+    await settleForCapture(page);
+
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'narrow-desktop-injection-840x720.png',
+      SNAPSHOT_OPTIONS
+    );
+  });
+
+  test('minimum workstation keeps both bottom command zones fully visible', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.minimumDesktop);
+    await openFixtureDraft(page);
+    await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
+    await settleForCapture(page);
+
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'minimum-workstation-injection-800x600.png',
+      SNAPSHOT_OPTIONS
+    );
+
+    const deck = page.locator('.meditech-command-deck');
+    const statusbar = page.locator('.cd2004-statusbar');
+    const recordActions = page.locator('[data-injection-record-actions]');
+    const deckBox = await deck.boundingBox();
+    const statusBox = await statusbar.boundingBox();
+    const recordBox = await recordActions.boundingBox();
+    expect(deckBox).not.toBeNull();
+    expect(statusBox).not.toBeNull();
+    expect(recordBox).not.toBeNull();
+    expect(deckBox.y + deckBox.height).toBeLessThanOrEqual(statusBox.y + 1);
+    expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
+
+    for (const button of await deck.locator('button:visible').all()) {
+      const box = await button.boundingBox();
+      expect(box.y).toBeGreaterThanOrEqual(deckBox.y - 1);
+      expect(box.y + box.height).toBeLessThanOrEqual(deckBox.y + deckBox.height + 1);
+    }
+    for (const button of await recordActions.locator('button:visible').all()) {
+      const box = await button.boundingBox();
+      expect(box.y).toBeGreaterThanOrEqual(recordBox.y - 1);
+      expect(box.y + box.height).toBeLessThanOrEqual(recordBox.y + recordBox.height + 1);
+    }
+
+    const verticallyClippedButtons = await page
+      .locator('.meditech-command-deck button:visible, [data-injection-record-actions] button:visible')
+      .evaluateAll((buttons) =>
+        buttons
+          .filter((button) => button.scrollHeight > button.clientHeight + 1)
+          .map((button) => ({
+            label: button.textContent?.replace(/\s+/g, ' ').trim(),
+            clientHeight: button.clientHeight,
+            scrollHeight: button.scrollHeight
+          }))
+      );
+    expect(verticallyClippedButtons).toEqual([]);
+  });
+
   test('ready-to-attest and locked local records at 1440 x 900', async ({ page }) => {
     await bootDeterministicWorkstation(page, VIEWPORTS.desktop1440);
     await prepareReadyInjection(page);
@@ -397,23 +456,18 @@ test.describe('Client/Server workstation visual snapshots', () => {
     );
   });
 
-  test('compact active Injection draft at 390 px', async ({ page }) => {
-    await bootDeterministicWorkstation(page, VIEWPORTS.compact);
-    await openFixtureDraft(page);
-    await expect(page.locator('.meditech-command-deck')).toBeHidden();
-    await expect(page.locator('.meditech-mobile-command-surface')).toBeVisible();
-    // On compact screens the labelled mobile command surface supplements the
-    // worksheet; it must not cover the actual record lifecycle controls.
-    const recordActions = page.locator('[data-injection-record-actions]');
-    await expect(recordActions).toBeVisible();
-    await expect(recordActions.locator('[data-injection-save]')).toBeVisible();
-    await expect(recordActions.locator('[data-injection-finish]')).toBeVisible();
-    await expect(recordActions.locator('[data-injection-new]')).toBeVisible();
-    await expect(recordActions.locator('[data-injection-discard]')).toBeVisible();
+  test('mobile viewport shows the deliberate workstation gate', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.unsupportedMobile);
+    const gate = page.locator('.meditech-workstation-gate');
+    await expect(gate).toBeVisible();
+    await expect(gate).toContainText('Workstation view required');
+    await expect(gate).toContainText('800 x 600 px');
+    await expect(page.locator('.cd2004-shell')).toBeHidden();
+    await expect(page.locator('.meditech-workstation-content')).toHaveAttribute('inert', '');
     await settleForCapture(page);
 
-    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
-      'compact-active-injection-draft-390x844.png',
+    await expect(page).toHaveScreenshot(
+      'unsupported-mobile-390x844.png',
       SNAPSHOT_OPTIONS
     );
   });

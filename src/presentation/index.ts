@@ -1,4 +1,8 @@
 export { ClinicalDesktopShell } from "./ClinicalDesktopShell";
+export {
+  MIN_WORKSTATION_VIEWPORT_WIDTH,
+  WorkstationViewportBoundary,
+} from "./WorkstationViewportBoundary";
 export { Panel } from "./Panel";
 export { ContextDialog } from "./ContextDialog";
 export type { ClinicOption } from "./ContextDialog";

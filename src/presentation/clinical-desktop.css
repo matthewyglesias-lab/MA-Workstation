@@ -808,10 +808,6 @@
   grid-column: 2;
 }
 
-.cd2004-mobile-switcher {
-  display: none;
-}
-
 .cd2004-work-context-strip {
   display: flex;
   align-items: center;
@@ -2282,51 +2278,11 @@
     min-height: 34px;
   }
 
-  .cd2004-mobile-switcher {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    min-width: 0;
-    padding: 3px;
-    background: var(--cd-face);
-    border-bottom: 1px solid var(--cd-border-dark);
-  }
-
-  .cd2004-mobile-switcher button {
-    min-width: 0;
-    min-height: 32px;
-    padding: 4px;
-    overflow: hidden;
-    color: #314154;
-    background: #dfe3e8;
-    border: 1px solid;
-    border-color: #fff #68737e #68737e #fff;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-overflow: ellipsis;
-  }
-
-  .cd2004-mobile-switcher button.is-active {
-    color: #fff;
-    background: var(--cd-navy);
-    border-color: #031942 #6e91c2 #6e91c2 #031942;
-  }
-
   .cd2004-workspace {
     display: block;
     min-width: 0;
     min-height: 0;
     padding: 3px;
-  }
-
-  .cd2004-workspace .cd2004-window {
-    display: none;
-    width: 100%;
-    height: 100%;
-  }
-
-  .cd2004-workspace .cd2004-window.is-mobile-active {
-    display: grid;
   }
 
   .cd2004-window-titlebar {
@@ -3396,7 +3352,6 @@
   }
 
   .cd2004-nav-item.is-selected,
-  .cd2004-mobile-switcher button.is-active,
   .cd2004-complete-button {
     border: 2px solid Highlight;
   }
