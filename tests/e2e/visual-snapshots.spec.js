@@ -14,6 +14,7 @@ const VIEWPORTS = {
   desktop1366: { name: '1366x768', width: 1366, height: 768 },
   desktop1440: { name: '1440x900', width: 1440, height: 900 },
   narrowDesktop: { name: '840x720', width: 840, height: 720 },
+  minimumDesktop: { name: '800x600', width: 800, height: 600 },
   unsupportedMobile: { name: '390x844', width: 390, height: 844 }
 };
 
@@ -386,6 +387,54 @@ test.describe('Client/Server workstation visual snapshots', () => {
       'narrow-desktop-injection-840x720.png',
       SNAPSHOT_OPTIONS
     );
+  });
+
+  test('minimum workstation keeps both bottom command zones fully visible', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.minimumDesktop);
+    await openFixtureDraft(page);
+    await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
+    await settleForCapture(page);
+
+    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+      'minimum-workstation-injection-800x600.png',
+      SNAPSHOT_OPTIONS
+    );
+
+    const deck = page.locator('.meditech-command-deck');
+    const statusbar = page.locator('.cd2004-statusbar');
+    const recordActions = page.locator('[data-injection-record-actions]');
+    const deckBox = await deck.boundingBox();
+    const statusBox = await statusbar.boundingBox();
+    const recordBox = await recordActions.boundingBox();
+    expect(deckBox).not.toBeNull();
+    expect(statusBox).not.toBeNull();
+    expect(recordBox).not.toBeNull();
+    expect(deckBox.y + deckBox.height).toBeLessThanOrEqual(statusBox.y + 1);
+    expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
+
+    for (const button of await deck.locator('button:visible').all()) {
+      const box = await button.boundingBox();
+      expect(box.y).toBeGreaterThanOrEqual(deckBox.y - 1);
+      expect(box.y + box.height).toBeLessThanOrEqual(deckBox.y + deckBox.height + 1);
+    }
+    for (const button of await recordActions.locator('button:visible').all()) {
+      const box = await button.boundingBox();
+      expect(box.y).toBeGreaterThanOrEqual(recordBox.y - 1);
+      expect(box.y + box.height).toBeLessThanOrEqual(recordBox.y + recordBox.height + 1);
+    }
+
+    const verticallyClippedButtons = await page
+      .locator('.meditech-command-deck button:visible, [data-injection-record-actions] button:visible')
+      .evaluateAll((buttons) =>
+        buttons
+          .filter((button) => button.scrollHeight > button.clientHeight + 1)
+          .map((button) => ({
+            label: button.textContent?.replace(/\s+/g, ' ').trim(),
+            clientHeight: button.clientHeight,
+            scrollHeight: button.scrollHeight
+          }))
+      );
+    expect(verticallyClippedButtons).toEqual([]);
   });
 
   test('ready-to-attest and locked local records at 1440 x 900', async ({ page }) => {
