@@ -112,7 +112,7 @@
       inset 1px 1px #fffdf1,
       2px 2px 0 rgb(0 0 0 / 20%);
     opacity: 0;
-    font-family: "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif;
+    font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
     font-size: 10px;
     font-weight: 700;
     pointer-events: none;
@@ -162,7 +162,7 @@
   body {
     color: #101828;
     background: #c6ccd4;
-    font-family: "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif;
+    font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
     font-size: 12px;
     line-height: 1.35;
   }
@@ -230,7 +230,7 @@
   isolation: isolate;
   color: var(--cd-ink);
   background: var(--cd-workspace);
-  font-family: "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif;
+  font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
   font-size: 12px;
   line-height: 1.35;
   color-scheme: light;
@@ -987,7 +987,7 @@
   border: 1px solid #46648f;
   border-radius: 2px;
   box-shadow: inset 1px 1px #fff, inset -1px -1px #9aabc3;
-  font: 700 10px "Pixel Operator", Tahoma, "MS Sans Serif", sans-serif;
+  font: 700 10px "W95FA", Tahoma, "MS Sans Serif", sans-serif;
   white-space: nowrap;
 }
 
@@ -1038,7 +1038,7 @@
   border: 1px solid #65749d;
   border-bottom: 0;
   border-radius: 3px 3px 0 0;
-  font: 700 10px "Pixel Operator", Tahoma, "MS Sans Serif", sans-serif;
+  font: 700 10px "W95FA", Tahoma, "MS Sans Serif", sans-serif;
 }
 
 .cd2004-worklist-tabs button:hover {
@@ -2005,7 +2005,7 @@
   background: #e4e8ec;
   border: 1px solid;
   border-color: #fff #69737e #69737e #fff;
-  font-family: "Pixel Operator", Tahoma, sans-serif;
+  font-family: "W95FA", Tahoma, sans-serif;
   font-size: 10px;
   font-weight: 700;
   text-align: center;
@@ -2453,7 +2453,7 @@
   --cd-util-amber: #815000;
   --cd-util-amber-soft: #fff2c2;
   box-sizing: border-box;
-  font-family: "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   color-scheme: light;
 }
 
@@ -2504,7 +2504,7 @@
     4px 4px 0 rgb(0 0 0 / 35%) !important;
   transform: none !important;
   transition: none !important;
-  font-family: "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
 }
 
 .records-drawer-head {
@@ -2538,7 +2538,7 @@
 .records-drawer-kicker {
   overflow: hidden;
   color: #cbdaf0 !important;
-  font: 700 9px/1.2 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 9px/1.2 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   letter-spacing: 0.1em !important;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -2549,7 +2549,7 @@
   margin: 0 !important;
   overflow: hidden;
   color: #fff !important;
-  font: 700 11px/1.2 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 11px/1.2 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   letter-spacing: 0 !important;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2560,7 +2560,7 @@
   margin: 0 !important;
   overflow: hidden;
   color: #e2ebf7 !important;
-  font: 10px/1.35 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 10px/1.35 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2585,7 +2585,7 @@
   transition:
     background-color 80ms linear,
     color 80ms linear !important;
-  font: 700 9px/1 "Pixel Operator", Tahoma, Arial, sans-serif !important;
+  font: 700 9px/1 "W95FA", Tahoma, Arial, sans-serif !important;
 }
 
 .records-drawer-close:hover {
@@ -2623,7 +2623,7 @@
     inset 1px 1px #aab2bb,
     inset -1px -1px #eef1f4 !important;
   outline: 0;
-  font: 11px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 11px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
 }
 
 /* The input already reserves 31px of right padding for this glyph; legacy.css
@@ -2687,7 +2687,7 @@
   box-shadow:
     inset 1px 1px #e8ecf0,
     inset -1px -1px #8c96a0 !important;
-  font: 700 10px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 10px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   transform: none !important;
   transition:
     color 80ms linear,
@@ -2713,7 +2713,7 @@
   color: #445264 !important;
   background: #e7eaed;
   border-bottom: 1px solid #a4adb6;
-  font: 700 9px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 9px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   letter-spacing: 0.03em;
 }
 
@@ -2744,7 +2744,7 @@
   border-color: #fff #97a1ab #97a1ab #fff !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  font: 700 9px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 9px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   letter-spacing: 0.04em;
   text-align: left;
   text-transform: uppercase;
@@ -2774,7 +2774,7 @@
   background: var(--cd-util-face);
   border: 1px solid;
   border-color: #fff #97a1ab #97a1ab #fff;
-  font: 700 9px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif;
+  font: 700 9px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
   letter-spacing: 0.04em;
   text-align: left;
   text-transform: uppercase;
@@ -2856,7 +2856,7 @@
 .records-drawer-row-meta {
   min-width: 0;
   overflow: hidden;
-  font-family: "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2884,7 +2884,7 @@
   background: #e7ebef !important;
   border: 1px solid #919ba5 !important;
   border-radius: 0 !important;
-  font: 700 8px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 8px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
 }
 
 .records-drawer-row-badge.locked {
@@ -2904,7 +2904,7 @@
   min-width: 0;
   overflow: hidden;
   color: #1f4f7c;
-  font: 700 9px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif;
+  font: 700 9px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2916,7 +2916,7 @@
   background: #fff !important;
   border: 1px solid #8d97a1 !important;
   border-radius: 0 !important;
-  font: 10px/1.4 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 10px/1.4 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
 }
 
 .records-drawer-empty b {
@@ -2941,7 +2941,7 @@
   margin: 0 !important;
   overflow: hidden;
   color: #4c5968 !important;
-  font: 9px/1.35 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 9px/1.35 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
 }
 
 .records-drawer-new {
@@ -2955,7 +2955,7 @@
   box-shadow:
     inset 1px 1px #436da6,
     inset -1px -1px #03183e !important;
-  font: 700 10px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 10px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   transform: none !important;
   transition: background-color 80ms linear !important;
 }
@@ -2988,7 +2988,7 @@
   border: 1px solid;
   border-color: #fff #6d7781 #6d7781 #fff;
   border-radius: 0;
-  font: 700 10px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif;
+  font: 700 10px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
 }
 
 .records-drawer-cancel:active {
@@ -3014,7 +3014,7 @@
   background: rgb(50 60 116 / 15%) !important;
   backdrop-filter: none !important;
   animation: cd2004-utility-fade 100ms linear both !important;
-  font-family: "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
 }
 
 .inj-completion-card {
@@ -3054,7 +3054,7 @@
     var(--cd-util-navy-light)
   );
   border-bottom: 1px solid var(--cd-util-navy-dark);
-  font: 700 12px/1.25 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 12px/1.25 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   letter-spacing: 0 !important;
   text-align: left;
   text-overflow: ellipsis;
@@ -3097,7 +3097,7 @@
   max-width: 410px;
   margin: 0 auto 9px !important;
   color: #435164 !important;
-  font: 10px/1.45 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 10px/1.45 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   text-align: center;
 }
 
@@ -3147,7 +3147,7 @@
   display: block;
   overflow: hidden;
   color: #5f6d7c !important;
-  font: 700 8px/1.25 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 8px/1.25 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   letter-spacing: 0.07em !important;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -3159,7 +3159,7 @@
   margin-top: 3px !important;
   overflow-wrap: anywhere;
   color: #15283e !important;
-  font: 700 10px/1.35 "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 10px/1.35 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
 }
 
 .inj-completion-card > button {
@@ -3176,7 +3176,7 @@
   box-shadow:
     inset 1px 1px #5277aa,
     inset -1px -1px #03183e !important;
-  font: 700 10px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
+  font: 700 10px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif !important;
   transition: background-color 80ms linear !important;
 }
 
@@ -3428,7 +3428,7 @@
   background: #d4d0c8;
   box-shadow: 4px 4px 0 rgb(0 0 0 / 28%);
   color: #101010;
-  font: 12px "Pixel Operator", Tahoma, "MS Sans Serif", Arial, sans-serif;
+  font: 12px "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
   animation: cd2004-dialog-in 120ms steps(2, end);
 }
 
@@ -3453,7 +3453,7 @@
   border-radius: 0 !important;
   background: #d4d0c8;
   color: #101010;
-  font: 700 14px/1 "Pixel Operator", Tahoma, Arial, sans-serif;
+  font: 700 14px/1 "W95FA", Tahoma, Arial, sans-serif;
 }
 
 .cd2004-dialog-body {
@@ -3475,7 +3475,7 @@
   background: #fff;
   padding: 4px 6px;
   color: #101010;
-  font: 12px "Pixel Operator", Tahoma, Arial, sans-serif;
+  font: 12px "W95FA", Tahoma, Arial, sans-serif;
   box-shadow: none !important;
 }
 
@@ -3508,7 +3508,7 @@
   background: #d4d0c8;
   padding: 3px 12px;
   color: #101010;
-  font: 12px "Pixel Operator", Tahoma, Arial, sans-serif;
+  font: 12px "W95FA", Tahoma, Arial, sans-serif;
 }
 
 .cd2004-dialog-actions button:active {

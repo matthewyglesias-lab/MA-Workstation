@@ -229,11 +229,11 @@ async function collectVisualContract(page, workflow) {
         focusedControlBorder: focusedControlStyle?.borderColor,
         focusedControlHasGlow: focusedControlStyle?.boxShadow !== 'none',
         recordLedgerHorizontalOverflow: hasHorizontalOverflow(recordTableWrap),
-        usesPixelOperatorFirst:
+        usesW95faFirst:
           controlStyle?.fontFamily
             .trim()
             .toLowerCase()
-            .startsWith('"pixel operator"') ?? false,
+            .startsWith('"w95fa"') ?? false,
         landmarksPresent: spec.landmarks.map(selector =>
           Boolean(pick(selector, false))
         )
@@ -302,7 +302,7 @@ function expectedContract(workflow) {
     chrome: {
       shell: {
         backgroundColor: 'rgb(184, 188, 229)',
-        fontFamily: expect.stringMatching(/^"Pixel Operator",/),
+        fontFamily: expect.stringMatching(/^"W95FA",/),
         fontSize: '11px',
         overflow: 'hidden'
       },
@@ -354,7 +354,7 @@ function expectedContract(workflow) {
       focusedControlBorder: 'rgb(245, 179, 0)',
       focusedControlHasGlow: false,
       recordLedgerHorizontalOverflow: false,
-      usesPixelOperatorFirst: true,
+      usesW95faFirst: true,
       landmarksPresent: [true, true, true, true]
     },
     containment: {
