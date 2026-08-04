@@ -3554,6 +3554,33 @@ input[type="radio"]:disabled {
     box-shadow: none !important;
   }
 }
+
+/*
+ * Every dedicated print job (AVS, UDS reports, sample handouts, worksheets,
+ * provider letters, the daily ledger) renders into its own #print-root sheet
+ * and sets one of these body classes right before window.print(). In that
+ * case the *entire* new workstation shell must stay hidden - not just the
+ * specific chrome elements listed above - because any workflow-specific
+ * control rendered outside the tab body (the injection record-actions bar
+ * is one example) would otherwise leak onto the printed page alongside the
+ * sheet. This is a blanket rule instead of chasing individual elements so a
+ * future control added anywhere in the shell can't reopen this same leak.
+ * The un-scoped rule above stays as a fallback for a literal Ctrl+P with no
+ * print sheet active; this one is more specific and wins whenever one is.
+ */
+@media print {
+  body.print-avs .cd2004-shell,
+  body.print-uds .cd2004-shell,
+  body.print-uds-patient .cd2004-shell,
+  body.print-sample .cd2004-shell,
+  body.print-sample-worksheet .cd2004-shell,
+  body.print-inj-worksheet .cd2004-shell,
+  body.print-letter .cd2004-shell,
+  body.print-daily .cd2004-shell {
+    display: none !important;
+  }
+}
+
 /*
  * Context editor on the native <dialog> element. The browser supplies the top
  * layer and ::backdrop, so no scrim element or z-index is needed - the dialog

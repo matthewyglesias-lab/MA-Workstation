@@ -175,14 +175,19 @@ async function expectPrintContract(page, {
   rootId,
   content,
   maxPages = 2,
-  maxContentWidth = 800
+  maxContentWidth = 800,
+  checkParity = true
 }) {
   const root = page.locator(`#${rootId}`);
   await expect(root).toBeVisible();
   for (const pattern of content) {
     await expect(root).toContainText(pattern);
   }
-  await expectProductionRendererParity(page, rootId);
+  // The byte-pinned parity fixture only matches the specific fully-filled
+  // fixture data used elsewhere in this file - callers exercising a
+  // different fill (e.g. the minimal early-print path) opt out and rely on
+  // the content/layout assertions below instead.
+  if (checkParity) await expectProductionRendererParity(page, rootId);
 
   const printLayout = await page.evaluate(({ rootId, printRootIds }) => {
     const root = document.getElementById(rootId);
@@ -229,9 +234,17 @@ async function expectPrintContract(page, {
       });
 
     const legacyHost = document.querySelector('.cd2004-legacy-host');
+    // The whole new-shell workstation (patient banner, workflow panel, and
+    // any workflow-specific chrome rendered outside the tab body - e.g. the
+    // injection record-actions bar) must collapse to nothing during a print
+    // job. Checking the shell root itself, rather than an enumerated list of
+    // "known chrome" selectors, is what actually catches a new control added
+    // anywhere inside it leaking onto a printed sheet.
+    const shell = document.querySelector('.cd2004-shell');
     return {
       visiblePrintRoots,
       visibleChrome,
+      shellDisplay: shell ? getComputedStyle(shell).display : 'none',
       legacyHostDisplay: legacyHost ? getComputedStyle(legacyHost).display : 'none',
       pageOverflow: document.documentElement.scrollWidth -
         document.documentElement.clientWidth,
@@ -244,6 +257,7 @@ async function expectPrintContract(page, {
 
   expect(printLayout.visiblePrintRoots).toEqual([rootId]);
   expect(printLayout.visibleChrome).toEqual([]);
+  expect(printLayout.shellDisplay).toBe('none');
   expect(printLayout.legacyHostDisplay).toBe('none');
   expect(printLayout.pageOverflow).toBeLessThanOrEqual(1);
   expect(printLayout.rootOverflow).toBeLessThanOrEqual(1);
@@ -274,7 +288,47 @@ async function expectPrintContract(page, {
   }
 }
 
+async function prepareMinimalAvsInjection(page) {
+  await bootWorkstation(page);
+  await openWorkflow(page, 'Injection', 'administer');
+  const panel = page.locator('.wfp-panel');
+  await expect(panel).toBeVisible();
+
+  // Deliberately fill only what the loosened AVS gate requires - medication,
+  // dose, route, site, and administration date - and nothing from
+  // Verification/Outcome (no attestations, no disposition). This is the
+  // real early-print path: AVS must be available, and clean, well before a
+  // full administration is documented.
+  await panel.locator('input[placeholder="Last, First"]').fill('Print, Early AVS');
+  await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('05/06/1990');
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+  await panel.locator('input[name="inj-dose"]').fill('50 mg');
+  await panel.locator('input[name="inj-route"]').fill('IM');
+  await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.getByText('R deltoid', { exact: true }).click();
+
+  await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
+  const printButton = panel.locator('button:has-text("Print AVS")');
+  await expect(printButton).toBeEnabled();
+  await printButton.click();
+  await page.emulateMedia({ media: 'print' });
+}
+
 test.describe('unchanged clinical print surfaces', () => {
+  test('keeps the injection record-actions bar and shell out of an early AVS printout', async ({ page }) => {
+    await prepareMinimalAvsInjection(page);
+    await expectPrintContract(page, {
+      rootId: 'avsSheet',
+      content: [
+        /Injection after-visit summary/i,
+        /Print, Early AVS/i
+      ],
+      checkParity: false
+    });
+  });
+
   test('isolates the injection AVS on a sane Letter printout', async ({ page }) => {
     await preparePrintableInjection(page);
     await setFieldsAndRender(page, {
