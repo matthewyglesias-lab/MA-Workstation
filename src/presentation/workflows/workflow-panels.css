@@ -1001,6 +1001,32 @@
   white-space: nowrap;
 }
 
+.cd2004-shell .wfp-transaction-readout {
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: stretch;
+  min-height: 17px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-dark);
+  font-family: "Arial Narrow", Tahoma, sans-serif;
+  font-size: 9px;
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-transaction-readout b,
+.cd2004-shell .wfp-transaction-readout span {
+  padding: 0 5px;
+}
+
+.cd2004-shell .wfp-transaction-readout b {
+  color: #fff;
+  background: var(--cd-navy);
+  border-right: 1px solid var(--cd-border-dark);
+  letter-spacing: 0.05em;
+}
+
 .cd2004-shell .wfp-session-default,
 .cd2004-shell .wfp-calculated-value {
   color: var(--cd-ink-muted);

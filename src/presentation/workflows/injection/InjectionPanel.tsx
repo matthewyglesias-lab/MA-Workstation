@@ -336,7 +336,7 @@ function StatusFlag({
   const label = idle
     ? "Not started"
     : stopCount > 0
-      ? `${stopCount} stop${stopCount === 1 ? "" : "s"}`
+      ? `${stopCount} required`
       : warningCount > 0
         ? `${warningCount} to review`
         : "Ready";
@@ -604,7 +604,7 @@ function OperatorGuidance({
     <section class="wfp-operator-guidance" aria-label="Operator guidance" data-operator-guidance>
       <div class="wfp-operator-guidance-head">
         <strong>Operator guidance</strong>
-        <span>{INJECTION_TAB_LABELS[tab]} â€” {medication.label}</span>
+        <span>{INJECTION_TAB_LABELS[tab]} — {medication.label}</span>
         {presentedOutput?.clinicalReferenceVersion && (
           <small>REF {presentedOutput.clinicalReferenceVersion}</small>
         )}
@@ -624,11 +624,11 @@ function OperatorGuidance({
           class="wfp-operator-guidance-action"
           onClick={() => onNavigate(blockerTab)}
         >
-          Next required: {firstStop.message} â€” go to {INJECTION_TAB_LABELS[blockerTab]}
+          Next required: {firstStop.message} — go to {INJECTION_TAB_LABELS[blockerTab]}
         </button>
       )}
       <details class="wfp-reference">
-        <summary>Reference â€” product, schedule, and technique</summary>
+        <summary>Reference — product, schedule, and technique</summary>
         <div class="wfp-reference-body">
           <dl class="wfp-report-meta">
             <dt>Medication</dt>
@@ -707,7 +707,7 @@ function NdcPicker({
     bundled: "Local audited package list",
     cached: "FDA-listed package choices cached locally",
     refreshed: "FDA-listed package choices refreshed locally",
-    fallback: "FDA lookup unavailable â€” using local audited package list",
+    fallback: "FDA lookup unavailable — using local audited package list",
   }[lookup.remoteStatus] : "Select the medication and exact strength to list known packages.";
 
   const apply = (raw: string) => {
@@ -1139,6 +1139,10 @@ export function InjectionPanel({
   const visibleTabs = nonAdministration
     ? INJECTION_TABS.filter(([key]) => key !== "administration" && key !== "product")
     : INJECTION_TABS;
+  const activePage = Math.max(
+    1,
+    visibleTabs.findIndex(([key]) => key === tab) + 1,
+  );
 
   // The evaluator owns cadence semantics (including calendar-month
   // products).  The worksheet only projects its calculated value; it does
@@ -1283,6 +1287,10 @@ export function InjectionPanel({
           </span>
         )}
         <span class="wfp-summary-spacer" />
+        <span class="wfp-transaction-readout" aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}>
+          <b>{locked ? "REVIEW" : "ENTRY"}</b>
+          <span>PG {activePage}/{visibleTabs.length}</span>
+        </span>
         {!locked && patientNeedsRestore && (
           <button
             type="button"

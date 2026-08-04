@@ -123,8 +123,8 @@ async function collectVisualContract(page, workflow) {
         rect: rectOf(element)
       }));
     const visiblePanes = panes.filter(pane => pane.visible);
-    // Two panes on desktop: the work area and the note dock nested inside the
-    // persistent MEDITECH Record List/function rail.
+    // Clinical worksheets have a document inspector. Start Center remains a
+    // single-purpose worklist instead of manufacturing empty note context.
     const desktopTiling =
       visiblePanes.length === 2 &&
       visiblePanes.every((pane, index) =>
@@ -334,15 +334,21 @@ function expectedContract(workflow, viewport) {
       }
     },
     panes: {
-      visible: desktop ? ['work', 'inspector'] : ['work'],
+      visible: desktop
+        ? isHome
+          ? ['work']
+          : ['work', 'inspector']
+        : ['work'],
       desktopTiling: false,
       mobileSwitcherVisible: !desktop,
       mobileTabs: desktop
         ? []
-        : [
-            { label: 'WORK', selected: 'true' },
-            { label: 'NOTE', selected: 'false' }
-          ],
+        : isHome
+          ? [{ label: 'WORK', selected: 'true' }]
+          : [
+              { label: 'WORK', selected: 'true' },
+              { label: 'NOTE', selected: 'false' }
+            ],
       singleActiveMobilePane: !desktop
     },
     surface: {

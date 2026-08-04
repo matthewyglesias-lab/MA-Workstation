@@ -85,12 +85,9 @@
     width: min(400px, 100%);
   }
 
-  /* The app-wide toast (legacy `toast()` / `toastSafe()`, still the only
-     transient-feedback channel) was another surface legacy.css owned outright.
-     With that sheet print-only, the toast had no screen styling left at all -
-     it rendered as a static, transparent, full-width 1460px block below the
-     fold. It is styled here as a flat status strip rather than the original
-     rounded, soft-shadowed popup: hidden until `toast()` adds `.show`. */
+  /* Legacy transient feedback is rendered as a Client/Server message field.
+     It stays visually distinct from the application status bar, while
+     avoiding the dark floating snackbar treatment of a contemporary web app. */
   .toast {
     position: fixed;
     /* Clears the 22px status bar and the bottom workflow tab strip, so
@@ -99,20 +96,24 @@
     left: 50%;
     z-index: 20000;
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
-    max-width: min(460px, calc(100vw - 32px));
-    padding: 7px 14px;
-    transform: translate(-50%, 8px);
+    max-width: min(520px, calc(100vw - 24px));
+    min-height: 25px;
+    padding: 4px 10px;
+    transform: translate(-50%, 5px);
     /* Literal colours, not `--cd-*`: those tokens are declared on
        `.cd2004-shell`, and the toast is appended to <body> outside it. */
-    color: #ffffff;
-    background: #101828;
-    border: 1px solid #000;
-    box-shadow: 3px 3px 0 rgb(0 0 0 / 35%);
+    color: #20284d;
+    background: #fff2b8;
+    border: 1px solid;
+    border-color: #fffce7 #5b5f77 #5b5f77 #fffce7;
+    box-shadow:
+      inset 1px 1px #fffdf1,
+      2px 2px 0 rgb(0 0 0 / 20%);
     opacity: 0;
     font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     pointer-events: none;
   }
@@ -121,8 +122,9 @@
      sizing it; unsized it defaults to 84px square and inflates the strip. */
   .toast svg {
     flex: none;
-    width: 13px;
-    height: 13px;
+    width: 12px;
+    height: 12px;
+    color: #287141;
   }
 
   .toast.show {
@@ -3057,7 +3059,7 @@
   padding: 12px !important;
   overflow: auto;
   color: var(--cd-util-ink);
-  background: rgb(8 17 34 / 46%) !important;
+  background: rgb(50 60 116 / 15%) !important;
   backdrop-filter: none !important;
   animation: cd2004-utility-fade 100ms linear both !important;
   font-family: Tahoma, Verdana, "Segoe UI", sans-serif !important;
@@ -3465,7 +3467,7 @@
 }
 
 .cd2004-dialog-layer::backdrop {
-  background: rgb(8 20 48 / 32%);
+  background: rgb(50 60 116 / 16%);
 }
 
 .cd2004-dialog-frame {

@@ -118,6 +118,13 @@ function worklistEmptyText(filter: WorklistFilter) {
   return "No local work or saved drafts are available.";
 }
 
+function worklistEmptyHint(filter: WorklistFilter) {
+  if (filter === "drafts") return "Use Start new injection to create an editable local record.";
+  if (filter === "review") return "Items appear here only when a saved local record needs review.";
+  if (filter === "today") return "Completed history remains available from Record List (F11).";
+  return "Start a new injection, or open Record List (F11) for local history.";
+}
+
 export function StartCenter({
   needsReview,
   todayQueue,
@@ -236,7 +243,10 @@ export function StartCenter({
             ))}
             {!visibleRows.length && (
               <tr class="cd2004-worklist-empty">
-                <td colSpan={5}>{worklistEmptyText(filter)}</td>
+                <td colSpan={5}>
+                  <strong>{worklistEmptyText(filter)}</strong>
+                  <small>{worklistEmptyHint(filter)}</small>
+                </td>
               </tr>
             )}
           </tbody>
