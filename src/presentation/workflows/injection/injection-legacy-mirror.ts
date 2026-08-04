@@ -1,4 +1,9 @@
-import { INJECTION_SAFETY_TRIGGERS, type InjectionEncounter } from "../../../domain/injection";
+import {
+  INJECTION_SAFETY_TRIGGERS,
+  InjectionEngine,
+  type InjectionEncounter,
+} from "../../../domain/injection";
+import type { MedicationVerificationKey } from "../../../domain/injection-catalog";
 import type { InjectionDocumentationMetadata } from "../../../domain/injection-ndc";
 import { setLegacyCheckboxValue, setLegacyFieldValue } from "../legacy-mirror";
 
@@ -15,6 +20,12 @@ declare global {
       response?: string;
       attestations?: Record<string, boolean>;
       verifications?: Record<string, boolean>;
+      /**
+       * The typed evaluator owns phase-aware medication checks.  Passing the
+       * applicable keys into the compatibility layer prevents legacy blanket
+       * flags from turning an initiation-only item into a routine stop.
+       */
+      requiredVerifications?: MedicationVerificationKey[];
       safetyConcerns?: Record<string, boolean>;
       acuteSafetyScreenConfirmed?: boolean;
       initiation?: {
@@ -55,6 +66,12 @@ declare global {
  * legacy interactive markup.
  */
 export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounter): void {
+  // Keep the legacy compatibility gate aligned with the typed clinical
+  // evaluator.  In particular, some legacy products expose every possible
+  // product flag, whereas the current reference bundle makes a subset apply
+  // only to initiation or re-initiation phases.
+  const requiredVerifications = InjectionEngine.evaluate(encounter, {}).output.requiredVerifications;
+
   setLegacyFieldValue("ptName", encounter.patient.name);
   setLegacyFieldValue("ptDOB", encounter.patient.dob);
   setLegacyFieldValue("orderingProvider", encounter.orderingProvider);
@@ -134,6 +151,7 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
     response: encounter.response.kind,
     attestations: encounter.attestations as Record<string, boolean>,
     verifications: encounter.verifications as Record<string, boolean>,
+    requiredVerifications,
     safetyConcerns,
     acuteSafetyScreenConfirmed: encounter.acuteSafetyScreenConfirmed,
     initiation: initiation

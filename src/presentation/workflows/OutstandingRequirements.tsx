@@ -9,6 +9,8 @@ interface OutstandingRequirementsProps<Tab extends string> {
   tabLabels: Record<Tab, string>;
   /** Switches the panel to the tab owning the clicked requirement. */
   onNavigate: (tab: Tab) => void;
+  /** Injection keeps its detailed register on demand; other worksheets retain it open. */
+  collapsible?: boolean;
 }
 
 /**
@@ -27,31 +29,48 @@ export function OutstandingRequirements<Tab extends string>({
   tabForField,
   tabLabels,
   onNavigate,
+  collapsible = false,
 }: OutstandingRequirementsProps<Tab>) {
   if (!stops.length) return null;
-  return (
-    <div class="wfp-section wfp-issue-section">
-      <div class="wfp-section-head">
-        Outstanding requirements
-        <span class="wfp-tab-badge">{stops.length}</span>
-      </div>
-      <div class="wfp-issue-list">
-        {stops.map((stop) => {
-          const stopTab = tabForField(stop.field);
-          return (
-            <button
-              key={`${stop.code}-${stop.field ?? ""}`}
-              type="button"
-              class="wfp-issue-row"
-              onClick={() => onNavigate(stopTab)}
-            >
-              <span class="wfp-issue-tab">{tabLabels[stopTab]}</span>
-              <span class="wfp-issue-message">{stop.message}</span>
-            </button>
-          );
-        })}
-      </div>
+  const rows = (
+    <div class="wfp-issue-list">
+      {stops.map((stop) => {
+        const stopTab = tabForField(stop.field);
+        return (
+          <button
+            key={`${stop.code}-${stop.field ?? ""}`}
+            type="button"
+            class="wfp-issue-row"
+            onClick={() => onNavigate(stopTab)}
+          >
+            <span class="wfp-issue-tab">{tabLabels[stopTab]}</span>
+            <span class="wfp-issue-message">{stop.message}</span>
+          </button>
+        );
+      })}
     </div>
+  );
+
+  if (!collapsible) {
+    return (
+      <div class="wfp-section wfp-issue-section">
+        <div class="wfp-section-head">
+          Outstanding requirements
+          <span class="wfp-tab-badge">{stops.length}</span>
+        </div>
+        {rows}
+      </div>
+    );
+  }
+
+  return (
+    <details class="wfp-section wfp-issue-section">
+      <summary class="wfp-section-head">
+        <span>View all outstanding requirements</span>
+        <span class="wfp-tab-badge">{stops.length}</span>
+      </summary>
+      {rows}
+    </details>
   );
 }
 

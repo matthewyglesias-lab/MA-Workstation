@@ -159,12 +159,9 @@ export function StartCenter({
     <section class="cd2004-start-center" aria-labelledby="currentWorklistTitle">
       <header class="cd2004-worklist-header">
         <div>
-          <span class="cd2004-worklist-kicker">Local clinical workspace</span>
+          <span class="cd2004-worklist-kicker">Current worklist</span>
           <h1 id="currentWorklistTitle">Current Worklist</h1>
-          <p>
-            Only local work requiring attention and saved injection drafts are
-            shown here.
-          </p>
+          <p>Local records only</p>
         </div>
         <button
           type="button"
@@ -182,6 +179,7 @@ export function StartCenter({
       </header>
 
       <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters">
+        <span class="cd2004-worklist-filter-label">VIEW:</span>
         {FILTERS.map((candidate) => (
           <button
             key={candidate.id}
@@ -247,7 +245,7 @@ export function StartCenter({
 
       <footer class="cd2004-worklist-footer">
         <span>{visibleRows.length} local item{visibleRows.length === 1 ? "" : "s"} shown</span>
-        <span>Locked injection history is available in Record List.</span>
+        <span>Locked local history: Record List</span>
       </footer>
     </section>
   );

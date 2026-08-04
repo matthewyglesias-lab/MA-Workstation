@@ -1559,6 +1559,610 @@
   }
 }
 
+/*
+ * Client/Server transaction composition.  The safety model stays in the
+ * typed workflow; these rules only remove the dashboard-shaped presentation
+ * around it.  The reference workstations use one active child window, a
+ * factual chart masthead, dense register rows, and a subordinate command
+ * rail rather than a set of peer cards.
+ */
+@media screen {
+  .cd2004-shell {
+    --cd-selection: #fff0a5;
+    --cd-selection-strong: #f5e287;
+    --cd-chrome: #c8cbe6;
+    --cd-chrome-light: #eeeff9;
+    --cd-face: #d8daf0;
+    --cd-face-warm: #f3f1df;
+    --cd-workspace: #b8bce5;
+    --cd-paper: #fffef8;
+    --cd-white: #ffffff;
+    --cd-ink: #101010;
+    --cd-ink-muted: #465277;
+    --cd-border-dark: #445181;
+    --cd-border-mid: #7b85ad;
+    --cd-border-light: #fafaff;
+    --cd-green: #227442;
+    --cd-green-soft: #c8efbf;
+    --cd-amber: #986000;
+    --cd-amber-soft: #fff0b4;
+    --cd-red: #a20d0d;
+    --cd-red-soft: #ffe2df;
+    --cd-info: #244f94;
+    --cd-info-soft: #d9e7f8;
+  }
+}
+
+@media screen and (min-width: 701px) {
+  .cd2004-app-titlebar {
+    height: 23px;
+    padding: 2px 5px;
+  }
+
+  .cd2004-app-logo {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cd2004-app-title > b {
+    font-size: 11px;
+  }
+
+  .cd2004-menu-bar {
+    min-height: 20px;
+  }
+
+  .cd2004-menu-title {
+    min-width: 36px;
+    padding: 2px 6px 3px;
+  }
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns: minmax(245px, 1.5fr) auto auto minmax(130px, 0.62fr) minmax(150px, 0.7fr);
+    grid-template-rows: minmax(36px, auto) 18px;
+    min-height: 54px;
+    background: #d9dbef;
+  }
+
+  .cd2004-patient-primary,
+  .cd2004-patient-field {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+    padding: 3px 6px;
+    background: transparent;
+    border-right: 0;
+    box-shadow: none;
+  }
+
+  .cd2004-patient-primary {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cd2004-patient-primary > svg {
+    display: none;
+  }
+
+  .cd2004-patient-primary span {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .cd2004-patient-banner small {
+    flex: 0 0 auto;
+    color: #405070;
+    font-size: 7px;
+  }
+
+  .cd2004-patient-banner strong,
+  .cd2004-patient-primary strong {
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-patient-primary strong {
+    font-size: 12px;
+  }
+
+  .cd2004-patient-banner.has-active-chart .cd2004-patient-primary,
+  .cd2004-patient-banner.has-active-chart .cd2004-patient-field {
+    background: transparent;
+    border-right: 0;
+    box-shadow: none;
+  }
+
+  .meditech-patient-safety {
+    gap: 5px;
+    min-height: 18px;
+    padding: 2px 6px;
+    background: #ced1ec;
+    font-size: 8px;
+  }
+
+  .meditech-patient-safety strong {
+    font-size: 8px;
+  }
+
+  .meditech-patient-safety b {
+    font-weight: 400;
+  }
+
+  .meditech-patient-safety small {
+    font-size: 7px;
+  }
+
+  .cd2004-workspace,
+  .cd2004-workspace.has-central-preview {
+    grid-template-columns: minmax(0, 1fr) minmax(178px, 196px);
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .cd2004-workspace.has-central-preview > .cd2004-work-window,
+  .cd2004-workspace.has-central-preview > .meditech-context-rail {
+    grid-row: 1;
+  }
+
+  .cd2004-workspace.has-central-preview > .cd2004-work-window {
+    grid-column: 1;
+  }
+
+  .cd2004-workspace.has-central-preview > .meditech-context-rail {
+    grid-column: 2;
+    display: block;
+  }
+
+  .cd2004-work-window > .cd2004-window-body {
+    overflow: hidden;
+  }
+
+  .cd2004-transaction-window {
+    min-width: 0;
+    min-height: 100%;
+    height: 100%;
+  }
+
+  .cd2004-transaction-window.has-document-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.56fr);
+    gap: 2px;
+    padding: 2px;
+    background: #c6c9e7;
+  }
+
+  .cd2004-transaction-window > .cd2004-workflow-slot {
+    min-height: 0;
+    height: 100%;
+    overflow: auto;
+    background: #f4f4fb;
+  }
+
+  .cd2004-document-split {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .cd2004-document-split > .cd2004-inspector-window {
+    display: grid;
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+    height: 100%;
+  }
+
+  .meditech-context-rail {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .cd2004-workspace.has-central-preview .meditech-context-rail {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .cd2004-navigator.meditech-record-list {
+    grid-template-rows: 21px 18px 19px minmax(0, 1fr);
+  }
+
+  .meditech-rail-title,
+  .meditech-function-heading {
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+
+  .meditech-rail-context {
+    padding: 2px 4px;
+    font-size: 7px;
+  }
+
+  .meditech-function-list {
+    grid-auto-rows: 19px;
+    align-content: start;
+    padding: 1px;
+  }
+
+  .meditech-record-list .cd2004-nav-item {
+    grid-template-columns: 14px minmax(0, 1fr) 9px;
+    gap: 3px;
+    min-height: 19px;
+    padding: 1px 3px;
+  }
+
+  .meditech-record-list .cd2004-nav-item kbd {
+    width: 12px;
+    height: 13px;
+    font-size: 7px;
+  }
+
+  .meditech-record-list .cd2004-nav-item strong {
+    font-size: 9px;
+    font-weight: 400;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-selected strong {
+    font-weight: 700;
+  }
+
+  .meditech-record-list .cd2004-nav-item small {
+    display: none;
+  }
+
+  .meditech-record-list .cd2004-nav-item em,
+  .meditech-record-list .cd2004-nav-item i {
+    width: 7px;
+    height: 7px;
+    border: 1px solid #69739a;
+  }
+
+  .meditech-record-list .cd2004-nav-item em {
+    color: transparent;
+    background: #9d2424;
+  }
+
+  .cd2004-shell .cd2004-start-center {
+    grid-template-rows: 25px 21px minmax(0, 1fr) 20px;
+    gap: 2px;
+    padding: 2px;
+    background: #c7cae8;
+  }
+
+  .cd2004-worklist-header {
+    align-items: center;
+    gap: 8px;
+    min-height: 25px;
+    padding: 2px 5px;
+    background: #eef0fb;
+    border-color: #65709a;
+    box-shadow: inset 1px 1px #fff;
+  }
+
+  .cd2004-worklist-header > div {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .cd2004-worklist-kicker {
+    display: none;
+  }
+
+  .cd2004-worklist-header h1 {
+    margin: 0;
+    color: #1f3264;
+    font: 700 10px Tahoma, "MS Sans Serif", sans-serif;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  .cd2004-worklist-header p {
+    margin: 0;
+    color: #566384;
+    font-size: 8px;
+  }
+
+  .cd2004-worklist-new,
+  .cd2004-worklist-action {
+    min-height: 19px;
+    padding: 2px 6px;
+    border-radius: 0;
+    font-size: 8px;
+  }
+
+  .cd2004-worklist-tabs {
+    align-items: center;
+    gap: 2px;
+    padding: 1px 3px;
+    background: #d4d7ee;
+    border: 1px solid #65709a;
+  }
+
+  .cd2004-worklist-filter-label {
+    margin-right: 3px;
+    color: #33426f;
+    font: 700 8px Tahoma, sans-serif;
+  }
+
+  .cd2004-worklist-tabs button {
+    min-height: 17px;
+    padding: 1px 5px;
+    border-bottom: 1px solid #65749d;
+    border-radius: 0;
+    font-size: 8px;
+  }
+
+  .cd2004-worklist-tabs b {
+    min-width: 12px;
+    height: 12px;
+    padding: 0 2px;
+    font-size: 7px;
+  }
+
+  .cd2004-worklist-table th,
+  .cd2004-worklist-table td {
+    height: 19px;
+    padding: 2px 5px;
+    font-size: 9px;
+  }
+
+  .cd2004-worklist-table th {
+    height: 19px;
+    font-size: 8px;
+  }
+
+  .cd2004-worklist-empty td {
+    height: auto;
+    font-size: 9px;
+  }
+
+  .cd2004-worklist-footer {
+    min-height: 20px;
+    padding: 3px 5px;
+    font-size: 8px;
+  }
+
+  .cd2004-record-actions {
+    grid-template-columns: minmax(145px, 0.48fr) minmax(0, 1.52fr);
+    grid-template-areas: "state actions";
+    margin: 2px;
+    background: #d6d9d7;
+  }
+
+  .cd2004-record-actions-state {
+    display: block;
+    min-height: 34px;
+    padding: 3px 5px;
+  }
+
+  .cd2004-record-actions-state > span,
+  .cd2004-record-actions-state > strong {
+    display: block;
+  }
+
+  .cd2004-record-actions-state > span {
+    font-size: 7px;
+  }
+
+  .cd2004-record-actions-state > strong {
+    margin-top: 1px;
+    font-size: 9px;
+  }
+
+  .cd2004-record-actions-state > small {
+    margin-top: 1px;
+    font-size: 8px;
+  }
+
+  .cd2004-record-actions-buttons {
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 3px 4px;
+    overflow: hidden;
+  }
+
+  .cd2004-record-actions-buttons button {
+    min-height: 21px;
+    padding: 2px 6px;
+    font-size: 8px;
+  }
+
+  .cd2004-record-actions-buttons button.is-primary {
+    color: #0d341e;
+    background: #b9eab0;
+    border-color: #efffea #397547 #397547 #efffea;
+  }
+
+  .cd2004-record-actions-buttons button.is-primary:hover:not(:disabled) {
+    background: #a9df9f;
+  }
+
+  .cd2004-record-actions-buttons button.is-new {
+    margin-left: auto;
+  }
+
+  .cd2004-record-action-separator {
+    flex: 0 0 1px;
+    width: 1px;
+    height: 17px;
+    margin: 0 2px;
+    background: #8b9693;
+  }
+
+  .cd2004-inspector-window .cd2004-window-titlebar {
+    min-height: 19px;
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+
+  .cd2004-inspector-window .cd2004-window-mark {
+    width: 8px;
+    height: 8px;
+  }
+
+  .cd2004-readiness-summary {
+    min-height: 22px;
+    padding: 3px 5px;
+  }
+
+  .cd2004-readiness-score {
+    gap: 5px;
+  }
+
+  .cd2004-readiness-score span {
+    font-size: 9px;
+  }
+
+  .cd2004-readiness-score strong {
+    font-size: 12px;
+  }
+
+  .cd2004-readiness-flags span {
+    padding: 1px 3px;
+    font-size: 7px;
+  }
+
+  .cd2004-readiness-list {
+    max-height: 82px;
+  }
+
+  .cd2004-readiness-item {
+    grid-template-columns: 14px minmax(0, 1fr);
+    gap: 4px;
+    min-height: 18px;
+    padding: 2px 4px;
+  }
+
+  .cd2004-readiness-marker {
+    width: 12px;
+    height: 12px;
+    margin-top: 0;
+    font-size: 8px;
+  }
+
+  .cd2004-readiness-item strong,
+  .cd2004-readiness-item small {
+    display: inline;
+    font-size: 8px;
+  }
+
+  .cd2004-readiness-item small::before {
+    content: " — ";
+  }
+
+  .cd2004-note-heading {
+    min-height: 24px;
+    padding: 3px 5px;
+  }
+
+  .cd2004-note-heading > div > span,
+  .cd2004-note-heading small {
+    font-size: 8px;
+  }
+
+  .cd2004-note-sections {
+    min-height: 0;
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .cd2004-note-section > header {
+    padding: 4px 6px 0;
+    font-size: 8px;
+  }
+
+  .cd2004-note-section pre {
+    max-height: none;
+    padding: 3px 6px 7px;
+  }
+
+  .meditech-command-deck {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    height: 29px;
+    padding: 2px 3px;
+  }
+
+  .meditech-command-deck::after {
+    content: "";
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .meditech-command-prompt {
+    flex: 0 0 120px;
+    padding: 2px 4px;
+  }
+
+  .meditech-command-deck button {
+    flex: 0 0 auto;
+    min-width: 82px;
+    padding: 2px 4px;
+  }
+
+  .meditech-command-deck button > span {
+    font-size: 8px;
+  }
+}
+
+@media screen and (min-width: 701px) and (max-width: 1181px) {
+  .cd2004-workspace,
+  .cd2004-workspace.has-central-preview {
+    grid-template-columns: minmax(0, 1fr) 184px;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .cd2004-transaction-window.has-document-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(310px, 1fr) minmax(215px, 0.56fr);
+  }
+
+  .cd2004-transaction-window.has-document-split > .cd2004-workflow-slot {
+    min-height: 0;
+    height: auto;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .cd2004-workspace.has-central-preview .cd2004-work-window > .cd2004-window-body,
+  .cd2004-workspace.has-central-preview .cd2004-transaction-window {
+    overflow: hidden;
+  }
+
+  .cd2004-workspace.has-central-preview .cd2004-transaction-window {
+    height: 100%;
+  }
+
+  .cd2004-workspace.has-central-preview .cd2004-workflow-slot {
+    height: 100%;
+    overflow: auto;
+  }
+
+  .cd2004-workspace.has-central-preview .cd2004-document-split {
+    display: none;
+    height: 100%;
+  }
+
+  .cd2004-workspace.has-central-preview[data-mobile-pane="inspector"] .cd2004-workflow-slot {
+    display: none;
+  }
+
+  .cd2004-workspace.has-central-preview[data-mobile-pane="inspector"] .cd2004-document-split {
+    display: block;
+  }
+
+  .cd2004-workspace.has-central-preview[data-mobile-pane="inspector"] .cd2004-document-split > .cd2004-inspector-window {
+    display: grid;
+    width: 100%;
+    height: 100%;
+  }
+}
+
 @media print {
   .meditech-context-rail,
   .meditech-command-deck,

@@ -798,7 +798,7 @@ export function ClinicalDesktopShell({
             selectedWorkflow === "home" ? "Local workstation overview" : "Active encounter"
           }
           active={focusedPane === "work"}
-          mobileActive={mobilePane === "work"}
+          mobileActive={mobilePane === "work" || selectedWorkflow === "administer"}
           onActivate={setFocusedPane}
           toolbar={
             selectedWorkflow !== "home" ? (
@@ -820,6 +820,11 @@ export function ClinicalDesktopShell({
             ) : undefined
           }
         >
+          <div
+            class={`cd2004-transaction-window ${
+              selectedWorkflow === "administer" ? "has-document-split" : ""
+            }`}
+          >
           <div
             ref={workHostRef}
             class="cd2004-workflow-slot"
@@ -853,9 +858,11 @@ export function ClinicalDesktopShell({
             )}
             {workflowContent}
           </div>
+          {selectedWorkflow === "administer" && (
+            <div class="cd2004-document-split">{inspectorPanel}</div>
+          )}
+          </div>
         </Panel>
-
-        {selectedWorkflow === "administer" && inspectorPanel}
 
         <aside class="meditech-context-rail">
           <MeditechRecordRail
@@ -1050,6 +1057,13 @@ function InjectionRecordActions({
     locked || posting || !actions.canDiscard || !onSaveDraft;
   const finishDisabled = locked || posting || !canComplete || !onFinish;
   const discardDisabled = locked || posting || !actions.canDiscard;
+  const attentionDetail = actions.blockingDetail
+    ? `First blocker: ${actions.blockingDetail}`
+    : blockerCount
+      ? `First blocker: ${blockerCount} required ${
+          blockerCount === 1 ? "field needs" : "fields need"
+        } attention.`
+      : actions.detail ?? defaultDetail;
 
   return (
     <section
@@ -1061,7 +1075,7 @@ function InjectionRecordActions({
         <span>INJECTION RECORD</span>
         <strong>{lifecycleLabel}</strong>
         <small role="status" aria-live="polite">
-          {actions.detail ?? defaultDetail}
+          {attentionDetail}
         </small>
       </div>
 
@@ -1070,6 +1084,7 @@ function InjectionRecordActions({
           <>
             <button
               type="button"
+              class="is-save"
               data-injection-save
               disabled={saveDisabled}
               title={
@@ -1101,8 +1116,10 @@ function InjectionRecordActions({
             </button>
           </>
         )}
+        <span class="cd2004-record-action-separator" aria-hidden="true" />
         <button
           type="button"
+          class="is-new"
           data-injection-new
           disabled={posting}
           title="Start a blank injection. Any current editable work is saved as a local draft first."
@@ -1127,16 +1144,6 @@ function InjectionRecordActions({
           </button>
         )}
       </div>
-
-      <p class="cd2004-record-actions-guidance">
-        {locked
-          ? "Start a new injection for another encounter; this record remains locked."
-          : actions.blockingDetail
-            ? `First blocker: ${actions.blockingDetail} Start new retains the current draft.`
-            : blockerCount
-              ? `${blockerCount} required ${blockerCount === 1 ? "field needs" : "fields need"} attention before local attestation is available. Start new retains the current draft.`
-            : "Start new retains the current draft. Discard permanently removes only this editable local draft."}
-      </p>
     </section>
   );
 }

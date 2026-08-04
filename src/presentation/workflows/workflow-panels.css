@@ -1219,6 +1219,218 @@
   color: var(--cd-ink-muted);
 }
 
+/* Injection is the active medication-administration transaction, not a page
+   of cards.  Compress its open worksheet into a Client/Server register while
+   retaining the exact evaluator-driven required states and all disclosure
+   detail. */
+@media (min-width: 701px) {
+  .cd2004-shell [data-workflow="administer"] .wfp-panel {
+    gap: 3px;
+    padding: 3px;
+    color: var(--cd-ink);
+    background: #f4f4fb;
+    font-size: 10px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-summary-bar {
+    min-height: 22px;
+    gap: 5px;
+    padding: 2px 5px;
+    background: #d6d9e5;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-summary-bar strong {
+    font-size: 10px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-injection-context .wfp-status-flag,
+  .cd2004-shell [data-workflow="administer"] .wfp-session-context {
+    padding: 1px 4px;
+    font-size: 8px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-tabbar {
+    gap: 1px;
+    padding: 0 2px;
+    background: #c9cce3;
+    border-bottom-width: 1px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-tab {
+    flex: 0 1 auto;
+    min-height: 20px;
+    padding: 2px 12px;
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-tab[aria-selected="true"] {
+    top: 1px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-tabpanel {
+    gap: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-section {
+    border-color: #7883a8;
+    box-shadow: none;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-section-head {
+    min-height: 18px;
+    padding: 2px 5px;
+    color: #1c3261;
+    background: #c9d9ed;
+    font-size: 8px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body {
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-row {
+    gap: 3px;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field {
+    display: grid;
+    grid-template-columns: 142px minmax(0, 1fr);
+    align-items: center;
+    gap: 3px 6px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > label {
+    grid-column: 1;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > input,
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > select,
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > textarea,
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-option-list,
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-select-group,
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-ndc-picker {
+    grid-column: 2;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-field-hint,
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-calculated-value {
+    grid-column: 2;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-field,
+  .cd2004-shell [data-workflow="administer"] .wfp-choice-field {
+    gap: 1px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-field label,
+  .cd2004-shell [data-workflow="administer"] .wfp-choice-caption {
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-field input,
+  .cd2004-shell [data-workflow="administer"] .wfp-field select,
+  .cd2004-shell [data-workflow="administer"] .wfp-field textarea,
+  .cd2004-shell [data-workflow="administer"] .wfp-select-group select {
+    min-height: 20px;
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-option-row {
+    grid-template-columns: 14px minmax(0, 1fr);
+    gap: 5px;
+    padding: 2px 5px;
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-option-title {
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-option-desc,
+  .cd2004-shell [data-workflow="administer"] .wfp-field-hint {
+    font-size: 8px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance {
+    border-left-width: 2px;
+    box-shadow: none;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head {
+    min-height: 18px;
+    gap: 5px;
+    padding: 2px 5px;
+    font-size: 8px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head strong {
+    flex: 0 0 auto;
+    font-size: 8px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-row {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 4px;
+    padding: 2px 5px;
+    font-size: 8px;
+    line-height: 1.2;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-row em {
+    grid-column: 2;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-action {
+    padding: 2px 5px;
+    font-size: 8px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-reference summary {
+    padding: 2px 5px;
+    font-size: 8px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-issue-section {
+    background: #f6f6fb;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-issue-section > summary {
+    min-height: 18px;
+    padding: 2px 5px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-issue-section > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-issue-section > summary::before {
+    content: "+";
+    display: inline-block;
+    width: 12px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-issue-section[open] > summary::before {
+    content: "−";
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-issue-row {
+    min-height: 18px;
+    padding: 2px 5px;
+    font-size: 9px;
+  }
+}
+
 @media (max-width: 600px) {
   .cd2004-shell .wfp-injection-context {
     gap: 5px;
