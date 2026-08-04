@@ -1724,6 +1724,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
     await openInjectionTab(page, 'Verification');
+    await panel.getByRole('button', { name: 'Show vitals (optional)' }).click();
     await panel.locator('.wfp-field:has-text("RR") input').fill('10');
     await panel.locator('.wfp-field:has-text("SpO2") input').fill('93');
 
@@ -1736,8 +1737,12 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
     await openInjectionTab(page, 'Verification');
-    await expect(panel.locator('.wfp-field:has-text("RR") input')).toHaveValue('');
-    await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveValue('');
+    // Vitals are hidden by default on a genuinely blank draft - their
+    // absence here (rather than an empty-valued field) is itself the
+    // "no leftover vitals" assertion.
+    await expect(panel.getByRole('button', { name: 'Show vitals (optional)' })).toBeVisible();
+    await expect(panel.locator('.wfp-field:has-text("RR") input')).toHaveCount(0);
+    await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveCount(0);
 
     await page.keyboard.press('F11');
     await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();

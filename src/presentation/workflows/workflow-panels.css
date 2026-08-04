@@ -595,6 +595,45 @@
   border-right: none;
 }
 
+/* Clinical disposition: a left-edge color band plus an icon separates the
+   completed-administration outcome from the three handoff outcomes at a
+   glance, instead of four visually identical rows. */
+.cd2004-shell .wfp-disposition-list .wfp-option-row {
+  border-left: 3px solid transparent;
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready {
+  border-left-color: var(--cd-green);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
+  background: var(--cd-green-soft);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning {
+  border-left-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
+  background: var(--cd-amber-soft);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cd2004-shell .wfp-option-icon svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.cd2004-shell .wfp-vitals-toggle {
+  margin: 4px 0;
+}
+
 /* Native select groups — the period-correct control for single choice */
 
 .cd2004-shell .wfp-select-group {

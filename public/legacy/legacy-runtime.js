@@ -1204,7 +1204,7 @@ function softReset(){
   ["ptName","ptDOB","orderingProvider","injOrderPurpose","tech","ndc","lot","exp","injProductSource","injProductSourceOther","injPreparation","injPreparationDetail","injWasteAmount","injWasteWitness","injProductIssueDetail","injProductIssueAction","injProductIssueRecipient","injProductIssueNotificationTime","injProductIssueDirection","injProductIssueNextStep","bp","hr","temp","rr","spo2","vitalRepeatNote","admin","respCustom","injAdminTime","injSecondAdminTime","injVolume","injVolumeUnit","injDevice","injDeviceOther","injSiteCondition","injSiteConditionDetail","injExceptionSummary","injExceptionRecipient","injExceptionTime","injExceptionOutcome","nextDate","priorDose","priorSite"].forEach(id=>{if($(id))$(id).value="";});
   ["injWasteToggle","injProductIssueToggle","injExceptionToggle"].forEach(id=>{if($(id))$(id).checked=false;});
   try{if(typeof window.resetSmartVitalsState==='function')window.resetSmartVitalsState();}catch(e){}
-  $("allergies").value="";$("adminDate").value=localDateValue();
+  $("allergies").value="NKDA";$("adminDate").value=localDateValue();
   try{const flow=window.__IPMG_RC530__;if(flow){flow.safetyNone=false;flow.inj={};flow.manualOpen.inj={};}}catch(e){}
   $("medHdr").classList.remove("show");$("medChipsGrp").classList.remove("hidden");
   $("medDetail").classList.add("hidden");$("medSpecWrap").classList.remove("show");$("medTip").classList.remove("show");
@@ -4119,7 +4119,10 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     }
     const over=daysSince-late;
     const farLate=daysSince>Math.round(intervalDays*1.5);
-    return {level:'danger',pill:farLate?'Significantly overdue':'Late',
+    // Reviewable, not blocking - a late dose no longer stops administration,
+    // it flags for a soft confirm-with-provider warning (matches "Early" just
+    // above, and the InjectionEngine.evaluate() timing state in injection.ts).
+    return {level:'warn',pill:farLate?'Significantly overdue':'Late',
       detail:`Given ${daysSince} day(s) after the prior dose — ${over} day(s) beyond the labeled window (about ${early}–${late} days).${farLate?' A gap this long may require re-initiation/loading rather than a routine maintenance dose.':''} Confirm timing and dosing with the provider.`,
       missed:S.med.missed||''};
   }
@@ -8914,7 +8917,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const inj=document.querySelector('#panel-administer .card-safety');
     if(inj&&!by('injFastReview')){
       const header=inj.querySelector('.card-head');
-      const item=bar('injFastReview','Quick review — routine injection checks are preselected.','Keep only what you verified today; tap off anything not completed. <span class="fast-review-alert">Allergy status still requires an explicit entry.</span>','Restore routine checks',restoreInjection);
+      const item=bar('injFastReview','Quick review — routine injection checks are preselected.','Keep only what you verified today; tap off anything not completed. <span class="fast-review-alert">Allergy status defaults to NKDA - edit it if the active record shows any allergy or reaction.</span>','Restore routine checks',restoreInjection);
       if(header)header.insertAdjacentElement('afterend',item);else inj.prepend(item);
     }
     const udsQuick=by('udsAllNeg'),udsPatient=by('udsPtName');

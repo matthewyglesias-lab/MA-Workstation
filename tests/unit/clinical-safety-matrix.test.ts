@@ -60,7 +60,7 @@ const issueCodes = (
 ) => evaluation[kind].map((entry) => entry.code);
 
 describe("InjectionEngine safety matrix", () => {
-  it("distinguishes an early review window from a late stop", () => {
+  it("reviews both an early and a late administration as soft warnings, never a hard stop", () => {
     const early = routineInjection();
     // Haldol timing is now an order-dependent review rather than an invented
     // fixed window. ERZOFRI retains a label-supported monthly timing window.
@@ -78,6 +78,8 @@ describe("InjectionEngine safety matrix", () => {
       "timing.outside-window",
     );
 
+    // A dose given outside the window is reviewable, not blocking - staff
+    // can still administer with a soft warning rather than a hard stop.
     const late = routineInjection();
     late.medicationKey = "erzofri";
     late.dose = "117 mg";
@@ -87,9 +89,12 @@ describe("InjectionEngine safety matrix", () => {
     const lateResult = InjectionEngine.evaluate(late, {
       today: late.administrationDate,
     });
-    expect(lateResult.output.timing.state).toBe("stop");
-    expect(issueCodes(lateResult, "stops")).toContain("timing.outside-window");
-    expect(lateResult.output.canFinalize).toBe(false);
+    expect(lateResult.output.timing.state).toBe("warning");
+    expect(issueCodes(lateResult, "warnings")).toContain("timing.review");
+    expect(issueCodes(lateResult, "stops")).not.toContain(
+      "timing.outside-window",
+    );
+    expect(lateResult.output.canFinalize).toBe(true);
   });
 
   it.each([

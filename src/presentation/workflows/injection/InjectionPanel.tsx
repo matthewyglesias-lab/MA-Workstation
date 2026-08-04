@@ -1,6 +1,7 @@
 import { createContext, Fragment, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "../workflow-panels.css";
+import { DesktopIcon } from "../../DesktopIcon";
 import {
   INJECTION_ATTESTATION_OPTIONS,
   INJECTION_REASON_OPTIONS,
@@ -844,6 +845,19 @@ export function InjectionPanel({
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
   const [tab, setTab] = useState<InjectionTab>("order");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  // Vitals are optional and rarely used for a routine maintenance dose - stay
+  // out of the way by default, but a reopened record that already carries a
+  // vitals value starts expanded so nothing entered is hidden from view.
+  const [vitalsOpen, setVitalsOpen] = useState(
+    () =>
+      !!(
+        initialEncounter.vitals?.bp ||
+        initialEncounter.vitals?.hr ||
+        initialEncounter.vitals?.temperature ||
+        initialEncounter.vitals?.rr ||
+        initialEncounter.vitals?.spo2
+      ),
+  );
   const mirroredOnMount = useRef(false);
   const autoCalculatedNextDue = useRef("");
   const ndcResolver = useMemo(() => createNdcOptionResolver(), []);
@@ -944,16 +958,20 @@ export function InjectionPanel({
     // A different product starts a different order context. Do not carry a
     // prior package choice or follow-up suggestion into it.
     autoCalculatedNextDue.current = "";
+    // "Other" has no real per-product route/cadence in the catalog - its
+    // entry is a generic placeholder for site/route UI plumbing, not a
+    // labeled fact, so it stays staff-entered like before.
+    const catalogMedication = key && key !== "other" ? INJECTION_MEDICATIONS[key] : null;
     patch({
       medicationKey: key,
       customMedication: "",
       dose: "",
       site: "",
-      // The reference catalog may describe a usual route/cadence, but those
-      // are not a local order feed. Keep the actual ordered route and cadence
-      // deliberately staff-entered.
-      route: "",
-      intervalKey: "",
+      // Pre-fill the reference catalog's usual route/cadence as a starting
+      // point - staff still see and can change both before the order is
+      // documented, this just saves re-typing what the label already says.
+      route: catalogMedication?.route ?? "",
+      intervalKey: catalogMedication?.intervalKey ?? "",
       nextDoseDate: "",
       traceability: { ...encounter.traceability, ndc: "" },
       verifications: {},
@@ -2261,54 +2279,73 @@ export function InjectionPanel({
                 <Field label="Allergy status" field="allergies">
                   <input
                     value={encounter.allergies}
-                    placeholder="Enter documented allergy / ADR status; enter NKDA only if confirmed"
+                    placeholder="Enter documented allergy / ADR status"
                     onInput={(event) => patch({ allergies: event.currentTarget.value })}
                   />
                 </Field>
-                <Field label="BP" field="vitals.bp">
-                  <input
-                    value={encounter.vitals?.bp ?? ""}
-                    placeholder="124/78"
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, bp: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
-                <Field label="HR" field="vitals.hr">
-                  <input
-                    value={encounter.vitals?.hr ?? ""}
-                    placeholder="72"
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, hr: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
-                <Field label="Temp" field="vitals.temperature">
-                  <input
-                    value={encounter.vitals?.temperature ?? ""}
-                    placeholder="98.6"
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, temperature: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
-                <Field label="RR" field="vitals.rr">
-                  <input
-                    value={encounter.vitals?.rr ?? ""}
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, rr: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
-                <Field label="SpO2" field="vitals.spo2">
-                  <input
-                    value={encounter.vitals?.spo2 ?? ""}
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, spo2: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
               </div>
+              {vitalsOpen ? (
+                <div class="wfp-row">
+                  <Field label="BP" field="vitals.bp">
+                    <input
+                      value={encounter.vitals?.bp ?? ""}
+                      placeholder="124/78"
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, bp: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <Field label="HR" field="vitals.hr">
+                    <input
+                      value={encounter.vitals?.hr ?? ""}
+                      placeholder="72"
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, hr: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <Field label="Temp" field="vitals.temperature">
+                    <input
+                      value={encounter.vitals?.temperature ?? ""}
+                      placeholder="98.6"
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, temperature: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <Field label="RR" field="vitals.rr">
+                    <input
+                      value={encounter.vitals?.rr ?? ""}
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, rr: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <Field label="SpO2" field="vitals.spo2">
+                    <input
+                      value={encounter.vitals?.spo2 ?? ""}
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, spo2: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <button
+                    type="button"
+                    class="cd2004-link-button wfp-vitals-toggle"
+                    onClick={() => setVitalsOpen(false)}
+                  >
+                    Hide vitals
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  class="cd2004-link-button wfp-vitals-toggle"
+                  onClick={() => setVitalsOpen(true)}
+                >
+                  Show vitals (optional)
+                </button>
+              )}
               {requirements.acuteSafetyScreenConfirmed?.state !== "hidden" && (
                 <div
                   class={`wfp-checkbox-row ${requirements.acuteSafetyScreenConfirmed?.state === "required" ? "is-required" : ""}`}
@@ -2446,18 +2483,18 @@ export function InjectionPanel({
                 documentation choice. An administration note remains unavailable until a complete
                 administration is documented.
               </p>
-              <div class="wfp-option-list wfp-option-list-inline">
+              <div class="wfp-option-list wfp-option-list-inline wfp-disposition-list">
                 {(
                   [
-                    ["administered", "Review complete — document administration"],
-                    ["held", "Held"],
-                    ["escalated", "Escalated"],
-                    ["provider", "Provider-directed plan"],
-                  ] as Array<[InjectionDisposition["kind"], string]>
-                ).map(([kind, label]) => (
+                    ["administered", "Review complete — document administration", "ready", "check"],
+                    ["held", "Held", "warning", "alert"],
+                    ["escalated", "Escalated", "warning", "alert"],
+                    ["provider", "Provider-directed plan", "warning", "alert"],
+                  ] as Array<[InjectionDisposition["kind"], string, "ready" | "warning", "check" | "alert"]>
+                ).map(([kind, label, tone, iconName]) => (
                   <label
                     key={kind}
-                    class={`wfp-option-row ${encounter.disposition.kind === kind ? "is-selected" : ""}`}
+                    class={`wfp-option-row is-${tone} ${encounter.disposition.kind === kind ? "is-selected" : ""}`}
                   >
                     <input
                       type="radio"
@@ -2465,7 +2502,12 @@ export function InjectionPanel({
                       checked={encounter.disposition.kind === kind}
                       onChange={() => patchDisposition({ kind })}
                     />
-                    <span class="wfp-option-title">{label}</span>
+                    <span class="wfp-option-title">
+                      <span class="wfp-option-icon" aria-hidden="true">
+                        <DesktopIcon name={iconName} />
+                      </span>
+                      {label}
+                    </span>
                   </label>
                 ))}
               </div>
