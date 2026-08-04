@@ -37,7 +37,7 @@ export function NoteInspector({
           </strong>
         </div>
         <div class="cd2004-readiness-flags">
-          <span class={blockers ? "has-stop" : ""}>{blockers} stops</span>
+          <span class={blockers ? "has-stop" : ""}>{blockers} incomplete</span>
           <span class={warnings ? "has-warning" : ""}>{warnings} warnings</span>
         </div>
       </div>

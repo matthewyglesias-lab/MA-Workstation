@@ -59,6 +59,45 @@ function normalizedPatientValue(value?: string) {
   return (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
+function normalizedPromptText(value?: string | null) {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Client/Server workstations keep a one-line prompt for the control that owns
+ * focus. Reuse the control's existing label and title so this improves field
+ * orientation without introducing a second, potentially divergent source of
+ * clinical guidance.
+ */
+function promptForFocusedControl(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return null;
+  const control = target.closest<HTMLElement>(
+    "button, input, select, textarea, [role='tab'], [role='menuitem']",
+  );
+  if (!control || control.matches(":disabled")) return null;
+
+  const labelledControl = control as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+  const associatedLabel = labelledControl.labels?.[0];
+  const enclosingLabel = control.closest("label");
+  const label = normalizedPromptText(
+    control.getAttribute("aria-label") ??
+      associatedLabel?.textContent ??
+      enclosingLabel?.textContent ??
+      control.textContent,
+  );
+  if (!label) return null;
+
+  const title = normalizedPromptText(control.getAttribute("title"));
+  const placeholder =
+    control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
+      ? normalizedPromptText(control.placeholder)
+      : "";
+  const detail = title || placeholder;
+  return detail && !detail.toLocaleLowerCase().includes(label.toLocaleLowerCase())
+    ? `${label} — ${detail}`
+    : `Current field: ${label}`;
+}
+
 function contextsMismatch(
   activePatient: PatientContext,
   workflowPatient?: PatientContext,
@@ -124,6 +163,7 @@ export function ClinicalDesktopShell({
   const [focusedPane, setFocusedPane] = useState<DesktopPane>("work");
   const [mobilePane, setMobilePane] = useState<DesktopPane>("work");
   const [internalStatus, setInternalStatus] = useState<string | null>(null);
+  const [fieldPrompt, setFieldPrompt] = useState<string | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -141,7 +181,10 @@ export function ClinicalDesktopShell({
   const capturedScrollWorkflowRef = useRef<WorkflowId | null>(null);
   const isMismatch = contextsMismatch(patient, workflowPatient);
   const effectiveStatus =
-    internalStatus ?? statusMessage ?? "Ready. Select a workflow to begin.";
+    internalStatus ??
+    fieldPrompt ??
+    statusMessage ??
+    "Ready. Select a workflow to begin.";
 
   const openWorkflow = (workflow: WorkflowId) => {
     const scrollBody = shellRef.current?.querySelector<HTMLElement>(
@@ -313,6 +356,16 @@ export function ClinicalDesktopShell({
     onWorkAreaReady?.(workHostRef.current);
     return () => onWorkAreaReady?.(null);
   }, [onWorkAreaReady]);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const handleFocus = (event: FocusEvent) => {
+      setFieldPrompt(promptForFocusedControl(event.target));
+    };
+    shell.addEventListener("focusin", handleFocus);
+    return () => shell.removeEventListener("focusin", handleFocus);
+  }, []);
 
   useEffect(() => {
     // Command feedback takes precedence long enough to be announced. A later
@@ -733,7 +786,10 @@ export function ClinicalDesktopShell({
         role="tablist"
         aria-label="Desktop section switcher"
       >
-        {(["work", "inspector"] as DesktopPane[]).map((pane) => (
+        {(selectedWorkflow === "home"
+          ? (["work"] as DesktopPane[])
+          : (["work", "inspector"] as DesktopPane[])
+        ).map((pane) => (
           <button
             key={pane}
             type="button"
@@ -872,7 +928,7 @@ export function ClinicalDesktopShell({
             onWorkflowOpen={openWorkflow}
             onOpenRecords={onOpenRecords}
           />
-          {selectedWorkflow !== "administer" && inspectorPanel}
+          {selectedWorkflow !== "administer" && selectedWorkflow !== "home" && inspectorPanel}
         </aside>
       </main>
 
@@ -1094,6 +1150,7 @@ function InjectionRecordActions({
               }
               onClick={onSaveDraft}
             >
+              <span class="cd2004-action-glyph" aria-hidden="true">▣</span>
               Save local draft <kbd>F12</kbd>
             </button>
             <button
@@ -1112,6 +1169,7 @@ function InjectionRecordActions({
               }
               onClick={onFinish}
             >
+              <span class="cd2004-action-glyph" aria-hidden="true">✓</span>
               Attest &amp; lock local record
             </button>
           </>
@@ -1125,6 +1183,7 @@ function InjectionRecordActions({
           title="Start a blank injection. Any current editable work is saved as a local draft first."
           onClick={actions.onStartNew}
         >
+          <span class="cd2004-action-glyph" aria-hidden="true">+</span>
           Start new injection
         </button>
         {!locked && (
@@ -1140,6 +1199,7 @@ function InjectionRecordActions({
             }
             onClick={actions.onDiscard}
           >
+            <span class="cd2004-action-glyph" aria-hidden="true">×</span>
             Discard local draft...
           </button>
         )}

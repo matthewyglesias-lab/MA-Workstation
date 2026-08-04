@@ -32,6 +32,19 @@
     line-height: 1.25;
   }
 
+  .cd2004-shell :where(
+      button,
+      input,
+      select,
+      textarea,
+      [role="tab"],
+      [role="menuitem"]
+    ):focus-visible {
+    outline: 1px dotted #101010 !important;
+    outline-offset: -3px !important;
+    box-shadow: 0 0 0 1px #f3be28 !important;
+  }
+
   .cd2004-application-header {
     border-bottom: 2px solid #535d9b;
     background: #d9dbf1;
@@ -1619,9 +1632,9 @@
 
   .cd2004-patient-banner,
   .cd2004-patient-banner.has-mismatch {
-    grid-template-columns: minmax(245px, 1.5fr) auto auto minmax(130px, 0.62fr) minmax(150px, 0.7fr);
-    grid-template-rows: minmax(36px, auto) 18px;
-    min-height: 54px;
+    grid-template-columns: minmax(265px, 1.5fr) auto auto minmax(130px, 0.62fr) minmax(150px, 0.7fr);
+    grid-template-rows: minmax(41px, auto) 19px;
+    min-height: 60px;
     background: #d9dbef;
   }
 
@@ -1656,19 +1669,20 @@
   .cd2004-patient-banner small {
     flex: 0 0 auto;
     color: #405070;
-    font-size: 7px;
+    font-size: 8px;
   }
 
   .cd2004-patient-banner strong,
   .cd2004-patient-primary strong {
     overflow: hidden;
-    font-size: 10px;
+    font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .cd2004-patient-primary strong {
-    font-size: 12px;
+    font-size: 14px;
+    letter-spacing: 0.045em;
   }
 
   .cd2004-patient-banner.has-active-chart .cd2004-patient-primary,
@@ -1680,14 +1694,14 @@
 
   .meditech-patient-safety {
     gap: 5px;
-    min-height: 18px;
+    min-height: 19px;
     padding: 2px 6px;
     background: #ced1ec;
-    font-size: 8px;
+    font-size: 9px;
   }
 
   .meditech-patient-safety strong {
-    font-size: 8px;
+    font-size: 9px;
   }
 
   .meditech-patient-safety b {
@@ -1695,7 +1709,7 @@
   }
 
   .meditech-patient-safety small {
-    font-size: 7px;
+    font-size: 8px;
   }
 
   .cd2004-workspace,
@@ -1767,30 +1781,30 @@
   }
 
   .cd2004-navigator.meditech-record-list {
-    grid-template-rows: 21px 18px 19px minmax(0, 1fr);
+    grid-template-rows: 22px 20px 20px minmax(0, 1fr);
   }
 
   .meditech-rail-title,
   .meditech-function-heading {
     padding: 2px 4px;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .meditech-rail-context {
     padding: 2px 4px;
-    font-size: 7px;
+    font-size: 8px;
   }
 
   .meditech-function-list {
-    grid-auto-rows: 19px;
+    grid-auto-rows: 21px;
     align-content: start;
     padding: 1px;
   }
 
   .meditech-record-list .cd2004-nav-item {
-    grid-template-columns: 14px minmax(0, 1fr) 9px;
-    gap: 3px;
-    min-height: 19px;
+    grid-template-columns: 14px 12px minmax(0, 1fr) 9px;
+    gap: 2px;
+    min-height: 21px;
     padding: 1px 3px;
   }
 
@@ -1801,8 +1815,19 @@
   }
 
   .meditech-record-list .cd2004-nav-item strong {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 400;
+  }
+
+  .meditech-record-list .cd2004-nav-item svg {
+    display: block;
+    width: 11px;
+    height: 11px;
+    color: #344f98;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-selected svg {
+    color: #8b1d27;
   }
 
   .meditech-record-list .cd2004-nav-item.is-selected strong {
@@ -1910,6 +1935,10 @@
     font-size: 9px;
   }
 
+  .cd2004-worklist-table tbody tr:focus-within td {
+    background: #fff1a8;
+  }
+
   .cd2004-worklist-table th {
     height: 19px;
     font-size: 8px;
@@ -1917,7 +1946,26 @@
 
   .cd2004-worklist-empty td {
     height: auto;
+    padding: 12px 8px;
+    color: #273563;
     font-size: 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .cd2004-worklist-empty strong,
+  .cd2004-worklist-empty small {
+    display: block;
+  }
+
+  .cd2004-worklist-empty strong {
+    font-size: 10px;
+  }
+
+  .cd2004-worklist-empty small {
+    margin-top: 2px;
+    color: #596483;
+    font-size: 8px;
   }
 
   .cd2004-worklist-footer {
@@ -1966,9 +2014,42 @@
   }
 
   .cd2004-record-actions-buttons button {
-    min-height: 21px;
+    min-height: 23px;
     padding: 2px 6px;
-    font-size: 8px;
+    font-size: 9px;
+  }
+
+  .cd2004-record-actions-buttons .cd2004-action-glyph {
+    display: inline-grid;
+    place-items: center;
+    width: 12px;
+    height: 12px;
+    margin-right: 3px;
+    font: 700 10px/1 Arial, sans-serif;
+  }
+
+  .cd2004-record-actions-buttons button.is-save .cd2004-action-glyph {
+    color: #284e91;
+  }
+
+  .cd2004-record-actions-buttons button.is-primary .cd2004-action-glyph {
+    color: #196a36;
+  }
+
+  .cd2004-record-actions-buttons button.is-new .cd2004-action-glyph {
+    color: #284e91;
+  }
+
+  .cd2004-record-actions-buttons button.is-danger .cd2004-action-glyph {
+    color: #9a1717;
+  }
+
+  .cd2004-record-actions-buttons button:disabled {
+    color: #666;
+    background: #d2d2cf;
+    border-color: #f4f4f1 #777 #777 #f4f4f1;
+    opacity: 1;
+    text-shadow: 1px 1px #fff;
   }
 
   .cd2004-record-actions-buttons button.is-primary {

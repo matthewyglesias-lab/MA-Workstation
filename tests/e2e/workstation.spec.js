@@ -404,7 +404,7 @@ test.describe('MA Workstation browser journeys', () => {
     ).toHaveAttribute('aria-expanded', 'true');
   });
 
-  test('keeps the navigator, work, and note panels fixed and simultaneously visible', async ({ page }) => {
+  test('keeps the navigator fixed and adds document context only inside a clinical workflow', async ({ page }) => {
     await page.goto('/');
     // The navigator is the CPRS-style workflow tab strip along the bottom
     // edge, not a pane - but the contract is unchanged: it is always present.
@@ -412,11 +412,11 @@ test.describe('MA Workstation browser journeys', () => {
     const work = page.locator('.cd2004-work-window');
     const inspector = page.locator('.cd2004-inspector-window');
 
-    // The layout is fixed: every surface a workflow needs is always in its
-    // place, with no minimize/maximize/close controls to hide it.
+    // Start Center is a single worklist surface. A clinical worksheet then
+    // owns the work and document-review pair without redundant window chrome.
     await expect(navigator).toBeVisible();
     await expect(work).toBeVisible();
-    await expect(inspector).toBeVisible();
+    await expect(inspector).toHaveCount(0);
     await expect(page.locator('.cd2004-caption-button')).toHaveCount(0);
 
     await openWorkflow(page, 'uds');
@@ -769,13 +769,12 @@ test.describe('MA Workstation browser journeys', () => {
     await page.goto('/');
     await expectNoHorizontalPageOverflow(page);
 
-    // Two panes now (WORK / NOTE): the workflow tab strip is docked along the
-    // bottom edge at every width, so it never needs a switcher slot of its own.
+    // Start Center owns one worklist surface. The NOTE pane only appears after
+    // a clinical worksheet is opened, where it has real document context.
     const switcher = page.locator('.cd2004-mobile-switcher');
     await expect(switcher).toBeVisible();
-    await expect(switcher.getByRole('tab')).toHaveCount(2);
+    await expect(switcher.getByRole('tab')).toHaveCount(1);
     const workTab = switcher.getByRole('tab', { name: 'WORK', exact: true });
-    const noteTab = switcher.getByRole('tab', { name: 'NOTE', exact: true });
     await expect(workTab).toHaveAttribute('aria-selected', 'true');
     await expect(workTab).toHaveAttribute('aria-controls', 'cd2004-pane-work');
     await expect(workTab).toHaveAttribute('tabindex', '0');
@@ -787,6 +786,15 @@ test.describe('MA Workstation browser journeys', () => {
       getComputedStyle(node).display
     )).not.toBe('none');
 
+    // The bottom tab strip stays reachable at phone width, so switching
+    // workflows never requires leaving the work pane.
+    await openWorkflow(page, 'samples');
+    await expect(switcher.getByRole('tab')).toHaveCount(2);
+    const noteTab = switcher.getByRole('tab', { name: 'NOTE', exact: true });
+    await expect(page.locator('.cd2004-work-window')).toBeVisible();
+    await expect(switcher.getByRole('tab', { name: 'WORK', exact: true }))
+      .toHaveAttribute('aria-selected', 'true');
+
     await workTab.focus();
     await page.keyboard.press('ArrowRight');
     await expect(noteTab).toHaveAttribute('aria-selected', 'true');
@@ -795,13 +803,6 @@ test.describe('MA Workstation browser journeys', () => {
     await page.keyboard.press('ArrowLeft');
     await expect(workTab).toHaveAttribute('aria-selected', 'true');
     await expect(workTab).toBeFocused();
-
-    // The bottom tab strip stays reachable at phone width, so switching
-    // workflows never requires leaving the work pane.
-    await openWorkflow(page, 'samples');
-    await expect(page.locator('.cd2004-work-window')).toBeVisible();
-    await expect(switcher.getByRole('tab', { name: 'WORK', exact: true }))
-      .toHaveAttribute('aria-selected', 'true');
 
     await expect(page.locator('.meditech-command-deck')).toBeHidden();
     const mobileCommands = page.locator('[role="toolbar"][aria-label="Local mobile commands"]');
@@ -840,38 +841,29 @@ test.describe('MA Workstation browser journeys', () => {
       expect(shellBox.x).toBeGreaterThanOrEqual(0);
       expect(shellBox.width).toBeLessThanOrEqual(width);
 
-      // Work stays beside the MEDITECH context rail until the phone-width
-      // single-window switcher takes over. The clinical navigator is the
-      // persistent Record List/function rail, not a bottom CPRS tab strip.
+      // Start Center is deliberately one worklist window at every width.
+      // Clinical workflows add the document review window on desktop and use
+      // the single-window switcher at compact widths.
       const visibleWindows = page.locator('.cd2004-workspace .cd2004-window:visible');
       await expect(page.locator('.cd2004-navigator')).toBeVisible();
+      await expect(visibleWindows).toHaveCount(1);
       if (width <= 700) {
         await expect(page.locator('.cd2004-mobile-switcher')).toBeVisible();
-        await expect(visibleWindows).toHaveCount(1);
       } else {
         await expect(page.locator('.cd2004-mobile-switcher')).toBeHidden();
-        await expect(visibleWindows).toHaveCount(2);
-      }
-
-      if (width === 1181) {
-        const [workBox, inspectorBox] = await Promise.all([
-          page.locator('.cd2004-work-window').boundingBox(),
-          page.locator('.cd2004-inspector-window').boundingBox()
-        ]);
-        expect(workBox.x + workBox.width).toBeLessThanOrEqual(inspectorBox.x + 1);
-      }
-
-      if (width === 1040) {
-        const [workBox, inspectorBox] = await Promise.all([
-          page.locator('.cd2004-work-window').boundingBox(),
-          page.locator('.cd2004-inspector-window').boundingBox()
-        ]);
-        expect(workBox.x + workBox.width).toBeLessThanOrEqual(inspectorBox.x + 1);
       }
 
       for (const [tab, selector] of workflows) {
         await openWorkflow(page, tab);
         await expect(page.locator(selector)).toBeVisible();
+        await expect(visibleWindows).toHaveCount(width <= 700 ? 1 : 2);
+        if (width > 700) {
+          const inspectorBox = await page
+            .locator('.cd2004-inspector-window')
+            .boundingBox();
+          expect(inspectorBox.x).toBeGreaterThanOrEqual(0);
+          expect(inspectorBox.x + inspectorBox.width).toBeLessThanOrEqual(width + 1);
+        }
         const internalOverflow = await page.locator(selector).evaluate(node =>
           node.scrollWidth - node.clientWidth
         );
@@ -1272,7 +1264,7 @@ test.describe('MA Workstation browser journeys', () => {
       '[data-injection-record-actions] [data-injection-new]'
     );
     await expect(lockedStartNew).toBeVisible();
-    await expect(lockedStartNew).toHaveText('Start new injection');
+    await expect(lockedStartNew).toHaveAccessibleName('Start new injection');
     await expect(page.locator('#ptName')).toBeDisabled();
     await expect(page.locator('#medClear')).toHaveAttribute('aria-disabled', 'true');
     await expect(panel.getByText('Record locked', { exact: true })).toBeVisible();
@@ -1500,6 +1492,10 @@ test.describe('MA Workstation browser journeys', () => {
 
     await expect(actions).toContainText('INJECTION RECORD');
     await expect(actions).toContainText('NEW LOCAL DRAFT');
+    await expect(save).toHaveAccessibleName('Save local draft F12');
+    await expect(finish).toHaveAccessibleName('Attest & lock local record');
+    await expect(startNew).toHaveAccessibleName('Start new injection');
+    await expect(discard).toHaveAccessibleName('Discard local draft...');
     await expect(save).toBeDisabled();
     await expect(finish).toBeDisabled();
     await expect(startNew).toBeEnabled();
