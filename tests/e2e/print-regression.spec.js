@@ -310,10 +310,25 @@ async function prepareMinimalAvsInjection(page) {
   await panel.getByText('R deltoid', { exact: true }).click();
 
   await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
+  // Prove the real user-facing gate: the button is reachable and enabled
+  // with only the minimal fields above, matching the loosened AVS gate.
   const printButton = panel.locator('button:has-text("Print AVS")');
   await expect(printButton).toBeEnabled();
+
+  // The button's own click handler adds the print-avs body class, calls
+  // window.print(), and clears the class again via a 500ms setTimeout
+  // regardless of whether printing finished - a real browser print dialog
+  // blocks that timer, but headless/CI has no dialog to block it, so the
+  // class can already be gone before the PDF/layout assertions below run.
+  // Click it anyway to exercise the real path, then drive the actual
+  // assertions the same race-free way every other test in this file does:
+  // render and set the print class directly.
   await printButton.click();
-  await page.emulateMedia({ media: 'print' });
+  await setFieldsAndRender(page, {
+    bodyClass: 'print-avs',
+    renderName: 'renderAVS',
+    rootId: 'avsSheet'
+  });
 }
 
 test.describe('unchanged clinical print surfaces', () => {
