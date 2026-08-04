@@ -1,12 +1,36 @@
 import { useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
 import {
+  WORKFLOW_LABELS,
   type ClinicalTone,
   type InjectionRecordRow,
   type WorkflowId,
   type WorkflowSummary,
   type WorkQueueItem,
 } from "./types";
+
+// The module tiles a real EHR home screen opens work from - everything a
+// shift touches except Start Center itself. Order follows the same
+// clinical-first, administrative-last sequence as the workflow nav strip.
+const LAUNCHER_WORKFLOWS: readonly WorkflowId[] = [
+  "administer",
+  "uds",
+  "samples",
+  "forms",
+  "reference",
+  "log",
+  "tms",
+];
+
+const LAUNCHER_HINT: Partial<Record<WorkflowId, string>> = {
+  administer: "Start or resume a medication administration record.",
+  uds: "Document a point-of-care urine drug screen.",
+  samples: "Log dispensed sample packages.",
+  forms: "Build a letter, form, or handoff document.",
+  reference: "Look up clinical and formulary reference material.",
+  log: "Review and close out today's local activity log.",
+  tms: "Open the future / TMS workspace.",
+};
 
 type WorklistFilter = "all" | "review" | "today" | "drafts";
 type WorklistSource = "review" | "today" | "drafts";
@@ -127,9 +151,11 @@ function worklistEmptyHint(filter: WorklistFilter) {
 }
 
 export function StartCenter({
+  summaries,
   needsReview,
   todayQueue,
   injectionRecords,
+  onWorkflowOpen,
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
@@ -165,6 +191,31 @@ export function StartCenter({
 
   return (
     <section class="cd2004-start-center" aria-labelledby="currentWorklistTitle">
+      <nav class="cd2004-launcher" aria-label="Start a clinical workflow">
+        <span class="cd2004-launcher-head">Clinical Modules</span>
+        <div class="cd2004-launcher-grid">
+          {LAUNCHER_WORKFLOWS.map((workflow) => {
+            const summary = summaries[workflow];
+            const count = summary?.count ?? 0;
+            return (
+              <button
+                key={workflow}
+                type="button"
+                class={`cd2004-launcher-tile ${summary?.state ? `is-${summary.state}` : ""}`}
+                title={LAUNCHER_HINT[workflow]}
+                onClick={() => onWorkflowOpen(workflow)}
+              >
+                <span class="cd2004-launcher-icon" aria-hidden="true">
+                  <DesktopIcon name={workflow} />
+                </span>
+                <span class="cd2004-launcher-label">{WORKFLOW_LABELS[workflow]}</span>
+                {count > 0 && <span class="cd2004-launcher-badge">{count}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
       <header class="cd2004-worklist-header">
         <div>
           <h1 id="currentWorklistTitle" aria-label="Current Worklist">
