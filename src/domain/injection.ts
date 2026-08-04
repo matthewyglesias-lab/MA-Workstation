@@ -899,7 +899,7 @@ const evaluateTiming = (
   }
   const farLate = daysSincePrior > Math.round(intervalDays * 1.5);
   return {
-    state: "stop",
+    state: "warning",
     daysSincePrior,
     earliestDay,
     latestDay,
@@ -1060,7 +1060,10 @@ const evaluateTimingWithCadence = (
   const daysPastExpected = differenceInCalendarDays(expectedDate, encounter.administrationDate) ?? 0;
   const farLate = daysPastExpected > Math.max(window.windowAfter * 2, 28);
   return {
-    state: "stop",
+    // A late dose is reviewable, not blocking - staff can still administer
+    // with a soft warning rather than a hard stop, matching the "before the
+    // window" case just above.
+    state: "warning",
     daysSincePrior,
     earliestDay,
     latestDay,
@@ -2462,7 +2465,7 @@ export const emptyInjectionEncounter = (): InjectionEncounter => ({
   administeredBy: "",
   administrationTime: "",
   secondAdministrationTime: "",
-  allergies: "",
+  allergies: "NKDA",
   technique: "",
   traceability: { ndc: "", lot: "", expiration: "" },
   vitals: {},

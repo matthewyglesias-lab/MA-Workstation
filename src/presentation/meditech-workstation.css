@@ -6,6 +6,28 @@
  * live workstation composition and its screen chrome.
  */
 
+/*
+ * W95FA by Alina Sava, released under the SIL Open Font License 1.1 --
+ * see public/fonts/W95FA-LICENSE.txt. Built specifically as a recreation
+ * of MS Sans Serif, the default Windows 95 UI font -- not a generic pixel
+ * font, and not an extraction of Microsoft's original raster font. Self-
+ * hosted so the period-correct character renders identically on every
+ * machine, regardless of which system fonts (if any) happen to be
+ * installed. Unlike the original raster MS Sans Serif, this is a proper
+ * scalable outline, so it stays crisp at this app's many non-standard
+ * small sizes instead of degrading between the fixed sizes a true bitmap
+ * font would ship.
+ */
+@font-face {
+  font-family: "W95FA";
+  src:
+    url("/fonts/W95FA.woff2") format("woff2"),
+    url("/fonts/W95FA.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @media screen {
   .meditech-workstation-content {
     display: contents;
@@ -25,7 +47,7 @@
   padding: 14px;
   color: #101010;
   background: #b8bce5;
-  font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+  font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
   }
 
   .meditech-workstation-gate *,
@@ -182,7 +204,7 @@
     --cd-focus: #f5b300;
     color: #101010;
     background: var(--mt-lavender);
-    font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+    font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
     font-size: 11px;
     line-height: 1.25;
   }
@@ -232,7 +254,7 @@
 
   .cd2004-app-title > b {
     color: #fff3a5;
-    font: 700 12px/1 "Arial Narrow", Tahoma, sans-serif;
+    font: 700 12px/1 "Arial Narrow", "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.08em;
   }
 
@@ -325,14 +347,14 @@
 
   .cd2004-patient-banner small {
     color: #48527b;
-    font: 700 8px "Arial Narrow", "MS Sans Serif", sans-serif;
+    font: 700 8px "Arial Narrow", "W95FA", "MS Sans Serif", sans-serif;
     letter-spacing: 0.08em;
   }
 
   .cd2004-patient-banner strong,
   .cd2004-patient-primary strong {
     color: #101010;
-    font: 700 11px "Arial Narrow", "MS Sans Serif", sans-serif;
+    font: 700 11px "Arial Narrow", "W95FA", "MS Sans Serif", sans-serif;
     letter-spacing: 0.035em;
     text-transform: uppercase;
   }
@@ -367,13 +389,17 @@
     padding: 2px 8px;
     background: #d0d3ed;
     border-top: 1px solid #9aa2c9;
-    font: 700 9px "Arial Narrow", "MS Sans Serif", sans-serif;
+    font: 700 9px "Arial Narrow", "W95FA", "MS Sans Serif", sans-serif;
     letter-spacing: 0.03em;
   }
 
   .meditech-patient-safety strong {
     color: #a20d0d;
     font-size: 9px;
+    /* This label reads real MEDITECH's exact mixed-case wording
+       ("Allergy/AdvReac:"); the general patient-banner <strong> rule
+       upper-cases everything else in the banner, so opt back out here. */
+    text-transform: none;
   }
 
   .meditech-patient-safety b {
@@ -401,7 +427,7 @@
     color: #23396f;
     background: #f4f5ff;
     border: 1px solid #6c79b0;
-    font: 700 8px Tahoma, sans-serif;
+    font: 700 8px "W95FA", Tahoma, sans-serif;
   }
 
   .cd2004-patient-banner.has-mismatch {
@@ -547,14 +573,14 @@
 
   .cd2004-record-actions-state > span {
     color: #314d52;
-    font: 700 8px Tahoma, "MS Sans Serif", sans-serif;
+    font: 700 8px "W95FA", Tahoma, "MS Sans Serif", sans-serif;
     letter-spacing: 0.08em;
   }
 
   .cd2004-record-actions-state > strong {
     overflow: hidden;
     color: #0d2e37;
-    font: 700 10px "Arial Narrow", Tahoma, sans-serif;
+    font: 700 10px "Arial Narrow", "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.03em;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -607,7 +633,7 @@
     border: 1px solid;
     border-color: #fff #4d6265 #4d6265 #fff;
     box-shadow: inset 1px 1px #f8fbf9;
-    font: 700 9px Tahoma, "MS Sans Serif", sans-serif;
+    font: 700 9px "W95FA", Tahoma, "MS Sans Serif", sans-serif;
     white-space: nowrap;
   }
 
@@ -665,7 +691,7 @@
     color: inherit;
     background: transparent;
     border: 0;
-    font: 700 8px Tahoma, sans-serif;
+    font: 700 8px "W95FA", Tahoma, sans-serif;
   }
 
   .cd2004-record-actions-guidance {
@@ -732,7 +758,7 @@
 
   .cd2004-attestation-review dt {
     color: #4a5581;
-    font: 700 8px Tahoma, sans-serif;
+    font: 700 8px "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -881,7 +907,7 @@
   }
 
   .meditech-rail-records-command kbd {
-    font: 700 8px/1 Tahoma, sans-serif;
+    font: 700 8px/1 "W95FA", Tahoma, sans-serif;
   }
 
   .meditech-function-heading small {
@@ -947,7 +973,7 @@
     color: #fff;
     background: #3d5eaa;
     border: 1px solid #233d80;
-    font: 700 8px Tahoma, sans-serif;
+    font: 700 8px "W95FA", Tahoma, sans-serif;
   }
 
   .meditech-record-list .cd2004-nav-item svg {
@@ -1073,7 +1099,7 @@
     color: #fff;
     background: #3c5da7;
     border: 1px solid #263e7d;
-    font: 700 8px/15px Tahoma, sans-serif;
+    font: 700 8px/15px "W95FA", Tahoma, sans-serif;
     text-align: center;
   }
 
@@ -1108,7 +1134,7 @@
   .wfp-panel {
     color: #101010;
     background: #eff0ed;
-    font: 10px/1.25 Tahoma, "MS Sans Serif", Verdana, sans-serif;
+    font: 10px/1.25 "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
   }
 
   .wfp-summary-bar {
@@ -1162,7 +1188,7 @@
     color: #101010;
     background: #fff;
     border-color: #7b7d78;
-    font: 10px Tahoma, "MS Sans Serif", sans-serif;
+    font: 10px "W95FA", Tahoma, "MS Sans Serif", sans-serif;
   }
 
   .wfp-field input:focus,
@@ -1215,7 +1241,7 @@
   .meditech-lab-header strong,
   .meditech-lab-header b {
     color: #fff9b5;
-    font: 700 11px/1.2 Tahoma, sans-serif;
+    font: 700 11px/1.2 "W95FA", Tahoma, sans-serif;
   }
 
   .meditech-lab-header span {
@@ -1233,7 +1259,7 @@
     color: #4f3000;
     background: #fff0a9;
     border-bottom: 1px solid #a88122;
-    font-family: Tahoma, sans-serif;
+    font-family: "W95FA", Tahoma, sans-serif;
   }
 
   .meditech-lab-status strong {
@@ -1273,7 +1299,7 @@
   .meditech-lab-demographics dt,
   .meditech-lab-device dt {
     color: #52716c;
-    font: 700 7px/1.1 Tahoma, sans-serif;
+    font: 700 7px/1.1 "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.07em;
   }
 
@@ -1301,7 +1327,7 @@
     background: #c8d9ec;
     border-right: 1px solid #8ea4c0;
     border-bottom: 1px solid #405b81;
-    font: 700 8px Tahoma, sans-serif;
+    font: 700 8px "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.04em;
     text-align: left;
   }
@@ -1384,7 +1410,7 @@
 
   .meditech-lab-interpretation b {
     color: #52716c;
-    font: 700 7px Tahoma, sans-serif;
+    font: 700 7px "W95FA", Tahoma, sans-serif;
   }
 
   .meditech-lab-interpretation span {
@@ -1430,7 +1456,7 @@
     color: #fff;
     background: #516e72;
     border: 1px solid #31484b;
-    font: 700 8px Tahoma, sans-serif;
+    font: 700 8px "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.06em;
   }
 }
@@ -1953,10 +1979,39 @@
   }
 
   .cd2004-shell .cd2004-start-center {
-    grid-template-rows: 25px 21px minmax(0, 1fr) 20px;
+    grid-template-rows: auto 25px 21px minmax(0, 1fr) 20px;
     gap: 2px;
     padding: 2px;
     background: #c7cae8;
+  }
+
+  .cd2004-launcher {
+    gap: 2px;
+    padding: 2px 4px;
+    background: #eef0fb;
+    border-color: #65709a;
+    box-shadow: inset 1px 1px #fff;
+  }
+
+  .cd2004-launcher-head {
+    font-size: 7px;
+  }
+
+  .cd2004-launcher-grid {
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: 3px;
+  }
+
+  .cd2004-launcher-tile {
+    min-height: 48px;
+    padding: 5px 3px 4px;
+    gap: 3px;
+    font-size: 8px;
+  }
+
+  .cd2004-launcher-icon svg {
+    width: 18px;
+    height: 18px;
   }
 
   .cd2004-worklist-header {
@@ -1982,7 +2037,7 @@
   .cd2004-worklist-header h1 {
     margin: 0;
     color: #1f3264;
-    font: 700 10px Tahoma, "MS Sans Serif", sans-serif;
+    font: 700 10px "W95FA", Tahoma, "MS Sans Serif", sans-serif;
     letter-spacing: 0.035em;
     text-transform: uppercase;
   }
@@ -2012,7 +2067,7 @@
   .cd2004-worklist-filter-label {
     margin-right: 3px;
     color: #33426f;
-    font: 700 8px Tahoma, sans-serif;
+    font: 700 8px "W95FA", Tahoma, sans-serif;
   }
 
   .cd2004-worklist-tabs button {
@@ -2354,22 +2409,49 @@
     overflow: hidden;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections) {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre) {
     scrollbar-color: #7e88ac #d6d8ec;
     scrollbar-width: auto;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar {
     width: 15px;
     height: 15px;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar-track {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar-track {
     background: #d6d8ec;
     border: 1px solid #8a92b3;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections)::-webkit-scrollbar-thumb {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar-thumb {
+    min-height: 24px;
+    background: #aeb3d0;
+    border: 1px solid;
+    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  /* These are body-appended siblings of .cd2004-shell, not descendants of it
+     (see main.tsx: RecordActionDialog/ContextDialog/RecordsWindow render
+     alongside <ClinicalDesktopShell/>, not inside it) - the .cd2004-shell
+     scrollbar rules above cannot reach them, so they need their own copy of
+     the same treatment. */
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card) {
+    scrollbar-color: #7e88ac #d6d8ec;
+    scrollbar-width: auto;
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar {
+    width: 15px;
+    height: 15px;
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar-track {
+    background: #d6d8ec;
+    border: 1px solid #8a92b3;
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar-thumb {
     min-height: 24px;
     background: #aeb3d0;
     border: 1px solid;
@@ -2482,7 +2564,7 @@
 
   .cd2004-status-segment {
     min-width: 76px;
-    font: 700 8px "Arial Narrow", Tahoma, sans-serif;
+    font: 700 8px "Arial Narrow", "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.045em;
     text-align: center;
   }
@@ -2989,7 +3071,7 @@
     border: 1px solid;
     border-color: #fff #56618f #56618f #fff;
     box-shadow: inset 1px 1px #fdfdff, inset -1px -1px #a4a9c8;
-    font: 700 10px Tahoma, "MS Sans Serif", sans-serif;
+    font: 700 10px "W95FA", Tahoma, "MS Sans Serif", sans-serif;
     text-align: left;
   }
 
@@ -3017,7 +3099,7 @@
     color: #fff;
     background: #3c5ca3;
     border: 1px solid #243a79;
-    font: 700 7px/1 Tahoma, sans-serif;
+    font: 700 7px/1 "W95FA", Tahoma, sans-serif;
   }
 
   .meditech-rail-records-command svg {
@@ -3077,7 +3159,7 @@
     border: 0;
     border-top: 1px solid #f8f9ff;
     border-bottom: 1px solid #7a84ad;
-    font: 700 9px/1.1 Tahoma, "MS Sans Serif", sans-serif;
+    font: 700 9px/1.1 "W95FA", Tahoma, "MS Sans Serif", sans-serif;
     letter-spacing: 0;
     text-transform: none;
   }
@@ -3103,7 +3185,7 @@
   }
 
   .meditech-record-list .cd2004-nav-item strong {
-    font: 400 10px/1 Tahoma, "MS Sans Serif", sans-serif;
+    font: 400 10px/1 "W95FA", Tahoma, "MS Sans Serif", sans-serif;
   }
 
   /* An always-visible outstanding-work count, not an alarm -- soft chip
@@ -3120,7 +3202,7 @@
     color: var(--cd-red);
     background: var(--cd-red-soft);
     border: 1px solid var(--cd-red);
-    font: 700 7px/1 Tahoma, sans-serif;
+    font: 700 7px/1 "W95FA", Tahoma, sans-serif;
   }
 
   .meditech-record-list .cd2004-nav-item .meditech-nav-icon {
@@ -3203,13 +3285,13 @@
   }
 
   .cd2004-readiness-score span {
-    font: 700 8px/1 Tahoma, sans-serif;
+    font: 700 8px/1 "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.03em;
     text-transform: uppercase;
   }
 
   .cd2004-readiness-score strong {
-    font: 700 9px/1 Tahoma, sans-serif;
+    font: 700 9px/1 "W95FA", Tahoma, sans-serif;
   }
 
   .cd2004-readiness-flags {
@@ -3225,7 +3307,7 @@
     color: #435078;
     background: transparent;
     border: 0;
-    font: 700 7px/1 Tahoma, sans-serif;
+    font: 700 7px/1 "W95FA", Tahoma, sans-serif;
   }
 
   .cd2004-readiness-flags .has-stop {
@@ -3288,7 +3370,7 @@
 
   .cd2004-readiness-state {
     color: #596583;
-    font: 700 7px/1 Tahoma, sans-serif;
+    font: 700 7px/1 "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.02em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -3326,14 +3408,14 @@
 
   .cd2004-note-heading > strong {
     overflow: hidden;
-    font: 700 10px/1 Tahoma, sans-serif;
+    font: 700 10px/1 "W95FA", Tahoma, sans-serif;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .cd2004-note-heading > span {
     color: #eef1ff;
-    font: 700 7px/1 Tahoma, sans-serif;
+    font: 700 7px/1 "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.05em;
   }
 
@@ -3357,7 +3439,7 @@
     background: #e7e8f3;
     border: 1px solid;
     border-color: #7781a8 #fff #fff #7781a8;
-    font: 700 7px/1 Tahoma, sans-serif;
+    font: 700 7px/1 "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.04em;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3374,7 +3456,7 @@
     background: #e7e8f3;
     border: 1px solid;
     border-color: #fff #626d99 #626d99 #fff;
-    font: 700 8px/1 Tahoma, sans-serif;
+    font: 700 8px/1 "W95FA", Tahoma, sans-serif;
   }
 
   .cd2004-note-toolbar .cd2004-command-button svg,
@@ -3406,7 +3488,7 @@
     color: #243866;
     background: #dce5f2;
     border-bottom: 1px solid #9aa6bd;
-    font: 700 8px/1 Tahoma, sans-serif;
+    font: 700 8px/1 "W95FA", Tahoma, sans-serif;
     letter-spacing: 0.02em;
     text-transform: uppercase;
   }

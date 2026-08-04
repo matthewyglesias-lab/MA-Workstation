@@ -1,6 +1,7 @@
 import { createContext, Fragment, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "../workflow-panels.css";
+import { DesktopIcon } from "../../DesktopIcon";
 import {
   INJECTION_ATTESTATION_OPTIONS,
   INJECTION_REASON_OPTIONS,
@@ -69,6 +70,20 @@ const INJECTION_TABS: Array<[InjectionTab, string]> = [
 ];
 
 const INJECTION_TAB_LABELS = Object.fromEntries(INJECTION_TABS) as Record<InjectionTab, string>;
+
+/**
+ * Site tiles use a small region pictogram purely as a scanning aid - the
+ * exact site string (e.g. "R deltoid") remains the actual label and the
+ * only thing `patch({ site })` ever reads. Derived from the label text
+ * rather than a new catalog field so `injection-catalog.ts`'s plain
+ * string site list stays untouched.
+ */
+function siteIconName(site: string): "site-deltoid" | "site-gluteal" | "site-abdomen" | "site-arm" {
+  if (/deltoid/i.test(site)) return "site-deltoid";
+  if (/gluteal/i.test(site)) return "site-gluteal";
+  if (/abdomen/i.test(site)) return "site-abdomen";
+  return "site-arm";
+}
 
 /**
  * The evaluator owns which fields are required, optional, or not relevant to
@@ -273,13 +288,13 @@ function tabForInjectionField(field?: string): InjectionTab {
     // When it is due, and the multi-dose protocol that sets the schedule.
     case "priorDoseDate":
     case "priorSite":
-    case "administrationDate":
     case "nextDoseDate":
     case "initiation":
       return "schedule";
-    // The administration event itself.
+    // The administration event itself: where, by whom, and when.
     case "site":
     case "administeredBy":
+    case "administrationDate":
     case "administrationTime":
     case "secondAdministrationTime":
       return "administration";
@@ -844,6 +859,19 @@ export function InjectionPanel({
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
   const [tab, setTab] = useState<InjectionTab>("order");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  // Vitals are optional and rarely used for a routine maintenance dose - stay
+  // out of the way by default, but a reopened record that already carries a
+  // vitals value starts expanded so nothing entered is hidden from view.
+  const [vitalsOpen, setVitalsOpen] = useState(
+    () =>
+      !!(
+        initialEncounter.vitals?.bp ||
+        initialEncounter.vitals?.hr ||
+        initialEncounter.vitals?.temperature ||
+        initialEncounter.vitals?.rr ||
+        initialEncounter.vitals?.spo2
+      ),
+  );
   const mirroredOnMount = useRef(false);
   const autoCalculatedNextDue = useRef("");
   const ndcResolver = useMemo(() => createNdcOptionResolver(), []);
@@ -944,16 +972,20 @@ export function InjectionPanel({
     // A different product starts a different order context. Do not carry a
     // prior package choice or follow-up suggestion into it.
     autoCalculatedNextDue.current = "";
+    // "Other" has no real per-product route/cadence in the catalog - its
+    // entry is a generic placeholder for site/route UI plumbing, not a
+    // labeled fact, so it stays staff-entered like before.
+    const catalogMedication = key && key !== "other" ? INJECTION_MEDICATIONS[key] : null;
     patch({
       medicationKey: key,
       customMedication: "",
       dose: "",
       site: "",
-      // The reference catalog may describe a usual route/cadence, but those
-      // are not a local order feed. Keep the actual ordered route and cadence
-      // deliberately staff-entered.
-      route: "",
-      intervalKey: "",
+      // Pre-fill the reference catalog's usual route/cadence as a starting
+      // point - staff still see and can change both before the order is
+      // documented, this just saves re-typing what the label already says.
+      route: catalogMedication?.route ?? "",
+      intervalKey: catalogMedication?.intervalKey ?? "",
       nextDoseDate: "",
       traceability: { ...encounter.traceability, ndc: "" },
       verifications: {},
@@ -1127,6 +1159,18 @@ export function InjectionPanel({
   );
 
   const administered = encounter.disposition.kind === "administered";
+  // AVS is deliberately gated separately from `administered`: it only needs
+  // enough to describe what was given, not the final disposition choice or
+  // complete safety record. The legacy engine's own AVS-availability check
+  // (`canPrintAvs()` in the RC535 clinical-safety module) mirrors this same,
+  // narrower set of fields.
+  const hasAdministrationDetailsForAvs = Boolean(
+    encounter.medicationKey &&
+      encounter.dose.trim() &&
+      encounter.route.trim() &&
+      encounter.site.trim() &&
+      encounter.administrationDate.trim(),
+  );
   const stops = evaluation?.stops ?? [];
   const incompleteFields = useMemo(
     () => new Set(stops.flatMap((item) => (item.field ? [item.field] : []))),
@@ -1306,6 +1350,24 @@ export function InjectionPanel({
             Session staff: {sessionStaff}
           </span>
         )}
+        {/* Printing is read-only output; a quick-access copy lives here so it's
+            reachable from any tab, not just Outcome's "Document output"
+            section - staff shouldn't have to navigate to the last tab just to
+            discover AVS is available once the minimal fields exist. */}
+        <button
+          type="button"
+          class="cd2004-link-button wfp-summary-print-avs"
+          onClick={() => clickLegacyControl("printAVS")}
+          disabled={!hasAdministrationDetailsForAvs}
+          title={
+            hasAdministrationDetailsForAvs
+              ? "Print the patient after-visit summary"
+              : "Available once medication, dose, route, site, and administration date are documented."
+          }
+        >
+          <DesktopIcon name="print" />
+          Print AVS
+        </button>
         <span class="wfp-summary-spacer" />
         <span class="wfp-transaction-readout" aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}>
           <b>{locked ? "REVIEW" : "ENTRY"}</b>
@@ -1548,13 +1610,6 @@ export function InjectionPanel({
                       </option>
                     ))}
                   </select>
-                </Field>
-                <Field label="Actual administration date" field="administrationDate">
-                  <input
-                    type="date"
-                    value={encounter.administrationDate}
-                    onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
-                  />
                 </Field>
                 <Field label="Expected next due" field="nextDoseDate">
                   <input
@@ -1919,14 +1974,20 @@ export function InjectionPanel({
                     {requirements.site?.state === "required" && <abbr class="wfp-req" title="Required">*</abbr>}
                     {requirements.site?.state === "optional" && <span class="wfp-opt">optional</span>}
                   </span>
-                  <div class="wfp-option-list">
+                  <div class="wfp-site-tile-grid">
                     {allowedSites.map((site) => (
-                      <label key={site} class={`wfp-option-row ${encounter.site === site ? "is-selected" : ""}`}>
+                      <label
+                        key={site}
+                        class={`wfp-site-tile ${encounter.site === site ? "is-selected" : ""}`}
+                      >
                         <input type="radio" name="inj-site" checked={encounter.site === site} onChange={() => patch({ site })} />
-                        <span>
-                          <span class="wfp-option-title">{site}</span>
-                          {site === recommendedSite && <div class="wfp-option-desc">Suggested rotation site</div>}
+                        <span class="wfp-site-tile-icon" aria-hidden="true">
+                          <DesktopIcon name={siteIconName(site)} />
                         </span>
+                        <span class="wfp-site-tile-title">{site}</span>
+                        {site === recommendedSite && (
+                          <span class="wfp-site-tile-badge">Suggested rotation site</span>
+                        )}
                       </label>
                     ))}
                   </div>
@@ -1962,6 +2023,13 @@ export function InjectionPanel({
                   {staffSignInValue.trim() && (
                     <span class="wfp-session-default">Session-derived default; editable for the documenting staff member.</span>
                   )}
+                </Field>
+                <Field label="Actual administration date" field="administrationDate">
+                  <input
+                    type="date"
+                    value={encounter.administrationDate}
+                    onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
+                  />
                 </Field>
                 <Field label="Actual administration time" field="administrationTime">
                   <input
@@ -2249,54 +2317,73 @@ export function InjectionPanel({
                 <Field label="Allergy status" field="allergies">
                   <input
                     value={encounter.allergies}
-                    placeholder="Enter documented allergy / ADR status; enter NKDA only if confirmed"
+                    placeholder="Enter documented allergy / ADR status"
                     onInput={(event) => patch({ allergies: event.currentTarget.value })}
                   />
                 </Field>
-                <Field label="BP" field="vitals.bp">
-                  <input
-                    value={encounter.vitals?.bp ?? ""}
-                    placeholder="124/78"
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, bp: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
-                <Field label="HR" field="vitals.hr">
-                  <input
-                    value={encounter.vitals?.hr ?? ""}
-                    placeholder="72"
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, hr: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
-                <Field label="Temp" field="vitals.temperature">
-                  <input
-                    value={encounter.vitals?.temperature ?? ""}
-                    placeholder="98.6"
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, temperature: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
-                <Field label="RR" field="vitals.rr">
-                  <input
-                    value={encounter.vitals?.rr ?? ""}
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, rr: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
-                <Field label="SpO2" field="vitals.spo2">
-                  <input
-                    value={encounter.vitals?.spo2 ?? ""}
-                    onInput={(event) =>
-                      patch({ vitals: { ...encounter.vitals, spo2: event.currentTarget.value } })
-                    }
-                  />
-                </Field>
               </div>
+              {vitalsOpen ? (
+                <div class="wfp-row">
+                  <Field label="BP" field="vitals.bp">
+                    <input
+                      value={encounter.vitals?.bp ?? ""}
+                      placeholder="124/78"
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, bp: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <Field label="HR" field="vitals.hr">
+                    <input
+                      value={encounter.vitals?.hr ?? ""}
+                      placeholder="72"
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, hr: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <Field label="Temp" field="vitals.temperature">
+                    <input
+                      value={encounter.vitals?.temperature ?? ""}
+                      placeholder="98.6"
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, temperature: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <Field label="RR" field="vitals.rr">
+                    <input
+                      value={encounter.vitals?.rr ?? ""}
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, rr: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <Field label="SpO2" field="vitals.spo2">
+                    <input
+                      value={encounter.vitals?.spo2 ?? ""}
+                      onInput={(event) =>
+                        patch({ vitals: { ...encounter.vitals, spo2: event.currentTarget.value } })
+                      }
+                    />
+                  </Field>
+                  <button
+                    type="button"
+                    class="cd2004-link-button wfp-vitals-toggle"
+                    onClick={() => setVitalsOpen(false)}
+                  >
+                    Hide vitals
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  class="cd2004-link-button wfp-vitals-toggle"
+                  onClick={() => setVitalsOpen(true)}
+                >
+                  Show vitals (optional)
+                </button>
+              )}
               {requirements.acuteSafetyScreenConfirmed?.state !== "hidden" && (
                 <div
                   class={`wfp-checkbox-row ${requirements.acuteSafetyScreenConfirmed?.state === "required" ? "is-required" : ""}`}
@@ -2431,21 +2518,21 @@ export function InjectionPanel({
             <div class="wfp-section-body">
               <p class="wfp-field-hint">
                 Use the checked routine review items as a fast review-by-exception sheet, then make one final
-                documentation choice. An administration note and AVS remain unavailable until a complete
+                documentation choice. An administration note remains unavailable until a complete
                 administration is documented.
               </p>
-              <div class="wfp-option-list wfp-option-list-inline">
+              <div class="wfp-option-list wfp-option-list-inline wfp-disposition-list">
                 {(
                   [
-                    ["administered", "Review complete — document administration"],
-                    ["held", "Held"],
-                    ["escalated", "Escalated"],
-                    ["provider", "Provider-directed plan"],
-                  ] as Array<[InjectionDisposition["kind"], string]>
-                ).map(([kind, label]) => (
+                    ["administered", "Review complete — document administration", "ready", "check"],
+                    ["held", "Held", "warning", "alert"],
+                    ["escalated", "Escalated", "warning", "alert"],
+                    ["provider", "Provider-directed plan", "warning", "alert"],
+                  ] as Array<[InjectionDisposition["kind"], string, "ready" | "warning", "check" | "alert"]>
+                ).map(([kind, label, tone, iconName]) => (
                   <label
                     key={kind}
-                    class={`wfp-option-row ${encounter.disposition.kind === kind ? "is-selected" : ""}`}
+                    class={`wfp-option-row is-${tone} ${encounter.disposition.kind === kind ? "is-selected" : ""}`}
                   >
                     <input
                       type="radio"
@@ -2453,7 +2540,12 @@ export function InjectionPanel({
                       checked={encounter.disposition.kind === kind}
                       onChange={() => patchDisposition({ kind })}
                     />
-                    <span class="wfp-option-title">{label}</span>
+                    <span class="wfp-option-title">
+                      <span class="wfp-option-icon" aria-hidden="true">
+                        <DesktopIcon name={iconName} />
+                      </span>
+                      {label}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -2499,43 +2591,54 @@ export function InjectionPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
-            <div class="wfp-section-head">Document output</div>
-            <div class="wfp-section-body">
-              <p class="wfp-field-hint wfp-document-output-hint">
-                Review and copy the generated note in Clinical Documentation. Printing uses the same local
-                encounter snapshot.
-              </p>
-              <div class="wfp-actions">
-                <button
-                  type="button"
-                  class="cd2004-command-button"
-                  onClick={() => clickLegacyControl("printAVS")}
-                  disabled={!administered}
-                >
-                  Print AVS
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => clickLegacyControl("injWorksheetPrint")}
-                >
-                  Print injection worksheet
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => clickLegacyControl("injWorksheetBlank")}
-                >
-                  Blank worksheet
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
       </fieldset>
+
+      {/* Printing is read-only output, not an edit - it stays outside the
+          locked fieldset so a completed record's AVS/worksheet remain
+          reprintable instead of going dead the moment the record locks. */}
+      {tab === "outcome" && (
+        <div class="wfp-section">
+          <div class="wfp-section-head">Document output</div>
+          <div class="wfp-section-body">
+            <p class="wfp-field-hint wfp-document-output-hint">
+              Review and copy the generated note in Clinical Documentation. Printing uses the same local
+              encounter snapshot.
+            </p>
+            <div class="wfp-actions">
+              <button
+                type="button"
+                class="cd2004-command-button"
+                onClick={() => clickLegacyControl("printAVS")}
+                disabled={!hasAdministrationDetailsForAvs}
+                title={
+                  hasAdministrationDetailsForAvs
+                    ? undefined
+                    : "Available once medication, dose, route, site, and administration date are documented."
+                }
+              >
+                Print AVS
+              </button>
+              <button
+                type="button"
+                class="cd2004-link-button"
+                onClick={() => clickLegacyControl("injWorksheetPrint")}
+              >
+                Print injection worksheet
+              </button>
+              <button
+                type="button"
+                class="cd2004-link-button"
+                onClick={() => clickLegacyControl("injWorksheetBlank")}
+              >
+                Blank worksheet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {locked && (
         <div class="wfp-section">

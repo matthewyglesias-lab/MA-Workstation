@@ -1293,7 +1293,7 @@ function PatientBanner({
         <strong>{staffLabel}</strong>
       </div>
       <div class="meditech-patient-safety">
-        <strong>ALLERGY / ADR STATUS:</strong>
+        <strong>Allergy/AdvReac:</strong>
         <b>
           {hasActiveChart
             ? patient.allergyStatus || "Not available in this local record"

@@ -26,13 +26,13 @@ const STAGES: Partial<Record<WorkflowId, readonly ReadinessStage[]>> = {
       label: "Medication & schedule",
       sections: ["medication", "timing", "initiation"],
     },
-    { id: "safety", label: "Safety", sections: ["safety"] },
-    { id: "product-trace", label: "Product trace", sections: ["traceability"] },
     {
       id: "administration",
       label: "Administration",
       sections: ["administration", "response", "details"],
     },
+    { id: "product-trace", label: "Product trace", sections: ["traceability"] },
+    { id: "safety", label: "Safety", sections: ["safety"] },
     {
       id: "disposition-followup",
       label: "Disposition / follow-up",

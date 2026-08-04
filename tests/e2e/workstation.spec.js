@@ -161,13 +161,13 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Administration');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
+    await panel.locator('input[type="date"]').first().fill('2026-07-30');
     if (includeAdministrationTime) {
       await panel.locator('input[type="time"]').first().fill(administrationTime);
     }
 
     await openInjectionTab(page, 'Schedule');
-    await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
-    await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+    await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
     return panel;
   }
 
@@ -1370,13 +1370,13 @@ test.describe('MA Workstation browser journeys', () => {
       .click();
 
     await openInjectionTab(page, 'Administration');
+    await panel.locator('input[type="date"]').first().fill('2026-07-30');
     await panel.locator('input[type="time"]').first().fill('10:15');
     await panel.locator('.wfp-field:has-text("Component 2 actual time") input').fill('10:18');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
 
     await openInjectionTab(page, 'Schedule');
-    await panel.locator('input[type="date"]').nth(1).fill('2026-07-30');
-    await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+    await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
 
     await openInjectionTab(page, 'Outcome');
     const administered = page.locator('#clinicalDisposition [data-disposition="administered"]');
@@ -1724,6 +1724,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
     await openInjectionTab(page, 'Verification');
+    await panel.getByRole('button', { name: 'Show vitals (optional)' }).click();
     await panel.locator('.wfp-field:has-text("RR") input').fill('10');
     await panel.locator('.wfp-field:has-text("SpO2") input').fill('93');
 
@@ -1736,8 +1737,12 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
     await openInjectionTab(page, 'Verification');
-    await expect(panel.locator('.wfp-field:has-text("RR") input')).toHaveValue('');
-    await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveValue('');
+    // Vitals are hidden by default on a genuinely blank draft - their
+    // absence here (rather than an empty-valued field) is itself the
+    // "no leftover vitals" assertion.
+    await expect(panel.getByRole('button', { name: 'Show vitals (optional)' })).toBeVisible();
+    await expect(panel.locator('.wfp-field:has-text("RR") input')).toHaveCount(0);
+    await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveCount(0);
 
     await page.keyboard.press('F11');
     await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
@@ -1799,8 +1804,8 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('uses prior administration context to recommend, but never auto-select, the actual site', async ({ page }) => {
     // The legacy interactive body-map (recommended/quick-rotate CSS classes,
-    // auto-collapsing cards) has been replaced by a plain list-based site
-    // picker per the approved redesign; this test now covers that picker's
+    // auto-collapsing cards) has been replaced by an icon-tile site picker
+    // per the approved redesign; this test now covers that picker's
     // equivalent guarantees: a recommended-site badge is shown, but nothing
     // is ever pre-selected on the user's behalf.
     await page.setViewportSize({ width: 840, height: 720 });
@@ -1825,13 +1830,13 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-section-head', { hasText: 'Actual administration location' })).toContainText(
       'rotate: L deltoid'
     );
-    await expect(panel.locator('.wfp-option-row.is-selected')).toHaveCount(0);
+    await expect(panel.locator('.wfp-site-tile.is-selected')).toHaveCount(0);
 
     await panel.getByText('L deltoid', { exact: true }).click();
     await expect(
-      panel.locator('.wfp-option-row', { hasText: 'L deltoid' })
+      panel.locator('.wfp-site-tile', { hasText: 'L deltoid' })
     ).toHaveClass(/is-selected/);
-    await expect(panel.locator('.wfp-option-row.is-selected')).toHaveCount(1);
+    await expect(panel.locator('.wfp-site-tile.is-selected')).toHaveCount(1);
 
     // Site and the administration time now share the Administration block, so
     // the actual-time field is reachable without leaving the tab.
@@ -1920,6 +1925,98 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
   });
 
+  test('saves a local UDS draft and resumes it from the UDS records window', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
+
+    await panel.locator('.cd2004-record-actions button.is-save').click();
+    await expect(panel.locator('.cd2004-record-actions')).toHaveClass(/is-draft/);
+    await expect(panel.locator('.cd2004-record-actions-state strong')).toHaveText('SAVED LOCAL DRAFT');
+
+    await panel.getByRole('button', { name: 'UDS records…' }).click();
+    const recordsDialog = page.locator('[role="dialog"][aria-labelledby="udsRecordsDrawerTitle"]');
+    await expect(recordsDialog).toBeVisible();
+    const rows = recordsDialog.locator('.records-drawer-row');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.locator('.records-drawer-row-title')).toHaveText('Rivera, Ana');
+    await expect(rows.locator('.records-drawer-row-badge')).toHaveText('Draft');
+
+    // Start new UDS screen from the records window blanks the worksheet, and
+    // the saved draft stays listed rather than being lost.
+    await recordsDialog.getByRole('button', { name: 'Start new UDS screen' }).click();
+    await expect(recordsDialog).toBeHidden();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
+
+    await panel.getByRole('button', { name: 'UDS records…' }).click();
+    await expect(recordsDialog).toBeVisible();
+    await expect(recordsDialog.locator('.records-drawer-row')).toHaveCount(1);
+    await recordsDialog.locator('.records-drawer-row').click();
+    await expect(recordsDialog).toBeHidden();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('Rivera, Ana');
+  });
+
+  test('discards a local UDS draft only after explicit confirmation', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
+    await panel.locator('.cd2004-record-actions button.is-save').click();
+
+    await panel.locator('.cd2004-record-actions button.is-danger').click();
+    const dialog = page.getByRole('dialog', { name: 'Discard Local Draft' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('editable local UDS screen draft');
+
+    // Keep editing leaves the draft intact.
+    await dialog.getByRole('button', { name: 'Keep editing' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('Rivera, Ana');
+
+    await panel.locator('.cd2004-record-actions button.is-danger').click();
+    await dialog.getByRole('button', { name: 'Discard draft' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
+    await expect(panel.locator('.cd2004-record-actions')).toHaveClass(/is-new/);
+  });
+
+  test('attests and locks a local UDS record, then accepts a dated addendum', async ({ page }) => {
+    await page.goto('/');
+    await signInLocalStaff(page, 'QA Staff, MA');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
+    await page.locator('#uds-readings-verified').check();
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    await panel.getByRole('button', { name: 'All tested negative' }).click();
+    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+
+    const attestButton = panel.locator('.cd2004-record-actions button.is-primary');
+    await expect(attestButton).toBeEnabled();
+    await attestButton.click();
+
+    const attestDialog = page.getByRole('dialog', { name: 'Attest & lock local record' });
+    await expect(attestDialog).toBeVisible();
+    await expect(attestDialog).toContainText('SAFE life 14-Panel Cup');
+    await attestDialog.getByRole('checkbox', { name: /I attest that I reviewed/ }).check();
+    await attestDialog.getByRole('button', { name: 'Attest & lock local record', exact: true }).click();
+    await expect(attestDialog).toBeHidden();
+
+    await expect(panel.locator('.wfp-status-flag.is-idle')).toHaveText('Read only');
+    await expect(panel.locator('.cd2004-record-actions')).toHaveClass(/is-locked/);
+
+    await panel.getByRole('tab', { name: /^Specimen/ }).click();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toBeDisabled();
+    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+
+    const addendumBox = panel.locator('textarea[data-addendum-input]');
+    await addendumBox.fill('Follow-up clarification.');
+    await panel.getByRole('button', { name: 'Save addendum' }).click();
+    await expect(panel.locator('.wfp-preview', { hasText: 'Follow-up clarification.' })).toBeVisible();
+    await expect(addendumBox).toHaveValue('');
+  });
+
   test('lists outstanding requirements and jumps to the tab that owns each one', async ({ page }) => {
     await page.goto('/');
 
@@ -1985,13 +2082,18 @@ test.describe('MA Workstation browser journeys', () => {
 
     // Expected next due is a visible calculation from the actual date and
     // selected cadence. Staff can still override it explicitly when the
-    // active order says otherwise.
+    // active order says otherwise. Actual administration date lives on
+    // Administration (with the time it pairs with); Expected next due
+    // stays on Schedule.
+    await panel.getByRole('tab', { name: /^Administration/ }).click();
     const actualDate = panel
       .locator('.wfp-field', { hasText: 'Actual administration date' })
       .locator('input[type="date"]');
+    await actualDate.fill('2026-07-30');
+
+    await panel.getByRole('tab', { name: /^Schedule/ }).click();
     const nextDue = panel
       .locator('.wfp-field', { hasText: 'Expected next due' });
-    await actualDate.fill('2026-07-30');
     await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-27');
     await expect(nextDue.locator('.wfp-calculated-value')).toBeVisible();
     await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);

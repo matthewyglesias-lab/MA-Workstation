@@ -1204,7 +1204,7 @@ function softReset(){
   ["ptName","ptDOB","orderingProvider","injOrderPurpose","tech","ndc","lot","exp","injProductSource","injProductSourceOther","injPreparation","injPreparationDetail","injWasteAmount","injWasteWitness","injProductIssueDetail","injProductIssueAction","injProductIssueRecipient","injProductIssueNotificationTime","injProductIssueDirection","injProductIssueNextStep","bp","hr","temp","rr","spo2","vitalRepeatNote","admin","respCustom","injAdminTime","injSecondAdminTime","injVolume","injVolumeUnit","injDevice","injDeviceOther","injSiteCondition","injSiteConditionDetail","injExceptionSummary","injExceptionRecipient","injExceptionTime","injExceptionOutcome","nextDate","priorDose","priorSite"].forEach(id=>{if($(id))$(id).value="";});
   ["injWasteToggle","injProductIssueToggle","injExceptionToggle"].forEach(id=>{if($(id))$(id).checked=false;});
   try{if(typeof window.resetSmartVitalsState==='function')window.resetSmartVitalsState();}catch(e){}
-  $("allergies").value="";$("adminDate").value=localDateValue();
+  $("allergies").value="NKDA";$("adminDate").value=localDateValue();
   try{const flow=window.__IPMG_RC530__;if(flow){flow.safetyNone=false;flow.inj={};flow.manualOpen.inj={};}}catch(e){}
   $("medHdr").classList.remove("show");$("medChipsGrp").classList.remove("hidden");
   $("medDetail").classList.add("hidden");$("medSpecWrap").classList.remove("show");$("medTip").classList.remove("show");
@@ -4119,7 +4119,10 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     }
     const over=daysSince-late;
     const farLate=daysSince>Math.round(intervalDays*1.5);
-    return {level:'danger',pill:farLate?'Significantly overdue':'Late',
+    // Reviewable, not blocking - a late dose no longer stops administration,
+    // it flags for a soft confirm-with-provider warning (matches "Early" just
+    // above, and the InjectionEngine.evaluate() timing state in injection.ts).
+    return {level:'warn',pill:farLate?'Significantly overdue':'Late',
       detail:`Given ${daysSince} day(s) after the prior dose — ${over} day(s) beyond the labeled window (about ${early}–${late} days).${farLate?' A gap this long may require re-initiation/loading rather than a routine maintenance dose.':''} Confirm timing and dosing with the provider.`,
       missed:S.med.missed||''};
   }
@@ -8627,6 +8630,13 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
   function recordLocked(){const panel=by('panel-administer');return !!(panel&&panel.classList.contains('record-readonly'));}
   function canAdminister(){return state.kind==='administered'&&review({requireAdministrationDetail:true}).stops.length===0;}
+  /* AVS only needs enough to describe what was given - medication, dose,
+     route, site, and an administration date - not the final disposition
+     choice or the full safety-record checklist canAdminister() requires.
+     Deliberately separate from canAdminister() so this can be looser
+     without touching the administration-note gate or the disposition/lock
+     safety record itself. */
+  function canPrintAvs(){return !!(med()&&String(S.dose||'').trim()&&String(S.route||'').trim()&&String(S.site||'').trim()&&text('adminDate'));}
   function canHandoff(){const f=fields();return !!(state.kind&&state.kind!=='administered'&&f.provider&&f.time&&f.outcome&&!optionalDetailStops().length);}
   function dispositionSnapshot(){const f=fields();return {kind:state.kind||'',provider:f.provider||'',time:f.time||'',outcome:f.outcome||''};}
   function restoreDisposition(data){
@@ -8680,7 +8690,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const list=by('clinicalDispositionList');
     if(list)list.innerHTML=[...r.stops.map(x=>`<div class="cd-line">${safe(x)}</div>`),...r.warnings.map(x=>`<div class="cd-line warn">${safe(x)}</div>`)].join('');
     const handoff=by('clinicalDispositionHandoff'); if(handoff)handoff.classList.toggle('show',!!hasHandoff);
-    const print=by('printAVS'); if(print){print.classList.toggle('clinical-output-pending',!!med()&&!canAdminister());print.title=med()&&!canAdminister()?'Available after an explicit Administered disposition and complete safety record.':print.dataset.clinicalDefaultTitle||print.title;}
+    const print=by('printAVS'); if(print){print.classList.toggle('clinical-output-pending',!!med()&&!canPrintAvs());print.title=med()&&!canPrintAvs()?'Available once medication, dose, route, site, and administration date are documented.':print.dataset.clinicalDefaultTitle||print.title;}
   }
   function neutralNote(){
     const r=review({requireAdministrationDetail:false}), f=fields(), decision=state.kind?labels[state.kind]:'No administration disposition documented',details=documentationDetails(),context=documentationContextLines(details);
@@ -8696,9 +8706,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
   function pendingAvs(){
     const sheet=by('avsSheet'); if(!sheet)return;
-    sheet.innerHTML=`<div class="beauty-page beauty-avs"><div class="beauty-head"><div class="beauty-kicker">IPMG</div><h1>Injection visit status</h1><p>No medication administration was recorded in this tool.</p></div><div class="beauty-card"><h2>Clinical handoff required</h2><p>Complete the clinical disposition and use the staff handoff note. A patient after-visit summary is not generated for a held, escalated, provider-directed, or incomplete administration record.</p></div></div>`;
+    sheet.innerHTML=`<div class="beauty-page beauty-avs"><div class="beauty-head"><div class="beauty-kicker">IPMG</div><h1>Injection visit status</h1><p>Medication, dose, route, site, and administration date are not yet fully documented.</p></div><div class="beauty-card"><h2>After-visit summary not yet available</h2><p>Enter the medication, dose, route, site, and administration date on the Administration tab to generate a patient after-visit summary.</p></div></div>`;
   }
-  function neutralizeIfNeeded(){if(!canAdminister()){neutralNote();pendingAvs();}}
+  function neutralizeIfNeeded(){if(!canAdminister())neutralNote();if(!canPrintAvs())pendingAvs();}
   function toastSafe(message){try{if(typeof toast==='function')toast(message);}catch(e){}}
   function addHandoffLog(){
     const f=fields(), r=review({requireAdministrationDetail:false}), m=med(),details=documentationDetails(),context=documentationContextLines(details,true);
@@ -8733,7 +8743,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function bindOutputGuards(){
     document.addEventListener('click',function(e){
       const print=e.target&&e.target.closest&&e.target.closest('#printAVS');
-      if(print&&med()&&!canAdminister()){e.preventDefault();e.stopImmediatePropagation();toastSafe('Patient AVS is unavailable until an explicit Administered disposition and complete safety record are documented.');return false;}
+      if(print&&med()&&!canPrintAvs()){e.preventDefault();e.stopImmediatePropagation();toastSafe('Patient AVS is unavailable until medication, dose, route, site, and administration date are documented.');return false;}
       const add=e.target&&e.target.closest&&e.target.closest('#addLog');
       if(add&&med()&&!canAdminister()){
         e.preventDefault();e.stopImmediatePropagation();
@@ -8752,7 +8762,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     }
     const oldAvs=window.renderAVS;
     if(typeof oldAvs==='function'&&!oldAvs.__rc535ClinicalSafetyWrap){
-      const wrappedAvs=function(){if(med()&&!canAdminister())return pendingAvs();return oldAvs.apply(this,arguments);};
+      const wrappedAvs=function(){if(med()&&!canPrintAvs())return pendingAvs();return oldAvs.apply(this,arguments);};
       wrappedAvs.__rc535ClinicalSafetyWrap=true; window.renderAVS=wrappedAvs; try{renderAVS=wrappedAvs;}catch(e){}
     }
     const oldReset=window.softReset;
@@ -8907,7 +8917,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const inj=document.querySelector('#panel-administer .card-safety');
     if(inj&&!by('injFastReview')){
       const header=inj.querySelector('.card-head');
-      const item=bar('injFastReview','Quick review — routine injection checks are preselected.','Keep only what you verified today; tap off anything not completed. <span class="fast-review-alert">Allergy status still requires an explicit entry.</span>','Restore routine checks',restoreInjection);
+      const item=bar('injFastReview','Quick review — routine injection checks are preselected.','Keep only what you verified today; tap off anything not completed. <span class="fast-review-alert">Allergy status defaults to NKDA - edit it if the active record shows any allergy or reaction.</span>','Restore routine checks',restoreInjection);
       if(header)header.insertAdjacentElement('afterend',item);else inj.prepend(item);
     }
     const udsQuick=by('udsAllNeg'),udsPatient=by('udsPtName');

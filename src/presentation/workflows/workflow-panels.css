@@ -48,6 +48,26 @@
   flex: 1 1 auto;
 }
 
+.cd2004-shell .wfp-summary-print-avs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-summary-print-avs svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.cd2004-shell .wfp-summary-print-avs:disabled {
+  color: var(--cd-ink-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .cd2004-shell .wfp-status-flag {
   display: inline-flex;
   align-items: center;
@@ -457,6 +477,19 @@
   max-width: 200px;
 }
 
+/* The calendar/clock glyph is a modern flat icon baked into the browser -
+   there's no cross-browser way to replace it without risking the native
+   picker's click behavior. Muting it to a flat, low-contrast mark is the
+   safe partial fix; Chromium-only (::-webkit-*), but that's what every
+   real workstation runs. */
+.cd2004-shell .wfp-field input[type="date"]::-webkit-calendar-picker-indicator,
+.cd2004-shell .wfp-field input[type="month"]::-webkit-calendar-picker-indicator,
+.cd2004-shell .wfp-field input[type="time"]::-webkit-calendar-picker-indicator,
+.cd2004-shell .wfp-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: grayscale(1) contrast(0.6) brightness(1.3);
+  opacity: 0.65;
+}
+
 .cd2004-shell .wfp-field input.mono {
   max-width: 190px;
 }
@@ -489,6 +522,21 @@
   box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
   font: inherit;
   font-size: 11px;
+}
+
+/* A native select's dropdown arrow is the current OS's modern flat chevron
+   on every platform - swap it for a small beveled button with a solid
+   triangle, matching the classic Windows dropdown control. */
+.cd2004-shell .wfp-field select {
+  appearance: none;
+  padding-right: 22px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23101828'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--cd-chrome-light) 0%, var(--cd-chrome) 100%);
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 7px center, right 0 top 0;
+  background-size: 8px 6px, 18px 100%;
+  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
 }
 
 .cd2004-shell .wfp-field input:focus-visible,
@@ -567,6 +615,45 @@
   border-right: none;
 }
 
+/* Clinical disposition: a left-edge color band plus an icon separates the
+   completed-administration outcome from the three handoff outcomes at a
+   glance, instead of four visually identical rows. */
+.cd2004-shell .wfp-disposition-list .wfp-option-row {
+  border-left: 3px solid transparent;
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready {
+  border-left-color: var(--cd-green);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
+  background: var(--cd-green-soft);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning {
+  border-left-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
+  background: var(--cd-amber-soft);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cd2004-shell .wfp-option-icon svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.cd2004-shell .wfp-vitals-toggle {
+  margin: 4px 0;
+}
+
 /* Native select groups — the period-correct control for single choice */
 
 .cd2004-shell .wfp-select-group {
@@ -586,6 +673,16 @@
   box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
   font: inherit;
   font-size: 11px;
+  /* Same classic-Windows dropdown button as .wfp-field select - see the
+     comment there for why. */
+  appearance: none;
+  padding-right: 22px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23101828'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--cd-chrome-light) 0%, var(--cd-chrome) 100%);
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 7px center, right 0 top 0;
+  background-size: 8px 6px, 18px 100%;
 }
 
 .cd2004-shell .wfp-select-group select:focus-visible {
@@ -624,7 +721,7 @@
   background: var(--cd-white);
   border: 1px solid var(--cd-border-mid);
   box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
-  font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+  font-family: "W95FA", Tahoma, "MS Sans Serif", Arial, sans-serif;
   font-size: 11px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -1014,7 +1111,7 @@
   color: var(--cd-ink);
   background: var(--cd-white);
   border: 1px solid var(--cd-border-dark);
-  font-family: "Arial Narrow", Tahoma, sans-serif;
+  font-family: "Arial Narrow", "W95FA", Tahoma, sans-serif;
   font-size: 9px;
   line-height: 15px;
   white-space: nowrap;
@@ -1183,6 +1280,69 @@
   content: ":";
 }
 
+/* Site tiles: an icon+label card grid, echoing the Start Center launcher
+   tiles rather than the plain bordered option-row list used for other
+   single-select fields. The icon is a scanning aid only - the exact site
+   string stays the visible label and the only thing patch({ site }) reads,
+   so nothing about the underlying selection model changes. */
+.cd2004-shell .wfp-site-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 5px;
+}
+
+.cd2004-shell .wfp-site-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 54px;
+  padding: 6px 4px 5px;
+  background: var(--cd-paper, #fff);
+  border: 1px solid var(--cd-border-mid);
+  cursor: pointer;
+  text-align: center;
+}
+
+.cd2004-shell .wfp-site-tile input[type="radio"] {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  margin: 0;
+}
+
+.cd2004-shell .wfp-site-tile:hover {
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-site-tile.is-selected {
+  background: var(--cd-selection);
+  border-color: var(--cd-ink-muted);
+}
+
+.cd2004-shell .wfp-site-tile-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cd2004-shell .wfp-site-tile-title {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.cd2004-shell .wfp-site-tile-badge {
+  color: #145b31;
+  background: var(--cd-green-soft);
+  border: 1px solid var(--cd-green);
+  padding: 0 3px;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 .cd2004-shell .wfp-site-suggestion {
   display: flex;
   flex-wrap: wrap;
@@ -1280,6 +1440,16 @@
     font-size: 8px;
   }
 
+  .cd2004-shell [data-workflow="administer"] .wfp-summary-print-avs {
+    padding: 1px 5px;
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-summary-print-avs svg {
+    width: 11px;
+    height: 11px;
+  }
+
   .cd2004-shell [data-workflow="administer"] .wfp-tabbar {
     gap: 1px;
     padding: 0 2px;
@@ -1345,6 +1515,20 @@
     grid-column: 2;
   }
 
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile {
+    min-height: 46px;
+    padding: 5px 3px 4px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-title {
+    font-size: 9px;
+  }
+
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-field-hint,
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-calculated-value {
     grid-column: 2;
@@ -1367,6 +1551,14 @@
     min-height: 20px;
     padding: 2px 4px;
     font-size: 10px;
+  }
+
+  /* The shorthand `padding` above resets padding-right too, which would
+     otherwise crush the dropdown-arrow space .wfp-field select and
+     .wfp-select-group select reserve. */
+  .cd2004-shell [data-workflow="administer"] .wfp-field select,
+  .cd2004-shell [data-workflow="administer"] .wfp-select-group select {
+    padding-right: 22px;
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-option-row {

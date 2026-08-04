@@ -262,12 +262,12 @@ async function prepareReadyInjection(page) {
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
   await selectInjectionTab(page, 'Schedule');
-  await panel.locator('input[type="date"]').nth(1).fill(FIXED_DATE_KEY);
-  await panel.locator('input[type="date"]').nth(2).fill('2026-08-27');
+  await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
 
   await selectInjectionTab(page, 'Administration');
   await panel.getByText('R deltoid', { exact: true }).click();
   await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Alex Rivera, MA');
+  await panel.locator('input[type="date"]').first().fill(FIXED_DATE_KEY);
   await panel.locator('input[type="time"]').first().fill('10:30');
 
   await selectInjectionTab(page, 'Product');

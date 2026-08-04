@@ -34,14 +34,13 @@ export function TmsPanel() {
     <div class="wfp-panel">
       <div class="wfp-summary-bar">
         <strong>Future / TMS</strong>
-        <span class="wfp-status-flag is-idle">Not active yet</span>
+        <span class="wfp-status-flag is-idle">Not installed</span>
       </div>
 
       <div class="wfp-wall">
-        <div class="wfp-wall-title">TMS treatment support — coming soon</div>
+        <div class="wfp-wall-title">TMS — Module Not Installed</div>
         <p>
-          This placeholder is ready for a future TMS workflow. Once the device, protocol, and documentation
-          requirements are confirmed, this becomes a session-by-session assistant for technicians and MAs.
+          TMS documentation is not available in this build.
         </p>
       </div>
 

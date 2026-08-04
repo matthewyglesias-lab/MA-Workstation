@@ -192,7 +192,7 @@ export function DailyCloseoutPanel() {
               <div class="wfp-wall-title">
                 {entries.length ? "No activity matches this filter." : "No activity logged yet."}
               </div>
-              <p>Add an injection, UDS, sample, or forms entry from its workflow to see it here.</p>
+              <p>Log an entry from another workflow to populate this view.</p>
             </div>
           )}
 

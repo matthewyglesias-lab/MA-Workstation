@@ -1,38 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import {
-  InjectionRecordRepository,
-  type InjectionRecord,
-} from "../persistence/injection-records";
+import { UdsRecordRepository, type UdsRecord } from "../persistence/uds-records";
 import { browserSafeStorage } from "../persistence/storage";
 
 /**
- * Injection record selection window.
+ * UDS record selection window.
  *
- * A real component over the typed `InjectionRecordRepository`, replacing the
- * drawer the legacy runtime used to build. The record *lifecycle* stays with
- * legacy: opening a record restores a v4 snapshot into the encounter form, and
- * that is the one path by which a draft is resumed or a locked record viewed,
- * so it is called through `window.IPMGRecords` rather than re-derived here.
- *
- * Search, filter, sort and rendering are ours. The filter and search semantics
- * deliberately match what legacy did (see `drawerRecords`), so switching the
- * renderer does not quietly change which records a search turns up.
+ * Modeled on `RecordsWindow.tsx` (the Injection records browser): same
+ * dialog chrome, focus trap, Escape handling, and search/filter/sort
+ * mechanics, since those are DOM/UX concerns rather than Injection-specific
+ * ones. Unlike Injection, UDS has no legacy engine backing it - the
+ * `UdsRecordRepository` is the only source of truth, both for reading and
+ * writing, so there is no `bridge()`/`window.IPMG*` equivalent here.
  */
 
 type RecordFilter = "all" | "draft" | "locked" | "addenda";
-type SortKey = "patient" | "medication" | "activity";
+type SortKey = "patient" | "summary" | "activity";
 type SortDirection = "asc" | "desc";
-
-interface LegacyRecordsBridge {
-  open: (id: string) => boolean | void;
-  create: () => boolean | void;
-  list: () => unknown[];
-  count: () => number;
-  onChange: (handler: () => void) => void;
-}
-
-const bridge = (): LegacyRecordsBridge | undefined =>
-  (window as unknown as { IPMGRecords?: LegacyRecordsBridge }).IPMGRecords;
 
 const FILTERS: Array<[RecordFilter, string]> = [
   ["all", "All"],
@@ -43,7 +26,7 @@ const FILTERS: Array<[RecordFilter, string]> = [
 
 const COLUMNS: Array<{ key: SortKey; label: string }> = [
   { key: "patient", label: "Patient" },
-  { key: "medication", label: "Medication" },
+  { key: "summary", label: "Device & result" },
   { key: "activity", label: "Last activity" },
 ];
 
@@ -52,7 +35,6 @@ const timeOf = (value: unknown): number => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
-/** Matches legacy's `stamp()` output: "Aug 2, 9:41 AM". */
 const stamp = (value: unknown): string => {
   const at = timeOf(value);
   if (!at) return "—";
@@ -64,71 +46,62 @@ const stamp = (value: unknown): string => {
   });
 };
 
-const addendaCount = (record: InjectionRecord): number =>
+const addendaCount = (record: UdsRecord): number =>
   Array.isArray(record.addenda) ? record.addenda.length : 0;
 
-/** Same shape legacy's `drawerMessage()` produced. */
-const activityText = (record: InjectionRecord): string => {
+const activityText = (record: UdsRecord): string => {
   const extra = addendaCount(record);
   const suffix = extra ? ` / ${extra} addendum${extra === 1 ? "" : "s"}` : "";
   return record.status === "completed"
-    ? `${record.attestation ? "Attested local lock" : "Legacy local lock"} ${stamp(record.completedAt || record.updatedAt)}${suffix}`
+    ? `Attested local lock ${stamp(record.completedAt || record.updatedAt)}${suffix}`
     : `Draft updated ${stamp(record.updatedAt)}${suffix}`;
 };
 
-const patientOf = (record: InjectionRecord): string =>
-  record.patient?.name?.trim() || record.summary || "Untitled injection";
+const patientOf = (record: UdsRecord): string =>
+  record.patient?.name?.trim() || record.summary || "Untitled UDS screen";
 
-const medicationOf = (record: InjectionRecord): string =>
-  record.summary || "No medication selected";
+const summaryOf = (record: UdsRecord): string => record.summary || "No device selected";
 
-/** Legacy searched the whole record; keep that so results do not narrow. */
-const searchText = (record: InjectionRecord): string =>
-  JSON.stringify(record).toLocaleLowerCase();
+const searchText = (record: UdsRecord): string => JSON.stringify(record).toLocaleLowerCase();
 
-interface RecordsWindowProps {
+interface UdsRecordsWindowProps {
   open: boolean;
   onClose: () => void;
-  /**
-   * The shell owns the active-record transition. Keeping the handoff here
-   * means a reopened draft is rehydrated before this dialog's close render can
-   * let the previous blank worksheet mirror back over its restored values.
-   */
-  onRecordOpen?: (id: string) => boolean;
+  onRecordOpen: (record: UdsRecord) => void;
+  onCreate: () => void;
+  /** Bumped by the caller after a save/discard/lock so the list re-reads. */
+  refreshToken?: number;
 }
 
-export function RecordsWindow({
+export function UdsRecordsWindow({
   open,
   onClose,
   onRecordOpen,
-}: RecordsWindowProps) {
+  onCreate,
+  refreshToken,
+}: UdsRecordsWindowProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
-  // Set when the window closes because a record was opened or created: those
-  // paths hand focus to the encounter form, and must not be clawed back.
   const handedOffRef = useRef(false);
-  const [records, setRecords] = useState<InjectionRecord[]>([]);
+  const repository = useMemo(() => new UdsRecordRepository(browserSafeStorage()), []);
+  const [records, setRecords] = useState<UdsRecord[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecordFilter>("all");
-  // Newest first: the encounter you were just in is the one you usually want.
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({
     key: "activity",
     direction: "desc",
   });
 
   const reload = () => {
-    const result = new InjectionRecordRepository(browserSafeStorage()).list();
+    const result = repository.list();
     setRecords(result.ok ? result.value : []);
   };
 
   useEffect(() => {
     reload();
-    bridge()?.onChange(reload);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshToken]);
 
-  // Native <dialog> supplies the top layer, ::backdrop, Escape, the focus
-  // trap, background inerting and focus restoration - all of which the legacy
-  // drawer hand-rolled.
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -136,13 +109,11 @@ export function RecordsWindow({
       reload();
       openerRef.current = document.activeElement as HTMLElement | null;
       dialog.showModal();
-      // showModal() focuses the first autofocus element, but the search field
-      // is the one staff always want, and it must be focused every time the
-      // window opens - not only the first.
-      dialog.querySelector<HTMLInputElement>("#recordsDrawerSearch")?.focus();
+      dialog.querySelector<HTMLInputElement>("#udsRecordsDrawerSearch")?.focus();
     } else if (!open && dialog.open) {
       dialog.close();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const visible = useMemo(() => {
@@ -161,7 +132,7 @@ export function RecordsWindow({
       if (sort.key === "activity") {
         return (timeOf(a.updatedAt) - timeOf(b.updatedAt)) * direction;
       }
-      const read = sort.key === "patient" ? patientOf : medicationOf;
+      const read = sort.key === "patient" ? patientOf : summaryOf;
       return read(a).localeCompare(read(b)) * direction;
     });
   }, [records, query, filter, sort]);
@@ -170,18 +141,10 @@ export function RecordsWindow({
     setSort((current) =>
       current.key === key
         ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
-        : // Names read A-Z first; a date column is more useful newest-first.
-          { key, direction: key === "activity" ? "desc" : "asc" },
+        : { key, direction: key === "activity" ? "desc" : "asc" },
     );
 
-  // showModal() inerts the background but does not cycle focus: in Chromium,
-  // Shift+Tab from the first control lands on <body>, outside the dialog. The
-  // platform gives containment, not wrapping, so the wrap is ours to add.
   const onKeyDown = (event: KeyboardEvent) => {
-    // Escape is handled by the dialog itself. Let it stop here: the shell has
-    // a document-level Escape binding that closes an open menu and pulls focus
-    // back to that menu's title, which otherwise fires as this window closes
-    // and steals the focus restore out from under it.
     if (event.key === "Escape") {
       event.stopPropagation();
       return;
@@ -207,18 +170,6 @@ export function RecordsWindow({
     }
   };
 
-  /**
-   * Runs on the dialog's own close event, which is where the restore has to
-   * live: Escape closes a <dialog> natively before any state update, so by the
-   * time an effect sees it the dialog is already shut and the branch is
-   * skipped.
-   *
-   * <dialog> does restore focus to whatever was focused when showModal() ran,
-   * but it does not win here - the shell keeps its own previous-focus pointer
-   * for its dialogs, and closing this one lets that stale pointer pull focus to
-   * whichever menu was last opened. Restoring on the next frame puts it back
-   * after everyone else has had their turn.
-   */
   const handleDialogClose = () => {
     onClose();
     const opener = openerRef.current;
@@ -230,23 +181,17 @@ export function RecordsWindow({
     });
   };
 
-  const openRecord = (id: string) => {
-    const opened = onRecordOpen ? onRecordOpen(id) : bridge()?.open(id);
-    if (opened === false) return;
+  const openRecord = (record: UdsRecord) => {
     handedOffRef.current = true;
+    onRecordOpen(record);
     onClose();
   };
 
   return (
     <dialog
       ref={dialogRef}
-      // Deliberately NOT id="recordsDrawerLayer". Legacy's ensureRecordsDrawer()
-      // looks the layer up by that id; finding ours it concluded its drawer
-      // existed and rendered its own rows into our #recordsDrawerResults, so
-      // every row appeared twice. Without the id its lookup returns null and
-      // renderRecordsDrawer() early-returns, which is the stand-down we want.
       class="records-drawer-layer"
-      aria-labelledby="recordsDrawerTitle"
+      aria-labelledby="udsRecordsDrawerTitle"
       onClose={handleDialogClose}
       onCancel={handleDialogClose}
       onKeyDown={onKeyDown}
@@ -254,15 +199,15 @@ export function RecordsWindow({
         if (event.target === dialogRef.current) onClose();
       }}
     >
-      <section class="records-drawer" role="dialog" aria-labelledby="recordsDrawerTitle">
+      <section class="records-drawer" role="dialog" aria-labelledby="udsRecordsDrawerTitle">
         <div class="records-drawer-head">
           <div>
-            <h2 id="recordsDrawerTitle">Local EMR / Record List</h2>
+            <h2 id="udsRecordsDrawerTitle">UDS Records</h2>
           </div>
           <button
             type="button"
             class="records-drawer-close"
-            aria-label="Close Local EMR / Record List"
+            aria-label="Close UDS Records"
             onClick={onClose}
           >
             X
@@ -270,13 +215,13 @@ export function RecordsWindow({
         </div>
 
         <div class="records-drawer-search">
-          <label class="records-sr-only" for="recordsDrawerSearch">
-            Search local injection records
+          <label class="records-sr-only" for="udsRecordsDrawerSearch">
+            Search local UDS screens
           </label>
           <input
-            id="recordsDrawerSearch"
+            id="udsRecordsDrawerSearch"
             type="search"
-            placeholder="Patient, DOB, medication, NDC, or lot"
+            placeholder="Patient, DOB, device, or lot"
             autocomplete="off"
             value={query}
             onInput={(event) => setQuery(event.currentTarget.value)}
@@ -289,7 +234,7 @@ export function RecordsWindow({
           </span>
         </div>
 
-        <div class="records-drawer-filters" role="group" aria-label="Filter local injection records">
+        <div class="records-drawer-filters" role="group" aria-label="Filter local UDS screens">
           {FILTERS.map(([key, label]) => (
             <button
               key={key}
@@ -304,13 +249,13 @@ export function RecordsWindow({
           ))}
         </div>
 
-        <div class="records-drawer-status" id="recordsDrawerStatus" role="status" aria-live="polite">
+        <div class="records-drawer-status" id="udsRecordsDrawerStatus" role="status" aria-live="polite">
           {visible.length === records.length
-            ? `${records.length} local record${records.length === 1 ? "" : "s"}`
-            : `${visible.length} of ${records.length} local record${records.length === 1 ? "" : "s"}`}
+            ? `${records.length} local UDS screen${records.length === 1 ? "" : "s"}`
+            : `${visible.length} of ${records.length} local UDS screen${records.length === 1 ? "" : "s"}`}
         </div>
 
-        <div class="records-drawer-results" id="recordsDrawerResults">
+        <div class="records-drawer-results" id="udsRecordsDrawerResults">
           <div class="records-drawer-columns" role="row">
             {COLUMNS.map((column) => {
               const active = sort.key === column.key;
@@ -347,7 +292,7 @@ export function RecordsWindow({
                   class={`records-drawer-row ${locked ? "locked" : "draft"}`}
                   data-records-open={record.id}
                   aria-label={`${action} for ${patientOf(record)}`}
-                  onClick={() => openRecord(String(record.id))}
+                  onClick={() => openRecord(record)}
                 >
                   <span class="records-drawer-row-top">
                     <span class="records-drawer-row-title">{patientOf(record)}</span>
@@ -355,7 +300,7 @@ export function RecordsWindow({
                       {locked ? (attested ? "Locked" : "Legacy lock") : "Draft"}
                     </span>
                   </span>
-                  <span class="records-drawer-row-summary">{medicationOf(record)}</span>
+                  <span class="records-drawer-row-summary">{summaryOf(record)}</span>
                   <span class="records-drawer-row-meta">{activityText(record)}</span>
                   <span class="records-drawer-row-action" aria-hidden="true">
                     {locked ? "View" : "Resume"}
@@ -365,8 +310,8 @@ export function RecordsWindow({
             })
           ) : (
             <div class="records-drawer-empty">
-              <b>No matching local injection records.</b>
-              <span>Try another patient, medication, traceability field, or filter.</span>
+              <b>No matching local UDS screens.</b>
+              <span>Try another patient, device, or filter.</span>
             </div>
           )}
         </div>
@@ -374,7 +319,7 @@ export function RecordsWindow({
         <div class="records-drawer-foot">
           <p>
             Saved only in this browser. Locked records remain read-only. Starting a new
-            injection retains any current local draft.
+            UDS screen retains any current local draft.
           </p>
           <div class="records-drawer-foot-actions">
             <button type="button" class="records-drawer-cancel" onClick={onClose}>
@@ -387,10 +332,10 @@ export function RecordsWindow({
               onClick={() => {
                 handedOffRef.current = true;
                 onClose();
-                bridge()?.create();
+                onCreate();
               }}
             >
-              Start new injection
+              Start new UDS screen
             </button>
           </div>
         </div>
