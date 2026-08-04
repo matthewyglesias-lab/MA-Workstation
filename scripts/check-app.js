@@ -151,6 +151,8 @@ assert.match(smoke, /legacy\/legacy-runtime\.js/, 'Deployment smoke must verify 
 assert.match(browserSmoke, /body\[data-application-ready="true"\]/, 'Browser deployment smoke must wait for application readiness');
 assert.match(browserSmoke, /data-active-workflow="administer"/, 'Browser deployment smoke must open the Injection workflow');
 assert.match(browserSmoke, /width: 390/, 'Browser deployment smoke must exercise the protected narrow viewport');
+assert.match(browserSmoke, /meditech-workstation-gate/, 'Browser deployment smoke must verify the unsupported-viewport gate');
+assert.match(browserSmoke, /getAttribute\("inert"\)/, 'Browser deployment smoke must verify hidden chart content is inert');
 assert.match(browserSmoke, /documentScrollWidth/, 'Browser deployment smoke must reject horizontal page overflow');
 
 assert.match(html, /function localDateValue\(d=new Date\(\)\)/, 'Date defaults must use the local calendar date');

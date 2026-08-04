@@ -120,29 +120,51 @@ try {
         "The Injection workflow",
       );
 
+      const patientName = page.locator(
+        '.wfp-panel input[placeholder="Last, First"]',
+      );
+      await patientName.fill("QA, Resize Smoke");
+
       await page.setViewportSize({ width: 390, height: 844 });
       await requireVisible(
         page,
-        ".cd2004-mobile-switcher",
-        "The narrow-window task switcher",
+        ".meditech-workstation-gate",
+        "The unsupported-viewport workstation gate",
       );
-
-      const noteTab = page.locator("#cd2004-pane-tab-inspector");
-      await noteTab.click();
-      await requireVisible(
-        page,
-        "#cd2004-pane-inspector",
-        "The narrow-window Note / Readiness pane",
-      );
-
-      const workTab = page.locator("#cd2004-pane-tab-work");
-      await workTab.click();
-      await requireVisible(
-        page,
-        '.cd2004-workflow-slot[data-workflow="administer"]',
-        "The narrow-window Injection workflow",
-      );
+      const workstationContent = page.locator(".meditech-workstation-content");
+      if ((await workstationContent.getAttribute("inert")) === null) {
+        throw new Error("The hidden clinical workspace was not inert at 390px.");
+      }
+      if ((await workstationContent.getAttribute("aria-hidden")) !== "true") {
+        throw new Error(
+          "The hidden clinical workspace was not removed from the accessibility tree at 390px.",
+        );
+      }
+      if (await page.locator(".cd2004-shell").isVisible()) {
+        throw new Error("Chart content remained visible below the workstation minimum.");
+      }
+      const gateText = await page
+        .locator(".meditech-workstation-gate")
+        .textContent();
+      if (gateText?.includes("800 x 600 px") !== true) {
+        throw new Error("The workstation gate did not state the supported minimum size.");
+      }
+      await page.keyboard.press("F11");
+      if (await page.locator(".records-drawer").isVisible()) {
+        throw new Error("A workstation shortcut remained active behind the viewport gate.");
+      }
       await verifyNoPageOverflow(page, "390px");
+
+      await page.setViewportSize({ width: 840, height: 720 });
+      await requireVisible(
+        page,
+        '.cd2004-shell[data-active-workflow="administer"]',
+        "The restored Injection workstation",
+      );
+      if ((await patientName.inputValue()) !== "QA, Resize Smoke") {
+        throw new Error("The workstation discarded in-progress entry while resizing.");
+      }
+      await verifyNoPageOverflow(page, "840px");
 
       await page.waitForTimeout(150);
       if (runtimeErrors.length) {
