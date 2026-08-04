@@ -1264,7 +1264,7 @@ test.describe('MA Workstation browser journeys', () => {
       '[data-injection-record-actions] [data-injection-new]'
     );
     await expect(lockedStartNew).toBeVisible();
-    await expect(lockedStartNew).toHaveText('Start new injection');
+    await expect(lockedStartNew).toHaveAccessibleName('Start new injection');
     await expect(page.locator('#ptName')).toBeDisabled();
     await expect(page.locator('#medClear')).toHaveAttribute('aria-disabled', 'true');
     await expect(panel.getByText('Record locked', { exact: true })).toBeVisible();
