@@ -1920,6 +1920,98 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
   });
 
+  test('saves a local UDS draft and resumes it from the UDS records window', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
+
+    await panel.locator('.cd2004-record-actions button.is-save').click();
+    await expect(panel.locator('.cd2004-record-actions')).toHaveClass(/is-draft/);
+    await expect(panel.locator('.cd2004-record-actions-state strong')).toHaveText('SAVED LOCAL DRAFT');
+
+    await panel.getByRole('button', { name: 'UDS records…' }).click();
+    const recordsDialog = page.locator('[role="dialog"][aria-labelledby="udsRecordsDrawerTitle"]');
+    await expect(recordsDialog).toBeVisible();
+    const rows = recordsDialog.locator('.records-drawer-row');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.locator('.records-drawer-row-title')).toHaveText('Rivera, Ana');
+    await expect(rows.locator('.records-drawer-row-badge')).toHaveText('Draft');
+
+    // Start new UDS screen from the records window blanks the worksheet, and
+    // the saved draft stays listed rather than being lost.
+    await recordsDialog.getByRole('button', { name: 'Start new UDS screen' }).click();
+    await expect(recordsDialog).toBeHidden();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
+
+    await panel.getByRole('button', { name: 'UDS records…' }).click();
+    await expect(recordsDialog).toBeVisible();
+    await expect(recordsDialog.locator('.records-drawer-row')).toHaveCount(1);
+    await recordsDialog.locator('.records-drawer-row').click();
+    await expect(recordsDialog).toBeHidden();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('Rivera, Ana');
+  });
+
+  test('discards a local UDS draft only after explicit confirmation', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
+    await panel.locator('.cd2004-record-actions button.is-save').click();
+
+    await panel.locator('.cd2004-record-actions button.is-danger').click();
+    const dialog = page.getByRole('dialog', { name: 'Discard Local Draft' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('editable local UDS screen draft');
+
+    // Keep editing leaves the draft intact.
+    await dialog.getByRole('button', { name: 'Keep editing' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('Rivera, Ana');
+
+    await panel.locator('.cd2004-record-actions button.is-danger').click();
+    await dialog.getByRole('button', { name: 'Discard draft' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
+    await expect(panel.locator('.cd2004-record-actions')).toHaveClass(/is-new/);
+  });
+
+  test('attests and locks a local UDS record, then accepts a dated addendum', async ({ page }) => {
+    await page.goto('/');
+    await signInLocalStaff(page, 'QA Staff, MA');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
+    await page.locator('#uds-readings-verified').check();
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    await panel.getByRole('button', { name: 'All tested negative' }).click();
+    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+
+    const attestButton = panel.locator('.cd2004-record-actions button.is-primary');
+    await expect(attestButton).toBeEnabled();
+    await attestButton.click();
+
+    const attestDialog = page.getByRole('dialog', { name: 'Attest & lock local record' });
+    await expect(attestDialog).toBeVisible();
+    await expect(attestDialog).toContainText('SAFE life 14-Panel Cup');
+    await attestDialog.getByRole('checkbox', { name: /I attest that I reviewed/ }).check();
+    await attestDialog.getByRole('button', { name: 'Attest & lock local record', exact: true }).click();
+    await expect(attestDialog).toBeHidden();
+
+    await expect(panel.locator('.wfp-status-flag.is-idle')).toHaveText('Read only');
+    await expect(panel.locator('.cd2004-record-actions')).toHaveClass(/is-locked/);
+
+    await panel.getByRole('tab', { name: /^Specimen/ }).click();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toBeDisabled();
+    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+
+    const addendumBox = panel.locator('textarea[data-addendum-input]');
+    await addendumBox.fill('Follow-up clarification.');
+    await panel.getByRole('button', { name: 'Save addendum' }).click();
+    await expect(panel.locator('.wfp-preview', { hasText: 'Follow-up clarification.' })).toBeVisible();
+    await expect(addendumBox).toHaveValue('');
+  });
+
   test('lists outstanding requirements and jumps to the tab that owns each one', async ({ page }) => {
     await page.goto('/');
 

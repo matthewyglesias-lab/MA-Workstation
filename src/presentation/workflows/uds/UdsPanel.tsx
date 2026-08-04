@@ -1,8 +1,9 @@
 import type { ComponentChildren, Ref } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "../workflow-panels.css";
 import {
   applyUdsDeviceProfileDefaults,
+  emptyUdsEncounter,
   profileFor,
   UDS_CONTROL_OPTIONS,
   UDS_GROUPS,
@@ -25,8 +26,15 @@ import { clickLegacyControl } from "../legacy-mirror";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { mirrorUdsEncounterToLegacyDom, mirrorUdsSignatureToggle } from "./uds-legacy-mirror";
 import type { PatientContext } from "../../types";
+import { DesktopIcon } from "../../DesktopIcon";
+import { RecordActionDialog, type RecordActionKind } from "../../RecordActionDialog";
+import { UdsRecordsWindow } from "../../UdsRecordsWindow";
+import { UdsRecordRepository, type UdsAddendum, type UdsRecord } from "../../../persistence/uds-records";
+import { browserSafeStorage } from "../../../persistence/storage";
 
 type UdsTab = "specimen" | "results" | "interpretation";
+
+const UDS_TABS: readonly UdsTab[] = ["specimen", "results", "interpretation"];
 
 // A point-of-care immunoassay report has three parts in every lab system that
 // ever rendered one: what was collected, what the analyzer said, and what a
@@ -405,6 +413,27 @@ export function UdsPanel({
   );
   const mirroredOnMount = useRef(false);
 
+  // Local record lifecycle - fully self-contained here, unlike Injection's
+  // (whose actual save/discard/lock engine lives in the legacy vanilla-JS
+  // runtime and whose command bar is rendered by ClinicalDesktopShell). UDS
+  // has no legacy engine to lean on, so both the persistence and the UI live
+  // in this panel, the same way its own StatusFlag/OutstandingRequirements
+  // dialog already do.
+  const repository = useMemo(() => new UdsRecordRepository(browserSafeStorage()), []);
+  const [activeRecordId, setActiveRecordId] = useState<string | undefined>(undefined);
+  const [locked, setLocked] = useState(false);
+  const [addenda, setAddenda] = useState<UdsAddendum[]>([]);
+  const [attestation, setAttestation] = useState<
+    { staff: string; timestamp: string; statementVersion: string } | undefined
+  >(undefined);
+  const [addendumAuthor, setAddendumAuthor] = useState(staffSignInValue);
+  const [addendumText, setAddendumText] = useState("");
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [recordAction, setRecordAction] = useState<RecordActionKind | null>(null);
+  const [recordStatus, setRecordStatus] = useState<string | undefined>(undefined);
+  const [recordsRefreshToken, setRecordsRefreshToken] = useState(0);
+  const addendumTextRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (mirroredOnMount.current) return;
     mirroredOnMount.current = true;
@@ -474,6 +503,125 @@ export function UdsPanel({
     reader.readAsDataURL(file);
   };
 
+  // One-line synopsis stored on the record and reused in the attestation
+  // review's "Device / panel summary" field - built from whatever encounter
+  // is passed in, not the closed-over one, so it stays correct for a
+  // just-locked snapshot rather than a stale render.
+  const summaryFor = (source: UdsEncounter): string => {
+    const tested =
+      UDS_PANELS.length -
+      UDS_PANELS.filter((panel) => (source.results[panel] ?? "nt") === "nt").length;
+    const positive = UDS_PANELS.filter((panel) => source.results[panel] === "pos").length;
+    const device = source.device || "No device selected";
+    return positive > 0
+      ? `${device} · ${positive} preliminary positive, ${tested}/${UDS_PANELS.length} tested`
+      : `${device} · ${tested}/${UDS_PANELS.length} tested`;
+  };
+
+  const canAttest = evaluation?.readiness === "ready" && staffSignInValue.trim().length > 0;
+
+  const saveLocalDraft = () => {
+    const result = repository.saveDraft({
+      id: activeRecordId,
+      patient: encounter.patient,
+      summary: summaryFor(encounter),
+      snapshot: encounter,
+    });
+    if (result.ok) {
+      setActiveRecordId(result.value.id);
+      setRecordStatus(`Draft saved ${new Date(result.value.updatedAt).toLocaleTimeString()}.`);
+      setRecordsRefreshToken((value) => value + 1);
+    } else {
+      setRecordStatus(result.error.message);
+    }
+  };
+
+  const discardLocalDraft = (): boolean => {
+    if (!activeRecordId) return false;
+    const result = repository.discard(activeRecordId);
+    if (!result.ok) {
+      setRecordStatus(result.error.message);
+      return false;
+    }
+    setEncounter(emptyUdsEncounter());
+    setActiveRecordId(undefined);
+    setLocked(false);
+    setAddenda([]);
+    setAttestation(undefined);
+    setRecordStatus(undefined);
+    setRecordsRefreshToken((value) => value + 1);
+    return true;
+  };
+
+  const attestAndLock = (): boolean => {
+    const staff = staffSignInValue.trim();
+    if (!canAttest || !staff) return false;
+    const nextAttestation = {
+      staff,
+      timestamp: new Date().toISOString(),
+      statementVersion: "local-attestation-v1",
+    };
+    const result = repository.complete({
+      id: activeRecordId,
+      patient: encounter.patient,
+      summary: summaryFor(encounter),
+      snapshot: encounter,
+      attestation: nextAttestation,
+    });
+    if (!result.ok) {
+      setRecordStatus(result.error.message);
+      return false;
+    }
+    setActiveRecordId(result.value.id);
+    setLocked(true);
+    setAddenda(result.value.addenda);
+    setAttestation(nextAttestation);
+    setRecordStatus(`Locked ${new Date().toLocaleTimeString()}.`);
+    setRecordsRefreshToken((value) => value + 1);
+    return true;
+  };
+
+  // Leaving an editable record without saving would silently lose it -
+  // mirrors Injection's "leaving an editable record is a save boundary".
+  const startNewUdsScreen = () => {
+    if (activeRecordId && !locked) saveLocalDraft();
+    setEncounter(emptyUdsEncounter());
+    setPhotoData("");
+    setActiveRecordId(undefined);
+    setLocked(false);
+    setAddenda([]);
+    setAttestation(undefined);
+    setAddendumText("");
+    setRecordStatus(undefined);
+  };
+
+  const openUdsRecord = (record: UdsRecord) => {
+    setEncounter(record.snapshot);
+    mirrorUdsEncounterToLegacyDom(record.snapshot, photoData);
+    setActiveRecordId(record.id);
+    setLocked(record.status === "completed");
+    setAddenda(record.addenda);
+    setAttestation(record.attestation);
+    setAddendumText("");
+    setRecordStatus(undefined);
+  };
+
+  const saveAddendum = () => {
+    if (!activeRecordId || !addendumText.trim()) return;
+    const result = repository.addAddendum({
+      recordId: activeRecordId,
+      author: addendumAuthor,
+      text: addendumText,
+    });
+    if (result.ok) {
+      setAddenda(result.value.addenda);
+      setAddendumText("");
+      setRecordsRefreshToken((value) => value + 1);
+    } else {
+      setRecordStatus(result.error.message);
+    }
+  };
+
   const noteInput = udsEncounterToDocumentationInput(encounter);
   const noteText = noteInput ? DocumentationEngine.format("uds", noteInput).text : "";
 
@@ -493,33 +641,52 @@ export function UdsPanel({
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <div class="wfp-summary-bar">
         <strong>UDS screen</strong>
-        <StatusFlag
-          idle={(evaluation?.readiness ?? "idle") === "idle"}
-          stopCount={stops.length}
-          warningCount={evaluation?.warnings.length ?? 0}
-          onOpenRequirements={() => setRequirementsOpen(true)}
-        />
+        {locked ? (
+          <span class="wfp-status-flag is-idle">Read only</span>
+        ) : (
+          <StatusFlag
+            idle={(evaluation?.readiness ?? "idle") === "idle"}
+            stopCount={stops.length}
+            warningCount={evaluation?.warnings.length ?? 0}
+            onOpenRequirements={() => setRequirementsOpen(true)}
+          />
+        )}
         <span class="wfp-summary-spacer" />
+        <span class="wfp-transaction-readout" aria-label={`Worksheet page ${UDS_TABS.indexOf(tab) + 1} of ${UDS_TABS.length}`}>
+          <b>{locked ? "REVIEW" : "ENTRY"}</b>
+          <span>PG {UDS_TABS.indexOf(tab) + 1}/{UDS_TABS.length}</span>
+        </span>
         <button
           type="button"
           class="cd2004-link-button"
-          onClick={() =>
-            patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } })
-          }
-          disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
+          onClick={() => setRecordsOpen(true)}
         >
-          Use current patient
+          UDS records…
         </button>
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() => {
-            if (staffSignInValue) patch({ collector: staffSignInValue });
-          }}
-          disabled={!staffSignInValue}
-        >
-          Use signed-in staff
-        </button>
+        {!locked && (
+          <button
+            type="button"
+            class="cd2004-link-button"
+            onClick={() =>
+              patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } })
+            }
+            disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
+          >
+            Use current patient
+          </button>
+        )}
+        {!locked && (
+          <button
+            type="button"
+            class="cd2004-link-button"
+            onClick={() => {
+              if (staffSignInValue) patch({ collector: staffSignInValue });
+            }}
+            disabled={!staffSignInValue}
+          >
+            Use signed-in staff
+          </button>
+        )}
         <button
           type="button"
           class="cd2004-command-button"
@@ -590,6 +757,8 @@ export function UdsPanel({
         tabLabels={UDS_TAB_LABEL}
         onNavigate={setTab}
       />
+
+      <fieldset disabled={locked} style="border:none;padding:0;margin:0;display:contents">
 
       {tab === "specimen" && (
         <div class="wfp-tabpanel" role="tabpanel">
@@ -1014,6 +1183,193 @@ export function UdsPanel({
             </div>
           </div>
         </div>
+      )}
+
+      </fieldset>
+
+      {locked && (
+        <div class="wfp-section">
+          <div class="wfp-section-head">Addendum</div>
+          <div class="wfp-section-body">
+            <p class="wfp-field-hint">
+              Read-only completed record. The original encounter snapshot is locked. Add a dated
+              addendum instead of changing the completed documentation.
+              {attestation && (
+                <>
+                  {" "}
+                  Attested by {attestation.staff} at{" "}
+                  {new Date(attestation.timestamp).toLocaleString()}.
+                </>
+              )}
+            </p>
+            {addenda.map((entry) => (
+              <div class="wfp-preview" key={entry.id}>
+                <strong>{entry.author || "Staff"}</strong>
+                <br />
+                {entry.text}
+              </div>
+            ))}
+            <Field label="Addendum entered by">
+              <input
+                value={addendumAuthor}
+                placeholder="Current staff name or initials"
+                onInput={(event) => setAddendumAuthor(event.currentTarget.value)}
+              />
+            </Field>
+            <Field label="Dated addendum">
+              <textarea
+                ref={addendumTextRef}
+                data-addendum-input
+                value={addendumText}
+                placeholder="Clarification, correction, or follow-up. The original completed record remains unchanged."
+                onInput={(event) => setAddendumText(event.currentTarget.value)}
+              />
+            </Field>
+            <div class="wfp-actions">
+              <button
+                type="button"
+                class="cd2004-command-button"
+                onClick={saveAddendum}
+                disabled={!addendumText.trim()}
+              >
+                Save addendum
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <section
+        class={`cd2004-record-actions is-${locked ? "locked" : activeRecordId ? "draft" : "new"}`}
+        aria-label="UDS record actions"
+      >
+        <div class="cd2004-record-actions-state">
+          <span>UDS RECORD</span>
+          <strong>
+            {locked ? "LOCAL RECORD LOCKED" : activeRecordId ? "SAVED LOCAL DRAFT" : "NEW LOCAL DRAFT"}
+          </strong>
+          <small role="status" aria-live="polite">
+            {recordStatus ??
+              (locked
+                ? "This browser-local record is read-only. Corrections require a dated addendum."
+                : activeRecordId
+                  ? "Draft saved in this browser. Attest and lock only when the screen is final."
+                  : "Enter encounter details, then save a local draft.")}
+          </small>
+        </div>
+        <div class="cd2004-record-actions-buttons">
+          {locked && (
+            <button
+              type="button"
+              class="is-addendum"
+              onClick={() => {
+                addendumTextRef.current?.scrollIntoView({ block: "center" });
+                addendumTextRef.current?.focus({ preventScroll: true });
+              }}
+            >
+              <span class="cd2004-action-glyph" aria-hidden="true">
+                <DesktopIcon name="addendum" />
+              </span>
+              Add dated addendum
+            </button>
+          )}
+          {!locked && (
+            <>
+              <button
+                type="button"
+                class="is-save"
+                onClick={saveLocalDraft}
+                title="Save this editable UDS draft locally."
+              >
+                <span class="cd2004-action-glyph" aria-hidden="true">
+                  <DesktopIcon name="save" />
+                </span>
+                Save local draft
+              </button>
+              <button
+                type="button"
+                class="is-primary"
+                disabled={!canAttest}
+                title={
+                  canAttest
+                    ? "Review the local attestation before locking this browser-local record."
+                    : "Complete the required clinical fields and sign in staff before attesting and locking this record."
+                }
+                onClick={() => setRecordAction("attest")}
+              >
+                <span class="cd2004-action-glyph" aria-hidden="true">
+                  <DesktopIcon name="lock" />
+                </span>
+                Attest &amp; lock local record
+              </button>
+            </>
+          )}
+          <span class="cd2004-record-action-separator" aria-hidden="true" />
+          <button
+            type="button"
+            class="is-new"
+            title="Start a blank UDS screen. Any current editable work is saved as a local draft first."
+            onClick={startNewUdsScreen}
+          >
+            <span class="cd2004-action-glyph" aria-hidden="true">
+              <DesktopIcon name="new" />
+            </span>
+            Start new UDS screen
+          </button>
+          {!locked && (
+            <button
+              type="button"
+              class="is-danger"
+              disabled={!activeRecordId}
+              title={
+                activeRecordId
+                  ? "Discard this editable local draft. This cannot be undone."
+                  : "There is no editable local draft to discard."
+              }
+              onClick={() => setRecordAction("discard")}
+            >
+              <span class="cd2004-action-glyph" aria-hidden="true">
+                <DesktopIcon name="discard" />
+              </span>
+              Discard local draft...
+            </button>
+          )}
+        </div>
+      </section>
+
+      <UdsRecordsWindow
+        open={recordsOpen}
+        onClose={() => setRecordsOpen(false)}
+        onRecordOpen={openUdsRecord}
+        onCreate={startNewUdsScreen}
+        refreshToken={recordsRefreshToken}
+      />
+
+      {recordAction && (
+        <RecordActionDialog
+          kind={recordAction}
+          recordNoun="UDS screen"
+          recordLabel={encounter.patient.name.trim() || "this UDS screen"}
+          attestation={
+            recordAction === "attest"
+              ? {
+                  patient: encounter.patient.name.trim() || "Not entered",
+                  localRecord: activeRecordId ?? "Not assigned",
+                  medication: summaryFor(encounter),
+                  disposition: `Validity: ${encounter.validity}; medication alignment: ${encounter.medicationAlignment}`,
+                  staff: staffSignInValue || "Not signed in",
+                  timestamp: new Date().toISOString(),
+                  statementVersion: "local-attestation-v1",
+                }
+              : undefined
+          }
+          attestationLabels={{
+            medication: "Device / panel summary",
+            disposition: "Validity / interpretation summary",
+          }}
+          onConfirm={recordAction === "attest" ? attestAndLock : discardLocalDraft}
+          onClose={() => setRecordAction(null)}
+        />
       )}
 
       <p class="wfp-field-hint">

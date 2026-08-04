@@ -15,6 +15,12 @@ export interface LocalAttestationReview {
 interface RecordActionDialogProps {
   kind: RecordActionKind;
   recordLabel?: string;
+  /** What kind of record this is, for the body sentences. Defaults to
+   * "injection" so the original caller's wording is unchanged. */
+  recordNoun?: string;
+  /** Overrides the attestation-review list's Medication/Disposition labels,
+   * for callers whose record shape doesn't literally have those fields. */
+  attestationLabels?: { medication?: string; disposition?: string };
   attestation?: LocalAttestationReview;
   /** Return false when validation or browser-local persistence fails. */
   onConfirm: () => boolean | Promise<boolean>;
@@ -29,6 +35,8 @@ interface RecordActionDialogProps {
 export function RecordActionDialog({
   kind,
   recordLabel = "this injection",
+  recordNoun = "injection",
+  attestationLabels,
   attestation,
   onConfirm,
   onClose,
@@ -106,7 +114,7 @@ export function RecordActionDialog({
           {isAttestation ? (
             <>
               <p>
-                Review and attest this browser-local injection record for{" "}
+                Review and attest this browser-local {recordNoun} record for{" "}
                 <strong>{recordLabel}</strong>.
               </p>
               <dl class="cd2004-attestation-review" aria-label="Local record review">
@@ -119,11 +127,11 @@ export function RecordActionDialog({
                   <dd>{attestation?.localRecord || "Not assigned"}</dd>
                 </div>
                 <div>
-                  <dt>Medication</dt>
+                  <dt>{attestationLabels?.medication ?? "Medication"}</dt>
                   <dd>{attestation?.medication || "Not entered"}</dd>
                 </div>
                 <div>
-                  <dt>Disposition</dt>
+                  <dt>{attestationLabels?.disposition ?? "Disposition"}</dt>
                   <dd>{attestation?.disposition || "Not documented"}</dd>
                 </div>
                 <div>
@@ -155,7 +163,7 @@ export function RecordActionDialog({
           ) : (
             <>
               <p>
-                Discard the editable local injection draft for <strong>{recordLabel}</strong>?
+                Discard the editable local {recordNoun} draft for <strong>{recordLabel}</strong>?
               </p>
               <p class="cd2004-record-action-warning">
                 This removes the saved browser-local draft and clears the worksheet. It cannot be undone.

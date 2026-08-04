@@ -1,4 +1,5 @@
 export const INJECTION_RECORDS_STORAGE_KEY = "ipmgMedAssistInjectionRecordsV1";
+export const UDS_RECORDS_STORAGE_KEY = "ipmgMedAssistUdsRecordsV1";
 export const SITE_HISTORY_STORAGE_KEY = "ipmgMedAssistSiteHistory";
 export const STAFF_STORAGE_KEY = "ipmgMedAssistStaff";
 export const LEGACY_STAFF_STORAGE_KEY = "ipmgStaffName";

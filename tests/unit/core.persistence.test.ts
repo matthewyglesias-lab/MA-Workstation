@@ -6,6 +6,8 @@ import {
   SITE_HISTORY_STORAGE_KEY,
   SafeStorage,
   SiteHistoryRepository,
+  UDS_RECORDS_STORAGE_KEY,
+  UdsRecordRepository,
   browserSafeStorage,
   type StorageLike,
 } from "../../src/persistence";
@@ -202,6 +204,187 @@ describe("InjectionRecordRepository", () => {
     expect(save.ok).toBe(false);
     expect(memory.values.get(INJECTION_RECORDS_STORAGE_KEY)).toBe("{bad json");
     expect(memory.writes).toBe(0);
+  });
+});
+
+const udsInput = (id?: string) => ({
+  ...(id ? { id } : {}),
+  patient: { name: "RIVERA, ANA", dob: "06/11/1988" },
+  summary: "SAFE life 14-Panel Cup · 14/14 tested",
+  snapshot: {
+    patient: { name: "RIVERA, ANA", dob: "06/11/1988" },
+    collectionDateTime: "2026-08-03T09:15",
+    reason: "routine" as const,
+    device: "SAFE life 14-Panel Cup",
+    omittedPanel: "" as const,
+    physicalReadingsVerified: true,
+    lot: "UDS4471",
+    expiration: "2027-04",
+    collector: "A. Rivera, MA",
+    temperature: "acceptable" as const,
+    control: "valid" as const,
+    validity: "acceptable" as const,
+    medicationAlignment: "no unexpected" as const,
+    results: { THC: "neg" as const },
+  },
+});
+
+describe("UdsRecordRepository", () => {
+  it("reports blocked browser storage without mutating application state", () => {
+    const repository = new UdsRecordRepository(new SafeStorage(null));
+    const listed = repository.list();
+    expect(listed.ok).toBe(false);
+    if (!listed.ok) expect(listed.error.code).toBe("storage-unavailable");
+  });
+
+  it("saves a draft, then completes it in place with an attestation", () => {
+    const memory = new MemoryStorage();
+    let timestamp = "2026-08-04T15:00:00.000Z";
+    const repository = new UdsRecordRepository(new SafeStorage(memory), {
+      now: () => timestamp,
+      createId: () => "uds-1",
+    });
+    const draft = repository.saveDraft(udsInput());
+    expect(draft.ok).toBe(true);
+    if (!draft.ok) return;
+    expect(draft.value.status).toBe("draft");
+    expect(draft.value.id).toBe("uds-1");
+    expect(draft.value.snapshot.device).toBe("SAFE life 14-Panel Cup");
+
+    timestamp = "2026-08-04T15:10:00.000Z";
+    const attestation = {
+      staff: "QA Staff, MA",
+      timestamp,
+      statementVersion: "local-attestation-v1",
+    };
+    const completed = repository.complete({ ...udsInput("uds-1"), attestation });
+    expect(completed.ok).toBe(true);
+    if (!completed.ok) return;
+    expect(completed.value.status).toBe("completed");
+    expect(completed.value.completedAt).toBe(timestamp);
+    expect(completed.value.attestation).toEqual(attestation);
+  });
+
+  it("keeps completed snapshots immutable and appends dated addenda separately", () => {
+    const memory = new MemoryStorage();
+    let timestamp = "2026-08-04T15:00:00.000Z";
+    const repository = new UdsRecordRepository(new SafeStorage(memory), {
+      now: () => timestamp,
+      createId: () => "uds-1",
+      createAddendumId: () => "add-1",
+    });
+    const completed = repository.complete(udsInput());
+    expect(completed.ok).toBe(true);
+    if (!completed.ok) return;
+    const lockedSnapshot = JSON.stringify(completed.value.snapshot);
+
+    const edit = repository.saveDraft(udsInput("uds-1"));
+    expect(edit.ok).toBe(false);
+    if (!edit.ok) expect(edit.error.code).toBe("immutable-record");
+
+    timestamp = "2026-08-04T16:00:00.000Z";
+    const added = repository.addAddendum({
+      recordId: "uds-1",
+      author: "MA",
+      text: "Clarification only.",
+    });
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    expect(JSON.stringify(added.value.snapshot)).toBe(lockedSnapshot);
+    expect(added.value.addenda).toEqual([
+      { id: "add-1", createdAt: timestamp, author: "MA", text: "Clarification only." },
+    ]);
+  });
+
+  it("rejects an addendum with an empty author or text", () => {
+    const memory = new MemoryStorage();
+    const repository = new UdsRecordRepository(new SafeStorage(memory), {
+      createId: () => "uds-1",
+    });
+    repository.complete(udsInput());
+    const missingAuthor = repository.addAddendum({ recordId: "uds-1", author: "  ", text: "Note" });
+    expect(missingAuthor.ok).toBe(false);
+    if (!missingAuthor.ok) expect(missingAuthor.error.code).toBe("validation");
+    const missingText = repository.addAddendum({ recordId: "uds-1", author: "MA", text: "  " });
+    expect(missingText.ok).toBe(false);
+    if (!missingText.ok) expect(missingText.error.code).toBe("validation");
+  });
+
+  it("rejects an addendum against a draft (only completed records take addenda)", () => {
+    const memory = new MemoryStorage();
+    const repository = new UdsRecordRepository(new SafeStorage(memory), {
+      createId: () => "uds-1",
+    });
+    repository.saveDraft(udsInput());
+    const added = repository.addAddendum({ recordId: "uds-1", author: "MA", text: "Note" });
+    expect(added.ok).toBe(false);
+    if (!added.ok) expect(added.error.code).toBe("validation");
+  });
+
+  it("discards an editable draft outright, but refuses to discard a completed record", () => {
+    const memory = new MemoryStorage();
+    const repository = new UdsRecordRepository(new SafeStorage(memory), {
+      createId: () => "uds-1",
+    });
+    repository.saveDraft(udsInput());
+    const discarded = repository.discard("uds-1");
+    expect(discarded.ok).toBe(true);
+    const listed = repository.list();
+    expect(listed.ok && listed.value).toEqual([]);
+
+    const missing = repository.discard("uds-1");
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.error.code).toBe("not-found");
+
+    const repository2 = new UdsRecordRepository(new SafeStorage(memory), {
+      createId: () => "uds-2",
+    });
+    repository2.complete(udsInput());
+    const refused = repository2.discard("uds-2");
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.error.code).toBe("immutable-record");
+  });
+
+  it("does not lock or replace the current record when a storage write fails", () => {
+    const memory = new MemoryStorage();
+    const repository = new UdsRecordRepository(new SafeStorage(memory), {
+      createId: () => "uds-1",
+      now: () => "2026-08-04T15:00:00.000Z",
+    });
+    const draft = repository.saveDraft(udsInput());
+    expect(draft.ok).toBe(true);
+    const before = memory.values.get(UDS_RECORDS_STORAGE_KEY);
+    memory.failWrites = true;
+    const completed = repository.complete(udsInput("uds-1"));
+    expect(completed.ok).toBe(false);
+    expect(memory.values.get(UDS_RECORDS_STORAGE_KEY)).toBe(before);
+    memory.failWrites = false;
+    const opened = repository.open("uds-1");
+    expect(opened.ok && opened.value.status).toBe("draft");
+  });
+
+  it("leaves malformed storage untouched instead of overwriting it", () => {
+    const memory = new MemoryStorage();
+    memory.values.set(UDS_RECORDS_STORAGE_KEY, "{bad json");
+    const repository = new UdsRecordRepository(new SafeStorage(memory));
+    const listed = repository.list();
+    expect(listed.ok && listed.value).toEqual([]);
+    const save = repository.saveDraft(udsInput());
+    expect(save.ok).toBe(false);
+    expect(memory.values.get(UDS_RECORDS_STORAGE_KEY)).toBe("{bad json");
+    expect(memory.writes).toBe(0);
+  });
+
+  it("searches across patient, device, lot, and addenda text", () => {
+    const memory = new MemoryStorage();
+    const repository = new UdsRecordRepository(new SafeStorage(memory), {
+      createId: () => "uds-1",
+    });
+    repository.saveDraft(udsInput());
+    const found = repository.search("UDS4471");
+    expect(found.ok && found.value).toHaveLength(1);
+    const notFound = repository.search("nonexistent-lot");
+    expect(notFound.ok && notFound.value).toHaveLength(0);
   });
 });
 
