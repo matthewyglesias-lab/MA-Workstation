@@ -113,4 +113,70 @@ test.describe('Injection decision support', () => {
         .getByRole('button', { name: /Reset to calculated/ }),
     ).toBeVisible();
   });
+
+  test('keeps the legacy completion gate aligned with phase-aware routine checks', async ({ page }) => {
+    const panel = await openInjection(page);
+    await enterRoutineOrder(panel, 'QA, Routine Bridge');
+
+    await openTab(panel, 'Schedule');
+    const scheduleDates = panel.locator('input[type="date"]');
+    await scheduleDates.nth(0).fill('2026-07-02');
+    await scheduleDates.nth(1).fill('2026-07-30');
+
+    await openTab(panel, 'Administration');
+    await panel.getByText('R deltoid', { exact: true }).click();
+    await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
+    await panel.locator('input[type="time"]').fill('10:30');
+
+    await openTab(panel, 'Product');
+    const ndcPicker = panel.locator('[data-ndc-picker]').first();
+    const packagePicker = ndcPicker.getByRole('combobox', { name: 'Known NDC package' });
+    const knownPackage = packagePicker.locator('option', { hasText: '50458-563-01' }).first();
+    await packagePicker.selectOption(await knownPackage.getAttribute('value'));
+    await panel.locator('input[placeholder="LOT123"]').fill('ROUTINE-BRIDGE-LOT');
+    await panel.locator('input[type="month"]').fill('2027-12');
+
+    await openTab(panel, 'Verification');
+    for (const item of [
+      'Two-identifier ID',
+      'Medication ‘rights’',
+      'Allergies reviewed',
+      'Consent reaffirmed',
+      'No contraindications',
+      'Aseptic technique',
+      'Suspension inspected and mixed'
+    ]) {
+      const checkbox = panel.getByRole('checkbox', { name: new RegExp(item) });
+      await checkbox.check();
+      await expect(checkbox).toBeChecked();
+    }
+    await panel
+      .locator('.wfp-field:has-text("Allergy status") input')
+      .fill('NKDA confirmed in this local record');
+    const noAcuteConcerns = panel.locator('.wfp-checkbox-row label', {
+      hasText: 'No acute concerns today confirmed'
+    });
+    await noAcuteConcerns.click();
+    await expect(noAcuteConcerns.locator('xpath=preceding-sibling::input')).toBeChecked();
+
+    await openTab(panel, 'Outcome');
+    await panel.locator('select[name="inj-response"]').selectOption('well');
+    await panel.getByText('Review complete — document administration', { exact: true }).click();
+
+    // Routine maintenance only requires the applicable suspension check.  The
+    // old legacy layer listed every product flag and could silently keep this
+    // path locked by asking for the initiation-only Sustenna confirmation.
+    await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
+    await expect(page.locator('#injRecordWorkspace [data-inj-complete]')).toBeEnabled();
+    await expect(page.locator('#clinicalDispositionList')).not.toContainText(
+      'Initiation / re-initiation plan verified'
+    );
+
+    await openTab(panel, 'Order');
+    await panel.locator('select[name="inj-reason"]').selectOption('initiation');
+    await expect(page.locator('#clinicalDispositionList')).toContainText(
+      'Initiation / re-initiation plan verified'
+    );
+    await expect(page.locator('#injRecordWorkspace [data-inj-complete]')).toBeDisabled();
+  });
 });

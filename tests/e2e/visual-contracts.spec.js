@@ -288,7 +288,7 @@ function expectedContract(workflow, viewport) {
   const desktop = viewport === 'desktop';
   const module = WORKFLOWS[workflow];
   const isHome = workflow === 'home';
-  const titlebarHeight = desktop ? '30px' : '29px';
+  const titlebarHeight = desktop ? '23px' : '29px';
   const windowTitlebarMinHeight = desktop ? '22px' : '25px';
 
   return {
@@ -299,10 +299,14 @@ function expectedContract(workflow, viewport) {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
       style: {
-        color: isHome ? 'rgb(16, 43, 86)' : 'rgb(16, 42, 86)',
-        fontSize: '16px',
+        color: isHome
+          ? desktop
+            ? 'rgb(31, 50, 100)'
+            : 'rgb(16, 43, 86)'
+          : 'rgb(16, 42, 86)',
+        fontSize: desktop && isHome ? '10px' : '16px',
         fontWeight: '700',
-        lineHeight: isHome ? '17.6px' : '18.4px'
+        lineHeight: desktop && isHome ? 'normal' : isHome ? '17.6px' : '18.4px'
       }
     },
     chrome: {
@@ -349,10 +353,14 @@ function expectedContract(workflow, viewport) {
       panelHorizontalOverflow: false,
       hero: {
         backgroundColor: isHome
-          ? 'rgb(243, 243, 255)'
+          ? desktop
+            ? 'rgb(238, 240, 251)'
+            : 'rgb(243, 243, 255)'
           : 'rgb(219, 228, 238)',
         borderBottomColor: isHome
-          ? 'rgb(89, 100, 128)'
+          ? desktop
+            ? 'rgb(101, 112, 154)'
+            : 'rgb(89, 100, 128)'
           : 'rgb(124, 137, 150)',
         borderRadius: '0px',
         boxShadow: expect.any(String),

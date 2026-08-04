@@ -589,12 +589,16 @@ function OperatorGuidance({
         suggestedNextDose,
         nonAdministration,
       });
-  const referenceItems = (presentedOutput?.guidance ?? []).filter(
-    (entry) => !items.some((current) => current.key === entry.key),
-  );
+  const referenceItems = [
+    ...items.slice(1),
+    ...(presentedOutput?.guidance ?? []).filter(
+      (entry) => !items.some((current) => current.key === entry.key),
+    ),
+  ];
   const clinicalReference = medication.clinicalReference;
   const firstStop = firstActionableClinicalIssue("administer", evaluation);
   const blockerTab = firstStop ? tabForInjectionField(firstStop.field) : null;
+  const primaryItem = items[0];
 
   return (
     <section class="wfp-operator-guidance" aria-label="Operator guidance" data-operator-guidance>
@@ -605,15 +609,15 @@ function OperatorGuidance({
           <small>REF {presentedOutput.clinicalReferenceVersion}</small>
         )}
       </div>
-      <div class="wfp-operator-guidance-list">
-        {items.slice(0, 3).map((item) => (
-          <div class="wfp-operator-guidance-row" key={item.key}>
-            <strong>{item.title}:</strong>
-            <span>{item.message}</span>
-            {item.action && <em>{item.action}</em>}
+      {primaryItem && (
+        <div class="wfp-operator-guidance-list">
+          <div class="wfp-operator-guidance-row">
+            <strong>{primaryItem.title}:</strong>
+            <span>{primaryItem.message}</span>
+            {primaryItem.action && <em>{primaryItem.action}</em>}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
       {firstStop && blockerTab && (
         <button
           type="button"
@@ -873,12 +877,16 @@ export function InjectionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePatient.name, activePatient.dob]);
 
-  const patch = (partial: Partial<InjectionEncounter>) => {
+  const updateEncounter = (updater: (previous: InjectionEncounter) => InjectionEncounter) => {
     setEncounter((previous) => {
-      const next = { ...previous, ...partial };
+      const next = updater(previous);
       mirrorInjectionEncounterToLegacyDom(next);
       return next;
     });
+  };
+
+  const patch = (partial: Partial<InjectionEncounter>) => {
+    updateEncounter((previous) => ({ ...previous, ...partial }));
   };
 
   // A workstation sign-in is a useful default, not an attestation. Only fill
@@ -892,22 +900,29 @@ export function InjectionPanel({
   }, [staffSignInValue, locked, encounter.administeredBy]);
 
   const patchPatient = (partial: Partial<InjectionEncounter["patient"]>) => {
-    patch({ patient: { ...encounter.patient, ...partial } });
+    updateEncounter((previous) => ({
+      ...previous,
+      patient: { ...previous.patient, ...partial },
+    }));
   };
 
   const patchDetails = (
     partial: Partial<InjectionAdministrationDetails & InjectionDocumentationMetadata>,
   ) => {
-    patch({
+    updateEncounter((previous) => ({
+      ...previous,
       details: {
-        ...(encounter.details ?? emptyDetails()),
+        ...(previous.details ?? emptyDetails()),
         ...partial,
       } as InjectionAdministrationDetails,
-    });
+    }));
   };
 
   const patchDisposition = (partial: Partial<InjectionDisposition>) => {
-    patch({ disposition: { ...encounter.disposition, ...partial } });
+    updateEncounter((previous) => ({
+      ...previous,
+      disposition: { ...previous.disposition, ...partial },
+    }));
   };
 
   const onMedicationChange = (key: InjectionMedicationKey | "") => {
@@ -953,28 +968,32 @@ export function InjectionPanel({
   };
 
   const toggleAttestation = (key: string, value: boolean) => {
-    patch({
+    updateEncounter((previous) => ({
+      ...previous,
       attestations: {
-        ...encounter.attestations,
+        ...previous.attestations,
         [key]: value,
       } as InjectionEncounter["attestations"],
-    });
+    }));
   };
 
   const toggleVerification = (key: string, value: boolean) => {
-    patch({
+    updateEncounter((previous) => ({
+      ...previous,
       verifications: {
-        ...encounter.verifications,
+        ...previous.verifications,
         [key]: value,
       } as InjectionEncounter["verifications"],
-    });
+    }));
   };
 
   const toggleSafetyConcern = (key: string, value: boolean) => {
-    const current = new Set(encounter.activeSafetyConcerns ?? []);
-    if (value) current.add(key);
-    else current.delete(key);
-    patch({ activeSafetyConcerns: [...current] });
+    updateEncounter((previous) => {
+      const current = new Set(previous.activeSafetyConcerns ?? []);
+      if (value) current.add(key);
+      else current.delete(key);
+      return { ...previous, activeSafetyConcerns: [...current] };
+    });
   };
 
   const patchInitiation = (partial: Partial<NonNullable<InjectionEncounter["initiation"]>>) => {
@@ -1085,6 +1104,17 @@ export function InjectionPanel({
       (encounter.medicationKey !== "" && trigger.medications.includes(encounter.medicationKey)),
   );
   const activeSafetyConcerns = new Set(encounter.activeSafetyConcerns ?? []);
+  const activePatientName = activePatient.name?.trim() ?? "";
+  const activePatientDob = activePatient.dob?.trim() ?? "";
+  const localPatientAvailable = Boolean(activePatientName || activePatientDob);
+  const patientNeedsRestore =
+    localPatientAvailable &&
+    (encounter.patient.name.trim() !== activePatientName ||
+      encounter.patient.dob.trim() !== activePatientDob);
+  const sessionStaff = staffSignInValue.trim();
+  const staffNeedsRestore = Boolean(
+    sessionStaff && encounter.administeredBy.trim() !== sessionStaff,
+  );
 
   const administered = encounter.disposition.kind === "administered";
   const stops = evaluation?.stops ?? [];
@@ -1247,32 +1277,32 @@ export function InjectionPanel({
           stopCount={stops.length}
           warningCount={evaluation?.warnings.length ?? 0}
         />
-        {staffSignInValue.trim() && (
+        {sessionStaff && (
           <span class="wfp-session-context" title="Editable documenting-staff default">
-            Session staff: {staffSignInValue.trim()}
+            Session staff: {sessionStaff}
           </span>
         )}
         <span class="wfp-summary-spacer" />
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() =>
-            patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } })
-          }
-          disabled={locked || (!activePatient.name?.trim() && !activePatient.dob?.trim())}
-        >
-          Use selected local patient
-        </button>
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() => {
-            if (staffSignInValue) patch({ administeredBy: staffSignInValue });
-          }}
-          disabled={locked || !staffSignInValue}
-        >
-          Restore session staff
-        </button>
+        {!locked && patientNeedsRestore && (
+          <button
+            type="button"
+            class="cd2004-link-button"
+            onClick={() =>
+              patch({ patient: { name: activePatientName, dob: activePatientDob } })
+            }
+          >
+            Use selected local patient
+          </button>
+        )}
+        {!locked && staffNeedsRestore && (
+          <button
+            type="button"
+            class="cd2004-link-button"
+            onClick={() => patch({ administeredBy: sessionStaff })}
+          >
+            Restore session staff
+          </button>
+        )}
       </div>
 
       <div class="wfp-tabbar" role="tablist">
@@ -1322,6 +1352,7 @@ export function InjectionPanel({
           stops={stops}
           tabForField={tabForInjectionField}
           tabLabels={INJECTION_TAB_LABELS}
+          collapsible
           onNavigate={(target) =>
             setTab(nonAdministration && (target === "administration" || target === "product") ? "outcome" : target)
           }

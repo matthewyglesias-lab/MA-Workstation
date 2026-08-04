@@ -481,7 +481,10 @@ function vitalSafetyItems(){
 }
 function medicationSafetyItems(){
   const items=[]; const m=S.med; if(!m)return items;
-  (m.flags||[]).forEach(fk=>{
+  const requiredVerifications=Array.isArray(S.requiredVerifications)
+    ?S.requiredVerifications
+    :(m.flags||[]);
+  requiredVerifications.forEach(fk=>{
     const f=FLAG[fk]; if(!f)return;
     if(!S.flags[fk])items.push({level:fk==='opioidFree'||fk==='glutealOnly'?'danger':'warn',text:`Review required: ${f.t}`});
   });
@@ -8553,7 +8556,13 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(S.attest&&S.attest.allergy&&!text('allergies'))stops.push('Enter the verified allergy status; do not use a default allergy statement.');
     const safetyState=window.__IPMG_RC530__;
     if(!safetyState||!safetyState.safetyNone)stops.push('Confirm today\'s acute safety screen or document an exception for provider review.');
-    (m.flags||[]).forEach(flag=>{
+    /* The migrated worksheet supplies the exact phase-aware set from the
+       typed evaluator. Fall back to the historical flags only when direct
+       legacy interaction has not provided that projection. */
+    const requiredVerifications=Array.isArray(S.requiredVerifications)
+      ?S.requiredVerifications
+      :(m.flags||[]);
+    requiredVerifications.forEach(flag=>{
       if(!S.flags||!S.flags[flag]){
         const detail=typeof FLAG!=='undefined'&&FLAG[flag]?FLAG[flag].t:flag;
         stops.push(`Complete medication-specific verification: ${detail}.`);
@@ -11193,6 +11202,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       const flags={};
       VERIFICATION_KEYS.forEach(key=>{flags[key]=Boolean(patch.verifications[key]);});
       S.flags=flags;
+    }
+    if(Array.isArray(patch.requiredVerifications)){
+      S.requiredVerifications=patch.requiredVerifications.filter(key=>VERIFICATION_KEYS.includes(key));
     }
     if(patch.safetyConcerns&&typeof patch.safetyConcerns==='object'){
       const guard={};
