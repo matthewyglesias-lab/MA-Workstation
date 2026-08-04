@@ -943,15 +943,11 @@
   cursor: pointer;
 }
 
-/* Clickable outstanding-requirements list - each row jumps straight to the
-   tab that owns the still-unmet field, instead of leaving staff to hunt
-   across every tab for whatever is blocking a stop. */
-
-.cd2004-shell .wfp-issue-section .wfp-section-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+/* Clickable outstanding-requirements list, shown inside the Outstanding
+   Requirements floating window (see cd2004-dialog-* in clinical-desktop.css)
+   - each row jumps straight to the tab that owns the still-unmet field,
+   instead of leaving staff to hunt across every tab for whatever is
+   blocking a stop. */
 
 .cd2004-shell .wfp-issue-list {
   display: flex;
@@ -1432,31 +1428,6 @@
   .cd2004-shell [data-workflow="administer"] .wfp-reference summary {
     padding: 2px 5px;
     font-size: 8px;
-  }
-
-  .cd2004-shell [data-workflow="administer"] .wfp-issue-section {
-    background: #f6f6fb;
-  }
-
-  .cd2004-shell [data-workflow="administer"] .wfp-issue-section > summary {
-    min-height: 18px;
-    padding: 2px 5px;
-    cursor: pointer;
-    list-style: none;
-  }
-
-  .cd2004-shell [data-workflow="administer"] .wfp-issue-section > summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .cd2004-shell [data-workflow="administer"] .wfp-issue-section > summary::before {
-    content: "+";
-    display: inline-block;
-    width: 12px;
-  }
-
-  .cd2004-shell [data-workflow="administer"] .wfp-issue-section[open] > summary::before {
-    content: "−";
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-issue-row {

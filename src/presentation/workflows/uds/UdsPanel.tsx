@@ -98,10 +98,12 @@ function StatusFlag({
   idle,
   stopCount,
   warningCount,
+  onOpenRequirements,
 }: {
   idle: boolean;
   stopCount: number;
   warningCount: number;
+  onOpenRequirements?: () => void;
 }) {
   const variant = idle
     ? "is-idle"
@@ -117,6 +119,17 @@ function StatusFlag({
       : warningCount > 0
         ? `${warningCount} to review`
         : "Ready";
+  if (stopCount > 0 && onOpenRequirements) {
+    return (
+      <button
+        type="button"
+        class={`wfp-status-flag ${variant}`}
+        onClick={onOpenRequirements}
+      >
+        {label}
+      </button>
+    );
+  }
   return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
 }
 
@@ -383,6 +396,7 @@ export function UdsPanel({
   const [encounter, setEncounter] = useState<UdsEncounter>(initialEncounter);
   const [photoData, setPhotoData] = useState<string>("");
   const [tab, setTab] = useState<UdsTab>("specimen");
+  const [requirementsOpen, setRequirementsOpen] = useState(false);
   // Seeded from whatever the hidden legacy checkbox already holds at mount
   // (its own boot-time default) rather than forced, so a fresh encounter
   // doesn't silently flip the print report's signature-block default.
@@ -483,6 +497,7 @@ export function UdsPanel({
           idle={(evaluation?.readiness ?? "idle") === "idle"}
           stopCount={stops.length}
           warningCount={evaluation?.warnings.length ?? 0}
+          onOpenRequirements={() => setRequirementsOpen(true)}
         />
         <span class="wfp-summary-spacer" />
         <button
@@ -568,6 +583,8 @@ export function UdsPanel({
       </div>
 
       <OutstandingRequirements<UdsTab>
+        open={requirementsOpen}
+        onClose={() => setRequirementsOpen(false)}
         stops={stops}
         tabForField={tabForUdsField}
         tabLabels={UDS_TAB_LABEL}

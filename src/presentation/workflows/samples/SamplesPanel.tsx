@@ -156,10 +156,12 @@ function StatusFlag({
   idle,
   stopCount,
   warningCount,
+  onOpenRequirements,
 }: {
   idle: boolean;
   stopCount: number;
   warningCount: number;
+  onOpenRequirements?: () => void;
 }) {
   const variant = idle
     ? "is-idle"
@@ -175,6 +177,17 @@ function StatusFlag({
       : warningCount > 0
         ? `${warningCount} to review`
         : "Ready";
+  if (stopCount > 0 && onOpenRequirements) {
+    return (
+      <button
+        type="button"
+        class={`wfp-status-flag ${variant}`}
+        onClick={onOpenRequirements}
+      >
+        {label}
+      </button>
+    );
+  }
   return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
 }
 
@@ -233,6 +246,7 @@ export function SamplesPanel({
 }: SamplesPanelProps) {
   const [encounter, setEncounter] = useState<SamplesEncounter>(initialEncounter);
   const [tab, setTab] = useState<SamplesTab>("order");
+  const [requirementsOpen, setRequirementsOpen] = useState(false);
   const mirroredOnMount = useRef(false);
 
   useEffect(() => {
@@ -429,6 +443,7 @@ export function SamplesPanel({
           idle={(evaluation?.readiness ?? "idle") === "idle"}
           stopCount={stops.length}
           warningCount={evaluation?.warnings.length ?? 0}
+          onOpenRequirements={() => setRequirementsOpen(true)}
         />
         <span class="wfp-summary-spacer" />
         <button
@@ -527,6 +542,8 @@ export function SamplesPanel({
       </div>
 
       <OutstandingRequirements<SamplesTab>
+        open={requirementsOpen}
+        onClose={() => setRequirementsOpen(false)}
         stops={stops}
         tabForField={tabForSamplesField}
         tabLabels={SAMPLES_TAB_LABEL}

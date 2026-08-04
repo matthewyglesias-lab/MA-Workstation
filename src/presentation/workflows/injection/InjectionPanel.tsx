@@ -320,10 +320,12 @@ function StatusFlag({
   idle,
   stopCount,
   warningCount,
+  onOpenRequirements,
 }: {
   idle: boolean;
   stopCount: number;
   warningCount: number;
+  onOpenRequirements?: () => void;
 }) {
   const variant = idle
     ? "is-idle"
@@ -339,6 +341,17 @@ function StatusFlag({
       : warningCount > 0
         ? `${warningCount} to review`
         : "Ready";
+  if (stopCount > 0 && onOpenRequirements) {
+    return (
+      <button
+        type="button"
+        class={`wfp-status-flag ${variant}`}
+        onClick={onOpenRequirements}
+      >
+        {label}
+      </button>
+    );
+  }
   return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
 }
 
@@ -830,6 +843,7 @@ export function InjectionPanel({
 }: InjectionPanelProps) {
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
   const [tab, setTab] = useState<InjectionTab>("order");
+  const [requirementsOpen, setRequirementsOpen] = useState(false);
   const mirroredOnMount = useRef(false);
   const autoCalculatedNextDue = useRef("");
   const ndcResolver = useMemo(() => createNdcOptionResolver(), []);
@@ -1284,6 +1298,7 @@ export function InjectionPanel({
             idle={(evaluation?.readiness ?? "idle") === "idle"}
             stopCount={stops.length}
             warningCount={evaluation?.warnings.length ?? 0}
+            onOpenRequirements={() => setRequirementsOpen(true)}
           />
         )}
         {sessionStaff && (
@@ -1355,10 +1370,11 @@ export function InjectionPanel({
       {/* A locked record is read-only, so there is nothing to act on. */}
       {!locked && (
         <OutstandingRequirements<InjectionTab>
+          open={requirementsOpen}
+          onClose={() => setRequirementsOpen(false)}
           stops={stops}
           tabForField={tabForInjectionField}
           tabLabels={INJECTION_TAB_LABELS}
-          collapsible
           onNavigate={(target) =>
             setTab(nonAdministration && (target === "administration" || target === "product") ? "outcome" : target)
           }
