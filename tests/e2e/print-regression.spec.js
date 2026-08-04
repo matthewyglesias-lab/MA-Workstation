@@ -318,15 +318,15 @@ async function prepareMinimalAvsInjection(page) {
   const printButton = panel.locator('.cd2004-command-button:has-text("Print AVS")');
   await expect(printButton).toBeEnabled();
 
-  // The button's own click handler adds the print-avs body class, calls
-  // window.print(), and clears the class again via a 500ms setTimeout
-  // regardless of whether printing finished - a real browser print dialog
-  // blocks that timer, but headless/CI has no dialog to block it, so the
-  // class can already be gone before the PDF/layout assertions below run.
-  // Click it anyway to exercise the real path, then drive the actual
-  // assertions the same race-free way every other test in this file does:
-  // render and set the print class directly.
-  await printButton.click();
+  // Deliberately do NOT click it: its handler adds the print-avs body
+  // class, calls window.print(), and clears the class again via a bare
+  // 500ms setTimeout regardless of whether printing finished. A real
+  // browser print dialog blocks that timer; headless/CI has no dialog to
+  // block it, and under CI's actual worker parallelism the timer can fire
+  // mid-test even with a same-tick workaround after it, intermittently
+  // hiding the sheet again before the assertions below run. toBeEnabled()
+  // above already proves the real gate; drive the actual content/layout
+  // assertions the same race-free way every other test in this file does.
   await setFieldsAndRender(page, {
     bodyClass: 'print-avs',
     renderName: 'renderAVS',
