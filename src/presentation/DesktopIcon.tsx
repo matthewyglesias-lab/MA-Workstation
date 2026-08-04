@@ -232,36 +232,6 @@ export function DesktopIcon({ name, ...props }: DesktopIconProps) {
           <path d="M1.5 8.5 5.5 13 14.5 3" stroke={white} />
         </svg>
       );
-    case "site-deltoid":
-      return (
-        <svg {...common}>
-          <path d="M4 14V9a4 4 0 0 1 8 0v5" fill={blueLight} stroke={ink} />
-          <circle cx="8" cy="8" r="1.4" fill={red} stroke={ink} />
-        </svg>
-      );
-    case "site-gluteal":
-      return (
-        <svg {...common}>
-          <path d="M2 14c0-5 2-8 6-8s6 3 6 8" fill={blueLight} stroke={ink} />
-          <path d="M8 6v2" stroke={ink} />
-          <circle cx="6.5" cy="10.5" r="1.2" fill={red} stroke={ink} />
-        </svg>
-      );
-    case "site-abdomen":
-      return (
-        <svg {...common}>
-          <rect x="3" y="3" width="10" height="10" rx="2" fill={paper} stroke={ink} />
-          <path d="M8 3v10M3 8h10" stroke={blue} />
-          <circle cx="10.5" cy="5.5" r="1.1" fill={red} stroke={ink} />
-        </svg>
-      );
-    case "site-arm":
-      return (
-        <svg {...common}>
-          <path d="M6 1.5h4v7a2 2 0 0 1-4 0z" fill={blueLight} stroke={ink} />
-          <circle cx="8" cy="5" r="1.1" fill={red} stroke={ink} />
-        </svg>
-      );
     default:
       return null;
   }

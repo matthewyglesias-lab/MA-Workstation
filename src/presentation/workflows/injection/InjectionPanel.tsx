@@ -2,6 +2,7 @@ import { createContext, Fragment, type ComponentChildren, type Ref } from "preac
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "../workflow-panels.css";
 import { DesktopIcon } from "../../DesktopIcon";
+import { SiteIcon } from "../../SiteIcon";
 import {
   INJECTION_ATTESTATION_OPTIONS,
   INJECTION_REASON_OPTIONS,
@@ -70,20 +71,6 @@ const INJECTION_TABS: Array<[InjectionTab, string]> = [
 ];
 
 const INJECTION_TAB_LABELS = Object.fromEntries(INJECTION_TABS) as Record<InjectionTab, string>;
-
-/**
- * Site tiles use a small region pictogram purely as a scanning aid - the
- * exact site string (e.g. "R deltoid") remains the actual label and the
- * only thing `patch({ site })` ever reads. Derived from the label text
- * rather than a new catalog field so `injection-catalog.ts`'s plain
- * string site list stays untouched.
- */
-function siteIconName(site: string): "site-deltoid" | "site-gluteal" | "site-abdomen" | "site-arm" {
-  if (/deltoid/i.test(site)) return "site-deltoid";
-  if (/gluteal/i.test(site)) return "site-gluteal";
-  if (/abdomen/i.test(site)) return "site-abdomen";
-  return "site-arm";
-}
 
 /**
  * The evaluator owns which fields are required, optional, or not relevant to
@@ -1982,7 +1969,7 @@ export function InjectionPanel({
                       >
                         <input type="radio" name="inj-site" checked={encounter.site === site} onChange={() => patch({ site })} />
                         <span class="wfp-site-tile-icon" aria-hidden="true">
-                          <DesktopIcon name={siteIconName(site)} />
+                          <SiteIcon site={site} />
                         </span>
                         <span class="wfp-site-tile-title">{site}</span>
                         {site === recommendedSite && (
