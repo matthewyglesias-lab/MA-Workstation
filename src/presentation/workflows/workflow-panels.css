@@ -457,6 +457,19 @@
   max-width: 200px;
 }
 
+/* The calendar/clock glyph is a modern flat icon baked into the browser -
+   there's no cross-browser way to replace it without risking the native
+   picker's click behavior. Muting it to a flat, low-contrast mark is the
+   safe partial fix; Chromium-only (::-webkit-*), but that's what every
+   real workstation runs. */
+.cd2004-shell .wfp-field input[type="date"]::-webkit-calendar-picker-indicator,
+.cd2004-shell .wfp-field input[type="month"]::-webkit-calendar-picker-indicator,
+.cd2004-shell .wfp-field input[type="time"]::-webkit-calendar-picker-indicator,
+.cd2004-shell .wfp-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: grayscale(1) contrast(0.6) brightness(1.3);
+  opacity: 0.65;
+}
+
 .cd2004-shell .wfp-field input.mono {
   max-width: 190px;
 }
