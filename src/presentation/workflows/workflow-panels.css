@@ -137,14 +137,21 @@
   border-bottom: 2px solid var(--cd-paper);
 }
 
+/* A count is still-to-do work, not an alarm: the soft-chip treatment below
+   matches .wfp-status-flag.is-stop rather than a solid alarm-red fill. Real
+   MEDITECH reserves a solid red fill for nothing in this severity system --
+   red there is always plain text on a genuinely critical item (allergy/code
+   status, an out-of-range lab value), never a filled badge for a count. */
 .cd2004-shell .wfp-tab .wfp-tab-badge {
   display: inline-block;
   min-width: 14px;
   margin-left: 6px;
   padding: 0 3px;
-  color: #fff;
-  background: var(--cd-red);
+  color: var(--cd-red);
+  background: var(--cd-red-soft);
+  border: 1px solid var(--cd-red);
   font-size: 9px;
+  font-weight: 700;
   text-align: center;
 }
 
@@ -152,9 +159,11 @@
 .cd2004-shell .wfp-section-head .wfp-tab-badge {
   min-width: 14px;
   padding: 0 3px;
-  color: #fff;
-  background: var(--cd-red);
+  color: var(--cd-red);
+  background: var(--cd-red-soft);
+  border: 1px solid var(--cd-red);
   font-size: 9px;
+  font-weight: 700;
   text-align: center;
 }
 
