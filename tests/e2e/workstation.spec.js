@@ -928,9 +928,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#sampleWorksheetSheet .sw-page')).toContainText(/Medication Sample|Sample/i);
 
     // The product deliberately clears its print class after invoking the system dialog.
-    // Let that cleanup finish, then restore it so Chromium renders the exact
-    // print stylesheet to a PDF without racing the production cleanup timer.
-    await page.waitForTimeout(650);
+    // Let both the legacy 500 ms cleanup and the print-hardening 1 s fallback
+    // finish, then restore it so Chromium renders the exact print stylesheet
+    // without racing the production cleanup timer on a loaded CI runner.
+    await page.waitForTimeout(1_100);
     await page.evaluate(() => document.body.classList.add('print-sample-worksheet'));
     await page.emulateMedia({ media: 'print' });
 
