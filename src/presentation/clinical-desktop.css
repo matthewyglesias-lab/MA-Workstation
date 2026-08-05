@@ -3756,3 +3756,251 @@ input[type="radio"]:disabled {
     display: none !important;
   }
 }
+
+/* ===================== INJECTION AVS (lab-report treatment) =====================
+ * The After Visit Summary prints as fixed-pitch clinical paperwork. The markup
+ * comes from src/domain/injection-avs-render.ts; this stylesheet owns page
+ * geometry and the emphasis ranking:
+ *   1. .avs2-alert - inverse-video banner, reserved for safety / call-ahead
+ *   2. .avs2-next  - double-ruled action box holding the due date
+ *   3. .avs2-sec   - plain ruled heading for everything else
+ * These live here rather than in public/legacy/legacy.css because that file is
+ * pinned byte-identical to the pre-migration production stylesheet (see
+ * tests/unit/print-baseline.test.ts) and must stay a faithful extract.
+ * The overrides carry !important so they win over legacy.css's older
+ * Inter-based #avsSheet shell regardless of stylesheet order.
+ */
+@media print {
+  /* Letter minus the 0.5in page margins. The print contract in
+     tests/e2e/print-regression.spec.js requires the rendered content to fit a
+     Letter page, so this stays a hard cap rather than `none`. */
+  body.print-avs #avsSheet {
+    max-width: 7.5in !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    font-family: "Courier New", Courier, monospace !important;
+  }
+
+  body.print-avs #avsSheet .avs2 {
+    color: #000 !important;
+    background: #fff !important;
+    font-family: "Courier New", Courier, monospace !important;
+    font-size: 10.6px !important;
+    line-height: 1.44 !important;
+  }
+
+  body.print-avs #avsSheet .avs2 * {
+    box-sizing: border-box;
+  }
+
+  /* --- run header --- */
+  body.print-avs #avsSheet .avs2-run {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 10.2px;
+    letter-spacing: 0.02em;
+  }
+
+  body.print-avs #avsSheet .avs2-run > div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.print-avs #avsSheet .avs2-run > div:last-child {
+    text-align: right;
+  }
+
+  body.print-avs #avsSheet .avs2-run span {
+    white-space: pre;
+  }
+
+  /* --- document title --- */
+  body.print-avs #avsSheet .avs2-title {
+    margin-top: 5px;
+    padding: 4px 0 3px;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-align: center;
+  }
+
+  body.print-avs #avsSheet .avs2-subtitle {
+    padding: 4px 0 0;
+    font-size: 10.4px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-align: center;
+  }
+
+  /* --- identity band --- */
+  body.print-avs #avsSheet .avs2-id {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 24px;
+    padding: 6px 0;
+    border-bottom: 1px solid #000;
+  }
+
+  /* --- dot-leader data rows --- */
+  body.print-avs #avsSheet .avs2-row {
+    white-space: pre-wrap;
+  }
+
+  body.print-avs #avsSheet .avs2-k {
+    letter-spacing: 0.02em;
+  }
+
+  body.print-avs #avsSheet .avs2-v {
+    font-weight: 700;
+  }
+
+  /* --- next-dose action box --- */
+  body.print-avs #avsSheet .avs2-next {
+    margin-top: 13px;
+    padding: 9px 13px 11px;
+    border: 2px solid #000;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-next-h {
+    margin-bottom: 9px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #000;
+    font-size: 10.2px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+  }
+
+  body.print-avs #avsSheet .avs2-date {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.18;
+    letter-spacing: 0.01em;
+  }
+
+  body.print-avs #avsSheet .avs2-date-sub {
+    margin-top: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  body.print-avs #avsSheet .avs2-next-foot {
+    margin-top: 9px;
+    padding-top: 7px;
+    border-top: 1px dashed #000;
+  }
+
+  body.print-avs #avsSheet .avs2-next-foot .avs2-p {
+    margin: 0 0 6px;
+  }
+
+  body.print-avs #avsSheet .avs2-next-foot .avs2-p:last-of-type {
+    margin-bottom: 7px;
+  }
+
+  /* --- inverse-video alert banners --- */
+  body.print-avs #avsSheet .avs2-alert {
+    margin-top: 13px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-alert-bar {
+    padding: 4px 10px;
+    color: #fff !important;
+    background: #000 !important;
+    font-size: 10.4px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.print-avs #avsSheet .avs2-alert-body {
+    padding: 8px 12px 9px;
+    border: 2px solid #000;
+    border-top: 0;
+  }
+
+  /* --- ordinary ruled sections --- */
+  body.print-avs #avsSheet .avs2-sec {
+    margin-top: 14px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-h {
+    margin: 0;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #000;
+    font-size: 10.4px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+
+  body.print-avs #avsSheet .avs2-b {
+    padding: 6px 0 0 15px;
+  }
+
+  /* --- prose and lists --- */
+  body.print-avs #avsSheet .avs2-p {
+    margin: 0 0 7px;
+  }
+
+  body.print-avs #avsSheet .avs2-p:last-child {
+    margin-bottom: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-ul {
+    margin: 0;
+    padding-left: 17px;
+  }
+
+  body.print-avs #avsSheet .avs2-ul li {
+    margin-bottom: 4px;
+  }
+
+  body.print-avs #avsSheet .avs2-ul li:last-child {
+    margin-bottom: 0;
+  }
+
+  /* --- starting-series schedule table --- */
+  body.print-avs #avsSheet .avs2-table {
+    width: 100%;
+    margin-bottom: 7px;
+    border-collapse: collapse;
+    font-size: 10.4px;
+  }
+
+  body.print-avs #avsSheet .avs2-table th {
+    padding: 1px 10px 2px 0;
+    border-bottom: 1px solid #000;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: left;
+  }
+
+  body.print-avs #avsSheet .avs2-table td {
+    padding: 2px 10px 2px 0;
+  }
+
+  body.print-avs #avsSheet .avs2-table tr.is-due td {
+    font-weight: 700;
+  }
+
+  /* --- footer --- */
+  body.print-avs #avsSheet .avs2-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 17px;
+    padding-top: 4px;
+    border-top: 1px solid #000;
+    font-size: 9.4px;
+  }
+}

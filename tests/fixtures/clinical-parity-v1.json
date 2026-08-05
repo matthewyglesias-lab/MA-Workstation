@@ -558,7 +558,7 @@
       "workflow": "injection",
       "id": "avsSheet",
       "printClass": "print-avs",
-      "title": "Injection after-visit summary",
+      "title": "AFTER VISIT SUMMARY - LONG-ACTING INJECTION",
       "rootPresent": true,
       "titlePresent": true,
       "printClassPresent": true

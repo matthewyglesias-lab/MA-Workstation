@@ -5458,29 +5458,88 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       ${footer('This patient summary is for education and visit documentation. The provider reviews office-screening results with the full clinical context.')}
     </div>`;
   };
-  window.renderAVS=function renderAVSRC510(){
+  /* The After Visit Summary body is built by the typed content engine in
+     src/domain/injection-avs-content.ts, exposed here as
+     window.ipmgBuildInjectionAvsHtml. This function's job is only to collect
+     the documented values out of the legacy fields and chip state and hand
+     them over, so the patient wording stays reviewable in one typed file
+     instead of being spread through this runtime.
+
+     If the typed bundle has not attached yet (a print fired before mount, or
+     a bundle load failure) we still render a readable minimal sheet rather
+     than leaving the print root blank. */
+  function avsRunStamp(){
+    try{
+      const now=new Date();
+      const p=n=>String(n).padStart(2,'0');
+      return `${p(now.getMonth()+1)}/${p(now.getDate())}/${String(now.getFullYear()).slice(2)} ${p(now.getHours())}${p(now.getMinutes())}`;
+    }catch(e){return '';}
+  }
+  function avsInput(){
+    const med=(typeof S!=='undefined'&&S.med)?S.med:{};
+    let init={protocol:'',day1Date:''};
+    try{ if(typeof window.ipmgInitiationProtocolSnapshot==='function')init=window.ipmgInitiationProtocolSnapshot()||init; }catch(e){}
+    const resp=(typeof RESP!=='undefined'&&typeof S!=='undefined'?(RESP.find(r=>r.k===S.resp)||{}).l:'')||'';
+    let recordNumber='';
+    try{
+      const records=window.IPMGRecords;
+      const recordState=records&&typeof records.state==='function'?records.state():null;
+      /* Local draft ids look like inj_1785924541744_fph2yy. The full string is
+         unreadable on a patient handout, so print the short trailing token -
+         combined with the patient name and visit date already on the sheet
+         that is enough for staff to find the encounter. */
+      const rawId=String((recordState&&recordState.activeRecordId)||'');
+      const tail=rawId.split('_').pop()||'';
+      recordNumber=(tail&&tail.length<=12?tail:rawId.slice(-6)).toUpperCase();
+    }catch(e){}
+    return {
+      patientName:raw('ptName',''),
+      patientDob:raw('ptDOB',''),
+      recordNumber:recordNumber,
+      orderingProvider:raw('orderingProvider',''),
+      administeredBy:raw('admin',''),
+      medicationKey:med.key||'',
+      medicationName:med.name||med.label||'',
+      genericName:med.gen||med.generic||'',
+      dose:(typeof S!=='undefined'&&S.dose)?S.dose:'',
+      route:(typeof S!=='undefined'&&S.route)?S.route:'',
+      site:(typeof S!=='undefined'&&S.site)?S.site:'',
+      intervalKey:(typeof S!=='undefined'&&S.intervalKey)?S.intervalKey:(med.intervalKey||''),
+      administrationDate:raw('adminDate','')||today(),
+      administrationTime:raw('injAdminTime',''),
+      nextDoseDate:raw('nextDate',''),
+      lot:raw('lot',''),
+      expiration:raw('exp',''),
+      responseLabel:resp,
+      reason:(typeof S!=='undefined'&&S.reason)?S.reason:'',
+      initiationProtocol:init.protocol||'',
+      day1Date:init.day1Date||'',
+      clinicPhone:'(909) 887-6222'
+    };
+  }
+  function avsFallback(data){
+    const line=(k,v)=>v?`<div class="avs2-row"><span class="avs2-k">${h(k)}</span> <span class="avs2-v">${h(v)}</span></div>`:'';
+    return `<div class="avs2"><div class="avs2-title">AFTER VISIT SUMMARY - LONG-ACTING INJECTION</div>`+
+      `<section class="avs2-sec"><h2 class="avs2-h">WHAT YOU RECEIVED TODAY</h2><div class="avs2-b">`+
+      line('MEDICATION......',data.medicationName)+line('DOSE............',data.dose)+
+      line('SITE............',data.site)+line('DATE............',data.administrationDate)+
+      `</div></section>`+
+      `<section class="avs2-sec"><h2 class="avs2-h">NEXT INJECTION</h2><div class="avs2-b">`+
+      `<p class="avs2-p">${h(data.nextDoseDate||'Not yet scheduled')} - please call (909) 887-6222 with any questions about this visit.</p>`+
+      `</div></section></div>`;
+  }
+  window.renderAVS=function renderAVSInjection(){
     const sheet=q('avsSheet'); if(!sheet) return;
-    const name=raw('ptName','Patient'), dob=raw('ptDOB','—');
-    const med=(typeof S!=='undefined'&&S.med)?S.med:{}; const medName=med.name||'Injection';
-    const dose=(typeof S!=='undefined'&&S.dose)?S.dose:''; const route=(typeof S!=='undefined'&&S.route)?S.route:''; const site=(typeof S!=='undefined'&&S.site)?S.site:'';
-    const given=raw('adminDate')||today(); const next=raw('nextDate'); const by=raw('admin','');
-    const resp=(typeof RESP!=='undefined'&&typeof S!=='undefined'?(RESP.find(r=>r.k===S.resp)||{}).l:'')||'Tolerated well';
-    const cl=raw('clinic',''); const clName=cl?cl.split('|')[0]:''; const clPhone=cl?cl.split('|')[1]:'';
-    const ivKey=(typeof S!=='undefined'&&S.intervalKey)?S.intervalKey:med.intervalKey;
-    const w=(typeof effectiveWindow==='function')?effectiveWindow(med,ivKey):{winB:med.winB||0,winA:med.winA||0};
-    const nextWindow=next?(med.timingMode==='orderVerify'?'Confirm timing with your clinic':`${fmt(add(next,-(w.winB||0)))} – ${fmt(add(next,(w.winA||0)))}`):'To be scheduled with the clinic';
-    const note=(typeof AVSNOTE!=='undefined'&&med.key&&AVSNOTE[med.key])||((typeof AVSNOTE!=='undefined'&&AVSNOTE._default)||'Follow the aftercare instructions from your care team.');
-    const routeSite=[route,site].filter(Boolean).join(' · ')||'Injection administered in office';
-    const siteCare = /deltoid|arm/i.test(site) ? 'Try to avoid heavy upper-arm activity right after the injection if your arm feels sore.' : /glute|buttock/i.test(site) ? 'Avoid firm rubbing or pressure over the injection site unless your care team tells you otherwise.' : /abdomen|subq|subcutaneous/i.test(site+route) ? 'Avoid scratching, rubbing, or applying heat directly over the area.' : 'Keep the injection area clean and follow your care team’s instructions.';
-    sheet.innerHTML=`<div class="beauty-page beauty-avs">
-      ${head('Injection after-visit summary','You received your injection today','A simple summary of today’s injection, site-care reminders, and the next-dose plan.','Injection visit','ok')}
-      ${meta([{k:'Patient',v:name},{k:'Date of birth',v:dob},{k:'Visit date',v:fmt(given)},{k:'Response',v:resp}])}
-       <div class="beauty-grid"><div class="beauty-hero emphasis"><div class="beauty-label">Today you received</div><div class="beauty-big">${h(medName)}${dose?` ${h(dose)}`:''}</div><p class="beauty-plain">${h(routeSite)}</p><p class="beauty-muted">${by?`Administered by ${h(by)}`:'Administered in office'}</p></div><div class="beauty-next"><div class="beauty-label">Next injection</div><div class="beauty-date">${h(next?fmt(next):'Schedule')}</div><p class="beauty-window">${next?`${h(typeof dowName==='function'?dowName(next):'')} · ${med.timingMode==='orderVerify'?'Timing confirmed by your clinic.':`Recommended window: ${h(nextWindow)}`}`:'Your clinic will help schedule the next dose.'}</p></div></div>
-      <div class="beauty-grid"><div class="beauty-card"><h2>What to expect</h2><ul class="beauty-list">${list(['Mild soreness, redness, or a small firm area can be normal for a few days.',note,'Continue medications exactly as prescribed unless your provider gives different instructions.'])}</ul></div><div class="beauty-card"><h2>Site care</h2><p>${h(siteCare)}</p><p class="beauty-muted">Avoid rubbing or massaging the injection site unless your care team specifically tells you otherwise.</p></div></div>
-      <div class="beauty-grid"><div class="beauty-card"><h2>Call the clinic if</h2><ul class="beauty-list">${list(['Severe or worsening pain, swelling, warmth, drainage, or rash at the injection site.','Any symptom or reaction that feels unusual or worries you.','You are not sure when your next injection should be scheduled.'])}</ul></div><div class="beauty-card"><h2>Seek emergency care now for</h2><ul class="beauty-list">${list(['Trouble breathing, chest tightness, or severe dizziness.','Swelling of the face, lips, tongue, or throat.','A severe allergic reaction or symptoms that feel urgent.'])}</ul></div></div>
-      <div class="beauty-trace"><b>Documentation details:</b> Medication ${h(medName)} · Dose ${h(dose||'—')} · Route/site ${h(routeSite)} · Lot ${h(raw('lot','not documented'))} · Exp ${h(raw('exp')?fmt(raw('exp')):'not documented')}</div>
-      ${footer(`<b>Questions?</b> ${clPhone?`Call ${h(clName||'your clinic')} at ${h(clPhone)}.`:'Please contact your IPMG clinic.'}`)}
-    </div>`;
+    let data;
+    try{ data=avsInput(); }catch(e){ data=null; }
+    if(!data){ sheet.innerHTML='<div class="avs2"><div class="avs2-title">AFTER VISIT SUMMARY</div></div>'; return; }
+    let html='';
+    try{
+      if(typeof window.ipmgBuildInjectionAvsHtml==='function'){
+        html=window.ipmgBuildInjectionAvsHtml(data,{runStamp:avsRunStamp()});
+      }
+    }catch(e){ html=''; }
+    sheet.innerHTML=html||avsFallback(data);
   };
   window.IPMG_RC_VERSION='RC5.11 Output Tray + Guided Card Formatting Pass';
 })();

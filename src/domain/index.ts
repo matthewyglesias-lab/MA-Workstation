@@ -2,6 +2,8 @@ export * from "./contracts";
 export * from "./dates";
 export * from "./forms";
 export * from "./injection";
+export * from "./injection-avs-content";
+export * from "./injection-avs-render";
 export * from "./injection-catalog";
 export * from "./injection-clinical-reference";
 export * from "./injection-ndc";
