@@ -434,6 +434,7 @@ export function SamplesPanel({
   const stopsByTab = countStopsByTab(stops, tabForSamplesField);
   const canFinalizeSampleLog =
     evaluation?.output.finalizedOutputAllowed ?? false;
+  const firstSampleStopMessage = stops[0]?.message;
 
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
@@ -936,6 +937,12 @@ export function SamplesPanel({
                   type="button"
                   class="cd2004-command-button"
                   onClick={() => clickLegacyControl("samplePrint")}
+                  disabled={!canFinalizeSampleLog}
+                  title={
+                    canFinalizeSampleLog
+                      ? "Print the finalized patient handout."
+                      : "Available once every outstanding requirement below is resolved."
+                  }
                 >
                   Print patient handout
                 </button>
@@ -962,6 +969,27 @@ export function SamplesPanel({
                   Copy Tebra sample note
                 </button>
               </div>
+              {!canFinalizeSampleLog && (
+                <p class="wfp-field-hint wfp-print-block-hint" role="status">
+                  Printing the patient handout is disabled until this dispense is complete
+                  {firstSampleStopMessage && (
+                    <>
+                      {" — "}
+                      {stops.length === 1
+                        ? firstSampleStopMessage
+                        : `${stops.length} outstanding requirements, starting with: ${firstSampleStopMessage}`}
+                    </>
+                  )}
+                  .{" "}
+                  <button
+                    type="button"
+                    class="cd2004-link-button"
+                    onClick={() => setRequirementsOpen(true)}
+                  >
+                    View outstanding requirements
+                  </button>
+                </p>
+              )}
             </div>
           </div>
         </div>
