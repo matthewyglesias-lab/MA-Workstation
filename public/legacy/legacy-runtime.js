@@ -11301,4 +11301,146 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(typeof window.ipmgRefreshInjectionRecordStatus==='function')window.ipmgRefreshInjectionRecordStatus();
   };
 })();
+
+/* Legacy runtime block: print pipeline hardening ==========================
+
+   Every clinical print in this runtime follows the same shape:
+
+     renderX(); cleanPrintClasses(); body.classList.add('print-x');
+     window.print(); setTimeout(cleanPrintClasses, 500);
+
+   repeated at ~21 call sites. That pattern has three defects, and rewriting
+   each site would be far riskier than hardening the one place they all pass
+   through, so this wraps window.print() instead:
+
+     1. If renderX() failed or produced nothing, print() still fired and the
+        patient got a blank or stale clinical document. Now an empty sheet
+        aborts the print instead of putting paper in someone's hand.
+     2. If two print classes were ever set at once both sheets are display:block,
+        so two documents print merged together. Now that aborts too.
+     3. If window.print() threw (blocked by policy, unavailable, headless),
+        the trailing setTimeout was never reached and the print class stayed
+        on <body> forever - so the next plain Ctrl+P silently printed the
+        wrong document. Cleanup is now guaranteed on every path.
+
+   Also adds a re-entrancy guard (double-clicking a print button no longer
+   stacks dialogs) and an afterprint backstop for prints started from the
+   browser's own menu.
+
+   The native function is kept on window.__ipmgNativePrint and invoked through
+   that property, so the print contract can be exercised in tests without
+   opening a real dialog. */
+(function(){
+  if(window.__IPMG_PRINT_HARDENED__)return;
+  window.__IPMG_PRINT_HARDENED__=true;
+
+  var SHEETS={
+    'print-avs':'avsSheet',
+    'print-uds':'udsSheet',
+    'print-uds-patient':'udsPatientSheet',
+    'print-sample':'sampleSheet',
+    'print-letter':'letterSheet',
+    'print-daily':'dailySheet',
+    'print-sample-worksheet':'sampleWorksheetSheet',
+    'print-inj-worksheet':'injWorksheetSheet'
+  };
+  var CLASSES=Object.keys(SHEETS);
+
+  function clearClasses(){
+    try{
+      if(typeof window.cleanPrintClasses==='function'){window.cleanPrintClasses();return;}
+    }catch(e){}
+    try{
+      for(var i=0;i<CLASSES.length;i++)document.body.classList.remove(CLASSES[i]);
+    }catch(e){}
+  }
+  function stagedClasses(){
+    var out=[];
+    try{
+      for(var i=0;i<CLASSES.length;i++){
+        if(document.body.classList.contains(CLASSES[i]))out.push(CLASSES[i]);
+      }
+    }catch(e){}
+    return out;
+  }
+  function say(message){
+    try{ if(typeof toast==='function'){toast(message);return;} }catch(e){}
+    try{ console.warn('[print] '+message); }catch(e){}
+  }
+  function sheetIsEmpty(id){
+    var root=document.getElementById(id);
+    if(!root)return true;
+    if(String(root.textContent||'').trim())return false;
+    /* A sheet can be purely graphical (an <img> or <svg> handout) and still be
+       a legitimate document, so treat rendered element content as present. */
+    try{ if(root.querySelector('img,svg,canvas'))return false; }catch(e){}
+    return true;
+  }
+
+  window.__ipmgNativePrint=window.print.bind(window);
+  var inFlight=false;
+
+  window.print=function ipmgHardenedPrint(){
+    if(inFlight)return;
+
+    var staged=stagedClasses();
+
+    /* No clinical sheet staged: an ordinary Ctrl+P of the visible screen. */
+    if(!staged.length){
+      inFlight=true;
+      try{ return window.__ipmgNativePrint(); }
+      finally{ inFlight=false; }
+    }
+
+    if(staged.length>1){
+      clearClasses();
+      say('Print cancelled - more than one document was staged. Please try again.');
+      return;
+    }
+
+    if(sheetIsEmpty(SHEETS[staged[0]])){
+      clearClasses();
+      say('Nothing to print yet - that document did not build. Check the worksheet and try again.');
+      return;
+    }
+
+    inFlight=true;
+    var settled=false;
+    function settle(){
+      if(settled)return;
+      settled=true;
+      inFlight=false;
+      try{ window.removeEventListener('afterprint',settle); }catch(e){}
+      try{ clearTimeout(backstop); }catch(e){}
+      clearClasses();
+    }
+    var backstop=0;
+    try{ window.addEventListener('afterprint',settle); }catch(e){}
+
+    try{
+      var result=window.__ipmgNativePrint();
+      /* afterprint is the authoritative signal and is what clears the class in
+         a real browser - unstaging any earlier could strip the print styles
+         before the page is captured. Browsers block inside print() until the
+         dialog closes, so by the time this line runs afterprint has normally
+         already settled it. The timer only covers environments that never fire
+         the event (headless automation), so the class can never be stranded. */
+      backstop=setTimeout(settle,1000);
+      return result;
+    }catch(error){
+      settle();
+      say('This browser blocked printing. Use the browser menu to print this page.');
+    }
+  };
+
+  /* Backstop for prints started outside this runtime (browser menu, Ctrl+P)
+     so a staged class is never left behind by a path we do not control. */
+  try{
+    window.addEventListener('afterprint',function(){
+      if(inFlight)return;
+      clearClasses();
+    });
+  }catch(e){}
+})();
+
 /* </script> */
