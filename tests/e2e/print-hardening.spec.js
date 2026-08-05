@@ -18,7 +18,8 @@ const PRINT_CLASSES = [
   'print-letter',
   'print-daily',
   'print-sample-worksheet',
-  'print-inj-worksheet'
+  'print-inj-worksheet',
+  'print-inj-patient-screen'
 ];
 
 async function bootWorkstation(page) {
@@ -222,6 +223,37 @@ test.describe('hardened print pipeline', () => {
     expect(await stagedClasses(page)).toEqual(['print-avs']);
     await expect.poll(() => stagedClasses(page), { timeout: 4000 }).toEqual([]);
     expect(await printCalls(page)).toBe(1);
+  });
+
+  test('rejects a draft patient screening sheet in a production-gated build', async ({ page }) => {
+    await bootWorkstation(page);
+    const previewEnabled = await page.evaluate(
+      () => window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__ === true
+    );
+    test.skip(previewEnabled, 'The PR-preview artifact intentionally enables the draft prototype.');
+
+    await page.evaluate(() => {
+      document.getElementById('injPatientScreenSheet').innerHTML = '<p>Draft form</p>';
+      document.body.classList.add('print-inj-patient-screen');
+      window.print();
+    });
+
+    expect(await printCalls(page)).toBe(0);
+    expect(await stagedClasses(page)).toEqual([]);
+  });
+
+  test('omits the draft patient-screening action from the production workflow', async ({ page }) => {
+    await bootWorkstation(page);
+    const previewEnabled = await page.evaluate(
+      () => window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__ === true
+    );
+    test.skip(previewEnabled, 'The PR-preview artifact intentionally exposes the draft prototype.');
+
+    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    const panel = page.locator('.wfp-panel');
+    await expect(panel).toBeVisible();
+    await panel.locator('select[name="inj-medication"]').selectOption('uzedy');
+    await expect(panel.locator('[data-patient-screening-print]')).toHaveCount(0);
   });
 
   test('every real print button routes through the hardened path', async ({ page }) => {

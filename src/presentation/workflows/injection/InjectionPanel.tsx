@@ -2,6 +2,7 @@ import { createContext, Fragment, type ComponentChildren, type Ref } from "preac
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "../workflow-panels.css";
 import { DesktopIcon } from "../../DesktopIcon";
+import { ModalDialog } from "../../ModalDialog";
 import { SiteIcon } from "../../SiteIcon";
 import {
   INJECTION_ATTESTATION_OPTIONS,
@@ -48,6 +49,14 @@ import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
 import type { PatientContext } from "../../types";
+import {
+  canBuildInjectionPatientScreenDocument,
+  type PatientScreenLanguage,
+} from "../../../domain/injection-patient-screening";
+import {
+  DRAFT_INJECTION_PATIENT_SCREENING_ENABLED,
+  printInjectionPatientScreening,
+} from "./patient-screening-print";
 
 // The tabs are the blocks of a medication administration record, not a
 // decomposition of the form. A MAR is organised around the administration
@@ -905,6 +914,7 @@ export function InjectionPanel({
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
   const [tab, setTab] = useState<InjectionTab>("order");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [patientScreeningDialogOpen, setPatientScreeningDialogOpen] = useState(false);
   // Vitals are optional and rarely used for a routine maintenance dose - stay
   // out of the way by default, but a reopened record that already carries a
   // vitals value starts expanded so nothing entered is hidden from view.
@@ -1258,6 +1268,19 @@ export function InjectionPanel({
       encounter.site.trim() &&
       encounter.administrationDate.trim(),
   );
+  const patientScreeningReady = canBuildInjectionPatientScreenDocument(encounter);
+  const patientScreeningDisabledReason =
+    encounter.medicationKey === "other"
+      ? undefined
+      : "Choose the exact medication dose before printing the draft patient form.";
+  const stagePatientScreeningPrint = (language: PatientScreenLanguage) => {
+    // The native dialog is rendered outside the shell, so let it unmount before
+    // the dedicated print class hides the rest of the workstation.
+    setPatientScreeningDialogOpen(false);
+    window.requestAnimationFrame(() => {
+      printInjectionPatientScreening(encounter, language);
+    });
+  };
   const stops = evaluation?.stops ?? [];
   const incompleteFields = useMemo(
     () => new Set(stops.flatMap((item) => (item.field ? [item.field] : []))),
@@ -1455,6 +1478,24 @@ export function InjectionPanel({
           <DesktopIcon name="print" />
           Print AVS
         </button>
+        {DRAFT_INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
+          <button
+            type="button"
+            class="cd2004-link-button wfp-summary-print-avs"
+            data-patient-screening-print="summary"
+            aria-haspopup="dialog"
+            onClick={() => setPatientScreeningDialogOpen(true)}
+            disabled={!patientScreeningReady}
+            title={
+              patientScreeningReady
+                ? "Print the draft patient screening and consent prototype."
+                : patientScreeningDisabledReason
+            }
+          >
+            <DesktopIcon name="print" />
+            Print patient screening (Draft)
+          </button>
+        )}
         <span class="wfp-summary-spacer" />
         <span class="wfp-transaction-readout" aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}>
           <b>{locked ? "REVIEW" : "ENTRY"}</b>
@@ -2731,6 +2772,23 @@ export function InjectionPanel({
               >
                 Print AVS
               </button>
+              {DRAFT_INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
+                <button
+                  type="button"
+                  class="cd2004-link-button"
+                  data-patient-screening-print="outcome"
+                  aria-haspopup="dialog"
+                  onClick={() => setPatientScreeningDialogOpen(true)}
+                  disabled={!patientScreeningReady}
+                  title={
+                    patientScreeningReady
+                      ? "Print the draft patient screening and consent prototype."
+                      : patientScreeningDisabledReason
+                  }
+                >
+                  Print patient screening (Draft)
+                </button>
+              )}
               <button
                 type="button"
                 class="cd2004-link-button"
@@ -2792,6 +2850,56 @@ export function InjectionPanel({
             </div>
           </div>
         </div>
+      )}
+
+      {patientScreeningDialogOpen && (
+        <ModalDialog
+          class="cd2004-dialog-layer cd2004-dialog cd2004-patient-screening-dialog"
+          labelledBy="patient-screening-print-title"
+          onDismiss={() => setPatientScreeningDialogOpen(false)}
+        >
+          <div class="cd2004-dialog-frame">
+            <div class="cd2004-dialog-titlebar">
+              <span id="patient-screening-print-title">Print patient screening (Draft)</span>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPatientScreeningDialogOpen(false)}
+              >
+                X
+              </button>
+            </div>
+            <div class="cd2004-dialog-body">
+              <p>
+                Draft-only, paper patient form. It does not record consent or change injection readiness.
+              </p>
+              <p>
+                Choose the language to print for {encounter.medicationKey === "other" ? "Other" : medication?.label}.
+              </p>
+            </div>
+            <div class="cd2004-dialog-actions">
+              <button type="button" onClick={() => setPatientScreeningDialogOpen(false)}>
+                Cancel
+              </button>
+              <span />
+              <button
+                type="button"
+                data-patient-screening-language="en"
+                onClick={() => stagePatientScreeningPrint("en")}
+              >
+                Print English
+              </button>
+              <button
+                type="button"
+                class="is-primary"
+                data-patient-screening-language="es"
+                onClick={() => stagePatientScreeningPrint("es")}
+              >
+                Imprimir español
+              </button>
+            </div>
+          </div>
+        </ModalDialog>
       )}
 
         </InjectionIncompleteFieldsContext.Provider>

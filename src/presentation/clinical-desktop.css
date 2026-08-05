@@ -3575,9 +3575,227 @@ input[type="radio"]:disabled {
   body.print-sample .cd2004-shell,
   body.print-sample-worksheet .cd2004-shell,
   body.print-inj-worksheet .cd2004-shell,
+  body.print-inj-patient-screen .cd2004-shell,
   body.print-letter .cd2004-shell,
   body.print-daily .cd2004-shell {
     display: none !important;
+  }
+}
+
+/*
+ * Draft patient screening is deliberately a new typed print surface, rather
+ * than a new legacy renderer. Keep every other staged surface hidden and use
+ * a compact paper form that remains legible on a Letter page; a second page is
+ * available only when the selected medication adds a required review block.
+ */
+@media print {
+  #injPatientScreenSheet {
+    display: none !important;
+  }
+
+  body.print-inj-patient-screen #print-root > :not(#injPatientScreenSheet),
+  body.print-inj-patient-screen dialog {
+    display: none !important;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet {
+    display: block !important;
+    width: 100%;
+    max-width: 7.8in;
+    margin: 0 auto;
+    color: #111;
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10.2pt;
+    line-height: 1.28;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet *,
+  body.print-inj-patient-screen #injPatientScreenSheet *::before,
+  body.print-inj-patient-screen #injPatientScreenSheet *::after {
+    box-sizing: border-box;
+    color: #111 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-page {
+    position: relative;
+    width: 100%;
+    padding: 0;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 0 0 8px;
+    border-bottom: 2px solid #111;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-kicker {
+    margin: 0 0 3px;
+    font-size: 7.6pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet h1 {
+    margin: 0;
+    font-size: 16pt;
+    line-height: 1.08;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-subtitle {
+    margin: 4px 0 0;
+    font-size: 8.4pt;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-draft-marker,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-footer-marker {
+    border: 1.5px solid #111;
+    padding: 4px 6px;
+    font-size: 7.8pt;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-draft-marker {
+    flex: 0 0 1.62in;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-metadata {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px 12px;
+    margin: 9px 0 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #777;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-meta-item span,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-signature-label,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-follow-up-label {
+    display: block;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-meta-item strong {
+    display: block;
+    min-height: 15px;
+    overflow-wrap: anywhere;
+    font-size: 9.4pt;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-section,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-signatures {
+    break-inside: avoid;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-section {
+    margin-top: 8px;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet h2 {
+    margin: 0 0 4px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #777;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-question {
+    margin: 5px 0;
+    padding-left: 4px;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-question-prompt,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-answer-options,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-details-line {
+    margin: 0;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-answer-options,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-details-line {
+    margin-top: 2px;
+    font-size: 8.6pt;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder {
+    margin-top: 9px;
+    padding: 7px 8px;
+    border: 1.5px solid #111;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder p {
+    margin: 0;
+    font-size: 8.6pt;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-signatures {
+    display: grid;
+    grid-template-columns: 1.7fr 0.7fr 1.7fr 0.7fr;
+    gap: 8px 12px;
+    margin-top: 10px;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-signature-line,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-follow-up-line {
+    display: block;
+    min-height: 19px;
+    border-bottom: 1px solid #111;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-follow-up {
+    grid-column: 1 / -1;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-source {
+    margin-top: 9px;
+    padding-top: 5px;
+    border-top: 1px solid #777;
+    font-size: 7.2pt;
+    overflow-wrap: anywhere;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-source a {
+    text-decoration: none;
+  }
+
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-footer-marker {
+    display: none;
+  }
+
+  /* Chromium repeats a fixed body pseudo-element on every printed page. Keep
+     the repeat marker outside the sheet's measured content box so it cannot
+     create horizontal clipping on a wide desktop print viewport. */
+  body.print-inj-patient-screen::after {
+    position: fixed;
+    right: 0.35in;
+    bottom: 0.2in;
+    z-index: 1;
+    content: "DRAFT / BORRADOR — NOT FOR CLINICAL USE / NO APTO PARA USO CLÍNICO";
+    border: 1px solid #111;
+    padding: 3px 5px;
+    color: #111;
+    background: #fff;
+    font: 700 6.5pt/1 Arial, Helvetica, sans-serif;
+    letter-spacing: 0.025em;
+  }
+
+  @media (max-width: 720px) {
+    body.print-inj-patient-screen #injPatientScreenSheet .ips-metadata {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 }
 
