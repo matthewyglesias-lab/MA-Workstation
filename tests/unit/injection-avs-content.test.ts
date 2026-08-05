@@ -121,9 +121,21 @@ describe("dose-specific notes", () => {
     expect(doseNote("uzedy", "100 mg", "q8wk")).toContain("every-2-month schedule");
   });
 
+  it("explains the higher Uzedy strengths as every-2-month schedules", () => {
+    expect(doseNote("uzedy", "150 mg", "q8wk")).toContain("every 2 months");
+    expect(doseNote("uzedy", "200 mg", "q8wk")).toContain("every 2 months");
+    expect(doseNote("uzedy", "250 mg", "q8wk")).toContain("every 2 months");
+  });
+
   it("disambiguates the Aristada strength that spans two intervals", () => {
     expect(doseNote("aristada", "882 mg", "q4wk")).toContain("monthly");
     expect(doseNote("aristada", "882 mg", "q6wk")).toContain("every 6 weeks");
+  });
+
+  it("explains the 1064 mg Aristada schedule and site", () => {
+    const note = doseNote("aristada", "1064 mg", "q8wk");
+    expect(note).toContain("every 2 months");
+    expect(note).toContain("gluteal muscle");
   });
 
   it("says nothing for an ordinary maintenance strength", () => {

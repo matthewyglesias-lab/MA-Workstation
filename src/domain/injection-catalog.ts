@@ -278,7 +278,44 @@ export const calculateNextInjectionDate = (
 export const allowedDosesForInterval = (
   medication: InjectionMedication,
   intervalKey: InjectionIntervalKey,
-): string[] => medication.dosesByInterval?.[intervalKey] ?? medication.doses;
+): string[] =>
+  medication.dosesByInterval ? medication.dosesByInterval[intervalKey] ?? [] : medication.doses;
+
+/**
+ * Returns every labeled interval that permits the selected strength.  This is
+ * intentionally separate from `allowedDosesForInterval`: the dose picker
+ * shows all strengths for a product, then uses this list to keep the schedule
+ * aligned with the selected strength.
+ */
+export const compatibleIntervalsForDose = (
+  medication: InjectionMedication,
+  dose: string,
+): InjectionIntervalKey[] => {
+  const normalizedDose = dose.trim();
+  if (!normalizedDose || !medication.dosesByInterval) return [];
+  return INJECTION_INTERVAL_OPTIONS.map((option) => option.key).filter((intervalKey) =>
+    medication.dosesByInterval?.[intervalKey]?.includes(normalizedDose),
+  );
+};
+
+/**
+ * Keeps a staff-selected compatible interval, otherwise returns the product's
+ * default compatible interval.  A unique strength (for example UZEDY 250 mg
+ * or ARISTADA 1064 mg) therefore fills its labeled schedule immediately.
+ */
+export const preferredIntervalForDose = (
+  medication: InjectionMedication,
+  dose: string,
+  currentIntervalKey: InjectionIntervalKey | "",
+): InjectionIntervalKey | "" => {
+  const compatibleIntervals = compatibleIntervalsForDose(medication, dose);
+  if (!compatibleIntervals.length) return currentIntervalKey;
+  if (currentIntervalKey && compatibleIntervals.includes(currentIntervalKey)) {
+    return currentIntervalKey;
+  }
+  if (compatibleIntervals.includes(medication.intervalKey)) return medication.intervalKey;
+  return compatibleIntervals[0] ?? currentIntervalKey;
+};
 
 export const normalizeInjectionSite = (site: string): string =>
   site === "Abdomen (SubQ)" ? "Abdomen RUQ (SubQ)" : site;

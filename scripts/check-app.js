@@ -66,7 +66,7 @@ function json(value) {
 
 const scheduling = section('const MEDS = [', 'const REASONS=[');
 const model = vm.runInNewContext(
-  `(() => {${scheduling}\nreturn { MEDS, effectiveWindow, medDosesForInterval }; })()`,
+  `(() => {${scheduling}\nreturn { MEDS, compatibleIntervalsForDose, effectiveWindow, medDosesForInterval, preferredIntervalForDose }; })()`,
   Object.create(null),
   { filename: 'index.html:scheduling' }
 );
@@ -80,6 +80,7 @@ const aristada = medication('aristada');
 assert.deepEqual(json(model.medDosesForInterval(aristada, 'q4wk')), ['441 mg', '662 mg', '882 mg']);
 assert.deepEqual(json(model.medDosesForInterval(aristada, 'q6wk')), ['882 mg']);
 assert.deepEqual(json(model.medDosesForInterval(aristada, 'q8wk')), ['1064 mg']);
+assert.deepEqual(json(model.medDosesForInterval(aristada, 'q2wk')), []);
 assert.deepEqual(json(model.effectiveWindow(aristada, 'q6wk')), { winB: 14, winA: 14 });
 assert.deepEqual(json(model.effectiveWindow(aristada, 'q8wk')), { winB: 14, winA: 14 });
 assert.deepEqual(json(model.effectiveWindow(medication('hafyera'), 'q26wk')), { winB: 14, winA: 21 });
@@ -92,6 +93,18 @@ assert.match(medication('trinza').missed, /current dose-specific INVEGA TRINZA m
 assert.match(medication('hafyera').missed, /current dose-specific INVEGA HAFYERA missed-dose table/i);
 assert.match(medication('sustenna').missed, /current product-specific missed-dose table/i);
 assert.match(medication('erzofri').missed, /current ERZOFRI missed-dose table/i);
+
+const uzedy = medication('uzedy');
+assert.deepEqual(json(model.compatibleIntervalsForDose(uzedy, '200 mg')), ['q8wk']);
+assert.deepEqual(json(model.compatibleIntervalsForDose(uzedy, '250 mg')), ['q8wk']);
+assert.deepEqual(json(model.compatibleIntervalsForDose(aristada, '1064 mg')), ['q8wk']);
+assert.equal(model.preferredIntervalForDose(uzedy, '250 mg', 'q4wk'), 'q8wk');
+assert.equal(model.preferredIntervalForDose(aristada, '882 mg', 'q6wk'), 'q6wk');
+assert.match(
+  legacyRuntime,
+  /function renderDoses\(\)\{[\s\S]*?const doses=\(S\.med&&S\.med\.doses\)\|\|\[\];/,
+  'Legacy dose picker must show all labeled strengths before autofilling the interval',
+);
 
 assert.match(html, /<input id="allergies" value="NKDA"/i, 'Allergy status must default to NKDA - staff review/edit it rather than fill a blank required field');
 assert.match(html, /resp:"well", attest:\{\}/, 'Routine injection response must start as tolerated well for quick review');
