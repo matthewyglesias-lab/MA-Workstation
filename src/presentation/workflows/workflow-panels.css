@@ -556,6 +556,24 @@
   font-size: 9px;
 }
 
+/* Print buttons that are disabled pending completion get a hint that's
+   visible without hovering a disabled button - a hover-only title on a
+   greyed-out button is easy to miss entirely. */
+.cd2004-shell .wfp-print-block-hint {
+  margin-top: 4px;
+  padding: 4px 6px;
+  color: var(--cd-amber);
+  background: var(--cd-amber-soft);
+  border: 1px solid var(--cd-amber);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-print-block-hint .cd2004-link-button {
+  font-size: 9px;
+  font-weight: 700;
+}
+
 /* Dense radio-style option list — replaces legacy "chip" grids */
 
 .cd2004-shell .wfp-option-list {

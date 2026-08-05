@@ -633,6 +633,7 @@ export function UdsPanel({
   const stops = evaluation?.stops ?? [];
   const stopsByTab = countStopsByTab(stops, tabForUdsField);
   const udsReadyForFinalOutput = evaluation?.readiness === "ready";
+  const firstStopMessage = stops[0]?.message;
   const udsLogLabel = udsReadyForFinalOutput
     ? "Finalize & add to daily log"
     : "Log as needs review";
@@ -1161,6 +1162,12 @@ export function UdsPanel({
                   type="button"
                   class="cd2004-command-button"
                   onClick={() => clickLegacyControl("printUdsReport")}
+                  disabled={!udsReadyForFinalOutput}
+                  title={
+                    udsReadyForFinalOutput
+                      ? "Print the finalized clinician result report."
+                      : "Available once every outstanding requirement below is resolved."
+                  }
                 >
                   Print clinician report
                 </button>
@@ -1168,6 +1175,12 @@ export function UdsPanel({
                   type="button"
                   class="cd2004-link-button"
                   onClick={() => clickLegacyControl("printUdsPatient")}
+                  disabled={!udsReadyForFinalOutput}
+                  title={
+                    udsReadyForFinalOutput
+                      ? "Print the finalized patient summary."
+                      : "Available once every outstanding requirement below is resolved."
+                  }
                 >
                   Patient summary
                 </button>
@@ -1180,6 +1193,27 @@ export function UdsPanel({
                   Copy Tebra UDS note
                 </button>
               </div>
+              {!udsReadyForFinalOutput && (
+                <p class="wfp-field-hint wfp-print-block-hint">
+                  Printing is disabled until this screen is complete
+                  {firstStopMessage && (
+                    <>
+                      {" — "}
+                      {stops.length === 1
+                        ? firstStopMessage
+                        : `${stops.length} outstanding requirements, starting with: ${firstStopMessage}`}
+                    </>
+                  )}
+                  .{" "}
+                  <button
+                    type="button"
+                    class="cd2004-link-button"
+                    onClick={() => setRequirementsOpen(true)}
+                  >
+                    View outstanding requirements
+                  </button>
+                </p>
+              )}
             </div>
           </div>
         </div>
