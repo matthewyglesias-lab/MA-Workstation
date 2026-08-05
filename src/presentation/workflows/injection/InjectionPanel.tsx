@@ -73,6 +73,50 @@ const INJECTION_TABS: Array<[InjectionTab, string]> = [
 const INJECTION_TAB_LABELS = Object.fromEntries(INJECTION_TABS) as Record<InjectionTab, string>;
 
 /**
+ * Reading order for the four abdomen quadrants, so they always sit
+ * top-left/top-right/bottom-left/bottom-right in a fixed 2-column block
+ * that mirrors their real spatial layout - independent of whatever order
+ * the catalog lists them in, and independent of viewport width (an
+ * auto-fill grid would happily wrap them 1, 3, or 4-wide and scramble
+ * that spatial meaning).
+ */
+const ABDOMEN_QUADRANT_ORDER = [
+  "Abdomen RUQ (SubQ)",
+  "Abdomen LUQ (SubQ)",
+  "Abdomen RLQ (SubQ)",
+  "Abdomen LLQ (SubQ)",
+];
+
+interface SiteGroup {
+  label: string;
+  sites: string[];
+  quadrants: string[];
+}
+
+/**
+ * Splits the site list by route (every SubQ site's label carries a
+ * "(SubQ)" suffix already) so an intramuscular medication's sites and a
+ * subcutaneous medication's sites aren't presented as one undifferentiated
+ * list. Pulled out of a SubQ group's `sites` into its own `quadrants` list
+ * whenever all four abdomen quadrants are present, so the tile grid can lay
+ * just those out as a fixed 2x2 block; a partial/custom site list falls
+ * back to the flat list untouched.
+ */
+function groupSitesByRoute(sites: string[]): SiteGroup[] {
+  const im = sites.filter((site) => !site.includes("(SubQ)"));
+  const subq = sites.filter((site) => site.includes("(SubQ)"));
+  const groups: SiteGroup[] = [];
+  if (im.length) groups.push({ label: "Intramuscular", sites: im, quadrants: [] });
+  if (subq.length) {
+    const hasAllQuadrants = ABDOMEN_QUADRANT_ORDER.every((site) => subq.includes(site));
+    const quadrants = hasAllQuadrants ? ABDOMEN_QUADRANT_ORDER : [];
+    const rest = hasAllQuadrants ? subq.filter((site) => !quadrants.includes(site)) : subq;
+    groups.push({ label: "Subcutaneous", sites: rest, quadrants });
+  }
+  return groups;
+}
+
+/**
  * The evaluator owns which fields are required, optional, or not relevant to
  * this encounter. The presentation layer consumes this projection instead of
  * inferring clinical requirements from label copy. `requirements` stays
@@ -1961,8 +2005,9 @@ export function InjectionPanel({
                     {requirements.site?.state === "required" && <abbr class="wfp-req" title="Required">*</abbr>}
                     {requirements.site?.state === "optional" && <span class="wfp-opt">optional</span>}
                   </span>
-                  <div class="wfp-site-tile-grid">
-                    {allowedSites.map((site) => (
+                  {(() => {
+                    const groups = groupSitesByRoute(allowedSites);
+                    const siteTile = (site: string) => (
                       <label
                         key={site}
                         class={`wfp-site-tile ${encounter.site === site ? "is-selected" : ""}`}
@@ -1976,8 +2021,22 @@ export function InjectionPanel({
                           <span class="wfp-site-tile-badge">Suggested rotation site</span>
                         )}
                       </label>
-                    ))}
-                  </div>
+                    );
+                    return groups.map((group) => (
+                      <div class="wfp-site-group" key={group.label}>
+                        {groups.length > 1 && <span class="wfp-site-group-label">{group.label}</span>}
+                        <div class="wfp-site-tile-grid">
+                          {group.sites.map(siteTile)}
+                          {group.quadrants.length > 0 && (
+                            <div class="wfp-site-quadrant-block">
+                              <span class="wfp-site-subgroup-label">Abdomen</span>
+                              <div class="wfp-site-quadrant-grid">{group.quadrants.map(siteTile)}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ));
+                  })()}
                 </div>
               )}
               {recommendedSite && (

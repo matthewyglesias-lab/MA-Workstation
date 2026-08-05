@@ -50,16 +50,18 @@ export function SiteIcon({ site, ...props }: SiteIconProps) {
       fill="none"
       aria-hidden="true"
       focusable="false"
-      shape-rendering="crispEdges"
     >
-      <circle cx="8" cy="2.6" r="1.3" fill={blueLight} stroke={ink} />
-      <path
-        d="M4.7 4.4 L11.3 4.4 L10.6 9.1 L11.1 13.4 L4.9 13.4 L5.4 9.1 Z"
-        fill={blueLight}
-        stroke={ink}
-      />
-      <path d="M4.7 4.6 2.7 9.0M11.3 4.6 13.3 9.0" stroke={ink} />
-      <circle cx={dot.x} cy={dot.y} r="1.15" fill={red} stroke={ink} />
+      <g stroke={ink} stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="2.6" r="1.3" fill={blueLight} />
+        <path
+          d="M4.7 4.4 L11.3 4.4 L10.6 9.1 L11.1 13.4 L4.9 13.4 L5.4 9.1 Z"
+          fill={blueLight}
+        />
+        <path d="M4.7 4.6 2.7 9.0M11.3 4.6 13.3 9.0" />
+        <path d="M6.4 13.4 5.9 15.6M9.6 13.4 10.1 15.6" />
+      </g>
+      <circle cx={dot.x} cy={dot.y} r="2.1" fill={red} opacity="0.22" />
+      <circle cx={dot.x} cy={dot.y} r="1.15" fill={red} stroke={ink} stroke-width="0.9" />
     </svg>
   );
 }
