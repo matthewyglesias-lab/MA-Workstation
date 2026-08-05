@@ -657,6 +657,13 @@ function OperatorGuidance({
   const firstStop = firstActionableClinicalIssue("administer", evaluation);
   const blockerTab = firstStop ? tabForInjectionField(firstStop.field) : null;
   const primaryItem = items[0];
+  // A provider-directed cadence is allowed, but its review notice needs to be
+  // visible at the exact point where the MA selects the order. Keep this
+  // deliberately narrow so ordinary engine warnings do not crowd the panel.
+  const intervalReviewWarning =
+    tab === "order"
+      ? evaluation?.warnings.find((entry) => entry.code === "dose.interval-mismatch")
+      : undefined;
 
   return (
     <section class="wfp-operator-guidance" aria-label="Operator guidance" data-operator-guidance>
@@ -667,13 +674,21 @@ function OperatorGuidance({
           <small>REF {presentedOutput.clinicalReferenceVersion}</small>
         )}
       </div>
-      {primaryItem && (
+      {(primaryItem || intervalReviewWarning) && (
         <div class="wfp-operator-guidance-list">
-          <div class="wfp-operator-guidance-row">
-            <strong>{primaryItem.title}:</strong>
-            <span>{primaryItem.message}</span>
-            {primaryItem.action && <em>{primaryItem.action}</em>}
-          </div>
+          {primaryItem && (
+            <div class="wfp-operator-guidance-row">
+              <strong>{primaryItem.title}:</strong>
+              <span>{primaryItem.message}</span>
+              {primaryItem.action && <em>{primaryItem.action}</em>}
+            </div>
+          )}
+          {intervalReviewWarning && (
+            <div class="wfp-operator-guidance-row is-warning" data-interval-review-warning>
+              <strong>Order review:</strong>
+              <span>{intervalReviewWarning.message}</span>
+            </div>
+          )}
         </div>
       )}
       {firstStop && blockerTab && (

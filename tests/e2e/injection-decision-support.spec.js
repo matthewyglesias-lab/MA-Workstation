@@ -47,6 +47,9 @@ test.describe('Injection decision support', () => {
     await interval.selectOption('q4wk');
     await expect(dose).toHaveValue('200 mg');
     await expect(interval).toHaveValue('q4wk');
+    await expect(panel.locator('[data-interval-review-warning]')).toContainText(
+      'This dose is outside the usual product interval. Verify the active order.'
+    );
 
     await medication.selectOption('aristada');
     await expect(dose.locator('option[value="882 mg"]')).toHaveCount(1);
