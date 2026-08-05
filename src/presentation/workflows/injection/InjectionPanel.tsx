@@ -26,6 +26,7 @@ import {
   INJECTION_INTERVAL_OPTIONS,
   INJECTION_MEDICATIONS,
   allowedDosesForInterval,
+  preferredIntervalForDose,
   type InjectionIntervalKey,
   type InjectionMedicationKey,
   type MedicationVerificationKey,
@@ -1033,8 +1034,15 @@ export function InjectionPanel({
   };
 
   const onDoseChange = (dose: string) => {
+    const catalogMedication =
+      encounter.medicationKey && encounter.medicationKey !== "other"
+        ? INJECTION_MEDICATIONS[encounter.medicationKey]
+        : null;
     patch({
       dose,
+      intervalKey: catalogMedication
+        ? preferredIntervalForDose(catalogMedication, dose, encounter.intervalKey)
+        : encounter.intervalKey,
       traceability: { ...encounter.traceability, ndc: "" },
     });
     patchDetails({
@@ -1043,6 +1051,36 @@ export function InjectionPanel({
         primary: undefined,
       },
     });
+  };
+
+  const onIntervalChange = (intervalKey: InjectionIntervalKey | "") => {
+    const catalogMedication =
+      encounter.medicationKey && encounter.medicationKey !== "other"
+        ? INJECTION_MEDICATIONS[encounter.medicationKey]
+        : null;
+    const doseRemainsCompatible =
+      !catalogMedication ||
+      !encounter.dose ||
+      !intervalKey ||
+      allowedDosesForInterval(catalogMedication, intervalKey).includes(encounter.dose);
+
+    patch({
+      intervalKey,
+      ...(doseRemainsCompatible
+        ? {}
+        : {
+            dose: "",
+            traceability: { ...encounter.traceability, ndc: "" },
+          }),
+    });
+    if (!doseRemainsCompatible) {
+      patchDetails({
+        ndcSelection: {
+          ...(encounter.details?.ndcSelection ?? {}),
+          primary: undefined,
+        },
+      });
+    }
   };
 
   const toggleAttestation = (key: string, value: boolean) => {
@@ -1127,11 +1165,10 @@ export function InjectionPanel({
   const initiationConfig = encounter.initiation?.protocol
     ? injectionInitiationConfig(encounter.initiation.protocol, encounter.medicationKey)
     : null;
-  const doseOptions = medication
-    ? encounter.intervalKey
-      ? allowedDosesForInterval(medication, encounter.intervalKey)
-      : medication.doses
-    : [];
+  // Show every labeled strength. Selecting a strength with only one compatible
+  // cadence fills that cadence below, rather than hiding the strength because a
+  // default interval was pre-filled when the medication was chosen.
+  const doseOptions = medication?.doses ?? [];
   const primaryNdcQuery: NdcOptionQuery = {
     medicationKey: encounter.medicationKey,
     dose: encounter.dose,
@@ -1556,7 +1593,15 @@ export function InjectionPanel({
                     />
                   </Field>
                 )}
-                <Field label="Dose" field="dose">
+                <Field
+                  label="Dose"
+                  field="dose"
+                  hint={
+                    medication?.dosesByInterval
+                      ? "All labeled strengths are shown. Selecting a strength fills a compatible interval; verify the active order."
+                      : undefined
+                  }
+                >
                   {encounter.medicationKey === "other" ? (
                     <input
                       name="inj-dose"
@@ -1592,7 +1637,7 @@ export function InjectionPanel({
                     name="inj-interval"
                     value={encounter.intervalKey}
                     onChange={(event) =>
-                      patch({ intervalKey: event.currentTarget.value as InjectionIntervalKey | "" })
+                      onIntervalChange(event.currentTarget.value as InjectionIntervalKey | "")
                     }
                   >
                     <option value="">Select interval</option>

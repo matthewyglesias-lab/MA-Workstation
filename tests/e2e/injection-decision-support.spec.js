@@ -23,6 +23,48 @@ async function enterRoutineOrder(panel, patient) {
 }
 
 test.describe('Injection decision support', () => {
+  test('shows higher Uzedy and Aristada strengths and fills their compatible interval', async ({ page }) => {
+    const panel = await openInjection(page);
+    await openTab(panel, 'Order');
+    const medication = panel.locator('select[name="inj-medication"]');
+    const dose = panel.locator('select[name="inj-dose"]');
+    const interval = panel.locator('select[name="inj-interval"]');
+
+    await medication.selectOption('uzedy');
+    await expect(dose.locator('option[value="150 mg"]')).toHaveCount(1);
+    await expect(dose.locator('option[value="200 mg"]')).toHaveCount(1);
+    await expect(dose.locator('option[value="250 mg"]')).toHaveCount(1);
+    await dose.selectOption('250 mg');
+    await expect(interval).toHaveValue('q8wk');
+    await openTab(panel, 'Product');
+    await expect(
+      panel.locator('[data-ndc-picker]').first().getByRole('combobox', { name: 'Known NDC package' }),
+    ).toContainText('51759-960-10');
+    await openTab(panel, 'Order');
+
+    // An incompatible staff override must clear the old strength instead of
+    // leaving an invalid dose/interval pair on the order.
+    await interval.selectOption('q4wk');
+    await expect(dose).toHaveValue('');
+
+    await medication.selectOption('aristada');
+    await expect(dose.locator('option[value="882 mg"]')).toHaveCount(1);
+    await expect(dose.locator('option[value="1064 mg"]')).toHaveCount(1);
+    await dose.selectOption('1064 mg');
+    await expect(interval).toHaveValue('q8wk');
+    await openTab(panel, 'Product');
+    await expect(
+      panel.locator('[data-ndc-picker]').first().getByRole('combobox', { name: 'Known NDC package' }),
+    ).toContainText('65757-404-03');
+    await openTab(panel, 'Order');
+
+    // Keep an explicitly selected compatible cadence for the strength that
+    // appears on more than one Aristada schedule.
+    await interval.selectOption('q6wk');
+    await dose.selectOption('882 mg');
+    await expect(interval).toHaveValue('q6wk');
+  });
+
   test('shows contextual guidance, requires an explicit site choice, and preserves custom NDC input', async ({ page }) => {
     const panel = await openInjection(page);
     await enterRoutineOrder(panel, 'QA, Decision Support');

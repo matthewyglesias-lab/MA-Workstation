@@ -496,18 +496,41 @@ export const doseNote = (
   if (medicationKey === "initio") {
     return "This is a one-time starting injection. It will not be repeated.";
   }
-  if (medicationKey === "uzedy" && (value === "100 mg" || value === "150 mg")) {
-    return intervalKey === "q8wk"
-      ? "This strength is part of the every-2-month schedule. Some Uzedy strengths look similar but belong to the monthly schedule, so go by the date on this sheet."
-      : "This strength is part of the monthly schedule. Some Uzedy strengths look similar but belong to the every-2-month schedule, so go by the date on this sheet.";
+  if (medicationKey === "uzedy" && value === "100 mg") {
+    if (intervalKey === "q8wk") {
+      return "This strength is part of the every-2-month schedule. Some Uzedy strengths look similar but belong to the monthly schedule, so go by the date on this sheet.";
+    }
+    if (intervalKey === "q4wk") {
+      return "This strength is part of the monthly schedule. Some Uzedy strengths look similar but belong to the every-2-month schedule, so go by the date on this sheet.";
+    }
+    return "The 100 mg strength can be given monthly or every 2 months. Follow the interval and date on this sheet.";
+  }
+  if (
+    medicationKey === "uzedy" &&
+    ["50 mg", "75 mg", "125 mg"].includes(value)
+  ) {
+    return "At this strength, your Uzedy injections are scheduled monthly. Go by the date on this sheet.";
+  }
+  if (
+    medicationKey === "uzedy" &&
+    ["150 mg", "200 mg", "250 mg"].includes(value)
+  ) {
+    return "At this strength, your Uzedy injections are scheduled every 2 months. Go by the date on this sheet.";
   }
   if (medicationKey === "aristada" && value === "882 mg") {
-    return intervalKey === "q6wk"
-      ? "At this strength your injections are every 6 weeks rather than monthly. Go by the date on this sheet."
-      : "At this strength your injections are monthly. Go by the date on this sheet.";
+    if (intervalKey === "q6wk") {
+      return "At this strength your injections are every 6 weeks rather than monthly. Go by the date on this sheet.";
+    }
+    if (intervalKey === "q4wk") {
+      return "At this strength your injections are monthly. Go by the date on this sheet.";
+    }
+    return "The 882 mg strength can be given monthly or every 6 weeks. Follow the interval and date on this sheet.";
+  }
+  if (medicationKey === "aristada" && ["441 mg", "662 mg"].includes(value)) {
+    return "At this strength your Aristada injections are scheduled monthly. Go by the date on this sheet.";
   }
   if (medicationKey === "aristada" && value === "1064 mg") {
-    return "At this strength your injections are every 2 months and are given in the hip. Go by the date on this sheet.";
+    return "At this strength your Aristada injections are every 2 months and are given in a gluteal muscle. Go by the date on this sheet.";
   }
   return "";
 };

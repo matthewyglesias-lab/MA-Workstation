@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   INJECTION_CLINICAL_REFERENCE_BUNDLE,
   InjectionEngine,
+  allowedDosesForInterval,
   calculateNextInjectionDate,
+  compatibleIntervalsForDose,
   emptyInjectionEncounter,
   emptyInjectionInitiation,
+  preferredIntervalForDose,
   type InjectionEncounter,
   type InjectionMedicationKey,
 } from "../../src/domain";
@@ -71,6 +74,19 @@ describe("InjectionClinicalReferenceBundle", () => {
     expect(
       calculateNextInjectionDate(INJECTION_MEDICATIONS.hafyera, "q26wk", "2026-08-31"),
     ).toBe("2027-02-28");
+  });
+
+  it("maps the higher Uzedy and Aristada strengths to their labeled schedules", () => {
+    const uzedy = INJECTION_MEDICATIONS.uzedy;
+    const aristada = INJECTION_MEDICATIONS.aristada;
+
+    expect(compatibleIntervalsForDose(uzedy, "150 mg")).toEqual(["q8wk"]);
+    expect(compatibleIntervalsForDose(uzedy, "200 mg")).toEqual(["q8wk"]);
+    expect(compatibleIntervalsForDose(uzedy, "250 mg")).toEqual(["q8wk"]);
+    expect(compatibleIntervalsForDose(aristada, "1064 mg")).toEqual(["q8wk"]);
+    expect(allowedDosesForInterval(uzedy, "q6wk")).toEqual([]);
+    expect(preferredIntervalForDose(uzedy, "250 mg", "q4wk")).toBe("q8wk");
+    expect(preferredIntervalForDose(aristada, "882 mg", "q6wk")).toBe("q6wk");
   });
 });
 

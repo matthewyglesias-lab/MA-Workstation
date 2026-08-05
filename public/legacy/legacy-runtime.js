@@ -184,8 +184,27 @@ function windowSummary(med){
   return w.winB===w.winA?`±${w.winB} days`:`${w.winB}/${w.winA} days`;
 }
 function medDosesForInterval(med, intervalKey){
-  if(med&&med.dosesByInterval&&med.dosesByInterval[intervalKey])return med.dosesByInterval[intervalKey];
+  if(med&&med.dosesByInterval)return med.dosesByInterval[intervalKey]||[];
   return (med&&med.doses)||[];
+}
+function compatibleIntervalsForDose(med,dose){
+  const value=String(dose||"").trim();
+  if(!med||!value||!med.dosesByInterval)return [];
+  return Object.keys(med.dosesByInterval).filter(intervalKey=>(med.dosesByInterval[intervalKey]||[]).includes(value));
+}
+function preferredIntervalForDose(med,dose,currentIntervalKey){
+  const compatible=compatibleIntervalsForDose(med,dose);
+  if(!compatible.length)return currentIntervalKey||"";
+  if(currentIntervalKey&&compatible.includes(currentIntervalKey))return currentIntervalKey;
+  if(med.intervalKey&&compatible.includes(med.intervalKey))return med.intervalKey;
+  return compatible[0];
+}
+function autoFillIntervalForDose(){
+  if(!S.med||!S.dose)return;
+  const nextInterval=preferredIntervalForDose(S.med,S.dose,S.intervalKey);
+  if(!nextInterval||nextInterval===S.intervalKey)return;
+  S.intervalKey=nextInterval;
+  const tag=$("intAuto");if(tag){tag.textContent="auto";tag.style.display="";}
 }
 function medDoseSummary(med){
   if(med.dosesByInterval){
@@ -571,7 +590,7 @@ $("medClear").addEventListener("click",()=>{
 
 function renderDoses(){
   const b=$("doseChips");b.innerHTML="";
-  const doses=medDosesForInterval(S.med,S.intervalKey);
+  const doses=(S.med&&S.med.doses)||[];
   if(!S.med||!doses.length){const i=document.createElement("input");i.placeholder="enter dose";i.style.maxWidth="160px";i.value=S.dose;i.addEventListener("input",e=>{S.dose=e.target.value;render();});b.appendChild(i);return;}
   doses.forEach(d=>b.appendChild(chipEl(d,S.dose===d,"dose sm",()=>{S.dose=d;applyMedDoseRules();renderDoses();renderSites();renderRoutes();renderIntervals();recalcNext();render();})));
 }
@@ -3685,6 +3704,7 @@ function renderRoutes(){
 }
 function applyMedDoseRules(){
   if(!S.med)return;
+  autoFillIntervalForDose();
   const rule=medAdminRule(S.med,S.dose);
   if(rule.route.length===1)S.route=rule.route[0];
   S.site=normalizeAdminSite(S.site);
@@ -7932,6 +7952,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
 
   function applyMedDoseRulesNatural(){
     if(!hasS()||!S.med)return;
+    try{autoFillIntervalForDose();}catch(e){}
     const r=rule();
     if(r.route&&r.route.length===1)S.route=r.route[0];
     else if(!S.route&&r.route&&r.route.length)S.route=r.route[0];

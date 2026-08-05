@@ -64,6 +64,15 @@ describe("Injection NDC package reference", () => {
     );
   });
 
+  it("lists the local package choices for the higher Uzedy and Aristada strengths", () => {
+    expect(resolveNdcOptions({ medicationKey: "uzedy", dose: "250 mg" })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ ndc: "51759-960-10" })]),
+    );
+    expect(resolveNdcOptions({ medicationKey: "aristada", dose: "1064 mg" })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ ndc: "65757-404-03" })]),
+    );
+  });
+
   it("formats only a known scanned/pasted package and retains unknown NDC text", () => {
     const known = resolveNdcEntry("5914807280");
     const unknown = resolveNdcEntry("  12345-6789-01  ");
