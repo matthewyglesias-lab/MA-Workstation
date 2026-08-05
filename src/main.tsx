@@ -18,6 +18,11 @@ import {
   type InjectionRecordRow,
   type LocalAttestationReview,
 } from './presentation';
+import {
+  buildInjectionAvsHtml,
+  type InjectionAvsChrome,
+  type InjectionAvsInput,
+} from './domain/injection-avs-render';
 import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
 import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
 import { InjectionPanel } from './presentation/workflows/injection/InjectionPanel';
@@ -723,9 +728,31 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   );
 }
 
+/**
+ * Publishes the typed After Visit Summary builder for the legacy print
+ * pipeline. renderAVS() collects the documented values out of the legacy
+ * fields and calls this; keeping the patient wording on this side means it
+ * lives in one reviewable, unit-tested module instead of the runtime blob.
+ *
+ * Installed before the legacy runtime loads so a print can never race the
+ * bridge. renderAVS() still has its own fallback if this is ever missing.
+ */
+function installInjectionAvsBridge(): void {
+  (
+    window as unknown as {
+      ipmgBuildInjectionAvsHtml?: (
+        input: InjectionAvsInput,
+        chrome?: Partial<InjectionAvsChrome>,
+      ) => string;
+    }
+  ).ipmgBuildInjectionAvsHtml = (input, chrome) => buildInjectionAvsHtml(input, chrome ?? {});
+}
+
 async function boot(): Promise<void> {
   const app = document.getElementById('app');
   if (!app) throw new Error('Missing application mount point.');
+
+  installInjectionAvsBridge();
 
   // Claim the records window before the legacy runtime boots. Its
   // ensureRecordsDrawer() rebuilds the drawer layer whenever it is missing and

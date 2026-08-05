@@ -145,11 +145,31 @@ function inspectPdf(pdf) {
 }
 
 function canonicalPrintHtml(html) {
-  return html
+  let canonical = html
     .replace(/\r\n?/g, '\n')
     .replace(/>\s+</g, '><')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/\s+/g, ' ');
+
+  // The injection AVS carries two values that legitimately differ on every run:
+  // the actual print time (to the minute) and the local record id, which is
+  // generated per draft. Normalise both so the hash still pins every other byte
+  // of the sheet. The stamp pattern is tight enough that it cannot match
+  // anything else; the record id is read out of the identity band and then
+  // replaced wherever it appears, because the footer repeats it.
+  canonical = canonical.replace(
+    /RUN(?:&nbsp;|\s)+\d{2}\/\d{2}\/\d{2} \d{4}/g,
+    'RUN <stamp>'
+  );
+
+  const recordId = (
+    canonical.match(/RECORD NO\.*<\/span>\s*<span class="avs2-v">([^<]*)/)?.[1] ?? ''
+  ).trim();
+  // Guard against blanking the document when nothing meaningful is documented.
+  if (recordId.length >= 4) {
+    canonical = canonical.split(recordId).join('<record-id>');
+  }
+
+  return canonical.trim();
 }
 
 async function expectProductionRendererParity(page, rootId) {
@@ -164,11 +184,17 @@ async function expectProductionRendererParity(page, rootId) {
     topLevelClass: await root.locator(':scope > *').first().getAttribute('class')
   };
 
+  // Compare only the pinned fields so a fixture entry can also carry a `note`
+  // recording why a root intentionally diverges from the production commit.
   expect(
     actual,
     `#${rootId} renderer output drifted from production commit ` +
       printBaseline.baselineCommit
-  ).toEqual(expected);
+  ).toEqual({
+    sha256: expected.sha256,
+    bytes: expected.bytes,
+    topLevelClass: expected.topLevelClass
+  });
 }
 
 async function expectPrintContract(page, {
@@ -340,7 +366,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
-        /Injection after-visit summary/i,
+        /AFTER VISIT SUMMARY - LONG-ACTING INJECTION/i,
         /Print, Early AVS/i
       ],
       checkParity: false
@@ -357,10 +383,16 @@ test.describe('unchanged clinical print surfaces', () => {
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
-        /Injection after-visit summary/i,
+        /AFTER VISIT SUMMARY - LONG-ACTING INJECTION/i,
         /Print, Injection/i,
-        /Next injection/i,
-        /PRINT-LOT-001/i
+        // The due date is the sheet's primary call to action, and the window
+        // is deliberately not printed - patients are asked for the exact day.
+        /YOUR NEXT INJECTION/i,
+        /PLEASE COME IN ON THIS DAY/i,
+        /PRINT-LOT-001/i,
+        // Walk-in policy and the San Bernardino number appear on every sheet.
+        /9:30 AM - 4:30 PM/i,
+        /\(909\) 887-6222/i
       ]
     });
   });
