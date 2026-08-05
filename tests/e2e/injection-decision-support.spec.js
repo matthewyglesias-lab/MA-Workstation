@@ -23,7 +23,7 @@ async function enterRoutineOrder(panel, patient) {
 }
 
 test.describe('Injection decision support', () => {
-  test('shows higher Uzedy and Aristada strengths and fills their compatible interval', async ({ page }) => {
+  test('keeps provider-directed interval overrides and autofills unambiguous injection orders', async ({ page }) => {
     const panel = await openInjection(page);
     await openTab(panel, 'Order');
     const medication = panel.locator('select[name="inj-medication"]');
@@ -34,24 +34,27 @@ test.describe('Injection decision support', () => {
     await expect(dose.locator('option[value="150 mg"]')).toHaveCount(1);
     await expect(dose.locator('option[value="200 mg"]')).toHaveCount(1);
     await expect(dose.locator('option[value="250 mg"]')).toHaveCount(1);
-    await dose.selectOption('250 mg');
+    await dose.selectOption('200 mg');
     await expect(interval).toHaveValue('q8wk');
     await openTab(panel, 'Product');
     await expect(
       panel.locator('[data-ndc-picker]').first().getByRole('combobox', { name: 'Known NDC package' }),
-    ).toContainText('51759-960-10');
+    ).toContainText('51759-850-10');
     await openTab(panel, 'Order');
 
-    // An incompatible staff override must clear the old strength instead of
-    // leaving an invalid dose/interval pair on the order.
+    // A provider-directed cadence preserves the exact ordered strength. The
+    // engine supplies a review warning rather than erasing the order.
     await interval.selectOption('q4wk');
-    await expect(dose).toHaveValue('');
+    await expect(dose).toHaveValue('200 mg');
+    await expect(interval).toHaveValue('q4wk');
 
     await medication.selectOption('aristada');
     await expect(dose.locator('option[value="882 mg"]')).toHaveCount(1);
     await expect(dose.locator('option[value="1064 mg"]')).toHaveCount(1);
     await dose.selectOption('1064 mg');
     await expect(interval).toHaveValue('q8wk');
+    await interval.selectOption('q4wk');
+    await expect(dose).toHaveValue('1064 mg');
     await openTab(panel, 'Product');
     await expect(
       panel.locator('[data-ndc-picker]').first().getByRole('combobox', { name: 'Known NDC package' }),
@@ -63,9 +66,13 @@ test.describe('Injection decision support', () => {
     await interval.selectOption('q6wk');
     await dose.selectOption('882 mg');
     await expect(interval).toHaveValue('q6wk');
+
+    await medication.selectOption('initio');
+    await expect(dose).toHaveValue('675 mg');
+    await expect(interval).toHaveValue('once');
   });
 
-  test('shows contextual guidance, requires an explicit site choice, and preserves custom NDC input', async ({ page }) => {
+  test('shows contextual guidance, autofills the rotated site, and preserves custom NDC input', async ({ page }) => {
     const panel = await openInjection(page);
     await enterRoutineOrder(panel, 'QA, Decision Support');
 
@@ -79,15 +86,13 @@ test.describe('Injection decision support', () => {
     await panel.locator('.wfp-field', { hasText: 'Prior site' }).locator('select').selectOption('R deltoid');
     await openTab(panel, 'Administration');
 
-    // A rotation recommendation is a one-click staff decision, never an
-    // automatic documentation change.
+    // A valid rotation suggestion is selected immediately, while remaining
+    // visible for the MA to confirm against the actual administration.
     const siteSuggestion = panel.locator('.wfp-site-suggestion');
-    await expect(siteSuggestion).toContainText('Suggested rotation site: L deltoid');
-    const selectedBefore = panel.locator('input[name="inj-site"]:checked');
-    await expect(selectedBefore).toHaveCount(0);
-    await siteSuggestion.getByRole('button', { name: 'Use suggested site' }).click();
+    await expect(siteSuggestion).toContainText('Suggested rotation site selected.');
     await expect(panel.locator('input[name="inj-site"]:checked')).toHaveCount(1);
     await expect(panel.locator('input[name="inj-site"]:checked').locator('xpath=..')).toContainText('L deltoid');
+    await expect(siteSuggestion.getByRole('button', { name: 'Use suggested site' })).toHaveCount(0);
 
     await openTab(panel, 'Product');
     const ndcPicker = panel.locator('[data-ndc-picker]').first();

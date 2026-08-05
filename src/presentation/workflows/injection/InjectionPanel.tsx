@@ -25,7 +25,6 @@ import {
   ALL_INJECTION_SITES,
   INJECTION_INTERVAL_OPTIONS,
   INJECTION_MEDICATIONS,
-  allowedDosesForInterval,
   preferredIntervalForDose,
   type InjectionIntervalKey,
   type InjectionMedicationKey,
@@ -1008,16 +1007,25 @@ export function InjectionPanel({
     // entry is a generic placeholder for site/route UI plumbing, not a
     // labeled fact, so it stays staff-entered like before.
     const catalogMedication = key && key !== "other" ? INJECTION_MEDICATIONS[key] : null;
+    const defaultDose =
+      catalogMedication?.doses.length === 1 ? (catalogMedication.doses[0] ?? "") : "";
+    const defaultIntervalKey =
+      catalogMedication && defaultDose
+        ? preferredIntervalForDose(catalogMedication, defaultDose, catalogMedication.intervalKey)
+        : (catalogMedication?.intervalKey ?? "");
     patch({
       medicationKey: key,
       customMedication: "",
-      dose: "",
+      // A product with one available strength has no strength choice to make.
+      // Keep the usual cadence as a starting point, just as we do after a
+      // staff-selected dose.
+      dose: defaultDose,
       site: "",
       // Pre-fill the reference catalog's usual route/cadence as a starting
       // point - staff still see and can change both before the order is
       // documented, this just saves re-typing what the label already says.
       route: catalogMedication?.route ?? "",
-      intervalKey: catalogMedication?.intervalKey ?? "",
+      intervalKey: defaultIntervalKey,
       nextDoseDate: "",
       traceability: { ...encounter.traceability, ndc: "" },
       verifications: {},
@@ -1054,33 +1062,10 @@ export function InjectionPanel({
   };
 
   const onIntervalChange = (intervalKey: InjectionIntervalKey | "") => {
-    const catalogMedication =
-      encounter.medicationKey && encounter.medicationKey !== "other"
-        ? INJECTION_MEDICATIONS[encounter.medicationKey]
-        : null;
-    const doseRemainsCompatible =
-      !catalogMedication ||
-      !encounter.dose ||
-      !intervalKey ||
-      allowedDosesForInterval(catalogMedication, intervalKey).includes(encounter.dose);
-
-    patch({
-      intervalKey,
-      ...(doseRemainsCompatible
-        ? {}
-        : {
-            dose: "",
-            traceability: { ...encounter.traceability, ndc: "" },
-          }),
-    });
-    if (!doseRemainsCompatible) {
-      patchDetails({
-        ndcSelection: {
-          ...(encounter.details?.ndcSelection ?? {}),
-          primary: undefined,
-        },
-      });
-    }
+    // A different cadence can be a provider-directed active order. Preserve
+    // the exact dose and package selection; the engine will flag an unusual
+    // combination for review without turning it into a hard stop.
+    patch({ intervalKey });
   };
 
   const toggleAttestation = (key: string, value: boolean) => {
@@ -1194,6 +1179,25 @@ export function InjectionPanel({
       : [...ALL_INJECTION_SITES]
     : [...ALL_INJECTION_SITES];
   const recommendedSite = presentationOutput?.recommendedSite ?? "";
+
+  useEffect(() => {
+    // A rotation suggestion is already constrained to the active product's
+    // allowed sites. When the current order has no site yet, select that
+    // alternate for the MA; any explicit site selection remains untouched.
+    if (
+      locked ||
+      nonAdministration ||
+      siteRequiresActiveOrderEntry ||
+      !recommendedSite ||
+      encounter.site.trim()
+    ) {
+      return;
+    }
+    patch({ site: recommendedSite });
+    // `patch` is intentionally render-local; using the value dependencies
+    // prevents a manual site choice from being overwritten.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [encounter.site, locked, nonAdministration, recommendedSite, siteRequiresActiveOrderEntry]);
 
   // The dose-history grid — the most recognisably-MAR artifact, and the one
   // that makes LAI site rotation legible at a glance. Read-only, and read
@@ -1598,7 +1602,7 @@ export function InjectionPanel({
                   field="dose"
                   hint={
                     medication?.dosesByInterval
-                      ? "All labeled strengths are shown. Selecting a strength fills a compatible interval; verify the active order."
+                      ? "All labeled strengths are shown. Selecting a strength fills its usual interval; provider-directed schedules remain available for review."
                       : undefined
                   }
                 >

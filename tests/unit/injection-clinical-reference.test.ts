@@ -49,6 +49,9 @@ const administered = (medicationKey: InjectionMedicationKey): InjectionEncounter
 const stopCodes = (result: ReturnType<typeof InjectionEngine.evaluate>): string[] =>
   result.stops.map((entry) => entry.code);
 
+const warningCodes = (result: ReturnType<typeof InjectionEngine.evaluate>): string[] =>
+  result.warnings.map((entry) => entry.code);
+
 describe("InjectionClinicalReferenceBundle", () => {
   it("gives every supported medication auditable label facts", () => {
     for (const reference of Object.values(INJECTION_CLINICAL_REFERENCE_BUNDLE.medications)) {
@@ -87,6 +90,44 @@ describe("InjectionClinicalReferenceBundle", () => {
     expect(allowedDosesForInterval(uzedy, "q6wk")).toEqual([]);
     expect(preferredIntervalForDose(uzedy, "250 mg", "q4wk")).toBe("q8wk");
     expect(preferredIntervalForDose(aristada, "882 mg", "q6wk")).toBe("q6wk");
+  });
+
+  it("keeps provider-directed dose and interval overrides as review warnings", () => {
+    const providerDirectedOrders: Array<{
+      medicationKey: InjectionMedicationKey;
+      dose: string;
+      intervalKey: InjectionEncounter["intervalKey"];
+      route: string;
+      site: string;
+    }> = [
+      {
+        medicationKey: "uzedy",
+        dose: "200 mg",
+        intervalKey: "q4wk",
+        route: "SubQ",
+        site: "Abdomen RUQ (SubQ)",
+      },
+      {
+        medicationKey: "aristada",
+        dose: "1064 mg",
+        intervalKey: "q4wk",
+        route: "IM",
+        site: "L deltoid",
+      },
+    ];
+
+    for (const order of providerDirectedOrders) {
+      const encounter = administered(order.medicationKey);
+      encounter.dose = order.dose;
+      encounter.intervalKey = order.intervalKey;
+      encounter.route = order.route;
+      encounter.site = order.site;
+      encounter.verifications = { resuspend: true };
+
+      const result = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+      expect(stopCodes(result)).not.toContain("dose.interval-mismatch");
+      expect(warningCodes(result)).toContain("dose.interval-mismatch");
+    }
   });
 });
 

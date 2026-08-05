@@ -596,7 +596,6 @@ function renderDoses(){
 }
 function renderIntervals(){const b=$("intChips");b.innerHTML="";INTERVALS.forEach(i=>b.appendChild(chipEl(i.l,S.intervalKey===i.k,"sm",()=>{
   S.intervalKey=i.k;$("intAuto").style.display="none";S.retCustom=false;
-  if(S.med&&S.med.dosesByInterval&&S.med.dosesByInterval[i.k]&&!S.med.dosesByInterval[i.k].includes(S.dose)){S.dose="";}
   recalcNext();renderDoses();renderIntervals();render();
 })));}
 function renderMedSpec(){
@@ -3713,7 +3712,7 @@ function applyMedDoseRules(){
   if(S.med.key==='asimtufii'){S.route='IM'; if(!/gluteal/i.test(S.site)){S.site='R ventrogluteal';$('siteAuto').style.display='';}}
 }
 function selectMed(m){
-  S.med=m;S.dose="";S.site="";S.route=m.route;S.intervalKey="";S.retCustom=false;
+  S.med=m;S.dose=(m.doses&&m.doses.length===1)?m.doses[0]:"";S.site="";S.route=m.route;S.intervalKey=m.intervalKey||"";S.retCustom=false;
   S.adminGuideCollapsed=false;S.needleGuideOpen=false;
   S.flags={};
   $('tech').value=m.tech||'';$('siteAuto').style.display='';$('intAuto').style.display='';
@@ -7943,9 +7942,16 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       siteTag('picked');
       return;
     }
-    S.site='';
     const smartSuggestion=typeof window.injectionRecommendedSite==='function'?window.injectionRecommendedSite(r):'';
-    S.siteSuggestion=smartSuggestion||(r.sites&&r.sites[0])||'';
+    if(smartSuggestion){
+      S.site=smartSuggestion;
+      S.siteSuggestion=smartSuggestion;
+      S.adminGuideCollapsed=false;
+      siteTag('picked');
+      return;
+    }
+    S.site='';
+    S.siteSuggestion=(r.sites&&r.sites[0])||'';
     S.adminGuideCollapsed=false;
     siteTag('needed');
   }
@@ -7962,11 +7968,11 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function selectMedNatural(m){
     if(!hasS())return;
     S.med=m;
-    S.dose='';
+    S.dose=(m.doses&&m.doses.length===1)?m.doses[0]:'';
     S.site='';
     S.siteSuggestion='';
     S.route=m.route||'';
-    S.intervalKey='';
+    S.intervalKey=m.intervalKey||'';
     S.retCustom=false;
     S.adminGuideCollapsed=false;
     S.needleGuideOpen=false;

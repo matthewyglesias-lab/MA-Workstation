@@ -1802,12 +1802,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#panel-administer')).not.toHaveClass(/record-readonly/);
   });
 
-  test('uses prior administration context to recommend, but never auto-select, the actual site', async ({ page }) => {
+  test('uses prior administration context to auto-select a valid rotated site', async ({ page }) => {
     // The legacy interactive body-map (recommended/quick-rotate CSS classes,
     // auto-collapsing cards) has been replaced by an icon-tile site picker
-    // per the approved redesign; this test now covers that picker's
-    // equivalent guarantees: a recommended-site badge is shown, but nothing
-    // is ever pre-selected on the user's behalf.
+    // per the approved redesign. A valid alternate now saves the MA a click,
+    // while the recommendation remains visible for confirmation.
     await page.setViewportSize({ width: 840, height: 720 });
     await page.goto('/');
     await openWorkflow(page, 'administer');
@@ -1830,9 +1829,6 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-section-head', { hasText: 'Actual administration location' })).toContainText(
       'rotate: L deltoid'
     );
-    await expect(panel.locator('.wfp-site-tile.is-selected')).toHaveCount(0);
-
-    await panel.getByText('L deltoid', { exact: true }).click();
     await expect(
       panel.locator('.wfp-site-tile', { hasText: 'L deltoid' })
     ).toHaveClass(/is-selected/);
