@@ -44,6 +44,17 @@ export function OutstandingRequirements<Tab extends string>({
     onClose();
   };
 
+  // The engine pushes stops in whatever order it happens to evaluate them,
+  // not in tab order - left as-is, the list bounces staff between tabs
+  // instead of letting them clear one tab before moving to the next. Sort by
+  // each row's tab position (a stable sort, so stops sharing a tab keep the
+  // engine's original relative order) purely for display; nothing about
+  // which stops exist or what they mean changes.
+  const tabOrder = Object.keys(tabLabels) as Tab[];
+  const orderedStops = [...stops].sort(
+    (a, b) => tabOrder.indexOf(tabForField(a.field)) - tabOrder.indexOf(tabForField(b.field)),
+  );
+
   return (
     <ModalDialog
       class="cd2004-dialog-layer cd2004-dialog cd2004-outstanding-requirements-dialog"
@@ -63,7 +74,7 @@ export function OutstandingRequirements<Tab extends string>({
         </div>
         <div class="cd2004-dialog-body">
           <div class="wfp-issue-list">
-            {stops.map((stop) => {
+            {orderedStops.map((stop) => {
               const stopTab = tabForField(stop.field);
               return (
                 <button
