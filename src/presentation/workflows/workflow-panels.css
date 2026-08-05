@@ -1217,6 +1217,21 @@
   color: var(--cd-ink-muted);
 }
 
+/* Provider-directed dose/cadence combinations remain available, but deserve
+   a quiet, visible review cue next to the selected order rather than a stop. */
+.cd2004-shell .wfp-operator-guidance-row.is-warning {
+  background: var(--cd-amber-soft);
+  border-left: 3px solid var(--cd-amber);
+}
+
+.cd2004-shell .wfp-operator-guidance-row.is-warning strong {
+  color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-operator-guidance-row.is-warning span {
+  color: var(--cd-ink);
+}
+
 .cd2004-shell .wfp-operator-guidance-row em {
   grid-column: 2;
   color: var(--cd-ink);
