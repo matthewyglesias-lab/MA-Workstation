@@ -970,7 +970,7 @@ export function SamplesPanel({
                 </button>
               </div>
               {!canFinalizeSampleLog && (
-                <p class="wfp-field-hint wfp-print-block-hint">
+                <p class="wfp-field-hint wfp-print-block-hint" role="status">
                   Printing the patient handout is disabled until this dispense is complete
                   {firstSampleStopMessage && (
                     <>

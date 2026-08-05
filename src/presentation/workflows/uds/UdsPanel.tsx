@@ -1194,7 +1194,7 @@ export function UdsPanel({
                 </button>
               </div>
               {!udsReadyForFinalOutput && (
-                <p class="wfp-field-hint wfp-print-block-hint">
+                <p class="wfp-field-hint wfp-print-block-hint" role="status">
                   Printing is disabled until this screen is complete
                   {firstStopMessage && (
                     <>
