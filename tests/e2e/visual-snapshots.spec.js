@@ -72,6 +72,13 @@ const CAPTURE_STYLES = `
     height: 0 !important;
     width: 0 !important;
   }
+
+  /* Visual baselines represent the live-production workstation. Pull-request
+     builds intentionally expose the draft-only patient-screening control;
+     its behavior and print layout are covered in print-regression.spec.js. */
+  html[data-visual-regression="true"] [data-patient-screening-print] {
+    display: none !important;
+  }
 `;
 
 const FIXED_LOCAL_DATA = {
