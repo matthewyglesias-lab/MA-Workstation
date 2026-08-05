@@ -2063,11 +2063,11 @@ export const InjectionEngine: ClinicalEngine<
           encounter.intervalKey &&
           !allowedDosesForInterval(medication, encounter.intervalKey).includes(encounter.dose)
         ) {
-          stops.push(
+          warnings.push(
             issue(
-              "stop",
+              "warning",
               "dose.interval-mismatch",
-              "The selected dose does not match the selected product interval. Verify the active order.",
+              "This dose is outside the usual product interval. Verify the active order.",
               "dose",
               "medication",
             ),
