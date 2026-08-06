@@ -13,6 +13,11 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     name: Type, static, unit, and production build
+    env:
+      # Clinic-approved patient screening is part of every production and PR
+      # artifact. An explicit false remains available as an operational kill
+      # switch, but the release workflow validates the live default.
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
     steps:
       - uses: actions/checkout@v4
         with:

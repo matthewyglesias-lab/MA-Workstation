@@ -983,7 +983,7 @@ function render(){
 }
 
 /* ---------- After-Visit Summary ---------- */
-function cleanPrintClasses(){document.body.classList.remove("print-avs","print-uds","print-uds-patient","print-sample","print-daily","print-letter","print-sample-worksheet","print-inj-worksheet");}
+function cleanPrintClasses(){document.body.classList.remove("print-avs","print-uds","print-uds-patient","print-sample","print-daily","print-letter","print-sample-worksheet","print-inj-worksheet","print-inj-patient-screen");}
 $("printAVS").addEventListener("click",()=>{
   if(!S.med){toast("Pick a drug first");return;}
   renderAVS();cleanPrintClasses();document.body.classList.add("print-avs");window.print();setTimeout(cleanPrintClasses,500);
@@ -6478,7 +6478,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
 
   window.renderSampleWorksheet=renderSampleWorksheet517;
   window.renderInjectionWorksheet=renderInjectionWorksheet517;
-  function cleanPrint(){ if(window.cleanPrintClasses) window.cleanPrintClasses(); document.body.classList.remove('print-avs','print-uds','print-uds-patient','print-sample','print-daily','print-letter','print-sample-worksheet','print-inj-worksheet'); }
+  function cleanPrint(){ if(window.cleanPrintClasses) window.cleanPrintClasses(); document.body.classList.remove('print-avs','print-uds','print-uds-patient','print-sample','print-daily','print-letter','print-sample-worksheet','print-inj-worksheet','print-inj-patient-screen'); }
   function samplePrint(blank){renderSampleWorksheet517(!!blank); cleanPrint(); document.body.classList.add('print-sample-worksheet'); window.print(); setTimeout(cleanPrint,500);}
   function injPrint(blank){renderInjectionWorksheet517(!!blank); cleanPrint(); document.body.classList.add('print-inj-worksheet'); window.print(); setTimeout(cleanPrint,500);}
   function takeover(id,handler){const old=get(id); if(!old || old.dataset.rc517) return; const fresh=old.cloneNode(true); fresh.dataset.rc517='1'; old.parentNode.replaceChild(fresh,old); fresh.addEventListener('click',ev=>{ev.preventDefault(); ev.stopPropagation(); handler();},true);}
@@ -6525,7 +6525,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
   window.renderSampleWorksheet=function(blank){ if(prevSample) prevSample(!!blank); enhanceSample(); };
   window.renderInjectionWorksheet=function(blank){ if(prevInj) prevInj(!!blank); enhanceInj(); };
-  function clean(){ if(window.cleanPrintClasses) window.cleanPrintClasses(); document.body.classList.remove('print-avs','print-uds','print-uds-patient','print-sample','print-daily','print-letter','print-sample-worksheet','print-inj-worksheet'); }
+  function clean(){ if(window.cleanPrintClasses) window.cleanPrintClasses(); document.body.classList.remove('print-avs','print-uds','print-uds-patient','print-sample','print-daily','print-letter','print-sample-worksheet','print-inj-worksheet','print-inj-patient-screen'); }
   function takeover(id,handler){const old=document.getElementById(id); if(!old || old.dataset.rc517b) return; const fresh=old.cloneNode(true); fresh.dataset.rc517b='1'; old.parentNode.replaceChild(fresh,old); fresh.addEventListener('click',ev=>{ev.preventDefault(); ev.stopPropagation(); handler();},true);}
   function wire(){
     takeover('sampleWorksheetPrint',()=>{window.renderSampleWorksheet(false); clean(); document.body.classList.add('print-sample-worksheet'); window.print(); setTimeout(clean,500);});
@@ -6552,7 +6552,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     }
   }
   window.renderInjectionWorksheet=function(blank){ if(prev) prev(!!blank); addBottomNotes(); };
-  function clean(){ if(window.cleanPrintClasses) window.cleanPrintClasses(); document.body.classList.remove('print-avs','print-uds','print-uds-patient','print-sample','print-daily','print-letter','print-sample-worksheet','print-inj-worksheet'); }
+  function clean(){ if(window.cleanPrintClasses) window.cleanPrintClasses(); document.body.classList.remove('print-avs','print-uds','print-uds-patient','print-sample','print-daily','print-letter','print-sample-worksheet','print-inj-worksheet','print-inj-patient-screen'); }
   function takeover(id,handler){const old=document.getElementById(id); if(!old || old.dataset.rc517c) return; const fresh=old.cloneNode(true); fresh.dataset.rc517c='1'; old.parentNode.replaceChild(fresh,old); fresh.addEventListener('click',ev=>{ev.preventDefault(); ev.stopPropagation(); handler();},true);}
   function wire(){takeover('injWorksheetPrint',()=>{window.renderInjectionWorksheet(false); clean(); document.body.classList.add('print-inj-worksheet'); window.print(); setTimeout(clean,500);}); takeover('injWorksheetBlank',()=>{window.renderInjectionWorksheet(true); clean(); document.body.classList.add('print-inj-worksheet'); window.print(); setTimeout(clean,500);});}
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire,{once:true}); else wire();
@@ -6694,7 +6694,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
 
   window.renderSampleWorksheet=function(blank){ if(prevSample) prevSample(!!blank); addSampleFastChecks(!!blank); };
   window.renderInjectionWorksheet=function(blank){ if(prevInj) prevInj(!!blank); addInjFastChecks(!!blank); };
-  function cleanPrint(){ if(window.cleanPrintClasses) window.cleanPrintClasses(); document.body.classList.remove('print-avs','print-uds','print-uds-patient','print-sample','print-daily','print-letter','print-sample-worksheet','print-inj-worksheet'); }
+  function cleanPrint(){ if(window.cleanPrintClasses) window.cleanPrintClasses(); document.body.classList.remove('print-avs','print-uds','print-uds-patient','print-sample','print-daily','print-letter','print-sample-worksheet','print-inj-worksheet','print-inj-patient-screen'); }
   function takeover(id,handler){const old=document.getElementById(id); if(!old || old.dataset.rc519) return; const fresh=old.cloneNode(true); fresh.dataset.rc519='1'; old.parentNode.replaceChild(fresh,old); fresh.addEventListener('click',ev=>{ev.preventDefault(); ev.stopPropagation(); handler();},true);}
   function wire(){
     takeover('sampleWorksheetPrint',()=>{window.renderSampleWorksheet(false); cleanPrint(); document.body.classList.add('print-sample-worksheet'); window.print(); setTimeout(cleanPrint,500);});
@@ -11369,7 +11369,8 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     'print-letter':'letterSheet',
     'print-daily':'dailySheet',
     'print-sample-worksheet':'sampleWorksheetSheet',
-    'print-inj-worksheet':'injWorksheetSheet'
+    'print-inj-worksheet':'injWorksheetSheet',
+    'print-inj-patient-screen':'injPatientScreenSheet'
   };
   var CLASSES=Object.keys(SHEETS);
 
@@ -11422,6 +11423,12 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(staged.length>1){
       clearClasses();
       say('Print cancelled - more than one document was staged. Please try again.');
+      return;
+    }
+
+    if(staged[0]==='print-inj-patient-screen'&&window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__!==true){
+      clearClasses();
+      say('Patient screening is not enabled in this build.');
       return;
     }
 

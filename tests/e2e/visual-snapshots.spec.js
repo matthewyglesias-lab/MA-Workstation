@@ -72,6 +72,13 @@ const CAPTURE_STYLES = `
     height: 0 !important;
     width: 0 !important;
   }
+
+  /* Broad workstation snapshots exclude this print action so their historical
+     baselines remain focused on entry controls; its behavior and paper layout
+     are covered by print-regression.spec.js. */
+  html[data-visual-regression="true"] [data-patient-screening-print] {
+    display: none !important;
+  }
 `;
 
 const FIXED_LOCAL_DATA = {

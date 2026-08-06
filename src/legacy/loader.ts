@@ -30,6 +30,7 @@ const PRINT_IDS = [
   'sampleSheet',
   'sampleWorksheetSheet',
   'injWorksheetSheet',
+  'injPatientScreenSheet',
 ] as const;
 
 export type LegacyInjectionRecordLifecycle =
@@ -224,7 +225,7 @@ export async function loadLegacyRuntime(): Promise<LegacyRuntime> {
   staging.innerHTML = legacyMarkup;
   movePrintSurfaces();
 
-  await loadClassicScript('/legacy/legacy-runtime.js?v=6.0.1');
+  await loadClassicScript('/legacy/legacy-runtime.js?v=6.0.2');
   await waitForDocumentReady();
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 

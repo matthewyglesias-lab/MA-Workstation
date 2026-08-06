@@ -18,7 +18,8 @@ const PRINT_CLASSES = [
   'print-letter',
   'print-daily',
   'print-sample-worksheet',
-  'print-inj-worksheet'
+  'print-inj-worksheet',
+  'print-inj-patient-screen'
 ];
 
 async function bootWorkstation(page) {
@@ -222,6 +223,19 @@ test.describe('hardened print pipeline', () => {
     expect(await stagedClasses(page)).toEqual(['print-avs']);
     await expect.poll(() => stagedClasses(page), { timeout: 4000 }).toEqual([]);
     expect(await printCalls(page)).toBe(1);
+  });
+
+  test('makes the approved patient-screening action available in the production workflow', async ({ page }) => {
+    await bootWorkstation(page);
+    expect(
+      await page.evaluate(() => window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__ === true)
+    ).toBe(true);
+
+    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    const panel = page.locator('.wfp-panel');
+    await expect(panel).toBeVisible();
+    await panel.locator('select[name="inj-medication"]').selectOption('uzedy');
+    await expect(panel.locator('[data-patient-screening-print="summary"]')).toBeVisible();
   });
 
   test('every real print button routes through the hardened path', async ({ page }) => {

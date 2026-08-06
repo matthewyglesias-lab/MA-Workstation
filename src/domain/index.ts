@@ -7,5 +7,6 @@ export * from "./injection-avs-render";
 export * from "./injection-catalog";
 export * from "./injection-clinical-reference";
 export * from "./injection-ndc";
+export * from "./injection-patient-screening";
 export * from "./samples";
 export * from "./uds";

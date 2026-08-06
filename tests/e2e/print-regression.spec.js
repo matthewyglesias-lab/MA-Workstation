@@ -10,7 +10,8 @@ const PRINT_ROOT_IDS = [
   'letterSheet',
   'dailySheet',
   'sampleWorksheetSheet',
-  'injWorksheetSheet'
+  'injWorksheetSheet',
+  'injPatientScreenSheet'
 ];
 
 async function bootWorkstation(page) {
@@ -94,7 +95,8 @@ async function setFieldsAndRender(page, {
       'print-letter',
       'print-daily',
       'print-sample-worksheet',
-      'print-inj-worksheet'
+      'print-inj-worksheet',
+      'print-inj-patient-screen'
     ];
 
     for (const className of printClasses) {
@@ -200,6 +202,7 @@ async function expectProductionRendererParity(page, rootId) {
 async function expectPrintContract(page, {
   rootId,
   content,
+  minPages = 1,
   maxPages = 2,
   maxContentWidth = 800,
   checkParity = true
@@ -305,7 +308,7 @@ async function expectPrintContract(page, {
   expect(pdf.length).toBeGreaterThan(5_000);
 
   const { pageCount, mediaBoxes } = inspectPdf(pdf);
-  expect(pageCount).toBeGreaterThanOrEqual(1);
+  expect(pageCount).toBeGreaterThanOrEqual(minPages);
   expect(pageCount).toBeLessThanOrEqual(maxPages);
   expect(mediaBoxes.length).toBeGreaterThan(0);
   for (const box of mediaBoxes) {
@@ -533,6 +536,126 @@ test.describe('unchanged clinical print surfaces', () => {
       ],
       maxContentWidth: 1500
     });
+  });
+
+  test('prints the bilingual patient screening form without leaking workstation chrome', async ({ page }) => {
+    await bootWorkstation(page);
+    await expect
+      .poll(() => page.evaluate(() => window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__ === true))
+      .toBe(true);
+
+    await openWorkflow(page, 'Injection', 'administer');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('input[placeholder="Last, First"]').fill('Print, Screening');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
+    await panel.locator('select[name="inj-medication"]').selectOption('uzedy');
+
+    const screeningAction = panel.locator('[data-patient-screening-print="summary"]');
+    await expect(screeningAction).toBeVisible();
+    await expect(screeningAction).toBeDisabled();
+    await panel.locator('select[name="inj-dose"]').selectOption({ label: '200 mg' });
+    await expect(screeningAction).toBeEnabled();
+
+    await page.evaluate(() => {
+      window.__printCalls = 0;
+      window.__ipmgNativePrint = () => {
+        window.__printCalls += 1;
+      };
+    });
+    await screeningAction.click();
+    const dialog = page.locator('.cd2004-patient-screening-dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.locator('[data-patient-screening-language="es"]').click();
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
+      )
+      .toContain('EVALUACIÓN PREVIA A LA INYECCIÓN Y CONSENTIMIENTO');
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
+      )
+      .not.toContain('BORRADOR');
+    await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(1);
+
+    // The native-print stub leaves the staged class until the hardener's
+    // afterprint/backstop cleanup. Re-stage it immediately before PDF capture
+    // so the layout contract is independent of that intentional cleanup timer.
+    await page.evaluate(() => document.body.classList.add('print-inj-patient-screen'));
+    await page.emulateMedia({ media: 'print' });
+    await expectPrintContract(page, {
+      rootId: 'injPatientScreenSheet',
+      content: [
+        /EVALUACI/i,
+        /Print, Screening/i,
+        /UZEDY/i,
+        /200 mg/i,
+        /SEGUIMIENTO \/ ACCIÓN DEL PERSONAL/i
+      ],
+      checkParity: false,
+      maxPages: 2
+    });
+
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await expect
+      .poll(() => page.evaluate(() => document.body.classList.contains('print-inj-patient-screen')))
+      .toBe(false);
+  });
+
+  test('prints expanded informed consent only for an initiation-like patient screening form', async ({ page }) => {
+    await bootWorkstation(page);
+    await expect
+      .poll(() => page.evaluate(() => window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__ === true))
+      .toBe(true);
+
+    await openWorkflow(page, 'Injection', 'administer');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('input[placeholder="Last, First"]').fill('Print, Initiation');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
+    await panel.locator('select[name="inj-medication"]').selectOption('vivitrol');
+    await panel.locator('select[name="inj-reason"]').selectOption('initiation');
+    await panel.locator('select[name="inj-dose"]').selectOption({ label: '380 mg' });
+
+    await page.evaluate(() => {
+      window.__printCalls = 0;
+      window.__ipmgNativePrint = () => {
+        window.__printCalls += 1;
+      };
+    });
+    await panel.locator('[data-patient-screening-print="summary"]').click();
+    const dialog = page.locator('.cd2004-patient-screening-dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.locator('[data-patient-screening-language="en"]').click();
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
+      )
+      .toContain('INFORMED CONSENT');
+    await expect(page.locator('#injPatientScreenSheet [data-section="consent"] .ips-question')).toHaveCount(2);
+    await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(1);
+
+    await page.evaluate(() => document.body.classList.add('print-inj-patient-screen'));
+    await page.emulateMedia({ media: 'print' });
+    await expectPrintContract(page, {
+      rootId: 'injPatientScreenSheet',
+      content: [
+        /PRE-INJECTION SCREENING & CONSENT/i,
+        /VIVITROL/i,
+        /CONSENT DISCUSSION/i,
+        /INFORMED CONSENT/i,
+        /Patient \/ legal representative signature/i
+      ],
+      checkParity: false,
+      minPages: 2,
+      maxPages: 2
+    });
+
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await expect
+      .poll(() => page.evaluate(() => document.body.classList.contains('print-inj-patient-screen')))
+      .toBe(false);
   });
 
   test('isolates the forms provider letter as a single Letter page', async ({ page }) => {
