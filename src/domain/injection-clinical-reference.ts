@@ -11,8 +11,8 @@ import type {
  * provenance behind those decisions.  It also keeps the Knowledge Center from
  * becoming a second, hand-maintained medication catalog.
  */
-export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.03.1";
-export const INJECTION_CLINICAL_REFERENCE_REVIEWED_ON = "2026-08-03";
+export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.05.1";
+export const INJECTION_CLINICAL_REFERENCE_REVIEWED_ON = "2026-08-05";
 
 export type ClinicalReferenceClassification =
   | "label constraint"

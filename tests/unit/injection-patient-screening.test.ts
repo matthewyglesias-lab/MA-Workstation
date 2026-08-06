@@ -36,8 +36,11 @@ describe("Injection patient screening draft model", () => {
       expect(rule.reviewStatus).toBe("draft");
       expect(rule.copy.en.sectionTitle.trim()).not.toHaveLength(0);
       expect(rule.copy.en.prompt.trim()).not.toHaveLength(0);
+      expect(rule.copy.en.staffInterpretation.trim()).not.toHaveLength(0);
       expect(rule.copy.es.sectionTitle.trim()).not.toHaveLength(0);
       expect(rule.copy.es.prompt.trim()).not.toHaveLength(0);
+      expect(rule.copy.es.staffInterpretation.trim()).not.toHaveLength(0);
+      expect(rule.responseType).toBe("yes-no-discuss");
       expect(rule.provenance.labelRevision.trim()).not.toHaveLength(0);
       if (rule.provenance.kind === "product-label") {
         expect(rule.provenance.source.url).toMatch(/^https:\/\//);
@@ -65,6 +68,8 @@ describe("Injection patient screening draft model", () => {
             item.provenance.source.url === reference.source.url,
         ),
       ).toBe(true);
+      expect(items.some((item) => item.id.startsWith(`medication-${medicationKey}-`))).toBe(true);
+      expect(items.every((item) => item.staffInterpretation.trim().length > 0)).toBe(true);
     }
   });
 
@@ -83,6 +88,28 @@ describe("Injection patient screening draft model", () => {
     expect(spanish.sections.map((section) => section.id)).toEqual(
       english.sections.map((section) => section.id),
     );
+    expect(english.showsDraftConsent).toBe(false);
+    expect(english.sections.map((section) => section.id)).not.toContain("consent");
+  });
+
+  it("adds expanded draft consent content only for a catalog initiation-like encounter", () => {
+    const initiation = encounterFor("vivitrol");
+    initiation.reason = "initiation";
+    const documentModel = buildInjectionPatientScreenDocument(initiation, "en");
+    const consentItems = documentModel.sections
+      .filter((section) => section.id === "consent")
+      .flatMap((section) => section.items);
+
+    expect(documentModel.showsDraftConsent).toBe(true);
+    expect(consentItems.length).toBeGreaterThanOrEqual(2);
+    expect(consentItems.map((item) => item.id)).toContain("consent-vivitrol-detailed-review");
+    expect(consentItems.every((item) => item.reviewStatus === "draft")).toBe(true);
+
+    const other = encounterFor("other");
+    other.reason = "initiation";
+    const otherDocument = buildInjectionPatientScreenDocument(other, "en");
+    expect(otherDocument.showsDraftConsent).toBe(false);
+    expect(otherDocument.sections.map((section) => section.id)).not.toContain("consent");
   });
 
   it("adds a dose-and-phase rule only when its source selector matches", () => {

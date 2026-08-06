@@ -572,6 +572,11 @@ test.describe('unchanged clinical print surfaces', () => {
         page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
       )
       .toContain('BORRADOR');
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
+      )
+      .not.toContain('SE REQUIERE TEXTO DE CONSENTIMIENTO');
     await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(1);
 
     // The native-print stub leaves the staged class until the hardener's
@@ -582,12 +587,67 @@ test.describe('unchanged clinical print surfaces', () => {
     await expectPrintContract(page, {
       rootId: 'injPatientScreenSheet',
       content: [
-        /Evaluación y consentimiento previos a la inyección/i,
+        /CONTROL PREVIO A LA INYECCIÓN/i,
         /BORRADOR/i,
         /Print, Screening/i,
         /UZEDY/i,
         /200 mg/i,
-        /Se requiere texto de consentimiento aprobado por la clínica/i
+        /SEGUIMIENTO \/ ACCIÓN DEL PERSONAL/i
+      ],
+      checkParity: false,
+      maxPages: 2
+    });
+
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await expect
+      .poll(() => page.evaluate(() => document.body.classList.contains('print-inj-patient-screen')))
+      .toBe(false);
+  });
+
+  test('prints expanded draft consent only for an initiation-like patient screening form', async ({ page }) => {
+    await bootWorkstation(page);
+    const previewEnabled = await page.evaluate(
+      () => window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__ === true
+    );
+    test.skip(!previewEnabled, 'This production artifact intentionally omits the draft screening prototype.');
+
+    await openWorkflow(page, 'Injection', 'administer');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('input[placeholder="Last, First"]').fill('Print, Initiation');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
+    await panel.locator('select[name="inj-medication"]').selectOption('vivitrol');
+    await panel.locator('select[name="inj-reason"]').selectOption('initiation');
+    await panel.locator('select[name="inj-dose"]').selectOption({ label: '380 mg' });
+
+    await page.evaluate(() => {
+      window.__printCalls = 0;
+      window.__ipmgNativePrint = () => {
+        window.__printCalls += 1;
+      };
+    });
+    await panel.locator('[data-patient-screening-print="summary"]').click();
+    const dialog = page.locator('.cd2004-patient-screening-dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.locator('[data-patient-screening-language="en"]').click();
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
+      )
+      .toContain('CLINIC-APPROVED CONSENT LANGUAGE REQUIRED');
+    await expect(page.locator('#injPatientScreenSheet [data-section="consent"] .ips-question')).toHaveCount(2);
+    await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(1);
+
+    await page.evaluate(() => document.body.classList.add('print-inj-patient-screen'));
+    await page.emulateMedia({ media: 'print' });
+    await expectPrintContract(page, {
+      rootId: 'injPatientScreenSheet',
+      content: [
+        /PRE-INJECTION PATIENT CHECK-IN/i,
+        /VIVITROL/i,
+        /CONSENT DISCUSSION - DRAFT/i,
+        /CLINIC-APPROVED CONSENT LANGUAGE REQUIRED/i,
+        /Patient \/ legal representative signature/i
       ],
       checkParity: false,
       maxPages: 2

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   INJECTION_CLINICAL_REFERENCE_BUNDLE,
+  INJECTION_CLINICAL_REFERENCE_REVIEWED_ON,
   InjectionEngine,
   allowedDosesForInterval,
   calculateNextInjectionDate,
@@ -59,7 +60,7 @@ describe("InjectionClinicalReferenceBundle", () => {
       expect(reference.source.url).toContain("setid=");
       expect(reference.source.labelRevision).not.toHaveLength(0);
       expect(reference.source.labelRevision).toContain("SPL v");
-      expect(reference.source.reviewedOn).toBe("2026-08-03");
+      expect(reference.source.reviewedOn).toBe(INJECTION_CLINICAL_REFERENCE_REVIEWED_ON);
       expect(reference.facts.length).toBeGreaterThan(0);
       for (const clinicalFact of reference.facts) {
         expect(clinicalFact.source.url).toBe(reference.source.url);

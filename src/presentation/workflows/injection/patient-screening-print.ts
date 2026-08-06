@@ -3,6 +3,7 @@ import {
   canBuildInjectionPatientScreenDocument,
   type InjectionEncounter,
   type InjectionPatientScreenDocument,
+  type InjectionPatientScreenItem,
   type PatientScreenLanguage,
 } from "../../../domain";
 
@@ -48,16 +49,56 @@ const element = <Tag extends keyof HTMLElementTagNameMap>(
   return node;
 };
 
-const addMeta = (root: HTMLElement, label: string, value: string): void => {
-  const item = element("div", "ips-meta-item");
-  item.append(element("span", undefined, label), element("strong", undefined, value));
-  root.append(item);
+const appendInfoPair = (root: HTMLElement, label: string, value: string): void => {
+  const pair = element("span", "ips-info-pair");
+  pair.append(element("strong", undefined, `${label}:`), document.createTextNode(` ${value}`));
+  root.append(pair);
 };
 
-const addSignatureLine = (root: HTMLElement, label: string): void => {
-  const field = element("div", "ips-signature-field");
-  field.append(element("span", "ips-signature-line"), element("span", "ips-signature-label", label));
-  root.append(field);
+const addInfoLine = (
+  root: HTMLElement,
+  left: { label: string; value: string },
+  right: { label: string; value: string },
+): void => {
+  const line = element("div", "ips-info-line");
+  appendInfoPair(line, left.label, left.value);
+  appendInfoPair(line, right.label, right.value);
+  root.append(line);
+};
+
+const addQuestion = (
+  root: HTMLElement,
+  number: number,
+  item: InjectionPatientScreenItem,
+  labels: InjectionPatientScreenDocument["labels"],
+): void => {
+  const question = element("div", "ips-question");
+  question.dataset.ruleId = item.id;
+  question.dataset.responseType = item.responseType;
+  question.dataset.staffInterpretation = item.staffInterpretation;
+
+  const prompt = element("p", "ips-question-prompt", item.prompt);
+  const answers = element(
+    "p",
+    "ips-answer-options",
+    `\u2610 ${labels.yes}   \u2610 ${labels.no}   \u2610 ${labels.discuss}`,
+  );
+  question.append(
+    element("span", "ips-question-number", `${String(number).padStart(2, "0")}.`),
+    prompt,
+    answers,
+  );
+  root.append(question);
+};
+
+const addSignatureRow = (root: HTMLElement, signerLabel: string, dateLabel: string): void => {
+  const row = element("div", "ips-signature-row");
+  const signature = element("div", "ips-signature-field");
+  signature.append(element("span", "ips-signature-line"), element("span", "ips-signature-label", signerLabel));
+  const date = element("div", "ips-signature-field ips-date-field");
+  date.append(element("span", "ips-signature-line"), element("span", "ips-signature-label", dateLabel));
+  row.append(signature, date);
+  root.append(row);
 };
 
 /** Renders a paper-only document into the dedicated print root. */
@@ -70,83 +111,95 @@ export const renderInjectionPatientScreenDocument = (
   page.dataset.patientScreenLanguage = documentModel.language;
   page.dataset.reviewStatus = documentModel.reviewStatus;
 
-  const draftMarker = element("div", "ips-draft-marker", labels.draftMarker);
   const header = element("header", "ips-header");
-  const heading = element("div", "ips-heading");
-  heading.append(
-    element("p", "ips-kicker", "IPMG MA WORKSTATION"),
-    element("h1", undefined, labels.title),
-    element("p", "ips-subtitle", labels.subtitle),
+  const topLine = element("div", "ips-topline");
+  topLine.append(
+    element("span", undefined, labels.workstation),
+    element("span", undefined, labels.formLabel),
   );
-  header.append(heading, draftMarker);
+  header.append(
+    topLine,
+    element("h1", "ips-heading", `** ${labels.title} **`),
+    element("p", "ips-subtitle", labels.subtitle),
+    element("p", "ips-draft-marker", labels.draftMarker),
+  );
+  page.append(header);
 
-  const metadataGrid = element("section", "ips-metadata");
-  addMeta(metadataGrid, labels.patient, metadata.patientName);
-  addMeta(metadataGrid, labels.dateOfBirth, metadata.patientDob);
-  addMeta(metadataGrid, labels.medication, metadata.medication);
-  addMeta(metadataGrid, labels.dose, metadata.dose);
-  addMeta(metadataGrid, labels.route, metadata.route);
-  addMeta(metadataGrid, labels.schedule, metadata.interval);
-  addMeta(metadataGrid, labels.phase, metadata.phase);
-  addMeta(metadataGrid, labels.date, metadata.administrationDate);
+  page.append(element("p", "ips-bar", labels.orderInformation));
+  const metadataBlock = element("section", "ips-metadata");
+  addInfoLine(
+    metadataBlock,
+    { label: labels.patient, value: metadata.patientName },
+    { label: labels.date, value: metadata.administrationDate },
+  );
+  addInfoLine(
+    metadataBlock,
+    { label: labels.dateOfBirth, value: metadata.patientDob },
+    { label: labels.phase, value: metadata.phase },
+  );
+  const orderLine = element("div", "ips-order-line");
+  orderLine.append(
+    element("strong", "ips-rx-label", "RX:"),
+    document.createTextNode(
+      ` ${metadata.medication} ${metadata.dose} / ${metadata.route} / ${metadata.interval}`,
+    ),
+  );
+  metadataBlock.append(orderLine);
+  page.append(metadataBlock);
 
-  page.append(header, metadataGrid);
+  page.append(
+    element("p", "ips-bar", labels.patientCheckIn),
+    element("p", "ips-response-instruction", labels.responseInstruction),
+  );
 
+  let questionNumber = 1;
   for (const sectionModel of documentModel.sections) {
     const section = element("section", `ips-section ips-section-${sectionModel.id}`);
     section.dataset.section = sectionModel.id;
-    section.append(element("h2", undefined, sectionModel.title));
+    section.append(element("h2", "ips-section-heading", sectionModel.title));
     for (const item of sectionModel.items) {
-      const question = element("div", "ips-question");
-      question.dataset.ruleId = item.id;
-      question.append(
-        element("p", "ips-question-prompt", item.prompt),
-        element(
-          "p",
-          "ips-answer-options",
-          `☐ ${labels.yes}    ☐ ${labels.no}    ☐ ${labels.discuss}`,
-        ),
-        element("p", "ips-details-line", `${labels.details}: ________________________________________________`),
-      );
-      section.append(question);
+      addQuestion(section, questionNumber, item, labels);
+      questionNumber += 1;
     }
     page.append(section);
   }
 
-  const consent = element("section", "ips-consent-placeholder");
-  consent.append(
-    element("h2", undefined, labels.consentPlaceholderTitle),
-    element("p", undefined, labels.consentPlaceholderBody),
-  );
-  page.append(consent);
+  const staffNote = element("p", "ips-staff-response-note");
+  staffNote.append(element("strong", undefined, "STAFF NOTE: "), document.createTextNode(labels.staffResponseNote));
+  page.append(staffNote);
 
-  const signatures = element("section", "ips-signatures");
-  addSignatureLine(signatures, labels.patientSignature);
-  addSignatureLine(signatures, labels.patientDate);
-  addSignatureLine(signatures, labels.staffReviewer);
-  addSignatureLine(signatures, labels.staffDate);
-  const followUp = element("div", "ips-follow-up");
+  const followUp = element("section", "ips-follow-up");
   followUp.append(
-    element("span", "ips-follow-up-label", labels.followUp),
-    element("span", "ips-follow-up-line"),
+    element("h2", undefined, labels.followUp),
+    element("div", "ips-write-line"),
+    element("div", "ips-write-line"),
   );
-  signatures.append(followUp);
-  page.append(signatures);
+  page.append(followUp);
 
-  const source = element("footer", "ips-source");
+  if (documentModel.showsDraftConsent) {
+    const consent = element("section", "ips-consent-placeholder");
+    consent.append(
+      element("h2", undefined, labels.consentPlaceholderTitle),
+      element("p", undefined, labels.consentPlaceholderBody),
+    );
+    page.append(consent);
+
+    const signatures = element("section", "ips-signatures");
+    addSignatureRow(signatures, labels.patientSignature, labels.patientDate);
+    addSignatureRow(signatures, labels.staffReviewer, labels.staffDate);
+    page.append(signatures);
+  }
+
+  const footer = element("footer", "ips-source");
   if (documentModel.source) {
     const sourceLink = element("a", undefined, documentModel.source.title);
     sourceLink.href = documentModel.source.url;
     sourceLink.rel = "noreferrer";
-    source.append(
-      `${labels.source}: `,
-      sourceLink,
-      ` — ${documentModel.source.labelRevision}`,
-    );
+    footer.append(`${labels.source}: `, sourceLink, ` - ${documentModel.source.labelRevision}`);
   } else {
-    source.textContent = documentModel.labels.noProductSource;
+    footer.textContent = documentModel.labels.noProductSource;
   }
-  page.append(source, element("div", "ips-footer-marker", labels.draftMarker));
+  page.append(footer, element("div", "ips-footer-marker", labels.draftMarker));
 
   root.replaceChildren(page);
   root.dataset.reviewStatus = documentModel.reviewStatus;
