@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   INJECTION_CLINICAL_REFERENCE_BUNDLE,
+  INJECTION_PATIENT_SCREENING_APPROVED_ON,
+  INJECTION_PATIENT_SCREENING_CONTENT_VERSION,
   INJECTION_PATIENT_SCREEN_RULES,
   buildInjectionPatientScreenDocument,
   canBuildInjectionPatientScreenDocument,
@@ -9,7 +11,7 @@ import {
   type InjectionEncounter,
   type InjectionMedicationKey,
 } from "../../src/domain";
-import { isDraftInjectionPatientScreeningEnabled } from "../../src/presentation/workflows/injection/patient-screening-print";
+import { isInjectionPatientScreeningEnabled } from "../../src/presentation/workflows/injection/patient-screening-print";
 
 const encounterFor = (medicationKey: InjectionMedicationKey): InjectionEncounter => {
   const reference =
@@ -29,18 +31,22 @@ const encounterFor = (medicationKey: InjectionMedicationKey): InjectionEncounter
   };
 };
 
-describe("Injection patient screening draft model", () => {
-  it("has a complete paired bilingual draft inventory with auditable provenance", () => {
+describe("Injection patient screening model", () => {
+  it("has a complete paired bilingual approved inventory with auditable provenance", () => {
+    expect(INJECTION_PATIENT_SCREENING_CONTENT_VERSION).toBe("2026.08.06.1");
+    expect(INJECTION_PATIENT_SCREENING_APPROVED_ON).toBe("2026-08-06");
     expect(INJECTION_PATIENT_SCREEN_RULES.length).toBeGreaterThan(3);
     for (const rule of INJECTION_PATIENT_SCREEN_RULES) {
-      expect(rule.reviewStatus).toBe("draft");
+      expect(rule.reviewStatus).toBe("approved");
       expect(rule.copy.en.sectionTitle.trim()).not.toHaveLength(0);
+      expect(rule.copy.en.sectionTitle).not.toMatch(/draft/i);
       expect(rule.copy.en.prompt.trim()).not.toHaveLength(0);
       expect(rule.copy.en.staffInterpretation.trim()).not.toHaveLength(0);
       expect(rule.copy.es.sectionTitle.trim()).not.toHaveLength(0);
+      expect(rule.copy.es.sectionTitle).not.toMatch(/borrador/i);
       expect(rule.copy.es.prompt.trim()).not.toHaveLength(0);
       expect(rule.copy.es.staffInterpretation.trim()).not.toHaveLength(0);
-      expect(rule.responseType).toBe("yes-no-discuss");
+      expect(rule.responseType).toBe("yes-no-not-sure");
       expect(rule.provenance.labelRevision.trim()).not.toHaveLength(0);
       if (rule.provenance.kind === "product-label") {
         expect(rule.provenance.source.url).toMatch(/^https:\/\//);
@@ -57,7 +63,7 @@ describe("Injection patient screening draft model", () => {
       const documentModel = buildInjectionPatientScreenDocument(encounter, "en");
       const items = documentModel.sections.flatMap((section) => section.items);
 
-      expect(documentModel.reviewStatus).toBe("draft");
+      expect(documentModel.reviewStatus).toBe("approved");
       expect(documentModel.hasProductSpecificContent).toBe(true);
       expect(documentModel.metadata.medication).toBe(reference.catalog.label);
       expect(documentModel.source?.url).toBe(reference.source.url);
@@ -83,16 +89,57 @@ describe("Injection patient screening draft model", () => {
     expect(english.metadata.medication).toBe(spanish.metadata.medication);
     expect(english.metadata.dose).toBe("200 mg");
     expect(english.metadata.interval).toBe("q4 wk");
-    expect(spanish.labels.draftMarker).toMatch(/BORRADOR/);
-    expect(english.labels.draftMarker).toMatch(/DRAFT/);
+    expect(spanish.labels.consentTitle).toBe("CONSENTIMIENTO INFORMADO");
+    expect(english.labels.consentTitle).toBe("INFORMED CONSENT");
     expect(spanish.sections.map((section) => section.id)).toEqual(
       english.sections.map((section) => section.id),
     );
-    expect(english.showsDraftConsent).toBe(false);
+    expect(english.showsConsent).toBe(false);
     expect(english.sections.map((section) => section.id)).not.toContain("consent");
   });
 
-  it("adds expanded draft consent content only for a catalog initiation-like encounter", () => {
+  it("uses a patient-friendly universal symptom check-in with an explicit Not sure path", () => {
+    const english = buildInjectionPatientScreenDocument(encounterFor("other"), "en");
+    const spanish = buildInjectionPatientScreenDocument(encounterFor("other"), "es");
+    const universalItems = english.sections
+      .flatMap((section) => section.items)
+      .filter((item) => item.id.startsWith("universal-"));
+
+    expect(english.labels.patientCheckIn).toBe("SINCE YOUR LAST INJECTION");
+    expect(english.labels.notSure).toBe("Not sure");
+    expect(spanish.labels.notSure).toBe("No estoy seguro/a");
+    expect(universalItems.map((item) => item.id)).toEqual([
+      "universal-plan-confirmation",
+      "universal-unwell-or-new-illness",
+      "universal-dizziness-fainting-or-fall",
+      "universal-chest-breathing-or-heart-symptoms",
+      "universal-injection-site-concern",
+      "universal-other-post-injection-problem",
+      "universal-allergy-or-reaction",
+      "universal-medication-change",
+      "universal-new-health-event",
+      "universal-pregnancy-or-lactation",
+      "universal-questions",
+    ]);
+    expect(universalItems.every((item) => item.responseType === "yes-no-not-sure")).toBe(true);
+    expect(universalItems.every((item) => item.staffInterpretation.includes("Yes or Not sure"))).toBe(
+      true,
+    );
+    expect(universalItems[0]?.prompt).toMatch(/different from what you expected/i);
+    expect(
+      spanish.sections.flatMap((section) => section.items).map((item) => item.staffInterpretation),
+    ).toContainEqual(expect.stringContaining("No estoy seguro/a"));
+  });
+
+  it("keeps serious antipsychotic symptoms in separate medication-specific prompts", () => {
+    const documentModel = buildInjectionPatientScreenDocument(encounterFor("uzedy"), "en");
+    const ids = documentModel.sections.flatMap((section) => section.items).map((item) => item.id);
+
+    expect(ids).toContain("medication-uzedy-fever-stiffness-or-confusion");
+    expect(ids).toContain("medication-uzedy-movement-or-swallowing");
+  });
+
+  it("adds approved consent content only for a catalog initiation-like encounter", () => {
     const initiation = encounterFor("vivitrol");
     initiation.reason = "initiation";
     const documentModel = buildInjectionPatientScreenDocument(initiation, "en");
@@ -100,15 +147,21 @@ describe("Injection patient screening draft model", () => {
       .filter((section) => section.id === "consent")
       .flatMap((section) => section.items);
 
-    expect(documentModel.showsDraftConsent).toBe(true);
+    expect(documentModel.showsConsent).toBe(true);
     expect(consentItems.length).toBeGreaterThanOrEqual(2);
     expect(consentItems.map((item) => item.id)).toContain("consent-vivitrol-detailed-review");
-    expect(consentItems.every((item) => item.reviewStatus === "draft")).toBe(true);
+    expect(consentItems.every((item) => item.reviewStatus === "approved")).toBe(true);
+    expect(
+      consentItems.find((item) => item.id === "consent-initiation-discussion-request")?.prompt,
+    ).toMatch(/important risks, reasonable alternatives/i);
+    expect(documentModel.labels.consentBody).toMatch(/voluntarily agree to receive/i);
+    const spanishInitiation = buildInjectionPatientScreenDocument(initiation, "es");
+    expect(spanishInitiation.labels.consentBody).toMatch(/Acepto voluntariamente recibir/i);
 
     const other = encounterFor("other");
     other.reason = "initiation";
     const otherDocument = buildInjectionPatientScreenDocument(other, "en");
-    expect(otherDocument.showsDraftConsent).toBe(false);
+    expect(otherDocument.showsConsent).toBe(false);
     expect(otherDocument.sections.map((section) => section.id)).not.toContain("consent");
   });
 
@@ -157,9 +210,9 @@ describe("Injection patient screening draft model", () => {
     expect(encounter).toEqual(before);
   });
 
-  it("defaults the draft feature flag to off and accepts only an explicit preview value", () => {
-    expect(isDraftInjectionPatientScreeningEnabled(undefined)).toBe(false);
-    expect(isDraftInjectionPatientScreeningEnabled("false")).toBe(false);
-    expect(isDraftInjectionPatientScreeningEnabled("true")).toBe(true);
+  it("enables the approved form by default and supports an explicit operational disable", () => {
+    expect(isInjectionPatientScreeningEnabled(undefined)).toBe(true);
+    expect(isInjectionPatientScreeningEnabled("false")).toBe(false);
+    expect(isInjectionPatientScreeningEnabled("true")).toBe(true);
   });
 });

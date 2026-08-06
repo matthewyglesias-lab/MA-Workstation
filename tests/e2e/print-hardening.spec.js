@@ -225,35 +225,17 @@ test.describe('hardened print pipeline', () => {
     expect(await printCalls(page)).toBe(1);
   });
 
-  test('rejects a draft patient screening sheet in a production-gated build', async ({ page }) => {
+  test('makes the approved patient-screening action available in the production workflow', async ({ page }) => {
     await bootWorkstation(page);
-    const previewEnabled = await page.evaluate(
-      () => window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__ === true
-    );
-    test.skip(previewEnabled, 'The PR-preview artifact intentionally enables the draft prototype.');
-
-    await page.evaluate(() => {
-      document.getElementById('injPatientScreenSheet').innerHTML = '<p>Draft form</p>';
-      document.body.classList.add('print-inj-patient-screen');
-      window.print();
-    });
-
-    expect(await printCalls(page)).toBe(0);
-    expect(await stagedClasses(page)).toEqual([]);
-  });
-
-  test('omits the draft patient-screening action from the production workflow', async ({ page }) => {
-    await bootWorkstation(page);
-    const previewEnabled = await page.evaluate(
-      () => window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__ === true
-    );
-    test.skip(previewEnabled, 'The PR-preview artifact intentionally exposes the draft prototype.');
+    expect(
+      await page.evaluate(() => window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__ === true)
+    ).toBe(true);
 
     await page.locator('.cd2004-nav-item[title="Injection"]').click();
     const panel = page.locator('.wfp-panel');
     await expect(panel).toBeVisible();
     await panel.locator('select[name="inj-medication"]').selectOption('uzedy');
-    await expect(panel.locator('[data-patient-screening-print]')).toHaveCount(0);
+    await expect(panel.locator('[data-patient-screening-print="summary"]')).toBeVisible();
   });
 
   test('every real print button routes through the hardened path', async ({ page }) => {

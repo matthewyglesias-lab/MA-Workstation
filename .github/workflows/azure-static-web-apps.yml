@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Type, static, unit, and production build
     env:
-      # Draft patient screening is intentionally review-preview only. The
-      # tested artifact for a PR has it enabled; the main artifact is compiled
-      # with the feature absent and the legacy print gate rejects it as well.
-      VITE_ENABLE_DRAFT_INJECTION_PATIENT_SCREENING: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+      # Clinic-approved patient screening is part of every production and PR
+      # artifact. An explicit false remains available as an operational kill
+      # switch, but the release workflow validates the live default.
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
     steps:
       - uses: actions/checkout@v4
         with:

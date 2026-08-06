@@ -11426,9 +11426,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       return;
     }
 
-    if(staged[0]==='print-inj-patient-screen'&&window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__!==true){
+    if(staged[0]==='print-inj-patient-screen'&&window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__!==true){
       clearClasses();
-      say('Draft patient screening is not enabled in this build.');
+      say('Patient screening is not enabled in this build.');
       return;
     }
 

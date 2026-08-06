@@ -54,7 +54,7 @@ import {
   type PatientScreenLanguage,
 } from "../../../domain/injection-patient-screening";
 import {
-  DRAFT_INJECTION_PATIENT_SCREENING_ENABLED,
+  INJECTION_PATIENT_SCREENING_ENABLED,
   printInjectionPatientScreening,
 } from "./patient-screening-print";
 
@@ -1272,7 +1272,7 @@ export function InjectionPanel({
   const patientScreeningDisabledReason =
     encounter.medicationKey === "other"
       ? undefined
-      : "Choose the exact medication dose before printing the draft patient form.";
+      : "Choose the exact medication dose before printing the patient screening form.";
   const stagePatientScreeningPrint = (language: PatientScreenLanguage) => {
     // The native dialog is rendered outside the shell, so let it unmount before
     // the dedicated print class hides the rest of the workstation.
@@ -1478,7 +1478,7 @@ export function InjectionPanel({
           <DesktopIcon name="print" />
           Print AVS
         </button>
-        {DRAFT_INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
+        {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
           <button
             type="button"
             class="cd2004-link-button wfp-summary-print-avs"
@@ -1488,12 +1488,12 @@ export function InjectionPanel({
             disabled={!patientScreeningReady}
             title={
               patientScreeningReady
-                ? "Print the draft patient screening and consent prototype."
+                ? "Print the patient screening and consent form."
                 : patientScreeningDisabledReason
             }
           >
             <DesktopIcon name="print" />
-            Print patient screening (Draft)
+            Print patient screening
           </button>
         )}
         <span class="wfp-summary-spacer" />
@@ -2772,7 +2772,7 @@ export function InjectionPanel({
               >
                 Print AVS
               </button>
-              {DRAFT_INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
+              {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
                 <button
                   type="button"
                   class="cd2004-link-button"
@@ -2782,11 +2782,11 @@ export function InjectionPanel({
                   disabled={!patientScreeningReady}
                   title={
                     patientScreeningReady
-                      ? "Print the draft patient screening and consent prototype."
+                      ? "Print the patient screening and consent form."
                       : patientScreeningDisabledReason
                   }
                 >
-                  Print patient screening (Draft)
+                  Print patient screening
                 </button>
               )}
               <button
@@ -2860,7 +2860,7 @@ export function InjectionPanel({
         >
           <div class="cd2004-dialog-frame">
             <div class="cd2004-dialog-titlebar">
-              <span id="patient-screening-print-title">Print patient screening (Draft)</span>
+              <span id="patient-screening-print-title">Print patient screening</span>
               <button
                 type="button"
                 aria-label="Close"
@@ -2871,7 +2871,7 @@ export function InjectionPanel({
             </div>
             <div class="cd2004-dialog-body">
               <p>
-                Draft-only, paper patient form. It does not record consent or change injection readiness.
+                This paper form does not store patient answers or signatures electronically and does not change injection readiness.
               </p>
               <p>
                 Choose the language to print for {encounter.medicationKey === "other" ? "Other" : medication?.label}.

@@ -11,31 +11,29 @@ export const INJECTION_PATIENT_SCREEN_PRINT_CLASS = "print-inj-patient-screen";
 export const INJECTION_PATIENT_SCREEN_SHEET_ID = "injPatientScreenSheet";
 
 /**
- * The flag must be explicitly set by the PR-preview build. Undefined is
- * intentionally treated as production-safe/off for local and live builds.
+ * Patient screening is live by default. An explicit false remains available as
+ * an operational kill switch without leaving a caller able to bypass it.
  */
-export const isDraftInjectionPatientScreeningEnabled = (
+export const isInjectionPatientScreeningEnabled = (
   value: string | undefined,
-): boolean => value === "true";
+): boolean => value !== "false";
 
-export const DRAFT_INJECTION_PATIENT_SCREENING_ENABLED =
-  isDraftInjectionPatientScreeningEnabled(
-    import.meta.env.VITE_ENABLE_DRAFT_INJECTION_PATIENT_SCREENING,
-  );
+export const INJECTION_PATIENT_SCREENING_ENABLED = isInjectionPatientScreeningEnabled(
+  import.meta.env.VITE_ENABLE_INJECTION_PATIENT_SCREENING,
+);
 
 declare global {
   interface Window {
-    __IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__?: boolean;
+    __IPMG_INJECTION_PATIENT_SCREENING_ENABLED__?: boolean;
     cleanPrintClasses?: () => void;
   }
 }
 
-// The legacy print hardener owns the final runtime rejection too. Publishing
-// the build value lets that plain-JS choke point reject a staged draft sheet in
-// a production build even if a caller bypasses the Preact button.
+// The legacy print hardener owns final print-root isolation. Publishing the
+// enabled value also lets its plain-JS choke point honor the operational kill
+// switch if a caller bypasses the Preact button.
 if (typeof window !== "undefined") {
-  window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__ =
-    DRAFT_INJECTION_PATIENT_SCREENING_ENABLED;
+  window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__ = INJECTION_PATIENT_SCREENING_ENABLED;
 }
 
 const element = <Tag extends keyof HTMLElementTagNameMap>(
@@ -81,7 +79,7 @@ const addQuestion = (
   const answers = element(
     "p",
     "ips-answer-options",
-    `\u2610 ${labels.yes}   \u2610 ${labels.no}   \u2610 ${labels.discuss}`,
+    `\u2610 ${labels.yes}   \u2610 ${labels.no}   \u2610 ${labels.notSure}`,
   );
   question.append(
     element("span", "ips-question-number", `${String(number).padStart(2, "0")}.`),
@@ -121,7 +119,6 @@ export const renderInjectionPatientScreenDocument = (
     topLine,
     element("h1", "ips-heading", `** ${labels.title} **`),
     element("p", "ips-subtitle", labels.subtitle),
-    element("p", "ips-draft-marker", labels.draftMarker),
   );
   page.append(header);
 
@@ -176,11 +173,11 @@ export const renderInjectionPatientScreenDocument = (
   );
   page.append(followUp);
 
-  if (documentModel.showsDraftConsent) {
-    const consent = element("section", "ips-consent-placeholder");
+  if (documentModel.showsConsent) {
+    const consent = element("section", "ips-consent");
     consent.append(
-      element("h2", undefined, labels.consentPlaceholderTitle),
-      element("p", undefined, labels.consentPlaceholderBody),
+      element("h2", undefined, labels.consentTitle),
+      element("p", undefined, labels.consentBody),
     );
     page.append(consent);
 
@@ -199,21 +196,21 @@ export const renderInjectionPatientScreenDocument = (
   } else {
     footer.textContent = documentModel.labels.noProductSource;
   }
-  page.append(footer, element("div", "ips-footer-marker", labels.draftMarker));
+  page.append(footer);
 
   root.replaceChildren(page);
   root.dataset.reviewStatus = documentModel.reviewStatus;
 };
 
 /**
- * Builds and stages the draft output. The hardened legacy print wrapper owns
+ * Builds and stages the patient-facing output. The hardened legacy print wrapper owns
  * collision detection, empty-sheet checks, and cleanup after the print dialog.
  */
 export const printInjectionPatientScreening = (
   encounter: InjectionEncounter,
   language: PatientScreenLanguage,
 ): boolean => {
-  if (!DRAFT_INJECTION_PATIENT_SCREENING_ENABLED) return false;
+  if (!INJECTION_PATIENT_SCREENING_ENABLED) return false;
   if (!canBuildInjectionPatientScreenDocument(encounter)) return false;
 
   const root = document.getElementById(INJECTION_PATIENT_SCREEN_SHEET_ID);

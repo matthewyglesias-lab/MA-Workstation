@@ -202,6 +202,7 @@ async function expectProductionRendererParity(page, rootId) {
 async function expectPrintContract(page, {
   rootId,
   content,
+  minPages = 1,
   maxPages = 2,
   maxContentWidth = 800,
   checkParity = true
@@ -307,7 +308,7 @@ async function expectPrintContract(page, {
   expect(pdf.length).toBeGreaterThan(5_000);
 
   const { pageCount, mediaBoxes } = inspectPdf(pdf);
-  expect(pageCount).toBeGreaterThanOrEqual(1);
+  expect(pageCount).toBeGreaterThanOrEqual(minPages);
   expect(pageCount).toBeLessThanOrEqual(maxPages);
   expect(mediaBoxes.length).toBeGreaterThan(0);
   for (const box of mediaBoxes) {
@@ -537,12 +538,11 @@ test.describe('unchanged clinical print surfaces', () => {
     });
   });
 
-  test('prints the preview-only bilingual patient screening draft without leaking workstation chrome', async ({ page }) => {
+  test('prints the bilingual patient screening form without leaking workstation chrome', async ({ page }) => {
     await bootWorkstation(page);
-    const previewEnabled = await page.evaluate(
-      () => window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__ === true
-    );
-    test.skip(!previewEnabled, 'This production artifact intentionally omits the draft screening prototype.');
+    await expect
+      .poll(() => page.evaluate(() => window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__ === true))
+      .toBe(true);
 
     await openWorkflow(page, 'Injection', 'administer');
     const panel = page.locator('.wfp-panel');
@@ -571,12 +571,12 @@ test.describe('unchanged clinical print surfaces', () => {
       .poll(() =>
         page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
       )
-      .toContain('BORRADOR');
+      .toContain('EVALUACIÓN PREVIA A LA INYECCIÓN Y CONSENTIMIENTO');
     await expect
       .poll(() =>
         page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
       )
-      .not.toContain('SE REQUIERE TEXTO DE CONSENTIMIENTO');
+      .not.toContain('BORRADOR');
     await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(1);
 
     // The native-print stub leaves the staged class until the hardener's
@@ -587,8 +587,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expectPrintContract(page, {
       rootId: 'injPatientScreenSheet',
       content: [
-        /CONTROL PREVIO A LA INYECCIÓN/i,
-        /BORRADOR/i,
+        /EVALUACI/i,
         /Print, Screening/i,
         /UZEDY/i,
         /200 mg/i,
@@ -604,12 +603,11 @@ test.describe('unchanged clinical print surfaces', () => {
       .toBe(false);
   });
 
-  test('prints expanded draft consent only for an initiation-like patient screening form', async ({ page }) => {
+  test('prints expanded informed consent only for an initiation-like patient screening form', async ({ page }) => {
     await bootWorkstation(page);
-    const previewEnabled = await page.evaluate(
-      () => window.__IPMG_DRAFT_INJECTION_PATIENT_SCREENING_ENABLED__ === true
-    );
-    test.skip(!previewEnabled, 'This production artifact intentionally omits the draft screening prototype.');
+    await expect
+      .poll(() => page.evaluate(() => window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__ === true))
+      .toBe(true);
 
     await openWorkflow(page, 'Injection', 'administer');
     const panel = page.locator('.wfp-panel');
@@ -634,7 +632,7 @@ test.describe('unchanged clinical print surfaces', () => {
       .poll(() =>
         page.evaluate(() => document.getElementById('injPatientScreenSheet')?.textContent ?? '')
       )
-      .toContain('CLINIC-APPROVED CONSENT LANGUAGE REQUIRED');
+      .toContain('INFORMED CONSENT');
     await expect(page.locator('#injPatientScreenSheet [data-section="consent"] .ips-question')).toHaveCount(2);
     await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(1);
 
@@ -643,13 +641,14 @@ test.describe('unchanged clinical print surfaces', () => {
     await expectPrintContract(page, {
       rootId: 'injPatientScreenSheet',
       content: [
-        /PRE-INJECTION PATIENT CHECK-IN/i,
+        /PRE-INJECTION SCREENING & CONSENT/i,
         /VIVITROL/i,
-        /CONSENT DISCUSSION - DRAFT/i,
-        /CLINIC-APPROVED CONSENT LANGUAGE REQUIRED/i,
+        /CONSENT DISCUSSION/i,
+        /INFORMED CONSENT/i,
         /Patient \/ legal representative signature/i
       ],
       checkParity: false,
+      minPages: 2,
       maxPages: 2
     });
 

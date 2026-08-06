@@ -12,14 +12,14 @@ import {
 } from "./injection-catalog";
 
 /**
- * This module deliberately models a paper-only draft. It never changes the
- * clinical evaluator or records a patient answer, signature, or consent.
- * Product labels are retained as source traceability for later clinical review;
- * they are not treated as approved patient-consent language.
+ * This paper-only patient form never changes the clinical evaluator or records
+ * patient answers, signatures, or consent. Product labels provide source
+ * traceability for medication-specific content; the clinic-approved bilingual
+ * consent acknowledgement below remains the patient-facing consent wording.
  */
 export type PatientScreenLanguage = "en" | "es";
 
-export type InjectionPatientScreenReviewStatus = "draft";
+export type InjectionPatientScreenReviewStatus = "approved";
 
 export type InjectionPatientScreenSectionKind =
   | "screening"
@@ -27,8 +27,8 @@ export type InjectionPatientScreenSectionKind =
   | "additional"
   | "consent";
 
-/** All draft prompts currently use the same compact paper response pattern. */
-export type InjectionPatientScreenResponseType = "yes-no-discuss";
+/** All prompts use the same compact, patient-facing paper response pattern. */
+export type InjectionPatientScreenResponseType = "yes-no-not-sure";
 
 type CatalogMedicationKey = Exclude<InjectionMedicationKey, "other">;
 
@@ -44,8 +44,8 @@ export interface InjectionPatientScreenRuleCopy {
   sectionTitle: string;
   prompt: string;
   /**
-   * Internal catalog guidance for staff. It explains what a Yes / Need to
-   * discuss response should trigger, but is never used to clear, stop, or
+   * Internal catalog guidance for staff. It explains what a Yes / Not sure
+   * response should trigger, but is never used to clear, stop, or
    * persist an encounter.
    */
   staffInterpretation: string;
@@ -58,7 +58,7 @@ export type InjectionPatientScreenRuleProvenance =
       labelRevision: string;
     }
   | {
-      kind: "local-draft";
+      kind: "clinic-approved";
       labelRevision: string;
     };
 
@@ -90,7 +90,6 @@ export interface InjectionPatientScreenSection {
 export interface InjectionPatientScreenLabels {
   title: string;
   subtitle: string;
-  draftMarker: string;
   workstation: string;
   formLabel: string;
   orderInformation: string;
@@ -107,9 +106,9 @@ export interface InjectionPatientScreenLabels {
   date: string;
   yes: string;
   no: string;
-  discuss: string;
-  consentPlaceholderTitle: string;
-  consentPlaceholderBody: string;
+  notSure: string;
+  consentTitle: string;
+  consentBody: string;
   patientSignature: string;
   patientDate: string;
   staffReviewer: string;
@@ -134,27 +133,52 @@ export interface InjectionPatientScreenDocument {
     administrationDate: string;
   };
   sections: InjectionPatientScreenSection[];
-  /** True only for initiation-like draft forms; maintenance forms omit consent. */
-  showsDraftConsent: boolean;
+  /** True only for initiation-like forms; maintenance forms omit consent. */
+  showsConsent: boolean;
   source?: ClinicalReferenceSource;
   hasProductSpecificContent: boolean;
 }
 
-const LOCAL_DRAFT_PROVENANCE: InjectionPatientScreenRuleProvenance = {
-  kind: "local-draft",
-  labelRevision: "Draft patient-screening framework; clinic approval pending; refreshed 2026-08-05",
+export const INJECTION_PATIENT_SCREENING_CONTENT_VERSION = "2026.08.06.1";
+export const INJECTION_PATIENT_SCREENING_APPROVED_ON = "2026-08-06";
+
+const CLINIC_APPROVED_PROVENANCE: InjectionPatientScreenRuleProvenance = {
+  kind: "clinic-approved",
+  labelRevision:
+    "Clinic-approved bilingual patient-screening and consent content 2026-08-06",
 };
 
-const responseType: InjectionPatientScreenResponseType = "yes-no-discuss";
+const responseType: InjectionPatientScreenResponseType = "yes-no-not-sure";
 
 const medicationKeys = Object.keys(INJECTION_CLINICAL_REFERENCE_BUNDLE.medications) as CatalogMedicationKey[];
+
+const normalizeStaffInterpretation = (
+  value: string,
+  language: PatientScreenLanguage,
+): string =>
+  language === "es"
+    ? value
+        .replaceAll("Necesito hablarlo", "No estoy seguro/a")
+        .replaceAll("Si responde Si", "Si responde S\u00ed")
+    : value.replaceAll("Need to discuss", "Not sure");
+
+const normalizedCopy = (
+  copy: InjectionPatientScreenRuleCopy,
+  language: PatientScreenLanguage,
+): InjectionPatientScreenRuleCopy => ({
+  ...copy,
+  staffInterpretation: normalizeStaffInterpretation(copy.staffInterpretation, language),
+});
 
 const bilingualCopy = (
   en: InjectionPatientScreenRuleCopy,
   es: InjectionPatientScreenRuleCopy,
-): Record<PatientScreenLanguage, InjectionPatientScreenRuleCopy> => ({ en, es });
+): Record<PatientScreenLanguage, InjectionPatientScreenRuleCopy> => ({
+  en: normalizedCopy(en, "en"),
+  es: normalizedCopy(es, "es"),
+});
 
-const localDraftRule = (
+const clinicApprovedRule = (
   id: string,
   section: InjectionPatientScreenSectionKind,
   copy: Record<PatientScreenLanguage, InjectionPatientScreenRuleCopy>,
@@ -165,8 +189,8 @@ const localDraftRule = (
   selector,
   responseType,
   copy,
-  provenance: LOCAL_DRAFT_PROVENANCE,
-  reviewStatus: "draft",
+  provenance: CLINIC_APPROVED_PROVENANCE,
+  reviewStatus: "approved",
 });
 
 const productLabelRule = (
@@ -188,108 +212,228 @@ const productLabelRule = (
       source: reference.source,
       labelRevision: reference.source.labelRevision,
     },
-    reviewStatus: "draft",
+    reviewStatus: "approved",
   };
 };
 
 const universalRules: InjectionPatientScreenRule[] = [
-  localDraftRule(
+  clinicApprovedRule(
     "universal-plan-confirmation",
     "plan",
     bilingualCopy(
       {
         sectionTitle: "Medication / plan check",
         prompt:
-          "Does the medication, dose, route, and schedule shown above match what you expected to receive today?",
+          "Is anything about the medication, dose, route, or schedule shown above different from what you expected to receive today?",
         staffInterpretation:
-          "If Yes or Need to discuss: verify the active order and resolve the mismatch or question with authorized staff before administration.",
+          "If Yes or Not sure: verify the active order and resolve the mismatch or question with authorized staff before administration.",
       },
       {
         sectionTitle: "Revisi\u00f3n del medicamento / plan",
         prompt:
-          "\u00bfEl medicamento, la dosis, la v\u00eda y el horario indicados arriba coinciden con lo que esperaba recibir hoy?",
+          "\u00bfHay algo sobre el medicamento, la dosis, la v\u00eda o el horario indicados arriba que sea diferente de lo que esperaba recibir hoy?",
         staffInterpretation:
-          "Si responde S\u00ed o Necesito hablarlo: verifique la orden activa y resuelva la diferencia o pregunta con personal autorizado antes de administrar.",
+          "Si responde S\u00ed o No estoy seguro/a: verifique la orden activa y resuelva la diferencia o pregunta con personal autorizado antes de administrar.",
       },
     ),
   ),
-  localDraftRule(
+  clinicApprovedRule(
+    "universal-unwell-or-new-illness",
+    "screening",
+    bilingualCopy(
+      {
+        sectionTitle: "Since your last injection",
+        prompt:
+          "Since your last injection, have you felt unwell today - for example, fever, infection, or anything new that concerns you?",
+        staffInterpretation:
+          "If Yes or Not sure: review current symptoms and route concerns to authorized staff or a clinician as indicated. Do not use this paper answer as a diagnosis or independent clearance.",
+      },
+      {
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
+        prompt:
+          "Desde su \u00faltima inyecci\u00f3n, \u00bfse ha sentido mal hoy, por ejemplo con fiebre, una infecci\u00f3n o algo nuevo que le preocupe?",
+        staffInterpretation:
+          "Si responde S\u00ed o No estoy seguro/a: revise los s\u00edntomas actuales y dirija las inquietudes a personal autorizado o a un profesional cl\u00ednico seg\u00fan corresponda. No use esta respuesta en papel como diagn\u00f3stico ni autorizaci\u00f3n independiente.",
+      },
+    ),
+  ),
+  clinicApprovedRule(
+    "universal-dizziness-fainting-or-fall",
+    "screening",
+    bilingualCopy(
+      {
+        sectionTitle: "Since your last injection",
+        prompt:
+          "Since your last injection, have you felt dizzy or lightheaded, fainted, or had a fall or near-fall?",
+        staffInterpretation:
+          "If Yes or Not sure: have authorized staff assess the reported event and obtain clinician direction when indicated before proceeding.",
+      },
+      {
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
+        prompt:
+          "Desde su \u00faltima inyecci\u00f3n, \u00bfse ha sentido mareado/a o aturdido/a, se ha desmayado o ha tenido una ca\u00edda o casi-ca\u00edda?",
+        staffInterpretation:
+          "Si responde S\u00ed o No estoy seguro/a: haga que personal autorizado eval\u00fae el evento informado y obtenga indicaciones cl\u00ednicas cuando corresponda antes de continuar.",
+      },
+    ),
+  ),
+  clinicApprovedRule(
+    "universal-chest-breathing-or-heart-symptoms",
+    "screening",
+    bilingualCopy(
+      {
+        sectionTitle: "Since your last injection",
+        prompt:
+          "Since your last injection, have you had chest pain, trouble breathing, or a racing, pounding, or irregular heartbeat?",
+        staffInterpretation:
+          "If Yes or Not sure: use the clinic's urgent safety process and obtain clinician assessment. Do not rely on this paper form alone.",
+      },
+      {
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
+        prompt:
+          "Desde su \u00faltima inyecci\u00f3n, \u00bfha tenido dolor en el pecho, dificultad para respirar o latidos cardiacos r\u00e1pidos, fuertes o irregulares?",
+        staffInterpretation:
+          "Si responde S\u00ed o No estoy seguro/a: use el proceso urgente de seguridad de la cl\u00ednica y obtenga una evaluaci\u00f3n cl\u00ednica. No se base solo en este formulario en papel.",
+      },
+    ),
+  ),
+  clinicApprovedRule(
+    "universal-injection-site-concern",
+    "screening",
+    bilingualCopy(
+      {
+        sectionTitle: "Since your last injection",
+        prompt:
+          "At the site of your last injection, have you had pain, swelling, warmth, drainage, a growing lump, or a reaction that is getting worse or not getting better?",
+        staffInterpretation:
+          "If Yes or Not sure: have authorized staff inspect the reported site and route concerning or severe findings to a clinician.",
+      },
+      {
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
+        prompt:
+          "En el sitio de su \u00faltima inyecci\u00f3n, \u00bfha tenido dolor, hinchaz\u00f3n, calor, drenaje, un bulto que crece o una reacci\u00f3n que empeora o no mejora?",
+        staffInterpretation:
+          "Si responde S\u00ed o No estoy seguro/a: haga que personal autorizado examine el sitio informado y dirija los hallazgos preocupantes o graves a un profesional cl\u00ednico.",
+      },
+    ),
+  ),
+  clinicApprovedRule(
+    "universal-other-post-injection-problem",
+    "screening",
+    bilingualCopy(
+      {
+        sectionTitle: "Since your last injection",
+        prompt:
+          "Since your last injection, have you had any other problem that you think may be related to the medicine or injection?",
+        staffInterpretation:
+          "If Yes or Not sure: capture the concern and route it to authorized staff or a clinician for review before proceeding as indicated.",
+      },
+      {
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
+        prompt:
+          "Desde su \u00faltima inyecci\u00f3n, \u00bfha tenido alg\u00fan otro problema que cree que puede estar relacionado con el medicamento o la inyecci\u00f3n?",
+        staffInterpretation:
+          "Si responde S\u00ed o No estoy seguro/a: registre la inquietud y dir\u00edjala a personal autorizado o a un profesional cl\u00ednico para su revisi\u00f3n antes de continuar, seg\u00fan corresponda.",
+      },
+    ),
+  ),
+  clinicApprovedRule(
     "universal-allergy-or-reaction",
     "screening",
     bilingualCopy(
       {
-        sectionTitle: "Patient check-in",
+        sectionTitle: "Since your last injection",
         prompt:
-          "Do you have an allergy, reaction, or concern about a medicine or injection that you want to tell the care team about today?",
+          "Have you had a new allergy, an allergic reaction, or a change in your allergies?",
         staffInterpretation:
-          "If Yes or Need to discuss: review the reported allergy or reaction and obtain clinician direction when indicated.",
+          "If Yes or Not sure: review the reported allergy or reaction and obtain clinician direction when indicated.",
       },
       {
-        sectionTitle: "Control del paciente",
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
         prompt:
-          "\u00bfTiene una alergia, reacci\u00f3n o inquietud sobre un medicamento o inyecci\u00f3n que quiera comunicar al equipo de atenci\u00f3n hoy?",
+          "\u00bfHa tenido una alergia nueva, una reacci\u00f3n al\u00e9rgica o un cambio en sus alergias?",
         staffInterpretation:
-          "Si responde S\u00ed o Necesito hablarlo: revise la alergia o reacci\u00f3n informada y obtenga indicaciones cl\u00ednicas cuando corresponda.",
+          "Si responde S\u00ed o No estoy seguro/a: revise la alergia o reacci\u00f3n informada y obtenga indicaciones cl\u00ednicas cuando corresponda.",
       },
     ),
   ),
-  localDraftRule(
-    "universal-medication-or-health-change",
+  clinicApprovedRule(
+    "universal-medication-change",
     "screening",
     bilingualCopy(
       {
-        sectionTitle: "Patient check-in",
+        sectionTitle: "Since your last injection",
         prompt:
-          "Since your last visit, have any prescription or non-prescription medicines, supplements, allergies, or important health details changed?",
+          "Since your last injection, have you started, stopped, or changed any prescription medicines, non-prescription medicines, vitamins, or supplements?",
         staffInterpretation:
-          "If Yes or Need to discuss: review the change for active-order, interaction, contraindication, or monitoring implications.",
+          "If Yes or Not sure: review the change for active-order, interaction, contraindication, or monitoring implications.",
       },
       {
-        sectionTitle: "Control del paciente",
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
         prompt:
-          "Desde su \u00faltima visita, \u00bfhan cambiado sus medicamentos con o sin receta, suplementos, alergias o informaci\u00f3n importante de salud?",
+          "Desde su \u00faltima inyecci\u00f3n, \u00bfha comenzado, suspendido o cambiado alg\u00fan medicamento con receta, sin receta, vitamina o suplemento?",
         staffInterpretation:
-          "Si responde S\u00ed o Necesito hablarlo: revise el cambio por sus implicaciones para la orden activa, interacciones, contraindicaciones o seguimiento.",
+          "Si responde S\u00ed o No estoy seguro/a: revise el cambio por sus implicaciones para la orden activa, interacciones, contraindicaciones o seguimiento.",
       },
     ),
   ),
-  localDraftRule(
+  clinicApprovedRule(
+    "universal-new-health-event",
+    "screening",
+    bilingualCopy(
+      {
+        sectionTitle: "Since your last injection",
+        prompt:
+          "Since your last injection, have you had an emergency visit, hospital stay, new diagnosis, or other health change that you have not already discussed with the care team?",
+        staffInterpretation:
+          "If Yes or Not sure: review the health change for active-order, contraindication, or monitoring implications with the appropriate clinician.",
+      },
+      {
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
+        prompt:
+          "Desde su \u00faltima inyecci\u00f3n, \u00bfha tenido una visita de emergencia, hospitalizaci\u00f3n, diagn\u00f3stico nuevo u otro cambio de salud que todav\u00eda no ha hablado con el equipo de atenci\u00f3n?",
+        staffInterpretation:
+          "Si responde S\u00ed o No estoy seguro/a: revise el cambio de salud con el profesional adecuado por sus implicaciones para la orden activa, contraindicaciones o seguimiento.",
+      },
+    ),
+  ),
+  clinicApprovedRule(
     "universal-pregnancy-or-lactation",
     "screening",
     bilingualCopy(
       {
-        sectionTitle: "Patient check-in",
+        sectionTitle: "Since your last injection",
         prompt:
-          "If this applies to you, is there anything about pregnancy, trying to become pregnant, or breastfeeding that you want to discuss before the injection?",
+          "If this applies to you, are you pregnant, could you be pregnant, trying to become pregnant, or breastfeeding?",
         staffInterpretation:
-          "If Yes or Need to discuss: route to a clinician for medication-specific counseling and active-plan review.",
+          "If Yes or Not sure: route to a clinician for medication-specific counseling and active-plan review.",
       },
       {
-        sectionTitle: "Control del paciente",
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
         prompt:
-          "Si corresponde, \u00bfhay algo relacionado con embarazo, intento de embarazo o lactancia que quiera hablar antes de la inyecci\u00f3n?",
+          "Si corresponde, \u00bfest\u00e1 embarazada, podr\u00eda estar embarazada, est\u00e1 intentando quedar embarazada o est\u00e1 amamantando?",
         staffInterpretation:
-          "Si responde S\u00ed o Necesito hablarlo: dirija al paciente a un profesional cl\u00ednico para orientaci\u00f3n espec\u00edfica del medicamento y revisi\u00f3n del plan activo.",
+          "Si responde S\u00ed o No estoy seguro/a: dirija al paciente a un profesional cl\u00ednico para orientaci\u00f3n espec\u00edfica del medicamento y revisi\u00f3n del plan activo.",
       },
     ),
   ),
-  localDraftRule(
+  clinicApprovedRule(
     "universal-questions",
     "screening",
     bilingualCopy(
       {
-        sectionTitle: "Patient check-in",
+        sectionTitle: "Since your last injection",
         prompt:
-          "Do you have questions or concerns that you would like to discuss with the care team before the injection?",
+          "Do you have any questions or concerns you would like to discuss before the injection?",
         staffInterpretation:
-          "If Yes or Need to discuss: address the question or route it to the appropriate clinician before proceeding as needed.",
+          "If Yes or Not sure: address the question or route it to the appropriate clinician before proceeding as needed.",
       },
       {
-        sectionTitle: "Control del paciente",
+        sectionTitle: "Desde su \u00faltima inyecci\u00f3n",
         prompt:
-          "\u00bfTiene preguntas o inquietudes que quisiera hablar con el equipo de atenci\u00f3n antes de la inyecci\u00f3n?",
+          "\u00bfTiene preguntas o inquietudes que quisiera hablar antes de la inyecci\u00f3n?",
         staffInterpretation:
-          "Si responde S\u00ed o Necesito hablarlo: responda la pregunta o dir\u00edjala al profesional adecuado antes de continuar, seg\u00fan corresponda.",
+          "Si responde S\u00ed o No estoy seguro/a: responda la pregunta o dir\u00edjala al profesional adecuado antes de continuar, seg\u00fan corresponda.",
       },
     ),
   ),
@@ -314,31 +458,54 @@ const antipsychoticMedicationKeys: readonly CatalogMedicationKey[] = [
   "prolixin",
 ];
 
-const antipsychoticSafetyCopy = bilingualCopy(
+const antipsychoticNmsSafetyCopy = bilingualCopy(
   {
     sectionTitle: "Medication-specific check-in",
     prompt:
-      "Since your last dose, have you had new or worse uncontrolled movements, severe restlessness, shaking or stiffness, fever with severe stiffness, confusion, fainting, or trouble swallowing?",
+      "Since your last dose, have you had fever together with severe muscle stiffness, confusion, or heavy sweating?",
     staffInterpretation:
-      "If Yes or Need to discuss: route to a clinician or authorized staff member for review of potentially serious movement, neurologic, cardiovascular, or swallowing symptoms.",
+      "If Yes or Not sure: use the clinic's urgent safety process and obtain clinician assessment for potentially serious symptoms. Do not rely on this paper form alone.",
   },
   {
     sectionTitle: "Control espec\u00edfico del medicamento",
     prompt:
-      "Desde su \u00faltima dosis, \u00bfha tenido movimientos incontrolables, inquietud intensa, temblor o rigidez, fiebre con rigidez intensa, confusi\u00f3n, desmayo o dificultad para tragar que sean nuevos o peores?",
+      "Desde su \u00faltima dosis, \u00bfha tenido fiebre junto con rigidez muscular intensa, confusi\u00f3n o sudoraci\u00f3n intensa?",
     staffInterpretation:
-      "Si responde S\u00ed o Necesito hablarlo: dirija al paciente a un profesional cl\u00ednico o personal autorizado para revisar s\u00edntomas de movimiento, neurol\u00f3gicos, cardiovasculares o de degluci\u00f3n potencialmente graves.",
+      "Si responde S\u00ed o No estoy seguro/a: use el proceso urgente de seguridad de la cl\u00ednica y obtenga una evaluaci\u00f3n cl\u00ednica de s\u00edntomas potencialmente graves. No se base solo en este formulario en papel.",
   },
 );
 
-const antipsychoticSafetyRules = antipsychoticMedicationKeys.map((medicationKey) =>
+const antipsychoticMovementSafetyCopy = bilingualCopy(
+  {
+    sectionTitle: "Medication-specific check-in",
+    prompt:
+      "Since your last dose, have you had new or worse uncontrolled movements, shaking or tremor, severe restlessness, stiffness, or trouble swallowing?",
+    staffInterpretation:
+      "If Yes or Not sure: route to a clinician or authorized staff member for review of potentially serious movement, neurologic, or swallowing symptoms.",
+  },
+  {
+    sectionTitle: "Control espec\u00edfico del medicamento",
+    prompt:
+      "Desde su \u00faltima dosis, \u00bfha tenido movimientos incontrolables, temblor, inquietud intensa, rigidez o dificultad para tragar que sean nuevos o peores?",
+    staffInterpretation:
+      "Si responde S\u00ed o No estoy seguro/a: dirija al paciente a un profesional cl\u00ednico o personal autorizado para revisar s\u00edntomas de movimiento, neurol\u00f3gicos o de degluci\u00f3n potencialmente graves.",
+  },
+);
+
+const antipsychoticSafetyRules = antipsychoticMedicationKeys.flatMap((medicationKey) => [
   productLabelRule(
     medicationKey,
-    `medication-${medicationKey}-movement-or-serious-symptoms`,
+    `medication-${medicationKey}-fever-stiffness-or-confusion`,
     "additional",
-    antipsychoticSafetyCopy,
+    antipsychoticNmsSafetyCopy,
   ),
-);
+  productLabelRule(
+    medicationKey,
+    `medication-${medicationKey}-movement-or-swallowing`,
+    "additional",
+    antipsychoticMovementSafetyCopy,
+  ),
+]);
 
 const productSpecificRules: InjectionPatientScreenRule[] = [
   productLabelRule(
@@ -370,14 +537,14 @@ const productSpecificRules: InjectionPatientScreenRule[] = [
       {
         sectionTitle: "Medication-specific check-in",
         prompt:
-          "Today's ARISTADA INITIO is a one-time start or restart component. Does that plan, including any companion medicine, match what was explained to you?",
+          "Today's ARISTADA INITIO is a one-time start or restart component. Is anything about that plan, including any companion medicine, different from what was explained to you?",
         staffInterpretation:
           "If Yes or Need to discuss: verify the active initiation or re-initiation plan, including any companion ARISTADA or oral aripiprazole order.",
       },
       {
         sectionTitle: "Control espec\u00edfico del medicamento",
         prompt:
-          "El ARISTADA INITIO de hoy es un componente de inicio o reinicio de una sola vez. \u00bfEse plan, incluido cualquier medicamento acompa\u00f1ante, coincide con lo que le explicaron?",
+          "El ARISTADA INITIO de hoy es un componente de inicio o reinicio de una sola vez. \u00bfHay algo sobre ese plan, incluido cualquier medicamento acompa\u00f1ante, que sea diferente de lo que le explicaron?",
         staffInterpretation:
           "Si responde S\u00ed o Necesito hablarlo: verifique el plan activo de inicio o reinicio, incluida cualquier orden de ARISTADA o aripiprazol oral acompa\u00f1ante.",
       },
@@ -689,14 +856,14 @@ const aripiprazoleStartPlanRules = (["aristada", "maintena", "asimtufii"] as con
         {
           sectionTitle: "Additional medication review",
           prompt:
-            "If this is a start or restart, has the clinician or staff reviewed the active oral or one-day initiation plan with you today?",
+            "If this is a start or restart, is there anything about the active oral or one-day initiation plan that you still need to review with a clinician or staff member today?",
           staffInterpretation:
             "If Yes or Need to discuss: verify the active initiation or re-initiation pathway against the product label and the current order.",
         },
         {
           sectionTitle: "Revisi\u00f3n adicional del medicamento",
           prompt:
-            "Si este es un inicio o reinicio, \u00bfel profesional cl\u00ednico o el personal revis\u00f3 con usted hoy el plan activo de inicio oral o de un d\u00eda?",
+            "Si este es un inicio o reinicio, \u00bfhay algo sobre el plan activo de inicio oral o de un d\u00eda que todav\u00eda necesite revisar con un profesional cl\u00ednico o miembro del personal hoy?",
           staffInterpretation:
             "Si responde S\u00ed o Necesito hablarlo: verifique la v\u00eda activa de inicio o reinicio con la etiqueta del producto y la orden actual.",
         },
@@ -714,14 +881,14 @@ const paliperidoneStartPlanRules = (["sustenna", "erzofri"] as const).map((medic
       {
         sectionTitle: "Additional medication review",
         prompt:
-          "If this is a start or restart, has the clinician or staff reviewed the product-specific start or restart plan with you today?",
+          "If this is a start or restart, is there anything about the product-specific start or restart plan that you still need to review with a clinician or staff member today?",
         staffInterpretation:
           "If Yes or Need to discuss: verify the active initiation or re-initiation pathway and any tolerability requirements with authorized staff.",
       },
       {
         sectionTitle: "Revisi\u00f3n adicional del medicamento",
         prompt:
-          "Si este es un inicio o reinicio, \u00bfel profesional cl\u00ednico o el personal revis\u00f3 con usted hoy el plan espec\u00edfico de inicio o reinicio?",
+          "Si este es un inicio o reinicio, \u00bfhay algo sobre el plan espec\u00edfico de inicio o reinicio que todav\u00eda necesite revisar con un profesional cl\u00ednico o miembro del personal hoy?",
         staffInterpretation:
           "Si responde S\u00ed o Necesito hablarlo: verifique la v\u00eda activa de inicio o reinicio y cualquier requisito de tolerabilidad con personal autorizado.",
       },
@@ -739,14 +906,14 @@ const longerIntervalStartPlanRules = (["trinza", "hafyera"] as const).map((medic
       {
         sectionTitle: "Additional medication review",
         prompt:
-          "If this is a start or restart, has the clinician or staff reviewed the stabilization or transition plan for this longer-interval medication with you today?",
+          "If this is a start or restart, is there anything about the stabilization or transition plan for this longer-interval medication that you still need to review with a clinician or staff member today?",
         staffInterpretation:
           "If Yes or Need to discuss: verify the active stabilization, transition, or restart plan against current product guidance and the active order.",
       },
       {
         sectionTitle: "Revisi\u00f3n adicional del medicamento",
         prompt:
-          "Si este es un inicio o reinicio, \u00bfel profesional cl\u00ednico o el personal revis\u00f3 con usted hoy el plan de estabilizaci\u00f3n o transici\u00f3n para este medicamento de intervalo m\u00e1s largo?",
+          "Si este es un inicio o reinicio, \u00bfhay algo sobre el plan de estabilizaci\u00f3n o transici\u00f3n para este medicamento de intervalo m\u00e1s largo que todav\u00eda necesite revisar con un profesional cl\u00ednico o miembro del personal hoy?",
         staffInterpretation:
           "Si responde S\u00ed o Necesito hablarlo: verifique el plan activo de estabilizaci\u00f3n, transici\u00f3n o reinicio con la gu\u00eda actual del producto y la orden activa.",
       },
@@ -763,14 +930,14 @@ const uzedyStartPlanRule = productLabelRule(
     {
       sectionTitle: "Additional medication review",
       prompt:
-        "If this is a start, restart, or schedule change, has the clinician or staff reviewed the active UZEDY plan with you today?",
+        "If this is a start, restart, or schedule change, is there anything about the active UZEDY plan that you still need to review with a clinician or staff member today?",
       staffInterpretation:
         "If Yes or Need to discuss: verify the active start, restart, or schedule-change plan against the current order and product guidance.",
     },
     {
       sectionTitle: "Revisi\u00f3n adicional del medicamento",
       prompt:
-        "Si este es un inicio, reinicio o cambio de horario, \u00bfel profesional cl\u00ednico o el personal revis\u00f3 con usted hoy el plan activo de UZEDY?",
+        "Si este es un inicio, reinicio o cambio de horario, \u00bfhay algo sobre el plan activo de UZEDY que todav\u00eda necesite revisar con un profesional cl\u00ednico o miembro del personal hoy?",
       staffInterpretation:
         "Si responde S\u00ed o Necesito hablarlo: verifique el plan activo de inicio, reinicio o cambio de horario con la orden actual y la gu\u00eda del producto.",
     },
@@ -785,28 +952,28 @@ const initiationLikePhases: readonly InjectionClinicalPhase[] = [
 ];
 
 /**
- * These are expanded, label-informed draft discussion prompts for a new or
- * restarted treatment. They are intentionally not legal consent language.
- * An approved clinic consent must still replace the visible placeholder.
+ * These label-informed discussion prompts supplement the clinic-approved
+ * informed-consent acknowledgement for a new or restarted treatment. They
+ * support, but never replace, the clinician's medication-specific discussion.
  */
 const initiationConsentRules: InjectionPatientScreenRule[] = [
-  localDraftRule(
+  clinicApprovedRule(
     "consent-initiation-discussion-request",
     "consent",
     bilingualCopy(
       {
-        sectionTitle: "Consent discussion - draft",
+        sectionTitle: "Consent discussion",
         prompt:
-          "Before signing the draft consent area, would you like a clinician to review why this medication is being started or restarted, expected benefits, alternatives, what happens if the plan changes, and what you can do if you do not want to proceed today?",
+          "Before you decide, do you need a clinician to review why this medication is being started or restarted, expected benefits, important risks, reasonable alternatives (including no treatment), and your right to ask questions or decline today?",
         staffInterpretation:
-          "If Yes or Need to discuss: arrange the requested clinician discussion. A No response never completes consent; use only clinic-approved consent language and process.",
+          "If Yes or Not sure: arrange the requested clinician discussion. A No response never completes consent; use only clinic-approved consent language and process.",
       },
       {
-        sectionTitle: "Conversacion de consentimiento - borrador",
+        sectionTitle: "Conversaci\u00f3n de consentimiento",
         prompt:
-          "Antes de firmar el area de consentimiento de borrador, \u00bfdesea que un profesional clinico revise por que se inicia o reinicia este medicamento, beneficios esperados, alternativas, que ocurre si cambia el plan y que puede hacer si no desea continuar hoy?",
+          "Antes de decidir, \u00bfnecesita que un profesional cl\u00ednico revise por qu\u00e9 se inicia o reinicia este medicamento, beneficios esperados, riesgos importantes, alternativas razonables (incluido no recibir tratamiento) y su derecho a hacer preguntas o rechazarlo hoy?",
         staffInterpretation:
-          "Si responde Si o Necesito hablarlo: organice la conversacion clinica solicitada. Una respuesta No nunca completa el consentimiento; use solamente el texto y proceso de consentimiento aprobados por la clinica.",
+          "Si responde S\u00ed o No estoy seguro/a: organice la conversaci\u00f3n cl\u00ednica solicitada. Una respuesta No nunca completa el consentimiento; use solamente el texto y proceso de consentimiento aprobados por la cl\u00ednica.",
       },
     ),
     { medicationKeys, phases: initiationLikePhases },
@@ -818,14 +985,14 @@ const initiationConsentRules: InjectionPatientScreenRule[] = [
       "consent",
       bilingualCopy(
         {
-          sectionTitle: "Consent discussion - draft",
+          sectionTitle: "Consent discussion",
           prompt:
             "Before deciding about this start or restart, would you like a clinician to review possible sleepiness or dizziness, falls or fainting, weight or blood-sugar changes, movement symptoms, fever with severe stiffness or confusion, and what to report after treatment?",
           staffInterpretation:
             "If Yes or Need to discuss: route to the clinician for a medication-specific risk discussion. Do not substitute this checklist for approved informed-consent language.",
         },
         {
-          sectionTitle: "Conversacion de consentimiento - borrador",
+          sectionTitle: "Conversacion de consentimiento",
           prompt:
             "Antes de decidir sobre este inicio o reinicio, \u00bfdesea que un profesional clinico revise posible sueno o mareo, caidas o desmayos, cambios de peso o azucar en la sangre, sintomas de movimiento, fiebre con rigidez intensa o confusion, y que informar despues del tratamiento?",
           staffInterpretation:
@@ -842,14 +1009,14 @@ const initiationConsentRules: InjectionPatientScreenRule[] = [
       "consent",
       bilingualCopy(
         {
-          sectionTitle: "Consent discussion - draft",
+          sectionTitle: "Consent discussion",
           prompt:
             "Would you like a clinician to specifically review the possibility of new or hard-to-control urges, such as gambling, spending money, eating or binge eating, sexual urges, or other impulsive behavior?",
           staffInterpretation:
             "If Yes or Need to discuss: include aripiprazole-related compulsive or impulsive behavior in the clinician's medication-specific discussion.",
         },
         {
-          sectionTitle: "Conversacion de consentimiento - borrador",
+          sectionTitle: "Conversacion de consentimiento",
           prompt:
             "\u00bfDesea que un profesional clinico revise especificamente la posibilidad de impulsos nuevos o dificiles de controlar, como apostar, gastar dinero, comer o darse atracones, impulsos sexuales u otro comportamiento impulsivo?",
           staffInterpretation:
@@ -866,14 +1033,14 @@ const initiationConsentRules: InjectionPatientScreenRule[] = [
       "consent",
       bilingualCopy(
         {
-          sectionTitle: "Consent discussion - draft",
+          sectionTitle: "Consent discussion",
           prompt:
             "Would you like a clinician to review the product-specific start, restart, stabilization, or transition plan, including movement symptoms, dizziness or fainting, metabolic changes, and any kidney-related considerations?",
           staffInterpretation:
             "If Yes or Need to discuss: route to a clinician for the relevant paliperidone product discussion and active-plan verification.",
         },
         {
-          sectionTitle: "Conversacion de consentimiento - borrador",
+          sectionTitle: "Conversacion de consentimiento",
           prompt:
             "\u00bfDesea que un profesional clinico revise el plan especifico de inicio, reinicio, estabilizacion o transicion del producto, incluidos sintomas de movimiento, mareo o desmayo, cambios metabolicos y consideraciones relacionadas con los rinones?",
           staffInterpretation:
@@ -889,14 +1056,14 @@ const initiationConsentRules: InjectionPatientScreenRule[] = [
     "consent",
     bilingualCopy(
       {
-        sectionTitle: "Consent discussion - draft",
+        sectionTitle: "Consent discussion",
         prompt:
           "Would you like a clinician to review the UZEDY schedule and injection sites, possible injection-site lumps or itching, movement and metabolic changes, and pregnancy or breastfeeding considerations that may apply to you?",
         staffInterpretation:
           "If Yes or Need to discuss: route to a clinician for the UZEDY-specific discussion and active-plan verification.",
       },
       {
-        sectionTitle: "Conversacion de consentimiento - borrador",
+        sectionTitle: "Conversacion de consentimiento",
         prompt:
           "\u00bfDesea que un profesional clinico revise el horario y los sitios de inyeccion de UZEDY, posibles bultos o picazon en el sitio de inyeccion, cambios de movimiento y metabolicos, y consideraciones de embarazo o lactancia que se le puedan aplicar?",
         staffInterpretation:
@@ -911,14 +1078,14 @@ const initiationConsentRules: InjectionPatientScreenRule[] = [
     "consent",
     bilingualCopy(
       {
-        sectionTitle: "Consent discussion - draft",
+        sectionTitle: "Consent discussion",
         prompt:
           "Would you like a clinician to review the opioid-free requirement, sudden withdrawal risk, reduced opioid tolerance and overdose risk, serious injection-site reactions, liver symptoms, depression or suicidal thoughts, and what to do if pain treatment is needed?",
         staffInterpretation:
           "If Yes or Need to discuss: route to the clinician for a VIVITROL-specific discussion and active opioid-risk review before administration.",
       },
       {
-        sectionTitle: "Conversacion de consentimiento - borrador",
+        sectionTitle: "Conversacion de consentimiento",
         prompt:
           "\u00bfDesea que un profesional clinico revise el requisito de no usar opioides, el riesgo de abstinencia repentina, menor tolerancia a opioides y riesgo de sobredosis, reacciones graves en el sitio de inyeccion, sintomas hepaticos, depresion o pensamientos suicidas, y que hacer si se necesita tratamiento para el dolor?",
         staffInterpretation:
@@ -933,14 +1100,14 @@ const initiationConsentRules: InjectionPatientScreenRule[] = [
     "consent",
     bilingualCopy(
       {
-        sectionTitle: "Consent discussion - draft",
+        sectionTitle: "Consent discussion",
         prompt:
           "Would you like a clinician to review heart-rhythm symptoms such as fainting or palpitations, movement symptoms, fever with severe stiffness or confusion, and what to report after HALDOL DECANOATE?",
         staffInterpretation:
           "If Yes or Need to discuss: route to the clinician for a HALDOL DECANOATE-specific risk discussion and active-plan review.",
         },
       {
-        sectionTitle: "Conversacion de consentimiento - borrador",
+        sectionTitle: "Conversacion de consentimiento",
         prompt:
           "\u00bfDesea que un profesional clinico revise sintomas de ritmo cardiaco como desmayos o palpitaciones, sintomas de movimiento, fiebre con rigidez intensa o confusion, y que informar despues de HALDOL DECANOATE?",
         staffInterpretation:
@@ -955,14 +1122,14 @@ const initiationConsentRules: InjectionPatientScreenRule[] = [
     "consent",
     bilingualCopy(
       {
-        sectionTitle: "Consent discussion - draft",
+        sectionTitle: "Consent discussion",
         prompt:
           "Would you like a clinician to review possible uncontrolled movements, fever with severe stiffness or confusion, blood-pressure or heart symptoms, and what to report after PROLIXIN DECANOATE?",
         staffInterpretation:
           "If Yes or Need to discuss: route to the clinician for a PROLIXIN DECANOATE-specific risk discussion and active-plan review.",
       },
       {
-        sectionTitle: "Conversacion de consentimiento - borrador",
+        sectionTitle: "Conversacion de consentimiento",
         prompt:
           "\u00bfDesea que un profesional clinico revise posibles movimientos incontrolables, fiebre con rigidez intensa o confusion, sintomas de presion arterial o cardiacos, y que informar despues de PROLIXIN DECANOATE?",
         staffInterpretation:
@@ -984,14 +1151,14 @@ const conditionalRules: InjectionPatientScreenRule[] = medicationKeys.flatMap((m
         {
           sectionTitle: "Additional medication review",
           prompt:
-            "The selected dose or treatment phase needs an additional plan review. Does the plan shown above match what you and your clinician discussed?",
+            "The selected dose or treatment phase needs an additional plan review. Is anything about the plan shown above different from what you and your clinician discussed?",
           staffInterpretation:
             "Review the selected dose and phase against the active order and current product-specific plan. This paper response never overrides existing validation.",
         },
         {
           sectionTitle: "Revisi\u00f3n adicional del medicamento",
           prompt:
-            "La dosis o fase de tratamiento seleccionada necesita una revisi\u00f3n adicional del plan. \u00bfEl plan indicado arriba coincide con lo que habl\u00f3 con su profesional cl\u00ednico?",
+            "La dosis o fase de tratamiento seleccionada necesita una revisi\u00f3n adicional del plan. \u00bfHay algo sobre el plan indicado arriba que sea diferente de lo que habl\u00f3 con su profesional cl\u00ednico?",
           staffInterpretation:
             "Revise la dosis y fase seleccionadas con la orden activa y el plan actual espec\u00edfico del producto. Esta respuesta en papel nunca reemplaza la validaci\u00f3n existente.",
         },
@@ -1004,23 +1171,23 @@ const conditionalRules: InjectionPatientScreenRule[] = medicationKeys.flatMap((m
   );
 });
 
-const otherMedicationRule: InjectionPatientScreenRule = localDraftRule(
+const otherMedicationRule: InjectionPatientScreenRule = clinicApprovedRule(
   "other-medication-approved-form-required",
   "additional",
   bilingualCopy(
     {
       sectionTitle: "Medication-specific form required",
       prompt:
-        "No product-specific screening or consent content is available for a medication entered as Other. Staff must use the clinic-approved medication-specific form before relying on this draft paper form.",
+        "No product-specific screening or consent content is available for a medication entered as Other. Staff must use the clinic-approved medication-specific form before using this universal form for clinical screening or consent.",
       staffInterpretation:
-        "Do not use this universal draft as product-specific clinical screening or consent. Obtain the approved external form and follow the active order.",
+        "Do not use this universal form as product-specific clinical screening or consent. Obtain the approved external form and follow the active order.",
     },
     {
       sectionTitle: "Se requiere un formulario espec\u00edfico del medicamento",
       prompt:
-        "No hay contenido espec\u00edfico de evaluaci\u00f3n o consentimiento para un medicamento registrado como Otro. El personal debe usar el formulario espec\u00edfico del medicamento aprobado por la cl\u00ednica antes de basarse en este formulario en papel de borrador.",
+        "No hay contenido espec\u00edfico de evaluaci\u00f3n o consentimiento para un medicamento registrado como Otro. El personal debe usar el formulario espec\u00edfico del medicamento aprobado por la cl\u00ednica antes de usar este formulario universal para evaluaci\u00f3n cl\u00ednica o consentimiento.",
       staffInterpretation:
-        "No use este borrador universal como evaluaci\u00f3n cl\u00ednica o consentimiento espec\u00edfico del producto. Obtenga el formulario externo aprobado y siga la orden activa.",
+        "No use este formulario universal como evaluaci\u00f3n cl\u00ednica o consentimiento espec\u00edfico del producto. Obtenga el formulario externo aprobado y siga la orden activa.",
     },
   ),
   { medicationKeys: ["other"] },
@@ -1028,9 +1195,8 @@ const otherMedicationRule: InjectionPatientScreenRule = localDraftRule(
 
 /**
  * Explicit bilingual content inventory. Every rule contains its source,
- * revision, response pattern, and staff interpretation. Future clinic-approved
- * wording replaces these draft strings; no runtime translation or external
- * lookup is used.
+ * revision, response pattern, and staff interpretation. No runtime
+ * translation or external lookup is used.
  */
 export const INJECTION_PATIENT_SCREEN_RULES: readonly InjectionPatientScreenRule[] = [
   ...universalRules,
@@ -1048,17 +1214,16 @@ export const INJECTION_PATIENT_SCREEN_RULES: readonly InjectionPatientScreenRule
 const labelsFor = (language: PatientScreenLanguage): InjectionPatientScreenLabels =>
   language === "es"
     ? {
-        title: "CONTROL PREVIO A LA INYECCI\u00d3N",
-        subtitle: "Evaluaci\u00f3n del paciente y consentimiento - formulario en papel de borrador",
-        draftMarker: "BORRADOR - NO APTO PARA USO CL\u00cdNICO",
+        title: "EVALUACI\u00d3N PREVIA A LA INYECCI\u00d3N Y CONSENTIMIENTO",
+        subtitle: "Formulario en papel de evaluaci\u00f3n y consentimiento del paciente",
         workstation: "IPMG MA WORKSTATION / COPIA DE CL\u00cdNICA",
-        formLabel: "FORMULARIO EN BORRADOR",
+        formLabel: "FORMULARIO DEL PACIENTE",
         orderInformation: "PACIENTE / INFORMACI\u00d3N DE LA ORDEN",
-        patientCheckIn: "CONTROL DEL PACIENTE",
+        patientCheckIn: "DESDE SU \u00daLTIMA INYECCI\u00d3N",
         responseInstruction:
-          "MARQUE UNA RESPUESTA PARA CADA PREGUNTA. SI RESPONDE S\u00cd O NECESITO HABLARLO, HABLE CON EL PERSONAL ANTES DE LA INYECCI\u00d3N.",
+          "MARQUE UNA RESPUESTA PARA CADA PREGUNTA. SI NO EST\u00c1 SEGURO/A, MARQUE NO ESTOY SEGURO/A. UNA RESPUESTA S\u00cd O NO ESTOY SEGURO/A SIGNIFICA QUE EL PERSONAL LA REVISAR\u00c1; POR S\u00cd SOLA NO DECIDE SI SE ADMINISTRA EL TRATAMIENTO.",
         staffResponseNote:
-          "Una respuesta S\u00cd o Necesito hablarlo requiere revisi\u00f3n del personal. No aprueba ni suspende la inyecci\u00f3n por s\u00ed sola.",
+          "Una respuesta S\u00cd o No estoy seguro/a requiere revisi\u00f3n del personal. No aprueba ni suspende la inyecci\u00f3n por s\u00ed sola.",
         patient: "Paciente",
         dateOfBirth: "Fecha de nacimiento",
         medication: "Medicamento",
@@ -1069,10 +1234,10 @@ const labelsFor = (language: PatientScreenLanguage): InjectionPatientScreenLabel
         date: "Fecha",
         yes: "S\u00ed",
         no: "No",
-        discuss: "Necesito hablarlo",
-        consentPlaceholderTitle: "SE REQUIERE TEXTO DE CONSENTIMIENTO APROBADO POR LA CL\u00cdNICA",
-        consentPlaceholderBody:
-          "BORRADOR SOLAMENTE: este prototipo no documenta consentimiento. El texto cl\u00ednico/legal aprobado y la traducci\u00f3n final al espa\u00f1ol deben reemplazar este recuadro antes del uso cl\u00ednico.",
+        notSure: "No estoy seguro/a",
+        consentTitle: "CONSENTIMIENTO INFORMADO",
+        consentBody:
+          "He tenido la oportunidad de hablar sobre el motivo del medicamento, los beneficios esperados, los riesgos y efectos secundarios importantes, las alternativas razonables (incluido no recibir tratamiento) y la dosis, v\u00eda y horario planificados. Tuve la oportunidad de hacer preguntas y recib\u00ed respuestas que entiendo. Puedo rechazar o posponer el tratamiento hoy. Acepto voluntariamente recibir el medicamento descrito arriba.",
         patientSignature: "Firma del paciente / representante legal",
         patientDate: "Fecha",
         staffReviewer: "Firma del revisor del personal",
@@ -1082,17 +1247,16 @@ const labelsFor = (language: PatientScreenLanguage): InjectionPatientScreenLabel
         noProductSource: "No hay fuente de producto para un medicamento registrado como Otro.",
       }
     : {
-        title: "PRE-INJECTION PATIENT CHECK-IN",
-        subtitle: "Patient screening & consent - draft paper form",
-        draftMarker: "DRAFT - NOT FOR CLINICAL USE",
+        title: "PRE-INJECTION SCREENING & CONSENT",
+        subtitle: "Patient screening and consent paper form",
         workstation: "IPMG MA WORKSTATION / CLINIC COPY",
-        formLabel: "DRAFT FORM",
+        formLabel: "PATIENT FORM",
         orderInformation: "PATIENT / ORDER INFORMATION",
-        patientCheckIn: "PATIENT CHECK-IN",
+        patientCheckIn: "SINCE YOUR LAST INJECTION",
         responseInstruction:
-          "MARK ONE RESPONSE FOR EACH QUESTION. IF YOU ANSWER YES OR NEED TO DISCUSS, TALK WITH STAFF BEFORE THE INJECTION.",
+          "MARK ONE RESPONSE FOR EACH QUESTION. IF YOU ARE UNSURE, MARK NOT SURE. A YES OR NOT SURE ANSWER MEANS STAFF WILL REVIEW IT; IT DOES NOT BY ITSELF DECIDE WHETHER TREATMENT IS GIVEN.",
         staffResponseNote:
-          "A Yes or Need to discuss response requires staff review. It does not independently approve or stop the injection.",
+          "A Yes or Not sure response requires staff review. It does not independently approve or stop the injection.",
         patient: "Patient",
         dateOfBirth: "Date of birth",
         medication: "Medication",
@@ -1103,10 +1267,10 @@ const labelsFor = (language: PatientScreenLanguage): InjectionPatientScreenLabel
         date: "Date",
         yes: "Yes",
         no: "No",
-        discuss: "Need to discuss",
-        consentPlaceholderTitle: "CLINIC-APPROVED CONSENT LANGUAGE REQUIRED",
-        consentPlaceholderBody:
-          "DRAFT ONLY: this prototype does not document consent. Approved clinical/legal language and final Spanish translation must replace this box before clinical use.",
+        notSure: "Not sure",
+        consentTitle: "INFORMED CONSENT",
+        consentBody:
+          "I have had the opportunity to discuss the reason for the medication, expected benefits, important risks and side effects, reasonable alternatives (including no treatment), and the planned dose, route, and schedule. I had an opportunity to ask questions and received answers I understand. I may decline or postpone treatment today. I voluntarily agree to receive the medication described above.",
         patientSignature: "Patient / legal representative signature",
         patientDate: "Date",
         staffReviewer: "Staff reviewer signature",
@@ -1174,7 +1338,7 @@ export const buildInjectionPatientScreenDocument = (
   const labels = labelsFor(language);
   const phase = injectionClinicalPhaseForReason(encounter.reason);
   const medicationKey = encounter.medicationKey;
-  const showsDraftConsent = medicationKey !== "other" && initiationLikePhases.includes(phase);
+  const showsConsent = medicationKey !== "other" && initiationLikePhases.includes(phase);
   const reference =
     medicationKey && medicationKey !== "other"
       ? INJECTION_CLINICAL_REFERENCE_BUNDLE.medications[medicationKey]
@@ -1203,7 +1367,7 @@ export const buildInjectionPatientScreenDocument = (
 
   return {
     language,
-    reviewStatus: "draft",
+    reviewStatus: "approved",
     labels,
     metadata: {
       patientName: blank(encounter.patient.name),
@@ -1219,7 +1383,7 @@ export const buildInjectionPatientScreenDocument = (
       const section = sections.get(sectionId);
       return section ? [section] : [];
     }),
-    showsDraftConsent,
+    showsConsent,
     ...(reference ? { source: reference.source } : {}),
     hasProductSpecificContent: Boolean(reference),
   };

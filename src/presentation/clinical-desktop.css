@@ -3583,10 +3583,9 @@ input[type="radio"]:disabled {
 }
 
 /*
- * Draft patient screening is deliberately a new typed print surface, rather
- * than a new legacy renderer. Keep every other staged surface hidden and use
- * a compact paper form that remains legible on a Letter page; a second page is
- * available only when the selected medication adds a required review block.
+ * Patient screening is a typed print surface, rather than a new legacy
+ * renderer. Keep every other staged surface hidden and use a compact Letter
+ * form; initiation-only consent discussion may continue on a second page.
  */
 @media print {
   #injPatientScreenSheet {
@@ -3654,20 +3653,6 @@ input[type="radio"]:disabled {
     font-size: 8.4pt;
   }
 
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-draft-marker,
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-footer-marker {
-    border: 1.5px solid #111;
-    padding: 4px 6px;
-    font-size: 7.8pt;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-align: center;
-  }
-
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-draft-marker {
-    flex: 0 0 1.62in;
-  }
-
   body.print-inj-patient-screen #injPatientScreenSheet .ips-metadata {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3695,7 +3680,7 @@ input[type="radio"]:disabled {
   }
 
   body.print-inj-patient-screen #injPatientScreenSheet .ips-section,
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder,
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent,
   body.print-inj-patient-screen #injPatientScreenSheet .ips-signatures {
     break-inside: avoid;
   }
@@ -3730,13 +3715,13 @@ input[type="radio"]:disabled {
     font-size: 8.6pt;
   }
 
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder {
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent {
     margin-top: 9px;
     padding: 7px 8px;
     border: 1.5px solid #111;
   }
 
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder p {
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent p {
     margin: 0;
     font-size: 8.6pt;
   }
@@ -3771,27 +3756,6 @@ input[type="radio"]:disabled {
     text-decoration: none;
   }
 
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-footer-marker {
-    display: none;
-  }
-
-  /* Chromium repeats a fixed body pseudo-element on every printed page. Keep
-     the repeat marker outside the sheet's measured content box so it cannot
-     create horizontal clipping on a wide desktop print viewport. */
-  body.print-inj-patient-screen::after {
-    position: fixed;
-    right: 0.35in;
-    bottom: 0.2in;
-    z-index: 1;
-    content: "DRAFT / BORRADOR — NOT FOR CLINICAL USE / NO APTO PARA USO CLÍNICO";
-    border: 1px solid #111;
-    padding: 3px 5px;
-    color: #111;
-    background: #fff;
-    font: 700 6.5pt/1 Arial, Helvetica, sans-serif;
-    letter-spacing: 0.025em;
-  }
-
   @media (max-width: 720px) {
     body.print-inj-patient-screen #injPatientScreenSheet .ips-metadata {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3800,10 +3764,10 @@ input[type="radio"]:disabled {
 }
 
 /*
- * MEDITECH-style draft patient screening override. It intentionally follows
+ * MEDITECH-style patient screening override. It intentionally follows
  * the familiar printout's sparse type, thin blue rules, and plain write-in
- * areas. The base draft rules above still own print-root isolation and the
- * repeated draft marker; this block only changes the paper presentation.
+ * areas. The base print rules above still own print-root isolation; this
+ * block only changes the paper presentation.
  */
 @media print {
   body.print-inj-patient-screen #injPatientScreenSheet {
@@ -3829,8 +3793,7 @@ input[type="radio"]:disabled {
 
   body.print-inj-patient-screen #injPatientScreenSheet .ips-topline,
   body.print-inj-patient-screen #injPatientScreenSheet .ips-info-line,
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-source,
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-footer-marker {
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-source {
     display: flex !important;
     justify-content: space-between !important;
     gap: 12px !important;
@@ -3865,19 +3828,6 @@ input[type="radio"]:disabled {
     font-size: 6.9pt !important;
     line-height: 1.16 !important;
     text-align: center !important;
-  }
-
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-draft-marker {
-    display: block !important;
-    margin: 5px 0 0 !important;
-    padding: 0 !important;
-    color: #8b0000 !important;
-    background: transparent !important;
-    border: 0 !important;
-    font-size: 7pt !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.04em !important;
-    text-align: right !important;
   }
 
   body.print-inj-patient-screen #injPatientScreenSheet .ips-bar,
@@ -3944,6 +3894,11 @@ input[type="radio"]:disabled {
     break-inside: auto !important;
   }
 
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-section-consent {
+    break-before: page !important;
+    margin-top: 0 !important;
+  }
+
   body.print-inj-patient-screen #injPatientScreenSheet .ips-section-heading {
     margin-bottom: 0 !important;
     color: #0000aa !important;
@@ -3955,7 +3910,7 @@ input[type="radio"]:disabled {
 
   body.print-inj-patient-screen #injPatientScreenSheet .ips-question {
     display: grid !important;
-    grid-template-columns: 0.29in minmax(0, 1fr) 1.48in !important;
+    grid-template-columns: 0.29in minmax(0, 1fr) 1.58in !important;
     column-gap: 6px !important;
     margin: 0 !important;
     padding: 5px 4px 4px !important;
@@ -3963,6 +3918,13 @@ input[type="radio"]:disabled {
     background: transparent !important;
     border-bottom: 1px dotted #77858e !important;
     break-inside: avoid !important;
+  }
+
+  body.print-inj-patient-screen
+    #injPatientScreenSheet
+    .ips-page[data-patient-screen-language="es"]
+    .ips-question {
+    grid-template-columns: 0.29in minmax(0, 1fr) 1.78in !important;
   }
 
   body.print-inj-patient-screen #injPatientScreenSheet .ips-question-number {
@@ -3978,8 +3940,8 @@ input[type="radio"]:disabled {
 
   body.print-inj-patient-screen #injPatientScreenSheet .ips-question-prompt {
     color: #111 !important;
-    font-size: 7.6pt !important;
-    line-height: 1.2 !important;
+    font-size: 7.9pt !important;
+    line-height: 1.22 !important;
   }
 
   body.print-inj-patient-screen #injPatientScreenSheet .ips-answer-options {
@@ -3990,7 +3952,7 @@ input[type="radio"]:disabled {
     gap: 2px 5px !important;
     padding-top: 1px !important;
     color: #111 !important;
-    font-size: 6.5pt !important;
+    font-size: 6.7pt !important;
     line-height: 1.2 !important;
   }
 
@@ -4032,28 +3994,28 @@ input[type="radio"]:disabled {
     border-bottom: 1px dotted #4d5961 !important;
   }
 
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder {
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent {
     margin: 0 5px 6px !important;
     padding: 5px 6px !important;
-    color: #570000 !important;
+    color: #111 !important;
     background: transparent !important;
-    border: 1.5px solid #8b0000 !important;
+    border: 1.5px solid #183a69 !important;
     break-inside: avoid !important;
   }
 
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder h2 {
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent h2 {
     margin: 0 0 2px !important;
     padding: 0 !important;
-    color: #8b0000 !important;
+    color: #0000aa !important;
     background: transparent !important;
     border: 0 !important;
     font-size: 7.2pt !important;
     letter-spacing: 0.015em !important;
   }
 
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent-placeholder p {
+  body.print-inj-patient-screen #injPatientScreenSheet .ips-consent p {
     margin: 0 !important;
-    color: #570000 !important;
+    color: #111 !important;
     background: transparent !important;
     font-size: 6.7pt !important;
     line-height: 1.2 !important;
@@ -4105,24 +4067,6 @@ input[type="radio"]:disabled {
   body.print-inj-patient-screen #injPatientScreenSheet .ips-source a {
     color: #182f4d !important;
     text-decoration: none !important;
-  }
-
-  body.print-inj-patient-screen #injPatientScreenSheet .ips-footer-marker {
-    margin-top: 4px !important;
-    color: #8b0000 !important;
-    background: transparent !important;
-    border: 0 !important;
-    font-size: 6.1pt !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.03em !important;
-  }
-
-  body.print-inj-patient-screen::after {
-    content: "DRAFT / BORRADOR - NOT FOR CLINICAL USE / NO APTO PARA USO CLINICO" !important;
-    color: #8b0000 !important;
-    border-color: #8b0000 !important;
-    font-family: "Courier New", Courier, monospace !important;
-    font-size: 6.2pt !important;
   }
 
   @media (max-width: 720px) {
