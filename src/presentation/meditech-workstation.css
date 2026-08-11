@@ -2479,14 +2479,7 @@
   }
 
   .cd2004-worklist-sheet {
-    background:
-      repeating-linear-gradient(
-        to bottom,
-        #fff 0,
-        #fff 20px,
-        #e5e7f2 20px,
-        #e5e7f2 21px
-      );
+    background: #fff;
   }
 
   .cd2004-worklist-header h1 {
