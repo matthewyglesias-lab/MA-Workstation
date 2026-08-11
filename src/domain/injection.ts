@@ -141,6 +141,9 @@ export interface InjectionAdministrationDetails {
   exceptionRecipient?: string;
   exceptionTime?: string;
   exceptionOutcome?: string;
+  /** Staff's brief acknowledgement of a late-dose warning; never blocks finalizing. */
+  lateDoseReview?: "" | "provider-authorized" | "other";
+  lateDoseReviewNote?: string;
   /** Product-reference provenance; the plain traceability NDC remains canonical documentation. */
   ndcSelection?: InjectionNdcSelectionMetadata;
   /** Calculated/manual origin of the editable next-dose date. */
@@ -196,6 +199,8 @@ export interface InjectionTimingEvaluation {
   earliestDate?: string;
   latestDate?: string;
   cadenceLabel?: string;
+  /** True only for a warning specifically because the dose was given after the window, not before it or for another reason. */
+  late: boolean;
   message: string;
 }
 
@@ -220,6 +225,8 @@ export interface InjectionGuidanceCard {
 export interface InjectionEvaluationOutput {
   medication: InjectionMedication | null;
   timing: InjectionTimingEvaluation;
+  /** True when the dose was given after its safe/allowed window - prompts the late-dose review. */
+  lateDoseWarning: boolean;
   allowedRoutes: string[];
   allowedSites: string[];
   recommendedSite: string;
@@ -820,6 +827,7 @@ const evaluateTiming = (
       daysSincePrior: null,
       earliestDay: null,
       latestDay: null,
+      late: false,
       message: "One-time initiation/loading dose — routine interval spacing does not apply.",
     };
   }
@@ -829,6 +837,7 @@ const evaluateTiming = (
       daysSincePrior: null,
       earliestDay: null,
       latestDay: null,
+      late: false,
       message: "Set a dosing interval to evaluate timing.",
     };
   }
@@ -838,6 +847,7 @@ const evaluateTiming = (
       daysSincePrior: null,
       earliestDay: null,
       latestDay: null,
+      late: false,
       message:
         medication.timingMode === "orderVerify"
           ? "Enter the prior injection date and verify timing against the active order and current product information."
@@ -854,6 +864,7 @@ const evaluateTiming = (
       daysSincePrior: null,
       earliestDay: null,
       latestDay: null,
+      late: false,
       message: "Verify the prior-dose and administration dates.",
     };
   }
@@ -863,6 +874,7 @@ const evaluateTiming = (
       daysSincePrior,
       earliestDay: null,
       latestDay: null,
+      late: false,
       message: "The administration date is before the prior-dose date — verify the dates.",
     };
   }
@@ -872,6 +884,7 @@ const evaluateTiming = (
       daysSincePrior,
       earliestDay: null,
       latestDay: null,
+      late: false,
       message: `${daysSincePrior} day(s) since the prior dose. Verify timing and any re-initiation decision against the active provider order and current product information.`,
     };
   }
@@ -885,6 +898,7 @@ const evaluateTiming = (
       daysSincePrior,
       earliestDay,
       latestDay,
+      late: false,
       message: `Given ${daysSincePrior} day(s) after the prior dose — earlier than the displayed window (about ${earliestDay}–${latestDay} days). Confirm provider direction.`,
     };
   }
@@ -894,6 +908,7 @@ const evaluateTiming = (
       daysSincePrior,
       earliestDay,
       latestDay,
+      late: false,
       message: `Given ${daysSincePrior} day(s) after the prior dose — within the displayed window (about ${earliestDay}–${latestDay} days).`,
     };
   }
@@ -903,6 +918,7 @@ const evaluateTiming = (
     daysSincePrior,
     earliestDay,
     latestDay,
+    late: true,
     message: `Given ${daysSincePrior} day(s) after the prior dose — beyond the displayed window (about ${earliestDay}–${latestDay} days).${
       farLate ? " A gap this long may require re-initiation/loading." : ""
     } Confirm timing and dosing with the provider.`,
@@ -929,6 +945,7 @@ const evaluateTimingWithCadence = (
       earliestDate: "",
       latestDate: "",
       cadenceLabel: "one-time",
+      late: false,
       message: "One-time initiation/loading dose; routine interval spacing does not apply.",
     };
   }
@@ -942,6 +959,7 @@ const evaluateTimingWithCadence = (
       earliestDate: "",
       latestDate: "",
       cadenceLabel: "",
+      late: false,
       message: "Set a dosing interval to evaluate timing.",
     };
   }
@@ -957,6 +975,7 @@ const evaluateTimingWithCadence = (
       earliestDate: "",
       latestDate: "",
       cadenceLabel: cadence.label,
+      late: false,
       message:
         medication.timingMode === "orderVerify"
           ? "Enter the prior injection date and verify timing against the active order and current product information."
@@ -983,6 +1002,7 @@ const evaluateTimingWithCadence = (
       earliestDate: "",
       latestDate: "",
       cadenceLabel: cadence.label,
+      late: false,
       message: "Verify the prior-dose and administration dates.",
     };
   }
@@ -996,6 +1016,7 @@ const evaluateTimingWithCadence = (
       earliestDate: "",
       latestDate: "",
       cadenceLabel: cadence.label,
+      late: false,
       message: "The administration date is before the prior-dose date; verify the dates.",
     };
   }
@@ -1009,6 +1030,7 @@ const evaluateTimingWithCadence = (
       earliestDate: "",
       latestDate: "",
       cadenceLabel: cadence.label,
+      late: false,
       message: `${daysSincePrior} day(s) since the prior dose. Expected ${cadence.label} date: ${expectedDate}. Verify timing and any re-initiation decision against the active provider order and current product information.`,
     };
   }
@@ -1028,6 +1050,7 @@ const evaluateTimingWithCadence = (
       earliestDate,
       latestDate,
       cadenceLabel: cadence.label,
+      late: false,
       message: "Verify the prior-dose date before using displayed timing guidance.",
     };
   }
@@ -1041,6 +1064,7 @@ const evaluateTimingWithCadence = (
       earliestDate,
       latestDate,
       cadenceLabel: cadence.label,
+      late: false,
       message: `Given ${daysSincePrior} day(s) after the prior dose; earlier than the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}). Confirm provider direction.`,
     };
   }
@@ -1054,6 +1078,7 @@ const evaluateTimingWithCadence = (
       earliestDate,
       latestDate,
       cadenceLabel: cadence.label,
+      late: false,
       message: `Given ${daysSincePrior} day(s) after the prior dose; within the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}).`,
     };
   }
@@ -1071,6 +1096,7 @@ const evaluateTimingWithCadence = (
     earliestDate,
     latestDate,
     cadenceLabel: cadence.label,
+    late: true,
     message: `Given ${daysSincePrior} day(s) after the prior dose; beyond the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}).${
       farLate ? " A gap this long may require re-initiation/loading." : ""
     } Confirm timing and dosing with the provider.`,
@@ -1094,6 +1120,7 @@ const verificationSatisfied = (
 const evaluateInitiation = (
   encounter: InjectionEncounter,
   stops: ClinicalIssue[],
+  warnings: ClinicalIssue[],
   calculatedDates: Record<string, string>,
   referenceDate: string,
 ): void => {
@@ -1389,9 +1416,14 @@ const evaluateInitiation = (
       encounter.administrationDate &&
       (encounter.administrationDate < window.early || encounter.administrationDate > window.late)
     ) {
-      stops.push(
+      // A Day 8 dose outside the window is reviewable, not blocking - matching
+      // every other late-dose case in this file, staff must still be able to
+      // finalize and lock the record with a soft warning rather than being
+      // stuck in an unfinishable draft. The missed-dose/re-initiation plan is
+      // a provider decision that happens alongside charting, not before it.
+      warnings.push(
         issue(
-          "stop",
+          "warning",
           "initiation.sustenna.outside-window",
           "This Day 8 administration date is outside the calculated ±4-day window. Use the current missed-dose/re-initiation plan and provider/pharmacist direction.",
           "administrationDate",
@@ -2003,6 +2035,7 @@ export const InjectionEngine: ClinicalEngine<
       daysSincePrior: null,
       earliestDay: null,
       latestDay: null,
+      late: false,
       message: "Select a medication to evaluate timing.",
     };
     let allowedRoutes: string[] = [];
@@ -2073,7 +2106,8 @@ export const InjectionEngine: ClinicalEngine<
             ),
           );
         }
-        if (!encounter.route.trim()) {
+        const enteredRoute = encounter.route.trim();
+        if (!enteredRoute) {
           stops.push(
             issue(
               "stop",
@@ -2083,7 +2117,13 @@ export const InjectionEngine: ClinicalEngine<
               "administration",
             ),
           );
-        } else if (!rule.routes.includes(encounter.route)) {
+        } else if (
+          // Route is free-typed (it's pre-filled from the catalog but staff can
+          // retype it), unlike site's fixed tile list - compare case/whitespace
+          // -insensitively so re-typing the same route in different casing
+          // ("im" vs "IM") doesn't produce an unresolvable stop.
+          !rule.routes.some((allowed) => allowed.toLowerCase() === enteredRoute.toLowerCase())
+        ) {
           stops.push(
             issue(
               "stop",
@@ -2326,6 +2366,7 @@ export const InjectionEngine: ClinicalEngine<
           evaluateInitiation(
             encounter,
             stops,
+            warnings,
             calculatedDates,
             encounter.administrationDate || context.today || localIsoDate(),
           );
@@ -2370,6 +2411,15 @@ export const InjectionEngine: ClinicalEngine<
 
     const uniqueStops = uniqueIssues(stops);
     const uniqueWarnings = uniqueIssues(warnings);
+    // Both the routine interval window and the Sustenna Day 8 window can
+    // produce a late-dose warning; either one prompts the same brief review.
+    const sustennaLateWarning = Boolean(
+      encounter.initiation?.protocol === "sustenna-day8" &&
+        calculatedDates.sustennaDay8Late &&
+        encounter.administrationDate &&
+        encounter.administrationDate > calculatedDates.sustennaDay8Late,
+    );
+    const lateDoseWarning = Boolean((timing.state === "warning" && timing.late) || sustennaLateWarning);
     const administrationDocumented =
       dispositionKind === "administered" && uniqueStops.length === 0;
     const handoffReady =
@@ -2403,6 +2453,7 @@ export const InjectionEngine: ClinicalEngine<
       output: {
         medication,
         timing,
+        lateDoseWarning,
         allowedRoutes,
         allowedSites,
         recommendedSite,

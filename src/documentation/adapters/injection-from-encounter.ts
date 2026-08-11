@@ -337,6 +337,16 @@ export function injectionEncounterToDocumentationInput(
   const wasteWitness = details.waste ? trimmed(details.wasteWitness) : "";
   const hasIssue = Boolean(details.productIssue);
   const hasException = Boolean(details.administrationException);
+  // Gated on the dose still being late, not merely on the field being set -
+  // an edited-back-to-on-time date must not carry a stale "reviewed as late"
+  // note forward into the chart.
+  const lateDoseReviewText = evaluation.output.lateDoseWarning
+    ? details.lateDoseReview === "provider-authorized"
+      ? "Late-dose review: reviewed with provider, administration authorized."
+      : details.lateDoseReview === "other"
+        ? `Late-dose review: ${trimmed(details.lateDoseReviewNote) || "other"}.`
+        : ""
+    : "";
 
   return {
     chiefComplaint: {
@@ -353,7 +363,10 @@ export function injectionEncounterToDocumentationInput(
       allergiesReview: trimmed(encounter.allergies) || undefined,
       previousDoseDate: encounter.priorDoseDate ? formatIsoDate(encounter.priorDoseDate) : undefined,
       previousSite: trimmed(encounter.priorSite) || undefined,
-      timingReview: encounter.priorDoseDate ? evaluation.output.timing.message || undefined : undefined,
+      timingReview: encounter.priorDoseDate
+        ? [evaluation.output.timing.message, lateDoseReviewText].filter(Boolean).join(" ") ||
+          undefined
+        : undefined,
       vitals: {
         bloodPressure: trimmed(encounter.vitals?.bp) || undefined,
         heartRate: trimmed(encounter.vitals?.hr) || undefined,

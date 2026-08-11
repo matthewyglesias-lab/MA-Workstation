@@ -46,6 +46,7 @@
               "daysSincePrior": null,
               "earliestDay": null,
               "latestDay": null,
+              "late": false,
               "message": "Enter the prior injection date to evaluate the dosing window."
             },
             "allowedRoutes": [
@@ -122,6 +123,7 @@
               "daysSincePrior": null,
               "earliestDay": null,
               "latestDay": null,
+              "late": false,
               "message": "Enter the prior injection date and verify timing against the active order and current product information."
             },
             "allowedRoutes": [

@@ -2479,14 +2479,7 @@
   }
 
   .cd2004-worklist-sheet {
-    background:
-      repeating-linear-gradient(
-        to bottom,
-        #fff 0,
-        #fff 20px,
-        #e5e7f2 20px,
-        #e5e7f2 21px
-      );
+    background: #fff;
   }
 
   .cd2004-worklist-header h1 {
@@ -2572,6 +2565,24 @@
   .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > select,
   .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > textarea,
   .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete .wfp-select-group select {
+    background: #fff0b4;
+  }
+
+  /* Same treatment, same reasoning, as the injection workflow above: UDS has
+     just as many always-required fields, so a persistent amber fill on every
+     one of them (most of the specimen tab) would be exactly the noise that
+     override was built to avoid. */
+  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required:not(.is-incomplete) > input,
+  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required:not(.is-incomplete) > select,
+  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required:not(.is-incomplete) > textarea,
+  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required:not(.is-incomplete) .wfp-select-group select {
+    background: #fff;
+  }
+
+  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete > input,
+  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete > select,
+  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete > textarea,
+  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete .wfp-select-group select {
     background: #fff0b4;
   }
 
