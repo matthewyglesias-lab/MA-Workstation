@@ -96,6 +96,41 @@ describe("InjectionEngine", () => {
     expect(result.output.lateDoseWarning).toBe(true);
   });
 
+  it("targets the Day 8 date for a Sustenna Day 1 initiation, not the ordered maintenance interval", () => {
+    const encounter = validInjection();
+    encounter.administrationDate = "2026-01-01";
+    encounter.nextDoseDate = "2026-01-08";
+    encounter.initiation = {
+      ...emptyInjectionInitiation(),
+      protocol: "sustenna-day1",
+      planVerified: true,
+      sustennaOrder: "standard",
+    };
+
+    const result = InjectionEngine.evaluate(encounter, { today: "2026-01-01" });
+
+    // q4wk (the ordered maintenance interval) would put this 28 days out;
+    // the actual next dose in the loading regimen is Day 8, 7 days out.
+    expect(result.calculatedDates.expectedNextDoseDate).toBe("2026-01-08");
+    expect(result.output.expectedNextDoseDate).toBe("2026-01-08");
+    expect(result.stops).toEqual([]);
+  });
+
+  it("does not auto-calculate a follow-up date on a provider-directed re-initiation path", () => {
+    const encounter = validInjection();
+    encounter.initiation = {
+      ...emptyInjectionInitiation(),
+      protocol: "sustenna-provider",
+      planVerified: true,
+      providerNote: "Provider-directed restart per current PI; see order.",
+    };
+
+    const result = InjectionEngine.evaluate(encounter, { today: "2026-01-08" });
+
+    expect(result.calculatedDates.expectedNextDoseDate).toBeUndefined();
+    expect(result.output.expectedNextDoseDate).toBe("");
+  });
+
   it.each(["im", "IM ", " im", "Im"])(
     "does not block a re-typed route that only differs in case or whitespace (%j)",
     (route) => {

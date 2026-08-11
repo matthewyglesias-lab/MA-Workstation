@@ -117,7 +117,6 @@ export interface InjectionInitiationState {
 export interface InjectionAdministrationDetails {
   purpose?: string;
   productSource?: string;
-  productSourceOther?: string;
   preparation?: string;
   preparationOther?: string;
   volume?: string;
@@ -144,6 +143,20 @@ export interface InjectionAdministrationDetails {
   /** Staff's brief acknowledgement of a late-dose warning; never blocks finalizing. */
   lateDoseReview?: "" | "provider-authorized" | "other";
   lateDoseReviewNote?: string;
+  /** Optional one-tap note additions; never pre-checked/pre-selected, never required. */
+  siteAssessed?: boolean;
+  postInjectionObservation?: boolean;
+  educationProvided?: boolean;
+  departureStatus?:
+    | ""
+    | "ambulatory"
+    | "observed"
+    | "escorted"
+    | "wheelchair"
+    | "continued-observation"
+    | "provider-evaluation"
+    | "custom";
+  departureStatusNote?: string;
   /** Product-reference provenance; the plain traceability NDC remains canonical documentation. */
   ndcSelection?: InjectionNdcSelectionMetadata;
   /** Calculated/manual origin of the editable next-dose date. */
@@ -247,6 +260,16 @@ const pairedProtocols = new Set<InjectionInitiationProtocol>([
   "maintena-1day",
   "asimtufii-1day",
   "aristada-initio-sameday",
+]);
+
+/** "Non-calculating path" protocols (see injectionInitiationConfig's "provider"
+ * kind) - timing is provider-directed and nonstandard, so nothing here
+ * should compute or auto-fill a follow-up date for these. */
+const PROVIDER_DIRECTED_INITIATION_PROTOCOLS = new Set<InjectionInitiationProtocol>([
+  "maintena-provider",
+  "asimtufii-provider",
+  "aristada-provider",
+  "sustenna-provider",
 ]);
 
 const pairedProtocolProduct = (
@@ -375,6 +398,43 @@ export const INJECTION_RESPONSE_OPTIONS: ReadonlyArray<{
   },
   { key: "disc", label: "Mild site discomfort", description: "mild transient site discomfort, no acute reaction" },
   { key: "custom", label: "Custom…", description: "" },
+];
+
+/**
+ * Optional one-tap departure-status note. Unselected by default and never
+ * required - staff pick one only when they want it in the chart.
+ */
+export const INJECTION_DEPARTURE_STATUS_OPTIONS: ReadonlyArray<{
+  key: Exclude<NonNullable<InjectionAdministrationDetails["departureStatus"]>, "" | "custom">;
+  label: string;
+  note: string;
+}> = [
+  { key: "ambulatory", label: "Ambulatory", note: "Pt departed clinic ambulatory w/o difficulty." },
+  {
+    key: "observed",
+    label: "Observed / no concern",
+    note: "Pt ambulatory on departure; no immediate post-inj concerns noted.",
+  },
+  {
+    key: "escorted",
+    label: "Escorted",
+    note: "Pt departed clinic accompanied/escorted w/o acute concern.",
+  },
+  {
+    key: "wheelchair",
+    label: "Wheelchair",
+    note: "Pt departed clinic via wheelchair; no immediate post-inj concerns noted.",
+  },
+  {
+    key: "continued-observation",
+    label: "Continued observation",
+    note: "Pt remained in clinic for continued observation.",
+  },
+  {
+    key: "provider-evaluation",
+    label: "Provider evaluation",
+    note: "Pt remained in clinic for provider evaluation following administration.",
+  },
 ];
 
 export const INJECTION_SAFETY_TRIGGERS: ReadonlyArray<{
@@ -626,12 +686,7 @@ export function injectionInitiationConfig(
       oralLabel: "21-day oral continuation documented",
     };
   }
-  if (
-    protocol === "maintena-provider" ||
-    protocol === "asimtufii-provider" ||
-    protocol === "aristada-provider" ||
-    protocol === "sustenna-provider"
-  ) {
+  if (PROVIDER_DIRECTED_INITIATION_PROTOCOLS.has(protocol)) {
     return {
       kind: "provider",
       title:
@@ -1337,9 +1392,7 @@ const evaluateInitiation = (
   }
 
   if (
-    ["maintena-provider", "asimtufii-provider", "aristada-provider", "sustenna-provider"].includes(
-      initiation.protocol,
-    ) &&
+    PROVIDER_DIRECTED_INITIATION_PROTOCOLS.has(initiation.protocol) &&
     !initiation.providerNote.trim()
   ) {
     stops.push(
@@ -1498,17 +1551,6 @@ const evaluateDetails = (
         "Describe the documented site condition.",
         "details.siteConditionOther",
         "administration",
-      ),
-    );
-  }
-  if (details.productSource === "Other" && !details.productSourceOther?.trim()) {
-    stops.push(
-      issue(
-        "stop",
-        "trace.source-other",
-        "Document the other medication source.",
-        "details.productSourceOther",
-        "traceability",
       ),
     );
   }
@@ -1738,7 +1780,7 @@ const buildRequirementProjection = (
   set("acuteSafetyScreenConfirmed", administrationDocumented ? "required" : "hidden", "safety");
   set("activeSafetyConcerns", administrationDocumented ? "optional" : "hidden", "safety");
   requiredAttestations.forEach(([key]) =>
-    set(`attestations.${String(key)}`, administrationDocumented ? "required" : "hidden", "safety"),
+    set(`attestations.${String(key)}`, administrationDocumented ? "optional" : "hidden", "safety"),
   );
   set("attestations.prior", administrationDocumented ? "optional" : "hidden", "safety");
 
@@ -1795,11 +1837,6 @@ const buildRequirementProjection = (
     "administration",
   );
   set("details.productSource", administrationDocumented ? "optional" : "hidden", "traceability");
-  set(
-    "details.productSourceOther",
-    administrationDocumented && encounter.details?.productSource === "Other" ? "required" : "hidden",
-    "traceability",
-  );
   set("details.preparation", administrationDocumented ? "optional" : "hidden", "traceability");
   set(
     "details.preparationOther",
@@ -1856,9 +1893,23 @@ const buildGuidanceProjection = (
   allowedSites: readonly string[],
   expectedNextDoseDate: string,
   nonAdministration: boolean,
+  initiationProtocol: InjectionInitiationProtocol | "",
 ): InjectionGuidanceCard[] => {
   if (!medication?.clinicalReference) return [];
   const reference = medication.clinicalReference;
+  const nextDoseSourceMessage = (() => {
+    if (initiationProtocol && PROVIDER_DIRECTED_INITIATION_PROTOCOLS.has(initiationProtocol)) {
+      return "This is a non-calculating path. Enter the actual provider-directed follow-up date.";
+    }
+    if (initiationProtocol === "sustenna-day1") {
+      return expectedNextDoseDate
+        ? `${expectedNextDoseDate} is the Day 8 target, 7 days from the documented Day 1 administration date - not the ordered maintenance interval. Confirm or revise it for the actual follow-up plan.`
+        : "Enter the actual Day 1 administration date to calculate the Day 8 target.";
+    }
+    return expectedNextDoseDate
+      ? `${expectedNextDoseDate} is calculated from the documented administration date and selected cadence. Confirm or revise it for the actual follow-up plan.`
+      : "Enter the actual administration date and ordered cadence to calculate an expected next due date.";
+  })();
   const cards: InjectionGuidanceCard[] = [
     {
       key: `${medication.key}-active-order`,
@@ -1872,9 +1923,7 @@ const buildGuidanceProjection = (
       key: `${medication.key}-schedule`,
       section: "timing",
       title: "Expected next due",
-      message: expectedNextDoseDate
-        ? `${expectedNextDoseDate} is calculated from the documented administration date and selected cadence. Confirm or revise it for the actual follow-up plan.`
-        : "Enter the actual administration date and ordered cadence to calculate an expected next due date.",
+      message: nextDoseSourceMessage,
       classification: "local policy",
     },
     {
@@ -2188,7 +2237,23 @@ export const InjectionEngine: ClinicalEngine<
             ),
           );
         }
-        if (encounter.administrationDate && encounter.intervalKey) {
+        if (
+          encounter.initiation?.protocol &&
+          PROVIDER_DIRECTED_INITIATION_PROTOCOLS.has(encounter.initiation.protocol)
+        ) {
+          // Non-calculating path: no follow-up date is suggested or
+          // auto-filled. The ordered interval doesn't describe a
+          // provider-directed restart/re-initiation timeline, so a
+          // calculated guess here would silently misdirect staff instead of
+          // prompting the explicit entry the plan actually requires.
+        } else if (encounter.initiation?.protocol === "sustenna-day1" && encounter.administrationDate) {
+          // Day 1 is followed by Day 8, not by the ordered maintenance
+          // interval (typically q4wk) - using the ordered interval here
+          // would suggest a follow-up date three weeks later than the
+          // clinically required Day 8 ± 4-day window.
+          expectedNextDoseDate = addCalendarDays(encounter.administrationDate, 7);
+          calculatedDates.expectedNextDoseDate = expectedNextDoseDate;
+        } else if (encounter.administrationDate && encounter.intervalKey) {
           expectedNextDoseDate = calculateNextInjectionDate(
             medication,
             encounter.intervalKey,
@@ -2242,9 +2307,13 @@ export const InjectionEngine: ClinicalEngine<
             ),
           );
         }
+        // These are pre-checked by default (see emptyInjectionEncounter) so an
+        // unchecked box represents staff affirmatively flagging that a step
+        // wasn't done - worth a review warning, not a hard stop that blocks
+        // finishing the record.
         requiredAttestations.forEach(([field, code, message]) => {
           if (!encounter.attestations[field]) {
-            stops.push(issue("stop", code, message, `attestations.${String(field)}`, "safety"));
+            warnings.push(issue("warning", code, message, `attestations.${String(field)}`, "safety"));
           }
         });
         if (encounter.attestations.allergy && !encounter.allergies.trim()) {
@@ -2441,6 +2510,7 @@ export const InjectionEngine: ClinicalEngine<
       allowedSites,
       expectedNextDoseDate,
       Boolean(dispositionKind && dispositionKind !== "administered"),
+      encounter.initiation?.protocol ?? "",
     );
 
     return {
@@ -2521,7 +2591,11 @@ export const emptyInjectionEncounter = (): InjectionEncounter => ({
   traceability: { ndc: "", lot: "", expiration: "" },
   vitals: {},
   response: { kind: "", custom: "" },
-  attestations: {},
+  // Pre-checked so staff review by exception (uncheck what wasn't actually
+  // done) instead of affirmatively re-ticking six routine safety steps on
+  // every encounter. "prior" (prior-authorization on file) stays unchecked -
+  // it's a real per-encounter fact, not a standard-of-care checklist item.
+  attestations: { id2: true, rights: true, allergy: true, consent: true, screen: true, hygiene: true },
   verifications: {},
   acuteSafetyScreenConfirmed: false,
   activeSafetyConcerns: [],

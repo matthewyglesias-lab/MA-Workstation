@@ -151,6 +151,32 @@ export interface InjectionFollowUp {
   appointmentStatus?: string;
 }
 
+/**
+ * Compact, clinical-shorthand facts for a completed administration - the
+ * "RC6.1 fast injection workflow" note rhythm. Present only when medication
+ * was actually administered; every field is optional and hidden from the
+ * generated note when absent, per the approved plan's "no label with no
+ * content" rule.
+ */
+export interface InjectionNoteFacts {
+  headline?: string;
+  presentation?: string;
+  verification?: string;
+  clinicalReview?: string;
+  siteAssessment?: string;
+  timing?: string;
+  administration?: string;
+  dateTime?: string;
+  asepticTechnique?: string;
+  response?: string;
+  observation?: string;
+  departureStatus?: string;
+  traceability?: string;
+  followUp?: string;
+  orderingProvider?: string;
+  administeredBy?: string;
+}
+
 export interface InjectionDocumentationInput {
   chiefComplaint?: InjectionChiefComplaint;
   disposition?: InjectionDisposition;
@@ -160,6 +186,7 @@ export interface InjectionDocumentationInput {
   handling?: InjectionProductHandling;
   exception?: InjectionException;
   followUp?: InjectionFollowUp;
+  noteFacts?: InjectionNoteFacts;
 }
 
 export interface InjectionDocumentationResult extends DocumentationResult {

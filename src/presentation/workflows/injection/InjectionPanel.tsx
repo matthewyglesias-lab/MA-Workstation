@@ -6,6 +6,7 @@ import { ModalDialog } from "../../ModalDialog";
 import { SiteIcon } from "../../SiteIcon";
 import {
   INJECTION_ATTESTATION_OPTIONS,
+  INJECTION_DEPARTURE_STATUS_OPTIONS,
   INJECTION_REASON_OPTIONS,
   INJECTION_RESPONSE_OPTIONS,
   INJECTION_SAFETY_TRIGGERS,
@@ -44,11 +45,14 @@ import {
   type NdcOptionsLookup,
 } from "../../../domain/injection-ndc";
 import { clickLegacyControl, setLegacyFieldValue } from "../legacy-mirror";
+import { DocumentationEngine } from "../../../documentation";
+import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
 import type { PatientContext } from "../../types";
+import { formatDobAsTyped } from "../../format-dob";
 import {
   canBuildInjectionPatientScreenDocument,
   type PatientScreenLanguage,
@@ -226,10 +230,6 @@ function legacyRequirementFallback(
       encounter.details?.waste ? "required" : "hidden",
       "traceability",
     ),
-    "details.productSourceOther": requirement(
-      encounter.details?.productSource === "Other" ? "required" : "hidden",
-      "traceability",
-    ),
     "details.preparationOther": requirement(
       encounter.details?.preparation === "Other" ? "required" : "hidden",
       "traceability",
@@ -284,7 +284,6 @@ const pairedMedicationKeyFor = (
 const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
   purpose: "order",
   productSource: "product",
-  productSourceOther: "product",
   preparation: "product",
   preparationOther: "product",
   waste: "product",
@@ -452,21 +451,72 @@ function OptionList<T extends string>({ name, value, onChange, options, inline }
   );
 }
 
+// A short status stamp for the timing banner - "what does this number mean"
+// answered in three words before staff read the full sentence below it.
+// Sentence case with a period, matching the app's own posted/error stamp
+// captions (.cd2004-post-stamp/.cd2004-post-error) rather than an all-caps
+// alert-box convention borrowed from elsewhere.
+function injectionTimingStatusLabel(timing: InjectionEvaluationOutput["timing"]): string {
+  switch (timing.state) {
+    case "ok":
+      return "Within the permitted window.";
+    case "stop":
+      return "Dates don't add up — check them.";
+    case "warning":
+      if (timing.late) return "Late — needs provider review.";
+      if (
+        timing.daysSincePrior !== null &&
+        timing.earliestDay !== null &&
+        timing.daysSincePrior < timing.earliestDay
+      ) {
+        return "Early — confirm with provider.";
+      }
+      return "Review timing before administering.";
+    case "idle":
+    default:
+      return "Timing not yet evaluated.";
+  }
+}
+
+// The icon column matches the app's own posted/error stamps: a fixed-color
+// pictogram, not a color recolored per state, from the same 16-bit-style set
+// used across the workstation.
+function injectionTimingStatusIcon(
+  timing: InjectionEvaluationOutput["timing"],
+): "check" | "alert" | "note" {
+  switch (timing.state) {
+    case "ok":
+      return "check";
+    case "warning":
+    case "stop":
+      return "alert";
+    case "idle":
+    default:
+      return "note";
+  }
+}
+
 function CheckList({
   items,
   checked,
   onToggle,
   requirementFor,
+  quiet,
 }: {
   items: ReadonlyArray<{ key: string; label: string; description?: string }>;
   checked: (key: string) => boolean;
   onToggle: (key: string, value: boolean) => void;
   /** The evaluator owns checklist visibility and required markers. */
   requirementFor?: (key: string) => string;
+  /** The app-wide "selected" amber fill means "this needs attention" (a
+      raised hold, an active exception). A routine attestation that's
+      pre-checked by default isn't that - it's the expected state - so this
+      skips the amber fill and shows only the checkmark. */
+  quiet?: boolean;
 }) {
   const requirements = useContext(InjectionRequirementsContext);
   return (
-    <div class="wfp-option-list">
+    <div class={`wfp-option-list ${quiet ? "wfp-option-list-quiet" : ""}`}>
       {items.map((item) => {
         const projected = requirementFor ? requirements[requirementFor(item.key)] : undefined;
         if (projected?.state === "hidden") return null;
@@ -944,6 +994,13 @@ export function InjectionPanel({
         initialEncounter.vitals?.spo2
       ),
   );
+  // Once staff confirm "no acute concerns today", the review-trigger checklist
+  // is asking about things that were already just ruled out - collapse it out
+  // of the way. It stays reachable via a link, and if any trigger is already
+  // ticked it never auto-collapses, since that combination needs eyes on it.
+  const [safetyTriggersOpen, setSafetyTriggersOpen] = useState(
+    () => (initialEncounter.activeSafetyConcerns?.length ?? 0) > 0,
+  );
   const mirroredOnMount = useRef(false);
   const autoCalculatedNextDue = useRef("");
   const ndcResolver = useMemo(() => createNdcOptionResolver(), []);
@@ -1297,6 +1354,8 @@ export function InjectionPanel({
       printInjectionPatientScreening(encounter, language);
     });
   };
+  const noteInput = evaluation ? injectionEncounterToDocumentationInput(encounter, evaluation) : null;
+  const noteText = noteInput ? DocumentationEngine.format("injection", noteInput).text : "";
   const stops = evaluation?.stops ?? [];
   // The routine timing warning and the Sustenna Day 8 window warning are
   // different checks with different messages - the timing readout's own
@@ -1432,8 +1491,23 @@ export function InjectionPanel({
   // staff change is preserved: only an empty value or the last calculation is
   // replaced when the date/cadence changes.
   useEffect(() => {
-    if (locked || nonAdministration || !suggestedNextDose) return;
+    if (locked || nonAdministration) return;
     const current = encounter.nextDoseDate;
+    if (!suggestedNextDose) {
+      // No calculated date currently applies (e.g. switching onto a
+      // provider-directed, non-calculating initiation path). Clear a
+      // leftover auto-calculated value so staff aren't looking at a stale
+      // date computed under a different protocol/interval - but never touch
+      // a date staff actually typed in themselves.
+      const wasAutoCalculated =
+        current && (current === autoCalculatedNextDue.current || nextDoseMetadata?.source === "calculated");
+      if (wasAutoCalculated) {
+        autoCalculatedNextDue.current = "";
+        patch({ nextDoseDate: "" });
+        patchDetails({ nextDose: undefined });
+      }
+      return;
+    }
     const canReplace =
       !current ||
       current === autoCalculatedNextDue.current ||
@@ -1658,7 +1732,10 @@ export function InjectionPanel({
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"
-                    onInput={(event) => patchPatient({ dob: event.currentTarget.value })}
+                    inputMode="numeric"
+                    onInput={(event) =>
+                      patchPatient({ dob: formatDobAsTyped(event.currentTarget.value) })
+                    }
                   />
                 </Field>
                 <Field label="Ordering provider" field="orderingProvider">
@@ -1822,7 +1899,11 @@ export function InjectionPanel({
                     onInput={(event) => applyManualNextDose(event.currentTarget.value)}
                   />
                   {nextDoseIsCalculated && (
-                    <span class="wfp-calculated-value">Calculated from documented date + cadence</span>
+                    <span class="wfp-calculated-value">
+                      {encounter.initiation?.protocol === "sustenna-day1"
+                        ? "Calculated as the Day 8 target (Day 1 + 7 days), not the ordered interval"
+                        : "Calculated from documented date + cadence"}
+                    </span>
                   )}
                   {suggestedNextDose && !nextDoseIsCalculated && (
                     <button
@@ -1836,31 +1917,45 @@ export function InjectionPanel({
                 </Field>
               </div>
               {/* The due line a MAR carries: how long since the last dose and
-                  what window this one falls in. Every value here is read
-                  straight off the engine's own timing evaluation — this
-                  surfaces what it already computed and adds no gating of its
-                  own. The engine raises the stop or warning itself. */}
+                  what window this one falls in, stamped the way the app's
+                  own posted/error banners are (.cd2004-post-stamp /
+                  .cd2004-post-error) - a fixed-color 16-bit pictogram beside
+                  a bold sentence-case caption, not a generic colored alert
+                  box. Every value here is read straight off the engine's own
+                  timing evaluation - this surfaces what it already computed
+                  and adds no gating of its own. The engine raises the stop
+                  or warning itself. */}
               {!nonAdministration && evaluation && (
-                <dl class={`wfp-report-meta wfp-due-line is-${evaluation.output.timing.state}`}>
-                  <dt>Days since prior</dt>
-                  <dd>
-                    {evaluation.output.timing.daysSincePrior === null
-                      ? "—"
-                      : `${evaluation.output.timing.daysSincePrior} day(s)`}
-                  </dd>
-                  {evaluation.output.timing.earliestDay !== null &&
-                    evaluation.output.timing.latestDay !== null && (
-                      <>
-                        <dt>Permitted window</dt>
-                        <dd>
-                          Day {evaluation.output.timing.earliestDay}–
-                          {evaluation.output.timing.latestDay}
-                        </dd>
-                      </>
-                    )}
-                  <dt>Timing</dt>
-                  <dd>{evaluation.output.timing.message}</dd>
-                </dl>
+                <div class={`wfp-timing-banner is-${evaluation.output.timing.state}`}>
+                  <DesktopIcon name={injectionTimingStatusIcon(evaluation.output.timing)} />
+                  <div>
+                    <strong class="wfp-timing-banner-status">
+                      {injectionTimingStatusLabel(evaluation.output.timing)}
+                    </strong>
+                    <div class="wfp-timing-banner-days">
+                      {evaluation.output.timing.daysSincePrior === null
+                        ? "Days since prior dose: —"
+                        : `${evaluation.output.timing.daysSincePrior} day(s) since prior dose`}
+                      {evaluation.output.timing.earliestDay !== null &&
+                        evaluation.output.timing.latestDay !== null && (
+                          <>
+                            {" "}
+                            · permitted window day {evaluation.output.timing.earliestDay}–
+                            {evaluation.output.timing.latestDay}
+                          </>
+                        )}
+                    </div>
+                    <p class="wfp-timing-banner-message">{evaluation.output.timing.message}</p>
+                    {medication &&
+                      evaluation.output.timing.state === "warning" &&
+                      medication.missedDoseGuidance.trim() && (
+                        <p class="wfp-timing-banner-guidance">
+                          <strong>{medication.label} guidance:</strong>{" "}
+                          {medication.missedDoseGuidance}
+                        </p>
+                      )}
+                  </div>
+                </div>
               )}
               {!nonAdministration && evaluation?.output.lateDoseWarning && (
                 <p class="wfp-field-hint">
@@ -2415,20 +2510,12 @@ export function InjectionPanel({
                     onChange={(event) => patchDetails({ productSource: event.currentTarget.value })}
                   >
                     <option value="">Not separately documented</option>
-                    <option value="Clinic stock">Clinic stock</option>
-                    <option value="Patient-supplied medication">Patient-supplied medication</option>
-                    <option value="Specialty-pharmacy shipment">Specialty-pharmacy shipment</option>
-                    <option value="Other">Other</option>
+                    <option value="Clinic sample">Clinic sample</option>
+                    <option value="Patient-specific pharmacy medication">
+                      Patient-specific pharmacy medication
+                    </option>
                   </select>
                 </Field>
-                {encounter.details?.productSource === "Other" && (
-                  <Field label="Medication source detail" field="details.productSourceOther">
-                    <input
-                      value={encounter.details?.productSourceOther ?? ""}
-                      onInput={(event) => patchDetails({ productSourceOther: event.currentTarget.value })}
-                    />
-                  </Field>
-                )}
                 <Field label="Preparation / reconstitution" field="details.preparation">
                   <select
                     value={encounter.details?.preparation ?? ""}
@@ -2546,6 +2633,7 @@ export function InjectionPanel({
                 checked={(key) => Boolean(encounter.attestations[key as keyof InjectionEncounter["attestations"]])}
                 onToggle={toggleAttestation}
                 requirementFor={(key) => `attestations.${key}`}
+                quiet
               />
               {medication && visibleMedicationVerifications.length > 0 && (
                 <>
@@ -2659,24 +2747,45 @@ export function InjectionPanel({
                   injection. Identical checkbox styling next to each other is
                   how staff tick one by accident and then cannot tell which box
                   is blocking them. It reads as an exception block. */}
-              {requirements.activeSafetyConcerns?.state !== "hidden" && safetyTriggers.length > 0 && (
-                <div class="wfp-exception-block">
-                  <div class="wfp-section-head">Provider review triggers</div>
-                  <p class="wfp-exception-lead">
-                    Tick only what the patient actually reports. Any tick here holds the
-                    injection for provider review — leave them clear for a routine dose.
-                  </p>
-                  <CheckList
-                    items={safetyTriggers.map((trigger) => ({
-                      key: trigger.key,
-                      label: trigger.label,
-                      description: trigger.description,
-                    }))}
-                    checked={(key) => activeSafetyConcerns.has(key)}
-                    onToggle={toggleSafetyConcern}
-                  />
-                </div>
-              )}
+              {requirements.activeSafetyConcerns?.state !== "hidden" &&
+                safetyTriggers.length > 0 &&
+                (encounter.acuteSafetyScreenConfirmed &&
+                activeSafetyConcerns.size === 0 &&
+                !safetyTriggersOpen ? (
+                  <button
+                    type="button"
+                    class="cd2004-link-button wfp-vitals-toggle"
+                    onClick={() => setSafetyTriggersOpen(true)}
+                  >
+                    Review triggers (none reported)
+                  </button>
+                ) : (
+                  <div class="wfp-exception-block">
+                    <div class="wfp-section-head">Provider review triggers</div>
+                    <p class="wfp-exception-lead">
+                      Tick only what the patient actually reports. Any tick here holds the
+                      injection for provider review — leave them clear for a routine dose.
+                    </p>
+                    <CheckList
+                      items={safetyTriggers.map((trigger) => ({
+                        key: trigger.key,
+                        label: trigger.label,
+                        description: trigger.description,
+                      }))}
+                      checked={(key) => activeSafetyConcerns.has(key)}
+                      onToggle={toggleSafetyConcern}
+                    />
+                    {encounter.acuteSafetyScreenConfirmed && activeSafetyConcerns.size === 0 && (
+                      <button
+                        type="button"
+                        class="cd2004-link-button wfp-vitals-toggle"
+                        onClick={() => setSafetyTriggersOpen(false)}
+                      >
+                        Hide review triggers
+                      </button>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         </div>
@@ -2754,6 +2863,72 @@ export function InjectionPanel({
               )}
             </div>
           </div>
+
+          {!nonAdministration && (
+            <div class="wfp-section">
+              <div class="wfp-section-head">Additional note items</div>
+              <div class="wfp-section-body">
+                <p class="wfp-field-hint">
+                  Optional one-tap additions to the generated note. None are pre-selected or required.
+                </p>
+                <div class="wfp-checkbox-row">
+                  <input
+                    type="checkbox"
+                    id="inj-site-assessed"
+                    checked={encounter.details?.siteAssessed ?? false}
+                    onChange={(event) => patchDetails({ siteAssessed: event.currentTarget.checked })}
+                  />
+                  <label for="inj-site-assessed">
+                    Injection site assessed prior to administration
+                  </label>
+                </div>
+                <div class="wfp-checkbox-row">
+                  <input
+                    type="checkbox"
+                    id="inj-post-observation"
+                    checked={encounter.details?.postInjectionObservation ?? false}
+                    onChange={(event) =>
+                      patchDetails({ postInjectionObservation: event.currentTarget.checked })
+                    }
+                  />
+                  <label for="inj-post-observation">
+                    Pt observed post-injection without adverse reaction
+                  </label>
+                </div>
+                <div class="wfp-checkbox-row">
+                  <input
+                    type="checkbox"
+                    id="inj-education-provided"
+                    checked={encounter.details?.educationProvided ?? false}
+                    onChange={(event) => patchDetails({ educationProvided: event.currentTarget.checked })}
+                  />
+                  <label for="inj-education-provided">
+                    Post-injection education provided
+                  </label>
+                </div>
+                <Field label="Disposition on departure" hint="optional">
+                  <OptionList<NonNullable<InjectionAdministrationDetails["departureStatus"]>>
+                    name="inj-departure-status"
+                    value={encounter.details?.departureStatus ?? ""}
+                    onChange={(value) => patchDetails({ departureStatus: value })}
+                    options={[
+                      { key: "", label: "Not documented" },
+                      ...INJECTION_DEPARTURE_STATUS_OPTIONS,
+                      { key: "custom", label: "Custom…" },
+                    ]}
+                  />
+                </Field>
+                {encounter.details?.departureStatus === "custom" && (
+                  <Field label="Describe departure">
+                    <input
+                      value={encounter.details?.departureStatusNote ?? ""}
+                      onInput={(event) => patchDetails({ departureStatusNote: event.currentTarget.value })}
+                    />
+                  </Field>
+                )}
+              </div>
+            </div>
+          )}
 
           <div class="wfp-section">
             <div
@@ -2854,9 +3029,20 @@ export function InjectionPanel({
           <div class="wfp-section-head">Document output</div>
           <div class="wfp-section-body">
             <p class="wfp-field-hint wfp-document-output-hint">
-              Review and copy the generated note in Clinical Documentation. Printing uses the same local
-              encounter snapshot.
+              Printing uses the same local encounter snapshot as the note below.
             </p>
+            <div class="meditech-lab-note-heading">TEBRA NARRATIVE</div>
+            <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
+            <div class="wfp-actions">
+              <button
+                type="button"
+                class="cd2004-link-button"
+                onClick={() => navigator.clipboard?.writeText(noteText)}
+                disabled={!noteText}
+              >
+                Copy note
+              </button>
+            </div>
             <div class="wfp-actions">
               <button
                 type="button"

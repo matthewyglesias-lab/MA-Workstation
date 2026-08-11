@@ -1165,7 +1165,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.wfp-field:has-text("Verified active-order purpose") input').fill('Active order follow-up context');
 
     await openInjectionTab(page, 'Product');
-    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic stock' });
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openInjectionTab(page, 'Administration');
     await panel.locator('.wfp-field:has-text("Administration amount") input').fill('2');
@@ -1190,7 +1190,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#outPL')).toContainText('Site condition: Skin/site intact before administration');
     await expect(page.locator('#outPL')).toContainText('Response: Tolerated well');
     await expect(page.locator('#outPL')).toContainText('PRODUCT TRACEABILITY');
-    await expect(page.locator('#outPL')).toContainText('Product source: Clinic stock');
+    await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
     const injectionPlan = await page.locator('#outPL').innerText();
     expect(injectionPlan).not.toMatch(
       /no (?:immediate complication|swelling)|without acute reaction/i
@@ -1261,7 +1261,7 @@ test.describe('MA Workstation browser journeys', () => {
     const lockedMedication = await page.locator('#medHdrName').textContent();
     expect(lockedMedication).toBeTruthy();
     await expect(page.locator('#outPL')).toContainText('Actual administration time: 9:41 AM');
-    await expect(page.locator('#outPL')).toContainText('Product source: Clinic stock');
+    await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
 
     // The addenda-authoring UI lives entirely inside the hidden legacy
     // record workspace; the new panel provides its own addendum section
@@ -2014,6 +2014,37 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(addendumBox).toHaveValue('');
   });
 
+  test('keeps printing available on a locked UDS record that carries a warning', async ({ page }) => {
+    // A preliminary positive is a genuine finding, not a fixable data-entry
+    // problem - it must never block attesting, locking, or (this test's
+    // focus) printing the finalized report once the record is locked. The
+    // print/copy actions also live outside the panel's locked-fieldset so
+    // they stay reachable after lock instead of going dead with every other
+    // now-read-only field.
+    await page.goto('/');
+    await signInLocalStaff(page, 'QA Staff, MA');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
+    await page.locator('#uds-readings-verified').check();
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    await panel.getByRole('button', { name: 'THC positive · rest negative' }).click();
+    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+
+    const attestButton = panel.locator('.cd2004-record-actions button.is-primary');
+    await expect(attestButton).toBeEnabled();
+    await attestButton.click();
+    const attestDialog = page.getByRole('dialog', { name: 'Attest & lock local record' });
+    await attestDialog.getByRole('checkbox', { name: /I attest that I reviewed/ }).check();
+    await attestDialog.getByRole('button', { name: 'Attest & lock local record', exact: true }).click();
+    await expect(attestDialog).toBeHidden();
+    await expect(panel.locator('.wfp-status-flag.is-idle')).toHaveText('Read only');
+
+    await expect(panel.getByRole('button', { name: 'Print clinician report' })).toBeEnabled();
+    await expect(panel.getByRole('button', { name: 'Patient summary' })).toBeEnabled();
+    await expect(panel.locator('.wfp-print-block-hint')).toHaveCount(0);
+  });
+
   test('lists outstanding requirements and jumps to the tab that owns each one', async ({ page }) => {
     await page.goto('/');
 
@@ -2093,6 +2124,42 @@ test.describe('MA Workstation browser journeys', () => {
       .locator('.wfp-field', { hasText: 'Expected next due' });
     await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-27');
     await expect(nextDue.locator('.wfp-calculated-value')).toBeVisible();
+    await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);
+  });
+
+  test('targets the Sustenna Day 8 date on a Day 1 initiation and clears a stale calculated date on a provider-directed path', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+
+    await panel.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
+    await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+    await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
+    await panel.getByRole('tab', { name: /^Administration/ }).click();
+    const actualDate = panel
+      .locator('.wfp-field', { hasText: 'Actual administration date' })
+      .locator('input[type="date"]');
+    await actualDate.fill('2026-07-30');
+
+    await panel.getByRole('tab', { name: /^Schedule/ }).click();
+    const nextDue = panel.locator('.wfp-field', { hasText: 'Expected next due' });
+    // Baseline: with no initiation protocol selected, the ordered q4wk
+    // interval drives the suggestion, same as the previous test.
+    await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-27');
+
+    // Day 1 initiation is followed by Day 8, not by the ordered maintenance
+    // interval - the suggestion must switch to admin date + 7 days.
+    await panel.locator('label:has-text("Day 1 initiation")').click();
+    await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-06');
+    await expect(nextDue.locator('.wfp-calculated-value')).toContainText('Day 8 target');
+
+    // A provider-directed re-initiation is explicitly a non-calculating
+    // path - the stale Day 8 (or interval) suggestion must be cleared, not
+    // left sitting in the field looking like a still-valid value.
+    await panel.locator('label:has-text("Re-initiation / provider plan")').click();
+    await expect(nextDue.locator('input[type="date"]')).toHaveValue('');
+    await expect(nextDue.locator('.wfp-calculated-value')).toHaveCount(0);
     await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);
   });
 });

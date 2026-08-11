@@ -604,6 +604,14 @@
   background: var(--cd-selection);
 }
 
+/* Pre-checked-by-default attestations aren't a "raised hold" the way an
+   exception-block tick is - the amber selection fill would read as every
+   routine item demanding attention on every fresh chart. Just the checkmark
+   is the signal here; an explicit uncheck is what should catch the eye. */
+.cd2004-shell .wfp-option-list-quiet .wfp-option-row.is-selected {
+  background: none;
+}
+
 .cd2004-shell .wfp-option-row input[type="radio"] {
   margin-top: 2px;
 }
@@ -878,24 +886,77 @@
   font-size: 10px;
 }
 
-/* The MAR due line. Colour tracks the engine's own timing state; it is a
-   readout, never a gate — the engine raises the stop or warning itself. */
-.cd2004-shell .wfp-due-line {
-  padding: 4px 7px;
-  border: 1px solid var(--cd-border-mid);
-  border-left: 4px solid var(--cd-border-mid);
+/* The MAR due line, stamped exactly like the app's own posted/error banners
+   (.cd2004-post-stamp / .cd2004-post-error): a fixed-color 16-bit pictogram
+   in a 27px column beside a double-bordered, soft-filled caption block, big
+   enough to read across the room. Colour tracks the engine's own timing
+   state; it is a readout, never a gate — the engine raises the stop or
+   warning itself. */
+.cd2004-shell .wfp-timing-banner {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 2px double var(--cd-border-mid);
+  background: var(--cd-chrome-light);
 }
 
-.cd2004-shell .wfp-due-line.is-ok {
-  border-left-color: var(--cd-green);
+.cd2004-shell .wfp-timing-banner svg {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
 }
 
-.cd2004-shell .wfp-due-line.is-warning {
-  border-left-color: var(--cd-amber);
+.cd2004-shell .wfp-timing-banner-status {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.045em;
 }
 
-.cd2004-shell .wfp-due-line.is-stop {
-  border-left-color: var(--cd-red);
+.cd2004-shell .wfp-timing-banner-days {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cd2004-shell .wfp-timing-banner-message {
+  margin: 3px 0 0;
+  font-size: 11px;
+}
+
+.cd2004-shell .wfp-timing-banner-guidance {
+  margin: 5px 0 0;
+  padding-top: 4px;
+  border-top: 1px solid currentColor;
+  font-size: 10.5px;
+  font-style: italic;
+}
+
+.cd2004-shell .wfp-timing-banner.is-idle {
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome-light);
+  border-color: var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-timing-banner.is-ok {
+  color: #063d21;
+  background: var(--cd-green-soft);
+  border-color: var(--cd-green);
+}
+
+.cd2004-shell .wfp-timing-banner.is-warning {
+  color: #4a2d00;
+  background: var(--cd-amber-soft);
+  border-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-timing-banner.is-stop {
+  color: #651111;
+  background: var(--cd-red-soft);
+  border-color: var(--cd-red);
 }
 
 /* Dose-history MAR grid: Date | Medication | Route | Site. Read-only. */

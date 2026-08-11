@@ -21,6 +21,7 @@ export type {
   FunctionKeyCommandId,
 } from "./FunctionKeyProfile";
 export { DesktopIcon } from "./DesktopIcon";
+export { formatDobAsTyped } from "./format-dob";
 export { LegacyWorkflowHost } from "./LegacyWorkflowHost";
 export { NoteInspector } from "./NoteInspector";
 export { StartCenter } from "./StartCenter";

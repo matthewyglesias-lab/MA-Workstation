@@ -20,6 +20,7 @@ import { formsEncounterToDocumentationInput } from "../../../documentation/adapt
 import { clickLegacyControl } from "../legacy-mirror";
 import { mirrorFormsEncounterToLegacyDom } from "./forms-legacy-mirror";
 import type { PatientContext } from "../../types";
+import { formatDobAsTyped } from "../../format-dob";
 
 type FormsTab = "request" | "letter";
 
@@ -300,7 +301,10 @@ export function FormsPanel({
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"
-                    onInput={(event) => patchPatient({ dob: event.currentTarget.value })}
+                    inputMode="numeric"
+                    onInput={(event) =>
+                      patchPatient({ dob: formatDobAsTyped(event.currentTarget.value) })
+                    }
                   />
                 </Field>
                 <Field label="Requested date">

@@ -27,6 +27,7 @@ import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirem
 import { mirrorUdsEncounterToLegacyDom, mirrorUdsSignatureToggle } from "./uds-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { DesktopIcon } from "../../DesktopIcon";
+import { formatDobAsTyped } from "../../format-dob";
 import { RecordActionDialog, type RecordActionKind } from "../../RecordActionDialog";
 import { UdsRecordsWindow } from "../../UdsRecordsWindow";
 import { UdsRecordRepository, type UdsAddendum, type UdsRecord } from "../../../persistence/uds-records";
@@ -658,11 +659,23 @@ export function UdsPanel({
     [stops],
   );
   const stopsByTab = countStopsByTab(stops, tabForUdsField);
-  const udsReadyForFinalOutput = evaluation?.readiness === "ready";
+  // Same fix as canAttest: a preliminary positive, an unreadable panel, or a
+  // medication-alignment flag pins readiness at "review" forever - those are
+  // genuine findings, not something staff can edit away. Printing (like
+  // attesting) only needs the absence of hard stops, not zero warnings -
+  // otherwise a record staff already attested and locked with a warning
+  // present could never be printed at all.
+  const udsReadyForFinalOutput =
+    evaluation !== undefined &&
+    evaluation.readiness !== "idle" &&
+    evaluation.readiness !== "blocked";
   const firstStopMessage = stops[0]?.message;
-  const udsLogLabel = udsReadyForFinalOutput
-    ? "Finalize & add to daily log"
-    : "Log as needs review";
+  // Unlike print/attest, the daily-log label is purely informational (never
+  // disables the button), so it keeps the stricter "no warnings either"
+  // reading - a preliminary positive genuinely does need review, even though
+  // it must not block printing or attesting.
+  const udsLogLabel =
+    evaluation?.readiness === "ready" ? "Finalize & add to daily log" : "Log as needs review";
 
   return (
     <UdsIncompleteFieldsContext.Provider value={incompleteFields}>
@@ -814,7 +827,10 @@ export function UdsPanel({
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"
-                    onInput={(event) => patchPatient({ dob: event.currentTarget.value })}
+                    inputMode="numeric"
+                    onInput={(event) =>
+                      patchPatient({ dob: formatDobAsTyped(event.currentTarget.value) })
+                    }
                   />
                 </Field>
                 <Field label="Collected by" field="collector" hint="required">
@@ -1174,79 +1190,87 @@ export function UdsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
-            <div class="wfp-section-head">Clinician result report</div>
-            <div class="wfp-section-body">
-              <ClinicianLabSheet
-                encounter={encounter}
-                omittedPanel={omittedPanel || undefined}
-                includeSignatureFields={includeSignatureFields}
-              />
-              <div class="meditech-lab-note-heading">TEBRA NARRATIVE</div>
-              <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
-              <div class="wfp-actions">
-                <button
-                  type="button"
-                  class="cd2004-command-button"
-                  onClick={() => clickLegacyControl("printUdsReport")}
-                  disabled={!udsReadyForFinalOutput}
-                  title={
-                    udsReadyForFinalOutput
-                      ? "Print the finalized clinician result report."
-                      : "Available once every outstanding requirement below is resolved."
-                  }
-                >
-                  Print clinician report
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => clickLegacyControl("printUdsPatient")}
-                  disabled={!udsReadyForFinalOutput}
-                  title={
-                    udsReadyForFinalOutput
-                      ? "Print the finalized patient summary."
-                      : "Available once every outstanding requirement below is resolved."
-                  }
-                >
-                  Patient summary
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => navigator.clipboard?.writeText(noteText)}
-                  disabled={!noteText}
-                >
-                  Copy Tebra UDS note
-                </button>
-              </div>
-              {!udsReadyForFinalOutput && (
-                <p class="wfp-field-hint wfp-print-block-hint" role="status">
-                  Printing is disabled until this screen is complete
-                  {firstStopMessage && (
-                    <>
-                      {" — "}
-                      {stops.length === 1
-                        ? firstStopMessage
-                        : `${stops.length} outstanding requirements, starting with: ${firstStopMessage}`}
-                    </>
-                  )}
-                  .{" "}
-                  <button
-                    type="button"
-                    class="cd2004-link-button"
-                    onClick={() => setRequirementsOpen(true)}
-                  >
-                    View outstanding requirements
-                  </button>
-                </p>
-              )}
-            </div>
-          </div>
         </div>
       )}
 
       </fieldset>
+
+      {/* Deliberately outside the fieldset above: printing/copying the
+          finalized output is the point of a locked record, so these actions
+          must stay reachable after lock instead of being disabled by the
+          same native <fieldset disabled> that makes editable fields
+          read-only. */}
+      {tab === "interpretation" && (
+        <div class="wfp-section">
+          <div class="wfp-section-head">Clinician result report</div>
+          <div class="wfp-section-body">
+            <ClinicianLabSheet
+              encounter={encounter}
+              omittedPanel={omittedPanel || undefined}
+              includeSignatureFields={includeSignatureFields}
+            />
+            <div class="meditech-lab-note-heading">TEBRA NARRATIVE</div>
+            <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
+            <div class="wfp-actions">
+              <button
+                type="button"
+                class="cd2004-command-button"
+                onClick={() => clickLegacyControl("printUdsReport")}
+                disabled={!udsReadyForFinalOutput}
+                title={
+                  udsReadyForFinalOutput
+                    ? "Print the finalized clinician result report."
+                    : "Available once every outstanding requirement below is resolved."
+                }
+              >
+                Print clinician report
+              </button>
+              <button
+                type="button"
+                class="cd2004-link-button"
+                onClick={() => clickLegacyControl("printUdsPatient")}
+                disabled={!udsReadyForFinalOutput}
+                title={
+                  udsReadyForFinalOutput
+                    ? "Print the finalized patient summary."
+                    : "Available once every outstanding requirement below is resolved."
+                }
+              >
+                Patient summary
+              </button>
+              <button
+                type="button"
+                class="cd2004-link-button"
+                onClick={() => navigator.clipboard?.writeText(noteText)}
+                disabled={!noteText}
+              >
+                Copy Tebra UDS note
+              </button>
+            </div>
+            {!udsReadyForFinalOutput && (
+              <p class="wfp-field-hint wfp-print-block-hint" role="status">
+                Printing is disabled until this screen is complete
+                {firstStopMessage && (
+                  <>
+                    {" — "}
+                    {stops.length === 1
+                      ? firstStopMessage
+                      : `${stops.length} outstanding requirements, starting with: ${firstStopMessage}`}
+                  </>
+                )}
+                .{" "}
+                <button
+                  type="button"
+                  class="cd2004-link-button"
+                  onClick={() => setRequirementsOpen(true)}
+                >
+                  View outstanding requirements
+                </button>
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {locked && (
         <div class="wfp-section">

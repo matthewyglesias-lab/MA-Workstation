@@ -25,6 +25,7 @@ import { clickLegacyControl } from "../legacy-mirror";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { mirrorSamplesEncounterToLegacyDom } from "./samples-legacy-mirror";
 import type { PatientContext } from "../../types";
+import { formatDobAsTyped } from "../../format-dob";
 
 type SamplesTab = "order" | "medication" | "plan" | "review";
 
@@ -568,7 +569,10 @@ export function SamplesPanel({
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"
-                    onInput={(event) => patchPatient({ dob: event.currentTarget.value })}
+                    inputMode="numeric"
+                    onInput={(event) =>
+                      patchPatient({ dob: formatDobAsTyped(event.currentTarget.value) })
+                    }
                   />
                 </Field>
                 <Field label="Prescriber">

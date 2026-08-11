@@ -146,7 +146,7 @@ const routineSustennaEncounter = (): InjectionEncounter => ({
   },
   details: {
     purpose: "Day 8 initiation",
-    productSource: "Clinic stock",
+    productSource: "Clinic sample",
     preparation: "Inspected and mixed per current product instructions",
     volume: "1",
     volumeUnit: "mL",
@@ -240,7 +240,7 @@ const routineInjectionDocumentation: InjectionDocumentationInput = {
       ndc: "50458-0564-01",
       lot: "SUS-A",
       expiration: "12/2027",
-      source: "Clinic stock",
+      source: "Clinic sample",
       preparation: "Inspected and mixed per current product instructions",
     },
   ],

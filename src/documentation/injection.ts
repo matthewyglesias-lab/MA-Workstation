@@ -2,6 +2,7 @@ import {
   ALERT,
   ARROW,
   INDENT,
+  alerts,
   block,
   bullets,
   cleanText,
@@ -21,6 +22,7 @@ import type {
   InjectionDocumentationInput,
   InjectionDocumentationResult,
   InjectionInitiationProtocol,
+  InjectionNoteFacts,
   InjectionVitals,
 } from "./types";
 
@@ -311,6 +313,60 @@ const section = (
   content: string,
 ): DocumentationSection => ({ id, label, destination, content });
 
+// RC6.1 fast injection workflow note rhythm: compact, clinical-shorthand
+// paragraphs instead of labeled-row blocks. Every label here is omitted
+// entirely when its fact is empty (no "Site assessment:" with nothing after
+// it) - `noteLines`/`joinBlocks` already drop falsy entries, so a paragraph
+// only needs to be pushed when it has real content.
+//
+// Staff-entered values (administered-by initials, provider names) sometimes
+// already end in punctuation ("Matthew Y."); append a period only when the
+// value doesn't already end in one, so a label line never doubles up.
+const endSentence = (value: string): string =>
+  /[.!?]$/.test(value) ? value : `${value}.`;
+
+const formatNoteFactsCC = (facts: InjectionNoteFacts): string =>
+  noteLines([facts.headline, facts.presentation]).join("\n");
+
+const formatNoteFactsAssessment = (
+  facts: InjectionNoteFacts,
+  clinicianAttention: string[],
+): string =>
+  joinBlocks([
+    facts.verification ? `Verification: ${facts.verification}` : "",
+    facts.clinicalReview ? `Clinical review: ${facts.clinicalReview}` : "",
+    alerts(clinicianAttention).join("\n"),
+    facts.siteAssessment ? `Site assessment: ${facts.siteAssessment}` : "",
+    facts.timing ? `Timing: ${facts.timing}` : "",
+  ]);
+
+const formatNoteFactsPlan = (
+  input: InjectionDocumentationInput,
+  facts: InjectionNoteFacts,
+): string =>
+  joinBlocks([
+    noteLines([
+      facts.administration ? `Administration: ${facts.administration}` : "",
+      facts.dateTime ? `Date/time: ${endSentence(facts.dateTime)}` : "",
+    ]).join("\n"),
+    facts.asepticTechnique ?? "",
+    formatInitiation(input.initiation),
+    noteLines([
+      facts.response ? `Response: ${facts.response}` : "",
+      facts.observation ?? "",
+    ]).join("\n"),
+    facts.departureStatus ? `Disposition: ${facts.departureStatus}` : "",
+    formatHandling(input),
+    formatProductIssue(input),
+    formatException(input),
+    facts.traceability ? `Traceability: ${endSentence(facts.traceability)}` : "",
+    facts.followUp ? `Follow-up: ${facts.followUp}` : "",
+    noteLines([
+      facts.orderingProvider ? `Ordering provider: ${endSentence(facts.orderingProvider)}` : "",
+      facts.administeredBy ? `Administered by: ${endSentence(facts.administeredBy)}` : "",
+    ]).join("\n"),
+  ]);
+
 export const formatInjectionDocumentation = (
   input: InjectionDocumentationInput,
   evaluation?: DocumentationEvaluation,
@@ -320,6 +376,23 @@ export const formatInjectionDocumentation = (
     (component) => component && typeof component === "object",
   );
   const administered = input.disposition?.kind === "administered";
+
+  if (administered && input.noteFacts) {
+    const facts = input.noteFacts;
+    const cc = formatNoteFactsCC(facts);
+    const assessment = formatNoteFactsAssessment(
+      facts,
+      input.preAdministration?.clinicianAttention ?? [],
+    );
+    const plan = formatNoteFactsPlan(input, facts);
+    const sections = [
+      section("cc", "CC", "CC", cc),
+      section("assessment", "Assessment", "Assessment", assessment),
+      section("plan", "Plan", "Plan", plan),
+    ];
+    const all = joinSectionBodies([cc, assessment, plan]);
+    return { workflow: "injection", sections, text: all, cc, assessment, plan, all };
+  }
 
   const cc = formatChiefComplaint(input, contribution.cc ?? []);
   const assessment = formatAssessment(input, contribution.assessment ?? []);
