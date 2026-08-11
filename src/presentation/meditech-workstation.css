@@ -1429,6 +1429,9 @@
   }
 
   .meditech-lab-note-heading {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     margin-top: 7px;
     padding: 3px 5px;
     color: #fff;
@@ -1436,6 +1439,11 @@
     border: 1px solid #31484b;
     font: 700 8px Tahoma, sans-serif;
     letter-spacing: 0.06em;
+  }
+
+  .meditech-lab-note-heading svg {
+    width: 13px;
+    height: 13px;
   }
 }
 

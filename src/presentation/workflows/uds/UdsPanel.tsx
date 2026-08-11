@@ -1209,7 +1209,10 @@ export function UdsPanel({
               omittedPanel={omittedPanel || undefined}
               includeSignatureFields={includeSignatureFields}
             />
-            <div class="meditech-lab-note-heading">TEBRA NARRATIVE</div>
+            <div class="meditech-lab-note-heading">
+              <DesktopIcon name="note" />
+              TEBRA NARRATIVE
+            </div>
             <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
             <div class="wfp-actions">
               <button

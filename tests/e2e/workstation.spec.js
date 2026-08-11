@@ -1182,19 +1182,18 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administered).toBeEnabled();
     await administered.check();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
-    await expect(page.locator('#outCC')).toContainText('Purpose: Active order follow-up context');
-    await expect(page.locator('#outPL')).toContainText('MEDICATION ADMINISTRATION');
-    await expect(page.locator('#outPL')).toContainText('Actual administration time: 9:41 AM');
-    await expect(page.locator('#outPL')).toContainText('Administration amount: 2 mL');
-    await expect(page.locator('#outPL')).toContainText('Delivery device: Prefilled syringe');
-    await expect(page.locator('#outPL')).toContainText('Site condition: Skin/site intact before administration');
-    await expect(page.locator('#outPL')).toContainText('Response: Tolerated well');
-    await expect(page.locator('#outPL')).toContainText('PRODUCT TRACEABILITY');
-    await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
-    const injectionPlan = await page.locator('#outPL').innerText();
-    expect(injectionPlan).not.toMatch(
-      /no (?:immediate complication|swelling)|without acute reaction/i
+    // RC6.1's compact Plan carries the strongest single administration
+    // sentence, compact military date/time, response wording, and
+    // traceability - not every individual field entered on the worksheet
+    // (order purpose, administration amount, delivery device, and site
+    // condition are intentionally not part of the compact rhythm).
+    await expect(page.locator('#outPL')).toContainText(
+      'Administration: Haldol Dec. 50 mg IM administered to R ventrogluteal per active order using aseptic technique.'
     );
+    await expect(page.locator('#outPL')).toContainText('Date/time: 7/30/26 0941.');
+    await expect(page.locator('#outPL')).toContainText('Response: Pt tolerated inj well');
+    await expect(page.locator('#outPL')).toContainText('Traceability: NDC 00000-0000-42');
+    await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
 
     const shellCopyAll = page
       .locator('.cd2004-inspector-window')
@@ -1203,7 +1202,7 @@ test.describe('MA Workstation browser journeys', () => {
     await shellCopyAll.click();
     await expect.poll(async () => {
       const copied = await page.evaluate(() => navigator.clipboard.readText());
-      return ['MEDICATION ADMINISTRATION', 'Actual administration time: 9:41 AM', 'PRODUCT TRACEABILITY']
+      return ['Administration: Haldol Dec.', 'Date/time: 7/30/26 0941', 'Traceability: NDC 00000-0000-42']
         .every(fragment => copied.includes(fragment));
     }).toBe(true);
     const copiedNote = await page.evaluate(() => navigator.clipboard.readText());
@@ -1260,7 +1259,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Outcome');
     const lockedMedication = await page.locator('#medHdrName').textContent();
     expect(lockedMedication).toBeTruthy();
-    await expect(page.locator('#outPL')).toContainText('Actual administration time: 9:41 AM');
+    await expect(page.locator('#outPL')).toContainText('Date/time: 7/30/26 0941.');
     await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
 
     // The addenda-authoring UI lives entirely inside the hidden legacy
@@ -1423,10 +1422,17 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
     // The worksheet preview remains the meaningful source for each component;
     // no legacy completion receipt or global F10 action owns this transition.
-    await expect(page.locator('#outPL')).toContainText('Component 1');
-    await expect(page.locator('#outPL')).toContainText('400 mg');
-    await expect(page.locator('#outPL')).toContainText('Component 2');
-    await expect(page.locator('#outPL')).toContainText('L deltoid');
+    // The compact note documents both components' dose/site (Administration)
+    // and both components' lot/NDC/expiration (Traceability) - not just the
+    // primary injection's.
+    await expect(page.locator('#outPL')).toContainText(
+      'Administration: Abilify Maintena 400 mg IM administered to R deltoid using aseptic technique.'
+    );
+    await expect(page.locator('#outPL')).toContainText(
+      'Component 2 — Abilify Maintena 400 mg IM administered to L deltoid.'
+    );
+    await expect(page.locator('#outPL')).toContainText('Traceability: NDC 00000-0000-11 · Lot PAIR-LOT-1 · Exp 05/2028.');
+    await expect(page.locator('#outPL')).toContainText('Component 2 — NDC 00000-0000-22 · Lot PAIR-LOT-2 · Exp 06/2028.');
     await expect(page.locator('#injCompletionOverlay')).toBeHidden();
     await expectNoHorizontalPageOverflow(page);
   });

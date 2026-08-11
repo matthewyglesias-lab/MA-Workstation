@@ -5,6 +5,8 @@ import {
 } from "../../../domain/injection";
 import type { MedicationVerificationKey } from "../../../domain/injection-catalog";
 import type { InjectionDocumentationMetadata } from "../../../domain/injection-ndc";
+import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
+import type { InjectionNoteFacts } from "../../../documentation/types";
 import { setLegacyCheckboxValue, setLegacyFieldValue } from "../legacy-mirror";
 
 declare global {
@@ -54,6 +56,16 @@ declare global {
       };
       documentation?: InjectionDocumentationMetadata;
     }) => void;
+    /**
+     * Pull accessor for the typed RC6.1 note-fact set, read by
+     * readLegacyInjectionDocumentation() so the legacy-DOM-driven note
+     * preview (the right-rail inspector, fed via window._note) renders the
+     * same compact note as the typed panel's own "Document output" preview
+     * instead of falling back to the pre-RC6.1 verbose format. Always
+     * reflects the most recently mirrored encounter; undefined when that
+     * encounter isn't in the administered state.
+     */
+    ipmgInjectionNoteFacts?: () => InjectionNoteFacts | undefined;
   }
 }
 
@@ -70,7 +82,10 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
   // evaluator.  In particular, some legacy products expose every possible
   // product flag, whereas the current reference bundle makes a subset apply
   // only to initiation or re-initiation phases.
-  const requiredVerifications = InjectionEngine.evaluate(encounter, {}).output.requiredVerifications;
+  const evaluation = InjectionEngine.evaluate(encounter, {});
+  const requiredVerifications = evaluation.output.requiredVerifications;
+  window.ipmgInjectionNoteFacts = () =>
+    injectionEncounterToDocumentationInput(encounter, evaluation)?.noteFacts;
 
   setLegacyFieldValue("ptName", encounter.patient.name);
   setLegacyFieldValue("ptDOB", encounter.patient.dob);
