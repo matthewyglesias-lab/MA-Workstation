@@ -1298,6 +1298,13 @@ export function InjectionPanel({
     });
   };
   const stops = evaluation?.stops ?? [];
+  // The routine timing warning and the Sustenna Day 8 window warning are
+  // different checks with different messages - the timing readout's own
+  // message only covers the former, so the late-dose dialog needs to look up
+  // whichever warning is actually driving lateDoseWarning to explain itself.
+  const lateDoseWarningMessage = evaluation?.warnings.find(
+    (item) => item.code === "timing.review" || item.code === "initiation.sustenna.outside-window",
+  )?.message;
   const incompleteFields = useMemo(
     () => new Set(stops.flatMap((item) => (item.field ? [item.field] : []))),
     [stops],
@@ -1455,18 +1462,37 @@ export function InjectionPanel({
     if (tab === "administration" || tab === "product") setTab("outcome");
   }, [nonAdministration, tab]);
 
+  // Seeds the dialog's editable fields from whatever is actually stored on
+  // the encounter, not from whatever the fields happened to hold last time
+  // the dialog was open - otherwise "Edit" on an already-reviewed record (or
+  // one just reopened from a saved draft) would show a stale/default choice
+  // instead of what staff actually recorded.
+  const openLateDoseDialog = () => {
+    const stored = encounter.details?.lateDoseReview;
+    setLateDoseReviewChoice(stored === "other" ? "other" : "provider-authorized");
+    setLateDoseReviewNoteDraft(stored === "other" ? encounter.details?.lateDoseReviewNote ?? "" : "");
+    setLateDoseDialogOpen(true);
+  };
+
   // A dose given after its safe window gets a brief MEDITECH-style review
-  // prompt, once per late administration date - it records the review, it
-  // does not gate finalizing (the engine only warns, never stops, on this).
+  // prompt - it records the review, it does not gate finalizing (the engine
+  // only warns, never stops, on this). It fires on arrival at Outcome, the
+  // last tab, rather than the instant the fields read as late: administration
+  // date defaults to today, so entering an old prior-dose date alone (before
+  // the actual administration date is even typed) would otherwise read as
+  // "40 days late" and pop a modal that blocks staff mid-entry, on a value
+  // nobody has finished typing yet. By Outcome the real dates are in.
   useEffect(() => {
-    if (locked || !evaluation?.output.lateDoseWarning) return;
+    if (locked || tab !== "outcome" || !evaluation?.output.lateDoseWarning) return;
     if (encounter.details?.lateDoseReview) return;
     if (lateDosePromptedFor.current === encounter.administrationDate) return;
     lateDosePromptedFor.current = encounter.administrationDate;
-    setLateDoseReviewChoice("provider-authorized");
-    setLateDoseReviewNoteDraft("");
-    setLateDoseDialogOpen(true);
+    openLateDoseDialog();
+    // `openLateDoseDialog` reads current encounter/details by closure and is
+    // recreated each render; including it would refire this on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    tab,
     encounter.administrationDate,
     encounter.details?.lateDoseReview,
     evaluation?.output.lateDoseWarning,
@@ -1848,7 +1874,7 @@ export function InjectionPanel({
                         <button
                           type="button"
                           class="cd2004-link-button"
-                          onClick={() => setLateDoseDialogOpen(true)}
+                          onClick={openLateDoseDialog}
                         >
                           Edit
                         </button>
@@ -1859,7 +1885,7 @@ export function InjectionPanel({
                       <button
                         type="button"
                         class="cd2004-link-button"
-                        onClick={() => setLateDoseDialogOpen(true)}
+                        onClick={openLateDoseDialog}
                       >
                         Document late-dose review
                       </button>
@@ -2989,7 +3015,7 @@ export function InjectionPanel({
               </button>
             </div>
             <div class="cd2004-dialog-body">
-              <p>{evaluation?.output.timing.message}</p>
+              <p>{lateDoseWarningMessage}</p>
               <OptionList<"provider-authorized" | "other">
                 name="late-dose-review"
                 value={lateDoseReviewChoice}
