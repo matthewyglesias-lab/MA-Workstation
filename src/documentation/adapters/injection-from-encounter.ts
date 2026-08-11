@@ -615,10 +615,7 @@ export function injectionEncounterToDocumentationInput(
   );
 
   const details = encounter.details ?? {};
-  const productSource =
-    details.productSource === "Other"
-      ? trimmed(details.productSourceOther)
-      : trimmed(details.productSource);
+  const productSource = trimmed(details.productSource);
   const preparation =
     details.preparation === "Other"
       ? trimmed(details.preparationOther)

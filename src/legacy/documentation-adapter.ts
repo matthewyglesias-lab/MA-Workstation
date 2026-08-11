@@ -681,10 +681,7 @@ export const readLegacyInjectionDocumentation = (
   const clinicianAttention = unique(
     selectedControlTexts("injSafetyChips", doc),
   );
-  const productSource =
-    rawValue("injProductSource", doc) === "Other"
-      ? value("injProductSourceOther", doc)
-      : selectedOptionText("injProductSource", doc);
+  const productSource = selectedOptionText("injProductSource", doc);
   const preparation =
     rawValue("injPreparation", doc) === "Other"
       ? value("injPreparationDetail", doc)

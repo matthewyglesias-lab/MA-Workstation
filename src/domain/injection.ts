@@ -117,7 +117,6 @@ export interface InjectionInitiationState {
 export interface InjectionAdministrationDetails {
   purpose?: string;
   productSource?: string;
-  productSourceOther?: string;
   preparation?: string;
   preparationOther?: string;
   volume?: string;
@@ -1552,17 +1551,6 @@ const evaluateDetails = (
       ),
     );
   }
-  if (details.productSource === "Other" && !details.productSourceOther?.trim()) {
-    stops.push(
-      issue(
-        "stop",
-        "trace.source-other",
-        "Document the other medication source.",
-        "details.productSourceOther",
-        "traceability",
-      ),
-    );
-  }
   if (details.preparation === "Other" && !details.preparationOther?.trim()) {
     stops.push(
       issue(
@@ -1789,7 +1777,7 @@ const buildRequirementProjection = (
   set("acuteSafetyScreenConfirmed", administrationDocumented ? "required" : "hidden", "safety");
   set("activeSafetyConcerns", administrationDocumented ? "optional" : "hidden", "safety");
   requiredAttestations.forEach(([key]) =>
-    set(`attestations.${String(key)}`, administrationDocumented ? "required" : "hidden", "safety"),
+    set(`attestations.${String(key)}`, administrationDocumented ? "optional" : "hidden", "safety"),
   );
   set("attestations.prior", administrationDocumented ? "optional" : "hidden", "safety");
 
@@ -1846,11 +1834,6 @@ const buildRequirementProjection = (
     "administration",
   );
   set("details.productSource", administrationDocumented ? "optional" : "hidden", "traceability");
-  set(
-    "details.productSourceOther",
-    administrationDocumented && encounter.details?.productSource === "Other" ? "required" : "hidden",
-    "traceability",
-  );
   set("details.preparation", administrationDocumented ? "optional" : "hidden", "traceability");
   set(
     "details.preparationOther",
@@ -2293,9 +2276,13 @@ export const InjectionEngine: ClinicalEngine<
             ),
           );
         }
+        // These are pre-checked by default (see emptyInjectionEncounter) so an
+        // unchecked box represents staff affirmatively flagging that a step
+        // wasn't done - worth a review warning, not a hard stop that blocks
+        // finishing the record.
         requiredAttestations.forEach(([field, code, message]) => {
           if (!encounter.attestations[field]) {
-            stops.push(issue("stop", code, message, `attestations.${String(field)}`, "safety"));
+            warnings.push(issue("warning", code, message, `attestations.${String(field)}`, "safety"));
           }
         });
         if (encounter.attestations.allergy && !encounter.allergies.trim()) {
@@ -2572,7 +2559,11 @@ export const emptyInjectionEncounter = (): InjectionEncounter => ({
   traceability: { ndc: "", lot: "", expiration: "" },
   vitals: {},
   response: { kind: "", custom: "" },
-  attestations: {},
+  // Pre-checked so staff review by exception (uncheck what wasn't actually
+  // done) instead of affirmatively re-ticking six routine safety steps on
+  // every encounter. "prior" (prior-authorization on file) stays unchecked -
+  // it's a real per-encounter fact, not a standard-of-care checklist item.
+  attestations: { id2: true, rights: true, allergy: true, consent: true, screen: true, hygiene: true },
   verifications: {},
   acuteSafetyScreenConfirmed: false,
   activeSafetyConcerns: [],

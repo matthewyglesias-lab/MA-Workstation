@@ -230,10 +230,6 @@ function legacyRequirementFallback(
       encounter.details?.waste ? "required" : "hidden",
       "traceability",
     ),
-    "details.productSourceOther": requirement(
-      encounter.details?.productSource === "Other" ? "required" : "hidden",
-      "traceability",
-    ),
     "details.preparationOther": requirement(
       encounter.details?.preparation === "Other" ? "required" : "hidden",
       "traceability",
@@ -288,7 +284,6 @@ const pairedMedicationKeyFor = (
 const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
   purpose: "order",
   productSource: "product",
-  productSourceOther: "product",
   preparation: "product",
   preparationOther: "product",
   waste: "product",
@@ -456,21 +451,72 @@ function OptionList<T extends string>({ name, value, onChange, options, inline }
   );
 }
 
+// A short status stamp for the timing banner - "what does this number mean"
+// answered in three words before staff read the full sentence below it.
+// Sentence case with a period, matching the app's own posted/error stamp
+// captions (.cd2004-post-stamp/.cd2004-post-error) rather than an all-caps
+// alert-box convention borrowed from elsewhere.
+function injectionTimingStatusLabel(timing: InjectionEvaluationOutput["timing"]): string {
+  switch (timing.state) {
+    case "ok":
+      return "Within the permitted window.";
+    case "stop":
+      return "Dates don't add up — check them.";
+    case "warning":
+      if (timing.late) return "Late — needs provider review.";
+      if (
+        timing.daysSincePrior !== null &&
+        timing.earliestDay !== null &&
+        timing.daysSincePrior < timing.earliestDay
+      ) {
+        return "Early — confirm with provider.";
+      }
+      return "Review timing before administering.";
+    case "idle":
+    default:
+      return "Timing not yet evaluated.";
+  }
+}
+
+// The icon column matches the app's own posted/error stamps: a fixed-color
+// pictogram, not a color recolored per state, from the same 16-bit-style set
+// used across the workstation.
+function injectionTimingStatusIcon(
+  timing: InjectionEvaluationOutput["timing"],
+): "check" | "alert" | "note" {
+  switch (timing.state) {
+    case "ok":
+      return "check";
+    case "warning":
+    case "stop":
+      return "alert";
+    case "idle":
+    default:
+      return "note";
+  }
+}
+
 function CheckList({
   items,
   checked,
   onToggle,
   requirementFor,
+  quiet,
 }: {
   items: ReadonlyArray<{ key: string; label: string; description?: string }>;
   checked: (key: string) => boolean;
   onToggle: (key: string, value: boolean) => void;
   /** The evaluator owns checklist visibility and required markers. */
   requirementFor?: (key: string) => string;
+  /** The app-wide "selected" amber fill means "this needs attention" (a
+      raised hold, an active exception). A routine attestation that's
+      pre-checked by default isn't that - it's the expected state - so this
+      skips the amber fill and shows only the checkmark. */
+  quiet?: boolean;
 }) {
   const requirements = useContext(InjectionRequirementsContext);
   return (
-    <div class="wfp-option-list">
+    <div class={`wfp-option-list ${quiet ? "wfp-option-list-quiet" : ""}`}>
       {items.map((item) => {
         const projected = requirementFor ? requirements[requirementFor(item.key)] : undefined;
         if (projected?.state === "hidden") return null;
@@ -947,6 +993,13 @@ export function InjectionPanel({
         initialEncounter.vitals?.rr ||
         initialEncounter.vitals?.spo2
       ),
+  );
+  // Once staff confirm "no acute concerns today", the review-trigger checklist
+  // is asking about things that were already just ruled out - collapse it out
+  // of the way. It stays reachable via a link, and if any trigger is already
+  // ticked it never auto-collapses, since that combination needs eyes on it.
+  const [safetyTriggersOpen, setSafetyTriggersOpen] = useState(
+    () => (initialEncounter.activeSafetyConcerns?.length ?? 0) > 0,
   );
   const mirroredOnMount = useRef(false);
   const autoCalculatedNextDue = useRef("");
@@ -1845,31 +1898,45 @@ export function InjectionPanel({
                 </Field>
               </div>
               {/* The due line a MAR carries: how long since the last dose and
-                  what window this one falls in. Every value here is read
-                  straight off the engine's own timing evaluation — this
-                  surfaces what it already computed and adds no gating of its
-                  own. The engine raises the stop or warning itself. */}
+                  what window this one falls in, stamped the way the app's
+                  own posted/error banners are (.cd2004-post-stamp /
+                  .cd2004-post-error) - a fixed-color 16-bit pictogram beside
+                  a bold sentence-case caption, not a generic colored alert
+                  box. Every value here is read straight off the engine's own
+                  timing evaluation - this surfaces what it already computed
+                  and adds no gating of its own. The engine raises the stop
+                  or warning itself. */}
               {!nonAdministration && evaluation && (
-                <dl class={`wfp-report-meta wfp-due-line is-${evaluation.output.timing.state}`}>
-                  <dt>Days since prior</dt>
-                  <dd>
-                    {evaluation.output.timing.daysSincePrior === null
-                      ? "—"
-                      : `${evaluation.output.timing.daysSincePrior} day(s)`}
-                  </dd>
-                  {evaluation.output.timing.earliestDay !== null &&
-                    evaluation.output.timing.latestDay !== null && (
-                      <>
-                        <dt>Permitted window</dt>
-                        <dd>
-                          Day {evaluation.output.timing.earliestDay}–
-                          {evaluation.output.timing.latestDay}
-                        </dd>
-                      </>
-                    )}
-                  <dt>Timing</dt>
-                  <dd>{evaluation.output.timing.message}</dd>
-                </dl>
+                <div class={`wfp-timing-banner is-${evaluation.output.timing.state}`}>
+                  <DesktopIcon name={injectionTimingStatusIcon(evaluation.output.timing)} />
+                  <div>
+                    <strong class="wfp-timing-banner-status">
+                      {injectionTimingStatusLabel(evaluation.output.timing)}
+                    </strong>
+                    <div class="wfp-timing-banner-days">
+                      {evaluation.output.timing.daysSincePrior === null
+                        ? "Days since prior dose: —"
+                        : `${evaluation.output.timing.daysSincePrior} day(s) since prior dose`}
+                      {evaluation.output.timing.earliestDay !== null &&
+                        evaluation.output.timing.latestDay !== null && (
+                          <>
+                            {" "}
+                            · permitted window day {evaluation.output.timing.earliestDay}–
+                            {evaluation.output.timing.latestDay}
+                          </>
+                        )}
+                    </div>
+                    <p class="wfp-timing-banner-message">{evaluation.output.timing.message}</p>
+                    {medication &&
+                      evaluation.output.timing.state === "warning" &&
+                      medication.missedDoseGuidance.trim() && (
+                        <p class="wfp-timing-banner-guidance">
+                          <strong>{medication.label} guidance:</strong>{" "}
+                          {medication.missedDoseGuidance}
+                        </p>
+                      )}
+                  </div>
+                </div>
               )}
               {!nonAdministration && evaluation?.output.lateDoseWarning && (
                 <p class="wfp-field-hint">
@@ -2424,20 +2491,12 @@ export function InjectionPanel({
                     onChange={(event) => patchDetails({ productSource: event.currentTarget.value })}
                   >
                     <option value="">Not separately documented</option>
-                    <option value="Clinic stock">Clinic stock</option>
-                    <option value="Patient-supplied medication">Patient-supplied medication</option>
-                    <option value="Specialty-pharmacy shipment">Specialty-pharmacy shipment</option>
-                    <option value="Other">Other</option>
+                    <option value="Clinic sample">Clinic sample</option>
+                    <option value="Patient-specific pharmacy medication">
+                      Patient-specific pharmacy medication
+                    </option>
                   </select>
                 </Field>
-                {encounter.details?.productSource === "Other" && (
-                  <Field label="Medication source detail" field="details.productSourceOther">
-                    <input
-                      value={encounter.details?.productSourceOther ?? ""}
-                      onInput={(event) => patchDetails({ productSourceOther: event.currentTarget.value })}
-                    />
-                  </Field>
-                )}
                 <Field label="Preparation / reconstitution" field="details.preparation">
                   <select
                     value={encounter.details?.preparation ?? ""}
@@ -2555,6 +2614,7 @@ export function InjectionPanel({
                 checked={(key) => Boolean(encounter.attestations[key as keyof InjectionEncounter["attestations"]])}
                 onToggle={toggleAttestation}
                 requirementFor={(key) => `attestations.${key}`}
+                quiet
               />
               {medication && visibleMedicationVerifications.length > 0 && (
                 <>
@@ -2668,24 +2728,45 @@ export function InjectionPanel({
                   injection. Identical checkbox styling next to each other is
                   how staff tick one by accident and then cannot tell which box
                   is blocking them. It reads as an exception block. */}
-              {requirements.activeSafetyConcerns?.state !== "hidden" && safetyTriggers.length > 0 && (
-                <div class="wfp-exception-block">
-                  <div class="wfp-section-head">Provider review triggers</div>
-                  <p class="wfp-exception-lead">
-                    Tick only what the patient actually reports. Any tick here holds the
-                    injection for provider review — leave them clear for a routine dose.
-                  </p>
-                  <CheckList
-                    items={safetyTriggers.map((trigger) => ({
-                      key: trigger.key,
-                      label: trigger.label,
-                      description: trigger.description,
-                    }))}
-                    checked={(key) => activeSafetyConcerns.has(key)}
-                    onToggle={toggleSafetyConcern}
-                  />
-                </div>
-              )}
+              {requirements.activeSafetyConcerns?.state !== "hidden" &&
+                safetyTriggers.length > 0 &&
+                (encounter.acuteSafetyScreenConfirmed &&
+                activeSafetyConcerns.size === 0 &&
+                !safetyTriggersOpen ? (
+                  <button
+                    type="button"
+                    class="cd2004-link-button wfp-vitals-toggle"
+                    onClick={() => setSafetyTriggersOpen(true)}
+                  >
+                    Review triggers (none reported)
+                  </button>
+                ) : (
+                  <div class="wfp-exception-block">
+                    <div class="wfp-section-head">Provider review triggers</div>
+                    <p class="wfp-exception-lead">
+                      Tick only what the patient actually reports. Any tick here holds the
+                      injection for provider review — leave them clear for a routine dose.
+                    </p>
+                    <CheckList
+                      items={safetyTriggers.map((trigger) => ({
+                        key: trigger.key,
+                        label: trigger.label,
+                        description: trigger.description,
+                      }))}
+                      checked={(key) => activeSafetyConcerns.has(key)}
+                      onToggle={toggleSafetyConcern}
+                    />
+                    {encounter.acuteSafetyScreenConfirmed && activeSafetyConcerns.size === 0 && (
+                      <button
+                        type="button"
+                        class="cd2004-link-button wfp-vitals-toggle"
+                        onClick={() => setSafetyTriggersOpen(false)}
+                      >
+                        Hide review triggers
+                      </button>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         </div>

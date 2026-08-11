@@ -1165,7 +1165,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.wfp-field:has-text("Verified active-order purpose") input').fill('Active order follow-up context');
 
     await openInjectionTab(page, 'Product');
-    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic stock' });
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openInjectionTab(page, 'Administration');
     await panel.locator('.wfp-field:has-text("Administration amount") input').fill('2');
@@ -1190,7 +1190,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#outPL')).toContainText('Site condition: Skin/site intact before administration');
     await expect(page.locator('#outPL')).toContainText('Response: Tolerated well');
     await expect(page.locator('#outPL')).toContainText('PRODUCT TRACEABILITY');
-    await expect(page.locator('#outPL')).toContainText('Product source: Clinic stock');
+    await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
     const injectionPlan = await page.locator('#outPL').innerText();
     expect(injectionPlan).not.toMatch(
       /no (?:immediate complication|swelling)|without acute reaction/i
@@ -1261,7 +1261,7 @@ test.describe('MA Workstation browser journeys', () => {
     const lockedMedication = await page.locator('#medHdrName').textContent();
     expect(lockedMedication).toBeTruthy();
     await expect(page.locator('#outPL')).toContainText('Actual administration time: 9:41 AM');
-    await expect(page.locator('#outPL')).toContainText('Product source: Clinic stock');
+    await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
 
     // The addenda-authoring UI lives entirely inside the hidden legacy
     // record workspace; the new panel provides its own addendum section

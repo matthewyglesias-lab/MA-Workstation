@@ -457,7 +457,6 @@ export function createLegacyClinicalSource(
       details: {
         purpose: value("injOrderPurpose"),
         productSource: value("injProductSource"),
-        productSourceOther: value("injProductSourceOther"),
         preparation: value("injPreparation"),
         preparationOther: value("injPreparationDetail"),
         volume: value("injVolume"),

@@ -97,7 +97,6 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
 
   const details = encounter.details ?? {};
   setLegacyFieldValue("injProductSource", details.productSource ?? "");
-  setLegacyFieldValue("injProductSourceOther", details.productSourceOther ?? "");
   setLegacyFieldValue("injPreparation", details.preparation ?? "");
   setLegacyFieldValue("injPreparationDetail", details.preparationOther ?? "");
   setLegacyFieldValue("injVolume", details.volume ?? "");
