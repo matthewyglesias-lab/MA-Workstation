@@ -2126,4 +2126,40 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(nextDue.locator('.wfp-calculated-value')).toBeVisible();
     await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);
   });
+
+  test('targets the Sustenna Day 8 date on a Day 1 initiation and clears a stale calculated date on a provider-directed path', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+
+    await panel.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
+    await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+    await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
+    await panel.getByRole('tab', { name: /^Administration/ }).click();
+    const actualDate = panel
+      .locator('.wfp-field', { hasText: 'Actual administration date' })
+      .locator('input[type="date"]');
+    await actualDate.fill('2026-07-30');
+
+    await panel.getByRole('tab', { name: /^Schedule/ }).click();
+    const nextDue = panel.locator('.wfp-field', { hasText: 'Expected next due' });
+    // Baseline: with no initiation protocol selected, the ordered q4wk
+    // interval drives the suggestion, same as the previous test.
+    await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-27');
+
+    // Day 1 initiation is followed by Day 8, not by the ordered maintenance
+    // interval - the suggestion must switch to admin date + 7 days.
+    await panel.locator('label:has-text("Day 1 initiation")').click();
+    await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-06');
+    await expect(nextDue.locator('.wfp-calculated-value')).toContainText('Day 8 target');
+
+    // A provider-directed re-initiation is explicitly a non-calculating
+    // path - the stale Day 8 (or interval) suggestion must be cleared, not
+    // left sitting in the field looking like a still-valid value.
+    await panel.locator('label:has-text("Re-initiation / provider plan")').click();
+    await expect(nextDue.locator('input[type="date"]')).toHaveValue('');
+    await expect(nextDue.locator('.wfp-calculated-value')).toHaveCount(0);
+    await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);
+  });
 });

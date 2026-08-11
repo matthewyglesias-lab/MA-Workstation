@@ -1491,8 +1491,23 @@ export function InjectionPanel({
   // staff change is preserved: only an empty value or the last calculation is
   // replaced when the date/cadence changes.
   useEffect(() => {
-    if (locked || nonAdministration || !suggestedNextDose) return;
+    if (locked || nonAdministration) return;
     const current = encounter.nextDoseDate;
+    if (!suggestedNextDose) {
+      // No calculated date currently applies (e.g. switching onto a
+      // provider-directed, non-calculating initiation path). Clear a
+      // leftover auto-calculated value so staff aren't looking at a stale
+      // date computed under a different protocol/interval - but never touch
+      // a date staff actually typed in themselves.
+      const wasAutoCalculated =
+        current && (current === autoCalculatedNextDue.current || nextDoseMetadata?.source === "calculated");
+      if (wasAutoCalculated) {
+        autoCalculatedNextDue.current = "";
+        patch({ nextDoseDate: "" });
+        patchDetails({ nextDose: undefined });
+      }
+      return;
+    }
     const canReplace =
       !current ||
       current === autoCalculatedNextDue.current ||
@@ -1884,7 +1899,11 @@ export function InjectionPanel({
                     onInput={(event) => applyManualNextDose(event.currentTarget.value)}
                   />
                   {nextDoseIsCalculated && (
-                    <span class="wfp-calculated-value">Calculated from documented date + cadence</span>
+                    <span class="wfp-calculated-value">
+                      {encounter.initiation?.protocol === "sustenna-day1"
+                        ? "Calculated as the Day 8 target (Day 1 + 7 days), not the ordered interval"
+                        : "Calculated from documented date + cadence"}
+                    </span>
                   )}
                   {suggestedNextDose && !nextDoseIsCalculated && (
                     <button

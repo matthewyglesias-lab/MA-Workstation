@@ -262,6 +262,16 @@ const pairedProtocols = new Set<InjectionInitiationProtocol>([
   "aristada-initio-sameday",
 ]);
 
+/** "Non-calculating path" protocols (see injectionInitiationConfig's "provider"
+ * kind) - timing is provider-directed and nonstandard, so nothing here
+ * should compute or auto-fill a follow-up date for these. */
+const PROVIDER_DIRECTED_INITIATION_PROTOCOLS = new Set<InjectionInitiationProtocol>([
+  "maintena-provider",
+  "asimtufii-provider",
+  "aristada-provider",
+  "sustenna-provider",
+]);
+
 const pairedProtocolProduct = (
   protocol: InjectionInitiationProtocol,
   primary: InjectionMedicationKey | "",
@@ -676,12 +686,7 @@ export function injectionInitiationConfig(
       oralLabel: "21-day oral continuation documented",
     };
   }
-  if (
-    protocol === "maintena-provider" ||
-    protocol === "asimtufii-provider" ||
-    protocol === "aristada-provider" ||
-    protocol === "sustenna-provider"
-  ) {
+  if (PROVIDER_DIRECTED_INITIATION_PROTOCOLS.has(protocol)) {
     return {
       kind: "provider",
       title:
@@ -1387,9 +1392,7 @@ const evaluateInitiation = (
   }
 
   if (
-    ["maintena-provider", "asimtufii-provider", "aristada-provider", "sustenna-provider"].includes(
-      initiation.protocol,
-    ) &&
+    PROVIDER_DIRECTED_INITIATION_PROTOCOLS.has(initiation.protocol) &&
     !initiation.providerNote.trim()
   ) {
     stops.push(
@@ -1890,9 +1893,23 @@ const buildGuidanceProjection = (
   allowedSites: readonly string[],
   expectedNextDoseDate: string,
   nonAdministration: boolean,
+  initiationProtocol: InjectionInitiationProtocol | "",
 ): InjectionGuidanceCard[] => {
   if (!medication?.clinicalReference) return [];
   const reference = medication.clinicalReference;
+  const nextDoseSourceMessage = (() => {
+    if (initiationProtocol && PROVIDER_DIRECTED_INITIATION_PROTOCOLS.has(initiationProtocol)) {
+      return "This is a non-calculating path. Enter the actual provider-directed follow-up date.";
+    }
+    if (initiationProtocol === "sustenna-day1") {
+      return expectedNextDoseDate
+        ? `${expectedNextDoseDate} is the Day 8 target, 7 days from the documented Day 1 administration date - not the ordered maintenance interval. Confirm or revise it for the actual follow-up plan.`
+        : "Enter the actual Day 1 administration date to calculate the Day 8 target.";
+    }
+    return expectedNextDoseDate
+      ? `${expectedNextDoseDate} is calculated from the documented administration date and selected cadence. Confirm or revise it for the actual follow-up plan.`
+      : "Enter the actual administration date and ordered cadence to calculate an expected next due date.";
+  })();
   const cards: InjectionGuidanceCard[] = [
     {
       key: `${medication.key}-active-order`,
@@ -1906,9 +1923,7 @@ const buildGuidanceProjection = (
       key: `${medication.key}-schedule`,
       section: "timing",
       title: "Expected next due",
-      message: expectedNextDoseDate
-        ? `${expectedNextDoseDate} is calculated from the documented administration date and selected cadence. Confirm or revise it for the actual follow-up plan.`
-        : "Enter the actual administration date and ordered cadence to calculate an expected next due date.",
+      message: nextDoseSourceMessage,
       classification: "local policy",
     },
     {
@@ -2222,7 +2237,23 @@ export const InjectionEngine: ClinicalEngine<
             ),
           );
         }
-        if (encounter.administrationDate && encounter.intervalKey) {
+        if (
+          encounter.initiation?.protocol &&
+          PROVIDER_DIRECTED_INITIATION_PROTOCOLS.has(encounter.initiation.protocol)
+        ) {
+          // Non-calculating path: no follow-up date is suggested or
+          // auto-filled. The ordered interval doesn't describe a
+          // provider-directed restart/re-initiation timeline, so a
+          // calculated guess here would silently misdirect staff instead of
+          // prompting the explicit entry the plan actually requires.
+        } else if (encounter.initiation?.protocol === "sustenna-day1" && encounter.administrationDate) {
+          // Day 1 is followed by Day 8, not by the ordered maintenance
+          // interval (typically q4wk) - using the ordered interval here
+          // would suggest a follow-up date three weeks later than the
+          // clinically required Day 8 ± 4-day window.
+          expectedNextDoseDate = addCalendarDays(encounter.administrationDate, 7);
+          calculatedDates.expectedNextDoseDate = expectedNextDoseDate;
+        } else if (encounter.administrationDate && encounter.intervalKey) {
           expectedNextDoseDate = calculateNextInjectionDate(
             medication,
             encounter.intervalKey,
@@ -2479,6 +2510,7 @@ export const InjectionEngine: ClinicalEngine<
       allowedSites,
       expectedNextDoseDate,
       Boolean(dispositionKind && dispositionKind !== "administered"),
+      encounter.initiation?.protocol ?? "",
     );
 
     return {
