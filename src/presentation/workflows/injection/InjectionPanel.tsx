@@ -52,6 +52,7 @@ import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
 import type { PatientContext } from "../../types";
+import { formatDobAsTyped } from "../../format-dob";
 import {
   canBuildInjectionPatientScreenDocument,
   type PatientScreenLanguage,
@@ -1663,7 +1664,10 @@ export function InjectionPanel({
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"
-                    onInput={(event) => patchPatient({ dob: event.currentTarget.value })}
+                    inputMode="numeric"
+                    onInput={(event) =>
+                      patchPatient({ dob: formatDobAsTyped(event.currentTarget.value) })
+                    }
                   />
                 </Field>
                 <Field label="Ordering provider" field="orderingProvider">

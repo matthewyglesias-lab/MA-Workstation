@@ -2014,6 +2014,37 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(addendumBox).toHaveValue('');
   });
 
+  test('keeps printing available on a locked UDS record that carries a warning', async ({ page }) => {
+    // A preliminary positive is a genuine finding, not a fixable data-entry
+    // problem - it must never block attesting, locking, or (this test's
+    // focus) printing the finalized report once the record is locked. The
+    // print/copy actions also live outside the panel's locked-fieldset so
+    // they stay reachable after lock instead of going dead with every other
+    // now-read-only field.
+    await page.goto('/');
+    await signInLocalStaff(page, 'QA Staff, MA');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
+    await page.locator('#uds-readings-verified').check();
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    await panel.getByRole('button', { name: 'THC positive · rest negative' }).click();
+    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+
+    const attestButton = panel.locator('.cd2004-record-actions button.is-primary');
+    await expect(attestButton).toBeEnabled();
+    await attestButton.click();
+    const attestDialog = page.getByRole('dialog', { name: 'Attest & lock local record' });
+    await attestDialog.getByRole('checkbox', { name: /I attest that I reviewed/ }).check();
+    await attestDialog.getByRole('button', { name: 'Attest & lock local record', exact: true }).click();
+    await expect(attestDialog).toBeHidden();
+    await expect(panel.locator('.wfp-status-flag.is-idle')).toHaveText('Read only');
+
+    await expect(panel.getByRole('button', { name: 'Print clinician report' })).toBeEnabled();
+    await expect(panel.getByRole('button', { name: 'Patient summary' })).toBeEnabled();
+    await expect(panel.locator('.wfp-print-block-hint')).toHaveCount(0);
+  });
+
   test('lists outstanding requirements and jumps to the tab that owns each one', async ({ page }) => {
     await page.goto('/');
 
