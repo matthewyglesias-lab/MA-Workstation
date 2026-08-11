@@ -1,4 +1,5 @@
 import {
+  INJECTION_DEPARTURE_STATUS_OPTIONS,
   INJECTION_RESPONSE_OPTIONS,
   INJECTION_SAFETY_TRIGGERS,
   injectionReasonLabel,
@@ -11,7 +12,7 @@ import {
   mapLegacyInitiationProtocol,
   type LegacyInitiationSnapshot,
 } from "../../legacy/documentation-adapter";
-import type { InjectionComponent, InjectionDocumentationInput } from "../types";
+import type { InjectionComponent, InjectionDocumentationInput, InjectionNoteFacts } from "../types";
 
 const trimmed = (value?: string): string => (value ?? "").trim();
 const unique = (items: string[]): string[] => [...new Set(items.filter(Boolean))];
@@ -46,6 +47,25 @@ const formatDateTime = (raw?: string): string => {
   const timeLabel = formatTime(time);
   return [dateLabel, timeLabel].filter(Boolean).join(" at ");
 };
+
+// Compact military-style charting (RC6.1 note format): "8/7/26 1750" for a
+// date + separate HH:MM field, and "8/7/26" alone when only the date exists.
+// Used everywhere administration date/time appears in the generated note so
+// the CC headline, Date/time line, and any other reference stay consistent.
+const formatCompactDate = (raw?: string): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed(raw));
+  if (!match) return "";
+  return `${Number(match[2])}/${Number(match[3])}/${(match[1] ?? "").slice(2)}`;
+};
+
+const formatMilitaryTime = (raw?: string): string => {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(trimmed(raw));
+  if (!match) return "";
+  return `${(match[1] ?? "").padStart(2, "0")}${match[2]}`;
+};
+
+const formatCompactDateTime = (date?: string, time?: string): string =>
+  [formatCompactDate(date), formatMilitaryTime(time)].filter(Boolean).join(" ");
 
 // Faithful port of legacy-runtime.js's <select> option value -> display-text
 // pairs where the visible text is shorter than the stored value (documented
@@ -104,6 +124,146 @@ const VERIFICATION_PLAN_FACTS: Partial<Record<MedicationVerificationKey, string>
   noMassage: "Injection site was not massaged after administration per product instructions.",
   deepZtrack:
     "Ordered route, site, and product-specific technique verified against the actual administration.",
+};
+
+// RC6.1 compact note wording for the core verification/clinical-review
+// attestations - deliberately distinct from ATTESTATION_ASSESSMENT_FACTS
+// above (which stays as the source for the legacy verbose block format).
+// "hygiene" is not here: it gets its own Aseptic technique line.
+const VERIFICATION_NOTE_TEXT: Partial<
+  Record<keyof InjectionEncounter["attestations"], string>
+> = {
+  id2: "Pt identity verified using two identifiers (full name & DOB).",
+  rights: "Med verified against active order — right pt, drug, dose, route, time, and documentation.",
+  consent: "Consent for injection obtained and reaffirmed before administration.",
+};
+
+const CLINICAL_REVIEW_NOTE_TEXT: Partial<
+  Record<keyof InjectionEncounter["attestations"], string>
+> = {
+  prior: "Prior dose tolerated well per pt report; no new or unresolved s/e.",
+  screen: "No acute s/e or contraindications to administration noted on pre-inj screening.",
+};
+
+const RESPONSE_NOTE_TEXT: Partial<Record<Exclude<InjectionEncounter["response"]["kind"], "">, string>> = {
+  well: "Pt tolerated inj well; no immediate complication, bleeding, or swelling at site.",
+  bleed: "Minor bleeding noted post-inj; controlled w/ pressure. No persistent bleeding or significant swelling.",
+  disc: "Mild transient site discomfort reported; no acute reaction noted.",
+};
+
+// Fixed clinical read order, independent of which order staff happened to
+// tap the attestation checkboxes in - the same encounter must produce the
+// same note wording regardless of click order. Matches
+// INJECTION_ATTESTATION_OPTIONS's order.
+const ATTESTATION_NOTE_ORDER: ReadonlyArray<keyof InjectionEncounter["attestations"]> = [
+  "id2",
+  "rights",
+  "allergy",
+  "consent",
+  "prior",
+  "screen",
+  "hygiene",
+];
+
+/** Compact verification / clinical-review sentences for the RC6.1 note
+ * format. Medication-specific verification facts (opioid screen, resuspend,
+ * Invega initiation plan, etc.) are preserved from the existing catalog and
+ * folded into Clinical review rather than dropped. */
+const compactReviewFacts = (
+  encounter: InjectionEncounter,
+): { verification: string; clinicalReview: string } => {
+  const verification: string[] = [];
+  const clinicalReview: string[] = [];
+  ATTESTATION_NOTE_ORDER.forEach(
+    (key) => {
+      if (!encounter.attestations[key]) return;
+      const verificationText = VERIFICATION_NOTE_TEXT[key];
+      if (verificationText) verification.push(verificationText);
+      const reviewText = CLINICAL_REVIEW_NOTE_TEXT[key];
+      if (reviewText) clinicalReview.push(reviewText);
+    },
+  );
+  if (encounter.attestations.allergy) {
+    const allergies = trimmed(encounter.allergies);
+    if (allergies) verification.push(`Allergies reviewed — ${allergies}.`);
+  }
+  (Object.keys(encounter.verifications) as MedicationVerificationKey[]).forEach((key) => {
+    if (!encounter.verifications[key]) return;
+    const fact = VERIFICATION_ASSESSMENT_FACTS[key];
+    if (fact) clinicalReview.push(fact);
+  });
+  const vitals = formatVitalsLine(encounter);
+  if (vitals) clinicalReview.push(vitals);
+  return {
+    verification: unique(verification).join(" "),
+    clinicalReview: unique(clinicalReview).join(" "),
+  };
+};
+
+const formatVitalsLine = (encounter: InjectionEncounter): string => {
+  const vitals = encounter.vitals;
+  if (!vitals) return "";
+  const parts = [
+    vitals.bp ? `BP ${trimmed(vitals.bp)}` : "",
+    vitals.hr ? `HR ${trimmed(vitals.hr)}` : "",
+    vitals.temperature ? `Temp ${trimmed(vitals.temperature)}` : "",
+  ].filter(Boolean);
+  return parts.length ? `Vitals: ${parts.join(" · ")}.` : "";
+};
+
+/** Compact Timing sentence. Never states an interval as acceptable unless
+ * the engine's own timing evaluation already reached that conclusion -
+ * this only re-words `timing`/`phase`, it does not re-derive the judgment.
+ * A late dose (routine window or the Sustenna Day 8 window) always carries
+ * staff's late-dose review acknowledgement, not just the bare late finding -
+ * "reviewed with the provider" is the fact a chart reviewer needs to see. */
+const timingNoteText = (
+  evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
+  encounter: InjectionEncounter,
+): string => {
+  const timing = evaluation.output.timing;
+  const phase = evaluation.output.phase;
+  const details = encounter.details ?? {};
+  const lateDoseReviewText = evaluation.output.lateDoseWarning
+    ? details.lateDoseReview === "provider-authorized"
+      ? " Reviewed with provider; administration authorized."
+      : details.lateDoseReview === "other"
+        ? ` Reviewed: ${trimmed(details.lateDoseReviewNote) || "other"}.`
+        : ""
+    : "";
+  if (timing.state === "idle") {
+    if (!evaluation.output.lateDoseWarning) return "";
+    // The Sustenna Day 8 window check runs independently of the routine
+    // interval evaluator above (there is no prior-dose day count during
+    // initiation), so its own warning message is the only source for what
+    // was actually out of window - never invent day-count wording for it.
+    const sustennaMessage = evaluation.warnings.find(
+      (item) => item.code === "initiation.sustenna.outside-window",
+    )?.message;
+    return sustennaMessage ? `${sustennaMessage}${lateDoseReviewText}` : "";
+  }
+  if (timing.cadenceLabel === "one-time") {
+    return "One-time initiation/loading dose; routine interval spacing does not apply.";
+  }
+  const days = timing.daysSincePrior;
+  const daysPhrase = days === null ? "" : `${days} day${days === 1 ? "" : "s"} since prior inj`;
+  if (timing.state === "ok") {
+    // The actual prior-dose -> administration span, not the theoretical
+    // permitted window - a chart reviewer wants to see what happened, and
+    // "within expected maintenance interval" already says it was on time.
+    const range =
+      encounter.priorDoseDate && encounter.administrationDate
+        ? ` (${formatCompactDate(encounter.priorDoseDate)}–${formatCompactDate(encounter.administrationDate)})`
+        : "";
+    return `${daysPhrase || "Timing reviewed"}${range}; within expected maintenance interval.`;
+  }
+  if (timing.late) {
+    return `${daysPhrase || "Timing reviewed"}; outside routine maintenance interval. Med-specific missed-dose guidance reviewed.${lateDoseReviewText}`;
+  }
+  const reinit = phase === "reinitiation" ? "Re-initiation interval" : "Interval";
+  return daysPhrase
+    ? `${daysPhrase}; ${reinit.toLowerCase()} reviewed per med-specific guidance. Provider direction confirmed.`
+    : `${reinit} reviewed per med-specific guidance; provider-directed regimen confirmed.`;
 };
 
 const documentedFacts = (
@@ -208,6 +368,138 @@ const primaryMedicationComponent = (
     ndc: trimmed(encounter.traceability.ndc) || undefined,
     lot: trimmed(encounter.traceability.lot) || undefined,
     expiration: formatMonth(encounter.traceability.expiration) || undefined,
+  };
+};
+
+const PHASE_HEADLINE_WORD: Record<InjectionEvaluationOutput["phase"], string> = {
+  maintenance: "Scheduled",
+  initiation: "Initiation",
+  reinitiation: "Re-initiation",
+  loading: "Loading dose",
+  prn: "PRN",
+};
+
+const PHASE_PRESENTATION_TEXT: Record<InjectionEvaluationOutput["phase"], string> = {
+  maintenance: "Pt presents today for scheduled LAI administration.",
+  initiation: "Pt presents today for LAI initiation.",
+  reinitiation: "Pt presents today for LAI re-initiation.",
+  loading: "Pt presents today for a loading dose.",
+  prn: "Pt presents today for a provider-ordered injection.",
+};
+
+const headlineResponseText = (encounter: InjectionEncounter): string => {
+  const custom = trimmed(encounter.response.custom);
+  if (custom) return custom;
+  const label = INJECTION_RESPONSE_OPTIONS.find((item) => item.key === encounter.response.kind)?.label;
+  return label ? label.charAt(0).toLowerCase() + label.slice(1) : "";
+};
+
+/** CC headline + presentation sentence for a completed administration. */
+const headlineAndPresentation = (
+  encounter: InjectionEncounter,
+  evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
+  medicationLabel: string,
+): { headline: string; presentation: string } => {
+  const phase = evaluation.output.phase;
+  const isCatalogProduct = encounter.medicationKey !== "other" && encounter.medicationKey !== "";
+  const kindWord = isCatalogProduct
+    ? `${PHASE_HEADLINE_WORD[phase]} LAI`
+    : phase === "maintenance"
+      ? "Scheduled injection"
+      : `${PHASE_HEADLINE_WORD[phase]} injection`;
+  const productLine = [medicationLabel, trimmed(encounter.dose), trimmed(encounter.route)]
+    .filter(Boolean)
+    .join(" ");
+  const site = trimmed(encounter.site);
+  const response = headlineResponseText(encounter);
+  const nextDose = encounter.nextDoseDate ? formatCompactDate(encounter.nextDoseDate) : "";
+  const headline = `${kindWord}${productLine ? ` — ${productLine}` : ""}${site ? `, ${site}` : ""}${
+    response ? `; ${response}` : ""
+  }${nextDose ? `; next due ${nextDose}` : ""}.`;
+  return { headline, presentation: PHASE_PRESENTATION_TEXT[phase] };
+};
+
+const traceabilityLine = (encounter: InjectionEncounter): string => {
+  const ndc = trimmed(encounter.traceability.ndc);
+  const lot = trimmed(encounter.traceability.lot);
+  const exp = formatMonth(encounter.traceability.expiration);
+  const parts = [ndc && `NDC ${ndc}`, lot && `Lot ${lot}`, exp && `Exp ${exp}`].filter(Boolean);
+  return parts.join(" · ");
+};
+
+const followUpLine = (encounter: InjectionEncounter): string => {
+  const details = encounter.details ?? {};
+  const nextDose = encounter.nextDoseDate ? formatCompactDate(encounter.nextDoseDate) : "";
+  const nextDueText = nextDose ? `Next dose due ${nextDose}.` : "";
+  if (!details.educationProvided) return nextDueText;
+  const eduText =
+    "Post-inj education provided re: expected effects, s/e to report, and adherence to next dose.";
+  return [eduText, nextDueText].filter(Boolean).join(" ");
+};
+
+/** Preserves custom response text as-is rather than prefixing it with a
+ * "tolerated well" framing that might not be accurate for what was typed. */
+const responseNoteText = (encounter: InjectionEncounter): string => {
+  if (encounter.response.kind === "custom") return trimmed(encounter.response.custom);
+  if (!encounter.response.kind) return "";
+  return RESPONSE_NOTE_TEXT[encounter.response.kind] ?? "";
+};
+
+const departureStatusLine = (encounter: InjectionEncounter): string => {
+  const details = encounter.details ?? {};
+  if (!details.departureStatus) return "";
+  if (details.departureStatus === "custom") return trimmed(details.departureStatusNote);
+  return (
+    INJECTION_DEPARTURE_STATUS_OPTIONS.find((option) => option.key === details.departureStatus)?.note ?? ""
+  );
+};
+
+/** Compact RC6.1 note facts for a completed administration. Every field is
+ * optional and hidden downstream when empty - a one-tap control left
+ * untouched produces no label in the note at all. */
+const buildInjectionNoteFacts = (
+  encounter: InjectionEncounter,
+  evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
+  medicationLabel: string,
+): InjectionNoteFacts => {
+  const details = encounter.details ?? {};
+  const { verification, clinicalReview } = compactReviewFacts(encounter);
+  const { headline, presentation } = headlineAndPresentation(encounter, evaluation, medicationLabel);
+  const asepticSentence = encounter.attestations.hygiene
+    ? "Hand hygiene performed; inj site cleansed w/ alcohol and allowed to dry prior to administration."
+    : "";
+  const administrationLine = [medicationLabel, trimmed(encounter.dose), trimmed(encounter.route)]
+    .filter(Boolean)
+    .join(" ");
+  const administration = administrationLine
+    ? `${administrationLine} administered to ${trimmed(encounter.site) || "the documented site"}${
+        encounter.attestations.hygiene ? " using aseptic technique" : ""
+      }.`
+    : "";
+
+  return {
+    headline,
+    presentation,
+    verification: verification || undefined,
+    clinicalReview: clinicalReview || undefined,
+    siteAssessment: details.siteAssessed
+      ? "Inj site assessed prior to administration; no local finding precluding use of selected site."
+      : undefined,
+    timing: encounter.priorDoseDate || evaluation.output.lateDoseWarning
+      ? timingNoteText(evaluation, encounter) || undefined
+      : undefined,
+    administration: administration || undefined,
+    dateTime: formatCompactDateTime(encounter.administrationDate, encounter.administrationTime) || undefined,
+    asepticTechnique: asepticSentence || undefined,
+    response: responseNoteText(encounter) || undefined,
+    observation: details.postInjectionObservation
+      ? "Pt observed post-inj w/o adverse reaction."
+      : undefined,
+    departureStatus: departureStatusLine(encounter) || undefined,
+    traceability: traceabilityLine(encounter) || undefined,
+    followUp: followUpLine(encounter) || undefined,
+    orderingProvider: trimmed(encounter.orderingProvider) || undefined,
+    administeredBy: trimmed(encounter.administeredBy) || undefined,
   };
 };
 
@@ -403,5 +695,8 @@ export function injectionEncounterToDocumentationInput(
       nextDoseDate: encounter.nextDoseDate ? formatIsoDate(encounter.nextDoseDate) : undefined,
       orderingProvider: trimmed(encounter.orderingProvider) || undefined,
     },
+    noteFacts: administered
+      ? buildInjectionNoteFacts(encounter, evaluation, primaryMedicationName)
+      : undefined,
   };
 }

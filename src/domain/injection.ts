@@ -144,6 +144,20 @@ export interface InjectionAdministrationDetails {
   /** Staff's brief acknowledgement of a late-dose warning; never blocks finalizing. */
   lateDoseReview?: "" | "provider-authorized" | "other";
   lateDoseReviewNote?: string;
+  /** Optional one-tap note additions; never pre-checked/pre-selected, never required. */
+  siteAssessed?: boolean;
+  postInjectionObservation?: boolean;
+  educationProvided?: boolean;
+  departureStatus?:
+    | ""
+    | "ambulatory"
+    | "observed"
+    | "escorted"
+    | "wheelchair"
+    | "continued-observation"
+    | "provider-evaluation"
+    | "custom";
+  departureStatusNote?: string;
   /** Product-reference provenance; the plain traceability NDC remains canonical documentation. */
   ndcSelection?: InjectionNdcSelectionMetadata;
   /** Calculated/manual origin of the editable next-dose date. */
@@ -375,6 +389,43 @@ export const INJECTION_RESPONSE_OPTIONS: ReadonlyArray<{
   },
   { key: "disc", label: "Mild site discomfort", description: "mild transient site discomfort, no acute reaction" },
   { key: "custom", label: "Custom…", description: "" },
+];
+
+/**
+ * Optional one-tap departure-status note. Unselected by default and never
+ * required - staff pick one only when they want it in the chart.
+ */
+export const INJECTION_DEPARTURE_STATUS_OPTIONS: ReadonlyArray<{
+  key: Exclude<NonNullable<InjectionAdministrationDetails["departureStatus"]>, "" | "custom">;
+  label: string;
+  note: string;
+}> = [
+  { key: "ambulatory", label: "Ambulatory", note: "Pt departed clinic ambulatory w/o difficulty." },
+  {
+    key: "observed",
+    label: "Observed / no concern",
+    note: "Pt ambulatory on departure; no immediate post-inj concerns noted.",
+  },
+  {
+    key: "escorted",
+    label: "Escorted",
+    note: "Pt departed clinic accompanied/escorted w/o acute concern.",
+  },
+  {
+    key: "wheelchair",
+    label: "Wheelchair",
+    note: "Pt departed clinic via wheelchair; no immediate post-inj concerns noted.",
+  },
+  {
+    key: "continued-observation",
+    label: "Continued observation",
+    note: "Pt remained in clinic for continued observation.",
+  },
+  {
+    key: "provider-evaluation",
+    label: "Provider evaluation",
+    note: "Pt remained in clinic for provider evaluation following administration.",
+  },
 ];
 
 export const INJECTION_SAFETY_TRIGGERS: ReadonlyArray<{

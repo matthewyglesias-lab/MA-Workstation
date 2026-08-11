@@ -6,6 +6,7 @@ import { ModalDialog } from "../../ModalDialog";
 import { SiteIcon } from "../../SiteIcon";
 import {
   INJECTION_ATTESTATION_OPTIONS,
+  INJECTION_DEPARTURE_STATUS_OPTIONS,
   INJECTION_REASON_OPTIONS,
   INJECTION_RESPONSE_OPTIONS,
   INJECTION_SAFETY_TRIGGERS,
@@ -44,6 +45,8 @@ import {
   type NdcOptionsLookup,
 } from "../../../domain/injection-ndc";
 import { clickLegacyControl, setLegacyFieldValue } from "../legacy-mirror";
+import { DocumentationEngine } from "../../../documentation";
+import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
@@ -1297,6 +1300,8 @@ export function InjectionPanel({
       printInjectionPatientScreening(encounter, language);
     });
   };
+  const noteInput = evaluation ? injectionEncounterToDocumentationInput(encounter, evaluation) : null;
+  const noteText = noteInput ? DocumentationEngine.format("injection", noteInput).text : "";
   const stops = evaluation?.stops ?? [];
   // The routine timing warning and the Sustenna Day 8 window warning are
   // different checks with different messages - the timing readout's own
@@ -2755,6 +2760,72 @@ export function InjectionPanel({
             </div>
           </div>
 
+          {!nonAdministration && (
+            <div class="wfp-section">
+              <div class="wfp-section-head">Additional note items</div>
+              <div class="wfp-section-body">
+                <p class="wfp-field-hint">
+                  Optional one-tap additions to the generated note. None are pre-selected or required.
+                </p>
+                <div class="wfp-checkbox-row">
+                  <input
+                    type="checkbox"
+                    id="inj-site-assessed"
+                    checked={encounter.details?.siteAssessed ?? false}
+                    onChange={(event) => patchDetails({ siteAssessed: event.currentTarget.checked })}
+                  />
+                  <label for="inj-site-assessed">
+                    Injection site assessed prior to administration
+                  </label>
+                </div>
+                <div class="wfp-checkbox-row">
+                  <input
+                    type="checkbox"
+                    id="inj-post-observation"
+                    checked={encounter.details?.postInjectionObservation ?? false}
+                    onChange={(event) =>
+                      patchDetails({ postInjectionObservation: event.currentTarget.checked })
+                    }
+                  />
+                  <label for="inj-post-observation">
+                    Pt observed post-injection without adverse reaction
+                  </label>
+                </div>
+                <div class="wfp-checkbox-row">
+                  <input
+                    type="checkbox"
+                    id="inj-education-provided"
+                    checked={encounter.details?.educationProvided ?? false}
+                    onChange={(event) => patchDetails({ educationProvided: event.currentTarget.checked })}
+                  />
+                  <label for="inj-education-provided">
+                    Post-injection education provided
+                  </label>
+                </div>
+                <Field label="Disposition on departure" hint="optional">
+                  <OptionList<NonNullable<InjectionAdministrationDetails["departureStatus"]>>
+                    name="inj-departure-status"
+                    value={encounter.details?.departureStatus ?? ""}
+                    onChange={(value) => patchDetails({ departureStatus: value })}
+                    options={[
+                      { key: "", label: "Not documented" },
+                      ...INJECTION_DEPARTURE_STATUS_OPTIONS,
+                      { key: "custom", label: "Custom…" },
+                    ]}
+                  />
+                </Field>
+                {encounter.details?.departureStatus === "custom" && (
+                  <Field label="Describe departure">
+                    <input
+                      value={encounter.details?.departureStatusNote ?? ""}
+                      onInput={(event) => patchDetails({ departureStatusNote: event.currentTarget.value })}
+                    />
+                  </Field>
+                )}
+              </div>
+            </div>
+          )}
+
           <div class="wfp-section">
             <div
               class="wfp-section-head"
@@ -2854,9 +2925,20 @@ export function InjectionPanel({
           <div class="wfp-section-head">Document output</div>
           <div class="wfp-section-body">
             <p class="wfp-field-hint wfp-document-output-hint">
-              Review and copy the generated note in Clinical Documentation. Printing uses the same local
-              encounter snapshot.
+              Printing uses the same local encounter snapshot as the note below.
             </p>
+            <div class="meditech-lab-note-heading">TEBRA NARRATIVE</div>
+            <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
+            <div class="wfp-actions">
+              <button
+                type="button"
+                class="cd2004-link-button"
+                onClick={() => navigator.clipboard?.writeText(noteText)}
+                disabled={!noteText}
+              >
+                Copy note
+              </button>
+            </div>
             <div class="wfp-actions">
               <button
                 type="button"
