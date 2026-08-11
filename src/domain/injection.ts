@@ -2079,7 +2079,8 @@ export const InjectionEngine: ClinicalEngine<
             ),
           );
         }
-        if (!encounter.route.trim()) {
+        const enteredRoute = encounter.route.trim();
+        if (!enteredRoute) {
           stops.push(
             issue(
               "stop",
@@ -2089,7 +2090,13 @@ export const InjectionEngine: ClinicalEngine<
               "administration",
             ),
           );
-        } else if (!rule.routes.includes(encounter.route)) {
+        } else if (
+          // Route is free-typed (it's pre-filled from the catalog but staff can
+          // retype it), unlike site's fixed tile list - compare case/whitespace
+          // -insensitively so re-typing the same route in different casing
+          // ("im" vs "IM") doesn't produce an unresolvable stop.
+          !rule.routes.some((allowed) => allowed.toLowerCase() === enteredRoute.toLowerCase())
+        ) {
           stops.push(
             issue(
               "stop",

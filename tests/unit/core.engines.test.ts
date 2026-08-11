@@ -93,6 +93,30 @@ describe("InjectionEngine", () => {
     expect(result.output.administrationDocumented).toBe(true);
   });
 
+  it.each(["im", "IM ", " im", "Im"])(
+    "does not block a re-typed route that only differs in case or whitespace (%j)",
+    (route) => {
+      const encounter = validInjection();
+      encounter.route = route;
+
+      const result = InjectionEngine.evaluate(encounter, { today: "2026-01-08" });
+
+      expect(result.stops.map((entry) => entry.code)).not.toContain(
+        "route.outside-guidance",
+      );
+      expect(result.output.administrationDocumented).toBe(true);
+    },
+  );
+
+  it("still blocks a genuinely unlisted route", () => {
+    const encounter = validInjection();
+    encounter.route = "PO";
+
+    const result = InjectionEngine.evaluate(encounter, { today: "2026-01-08" });
+
+    expect(result.stops.map((entry) => entry.code)).toContain("route.outside-guidance");
+  });
+
   it("keeps paired aripiprazole injections separately traceable and in separate muscles", () => {
     const encounter: InjectionEncounter = {
       ...validInjection(),
