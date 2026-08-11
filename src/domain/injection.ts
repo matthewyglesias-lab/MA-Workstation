@@ -1094,6 +1094,7 @@ const verificationSatisfied = (
 const evaluateInitiation = (
   encounter: InjectionEncounter,
   stops: ClinicalIssue[],
+  warnings: ClinicalIssue[],
   calculatedDates: Record<string, string>,
   referenceDate: string,
 ): void => {
@@ -1389,9 +1390,14 @@ const evaluateInitiation = (
       encounter.administrationDate &&
       (encounter.administrationDate < window.early || encounter.administrationDate > window.late)
     ) {
-      stops.push(
+      // A Day 8 dose outside the window is reviewable, not blocking - matching
+      // every other late-dose case in this file, staff must still be able to
+      // finalize and lock the record with a soft warning rather than being
+      // stuck in an unfinishable draft. The missed-dose/re-initiation plan is
+      // a provider decision that happens alongside charting, not before it.
+      warnings.push(
         issue(
-          "stop",
+          "warning",
           "initiation.sustenna.outside-window",
           "This Day 8 administration date is outside the calculated ±4-day window. Use the current missed-dose/re-initiation plan and provider/pharmacist direction.",
           "administrationDate",
@@ -2326,6 +2332,7 @@ export const InjectionEngine: ClinicalEngine<
           evaluateInitiation(
             encounter,
             stops,
+            warnings,
             calculatedDates,
             encounter.administrationDate || context.today || localIsoDate(),
           );

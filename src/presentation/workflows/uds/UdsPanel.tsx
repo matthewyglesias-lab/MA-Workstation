@@ -518,7 +518,17 @@ export function UdsPanel({
       : `${device} · ${tested}/${UDS_PANELS.length} tested`;
   };
 
-  const canAttest = evaluation?.readiness === "ready" && staffSignInValue.trim().length > 0;
+  // A preliminary positive panel, an unreadable result, or an unresolved
+  // medication-alignment flag keeps readiness at "review" forever - those are
+  // genuine findings, not something staff can "fix" away. Gate attest/lock on
+  // the absence of hard stops (matching InjectionPanel's canFinalize), not on
+  // zero warnings, so a flagged-but-clinically-complete screen can still be
+  // attested and locked instead of stuck as an unfinishable draft.
+  const canAttest =
+    evaluation !== undefined &&
+    evaluation.readiness !== "idle" &&
+    evaluation.readiness !== "blocked" &&
+    staffSignInValue.trim().length > 0;
 
   const saveLocalDraft = () => {
     const result = repository.saveDraft({

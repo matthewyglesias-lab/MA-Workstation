@@ -71,7 +71,7 @@ describe("InjectionEngine", () => {
     expect(result.output.administrationDocumented).toBe(true);
   });
 
-  it("blocks a Day 8 date outside the displayed ±4-day window", () => {
+  it("warns but does not block a Day 8 date outside the displayed ±4-day window", () => {
     const encounter = validInjection();
     encounter.administrationDate = "2026-01-13";
     encounter.initiation = {
@@ -84,10 +84,13 @@ describe("InjectionEngine", () => {
 
     const result = InjectionEngine.evaluate(encounter, { today: "2026-01-13" });
 
-    expect(result.stops.map((entry) => entry.code)).toContain(
+    expect(result.stops.map((entry) => entry.code)).not.toContain(
       "initiation.sustenna.outside-window",
     );
-    expect(result.output.administrationDocumented).toBe(false);
+    expect(result.warnings.map((entry) => entry.code)).toContain(
+      "initiation.sustenna.outside-window",
+    );
+    expect(result.output.administrationDocumented).toBe(true);
   });
 
   it("keeps paired aripiprazole injections separately traceable and in separate muscles", () => {
@@ -160,7 +163,7 @@ describe("UdsEngine", () => {
     expect(result.output.activityStatus).toBe("completed");
   });
 
-  it("keeps preliminary positives in clinician-review status", () => {
+  it("keeps preliminary positives in clinician-review status without blocking completion", () => {
     const encounter = readyUds();
     encounter.results.THC = "pos";
     const result = UdsEngine.evaluate(encounter, { today: "2026-07-30" });
@@ -168,6 +171,11 @@ describe("UdsEngine", () => {
       "results.preliminary-positive",
     );
     expect(result.output.activityStatus).toBe("needs_review");
+    // A preliminary positive is a genuine finding, not something staff can
+    // resolve away - it must never become a stop, or the screen could never
+    // be attested and locked.
+    expect(result.stops).toEqual([]);
+    expect(result.readiness).toBe("review");
   });
 
   it("requires the omitted panel on a 13-panel cup to remain not tested", () => {
