@@ -1,5 +1,5 @@
-import type { ComponentChildren, Ref } from "preact";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { createContext, type ComponentChildren, type Ref } from "preact";
+import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "../workflow-panels.css";
 import {
   applyUdsDeviceProfileDefaults,
@@ -102,6 +102,12 @@ interface UdsPanelProps {
 const patientIsEmpty = (patient: UdsEncounter["patient"]): boolean =>
   !patient.name.trim() && !patient.dob.trim();
 
+/** Which required fields the engine is *currently* stopping on - same idea
+ * and same wiring as InjectionPanel's context, so a staff member scanning a
+ * still-incomplete required field gets the same visual language on every
+ * workflow instead of relearning one per panel. */
+const UdsIncompleteFieldsContext = createContext<ReadonlySet<string>>(new Set());
+
 function StatusFlag({
   idle,
   stopCount,
@@ -185,6 +191,7 @@ function Field({
   label,
   hint,
   width,
+  field,
   children,
 }: {
   label: string;
@@ -193,6 +200,9 @@ function Field({
    * shape - a date typed as MM/DD/YYYY, a short code - should not stretch to
    * a full grid column just because the grid offers one. */
   width?: "date" | "short";
+  /** Issue `field` this control edits, so an active stop on it can be shown
+   * here instead of only in the aggregate outstanding-requirements list. */
+  field?: string;
   children: ComponentChildren;
 }) {
   // Requirement is marked on the field itself - a red asterisk on the caption
@@ -201,6 +211,8 @@ function Field({
   // real content ("required for Other") keeps its explanatory line.
   const required = hint?.startsWith("required") ?? false;
   const optional = hint?.startsWith("optional") ?? false;
+  const incompleteFields = useContext(UdsIncompleteFieldsContext);
+  const incomplete = Boolean(field && incompleteFields.has(field));
   // A hint that only says "required"/"optional" is fully replaced by the
   // marker. One that qualifies it keeps the qualifier, minus the leading word
   // the marker already carries, so it does not read "optional ... optional".
@@ -210,7 +222,7 @@ function Field({
       : "";
   return (
     <div
-      class={`wfp-field ${required ? "is-required" : ""} ${width ? `is-w-${width}` : ""}`}
+      class={`wfp-field ${required ? "is-required" : ""} ${incomplete ? "is-incomplete" : ""} ${width ? `is-w-${width}` : ""}`}
     >
       <label>
         <span class="wfp-field-caption">{label}</span>
@@ -641,6 +653,10 @@ export function UdsPanel({
   const invalidCount = UDS_PANELS.filter((panel) => encounter.results[panel] === "invalid").length;
 
   const stops = evaluation?.stops ?? [];
+  const incompleteFields = useMemo(
+    () => new Set(stops.flatMap((item) => (item.field ? [item.field] : []))),
+    [stops],
+  );
   const stopsByTab = countStopsByTab(stops, tabForUdsField);
   const udsReadyForFinalOutput = evaluation?.readiness === "ready";
   const firstStopMessage = stops[0]?.message;
@@ -649,6 +665,7 @@ export function UdsPanel({
     : "Log as needs review";
 
   return (
+    <UdsIncompleteFieldsContext.Provider value={incompleteFields}>
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <div class="wfp-summary-bar">
         <strong>UDS screen</strong>
@@ -786,21 +803,21 @@ export function UdsPanel({
                 <dd>Point-of-care immunoassay (waived)</dd>
               </dl>
               <div class="wfp-row">
-                <Field label="Patient name">
+                <Field label="Patient name" field="patient.name" hint="required">
                   <input
                     value={encounter.patient.name}
                     placeholder="Last, First"
                     onInput={(event) => patchPatient({ name: event.currentTarget.value })}
                   />
                 </Field>
-                <Field label="DOB" width="date">
+                <Field label="DOB" width="date" field="patient.dob" hint="required">
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"
                     onInput={(event) => patchPatient({ dob: event.currentTarget.value })}
                   />
                 </Field>
-                <Field label="Collected by">
+                <Field label="Collected by" field="collector" hint="required">
                   <input
                     value={encounter.collector}
                     placeholder="Staff initials / name"
@@ -809,7 +826,7 @@ export function UdsPanel({
                 </Field>
               </div>
               <div class="wfp-row">
-                <Field label="Collection date / time">
+                <Field label="Collection date / time" field="collectionDateTime" hint="required">
                   <input
                     type="datetime-local"
                     value={encounter.collectionDateTime}
@@ -817,7 +834,7 @@ export function UdsPanel({
                   />
                 </Field>
               </div>
-              <Field label="Specimen temperature">
+              <Field label="Specimen temperature" field="temperature" hint="required">
                 <OptionList<UdsTemperatureState>
                   name="uds-temperature"
                   value={encounter.temperature}
@@ -842,7 +859,7 @@ export function UdsPanel({
             <div class="wfp-section-head">Device &amp; quality control</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
-                <Field label="Device">
+                <Field label="Device" field="device" hint="required">
                   <select
                     value={encounter.device}
                     onChange={(event) => onDeviceChange(event.currentTarget.value)}
@@ -853,7 +870,7 @@ export function UdsPanel({
                     <option>Other point-of-care UDS cup</option>
                   </select>
                 </Field>
-                <Field label="Lot #">
+                <Field label="Lot #" field="lot" hint="required">
                   <input
                     class="mono"
                     value={encounter.lot}
@@ -861,7 +878,7 @@ export function UdsPanel({
                     onInput={(event) => patch({ lot: event.currentTarget.value })}
                   />
                 </Field>
-                <Field label="Exp">
+                <Field label="Exp" field="expiration" hint="required">
                   <input
                     class="mono"
                     type="month"
@@ -872,7 +889,7 @@ export function UdsPanel({
               </div>
 
               {profile === "13" && (
-                <Field label="Panel not on this 13-panel cup">
+                <Field label="Panel not on this 13-panel cup" field="omittedPanel" hint="required">
                   <select
                     value={encounter.omittedPanel ?? ""}
                     onChange={(event) =>
@@ -923,7 +940,7 @@ export function UdsPanel({
                 </div>
               )}
 
-              <Field label="Control line">
+              <Field label="Control line" field="control" hint="required">
                 <OptionList<UdsControlState>
                   name="uds-control"
                   value={encounter.control}
@@ -1089,7 +1106,7 @@ export function UdsPanel({
             <div class="wfp-section-head">Interpretation &amp; review</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
-                <Field label="Validity markers">
+                <Field label="Validity markers" field="validity" hint="required">
                   <select
                     value={encounter.validity}
                     onChange={(event) =>
@@ -1421,5 +1438,6 @@ export function UdsPanel({
         clinical context; outside lab order may be placed when clinically indicated.
       </p>
     </div>
+    </UdsIncompleteFieldsContext.Provider>
   );
 }
