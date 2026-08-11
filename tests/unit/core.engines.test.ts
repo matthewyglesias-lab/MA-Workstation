@@ -91,6 +91,9 @@ describe("InjectionEngine", () => {
       "initiation.sustenna.outside-window",
     );
     expect(result.output.administrationDocumented).toBe(true);
+    // 2026-01-13 is after the ±4-day window's late edge (2026-01-12) - the
+    // late-dose review prompt should trigger for this administration date.
+    expect(result.output.lateDoseWarning).toBe(true);
   });
 
   it.each(["im", "IM ", " im", "Im"])(

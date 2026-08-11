@@ -81,6 +81,14 @@ const INJECTION_TABS: Array<[InjectionTab, string]> = [
 
 const INJECTION_TAB_LABELS = Object.fromEntries(INJECTION_TABS) as Record<InjectionTab, string>;
 
+const LATE_DOSE_REVIEW_OPTIONS: ReadonlyArray<{
+  key: "provider-authorized" | "other";
+  label: string;
+}> = [
+  { key: "provider-authorized", label: "Reviewed with provider — administration authorized" },
+  { key: "other", label: "Other" },
+];
+
 /**
  * Reading order for the four abdomen quadrants, so they always sit
  * top-left/top-right/bottom-left/bottom-right in a fixed 2-column block
@@ -915,6 +923,14 @@ export function InjectionPanel({
   const [tab, setTab] = useState<InjectionTab>("order");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [patientScreeningDialogOpen, setPatientScreeningDialogOpen] = useState(false);
+  const [lateDoseDialogOpen, setLateDoseDialogOpen] = useState(false);
+  const [lateDoseReviewChoice, setLateDoseReviewChoice] = useState<"provider-authorized" | "other">(
+    "provider-authorized",
+  );
+  const [lateDoseReviewNoteDraft, setLateDoseReviewNoteDraft] = useState("");
+  // Prompt once per late administration date, not on every render while the
+  // dialog is open or after staff already reviewed it.
+  const lateDosePromptedFor = useRef("");
   // Vitals are optional and rarely used for a routine maintenance dose - stay
   // out of the way by default, but a reopened record that already carries a
   // vitals value starts expanded so nothing entered is hidden from view.
@@ -1439,6 +1455,32 @@ export function InjectionPanel({
     if (tab === "administration" || tab === "product") setTab("outcome");
   }, [nonAdministration, tab]);
 
+  // A dose given after its safe window gets a brief MEDITECH-style review
+  // prompt, once per late administration date - it records the review, it
+  // does not gate finalizing (the engine only warns, never stops, on this).
+  useEffect(() => {
+    if (locked || !evaluation?.output.lateDoseWarning) return;
+    if (encounter.details?.lateDoseReview) return;
+    if (lateDosePromptedFor.current === encounter.administrationDate) return;
+    lateDosePromptedFor.current = encounter.administrationDate;
+    setLateDoseReviewChoice("provider-authorized");
+    setLateDoseReviewNoteDraft("");
+    setLateDoseDialogOpen(true);
+  }, [
+    encounter.administrationDate,
+    encounter.details?.lateDoseReview,
+    evaluation?.output.lateDoseWarning,
+    locked,
+  ]);
+
+  const confirmLateDoseReview = () => {
+    patchDetails({
+      lateDoseReview: lateDoseReviewChoice,
+      lateDoseReviewNote: lateDoseReviewChoice === "other" ? lateDoseReviewNoteDraft.trim() : "",
+    });
+    setLateDoseDialogOpen(false);
+  };
+
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <InjectionRequirementsContext.Provider value={requirements}>
@@ -1793,6 +1835,37 @@ export function InjectionPanel({
                   <dt>Timing</dt>
                   <dd>{evaluation.output.timing.message}</dd>
                 </dl>
+              )}
+              {!nonAdministration && evaluation?.output.lateDoseWarning && (
+                <p class="wfp-field-hint">
+                  {encounter.details?.lateDoseReview ? (
+                    <>
+                      Late-dose review:{" "}
+                      {encounter.details.lateDoseReview === "provider-authorized"
+                        ? "reviewed with provider, administration authorized."
+                        : encounter.details.lateDoseReviewNote || "other (see note)."}{" "}
+                      {!locked && (
+                        <button
+                          type="button"
+                          class="cd2004-link-button"
+                          onClick={() => setLateDoseDialogOpen(true)}
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    !locked && (
+                      <button
+                        type="button"
+                        class="cd2004-link-button"
+                        onClick={() => setLateDoseDialogOpen(true)}
+                      >
+                        Document late-dose review
+                      </button>
+                    )
+                  )}
+                </p>
               )}
             </div>
           </div>
@@ -2896,6 +2969,53 @@ export function InjectionPanel({
                 onClick={() => stagePatientScreeningPrint("es")}
               >
                 Imprimir español
+              </button>
+            </div>
+          </div>
+        </ModalDialog>
+      )}
+
+      {lateDoseDialogOpen && (
+        <ModalDialog
+          class="cd2004-dialog-layer cd2004-dialog"
+          labelledBy="late-dose-review-title"
+          onDismiss={() => setLateDoseDialogOpen(false)}
+        >
+          <div class="cd2004-dialog-frame">
+            <div class="cd2004-dialog-titlebar">
+              <span id="late-dose-review-title">Late-dose review</span>
+              <button type="button" aria-label="Close" onClick={() => setLateDoseDialogOpen(false)}>
+                X
+              </button>
+            </div>
+            <div class="cd2004-dialog-body">
+              <p>{evaluation?.output.timing.message}</p>
+              <OptionList<"provider-authorized" | "other">
+                name="late-dose-review"
+                value={lateDoseReviewChoice}
+                onChange={setLateDoseReviewChoice}
+                options={LATE_DOSE_REVIEW_OPTIONS}
+              />
+              {lateDoseReviewChoice === "other" && (
+                <textarea
+                  value={lateDoseReviewNoteDraft}
+                  placeholder="Briefly describe"
+                  onInput={(event) => setLateDoseReviewNoteDraft(event.currentTarget.value)}
+                />
+              )}
+            </div>
+            <div class="cd2004-dialog-actions">
+              <button type="button" onClick={() => setLateDoseDialogOpen(false)}>
+                Cancel
+              </button>
+              <span />
+              <button
+                type="button"
+                class="is-primary"
+                disabled={lateDoseReviewChoice === "other" && !lateDoseReviewNoteDraft.trim()}
+                onClick={confirmLateDoseReview}
+              >
+                Confirm
               </button>
             </div>
           </div>

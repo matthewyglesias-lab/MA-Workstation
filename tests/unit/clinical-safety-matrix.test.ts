@@ -77,6 +77,10 @@ describe("InjectionEngine safety matrix", () => {
     expect(issueCodes(earlyResult, "stops")).not.toContain(
       "timing.outside-window",
     );
+    // Early is a warning too, but it is not the "later than an unsafe date"
+    // case the late-dose review prompt is for.
+    expect(earlyResult.output.timing.late).toBe(false);
+    expect(earlyResult.output.lateDoseWarning).toBe(false);
 
     // A dose given outside the window is reviewable, not blocking - staff
     // can still administer with a soft warning rather than a hard stop.
@@ -95,6 +99,8 @@ describe("InjectionEngine safety matrix", () => {
       "timing.outside-window",
     );
     expect(lateResult.output.canFinalize).toBe(true);
+    expect(lateResult.output.timing.late).toBe(true);
+    expect(lateResult.output.lateDoseWarning).toBe(true);
   });
 
   it.each([
