@@ -15,6 +15,9 @@
     display: none;
   }
 
+  /* Literal colours throughout this gate, not var(--cd-*): those tokens are
+     declared on .cd2004-shell, and this gate replaces the shell entirely
+     when the window is too small to render it (see .is-unsupported above). */
   .meditech-workstation-gate {
   box-sizing: border-box;
   display: grid;
@@ -203,7 +206,7 @@
   .cd2004-application-header {
     border-bottom: 2px solid #535d9b;
     background: #d9dbf1;
-    box-shadow: inset 0 -1px #fafaff;
+    box-shadow: inset 0 -1px var(--cd-border-light);
   }
 
   .cd2004-app-titlebar {
@@ -300,7 +303,7 @@
     min-height: 63px;
     color: #101010;
     background: #e0e2f4;
-    border-top: 1px solid #fafaff;
+    border-top: 1px solid var(--cd-border-light);
     border-bottom: 2px solid #646f9e;
   }
 
@@ -372,7 +375,7 @@
   }
 
   .meditech-patient-safety strong {
-    color: #a20d0d;
+    color: var(--cd-red);
     font-size: 9px;
     /* This label reads real MEDITECH's exact mixed-case wording
        ("Allergy/AdvReac:"); the general patient-banner <strong> rule
@@ -578,7 +581,7 @@
 
   .cd2004-record-actions.is-draft .cd2004-record-actions-state,
   .cd2004-record-actions.is-saving .cd2004-record-actions-state {
-    background: #fff0a5;
+    background: var(--cd-selection);
   }
 
   .cd2004-record-actions.is-locked .cd2004-record-actions-state {
@@ -639,7 +642,7 @@
   }
 
   .cd2004-record-actions-buttons button.is-primary:hover:not(:disabled) {
-    background: #244f94;
+    background: var(--cd-info);
   }
 
   /* A disabled lock action must not retain the blue commitment treatment.
@@ -932,7 +935,7 @@
   }
 
   .meditech-record-list .cd2004-nav-item:hover {
-    background: #fff0a5;
+    background: var(--cd-selection);
   }
 
   .meditech-record-list .cd2004-nav-item.is-selected {
@@ -1016,7 +1019,7 @@
     height: 32px;
     padding: 2px 3px;
     background: #c8cbe7;
-    border-top: 1px solid #fafaff;
+    border-top: 1px solid var(--cd-border-light);
     border-bottom: 1px solid #566191;
     box-shadow: none;
   }
@@ -1189,7 +1192,7 @@
     min-width: 610px;
     margin-bottom: 7px;
     color: #101b1d;
-    background: #fffef8;
+    background: var(--cd-paper);
     border: 1px solid #263f42;
     box-shadow: inset 0 0 0 1px #d2d7d2;
     font: 10px/1.2 "Courier New", Courier, monospace;
@@ -1335,7 +1338,7 @@
     height: 22px;
     padding: 3px 5px;
     overflow: hidden;
-    background: #fffef8;
+    background: var(--cd-paper);
     border-right: 1px solid #c3cbc6;
     border-bottom: 1px solid #d2d8d3;
     text-overflow: ellipsis;
@@ -1363,7 +1366,7 @@
 
   .meditech-lab-results tr.is-abnormal td:nth-child(2),
   .meditech-lab-results tr.is-abnormal td:nth-child(3) {
-    color: #a20d0d;
+    color: var(--cd-red);
     background: #fff0d2;
     font-weight: 700;
   }
@@ -1401,7 +1404,7 @@
     grid-column: 1 / -1;
     margin: 0;
     padding: 5px 6px;
-    background: #fffef8;
+    background: var(--cd-paper);
     border-top: 1px solid #b5bfba;
   }
 
@@ -2519,7 +2522,7 @@
 
   .cd2004-worklist-table tbody tr:focus-within td {
     color: #101010;
-    background: #fff0a5;
+    background: var(--cd-selection);
     box-shadow: inset 0 1px #3f4d7d, inset 0 -1px #3f4d7d;
   }
 
@@ -2573,7 +2576,7 @@
   .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > select,
   .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > textarea,
   .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete .wfp-select-group select {
-    background: #fff0b4;
+    background: var(--cd-amber-soft);
   }
 
   /* Same treatment, same reasoning, as the injection workflow above: UDS has
@@ -2591,7 +2594,7 @@
   .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete > select,
   .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete > textarea,
   .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete .wfp-select-group select {
-    background: #fff0b4;
+    background: var(--cd-amber-soft);
   }
 
   .cd2004-shell [data-workflow="administer"][data-post-state="posted"] :where(input, select, textarea):disabled {
@@ -2642,7 +2645,7 @@
     grid-template-rows: minmax(0, 1fr) auto;
     min-height: 0;
     overflow: hidden !important;
-    background: #c8cbe6;
+    background: var(--cd-chrome);
   }
 
   .cd2004-workflow-slot[data-workflow="administer"] > .cd2004-workflow-body {
@@ -2658,7 +2661,7 @@
     margin: 2px 2px 0;
     color: #172341;
     background: #cfd2e8;
-    border-color: #fafaff #525f8f #525f8f #fafaff;
+    border-color: var(--cd-border-light) #525f8f #525f8f var(--cd-border-light);
     box-shadow: inset 1px 1px #fff;
   }
 
@@ -2814,7 +2817,6 @@
     font-size: 9px;
   }
 
-  .cd2004-shell [data-workflow="administer"] .wfp-section-head,
   .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head,
   .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head strong,
   .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-action,
@@ -2904,7 +2906,7 @@
     grid-template-rows: minmax(0, 1fr) auto;
     min-height: 0;
     overflow: hidden;
-    background: #c8cbe6;
+    background: var(--cd-chrome);
   }
 
   .cd2004-workflow-slot[data-workflow="administer"] > .cd2004-workflow-body {
@@ -3073,7 +3075,7 @@
   }
 
   .meditech-rail-title:hover:not(:disabled) {
-    background: #fff0a5;
+    background: var(--cd-selection);
   }
 
   .meditech-rail-title:active:not(:disabled) {
@@ -3225,7 +3227,7 @@
 
   .meditech-record-list .cd2004-nav-item.is-selected {
     color: #111a38;
-    background: #fff0a5;
+    background: var(--cd-selection);
     border-color: #5b6387 #fff #fff #5b6387;
     box-shadow: inset 2px 0 #31519b, inset 1px 1px #8c8051;
   }
@@ -3235,7 +3237,7 @@
   }
 
   .meditech-record-list .cd2004-nav-item.is-attention .meditech-nav-icon {
-    background: #ffe2df;
+    background: var(--cd-red-soft);
   }
 
   .meditech-record-list .cd2004-nav-item.is-ready .meditech-nav-icon,

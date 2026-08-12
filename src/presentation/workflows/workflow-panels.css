@@ -1609,14 +1609,6 @@
     box-shadow: none;
   }
 
-  .cd2004-shell [data-workflow="administer"] .wfp-section-head {
-    min-height: 18px;
-    padding: 2px 5px;
-    color: #1c3261;
-    background: #c9d9ed;
-    font-size: 8px;
-  }
-
   .cd2004-shell [data-workflow="administer"] .wfp-section-body {
     gap: 3px;
     padding: 3px;
