@@ -19,6 +19,7 @@ import { formatProviderLetterDraft } from "../../../documentation/forms";
 import { formsEncounterToDocumentationInput } from "../../../documentation/adapters/forms-from-encounter";
 import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
+import { StatusFlag } from "../StatusFlag";
 import { mirrorFormsEncounterToLegacyDom } from "./forms-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { formatDobAsTyped } from "../../format-dob";
@@ -42,32 +43,6 @@ interface FormsPanelProps {
 
 const patientIsEmpty = (patient: FormsEncounter["patient"]): boolean =>
   !patient.name.trim() && !patient.dob.trim();
-
-function StatusFlag({
-  idle,
-  stopCount,
-  warningCount,
-}: {
-  idle: boolean;
-  stopCount: number;
-  warningCount: number;
-}) {
-  const variant = idle
-    ? "is-idle"
-    : stopCount > 0
-      ? "is-stop"
-      : warningCount > 0
-        ? "is-warning"
-        : "is-ready";
-  const label = idle
-    ? "Not started"
-    : stopCount > 0
-      ? `${stopCount} stop${stopCount === 1 ? "" : "s"}`
-      : warningCount > 0
-        ? `${warningCount} to review`
-        : "Ready";
-  return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
-}
 
 interface OptionListProps<T extends string> {
   name: string;

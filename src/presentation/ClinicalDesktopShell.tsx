@@ -25,6 +25,10 @@ import {
 import { LegacyWorkflowHost } from "./LegacyWorkflowHost";
 import { ModalDialog } from "./ModalDialog";
 import { NoteInspector } from "./NoteInspector";
+import {
+  RecordLifecycleActions,
+  type RecordLifecycle,
+} from "./RecordLifecycleActions";
 import { StartCenter } from "./StartCenter";
 import {
   WORKFLOW_LABELS,
@@ -1012,6 +1016,14 @@ interface InjectionRecordActionsProps {
   onAddendum?: () => void;
 }
 
+const INJECTION_DEFAULT_DETAIL: Record<RecordLifecycle, string> = {
+  new: "Enter encounter details to begin a local draft.",
+  draft: "Draft saved in this browser. Finish only when the disposition is final.",
+  locked: "This browser-local record is read-only. Corrections require a dated addendum.",
+  saving: "Writing the latest encounter changes to this browser.",
+  error: "The local draft needs storage attention before you leave this encounter.",
+};
+
 /**
  * The only visible source of truth for the active injection record's
  * lifecycle. Shell commands remain accelerators for these actions, rather
@@ -1027,143 +1039,120 @@ function InjectionRecordActions({
   onAddendum,
 }: InjectionRecordActionsProps) {
   const locked = actions.lifecycle === "locked";
-  const lifecycleLabel = {
-    new: "NEW LOCAL DRAFT",
-    draft: "SAVED LOCAL DRAFT",
-    locked: "LOCAL RECORD LOCKED",
-    saving: "SAVING LOCAL DRAFT",
-    error: "SAVE ATTENTION REQUIRED",
-  }[actions.lifecycle];
-  const defaultDetail = {
-    new: "Enter encounter details to begin a local draft.",
-    draft: "Draft saved in this browser. Finish only when the disposition is final.",
-    locked: "This browser-local record is read-only. Corrections require a dated addendum.",
-    saving: "Writing the latest encounter changes to this browser.",
-    error: "The local draft needs storage attention before you leave this encounter.",
-  }[actions.lifecycle];
   const saveDisabled =
     locked || posting || !actions.canDiscard || !onSaveDraft;
   const finishDisabled = locked || posting || !canComplete || !onFinish;
   const discardDisabled = locked || posting || !actions.canDiscard;
-  const attentionDetail = locked
-    ? actions.detail ?? defaultDetail
+  const detail = locked
+    ? actions.detail ?? INJECTION_DEFAULT_DETAIL[actions.lifecycle]
     : actions.blockingDetail
       ? `First blocker: ${actions.blockingDetail}`
       : blockerCount
         ? `First blocker: ${blockerCount} required ${
             blockerCount === 1 ? "field needs" : "fields need"
           } attention.`
-        : actions.detail ?? defaultDetail;
+        : actions.detail ?? INJECTION_DEFAULT_DETAIL[actions.lifecycle];
 
   return (
-    <section
-      class={`cd2004-record-actions is-${actions.lifecycle}`}
-      aria-label="Injection record actions"
-      data-injection-record-actions
-    >
-      <div
-        class="cd2004-record-actions-state"
-        tabIndex={locked ? -1 : undefined}
-        data-locked-record-action={locked ? true : undefined}
-      >
-        <span>INJECTION RECORD</span>
-        <strong>{lifecycleLabel}</strong>
-        <small role="status" aria-live="polite">
-          {attentionDetail}
-        </small>
-      </div>
-
-      <div class="cd2004-record-actions-buttons">
-        {locked && (
-          <button
-            type="button"
-            class="is-addendum"
-            onClick={onAddendum}
-            disabled={!onAddendum}
-          >
-            <span class="cd2004-action-glyph" aria-hidden="true">
-              <DesktopIcon name="addendum" />
-            </span>
-            Add dated addendum
-          </button>
-        )}
-        {!locked && (
-          <>
+    <RecordLifecycleActions
+      recordLabel="INJECTION RECORD"
+      ariaLabel="Injection record actions"
+      lifecycle={actions.lifecycle}
+      detail={detail}
+      rootTestAttribute="data-injection-record-actions"
+      buttons={
+        <>
+          {locked && (
             <button
               type="button"
-              class="is-save"
-              data-injection-save
-              disabled={saveDisabled}
-              title={
-                saveDisabled
-                  ? "Enter encounter details before saving a local draft."
-                  : "Save this editable injection draft locally (F12)."
-              }
-              onClick={onSaveDraft}
+              class="is-addendum"
+              onClick={onAddendum}
+              disabled={!onAddendum}
             >
               <span class="cd2004-action-glyph" aria-hidden="true">
-                <DesktopIcon name="save" />
+                <DesktopIcon name="addendum" />
               </span>
-              Save local draft <kbd>F12</kbd>
+              Add dated addendum
             </button>
-            <button
-              type="button"
-              class="is-primary"
-              data-injection-finish
-              disabled={finishDisabled}
-              title={
-                finishDisabled
-                  ? actions.blockingDetail
+          )}
+          {!locked && (
+            <>
+              <button
+                type="button"
+                class="is-save"
+                data-injection-save
+                disabled={saveDisabled}
+                title={
+                  saveDisabled
+                    ? "Enter encounter details before saving a local draft."
+                    : "Save this editable injection draft locally (F12)."
+                }
+                onClick={onSaveDraft}
+              >
+                <span class="cd2004-action-glyph" aria-hidden="true">
+                  <DesktopIcon name="save" />
+                </span>
+                Save local draft <kbd>F12</kbd>
+              </button>
+              <button
+                type="button"
+                class="is-primary"
+                data-injection-finish
+                disabled={finishDisabled}
+                title={
+                  finishDisabled
                     ? actions.blockingDetail
-                    : blockerCount
-                    ? `Complete ${blockerCount} required clinical ${blockerCount === 1 ? "field" : "fields"} before attesting and locking this local record.`
-                    : "Complete the required clinical fields before finishing and locking this record."
-                  : "Review the local attestation before locking this browser-local record."
-              }
-              onClick={onFinish}
-            >
-              <span class="cd2004-action-glyph" aria-hidden="true">
-                <DesktopIcon name="lock" />
-              </span>
-              Attest &amp; lock local record
-            </button>
-          </>
-        )}
-        <span class="cd2004-record-action-separator" aria-hidden="true" />
-        <button
-          type="button"
-          class="is-new"
-          data-injection-new
-          disabled={posting}
-          title="Start a blank injection. Any current editable work is saved as a local draft first."
-          onClick={actions.onStartNew}
-        >
-          <span class="cd2004-action-glyph" aria-hidden="true">
-            <DesktopIcon name="new" />
-          </span>
-          Start new injection
-        </button>
-        {!locked && (
+                      ? actions.blockingDetail
+                      : blockerCount
+                      ? `Complete ${blockerCount} required clinical ${blockerCount === 1 ? "field" : "fields"} before attesting and locking this local record.`
+                      : "Complete the required clinical fields before finishing and locking this record."
+                    : "Review the local attestation before locking this browser-local record."
+                }
+                onClick={onFinish}
+              >
+                <span class="cd2004-action-glyph" aria-hidden="true">
+                  <DesktopIcon name="lock" />
+                </span>
+                Attest &amp; lock local record
+              </button>
+            </>
+          )}
+          <span class="cd2004-record-action-separator" aria-hidden="true" />
           <button
             type="button"
-            class="is-danger"
-            data-injection-discard
-            disabled={discardDisabled}
-            title={
-              discardDisabled
-                ? "There is no editable local draft to discard."
-                : "Discard this editable local draft. This cannot be undone."
-            }
-            onClick={actions.onDiscard}
+            class="is-new"
+            data-injection-new
+            disabled={posting}
+            title="Start a blank injection. Any current editable work is saved as a local draft first."
+            onClick={actions.onStartNew}
           >
             <span class="cd2004-action-glyph" aria-hidden="true">
-              <DesktopIcon name="discard" />
+              <DesktopIcon name="new" />
             </span>
-            Discard local draft...
+            Start new injection
           </button>
-        )}
-      </div>
-    </section>
+          {!locked && (
+            <button
+              type="button"
+              class="is-danger"
+              data-injection-discard
+              disabled={discardDisabled}
+              title={
+                discardDisabled
+                  ? "There is no editable local draft to discard."
+                  : "Discard this editable local draft. This cannot be undone."
+              }
+              onClick={actions.onDiscard}
+            >
+              <span class="cd2004-action-glyph" aria-hidden="true">
+                <DesktopIcon name="discard" />
+              </span>
+              Discard local draft...
+            </button>
+          )}
+        </>
+      }
+    />
   );
 }
 

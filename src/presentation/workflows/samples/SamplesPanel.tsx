@@ -24,6 +24,7 @@ import { samplesEncounterToDocumentationInput } from "../../../documentation/ada
 import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
+import { StatusFlag } from "../StatusFlag";
 import { mirrorSamplesEncounterToLegacyDom } from "./samples-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { formatDobAsTyped } from "../../format-dob";
@@ -153,45 +154,6 @@ const buildPlanAndPackages = (
 };
 
 const newRowId = (): string => `sample-row-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-
-function StatusFlag({
-  idle,
-  stopCount,
-  warningCount,
-  onOpenRequirements,
-}: {
-  idle: boolean;
-  stopCount: number;
-  warningCount: number;
-  onOpenRequirements?: () => void;
-}) {
-  const variant = idle
-    ? "is-idle"
-    : stopCount > 0
-      ? "is-stop"
-      : warningCount > 0
-        ? "is-warning"
-        : "is-ready";
-  const label = idle
-    ? "Not started"
-    : stopCount > 0
-      ? `${stopCount} stop${stopCount === 1 ? "" : "s"}`
-      : warningCount > 0
-        ? `${warningCount} to review`
-        : "Ready";
-  if (stopCount > 0 && onOpenRequirements) {
-    return (
-      <button
-        type="button"
-        class={`wfp-status-flag ${variant}`}
-        onClick={onOpenRequirements}
-      >
-        {label}
-      </button>
-    );
-  }
-  return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
-}
 
 function Field({
   label,

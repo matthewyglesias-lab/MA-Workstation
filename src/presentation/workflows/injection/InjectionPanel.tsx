@@ -48,6 +48,7 @@ import { clickLegacyControl, setLegacyFieldValue } from "../legacy-mirror";
 import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
+import { StatusFlag } from "../StatusFlag";
 import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
@@ -377,45 +378,6 @@ interface InjectionPanelProps {
 
 const patientIsEmpty = (patient: InjectionEncounter["patient"]): boolean =>
   !patient.name.trim() && !patient.dob.trim();
-
-function StatusFlag({
-  idle,
-  stopCount,
-  warningCount,
-  onOpenRequirements,
-}: {
-  idle: boolean;
-  stopCount: number;
-  warningCount: number;
-  onOpenRequirements?: () => void;
-}) {
-  const variant = idle
-    ? "is-idle"
-    : stopCount > 0
-      ? "is-stop"
-      : warningCount > 0
-        ? "is-warning"
-        : "is-ready";
-  const label = idle
-    ? "Not started"
-    : stopCount > 0
-      ? `${stopCount} required`
-      : warningCount > 0
-        ? `${warningCount} to review`
-        : "Ready";
-  if (stopCount > 0 && onOpenRequirements) {
-    return (
-      <button
-        type="button"
-        class={`wfp-status-flag ${variant}`}
-        onClick={onOpenRequirements}
-      >
-        {label}
-      </button>
-    );
-  }
-  return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
-}
 
 interface OptionListProps<T extends string> {
   name: string;
