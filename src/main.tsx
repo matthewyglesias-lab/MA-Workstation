@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import { RecordsWindow } from './presentation/RecordsWindow';
+import { useIdleLock, WorkstationLock } from './presentation/WorkstationLock';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   ClinicalDesktopShell,
@@ -610,6 +611,15 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         : snapshot.postState
       : 'idle';
 
+  // snapshot.staffLabel is legacy-formatted display text ("Signed in: A.
+  // Rivera, MA", or the literal string "Not signed in" when nobody is) - not
+  // a reliable "is anyone signed in" boolean and not a clean name to display
+  // or match against. activeStaffValue() is the raw #staffSignIn input value
+  // (empty when nobody has signed in), same source ContextDialog already
+  // reads at render time below.
+  const staffSignInName = activeStaffValue().trim();
+  const [locked, unlock] = useIdleLock(staffSignInName.length > 0);
+
   return (
     <WorkstationViewportBoundary>
       <ClinicalDesktopShell
@@ -724,6 +734,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           onClose={() => setContextEditor(null)}
         />
       )}
+      {locked && (
+        <WorkstationLock staffLabel={staffSignInName} onUnlock={unlock} />
+      )}
     </WorkstationViewportBoundary>
   );
 }
@@ -769,10 +782,25 @@ async function boot(): Promise<void> {
     runtime.staging.setAttribute('aria-hidden', 'true');
   }, 0);
   document.body.dataset.applicationReady = 'true';
+  dismissBootSplash();
+}
+
+/**
+ * #boot-splash (index.html) is inline HTML/CSS with no JS dependency, so it
+ * paints before this module even finishes loading. Fades out once the real
+ * shell has rendered - tied to genuine boot completion, not a fixed delay -
+ * and is removed outright afterward so it cannot ever intercept a click.
+ */
+function dismissBootSplash(): void {
+  const splash = document.getElementById('boot-splash');
+  if (!splash) return;
+  splash.classList.add('is-done');
+  window.setTimeout(() => splash.remove(), 200);
 }
 
 boot().catch((error: unknown) => {
   console.error(error);
+  dismissBootSplash();
   const app = document.getElementById('app');
   if (app) {
     app.innerHTML =

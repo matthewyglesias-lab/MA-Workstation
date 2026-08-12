@@ -535,8 +535,9 @@ input[type="radio"]:disabled {
   background: var(--cd-face);
   border-bottom: 1px solid #78838d;
   box-shadow: inset 0 1px #fff;
-  scrollbar-color: #aab2bc #e4e8eb;
-  scrollbar-width: thin;
+  /* Classic beveled scrollbar treatment (with arrow-cap buttons) lives in
+     meditech-workstation.css's shared .cd2004-navigator/.cd2004-toolbar
+     scrollbar block. */
 }
 
 .cd2004-toolbar-button {
@@ -864,8 +865,8 @@ input[type="radio"]:disabled {
   overflow: auto;
   overscroll-behavior: contain;
   background: #f5f7f8;
-  scrollbar-color: #aab2bc #e4e8eb;
-  scrollbar-width: thin;
+  /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
+     shared scrollbar block. */
 }
 
 .cd2004-window-footer {
@@ -928,8 +929,8 @@ input[type="radio"]:disabled {
   overflow-y: hidden;
   background: var(--cd-face);
   border-top: 1px solid var(--cd-border-dark);
-  scrollbar-color: #aab2bc #e4e8eb;
-  scrollbar-width: thin;
+  /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
+     shared .cd2004-navigator/.cd2004-toolbar scrollbar block. */
 }
 
 .cd2004-nav-item {
@@ -2131,6 +2132,153 @@ input[type="radio"]:disabled {
   background: rgb(14 25 40 / 45%);
 }
 
+/* Windows-2000-style "workstation locked" overlay. Same --cd-util-* token
+   set and raised Win32 window edge the injection-completion card and records
+   drawer already use, kept self-contained here since it is the one dialog in
+   the app that must never be dismissed by Escape or a backdrop click. */
+.cd2004-lock-overlay {
+  --cd-util-navy: #0a246a;
+  --cd-util-navy-dark: #061a50;
+  --cd-util-navy-light: #3768a8;
+  --cd-util-face: #d9dee5;
+  --cd-util-ink: #101828;
+  --cd-util-muted: #40485a;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  padding: 0;
+  overflow: auto;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  place-items: center;
+  font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+}
+
+.cd2004-lock-overlay[open] {
+  display: grid;
+}
+
+.cd2004-lock-overlay::backdrop {
+  background: var(--cd-util-navy-dark);
+}
+
+.cd2004-lock-card {
+  box-sizing: border-box;
+  width: 340px;
+  padding: 0 0 16px;
+  color: var(--cd-util-ink);
+  text-align: center;
+  background: var(--cd-util-face);
+  border: 1px solid #000;
+  border-top-color: #fff;
+  border-left-color: #fff;
+  box-shadow:
+    inset 1px 1px #fff,
+    inset -1px -1px #7a838d,
+    4px 4px 0 rgb(0 0 0 / 35%);
+}
+
+.cd2004-lock-card::before {
+  content: "";
+  display: block;
+  height: 6px;
+  margin-bottom: 14px;
+  background: linear-gradient(90deg, var(--cd-util-navy), var(--cd-util-navy-light));
+  border-bottom: 1px solid var(--cd-util-navy-dark);
+}
+
+.cd2004-lock-icon {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.cd2004-lock-card h2 {
+  margin: 6px 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cd2004-lock-detail {
+  margin: 0 20px 10px;
+  color: var(--cd-util-muted);
+  font-size: 11px;
+}
+
+.cd2004-lock-staff {
+  margin: 0 20px 14px;
+  font-size: 11px;
+}
+
+.cd2004-lock-overlay form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 20px;
+}
+
+.cd2004-lock-label {
+  align-self: flex-start;
+  font-size: 11px;
+}
+
+.cd2004-lock-overlay input[type="text"] {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 3px 5px;
+  font-family: inherit;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #000;
+  border-top-color: #6b7280;
+  border-left-color: #6b7280;
+}
+
+.cd2004-lock-overlay input[type="text"]:focus-visible {
+  outline: 1px dotted #101010;
+  outline-offset: 1px;
+}
+
+.cd2004-lock-mismatch {
+  align-self: flex-start;
+  margin: 0;
+  color: #a31212;
+  font-size: 11px;
+}
+
+.cd2004-lock-overlay button[type="submit"] {
+  min-width: 96px;
+  margin-top: 6px;
+  padding: 4px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--cd-util-ink);
+  background: var(--cd-util-face);
+  border: 1px solid #000;
+  border-top-color: #fff;
+  border-left-color: #fff;
+  box-shadow:
+    inset 1px 1px #fff,
+    inset -1px -1px #7a838d;
+}
+
+.cd2004-lock-overlay button[type="submit"]:active:not(:disabled) {
+  box-shadow:
+    inset -1px -1px #fff,
+    inset 1px 1px #7a838d;
+}
+
+.cd2004-lock-overlay button[type="submit"]:disabled {
+  color: #8a929c;
+}
+
+.cd2004-lock-overlay button[type="submit"]:focus-visible {
+  outline: 1px dotted #101010;
+  outline-offset: -3px;
+}
+
 .cd2004-help-dialog {
   width: min(430px, 100%);
   background: var(--cd-face);
@@ -2967,8 +3115,8 @@ input[type="radio"]:disabled {
   padding: 5px 6px 6px !important;
   overflow: auto;
   background: #f2f4f5;
-  scrollbar-color: #929ca6 #e0e4e8;
-  scrollbar-width: thin;
+  /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
+     shared scrollbar block. */
 }
 
 /* One record per line, in columns - Patient / Medication / Last activity /
