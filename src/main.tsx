@@ -782,10 +782,25 @@ async function boot(): Promise<void> {
     runtime.staging.setAttribute('aria-hidden', 'true');
   }, 0);
   document.body.dataset.applicationReady = 'true';
+  dismissBootSplash();
+}
+
+/**
+ * #boot-splash (index.html) is inline HTML/CSS with no JS dependency, so it
+ * paints before this module even finishes loading. Fades out once the real
+ * shell has rendered - tied to genuine boot completion, not a fixed delay -
+ * and is removed outright afterward so it cannot ever intercept a click.
+ */
+function dismissBootSplash(): void {
+  const splash = document.getElementById('boot-splash');
+  if (!splash) return;
+  splash.classList.add('is-done');
+  window.setTimeout(() => splash.remove(), 200);
 }
 
 boot().catch((error: unknown) => {
   console.error(error);
+  dismissBootSplash();
   const app = document.getElementById('app');
   if (app) {
     app.innerHTML =
