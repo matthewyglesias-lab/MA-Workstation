@@ -118,6 +118,14 @@
     pointer-events: none;
   }
 
+  /* Injection and UDS worksheets dock a record-lifecycle action bar (Save /
+     Attest / Start new) directly above that footer chrome. Without this, the
+     toast's fixed 62px offset lands inside that bar and hides its buttons -
+     the exact controls staff need right after "New injection started." */
+  body:has(.cd2004-record-actions) .toast {
+    bottom: 100px;
+  }
+
   /* The check glyph carries no width/height attributes and legacy.css was
      sizing it; unsized it defaults to 84px square and inflates the strip. */
   .toast svg {
