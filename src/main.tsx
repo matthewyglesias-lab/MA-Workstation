@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import { RecordsWindow } from './presentation/RecordsWindow';
+import { useIdleLock, WorkstationLock } from './presentation/WorkstationLock';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   ClinicalDesktopShell,
@@ -610,6 +611,15 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         : snapshot.postState
       : 'idle';
 
+  // snapshot.staffLabel is legacy-formatted display text ("Signed in: A.
+  // Rivera, MA", or the literal string "Not signed in" when nobody is) - not
+  // a reliable "is anyone signed in" boolean and not a clean name to display
+  // or match against. activeStaffValue() is the raw #staffSignIn input value
+  // (empty when nobody has signed in), same source ContextDialog already
+  // reads at render time below.
+  const staffSignInName = activeStaffValue().trim();
+  const [locked, unlock] = useIdleLock(staffSignInName.length > 0);
+
   return (
     <WorkstationViewportBoundary>
       <ClinicalDesktopShell
@@ -723,6 +733,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           }}
           onClose={() => setContextEditor(null)}
         />
+      )}
+      {locked && (
+        <WorkstationLock staffLabel={staffSignInName} onUnlock={unlock} />
       )}
     </WorkstationViewportBoundary>
   );
