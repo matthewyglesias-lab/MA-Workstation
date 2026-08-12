@@ -17,6 +17,7 @@ import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { DocumentationEngine } from "../../../documentation";
 import { formatProviderLetterDraft } from "../../../documentation/forms";
 import { formsEncounterToDocumentationInput } from "../../../documentation/adapters/forms-from-encounter";
+import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
 import { mirrorFormsEncounterToLegacyDom } from "./forms-legacy-mirror";
 import type { PatientContext } from "../../types";
@@ -444,17 +445,24 @@ export function FormsPanel({
           </div>
 
           <div class="wfp-section">
-            <div class="wfp-section-head">Forms handoff note</div>
+            <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
+              <p class="wfp-field-hint wfp-document-output-hint">
+                Printing and handoff use the same local encounter snapshot as the note below.
+              </p>
+              <div class="meditech-lab-note-heading">
+                <DesktopIcon name="note" />
+                TEBRA NARRATIVE
+              </div>
               <div class="wfp-preview">{noteText || "Document the request to build the note."}</div>
               <div class="wfp-actions">
                 <button
                   type="button"
-                  class="cd2004-command-button"
+                  class="cd2004-link-button"
                   onClick={() => navigator.clipboard?.writeText(noteText)}
                   disabled={!noteText}
                 >
-                  Copy forms note
+                  Copy note
                 </button>
               </div>
             </div>

@@ -419,12 +419,41 @@ const headlineAndPresentation = (
   return { headline, presentation: PHASE_PRESENTATION_TEXT[phase] };
 };
 
-const traceabilityLine = (encounter: InjectionEncounter): string => {
-  const ndc = trimmed(encounter.traceability.ndc);
-  const lot = trimmed(encounter.traceability.lot);
-  const exp = formatMonth(encounter.traceability.expiration);
-  const parts = [ndc && `NDC ${ndc}`, lot && `Lot ${lot}`, exp && `Exp ${exp}`].filter(Boolean);
+const componentTraceabilitySummary = (
+  ndc?: string,
+  lot?: string,
+  expiration?: string,
+): string => {
+  const parts = [
+    trimmed(ndc) && `NDC ${trimmed(ndc)}`,
+    trimmed(lot) && `Lot ${trimmed(lot)}`,
+    formatMonth(expiration) && `Exp ${formatMonth(expiration)}`,
+  ].filter(Boolean);
   return parts.join(" · ");
+};
+
+/** A paired-injection protocol (Maintena/Asimtufii 1-day, Aristada INITIO
+ * same-day) physically administers two products - the compact note still
+ * has to carry both products' lot/NDC/expiration for traceability, not just
+ * the primary component's, even though it stays a single terse line. */
+const traceabilityLine = (
+  encounter: InjectionEncounter,
+  secondComponent?: InjectionComponent,
+): string => {
+  const primary = componentTraceabilitySummary(
+    encounter.traceability.ndc,
+    encounter.traceability.lot,
+    encounter.traceability.expiration,
+  );
+  const secondSummary = secondComponent
+    ? componentTraceabilitySummary(
+        secondComponent.ndc,
+        secondComponent.lot,
+        secondComponent.expiration,
+      )
+    : "";
+  if (!secondSummary) return primary;
+  return [primary, `Component 2 — ${secondSummary}`].filter(Boolean).join(". ");
 };
 
 const followUpLine = (encounter: InjectionEncounter): string => {
@@ -461,6 +490,7 @@ const buildInjectionNoteFacts = (
   encounter: InjectionEncounter,
   evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
   medicationLabel: string,
+  secondComponent?: InjectionComponent,
 ): InjectionNoteFacts => {
   const details = encounter.details ?? {};
   const { verification, clinicalReview } = compactReviewFacts(encounter);
@@ -471,11 +501,27 @@ const buildInjectionNoteFacts = (
   const administrationLine = [medicationLabel, trimmed(encounter.dose), trimmed(encounter.route)]
     .filter(Boolean)
     .join(" ");
-  const administration = administrationLine
+  const primaryAdministration = administrationLine
     ? `${administrationLine} administered to ${trimmed(encounter.site) || "the documented site"}${
         encounter.attestations.hygiene ? " using aseptic technique" : ""
       }.`
     : "";
+  // A paired-injection protocol physically administers a second product at a
+  // separate site - the note has to say where, not just that a second
+  // component happened, matching the level of detail the primary sentence
+  // gets.
+  const secondAdministrationLine = [
+    trimmed(secondComponent?.medication),
+    trimmed(secondComponent?.dose),
+    trimmed(secondComponent?.route) || "IM",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const secondAdministration =
+    secondComponent && secondAdministrationLine && trimmed(secondComponent.site)
+      ? `Component 2 — ${secondAdministrationLine} administered to ${trimmed(secondComponent.site)}.`
+      : "";
+  const administration = [primaryAdministration, secondAdministration].filter(Boolean).join(" ");
 
   return {
     headline,
@@ -496,7 +542,7 @@ const buildInjectionNoteFacts = (
       ? "Pt observed post-inj w/o adverse reaction."
       : undefined,
     departureStatus: departureStatusLine(encounter) || undefined,
-    traceability: traceabilityLine(encounter) || undefined,
+    traceability: traceabilityLine(encounter, secondComponent) || undefined,
     followUp: followUpLine(encounter) || undefined,
     orderingProvider: trimmed(encounter.orderingProvider) || undefined,
     administeredBy: trimmed(encounter.administeredBy) || undefined,
@@ -693,7 +739,7 @@ export function injectionEncounterToDocumentationInput(
       orderingProvider: trimmed(encounter.orderingProvider) || undefined,
     },
     noteFacts: administered
-      ? buildInjectionNoteFacts(encounter, evaluation, primaryMedicationName)
+      ? buildInjectionNoteFacts(encounter, evaluation, primaryMedicationName, initiation.secondComponent)
       : undefined,
   };
 }

@@ -3031,7 +3031,10 @@ export function InjectionPanel({
             <p class="wfp-field-hint wfp-document-output-hint">
               Printing uses the same local encounter snapshot as the note below.
             </p>
-            <div class="meditech-lab-note-heading">TEBRA NARRATIVE</div>
+            <div class="meditech-lab-note-heading">
+              <DesktopIcon name="note" />
+              TEBRA NARRATIVE
+            </div>
             <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
             <div class="wfp-actions">
               <button

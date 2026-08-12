@@ -264,6 +264,7 @@ async function prepareReadyInjection(page) {
   await panel.locator('input[placeholder="Provider name"]').fill('Snapshot Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+  await panel.locator('.wfp-field:has-text("Medication name") input').fill('Custom Medication');
   await panel.locator('input[name="inj-dose"]').fill('100 mg');
   await panel.locator('input[name="inj-route"]').fill('IM');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');

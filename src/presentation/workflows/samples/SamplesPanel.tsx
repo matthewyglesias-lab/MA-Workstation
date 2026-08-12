@@ -21,6 +21,7 @@ import { localIsoDate } from "../../../domain/dates";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { DocumentationEngine } from "../../../documentation";
 import { samplesEncounterToDocumentationInput } from "../../../documentation/adapters/samples-from-encounter";
+import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { mirrorSamplesEncounterToLegacyDom } from "./samples-legacy-mirror";
@@ -933,9 +934,26 @@ export function SamplesPanel({
           </div>
 
           <div class="wfp-section">
-            <div class="wfp-section-head">Oral sample handout</div>
+            <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
+              <p class="wfp-field-hint wfp-document-output-hint">
+                Printing uses the same local encounter snapshot as the note below.
+              </p>
+              <div class="meditech-lab-note-heading">
+                <DesktopIcon name="note" />
+                TEBRA NARRATIVE
+              </div>
               <div class="wfp-preview">{noteText || "Document the encounter to build the handout note."}</div>
+              <div class="wfp-actions">
+                <button
+                  type="button"
+                  class="cd2004-link-button"
+                  onClick={() => navigator.clipboard?.writeText(noteText)}
+                  disabled={!noteText}
+                >
+                  Copy note
+                </button>
+              </div>
               <div class="wfp-actions">
                 <button
                   type="button"
@@ -963,14 +981,6 @@ export function SamplesPanel({
                   onClick={() => clickLegacyControl("sampleWorksheetBlank")}
                 >
                   Blank worksheet
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => navigator.clipboard?.writeText(noteText)}
-                  disabled={!noteText}
-                >
-                  Copy Tebra sample note
                 </button>
               </div>
               {!canFinalizeSampleLog && (

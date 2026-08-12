@@ -768,6 +768,16 @@ export const readLegacyInjectionDocumentation = (
         : undefined,
       orderingProvider: value("orderingProvider", doc) || undefined,
     },
+    // Sourced from the typed panel's own already-computed note facts (via
+    // window.ipmgInjectionNoteFacts, set by injection-legacy-mirror.ts)
+    // rather than re-derived from these scraped DOM fields, so this
+    // legacy-DOM-driven path renders the same RC6.1 compact note as the
+    // typed panel's own preview instead of silently falling back to the
+    // pre-RC6.1 verbose formatter.
+    noteFacts:
+      disposition?.kind === "administered"
+        ? win.ipmgInjectionNoteFacts?.()
+        : undefined,
   };
 };
 
