@@ -19,6 +19,7 @@ import { formatProviderLetterDraft } from "../../../documentation/forms";
 import { formsEncounterToDocumentationInput } from "../../../documentation/adapters/forms-from-encounter";
 import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
+import { StatusFlag } from "../StatusFlag";
 import { mirrorFormsEncounterToLegacyDom } from "./forms-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { formatDobAsTyped } from "../../format-dob";
@@ -42,32 +43,6 @@ interface FormsPanelProps {
 
 const patientIsEmpty = (patient: FormsEncounter["patient"]): boolean =>
   !patient.name.trim() && !patient.dob.trim();
-
-function StatusFlag({
-  idle,
-  stopCount,
-  warningCount,
-}: {
-  idle: boolean;
-  stopCount: number;
-  warningCount: number;
-}) {
-  const variant = idle
-    ? "is-idle"
-    : stopCount > 0
-      ? "is-stop"
-      : warningCount > 0
-        ? "is-warning"
-        : "is-ready";
-  const label = idle
-    ? "Not started"
-    : stopCount > 0
-      ? `${stopCount} stop${stopCount === 1 ? "" : "s"}`
-      : warningCount > 0
-        ? `${warningCount} to review`
-        : "Ready";
-  return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
-}
 
 interface OptionListProps<T extends string> {
   name: string;
@@ -287,7 +262,7 @@ export function FormsPanel({
 
       {tab === "request" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Patient & request">
             <div class="wfp-section-head">Patient &amp; request</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -319,7 +294,7 @@ export function FormsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Type of request">
             <div class="wfp-section-head">Type of request</div>
             <div class="wfp-section-body">
               <OptionList<FormRequestType>
@@ -444,7 +419,7 @@ export function FormsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Document output">
             <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
               <p class="wfp-field-hint wfp-document-output-hint">
@@ -483,7 +458,7 @@ export function FormsPanel({
 
       {tab === "letter" && LETTER_BUILDER_ENABLED && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Letter purpose">
             <div class="wfp-section-head">Letter purpose</div>
             <div class="wfp-section-body">
               <OptionList<LetterType>
@@ -496,7 +471,7 @@ export function FormsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Letter details">
             <div class="wfp-section-head">Letter details</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -625,7 +600,7 @@ export function FormsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Letter draft">
             <div class="wfp-section-head">Letter draft</div>
             <div class="wfp-section-body">
               <div class="wfp-preview">{letterDraft.bodyText}</div>

@@ -24,6 +24,7 @@ import { samplesEncounterToDocumentationInput } from "../../../documentation/ada
 import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
+import { StatusFlag } from "../StatusFlag";
 import { mirrorSamplesEncounterToLegacyDom } from "./samples-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { formatDobAsTyped } from "../../format-dob";
@@ -153,45 +154,6 @@ const buildPlanAndPackages = (
 };
 
 const newRowId = (): string => `sample-row-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-
-function StatusFlag({
-  idle,
-  stopCount,
-  warningCount,
-  onOpenRequirements,
-}: {
-  idle: boolean;
-  stopCount: number;
-  warningCount: number;
-  onOpenRequirements?: () => void;
-}) {
-  const variant = idle
-    ? "is-idle"
-    : stopCount > 0
-      ? "is-stop"
-      : warningCount > 0
-        ? "is-warning"
-        : "is-ready";
-  const label = idle
-    ? "Not started"
-    : stopCount > 0
-      ? `${stopCount} stop${stopCount === 1 ? "" : "s"}`
-      : warningCount > 0
-        ? `${warningCount} to review`
-        : "Ready";
-  if (stopCount > 0 && onOpenRequirements) {
-    return (
-      <button
-        type="button"
-        class={`wfp-status-flag ${variant}`}
-        onClick={onOpenRequirements}
-      >
-        {label}
-      </button>
-    );
-  }
-  return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
-}
 
 function Field({
   label,
@@ -555,7 +517,7 @@ export function SamplesPanel({
 
       {tab === "order" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Patient / order">
             <div class="wfp-section-head">Patient / order</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -632,7 +594,7 @@ export function SamplesPanel({
 
       {tab === "medication" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Clinic sample medication">
             <div class="wfp-section-head">Clinic sample medication</div>
             <div class="wfp-section-body">
               <Field label="Medication">
@@ -714,7 +676,7 @@ export function SamplesPanel({
 
       {tab === "plan" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Package traceability">
             <div class="wfp-section-head">Package traceability</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -738,7 +700,7 @@ export function SamplesPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Samples provided / step plan">
             <div class="wfp-section-head">
               Samples provided / step plan
               <button type="button" class="cd2004-link-button wfp-group-action" onClick={addRow}>
@@ -840,7 +802,7 @@ export function SamplesPanel({
 
       {tab === "review" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Safety handoff">
             <div class="wfp-section-head">Safety handoff</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -904,7 +866,7 @@ export function SamplesPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Final dispense review">
             <div class="wfp-section-head">Final dispense review</div>
             <div class="wfp-section-body">
               <p class="wfp-field-hint">
@@ -933,7 +895,7 @@ export function SamplesPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Document output">
             <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
               <p class="wfp-field-hint wfp-document-output-hint">

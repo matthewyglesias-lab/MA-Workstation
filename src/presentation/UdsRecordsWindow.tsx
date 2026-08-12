@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { UdsRecordRepository, type UdsRecord } from "../persistence/uds-records";
 import { browserSafeStorage } from "../persistence/storage";
+import {
+  addendaCount,
+  searchText,
+  stamp,
+  timeOf,
+  trapDialogTabKey,
+} from "./records-drawer-shared";
 
 /**
  * UDS record selection window.
@@ -30,25 +37,6 @@ const COLUMNS: Array<{ key: SortKey; label: string }> = [
   { key: "activity", label: "Last activity" },
 ];
 
-const timeOf = (value: unknown): number => {
-  const parsed = Date.parse(String(value ?? ""));
-  return Number.isNaN(parsed) ? 0 : parsed;
-};
-
-const stamp = (value: unknown): string => {
-  const at = timeOf(value);
-  if (!at) return "—";
-  return new Date(at).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
-
-const addendaCount = (record: UdsRecord): number =>
-  Array.isArray(record.addenda) ? record.addenda.length : 0;
-
 const activityText = (record: UdsRecord): string => {
   const extra = addendaCount(record);
   const suffix = extra ? ` / ${extra} addendum${extra === 1 ? "" : "s"}` : "";
@@ -61,8 +49,6 @@ const patientOf = (record: UdsRecord): string =>
   record.patient?.name?.trim() || record.summary || "Untitled UDS screen";
 
 const summaryOf = (record: UdsRecord): string => record.summary || "No device selected";
-
-const searchText = (record: UdsRecord): string => JSON.stringify(record).toLocaleLowerCase();
 
 interface UdsRecordsWindowProps {
   open: boolean;
@@ -144,31 +130,7 @@ export function UdsRecordsWindow({
         : { key, direction: key === "activity" ? "desc" : "asc" },
     );
 
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      return;
-    }
-    if (event.key !== "Tab") return;
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const focusable = [
-      ...dialog.querySelectorAll<HTMLElement>(
-        'button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])',
-      ),
-    ].filter((node) => !node.hasAttribute("disabled") && node.offsetParent !== null);
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
+  const onKeyDown = (event: KeyboardEvent) => trapDialogTabKey(dialogRef.current, event);
 
   const handleDialogClose = () => {
     onClose();

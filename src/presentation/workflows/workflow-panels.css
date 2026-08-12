@@ -12,6 +12,7 @@
   gap: 7px;
   min-width: 0;
   padding: 8px;
+  background: #eff0ed;
   /* The panel's own base size. Without it anything unstyled - buttons in
      particular - inherits the document's 12px and sits a step above the 11px
      body text beside it. A period form runs on one size. */
@@ -130,6 +131,7 @@
   gap: 2px;
   min-width: 0;
   padding-inline: 2px;
+  background: #d5dcda;
   border-bottom: 2px solid var(--cd-border-dark);
 }
 
@@ -366,6 +368,7 @@
 /* Field groups */
 
 .cd2004-shell .wfp-section {
+  background: var(--cd-white);
   border: 1px solid var(--cd-border-mid);
   box-shadow: inset 1px 1px var(--cd-border-light);
 }
