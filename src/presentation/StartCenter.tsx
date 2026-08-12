@@ -203,13 +203,22 @@ export function StartCenter({
                 type="button"
                 class={`cd2004-launcher-tile ${summary?.state ? `is-${summary.state}` : ""}`}
                 title={LAUNCHER_HINT[workflow]}
+                aria-label={
+                  summary?.detail
+                    ? `${WORKFLOW_LABELS[workflow]} — ${summary.detail}`
+                    : WORKFLOW_LABELS[workflow]
+                }
                 onClick={() => onWorkflowOpen(workflow)}
               >
                 <span class="cd2004-launcher-icon" aria-hidden="true">
                   <DesktopIcon name={workflow} />
                 </span>
                 <span class="cd2004-launcher-label">{WORKFLOW_LABELS[workflow]}</span>
-                {count > 0 && <span class="cd2004-launcher-badge">{count}</span>}
+                {count > 0 && (
+                  <span class="cd2004-launcher-badge" aria-label={`${count} items`}>
+                    {count}
+                  </span>
+                )}
               </button>
             );
           })}
