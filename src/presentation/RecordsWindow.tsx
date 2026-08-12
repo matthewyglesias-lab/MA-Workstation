@@ -4,6 +4,13 @@ import {
   type InjectionRecord,
 } from "../persistence/injection-records";
 import { browserSafeStorage } from "../persistence/storage";
+import {
+  addendaCount,
+  searchText,
+  stamp,
+  timeOf,
+  trapDialogTabKey,
+} from "./records-drawer-shared";
 
 /**
  * Injection record selection window.
@@ -47,26 +54,6 @@ const COLUMNS: Array<{ key: SortKey; label: string }> = [
   { key: "activity", label: "Last activity" },
 ];
 
-const timeOf = (value: unknown): number => {
-  const parsed = Date.parse(String(value ?? ""));
-  return Number.isNaN(parsed) ? 0 : parsed;
-};
-
-/** Matches legacy's `stamp()` output: "Aug 2, 9:41 AM". */
-const stamp = (value: unknown): string => {
-  const at = timeOf(value);
-  if (!at) return "—";
-  return new Date(at).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
-
-const addendaCount = (record: InjectionRecord): number =>
-  Array.isArray(record.addenda) ? record.addenda.length : 0;
-
 /** Same shape legacy's `drawerMessage()` produced. */
 const activityText = (record: InjectionRecord): string => {
   const extra = addendaCount(record);
@@ -81,10 +68,6 @@ const patientOf = (record: InjectionRecord): string =>
 
 const medicationOf = (record: InjectionRecord): string =>
   record.summary || "No medication selected";
-
-/** Legacy searched the whole record; keep that so results do not narrow. */
-const searchText = (record: InjectionRecord): string =>
-  JSON.stringify(record).toLocaleLowerCase();
 
 interface RecordsWindowProps {
   open: boolean;
@@ -174,38 +157,7 @@ export function RecordsWindow({
           { key, direction: key === "activity" ? "desc" : "asc" },
     );
 
-  // showModal() inerts the background but does not cycle focus: in Chromium,
-  // Shift+Tab from the first control lands on <body>, outside the dialog. The
-  // platform gives containment, not wrapping, so the wrap is ours to add.
-  const onKeyDown = (event: KeyboardEvent) => {
-    // Escape is handled by the dialog itself. Let it stop here: the shell has
-    // a document-level Escape binding that closes an open menu and pulls focus
-    // back to that menu's title, which otherwise fires as this window closes
-    // and steals the focus restore out from under it.
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      return;
-    }
-    if (event.key !== "Tab") return;
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const focusable = [
-      ...dialog.querySelectorAll<HTMLElement>(
-        'button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])',
-      ),
-    ].filter((node) => !node.hasAttribute("disabled") && node.offsetParent !== null);
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
+  const onKeyDown = (event: KeyboardEvent) => trapDialogTabKey(dialogRef.current, event);
 
   /**
    * Runs on the dialog's own close event, which is where the restore has to

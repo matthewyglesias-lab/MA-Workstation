@@ -16,8 +16,6 @@ import { emptyUdsEncounter, type UdsEncounter } from "../domain/uds";
 export type ClinicalWorkflow = "injection" | "uds" | "samples" | "forms";
 export type ApplicationWorkflow = WorkflowKey | "closeout" | "future";
 export type EncounterLifecycle = "empty" | "started" | "draft" | "completed";
-export type DesktopPane = "navigator" | "work" | "inspector";
-export type DesktopWindowMode = "normal" | "minimized" | "maximized" | "closed";
 
 export interface EncounterByWorkflow {
   injection: InjectionEncounter;
@@ -49,8 +47,6 @@ export interface AppState {
   activeWorkflow: ApplicationWorkflow;
   activePatient: PatientIdentity;
   workflows: WorkflowSessions;
-  windows: Record<DesktopPane, DesktopWindowMode>;
-  activePane: DesktopPane;
   persistence: PersistenceStatus;
 }
 
@@ -91,14 +87,7 @@ export type AppAction =
       message: string;
       occurredAt: string;
     }
-  | { type: "persistence/clear" }
-  | {
-      type: "window/set-mode";
-      pane: DesktopPane;
-      mode: DesktopWindowMode;
-    }
-  | { type: "window/activate"; pane: DesktopPane }
-  | { type: "window/reset-layout" };
+  | { type: "persistence/clear" };
 
 export type AppListener = (state: AppState, action: AppAction) => void;
 
@@ -150,12 +139,6 @@ export const createInitialAppState = (): AppState => {
       samples: createSession("samples", activePatient),
       forms: createSession("forms", activePatient),
     },
-    windows: {
-      navigator: "normal",
-      work: "normal",
-      inspector: "normal",
-    },
-    activePane: "work",
     persistence: { state: "idle" },
   };
 };
@@ -219,8 +202,6 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       let next: AppState = {
         ...state,
         activeWorkflow: action.workflow,
-        windows: { ...state.windows, work: "normal" },
-        activePane: "work",
       };
       if (clinicalWorkflow(action.workflow)) {
         const session = next.workflows[action.workflow];
@@ -331,36 +312,6 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       };
     case "persistence/clear":
       return { ...state, persistence: { state: "idle" } };
-    case "window/set-mode": {
-      const windows = { ...state.windows };
-      if (action.mode === "maximized") {
-        (Object.keys(windows) as DesktopPane[]).forEach((pane) => {
-          if (windows[pane] === "maximized") windows[pane] = "normal";
-        });
-      }
-      windows[action.pane] = action.mode;
-      const activePane =
-        action.mode === "normal" || action.mode === "maximized"
-          ? action.pane
-          : state.activePane === action.pane
-            ? ((Object.keys(windows) as DesktopPane[]).find(
-                (pane) => windows[pane] !== "closed" && windows[pane] !== "minimized",
-              ) ?? "work")
-            : state.activePane;
-      return { ...state, windows, activePane };
-    }
-    case "window/activate":
-      return {
-        ...state,
-        activePane: action.pane,
-        windows: { ...state.windows, [action.pane]: "normal" },
-      };
-    case "window/reset-layout":
-      return {
-        ...state,
-        windows: { navigator: "normal", work: "normal", inspector: "normal" },
-        activePane: "work",
-      };
     default:
       return state;
   }
