@@ -1679,7 +1679,7 @@ export function InjectionPanel({
 
       {tab === "order" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Patient & ordering provider">
             <div class="wfp-section-head">Patient &amp; ordering provider</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -1731,7 +1731,7 @@ export function InjectionPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Ordered medication">
             <div class="wfp-section-head">Ordered medication</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -1830,7 +1830,7 @@ export function InjectionPanel({
 
       {tab === "schedule" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Schedule & next dose">
             <div class="wfp-section-head">Schedule &amp; next dose</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -1953,7 +1953,7 @@ export function InjectionPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Dose history">
             <div class="wfp-section-head">
               Dose history
               {doseHistory.length > 0 && (
@@ -1994,7 +1994,7 @@ export function InjectionPanel({
           </div>
 
           {showInitiationPath && (
-            <div class="wfp-section">
+            <div class="wfp-section" role="group" aria-label="Initiation & paired-injection path">
               <div class="wfp-section-head">Initiation &amp; paired-injection path</div>
               <div class="wfp-section-body">
                 <p class="wfp-field-hint">
@@ -2031,7 +2031,7 @@ export function InjectionPanel({
                 )}
 
                 {initiationConfig && (
-                  <div class="wfp-section">
+                  <div class="wfp-section" role="group" aria-label="Initiation component">
                     <div class="wfp-section-head">{initiationConfig.title}</div>
                     <div class="wfp-section-body">
                       <p class="wfp-field-hint">{initiationConfig.summary}</p>
@@ -2233,7 +2233,7 @@ export function InjectionPanel({
 
       {!nonAdministration && tab === "administration" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Actual administration location">
             <div class="wfp-section-head">
               Actual administration location
               {recommendedSite && (
@@ -2317,7 +2317,7 @@ export function InjectionPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Given by / time">
             <div class="wfp-section-head">Given by / time</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -2423,7 +2423,7 @@ export function InjectionPanel({
 
       {!nonAdministration && tab === "product" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Lot & traceability">
             <div class="wfp-section-head">Lot &amp; traceability</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -2462,7 +2462,7 @@ export function InjectionPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Product handling & trace exceptions">
             <div class="wfp-section-head">Product handling &amp; trace exceptions</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -2587,7 +2587,7 @@ export function InjectionPanel({
 
       {tab === "verification" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Verification & safety">
             <div class="wfp-section-head">Verification &amp; safety</div>
             <div class="wfp-section-body">
               <CheckList
@@ -2755,7 +2755,7 @@ export function InjectionPanel({
 
       {tab === "outcome" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Response & follow-up">
             <div class="wfp-section-head">Response &amp; follow-up</div>
             <div class="wfp-section-body">
               <Field label="Patient response" field="response">
@@ -2827,7 +2827,7 @@ export function InjectionPanel({
           </div>
 
           {!nonAdministration && (
-            <div class="wfp-section">
+            <div class="wfp-section" role="group" aria-label="Additional note items">
               <div class="wfp-section-head">Additional note items</div>
               <div class="wfp-section-body">
                 <p class="wfp-field-hint">
@@ -2892,7 +2892,7 @@ export function InjectionPanel({
             </div>
           )}
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Clinical disposition">
             <div
               class="wfp-section-head"
               data-requirement={requirements["disposition.kind"]?.state ?? "unprojected"}
@@ -2937,7 +2937,7 @@ export function InjectionPanel({
                 ))}
               </div>
               {encounter.disposition.kind && encounter.disposition.kind !== "administered" && (
-                <div class="wfp-section">
+                <div class="wfp-section" role="group" aria-label="Required handoff details">
                   <div class="wfp-section-head">Required handoff details</div>
                   <div class="wfp-section-body">
                     <div class="wfp-row">
@@ -2987,7 +2987,7 @@ export function InjectionPanel({
           locked fieldset so a completed record's AVS/worksheet remain
           reprintable instead of going dead the moment the record locks. */}
       {tab === "outcome" && (
-        <div class="wfp-section">
+        <div class="wfp-section" role="group" aria-label="Document output">
           <div class="wfp-section-head">Document output</div>
           <div class="wfp-section-body">
             <p class="wfp-field-hint wfp-document-output-hint">
@@ -3059,7 +3059,7 @@ export function InjectionPanel({
       )}
 
       {locked && (
-        <div class="wfp-section">
+        <div class="wfp-section" role="group" aria-label="Addendum">
           <div class="wfp-section-head">Addendum</div>
           <div class="wfp-section-body">
             <p class="wfp-field-hint">

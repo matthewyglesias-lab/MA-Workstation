@@ -517,7 +517,7 @@ export function SamplesPanel({
 
       {tab === "order" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Patient / order">
             <div class="wfp-section-head">Patient / order</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -594,7 +594,7 @@ export function SamplesPanel({
 
       {tab === "medication" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Clinic sample medication">
             <div class="wfp-section-head">Clinic sample medication</div>
             <div class="wfp-section-body">
               <Field label="Medication">
@@ -676,7 +676,7 @@ export function SamplesPanel({
 
       {tab === "plan" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Package traceability">
             <div class="wfp-section-head">Package traceability</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -700,7 +700,7 @@ export function SamplesPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Samples provided / step plan">
             <div class="wfp-section-head">
               Samples provided / step plan
               <button type="button" class="cd2004-link-button wfp-group-action" onClick={addRow}>
@@ -802,7 +802,7 @@ export function SamplesPanel({
 
       {tab === "review" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Safety handoff">
             <div class="wfp-section-head">Safety handoff</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -866,7 +866,7 @@ export function SamplesPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Final dispense review">
             <div class="wfp-section-head">Final dispense review</div>
             <div class="wfp-section-body">
               <p class="wfp-field-hint">
@@ -895,7 +895,7 @@ export function SamplesPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Document output">
             <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
               <p class="wfp-field-hint wfp-document-output-hint">

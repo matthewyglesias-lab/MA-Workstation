@@ -262,7 +262,7 @@ export function FormsPanel({
 
       {tab === "request" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Patient & request">
             <div class="wfp-section-head">Patient &amp; request</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -294,7 +294,7 @@ export function FormsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Type of request">
             <div class="wfp-section-head">Type of request</div>
             <div class="wfp-section-body">
               <OptionList<FormRequestType>
@@ -419,7 +419,7 @@ export function FormsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Document output">
             <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
               <p class="wfp-field-hint wfp-document-output-hint">
@@ -458,7 +458,7 @@ export function FormsPanel({
 
       {tab === "letter" && LETTER_BUILDER_ENABLED && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Letter purpose">
             <div class="wfp-section-head">Letter purpose</div>
             <div class="wfp-section-body">
               <OptionList<LetterType>
@@ -471,7 +471,7 @@ export function FormsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Letter details">
             <div class="wfp-section-head">Letter details</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -600,7 +600,7 @@ export function FormsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Letter draft">
             <div class="wfp-section-head">Letter draft</div>
             <div class="wfp-section-body">
               <div class="wfp-preview">{letterDraft.bodyText}</div>

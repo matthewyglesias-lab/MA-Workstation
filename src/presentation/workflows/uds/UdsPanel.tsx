@@ -776,7 +776,7 @@ export function UdsPanel({
 
       {tab === "specimen" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Specimen & collection">
             <div class="wfp-section-head">Specimen &amp; collection</div>
             <div class="wfp-section-body">
               {/* Source and method are fixed for this workflow, but a lab
@@ -844,7 +844,7 @@ export function UdsPanel({
             </div>
           </div>
 
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Device & quality control">
             <div class="wfp-section-head">Device &amp; quality control</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -949,7 +949,7 @@ export function UdsPanel({
 
       {tab === "results" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Result detail">
             <div class="wfp-section-head">Result detail</div>
             <div class="wfp-section-body">
               {/* Every point-of-care immunoassay result is presumptive until a
@@ -1010,7 +1010,7 @@ export function UdsPanel({
               </div>
 
               {UDS_GROUPS.map((group) => (
-                <div class="wfp-section" key={group.key}>
+                <div class="wfp-section" key={group.key} role="group" aria-label={group.label}>
                   <div class="wfp-section-head">
                     {group.label}
                     <button
@@ -1091,7 +1091,7 @@ export function UdsPanel({
 
       {tab === "interpretation" && (
         <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section">
+          <div class="wfp-section" role="group" aria-label="Interpretation & review">
             <div class="wfp-section-head">Interpretation &amp; review</div>
             <div class="wfp-section-body">
               <div class="wfp-row">
@@ -1174,7 +1174,7 @@ export function UdsPanel({
           same native <fieldset disabled> that makes editable fields
           read-only. */}
       {tab === "interpretation" && (
-        <div class="wfp-section">
+        <div class="wfp-section" role="group" aria-label="Clinician result report">
           <div class="wfp-section-head">Clinician result report</div>
           <div class="wfp-section-body">
             <ClinicianLabSheet
@@ -1249,7 +1249,7 @@ export function UdsPanel({
       )}
 
       {locked && (
-        <div class="wfp-section">
+        <div class="wfp-section" role="group" aria-label="Addendum">
           <div class="wfp-section-head">Addendum</div>
           <div class="wfp-section-body">
             <p class="wfp-field-hint">
