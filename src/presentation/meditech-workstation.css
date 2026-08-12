@@ -915,7 +915,7 @@
     overflow: auto;
     background: #ced1e7;
     scrollbar-color: #8490bc #e4e5f4;
-    scrollbar-width: thin;
+    scrollbar-width: auto;
   }
 
   .meditech-record-list .cd2004-nav-item {
@@ -2322,53 +2322,154 @@
     overflow: hidden;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre) {
+  /* Classic Explorer-style scrollbar: beveled track, raised thumb, and
+     clickable arrow-cap buttons at each end - not the flat thin bar the
+     unstyled default gives you. .cd2004-navigator and .cd2004-toolbar used
+     to fall back to a plain scrollbar-color/width:thin declaration in
+     clinical-desktop.css because they were never added to this list; that
+     now-redundant declaration is removed below. */
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar) {
     scrollbar-color: #7e88ac #d6d8ec;
     scrollbar-width: auto;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar {
     width: 15px;
     height: 15px;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar-track {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-track {
     background: #d6d8ec;
     border: 1px solid #8a92b3;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre)::-webkit-scrollbar-thumb {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-thumb {
     min-height: 24px;
     background: #aeb3d0;
     border: 1px solid;
     border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button {
+    display: block;
+    width: 15px;
+    height: 15px;
+    background-color: #d6d8ec;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: 1px solid;
+    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:vertical:start:decrement {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 2L9 8H1Z' fill='%23404868'/%3E%3C/svg%3E");
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:vertical:end:increment {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 8L9 2H1Z' fill='%23404868'/%3E%3C/svg%3E");
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:horizontal:start:decrement {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5L8 9V1Z' fill='%23404868'/%3E%3C/svg%3E");
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:horizontal:end:increment {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M8 5L2 9V1Z' fill='%23404868'/%3E%3C/svg%3E");
+  }
+
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-corner {
+    background: #d6d8ec;
   }
 
   /* These are body-appended siblings of .cd2004-shell, not descendants of it
      (see main.tsx: RecordActionDialog/ContextDialog/RecordsWindow render
      alongside <ClinicalDesktopShell/>, not inside it) - the .cd2004-shell
      scrollbar rules above cannot reach them, so they need their own copy of
-     the same treatment. */
-  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card) {
+     the same treatment. .records-drawer-results (inside RecordsWindow's
+     <dialog class="records-drawer-layer">) is the same situation - it used to
+     fall back to a plain scrollbar-color/width:thin declaration in
+     clinical-desktop.css, now removed. */
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results) {
     scrollbar-color: #7e88ac #d6d8ec;
     scrollbar-width: auto;
   }
 
-  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar {
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar {
     width: 15px;
     height: 15px;
   }
 
-  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar-track {
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-track {
     background: #d6d8ec;
     border: 1px solid #8a92b3;
   }
 
-  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card)::-webkit-scrollbar-thumb {
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-thumb {
     min-height: 24px;
     background: #aeb3d0;
     border: 1px solid;
     border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-button {
+    display: block;
+    width: 15px;
+    height: 15px;
+    background-color: #d6d8ec;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: 1px solid;
+    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-button:vertical:start:decrement {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 2L9 8H1Z' fill='%23404868'/%3E%3C/svg%3E");
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-button:vertical:end:increment {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 8L9 2H1Z' fill='%23404868'/%3E%3C/svg%3E");
+  }
+
+  :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-corner {
+    background: #d6d8ec;
+  }
+
+  /* .meditech-function-list keeps its own established (slightly cooler-blue)
+     scrollbar tint rather than being folded into the group above - just
+     gains the same beveled track/thumb/arrow-button treatment. */
+  .meditech-function-list::-webkit-scrollbar {
+    width: 15px;
+  }
+
+  .meditech-function-list::-webkit-scrollbar-track {
+    background: #e4e5f4;
+    border: 1px solid #8a92b3;
+  }
+
+  .meditech-function-list::-webkit-scrollbar-thumb {
+    min-height: 24px;
+    background: #8490bc;
+    border: 1px solid;
+    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  .meditech-function-list::-webkit-scrollbar-button {
+    display: block;
+    width: 15px;
+    height: 15px;
+    background-color: #e4e5f4;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: 1px solid;
+    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+  }
+
+  .meditech-function-list::-webkit-scrollbar-button:vertical:start:decrement {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 2L9 8H1Z' fill='%23404868'/%3E%3C/svg%3E");
+  }
+
+  .meditech-function-list::-webkit-scrollbar-button:vertical:end:increment {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 8L9 2H1Z' fill='%23404868'/%3E%3C/svg%3E");
   }
 
   .cd2004-shell :where(

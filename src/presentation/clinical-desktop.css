@@ -535,8 +535,9 @@ input[type="radio"]:disabled {
   background: var(--cd-face);
   border-bottom: 1px solid #78838d;
   box-shadow: inset 0 1px #fff;
-  scrollbar-color: #aab2bc #e4e8eb;
-  scrollbar-width: thin;
+  /* Classic beveled scrollbar treatment (with arrow-cap buttons) lives in
+     meditech-workstation.css's shared .cd2004-navigator/.cd2004-toolbar
+     scrollbar block. */
 }
 
 .cd2004-toolbar-button {
@@ -864,8 +865,8 @@ input[type="radio"]:disabled {
   overflow: auto;
   overscroll-behavior: contain;
   background: #f5f7f8;
-  scrollbar-color: #aab2bc #e4e8eb;
-  scrollbar-width: thin;
+  /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
+     shared scrollbar block. */
 }
 
 .cd2004-window-footer {
@@ -928,8 +929,8 @@ input[type="radio"]:disabled {
   overflow-y: hidden;
   background: var(--cd-face);
   border-top: 1px solid var(--cd-border-dark);
-  scrollbar-color: #aab2bc #e4e8eb;
-  scrollbar-width: thin;
+  /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
+     shared .cd2004-navigator/.cd2004-toolbar scrollbar block. */
 }
 
 .cd2004-nav-item {
@@ -2967,8 +2968,8 @@ input[type="radio"]:disabled {
   padding: 5px 6px 6px !important;
   overflow: auto;
   background: #f2f4f5;
-  scrollbar-color: #929ca6 #e0e4e8;
-  scrollbar-width: thin;
+  /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
+     shared scrollbar block. */
 }
 
 /* One record per line, in columns - Patient / Medication / Last activity /
