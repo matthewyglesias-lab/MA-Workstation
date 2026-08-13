@@ -1288,7 +1288,10 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input').first().fill('QA, Explicit Forms');
     await panel.locator('select[name="forms-status"]').selectOption({ label: 'Provider review' });
 
-    const preview = panel.locator('.wfp-tabpanel .wfp-preview').first();
+    // The in-panel note preview was removed as a duplicate of this sidebar,
+    // which shows the same generated note content (now the only on-screen
+    // copy) split into labeled, individually-copyable sections.
+    const preview = page.locator('.cd2004-note-sections');
     await expect(preview).toContainText('Status: Provider review');
     await expect(preview).not.toContainText(
       'Release only after provider approval is confirmed.'

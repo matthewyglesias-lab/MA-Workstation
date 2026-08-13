@@ -644,23 +644,45 @@
   border-right: none;
 }
 
-/* Clinical disposition: a left-edge color band plus an icon separates the
-   completed-administration outcome from the three handoff outcomes at a
-   glance, instead of four visually identical rows. */
+/* Clinical disposition: the most consequential single choice on the
+   worksheet, so it gets real raised MEDITECH command-button weight - not a
+   thin radio row shared visually with routine checklist items. Each option
+   is its own beveled tile; a left-edge color band plus a bigger icon still
+   separates the completed-administration outcome from the three handoff
+   outcomes at a glance. */
+.cd2004-shell .wfp-disposition-list.wfp-option-list-inline {
+  gap: 8px;
+  border: none;
+}
+
 .cd2004-shell .wfp-disposition-list .wfp-option-row {
-  border-left: 3px solid transparent;
+  flex: 1 1 170px;
+  align-items: center;
+  padding: 11px 14px;
+  border: 1px solid var(--cd-border-mid);
+  border-left: 4px solid transparent;
+  box-shadow:
+    inset 1px 1px var(--cd-white),
+    inset -2px -1px var(--cd-border-mid);
+  background: var(--cd-face);
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready {
   border-left-color: var(--cd-green);
 }
 
-.cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
-  background: var(--cd-green-soft);
-}
-
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning {
   border-left-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-selected {
+  box-shadow:
+    inset 1px 1px var(--cd-border-mid),
+    inset -2px -1px var(--cd-white);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
+  background: var(--cd-green-soft);
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
@@ -670,12 +692,13 @@
 .cd2004-shell .wfp-disposition-list .wfp-option-title {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  font-size: 12px;
 }
 
 .cd2004-shell .wfp-option-icon svg {
-  width: 13px;
-  height: 13px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
@@ -759,7 +782,32 @@
 .cd2004-shell .wfp-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+}
+
+.cd2004-shell .wfp-actions .cd2004-command-button,
+.cd2004-shell .wfp-actions .cd2004-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cd2004-shell .wfp-actions .cd2004-command-button svg,
+.cd2004-shell .wfp-actions .cd2004-link-button svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* A one-off "these two groups are logically different" divider, the same
+   treatment the record-actions bar's own button-row separator uses. */
+.cd2004-shell .wfp-actions-divider {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 17px;
+  margin: 0 2px;
+  background: var(--cd-border-mid);
 }
 
 .cd2004-shell .wfp-checkbox-row {

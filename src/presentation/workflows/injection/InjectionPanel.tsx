@@ -2991,13 +2991,8 @@ export function InjectionPanel({
           <div class="wfp-section-head">Document output</div>
           <div class="wfp-section-body">
             <p class="wfp-field-hint wfp-document-output-hint">
-              Printing uses the same local encounter snapshot as the note below.
+              Printing uses the same local encounter snapshot as Clinical Documentation, in the sidebar.
             </p>
-            <div class="meditech-lab-note-heading">
-              <DesktopIcon name="note" />
-              TEBRA NARRATIVE
-            </div>
-            <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
             <div class="wfp-actions">
               <button
                 type="button"
@@ -3005,10 +3000,10 @@ export function InjectionPanel({
                 onClick={() => navigator.clipboard?.writeText(noteText)}
                 disabled={!noteText}
               >
+                <DesktopIcon name="copy" />
                 Copy note
               </button>
-            </div>
-            <div class="wfp-actions">
+              <span class="wfp-actions-divider" aria-hidden="true" />
               <button
                 type="button"
                 class="cd2004-command-button"
@@ -3020,6 +3015,7 @@ export function InjectionPanel({
                     : "Available once medication, dose, route, site, and administration date are documented."
                 }
               >
+                <DesktopIcon name="print" />
                 Print AVS
               </button>
               {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
@@ -3036,6 +3032,7 @@ export function InjectionPanel({
                       : patientScreeningDisabledReason
                   }
                 >
+                  <DesktopIcon name="print" />
                   Print patient screening
                 </button>
               )}
@@ -3044,6 +3041,7 @@ export function InjectionPanel({
                 class="cd2004-link-button"
                 onClick={() => clickLegacyControl("injWorksheetPrint")}
               >
+                <DesktopIcon name="print" />
                 Print injection worksheet
               </button>
               <button
@@ -3051,6 +3049,7 @@ export function InjectionPanel({
                 class="cd2004-link-button"
                 onClick={() => clickLegacyControl("injWorksheetBlank")}
               >
+                <DesktopIcon name="print" />
                 Blank worksheet
               </button>
             </div>

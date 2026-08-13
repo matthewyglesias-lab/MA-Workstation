@@ -423,13 +423,8 @@ export function FormsPanel({
             <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
               <p class="wfp-field-hint wfp-document-output-hint">
-                Printing and handoff use the same local encounter snapshot as the note below.
+                Printing and handoff use the same local encounter snapshot as Clinical Documentation, in the sidebar.
               </p>
-              <div class="meditech-lab-note-heading">
-                <DesktopIcon name="note" />
-                TEBRA NARRATIVE
-              </div>
-              <div class="wfp-preview">{noteText || "Document the request to build the note."}</div>
               <div class="wfp-actions">
                 <button
                   type="button"
@@ -437,6 +432,7 @@ export function FormsPanel({
                   onClick={() => navigator.clipboard?.writeText(noteText)}
                   disabled={!noteText}
                 >
+                  <DesktopIcon name="copy" />
                   Copy note
                 </button>
               </div>

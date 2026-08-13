@@ -553,9 +553,12 @@
   }
 
   .cd2004-record-actions-state > span {
+    overflow: hidden;
     color: #314d52;
     font: 700 8px Tahoma, "MS Sans Serif", sans-serif;
     letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .cd2004-record-actions-state > strong {
@@ -1355,23 +1358,6 @@
     font-size: 7px;
   }
 
-  .meditech-lab-note-heading {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 7px;
-    padding: 3px 5px;
-    color: #fff;
-    background: #516e72;
-    border: 1px solid #31484b;
-    font: 700 8px Tahoma, sans-serif;
-    letter-spacing: 0.06em;
-  }
-
-  .meditech-lab-note-heading svg {
-    width: 13px;
-    height: 13px;
-  }
 }
 
 @media screen and (max-width: 1181px) {
@@ -2712,6 +2698,7 @@
   }
 
   .cd2004-record-actions-buttons {
+    flex-wrap: wrap;
     gap: 3px;
     justify-content: flex-end;
     padding: 5px;
