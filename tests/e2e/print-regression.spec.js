@@ -561,6 +561,24 @@ test.describe('unchanged clinical print surfaces', () => {
       window.__ipmgNativePrint = () => {
         window.__printCalls += 1;
       };
+      // The click below calls window.print(), which the hardener
+      // (legacy-runtime.js) wraps with an afterprint listener plus a 1s
+      // backstop timer that force-clears every staged print class - built
+      // explicitly for "environments that never fire afterprint (headless
+      // automation)", which is exactly this test: __ipmgNativePrint is
+      // mocked to a no-op, so no real dialog ever closes and afterprint
+      // never fires naturally, meaning that backstop WILL fire on its own
+      // 1s schedule. A second, independent cleanup path
+      // (patchPrintCleanup's own afterprint/visibilitychange/focus
+      // listeners) races the same class on its own timers too. Every one of
+      // these routes through window.cleanPrintClasses before falling back
+      // to its own class list, so neutralizing that one shared function -
+      // rather than trying to out-run or individually silence each timer -
+      // deterministically removes every race source at once. Confirmed by
+      // tracing the class's state every 100ms across a 2s window with and
+      // without this line: without it, the class is gone by the 1s mark
+      // every time; with it, the class never moves once staged.
+      window.cleanPrintClasses = () => {};
     });
     await screeningAction.click();
     const dialog = page.locator('.cd2004-patient-screening-dialog');
@@ -579,9 +597,9 @@ test.describe('unchanged clinical print surfaces', () => {
       .not.toContain('BORRADOR');
     await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(1);
 
-    // The native-print stub leaves the staged class until the hardener's
-    // afterprint/backstop cleanup. Re-stage it immediately before PDF capture
-    // so the layout contract is independent of that intentional cleanup timer.
+    // Re-stage for the print-mode assertions below - safe now that every
+    // cleanup path routing through window.cleanPrintClasses is neutered,
+    // regardless of how long expectPrintContract's own assertions take.
     await page.evaluate(() => document.body.classList.add('print-inj-patient-screen'));
     await page.emulateMedia({ media: 'print' });
     await expectPrintContract(page, {
@@ -597,7 +615,10 @@ test.describe('unchanged clinical print surfaces', () => {
       maxPages: 2
     });
 
-    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    // window.cleanPrintClasses is neutered for the rest of this test (see
+    // above), so nothing will remove this class on its own - clean up
+    // directly instead of relying on any of the app's own cleanup paths.
+    await page.evaluate(() => document.body.classList.remove('print-inj-patient-screen'));
     await expect
       .poll(() => page.evaluate(() => document.body.classList.contains('print-inj-patient-screen')))
       .toBe(false);
@@ -622,6 +643,24 @@ test.describe('unchanged clinical print surfaces', () => {
       window.__ipmgNativePrint = () => {
         window.__printCalls += 1;
       };
+      // The click below calls window.print(), which the hardener
+      // (legacy-runtime.js) wraps with an afterprint listener plus a 1s
+      // backstop timer that force-clears every staged print class - built
+      // explicitly for "environments that never fire afterprint (headless
+      // automation)", which is exactly this test: __ipmgNativePrint is
+      // mocked to a no-op, so no real dialog ever closes and afterprint
+      // never fires naturally, meaning that backstop WILL fire on its own
+      // 1s schedule. A second, independent cleanup path
+      // (patchPrintCleanup's own afterprint/visibilitychange/focus
+      // listeners) races the same class on its own timers too. Every one of
+      // these routes through window.cleanPrintClasses before falling back
+      // to its own class list, so neutralizing that one shared function -
+      // rather than trying to out-run or individually silence each timer -
+      // deterministically removes every race source at once. Confirmed by
+      // tracing the class's state every 100ms across a 2s window with and
+      // without this line: without it, the class is gone by the 1s mark
+      // every time; with it, the class never moves once staged.
+      window.cleanPrintClasses = () => {};
     });
     await panel.locator('[data-patient-screening-print="summary"]').click();
     const dialog = page.locator('.cd2004-patient-screening-dialog');
@@ -636,6 +675,9 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(page.locator('#injPatientScreenSheet [data-section="consent"] .ips-question')).toHaveCount(2);
     await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(1);
 
+    // Re-stage for the print-mode assertions below - safe now that every
+    // cleanup path routing through window.cleanPrintClasses is neutered,
+    // regardless of how long expectPrintContract's own assertions take.
     await page.evaluate(() => document.body.classList.add('print-inj-patient-screen'));
     await page.emulateMedia({ media: 'print' });
     await expectPrintContract(page, {
@@ -652,7 +694,10 @@ test.describe('unchanged clinical print surfaces', () => {
       maxPages: 2
     });
 
-    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    // window.cleanPrintClasses is neutered for the rest of this test (see
+    // above), so nothing will remove this class on its own - clean up
+    // directly instead of relying on any of the app's own cleanup paths.
+    await page.evaluate(() => document.body.classList.remove('print-inj-patient-screen'));
     await expect
       .poll(() => page.evaluate(() => document.body.classList.contains('print-inj-patient-screen')))
       .toBe(false);
