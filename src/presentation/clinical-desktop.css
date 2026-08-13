@@ -4521,6 +4521,16 @@ input[type="radio"]:disabled {
     text-wrap: balance;
   }
 
+  /* The sheet runs to two pages at reading size, so keep the masthead and its
+     title from stranding at the foot of page one, away from the content they
+     introduce. */
+  body.print-avs #avsSheet .avs2-run,
+  body.print-avs #avsSheet .avs2-title,
+  body.print-avs #avsSheet .avs2-subtitle {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
   body.print-avs #avsSheet .avs2-subtitle {
     margin-top: 6px;
     color: var(--avs-accent);
@@ -4675,6 +4685,16 @@ input[type="radio"]:disabled {
   body.print-avs #avsSheet .avs2-step-due .avs2-when b {
     color: var(--avs-accent);
     font-size: 17px;
+  }
+
+  /* The authoritative statement of the due date, carrying the weekday and year
+     the compact gutter omits. Sized between the step title and body so it reads
+     as part of the headline rather than as prose. */
+  body.print-avs #avsSheet .avs2-step-date {
+    margin-top: 2px;
+    font-size: 14.5px;
+    font-weight: 700;
+    font-variant-numeric: lining-nums tabular-nums;
   }
 
   body.print-avs #avsSheet .avs2-step-instr {

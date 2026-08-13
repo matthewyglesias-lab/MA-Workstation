@@ -127,6 +127,9 @@ const renderStep = (step: AvsTimelineStep, instruction = ""): string => {
     `<div class="avs2-rail"><i class="avs2-node"></i></div>` +
     `<div class="${bodyClass}">` +
     `<div class="avs2-step-title">${escapeHtml(step.title)}</div>` +
+    (step.dateLong
+      ? `<div class="avs2-step-date">${escapeHtml(step.dateLong)}</div>`
+      : "") +
     (instruction
       ? `<div class="avs2-step-instr">${escapeHtml(instruction)}</div>`
       : "") +
@@ -214,8 +217,12 @@ export const renderInjectionAvsHtml = (
     `<div><span class="avs2-run-name">${escapeHtml(chrome.facilityName)}</span>` +
     `<span>${escapeHtml(chrome.facilityUnit)}</span>` +
     `<span>TEL ${escapeHtml(chrome.clinicPhone)}</span></div>` +
-    `<div><span>PAGE 1 OF 1</span>` +
-    `<span>RUN&nbsp; ${escapeHtml(chrome.runStamp)}</span>` +
+    // No page counter. The sheet reliably runs to two printed pages now that it
+    // is set in Palatino at reading size, and the old hardcoded "PAGE 1 OF 1"
+    // was simply wrong on every one of them. A real count cannot be computed
+    // here - it is a paged-media property, not a property of the markup - and a
+    // patient handout does not need one, so it is dropped rather than faked.
+    `<div><span>RUN&nbsp; ${escapeHtml(chrome.runStamp)}</span>` +
     `<span>RPT&nbsp; ${escapeHtml(chrome.reportId)}</span></div>` +
     `</div>` +
     `<div class="avs2-title">${escapeHtml(model.documentTitle)}</div>` +

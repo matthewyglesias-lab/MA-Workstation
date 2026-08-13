@@ -5499,6 +5499,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     let init={protocol:'',day1Date:''};
     try{ if(typeof window.ipmgInitiationProtocolSnapshot==='function')init=window.ipmgInitiationProtocolSnapshot()||init; }catch(e){}
     const resp=(typeof RESP!=='undefined'&&typeof S!=='undefined'?(RESP.find(r=>r.k===S.resp)||{}).l:'')||'';
+    const second=(init&&typeof init.second==='object'&&init.second)?init.second:{};
+    let disposition={kind:''};
+    try{ if(typeof window.ipmgClinicalDispositionSnapshot==='function')disposition=window.ipmgClinicalDispositionSnapshot()||disposition; }catch(e){}
     let recordNumber='';
     try{
       const records=window.IPMGRecords;
@@ -5533,7 +5536,23 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       reason:(typeof S!=='undefined'&&S.reason)?S.reason:'',
       initiationProtocol:init.protocol||'',
       day1Date:init.day1Date||'',
-      clinicPhone:'(909) 887-6222'
+      clinicPhone:'(909) 887-6222',
+      /* Held / escalated / provider-directed all mean the injection was not
+         given. The AVS gate above deliberately does not require a disposition
+         so staff can preview the sheet mid-documentation, which is why an
+         empty kind has to keep rendering the full sheet - only an explicit
+         non-administration choice neutralises it. */
+      dispositionKind:disposition.kind||'',
+      /* The one-day dual protocols give a second injection in another muscle at
+         the same visit. The snapshot has carried these all along; the AVS just
+         was not reading them, so the sheet described one injection and one site
+         when the patient had two of each to look after. */
+      secondDose:second.dose||'',
+      secondSite:second.site||'',
+      secondLot:second.lot||'',
+      secondExpiration:second.exp||'',
+      secondGiven:!!second.given,
+      oralStatus:init.oralStatus||''
     };
   }
   function avsFallback(data){
