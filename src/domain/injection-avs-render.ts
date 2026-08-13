@@ -2,6 +2,7 @@ import {
   buildInjectionAvsModel,
   type AvsBlock,
   type AvsDataRow,
+  type AvsTimelineStep,
   type InjectionAvsInput,
   type InjectionAvsModel,
 } from "./injection-avs-content";
@@ -9,14 +10,20 @@ import {
 export type { InjectionAvsInput, InjectionAvsModel } from "./injection-avs-content";
 
 /**
- * Renders the injection After Visit Summary as fixed-pitch clinical
- * paperwork - the "lab report" treatment: a run header, a ruled identity
- * band, dot-leader data rows, ruled section headings, and inverse-video
- * banners reserved for the two or three things that must not be missed.
+ * Renders the injection After Visit Summary as a marginalia sheet built around
+ * a dated dose spine.
  *
- * The markup is intentionally plain and self-describing (one `avs2-` class
- * per structural role) so the print stylesheet can control spacing without
- * this module knowing anything about page geometry.
+ * One grid runs the length of the page - a right-aligned label gutter, a narrow
+ * rail, and the content column. Ordinary sections put their heading in the
+ * gutter and leave the rail empty; timeline steps put their date in the gutter
+ * and draw a node on the rail. Safety alerts deliberately break that grid and
+ * span the full measure, which is what makes them read as urgent without
+ * needing a fill.
+ *
+ * The printed handout is black and white (only the archived PDF keeps colour),
+ * so every level of the hierarchy has to survive greyscale. Size, weight, and
+ * position carry it; the accent colour is an enrichment that the stylesheet
+ * lets degrade rather than forcing with print-color-adjust.
  */
 
 const escapeHtml = (value: unknown): string =>
@@ -32,29 +39,25 @@ const escapeHtml = (value: unknown): string =>
       })[character] as string,
   );
 
-/** Right-pads a label with dot leaders so values line up in a fixed pitch. */
-const leader = (label: string, width: number): string => {
-  const text = label.toUpperCase();
-  if (text.length >= width) return text;
-  return text + ".".repeat(width - text.length);
-};
+const paragraphs = (lines: readonly string[]): string =>
+  lines
+    .filter((line) => String(line ?? "").trim())
+    .map((line) => `<p class="avs2-p">${escapeHtml(line)}</p>`)
+    .join("");
 
-const renderRows = (rows: readonly AvsDataRow[], width: number): string =>
-  rows
+const pairList = (rows: readonly AvsDataRow[]): string =>
+  `<dl class="avs2-pairs">${rows
     .map(
       (row) =>
-        `<div class="avs2-row"><span class="avs2-k">${escapeHtml(
-          leader(row.label, width),
-        )}</span> <span class="avs2-v">${escapeHtml(row.value)}</span></div>`,
+        `<div><dt>${escapeHtml(row.label)}</dt>` +
+        `<dd>${escapeHtml(row.value)}</dd></div>`,
     )
-    .join("");
+    .join("")}</dl>`;
 
 const renderBlockBody = (block: AvsBlock): string => {
   const parts: string[] = [];
-  if (block.rows?.length) parts.push(renderRows(block.rows, 16));
-  for (const paragraph of block.paragraphs ?? []) {
-    parts.push(`<p class="avs2-p">${escapeHtml(paragraph)}</p>`);
-  }
+  if (block.rows?.length) parts.push(pairList(block.rows));
+  parts.push(paragraphs(block.paragraphs ?? []));
   if (block.items?.length) {
     parts.push(
       `<ul class="avs2-ul">${block.items
@@ -65,50 +68,113 @@ const renderBlockBody = (block: AvsBlock): string => {
   return parts.join("");
 };
 
-const renderBlock = (block: AvsBlock): string => {
-  if (block.emphasis) {
-    return (
-      `<div class="avs2-alert">` +
-      `<div class="avs2-alert-bar">${escapeHtml(block.heading)}</div>` +
-      `<div class="avs2-alert-body">${renderBlockBody(block)}</div>` +
-      `</div>`
-    );
-  }
+/**
+ * A section on the page grid: heading in the gutter, content in the wide
+ * column. The gutter label is allowed to wrap - a two- or three-line
+ * right-aligned label is the marginalia device working as intended, not an
+ * overflow.
+ */
+const renderSection = (heading: string, body: string): string =>
+  `<section class="avs2-sec">` +
+  `<div class="avs2-lab">${escapeHtml(heading)}</div>` +
+  `<div class="avs2-rail"></div>` +
+  `<div class="avs2-b">${body}</div>` +
+  `</section>`;
+
+/**
+ * Alerts break the grid on purpose. Spanning the full measure over a heavy rule
+ * is what separates them from ordinary sections once the inverse-video bars are
+ * gone, and it keeps long safety headings ("EMERGENCY - CALL 911 OR GO TO THE
+ * NEAREST ER NOW IF") out of a narrow gutter that would wrap them to four lines.
+ */
+const renderAlert = (block: AvsBlock): string =>
+  `<div class="avs2-alert">` +
+  `<div class="avs2-alert-bar">${escapeHtml(block.heading)}</div>` +
+  `<div class="avs2-alert-body">${renderBlockBody(block)}</div>` +
+  `</div>`;
+
+const renderBlock = (block: AvsBlock): string =>
+  block.emphasis
+    ? renderAlert(block)
+    : renderSection(block.heading, renderBlockBody(block));
+
+/**
+ * One node on the spine: date in the gutter, marker on the rail, step body.
+ *
+ * `instruction` is the model's imperative for the due step ("PLEASE COME IN ON
+ * THIS DAY", or "NOT YET SCHEDULED" when no date is documented). It rides above
+ * the step's caveats so the call to action is read before the exceptions to it.
+ */
+const renderStep = (step: AvsTimelineStep, instruction = ""): string => {
+  // The due step keeps the avs2-next / avs2-date hooks: it is still "the next
+  // dose and its date", the roles those classes have always named, so the
+  // print stylesheet and the structural test both stay pointed at the right
+  // element after the layout change.
+  const isDue = step.state === "due";
+  const whenClass = isDue ? "avs2-when avs2-date" : "avs2-when";
+  const bodyClass = isDue ? "avs2-step-body avs2-next" : "avs2-step-body";
+
+  const when = step.when
+    ? `<b>${escapeHtml(step.when)}</b>`
+    : `<b class="avs2-when-none">&mdash;</b>`;
+  const whenNote = step.whenNote
+    ? `<span>${escapeHtml(step.whenNote)}</span>`
+    : "";
+
   return (
-    `<section class="avs2-sec">` +
-    `<h2 class="avs2-h">${escapeHtml(block.heading)}</h2>` +
-    `<div class="avs2-b">${renderBlockBody(block)}</div>` +
-    `</section>`
+    `<div class="avs2-step avs2-step-${escapeHtml(step.state)}">` +
+    `<div class="${whenClass}">${when}${whenNote}</div>` +
+    `<div class="avs2-rail"><i class="avs2-node"></i></div>` +
+    `<div class="${bodyClass}">` +
+    `<div class="avs2-step-title">${escapeHtml(step.title)}</div>` +
+    (step.dateLong
+      ? `<div class="avs2-step-date">${escapeHtml(step.dateLong)}</div>`
+      : "") +
+    (instruction
+      ? `<div class="avs2-step-instr">${escapeHtml(instruction)}</div>`
+      : "") +
+    paragraphs(step.detail) +
+    `</div></div>`
   );
 };
 
-const renderSchedule = (model: InjectionAvsModel): string => {
-  if (!model.schedule.length) return "";
-  const rows = model.schedule
+const renderSpine = (
+  timeline: readonly AvsTimelineStep[],
+  administrationNote: string,
+  instruction: string,
+): string => {
+  if (!timeline.length) return "";
+  // The dose-specific note is folded into the step it describes rather than
+  // trailing the spine as its own row. That keeps every row in the spine a real
+  // dated step, which is what lets the rail terminate cleanly at the first and
+  // last nodes instead of running past a marker-less row.
+  const steps = timeline
+    .map((step) => {
+      const isDue = step.state === "due";
+      const detail =
+        step.state === "given" && administrationNote
+          ? [...step.detail, administrationNote]
+          : step.detail;
+      return renderStep({ ...step, detail }, isDue ? instruction : "");
+    })
+    .join("");
+  return `<div class="avs2-spine">${steps}</div>`;
+};
+
+/** The tier-3 record run: small, quiet, and deliberately last. */
+const renderRecord = (identity: readonly AvsDataRow[]): string =>
+  `<div class="avs2-id">` +
+  identity
+    .filter((row) => String(row.value ?? "").trim())
     .map(
       (row) =>
-        `<tr${row.due ? ' class="is-due"' : ""}>` +
-        `<td>${escapeHtml(row.label)}</td>` +
-        `<td>${escapeHtml(row.date)}</td>` +
-        `<td>${escapeHtml(row.dose)}</td>` +
-        `<td>${escapeHtml(row.site)}</td>` +
-        `<td>${escapeHtml(row.status)}</td>` +
-        `</tr>`,
+        `<span class="avs2-id-pair">` +
+        `<span class="avs2-id-k">${escapeHtml(row.label)}</span> ` +
+        `<span class="avs2-id-v">${escapeHtml(row.value)}</span>` +
+        `</span>`,
     )
-    .join("");
-  const note = model.scheduleNote
-    ? `<p class="avs2-p">${escapeHtml(model.scheduleNote)}</p>`
-    : "";
-  return (
-    `<section class="avs2-sec">` +
-    `<h2 class="avs2-h">YOUR STARTING SCHEDULE</h2>` +
-    `<div class="avs2-b">` +
-    `<table class="avs2-table"><thead><tr>` +
-    `<th>STEP</th><th>DATE</th><th>DOSE</th><th>SITE</th><th>STATUS</th>` +
-    `</tr></thead><tbody>${rows}</tbody></table>${note}` +
-    `</div></section>`
-  );
-};
+    .join("") +
+  `</div>`;
 
 export interface InjectionAvsChrome {
   facilityName: string;
@@ -134,60 +200,45 @@ export const renderInjectionAvsHtml = (
   model: InjectionAvsModel,
   chrome: InjectionAvsChrome,
 ): string => {
-  const identityLeft = model.identity.slice(0, 3);
-  const identityRight = model.identity.slice(3);
-
   const subtitle = model.documentSubtitle
-    ? `<div class="avs2-subtitle">*** ${escapeHtml(model.documentSubtitle)} ***</div>`
+    ? `<div class="avs2-subtitle">${escapeHtml(model.documentSubtitle)}</div>`
     : "";
 
-  const nextNotes = model.nextDose.notes
-    .map((note) => `<p class="avs2-p">${escapeHtml(note)}</p>`)
-    .join("");
-
-  const nextBlock =
-    `<div class="avs2-next avs2-next-${escapeHtml(model.nextDose.firmness)}">` +
-    `<div class="avs2-next-h">&gt;&gt; ${escapeHtml(model.nextDose.heading)}</div>` +
-    (model.nextDose.dateLong
-      ? `<div class="avs2-date">${escapeHtml(model.nextDose.dateLong.toUpperCase())}</div>`
-      : "") +
-    `<div class="avs2-date-sub">${escapeHtml(model.nextDose.instruction)}</div>` +
-    `<div class="avs2-next-foot">${nextNotes}` +
-    renderRows(model.nextDose.contactLines, 18) +
-    `</div></div>`;
-
-  const adminNote = model.administrationNote
-    ? `<p class="avs2-p">${escapeHtml(model.administrationNote)}</p>`
+  const contact = model.nextDose.contactLines.length
+    ? renderSection("Contact", pairList(model.nextDose.contactLines))
     : "";
 
+  // The spine is the record of what was given and when, so model.administration
+  // is not drawn a second time here; its dose-specific note rides with the step
+  // it belongs to.
   return (
     `<div class="avs2">` +
     `<div class="avs2-run">` +
-    `<div><span>${escapeHtml(chrome.facilityName)}</span><span>${escapeHtml(
-      chrome.facilityUnit,
-    )}</span><span>TEL ${escapeHtml(chrome.clinicPhone)}</span></div>` +
-    `<div><span>PAGE 1 OF 1</span><span>RUN&nbsp; ${escapeHtml(
-      chrome.runStamp,
-    )}</span><span>RPT&nbsp; ${escapeHtml(chrome.reportId)}</span></div>` +
+    `<div><span class="avs2-run-name">${escapeHtml(chrome.facilityName)}</span>` +
+    `<span>${escapeHtml(chrome.facilityUnit)}</span>` +
+    `<span>TEL ${escapeHtml(chrome.clinicPhone)}</span></div>` +
+    // No page counter. The sheet reliably runs to two printed pages now that it
+    // is set in Palatino at reading size, and the old hardcoded "PAGE 1 OF 1"
+    // was simply wrong on every one of them. A real count cannot be computed
+    // here - it is a paged-media property, not a property of the markup - and a
+    // patient handout does not need one, so it is dropped rather than faked.
+    `<div><span>RUN&nbsp; ${escapeHtml(chrome.runStamp)}</span>` +
+    `<span>RPT&nbsp; ${escapeHtml(chrome.reportId)}</span></div>` +
     `</div>` +
     `<div class="avs2-title">${escapeHtml(model.documentTitle)}</div>` +
     subtitle +
-    `<div class="avs2-id">` +
-    `<div>${renderRows(identityLeft, 12)}</div>` +
-    `<div>${renderRows(identityRight, 12)}</div>` +
-    `</div>` +
-    model.leadAlerts.map(renderBlock).join("") +
-    nextBlock +
-    renderSchedule(model) +
-    `<section class="avs2-sec"><h2 class="avs2-h">WHAT YOU RECEIVED TODAY</h2>` +
-    `<div class="avs2-b">${renderRows(model.administration, 16)}${adminNote}</div></section>` +
+    model.leadAlerts.map(renderAlert).join("") +
+    renderSpine(
+      model.timeline,
+      model.administrationNote,
+      model.nextDose.instruction,
+    ) +
+    contact +
     model.blocks.map(renderBlock).join("") +
-    renderBlock(model.emergency) +
+    renderAlert(model.emergency) +
+    renderRecord(model.identity) +
     `<div class="avs2-foot">` +
     `<span>${escapeHtml(chrome.formId)}</span>` +
-    `<span>${escapeHtml(
-      [model.identity[0]?.value, model.identity[3]?.value].filter(Boolean).join(" - "),
-    )}</span>` +
     `<span>END OF DOCUMENT</span>` +
     `</div>` +
     `</div>`

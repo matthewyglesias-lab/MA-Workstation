@@ -163,8 +163,14 @@ function canonicalPrintHtml(html) {
     'RUN <stamp>'
   );
 
+  // Anchored to the marginalia record run's key/value spans. This regex has to
+  // move whenever the identity markup changes: if it stops matching it fails
+  // silently, leaving the per-draft record id in the hashed output and turning
+  // this parity check non-deterministic rather than red.
   const recordId = (
-    canonical.match(/RECORD NO\.*<\/span>\s*<span class="avs2-v">([^<]*)/)?.[1] ?? ''
+    canonical.match(
+      /<span class="avs2-id-k">RECORD NO<\/span>\s*<span class="avs2-id-v">([^<]*)/
+    )?.[1] ?? ''
   ).trim();
   // Guard against blanking the document when nothing meaningful is documented.
   if (recordId.length >= 4) {

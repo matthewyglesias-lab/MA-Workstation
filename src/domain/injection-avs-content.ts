@@ -74,6 +74,28 @@ export interface InjectionAvsInput {
   /** Day 1 date for the Invega Sustenna day-8 protocol. */
   day1Date: string;
   clinicPhone: string;
+  /**
+   * Clinical disposition: "" | "administered" | "held" | "escalated" |
+   * "provider". The AVS is printable before a disposition is chosen so staff
+   * can preview it, so an empty value must behave exactly like "administered".
+   * Only an explicit non-administration choice neutralises the sheet.
+   */
+  dispositionKind?: string;
+  /**
+   * The paired second injection, for the one-day dual protocols that give two
+   * injections in different muscles at the same visit. Component 2 is the same
+   * product as the primary on every protocol that populates it, so it needs no
+   * separate medication name. `secondGiven` gates the whole thing: a
+   * part-filled paired protocol must never have the sheet claim a second
+   * injection that was not administered.
+   */
+  secondDose?: string;
+  secondSite?: string;
+  secondLot?: string;
+  secondExpiration?: string;
+  secondGiven?: boolean;
+  /** "administered" | "verified" | "" - the oral dose these protocols require. */
+  oralStatus?: string;
 }
 
 export interface AvsDataRow {
@@ -99,6 +121,30 @@ export interface AvsScheduleRow {
   due?: boolean;
 }
 
+/**
+ * How a timeline step is marked on the printed spine: something already done,
+ * something the patient must keep doing in the meantime, the next thing due, or
+ * the pattern the schedule settles into afterwards.
+ */
+export type AvsTimelineState = "given" | "action" | "due" | "ongoing";
+
+export interface AvsTimelineStep {
+  /** Gutter date, e.g. "Aug 12". Empty when the step has no fixed date. */
+  when: string;
+  /** Small-caps qualifier under the date: "Today", "Through", "Next". */
+  whenNote: string;
+  title: string;
+  /**
+   * Full weekday-and-year date, restated in the step body. Set only where the
+   * compact gutter date is not enough on its own - the next dose, which is the
+   * one date the patient has to act on and the only one the sheet would
+   * otherwise print without a year or a weekday.
+   */
+  dateLong?: string;
+  detail: string[];
+  state: AvsTimelineState;
+}
+
 export interface InjectionAvsModel {
   documentTitle: string;
   /** Second title line, e.g. the starting-series marker. Empty when routine. */
@@ -116,6 +162,12 @@ export interface InjectionAvsModel {
   };
   /** Shown above the next-dose block when the medication needs a call first. */
   leadAlerts: AvsBlock[];
+  /**
+   * Ordered steps the printed spine draws. Initiation encounters legitimately
+   * produce more steps than routine ones - that difference is the point, and
+   * the print stylesheet must never cap or truncate it.
+   */
+  timeline: AvsTimelineStep[];
   schedule: AvsScheduleRow[];
   scheduleNote: string;
   administration: AvsDataRow[];
@@ -141,7 +193,11 @@ const isoParts = (iso: string): [number, number, number] | null => {
   const parts = String(iso ?? "").trim().split("-").map(Number);
   if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
   const [y, m, d] = parts as [number, number, number];
-  if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  // The year bound rejects two-digit input like "26-08-05", which otherwise
+  // parses as year 26 and prints as "Aug 5, 26".
+  if (!y || !m || !d || y < 1000 || m < 1 || m > 12 || d < 1 || d > 31) {
+    return null;
+  }
   return [y, m, d];
 };
 
@@ -161,6 +217,30 @@ export const formatShortDate = (iso: string): string => {
   if (!parts) return "";
   const [y, m, d] = parts;
   return `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}/${y}`;
+};
+
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * "2026-08-12" -> "Aug 12". Used for the printed timeline's date gutter, where
+ * the year is already established by the visit date and would only add width.
+ */
+export const formatGutterDate = (iso: string, referenceIso = ""): string => {
+  const parts = isoParts(iso);
+  if (!parts) return "";
+  const [year, m, d] = parts;
+  const reference = isoParts(referenceIso);
+  // The year is dropped only when it matches the visit's, where repeating it
+  // would be noise. It is kept whenever they differ - Trinza is dosed q12wk and
+  // Hafyera q26wk, so their next dose routinely lands in the following calendar
+  // year, and a bare "Feb 3" on the sheet's single most important fact is
+  // genuinely ambiguous. With no reference date to compare against, keep the
+  // year rather than guess.
+  const sameYear = reference ? reference[0] === year : false;
+  return `${MONTH_ABBR[m - 1]} ${d}${sameYear ? "" : `, ${year}`}`;
 };
 
 /** "2027-11" -> "11/2027"; passes anything else through untouched. */
@@ -550,6 +630,13 @@ interface InitiationPlan {
   alert?: AvsBlock;
   /** Extra instruction block, e.g. the oral-overlap countdown. */
   block?: AvsBlock;
+  /**
+   * Oral-overlap length and its last day, when the protocol has one. The alert
+   * block spells these out in prose; the timeline reuses the same values so the
+   * date the patient must remember is stated once and drawn once.
+   */
+  oralDays?: number;
+  oralLastDay?: string;
   /** Overrides the next-dose heading, e.g. the day-8 return. */
   nextHeading?: string;
   schedule?: AvsScheduleRow[];
@@ -640,6 +727,8 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
     return {
       subtitle: "STARTING DOSE - ORAL MEDICATION CONTINUES",
       firm: false,
+      oralDays: days,
+      oralLastDay: lastDay,
       alert: {
         heading: `KEEP TAKING YOUR ORAL MEDICATION FOR ${days} DAYS`,
         emphasis: true,
@@ -688,6 +777,213 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
 };
 
 /* ------------------------------------------------------------------ */
+/* Timeline                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What the next step is called, per protocol. These are deliberately sentence
+ * case rather than the shouted headings the rest of this file carries: the
+ * timeline is read as a sequence of plain statements, and "COME BACK FOR A
+ * SECOND STARTING INJECTION" set beside a date reads as alarm rather than
+ * instruction.
+ */
+/**
+ * Dispositions that mean the injection was not administered. The clinical
+ * disposition panel says as much in its own footer: "If medication was not
+ * given, select Held, Escalated, or Provider-directed plan."
+ */
+const NON_ADMINISTERED_KINDS = new Set(["held", "escalated", "provider"]);
+
+/**
+ * A paired second injection only counts once it is both documented and marked
+ * given. Anything less and the sheet would assert an injection the record does
+ * not support.
+ */
+/**
+ * Collapses guidance lines that open with the same instruction, keeping the
+ * fullest wording of each.
+ *
+ * A paired injection in two regions pulls in both regions' aftercare, and those
+ * lists deliberately overlap - the deltoid list says "Do not rub or massage the
+ * site - rubbing can change how the medication is absorbed" where the gluteal
+ * list just says "Do not rub or massage the site." Exact-match de-duplication
+ * misses that pair and the patient reads the same instruction twice, so lines
+ * are keyed on their first clause instead.
+ */
+const dedupeGuidance = (lines: readonly string[]): string[] => {
+  const keyOf = (line: string) =>
+    line
+      .split(/[.]|\s-\s/)[0]!
+      .trim()
+      .toLowerCase();
+  const best = new Map<string, string>();
+  for (const line of lines) {
+    const key = keyOf(line);
+    const existing = best.get(key);
+    if (!existing || line.length > existing.length) best.set(key, line);
+  }
+  return [...best.values()];
+};
+
+const hasSecondInjection = (input: InjectionAvsInput): boolean =>
+  Boolean(
+    input.secondGiven &&
+      String(input.secondDose ?? "").trim() &&
+      String(input.secondSite ?? "").trim(),
+  );
+
+const DUE_TITLES: Record<string, string> = {
+  "sustenna-day1": "Come back for your second starting injection",
+  "sustenna-day8": "Your first monthly injection",
+  "aristada-initio-sameday": "Your next regular Aristada injection",
+  "maintena-1day": "Your next injection",
+  "asimtufii-1day": "Your next injection",
+};
+
+const dueTitleFor = (protocol: string): string => {
+  if (protocol.endsWith("-provider")) {
+    return "Your next dose, as your provider directed";
+  }
+  return DUE_TITLES[protocol] ?? "Your next injection";
+};
+
+/**
+ * Turns the encounter into the ordered steps the printed spine draws: what was
+ * given today, anything that must continue in between, what is due next, and
+ * where the schedule settles afterwards.
+ *
+ * Only the steps that genuinely exist are emitted - no filler is invented to
+ * pad an initiation sheet. Initiation encounters come out longer because they
+ * really do have more happening, which is exactly the distinction the printed
+ * sheet needs to show.
+ */
+const buildTimeline = (
+  input: InjectionAvsInput,
+  plan: InitiationPlan | null,
+  nextDose: InjectionAvsModel["nextDose"],
+  nextDoseIso: string,
+  medicationLabel: string,
+  notGiven: boolean,
+): AvsTimelineStep[] => {
+  const protocol = String(input.initiationProtocol ?? "").trim();
+  const phone = input.clinicPhone;
+  const steps: AvsTimelineStep[] = [];
+
+  /* ---- what happened today ---- */
+  const visitWhen = formatGutterDate(
+    input.administrationDate,
+    input.administrationDate,
+  );
+  // Without a documented date the qualifier would sit alone over an empty
+  // gutter, claiming "TODAY" with nothing beside it.
+  const visitNote = visitWhen ? "Today" : "";
+
+  if (notGiven) {
+    // Nothing was administered, so this step says that and nothing more: no
+    // medication headline, no site, no lot or expiry. Printing product
+    // traceability for a dose that never left the vial would read as a record
+    // of administration.
+    steps.push({
+      when: visitWhen,
+      whenNote: visitNote,
+      title: "This injection was not given today",
+      detail: [
+        "Your care team will explain what happens next and when to come back.",
+      ],
+      state: "action",
+    });
+  } else {
+    // The headline carries the brand name and strength only. The generic name
+    // is real information but it is not what the patient recognises the
+    // injection by, so it drops to the supporting line rather than diluting the
+    // one piece of type the sheet most wants read.
+    const givenDetail: string[] = [];
+    if (input.genericName) givenDetail.push(input.genericName);
+    const siteText = describeSite(input.site, input.route);
+    if (siteText) givenDetail.push(siteText);
+    const expiration = formatExpiration(input.expiration);
+    const trace = [
+      input.lot && `Lot ${input.lot}`,
+      expiration && `exp ${expiration}`,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    if (trace) givenDetail.push(trace);
+
+    // The one-day dual protocols give a second injection in a different muscle
+    // at the same visit. It belongs in this step rather than its own node: both
+    // happened now, and a second node on the same date would imply a sequence
+    // that does not exist. Naming its site matters because the patient has two
+    // sites to look after, not one.
+    if (hasSecondInjection(input)) {
+      const secondSite = describeSite(
+        String(input.secondSite ?? ""),
+        input.route,
+      );
+      givenDetail.push(
+        `Second injection: ${String(input.secondDose ?? "").trim()}${
+          secondSite ? `, ${secondSite.toLowerCase()}` : ""
+        }`,
+      );
+    }
+    if (String(input.oralStatus ?? "").trim() === "administered") {
+      givenDetail.push("An oral dose was also given today.");
+    }
+
+    if (input.responseLabel) givenDetail.push(input.responseLabel);
+
+    steps.push({
+      when: visitWhen,
+      whenNote: visitNote,
+      title:
+        [medicationLabel, input.dose].filter(Boolean).join(", ") ||
+        "Injection given",
+      detail: givenDetail,
+      state: "given",
+    });
+  }
+
+  /* ---- anything that has to continue in between ---- */
+  if (plan?.oralDays && plan.oralLastDay && !notGiven) {
+    // Deliberately terse. The gutter already carries the last day and the alert
+    // block above carries the reasoning and the what-if-you-run-out line, so
+    // restating either here would read as padding rather than emphasis.
+    steps.push({
+      when: formatGutterDate(plan.oralLastDay, input.administrationDate),
+      whenNote: "Through",
+      title: "Keep taking your oral medication",
+      detail: [`${plan.oralDays} days in a row, counting today.`],
+      state: "action",
+    });
+  }
+
+  /* ---- what is due next ---- */
+  steps.push({
+    when: formatGutterDate(nextDoseIso, input.administrationDate),
+    whenNote: nextDoseIso ? "Next" : "",
+    title: dueTitleFor(protocol),
+    // The gutter is a compact index; this is the authoritative statement of the
+    // date, and the only place the sheet carries its weekday and year.
+    dateLong: nextDose.dateLong,
+    detail: nextDose.notes,
+    state: "due",
+  });
+
+  /* ---- where the schedule settles afterwards ---- */
+  if (plan?.scheduleNote) {
+    steps.push({
+      when: "",
+      whenNote: "Ongoing",
+      title: "Then your regular schedule",
+      detail: [plan.scheduleNote],
+      state: "ongoing",
+    });
+  }
+
+  return steps;
+};
+
+/* ------------------------------------------------------------------ */
 /* Model builder                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -705,6 +1001,13 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   const profile = profileFor(input.medicationKey);
   const phone = input.clinicPhone;
   const plan = initiationPlan(input);
+  // Held, escalated, and provider-directed all mean the injection was not
+  // given. An empty kind is the ordinary mid-documentation preview state and
+  // must keep rendering the full sheet, or the deliberately loosened AVS gate
+  // stops working.
+  const notGiven = NON_ADMINISTERED_KINDS.has(
+    String(input.dispositionKind ?? "").trim(),
+  );
   const subcutaneous = /subq|subcut/i.test(input.route ?? "");
   const region = siteRegion(input.site);
   const coldChain = Boolean(profile.coldChain);
@@ -745,8 +1048,13 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
 
   /* ---- lead alerts ---- */
   const leadAlerts: AvsBlock[] = [];
-  if (profile.leadAlert) leadAlerts.push(profile.leadAlert);
-  if (plan?.alert) leadAlerts.push(plan.alert);
+  // Both of these assert a consequence of having been dosed - Vivitrol's alert
+  // says opioid tolerance "is now much LOWER", and the oral-overlap alert
+  // counts days from an injection. Printing either after a held encounter would
+  // be actively wrong, so they are gated. The cold-chain alert is about the
+  // next visit and stays either way.
+  if (profile.leadAlert && !notGiven) leadAlerts.push(profile.leadAlert);
+  if (plan?.alert && !notGiven) leadAlerts.push(plan.alert);
   if (coldChain) {
     leadAlerts.push({
       heading: `CALL BEFORE YOU COME IN - ${phone}`,
@@ -758,6 +1066,9 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   }
 
   /* ---- administration record ---- */
+  // Left empty when nothing was administered. The spine already stops claiming
+  // a dose, but this field is the model's assertion that one was given, and a
+  // consumer other than the printed sheet would read it that way.
   const administration: AvsDataRow[] = [];
   const medLine = input.genericName
     ? `${input.medicationName} (${input.genericName})`
@@ -779,22 +1090,39 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
 
   /* ---- instruction blocks ---- */
   const blocks: AvsBlock[] = [];
-  if (plan?.block) blocks.push(plan.block);
+  // Protocol narration ("today you received two injections...") presumes the
+  // dose landed.
+  if (plan?.block && !notGiven) blocks.push(plan.block);
 
   blocks.push({
     heading: "WHY YOUR TIMING MATTERS FOR THIS MEDICATION",
     paragraphs: profile.timingReason,
   });
 
-  const siteCare = [
-    ...siteCareForRegion(region, subcutaneous),
+  // When a paired protocol used two different regions the patient has two sets
+  // of aftercare to follow, so both are emitted. The de-duplication matters:
+  // every region shares lines like "Do not rub or massage the site."
+  const secondRegion = hasSecondInjection(input)
+    ? siteRegion(String(input.secondSite ?? ""))
+    : "unspecified";
+  const regionCare =
+    secondRegion !== "unspecified" && secondRegion !== region
+      ? [
+          ...siteCareForRegion(region, subcutaneous),
+          ...siteCareForRegion(secondRegion, subcutaneous),
+        ]
+      : siteCareForRegion(region, subcutaneous);
+  const siteCare = dedupeGuidance([
+    ...regionCare,
     ...(profile.siteCareExtra ?? []),
-  ];
-  if (siteCare.length) {
+  ]);
+  // No site was used and nothing was absorbed, so neither aftercare nor
+  // what-to-expect applies to a visit where the injection was not given.
+  if (siteCare.length && !notGiven) {
     blocks.push({ heading: "CARING FOR THE INJECTION SITE", paragraphs: siteCare });
   }
 
-  if (profile.expect?.length) {
+  if (profile.expect?.length && !notGiven) {
     blocks.push({ heading: "WHAT TO EXPECT", items: profile.expect });
   }
 
@@ -806,8 +1134,10 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
     /injection site|the site/i.test(item),
   );
   const callItems = [
-    ...profileCallItems,
-    ...(hasOwnSiteWarning
+    ...(notGiven
+      ? profileCallItems.filter((item) => !/injection site|the site/i.test(item))
+      : profileCallItems),
+    ...(hasOwnSiteWarning || notGiven
       ? []
       : ["Pain, swelling, warmth, drainage, or a rash at the injection site gets worse."]),
     dateLong
@@ -818,8 +1148,20 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   blocks.push({ heading: `CALL THE CLINIC AT ${phone} IF`, items: callItems });
 
   /* ---- subtitle ---- */
-  const documentSubtitle =
-    plan?.subtitle ?? REASON_SUBTITLE[String(input.reason ?? "").trim()] ?? "";
+  // Overrides any initiation subtitle: "STARTING SERIES - DOSE 1 OF 2" on a
+  // sheet where dose 1 was never given would be actively misleading.
+  const documentSubtitle = notGiven
+    ? "INJECTION NOT GIVEN TODAY"
+    : plan?.subtitle ?? REASON_SUBTITLE[String(input.reason ?? "").trim()] ?? "";
+
+  const nextDose = {
+    dateLong,
+    heading: plan?.nextHeading ?? "YOUR NEXT INJECTION",
+    instruction: dateLong ? "PLEASE COME IN ON THIS DAY" : "NOT YET SCHEDULED",
+    firmness,
+    notes,
+    contactLines,
+  };
 
   return {
     documentTitle: "AFTER VISIT SUMMARY - LONG-ACTING INJECTION",
@@ -832,19 +1174,22 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
       { label: "VISIT DATE", value: formatShortDate(input.administrationDate) || "-" },
       { label: "GIVEN BY", value: input.administeredBy || "-" },
     ],
-    nextDose: {
-      dateLong,
-      heading: plan?.nextHeading ?? "YOUR NEXT INJECTION",
-      instruction: dateLong ? "PLEASE COME IN ON THIS DAY" : "NOT YET SCHEDULED",
-      firmness,
-      notes,
-      contactLines,
-    },
+    nextDose,
     leadAlerts,
+    timeline: buildTimeline(
+      input,
+      plan,
+      nextDose,
+      nextDoseIso,
+      input.medicationName,
+      notGiven,
+    ),
     schedule: plan?.schedule ?? [],
     scheduleNote: plan?.scheduleNote ?? "",
-    administration,
-    administrationNote: doseNote(input.medicationKey, input.dose, input.intervalKey),
+    administration: notGiven ? [] : administration,
+    administrationNote: notGiven
+      ? ""
+      : doseNote(input.medicationKey, input.dose, input.intervalKey),
     blocks,
     emergency: {
       heading: "EMERGENCY - CALL 911 OR GO TO THE NEAREST ER NOW IF",
