@@ -11,10 +11,10 @@
   },
   "outputs": {
     "avsSheet": {
-      "sha256": "06dbef194b964755e25d3d7d75938d7288177f33cd489f79f6bd5e6c4eb42a98",
-      "bytes": 4574,
+      "sha256": "d9eb93de084ccd0053d7bbdc2859bbc9cb97c40340044f4af095ee1af6d4ce07",
+      "bytes": 4312,
       "topLevelClass": "avs2",
-      "note": "Intentionally diverges from the production commit. The injection After Visit Summary was redesigned as fixed-pitch clinical paperwork and its patient wording moved to src/domain/injection-avs-content.ts. Every other print root in this fixture is still pinned to production output."
+      "note": "Intentionally diverges from the production commit. The injection After Visit Summary was rebuilt as a marginalia sheet organised around a dated dose spine; its patient wording and its timeline live in src/domain/injection-avs-content.ts and its markup in src/domain/injection-avs-render.ts. Every other print root in this fixture is still pinned to production output."
     },
     "injWorksheetSheet": {
       "sha256": "b0edc70d9f4cbded0b3b3979484488aa968b81c0df8e8648d8124e0fc2fd6380",
