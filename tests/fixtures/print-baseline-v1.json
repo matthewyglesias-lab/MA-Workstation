@@ -11,8 +11,8 @@
   },
   "outputs": {
     "avsSheet": {
-      "sha256": "d9eb93de084ccd0053d7bbdc2859bbc9cb97c40340044f4af095ee1af6d4ce07",
-      "bytes": 4312,
+      "sha256": "82302c655dc3d5641306b93f531868dfec98f9c3d45339a558134ed9872cf5f2",
+      "bytes": 4347,
       "topLevelClass": "avs2",
       "note": "Intentionally diverges from the production commit. The injection After Visit Summary was rebuilt as a marginalia sheet organised around a dated dose spine; its patient wording and its timeline live in src/domain/injection-avs-content.ts and its markup in src/domain/injection-avs-render.ts. Every other print root in this fixture is still pinned to production output."
     },
