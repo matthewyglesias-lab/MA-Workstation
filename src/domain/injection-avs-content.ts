@@ -99,6 +99,23 @@ export interface AvsScheduleRow {
   due?: boolean;
 }
 
+/**
+ * How a timeline step is marked on the printed spine: something already done,
+ * something the patient must keep doing in the meantime, the next thing due, or
+ * the pattern the schedule settles into afterwards.
+ */
+export type AvsTimelineState = "given" | "action" | "due" | "ongoing";
+
+export interface AvsTimelineStep {
+  /** Gutter date, e.g. "Aug 12". Empty when the step has no fixed date. */
+  when: string;
+  /** Small-caps qualifier under the date: "Today", "Through", "Next". */
+  whenNote: string;
+  title: string;
+  detail: string[];
+  state: AvsTimelineState;
+}
+
 export interface InjectionAvsModel {
   documentTitle: string;
   /** Second title line, e.g. the starting-series marker. Empty when routine. */
@@ -116,6 +133,12 @@ export interface InjectionAvsModel {
   };
   /** Shown above the next-dose block when the medication needs a call first. */
   leadAlerts: AvsBlock[];
+  /**
+   * Ordered steps the printed spine draws. Initiation encounters legitimately
+   * produce more steps than routine ones - that difference is the point, and
+   * the print stylesheet must never cap or truncate it.
+   */
+  timeline: AvsTimelineStep[];
   schedule: AvsScheduleRow[];
   scheduleNote: string;
   administration: AvsDataRow[];
@@ -161,6 +184,22 @@ export const formatShortDate = (iso: string): string => {
   if (!parts) return "";
   const [y, m, d] = parts;
   return `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}/${y}`;
+};
+
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * "2026-08-12" -> "Aug 12". Used for the printed timeline's date gutter, where
+ * the year is already established by the visit date and would only add width.
+ */
+export const formatGutterDate = (iso: string): string => {
+  const parts = isoParts(iso);
+  if (!parts) return "";
+  const [, m, d] = parts;
+  return `${MONTH_ABBR[m - 1]} ${d}`;
 };
 
 /** "2027-11" -> "11/2027"; passes anything else through untouched. */
@@ -550,6 +589,13 @@ interface InitiationPlan {
   alert?: AvsBlock;
   /** Extra instruction block, e.g. the oral-overlap countdown. */
   block?: AvsBlock;
+  /**
+   * Oral-overlap length and its last day, when the protocol has one. The alert
+   * block spells these out in prose; the timeline reuses the same values so the
+   * date the patient must remember is stated once and drawn once.
+   */
+  oralDays?: number;
+  oralLastDay?: string;
   /** Overrides the next-dose heading, e.g. the day-8 return. */
   nextHeading?: string;
   schedule?: AvsScheduleRow[];
@@ -640,6 +686,8 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
     return {
       subtitle: "STARTING DOSE - ORAL MEDICATION CONTINUES",
       firm: false,
+      oralDays: days,
+      oralLastDay: lastDay,
       alert: {
         heading: `KEEP TAKING YOUR ORAL MEDICATION FOR ${days} DAYS`,
         emphasis: true,
@@ -685,6 +733,120 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
   }
 
   return null;
+};
+
+/* ------------------------------------------------------------------ */
+/* Timeline                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What the next step is called, per protocol. These are deliberately sentence
+ * case rather than the shouted headings the rest of this file carries: the
+ * timeline is read as a sequence of plain statements, and "COME BACK FOR A
+ * SECOND STARTING INJECTION" set beside a date reads as alarm rather than
+ * instruction.
+ */
+const DUE_TITLES: Record<string, string> = {
+  "sustenna-day1": "Come back for your second starting injection",
+  "sustenna-day8": "Your first monthly injection",
+  "aristada-initio-sameday": "Your next regular Aristada injection",
+  "maintena-1day": "Your next injection",
+  "asimtufii-1day": "Your next injection",
+};
+
+const dueTitleFor = (protocol: string): string => {
+  if (protocol.endsWith("-provider")) {
+    return "Your next dose, as your provider directed";
+  }
+  return DUE_TITLES[protocol] ?? "Your next injection";
+};
+
+/**
+ * Turns the encounter into the ordered steps the printed spine draws: what was
+ * given today, anything that must continue in between, what is due next, and
+ * where the schedule settles afterwards.
+ *
+ * Only the steps that genuinely exist are emitted - no filler is invented to
+ * pad an initiation sheet. Initiation encounters come out longer because they
+ * really do have more happening, which is exactly the distinction the printed
+ * sheet needs to show.
+ */
+const buildTimeline = (
+  input: InjectionAvsInput,
+  plan: InitiationPlan | null,
+  nextDose: InjectionAvsModel["nextDose"],
+  nextDoseIso: string,
+  medicationLabel: string,
+): AvsTimelineStep[] => {
+  const protocol = String(input.initiationProtocol ?? "").trim();
+  const phone = input.clinicPhone;
+  const steps: AvsTimelineStep[] = [];
+
+  /* ---- what was given today ---- */
+  // The headline carries the brand name and strength only. The generic name is
+  // real information but it is not what the patient recognises the injection
+  // by, so it drops to the supporting line rather than diluting the one piece
+  // of type the sheet most wants read.
+  const givenDetail: string[] = [];
+  if (input.genericName) givenDetail.push(input.genericName);
+  const siteText = describeSite(input.site, input.route);
+  if (siteText) givenDetail.push(siteText);
+  const expiration = formatExpiration(input.expiration);
+  const trace = [
+    input.lot && `Lot ${input.lot}`,
+    expiration && `exp ${expiration}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  if (trace) givenDetail.push(trace);
+  if (input.responseLabel) givenDetail.push(input.responseLabel);
+
+  steps.push({
+    when: formatGutterDate(input.administrationDate),
+    whenNote: "Today",
+    title:
+      [medicationLabel, input.dose].filter(Boolean).join(", ") ||
+      "Injection given",
+    detail: givenDetail,
+    state: "given",
+
+  });
+
+  /* ---- anything that has to continue in between ---- */
+  if (plan?.oralDays && plan.oralLastDay) {
+    // Deliberately terse. The gutter already carries the last day and the alert
+    // block above carries the reasoning and the what-if-you-run-out line, so
+    // restating either here would read as padding rather than emphasis.
+    steps.push({
+      when: formatGutterDate(plan.oralLastDay),
+      whenNote: "Through",
+      title: "Keep taking your oral medication",
+      detail: [`${plan.oralDays} days in a row, counting today.`],
+      state: "action",
+    });
+  }
+
+  /* ---- what is due next ---- */
+  steps.push({
+    when: formatGutterDate(nextDoseIso),
+    whenNote: nextDoseIso ? "Next" : "",
+    title: dueTitleFor(protocol),
+    detail: nextDose.notes,
+    state: "due",
+  });
+
+  /* ---- where the schedule settles afterwards ---- */
+  if (plan?.scheduleNote) {
+    steps.push({
+      when: "",
+      whenNote: "Ongoing",
+      title: "Then your regular schedule",
+      detail: [plan.scheduleNote],
+      state: "ongoing",
+    });
+  }
+
+  return steps;
 };
 
 /* ------------------------------------------------------------------ */
@@ -821,6 +983,15 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   const documentSubtitle =
     plan?.subtitle ?? REASON_SUBTITLE[String(input.reason ?? "").trim()] ?? "";
 
+  const nextDose = {
+    dateLong,
+    heading: plan?.nextHeading ?? "YOUR NEXT INJECTION",
+    instruction: dateLong ? "PLEASE COME IN ON THIS DAY" : "NOT YET SCHEDULED",
+    firmness,
+    notes,
+    contactLines,
+  };
+
   return {
     documentTitle: "AFTER VISIT SUMMARY - LONG-ACTING INJECTION",
     documentSubtitle,
@@ -832,15 +1003,15 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
       { label: "VISIT DATE", value: formatShortDate(input.administrationDate) || "-" },
       { label: "GIVEN BY", value: input.administeredBy || "-" },
     ],
-    nextDose: {
-      dateLong,
-      heading: plan?.nextHeading ?? "YOUR NEXT INJECTION",
-      instruction: dateLong ? "PLEASE COME IN ON THIS DAY" : "NOT YET SCHEDULED",
-      firmness,
-      notes,
-      contactLines,
-    },
+    nextDose,
     leadAlerts,
+    timeline: buildTimeline(
+      input,
+      plan,
+      nextDose,
+      nextDoseIso,
+      input.medicationName,
+    ),
     schedule: plan?.schedule ?? [],
     scheduleNote: plan?.scheduleNote ?? "",
     administration,

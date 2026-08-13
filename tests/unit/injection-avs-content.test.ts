@@ -8,6 +8,7 @@ import {
   formatShortDate,
   requiresColdChainCall,
   siteRegion,
+  type AvsTimelineStep,
   type InjectionAvsInput,
 } from "../../src/domain/injection-avs-content";
 import { buildInjectionAvsHtml } from "../../src/domain/injection-avs-render";
@@ -371,5 +372,169 @@ describe("rendered sheet", () => {
     );
     expect(html).toContain("AFTER VISIT SUMMARY");
     expect(html).toContain("NOT YET SCHEDULED");
+  });
+});
+
+describe("printed timeline", () => {
+  const timeline = (overrides: Partial<InjectionAvsInput> = {}) =>
+    buildInjectionAvsModel(base(overrides)).timeline;
+
+  const states = (overrides: Partial<InjectionAvsInput> = {}) =>
+    timeline(overrides).map((step) => step.state);
+
+  /** Indexing a timeline should fail the test loudly, not throw on undefined. */
+  const at = (steps: readonly AvsTimelineStep[], index: number) => {
+    const step = steps[index];
+    expect(step, `expected a timeline step at index ${index}`).toBeDefined();
+    return step as AvsTimelineStep;
+  };
+
+  const withState = (
+    steps: readonly AvsTimelineStep[],
+    state: AvsTimelineStep["state"],
+  ) => {
+    const step = steps.find((candidate) => candidate.state === state);
+    expect(step, `expected a "${state}" timeline step`).toBeDefined();
+    return step as AvsTimelineStep;
+  };
+
+  it("opens every encounter with what was actually given today", () => {
+    const first = at(timeline(), 0);
+    expect(first.state).toBe("given");
+    expect(first.whenNote).toBe("Today");
+    expect(first.when).toBe("Aug 5");
+    // Brand and strength headline it; the generic name supports rather than
+    // dilutes the one line the sheet most wants read.
+    expect(first.title).toBe("Invega Sustenna, 156 mg");
+    expect(first.detail.join(" ")).toContain("paliperidone palmitate");
+    expect(first.detail.join(" ")).toContain("Lot INV-4471");
+  });
+
+  it("reduces a routine dose to just what was given and what is next", () => {
+    expect(states()).toEqual(["given", "due"]);
+    const due = at(timeline(), 1);
+    expect(due.when).toBe("Sep 2");
+    expect(due.whenNote).toBe("Next");
+    expect(due.title).toBe("Your next injection");
+  });
+
+  it("carries the Sustenna day-1 start through to its ongoing schedule", () => {
+    const steps = timeline({
+      reason: "initiation",
+      initiationProtocol: "sustenna-day1",
+      dose: "234 mg",
+    });
+    expect(steps.map((s) => s.state)).toEqual(["given", "due", "ongoing"]);
+    // The due step targets day 8, not the monthly projection.
+    expect(at(steps, 1).when).toBe("Aug 12");
+    expect(at(steps, 1).title).toBe(
+      "Come back for your second starting injection",
+    );
+    expect(at(steps, 2).when).toBe("");
+    expect(at(steps, 2).whenNote).toBe("Ongoing");
+  });
+
+  it("puts the oral-overlap countdown on the timeline as its own dated step", () => {
+    const steps = timeline({
+      medicationKey: "maintena",
+      medicationName: "Abilify Maintena",
+      genericName: "aripiprazole",
+      dose: "400 mg",
+      reason: "initiation",
+      initiationProtocol: "maintena-14day",
+    });
+    expect(steps.map((s) => s.state)).toEqual(["given", "action", "due"]);
+
+    const oral = at(steps, 1);
+    expect(oral.title).toBe("Keep taking your oral medication");
+    // 14 days counting today, so the last day is 13 days after 08/05.
+    expect(oral.when).toBe("Aug 18");
+    expect(oral.whenNote).toBe("Through");
+    expect(oral.detail.join(" ")).toContain("14 days in a row");
+    // The step stays terse: the gutter already carries the last day and the
+    // alert block carries the reasoning, so neither is restated here.
+    expect(oral.detail.join(" ")).not.toContain("(909) 887-6222");
+    expect(oral.detail).toHaveLength(1);
+  });
+
+  it("uses the full 21-day window for the Aristada oral overlap", () => {
+    const steps = timeline({
+      medicationKey: "aristada",
+      medicationName: "Aristada",
+      dose: "441 mg",
+      site: "R ventrogluteal",
+      reason: "initiation",
+      initiationProtocol: "aristada-21day",
+    });
+    const oral = withState(steps, "action");
+    expect(oral.when).toBe("Aug 25");
+    expect(oral.detail.join(" ")).toContain("21 days in a row");
+  });
+
+  it("degrades a provider-directed start to an undated next step", () => {
+    const steps = timeline({
+      medicationKey: "aristada",
+      medicationName: "Aristada",
+      reason: "initiation",
+      initiationProtocol: "aristada-provider",
+      nextDoseDate: "",
+    });
+    const due = withState(steps, "due");
+    expect(due.when).toBe("");
+    expect(due.whenNote).toBe("");
+    expect(due.title).toBe("Your next dose, as your provider directed");
+    expect(due.detail.join(" ")).toContain("has not been scheduled yet");
+  });
+
+  it("still produces a usable timeline when nothing is documented", () => {
+    const steps = timeline({
+      medicationName: "",
+      genericName: "",
+      dose: "",
+      site: "",
+      lot: "",
+      expiration: "",
+      responseLabel: "",
+      nextDoseDate: "",
+    });
+    expect(steps.map((s) => s.state)).toEqual(["given", "due"]);
+    expect(at(steps, 0).title).toBe("Injection given");
+    expect(at(steps, 1).when).toBe("");
+  });
+
+  it("gives initiation encounters strictly more steps than a routine dose", () => {
+    const routine = timeline().length;
+    for (const protocol of [
+      "sustenna-day1",
+      "maintena-14day",
+      "asimtufii-14day",
+      "aristada-21day",
+    ]) {
+      expect(
+        timeline({ reason: "initiation", initiationProtocol: protocol }).length,
+        `${protocol} should out-step a routine dose`,
+      ).toBeGreaterThan(routine);
+    }
+  });
+
+  it("never emits a step without a title", () => {
+    for (const protocol of [
+      "",
+      "sustenna-day1",
+      "sustenna-day8",
+      "aristada-initio-sameday",
+      "aristada-21day",
+      "maintena-14day",
+      "asimtufii-14day",
+      "maintena-1day",
+      "asimtufii-1day",
+      "sustenna-provider",
+      "maintena-provider",
+    ]) {
+      for (const step of timeline({ initiationProtocol: protocol })) {
+        expect(step.title.trim(), `${protocol || "routine"} step title`)
+          .not.toBe("");
+      }
+    }
   });
 });
