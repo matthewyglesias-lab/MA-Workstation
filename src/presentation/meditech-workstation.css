@@ -553,9 +553,12 @@
   }
 
   .cd2004-record-actions-state > span {
+    overflow: hidden;
     color: #314d52;
     font: 700 8px Tahoma, "MS Sans Serif", sans-serif;
     letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .cd2004-record-actions-state > strong {
@@ -2695,6 +2698,7 @@
   }
 
   .cd2004-record-actions-buttons {
+    flex-wrap: wrap;
     gap: 3px;
     justify-content: flex-end;
     padding: 5px;
