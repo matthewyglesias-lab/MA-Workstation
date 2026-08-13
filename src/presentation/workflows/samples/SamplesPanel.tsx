@@ -899,13 +899,8 @@ export function SamplesPanel({
             <div class="wfp-section-head">Document output</div>
             <div class="wfp-section-body">
               <p class="wfp-field-hint wfp-document-output-hint">
-                Printing uses the same local encounter snapshot as the note below.
+                Printing uses the same local encounter snapshot as Clinical Documentation, in the sidebar.
               </p>
-              <div class="meditech-lab-note-heading">
-                <DesktopIcon name="note" />
-                TEBRA NARRATIVE
-              </div>
-              <div class="wfp-preview">{noteText || "Document the encounter to build the handout note."}</div>
               <div class="wfp-actions">
                 <button
                   type="button"
@@ -913,10 +908,10 @@ export function SamplesPanel({
                   onClick={() => navigator.clipboard?.writeText(noteText)}
                   disabled={!noteText}
                 >
+                  <DesktopIcon name="copy" />
                   Copy note
                 </button>
-              </div>
-              <div class="wfp-actions">
+                <span class="wfp-actions-divider" aria-hidden="true" />
                 <button
                   type="button"
                   class="cd2004-command-button"
@@ -928,6 +923,7 @@ export function SamplesPanel({
                       : "Available once every outstanding requirement below is resolved."
                   }
                 >
+                  <DesktopIcon name="print" />
                   Print patient handout
                 </button>
                 <button
@@ -935,6 +931,7 @@ export function SamplesPanel({
                   class="cd2004-link-button"
                   onClick={() => clickLegacyControl("sampleWorksheetPrint")}
                 >
+                  <DesktopIcon name="print" />
                   Print clinician worksheet
                 </button>
                 <button
@@ -942,6 +939,7 @@ export function SamplesPanel({
                   class="cd2004-link-button"
                   onClick={() => clickLegacyControl("sampleWorksheetBlank")}
                 >
+                  <DesktopIcon name="print" />
                   Blank worksheet
                 </button>
               </div>

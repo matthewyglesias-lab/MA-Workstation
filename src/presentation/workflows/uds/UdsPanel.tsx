@@ -1182,11 +1182,6 @@ export function UdsPanel({
               omittedPanel={omittedPanel || undefined}
               includeSignatureFields={includeSignatureFields}
             />
-            <div class="meditech-lab-note-heading">
-              <DesktopIcon name="note" />
-              TEBRA NARRATIVE
-            </div>
-            <div class="wfp-preview">{noteText || "Document the encounter to build the note."}</div>
             <div class="wfp-actions">
               <button
                 type="button"
@@ -1199,6 +1194,7 @@ export function UdsPanel({
                     : "Available once every outstanding requirement below is resolved."
                 }
               >
+                <DesktopIcon name="print" />
                 Print clinician report
               </button>
               <button
@@ -1212,14 +1208,17 @@ export function UdsPanel({
                     : "Available once every outstanding requirement below is resolved."
                 }
               >
+                <DesktopIcon name="print" />
                 Patient summary
               </button>
+              <span class="wfp-actions-divider" aria-hidden="true" />
               <button
                 type="button"
                 class="cd2004-link-button"
                 onClick={() => navigator.clipboard?.writeText(noteText)}
                 disabled={!noteText}
               >
+                <DesktopIcon name="copy" />
                 Copy Tebra UDS note
               </button>
             </div>
