@@ -11,10 +11,10 @@
   },
   "outputs": {
     "avsSheet": {
-      "sha256": "20d4e38eef5dc1b10b2a2c3956e5f052fd73148860eb25ac64d7989e76c343e0",
-      "bytes": 4483,
-      "topLevelClass": "avs3 avs3-patient avs3-routine",
-      "note": "Intentionally diverges from the production commit. The injection AVS now uses the refined card renderer, explicit patient mode, deterministic page wrappers, structured administration components, and due-date-only scheduling copy. Every other print root remains pinned to production output."
+      "sha256": "82302c655dc3d5641306b93f531868dfec98f9c3d45339a558134ed9872cf5f2",
+      "bytes": 4347,
+      "topLevelClass": "avs2",
+      "note": "Intentionally diverges from the production commit. The injection After Visit Summary was rebuilt as a marginalia sheet organised around a dated dose spine; its patient wording and its timeline live in src/domain/injection-avs-content.ts and its markup in src/domain/injection-avs-render.ts. Every other print root in this fixture is still pinned to production output."
     },
     "injWorksheetSheet": {
       "sha256": "b0edc70d9f4cbded0b3b3979484488aa968b81c0df8e8648d8124e0fc2fd6380",

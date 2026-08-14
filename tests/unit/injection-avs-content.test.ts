@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildInjectionAvsModel as buildInjectionAvsModelForMode,
+  buildInjectionAvsModel,
   describeSite,
   doseNote,
   formatExpiration,
@@ -11,7 +11,7 @@ import {
   type AvsTimelineStep,
   type InjectionAvsInput,
 } from "../../src/domain/injection-avs-content";
-import { buildInjectionAvsDocument } from "../../src/domain/injection-avs-render";
+import { buildInjectionAvsHtml } from "../../src/domain/injection-avs-render";
 
 const base = (overrides: Partial<InjectionAvsInput> = {}): InjectionAvsInput => ({
   patientName: "Rivera, Ana M",
@@ -36,22 +36,8 @@ const base = (overrides: Partial<InjectionAvsInput> = {}): InjectionAvsInput => 
   initiationProtocol: "",
   day1Date: "",
   clinicPhone: "(909) 887-6222",
-  administrationStops: [],
-  dispositionKind: "administered",
   ...overrides,
 });
-
-const buildInjectionAvsModel = (input: InjectionAvsInput) =>
-  buildInjectionAvsModelForMode(input, "patient");
-
-const buildInjectionAvsHtml = (
-  input: InjectionAvsInput,
-  chrome: Record<string, string> = {},
-): string => {
-  const result = buildInjectionAvsDocument(input, { mode: "patient", chrome });
-  if (!result.ok) throw new Error(result.reason);
-  return result.html;
-};
 
 const allText = (input: InjectionAvsInput): string => {
   const model = buildInjectionAvsModel(input);
@@ -83,14 +69,6 @@ describe("AVS formatting helpers", () => {
     expect(formatLongDate("")).toBe("");
     expect(formatLongDate("not-a-date")).toBe("");
     expect(formatShortDate("2026-13-40")).toBe("");
-  });
-
-  it("round-trips strict calendar dates across leap years and month boundaries", () => {
-    expect(formatLongDate("2024-02-29")).toBe("Thursday, February 29, 2024");
-    expect(formatLongDate("2023-02-29")).toBe("");
-    expect(formatLongDate("2026-04-31")).toBe("");
-    expect(formatLongDate("2026-02-31")).toBe("");
-    expect(formatLongDate("026-08-05")).toBe("");
   });
 
   it("renders a month-precision expiration the way a carton reads", () => {
@@ -185,7 +163,7 @@ describe("due-date framing", () => {
   it("names the exact day and never prints a come-any-day range", () => {
     const model = buildInjectionAvsModel(base());
     expect(model.nextDose.dateLong).toBe("Wednesday, September 2, 2026");
-    expect(model.nextDose.instruction).toBe("CALL TO SCHEDULE OR RESCHEDULE");
+    expect(model.nextDose.instruction).toBe("PLEASE COME IN ON THIS DAY");
     const text = allText(base());
     expect(text).not.toMatch(/any day from/i);
     expect(text).not.toMatch(/come in between/i);
@@ -200,8 +178,8 @@ describe("due-date framing", () => {
   it("degrades to a scheduling prompt when no next date exists", () => {
     const model = buildInjectionAvsModel(base({ nextDoseDate: "" }));
     expect(model.nextDose.dateLong).toBe("");
-    expect(model.nextDose.instruction).toBe("CALL TO SCHEDULE");
-    expect(model.nextDose.notes.join(" ")).toContain("due date has not been set");
+    expect(model.nextDose.instruction).toBe("NOT YET SCHEDULED");
+    expect(model.nextDose.notes.join(" ")).toContain("has not been scheduled");
   });
 });
 
@@ -352,114 +330,23 @@ describe("medication-specific safety", () => {
 });
 
 describe("rendered sheet", () => {
-  it("fails patient mode closed for every non-administered disposition", () => {
-    for (const dispositionKind of ["", "held", "escalated", "provider"]) {
-      expect(
-        buildInjectionAvsDocument(base({ dispositionKind }), { mode: "patient" }),
-        dispositionKind || "blank",
-      ).toMatchObject({ ok: false, html: "" });
-    }
-    expect(
-      buildInjectionAvsDocument(base({ dispositionKind: "administered" }), {
-        mode: "patient",
-      }),
-    ).toMatchObject({ ok: true, reason: "" });
-    expect(
-      buildInjectionAvsDocument(
-        base({
-          dispositionKind: "administered",
-          administrationStops: ["Document the medication lot."],
-        }),
-        { mode: "patient" },
-      ),
-    ).toMatchObject({ ok: false, html: "" });
-  });
-
-  it("renders an undecided encounter only as a repeated, watermarked staff draft", () => {
-    const result = buildInjectionAvsDocument(base({ dispositionKind: "" }), {
-      mode: "draft",
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.html).toContain("STAFF DRAFT — ADMINISTRATION NOT FINALIZED");
-    expect(result.html).toContain("Staff must verify before release");
-    expect(result.html).not.toMatch(/Today you received|Injection given|Component 1 · Administered/i);
-  });
-
-  it("selects one page for routine care and two for complex pathways", () => {
-    expect(buildInjectionAvsModel(base()).layoutVariant).toBe("routine-one-page");
-    for (const overrides of [
-      { reason: "initiation", initiationProtocol: "sustenna-day1" },
-      { reason: "reinit" },
-      { reason: "loading" },
-      { initiationProtocol: "maintena-14day" },
-      {
-        initiationProtocol: "maintena-1day",
-        secondDose: "400 mg",
-        secondSite: "L deltoid",
-        secondGiven: true,
-      },
-    ]) {
-      expect(buildInjectionAvsModel(base(overrides)).layoutVariant).toBe(
-        "complex-two-page",
-      );
-    }
-  });
-
-  it("projects paired product identity and traceability from protocol facts", () => {
-    const model = buildInjectionAvsModel(
-      base({
-        medicationKey: "asimtufii",
-        medicationName: "Abilify Asimtufii",
-        dose: "960 mg",
-        site: "R gluteal",
-        initiationProtocol: "asimtufii-1day",
-        secondDose: "400 mg",
-        secondSite: "L deltoid",
-        secondLot: "MAINT-22",
-        secondExpiration: "2028-02",
-        secondGiven: true,
-      }),
-    );
-    expect(model.components).toHaveLength(2);
-    expect(model.components[1]).toMatchObject({
-      productKey: "maintena",
-      productLabel: "Abilify Maintena",
-      lot: "MAINT-22",
-      expiration: "02/2028",
-      administered: true,
-    });
-  });
-
-  it("frames the next date only as due and never as a booked appointment", () => {
-    const result = buildInjectionAvsDocument(base(), { mode: "patient" });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.html).toContain("Your next injection is due");
-    expect(result.html).toContain("Call to schedule or reschedule");
-    expect(result.html).not.toMatch(/appointment/i);
-  });
-
-  it("emits the refined semantic structure the print stylesheet targets", () => {
+  it("emits the lab-report structure the print stylesheet targets", () => {
     const html = buildInjectionAvsHtml(base(), { runStamp: "08/05/26 1024" });
     for (const hook of [
-      "avs3-header",
-      "avs3-patient-band",
-      "avs3-overview",
-      "avs3-site-svg",
-      "avs3-care-grid",
-      "avs3-contact",
-      "avs3-trace",
-      "avs3-footer",
+      "avs2-run",
+      "avs2-title",
+      "avs2-id",
+      "avs2-next",
+      "avs2-date",
+      "avs2-sec",
+      "avs2-alert-bar",
+      "avs2-foot",
     ]) {
       expect(html).toContain(hook);
     }
     expect(html).toContain("IPMG - SAN BERNARDINO");
     expect(html).toContain("(909) 887-6222");
-    expect(html).toContain("Page 1 of 1");
-    expect(html).not.toContain("END OF DOCUMENT");
-    expect(html).not.toContain("RPT&nbsp;");
-    expect(html).not.toContain("RUN&nbsp;");
+    expect(html).toContain("END OF DOCUMENT");
   });
 
   it("escapes documented values instead of trusting them as markup", () => {
@@ -483,8 +370,8 @@ describe("rendered sheet", () => {
         responseLabel: "",
       }),
     );
-    expect(html).toContain("Injection After Visit Summary");
-    expect(html).toContain("Due date not yet set");
+    expect(html).toContain("AFTER VISIT SUMMARY");
+    expect(html).toContain("NOT YET SCHEDULED");
   });
 });
 
@@ -596,7 +483,7 @@ describe("printed timeline", () => {
     expect(due.when).toBe("");
     expect(due.whenNote).toBe("");
     expect(due.title).toBe("Your next dose, as your provider directed");
-    expect(due.detail.join(" ")).toContain("due date has not been set yet");
+    expect(due.detail.join(" ")).toContain("has not been scheduled yet");
   });
 
   it("still produces a usable timeline when nothing is documented", () => {

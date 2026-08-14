@@ -51,10 +51,11 @@ const PRINT_MODELS = [
     workflow: "injection",
     id: "avsSheet",
     printClass: "print-avs",
-    // The runtime must call the typed, fail-closed document bridge. There is no
-    // patient-mode fallback title anymore because a missing bridge must block
-    // release rather than print an unmarked minimal sheet.
-    title: "ipmgBuildInjectionAvsDocument",
+    // The AVS body is now built by src/domain/injection-avs-content.ts. The
+    // runtime keeps this title in renderAVS()'s fallback sheet, so the guard
+    // still proves the print surface is wired even though the patient wording
+    // moved out of the runtime.
+    title: "AFTER VISIT SUMMARY - LONG-ACTING INJECTION",
   },
   {
     workflow: "forms",

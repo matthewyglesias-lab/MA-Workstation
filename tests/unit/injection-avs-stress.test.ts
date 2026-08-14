@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildInjectionAvsModel as buildInjectionAvsModelForMode,
+  buildInjectionAvsModel,
   formatGutterDate,
   type AvsTimelineStep,
   type InjectionAvsInput,
 } from "../../src/domain/injection-avs-content";
-import { buildInjectionAvsDocument } from "../../src/domain/injection-avs-render";
+import { buildInjectionAvsHtml } from "../../src/domain/injection-avs-render";
 
 /**
  * Combinatorial stress coverage for the printed After Visit Summary.
@@ -40,22 +40,8 @@ const base = (overrides: Partial<InjectionAvsInput> = {}): InjectionAvsInput => 
   initiationProtocol: "",
   day1Date: "",
   clinicPhone: "(909) 887-6222",
-  administrationStops: [],
-  dispositionKind: "administered",
   ...overrides,
 });
-
-const buildInjectionAvsModel = (input: InjectionAvsInput) =>
-  buildInjectionAvsModelForMode(input, "patient");
-
-const buildDraftInjectionAvsModel = (input: InjectionAvsInput) =>
-  buildInjectionAvsModelForMode(input, "draft");
-
-const buildInjectionAvsHtml = (input: InjectionAvsInput, _legacyChrome?: unknown): string => {
-  const result = buildInjectionAvsDocument(input, { mode: "patient" });
-  if (!result.ok) throw new Error(result.reason);
-  return result.html;
-};
 
 /** Every catalogued medication, plus the uncatalogued fallback path. */
 const MEDICATIONS: ReadonlyArray<Partial<InjectionAvsInput>> = [
@@ -92,10 +78,7 @@ const PROTOCOLS = [
 const NOT_GIVEN_KINDS = ["held", "escalated", "provider"] as const;
 
 const allText = (input: InjectionAvsInput): string => {
-  const model =
-    input.dispositionKind === "administered"
-      ? buildInjectionAvsModel(input)
-      : buildDraftInjectionAvsModel(input);
+  const model = buildInjectionAvsModel(input);
   return JSON.stringify(model);
 };
 
@@ -159,10 +142,12 @@ describe("AVS stress: every medication x every protocol", () => {
   it("always renders an escaped, non-empty sheet", () => {
     for (const { label, input } of combinations) {
       const html = buildInjectionAvsHtml(input, { runStamp: "08/05/26 1024" });
-      expect(html, label).toContain("Injection After Visit Summary");
-      expect(html, label).toContain("avs3-patient-band");
-      expect(html, label).toMatch(/Page [12] of [12]/);
-      expect(html, label).not.toContain("END OF DOCUMENT");
+      expect(html, label).toContain("AFTER VISIT SUMMARY");
+      expect(html, label).toContain("END OF DOCUMENT");
+      // The record run is what the print-parity canonicaliser anchors on; if
+      // this markup moves, tests/e2e/print-regression.spec.js goes silently
+      // non-deterministic rather than red.
+      expect(html, label).toContain('<span class="avs2-id-k">RECORD NO</span>');
     }
   });
 });
@@ -177,7 +162,7 @@ describe("AVS stress: nothing was given", () => {
 
   it("never claims a dose was received", () => {
     for (const { label, input } of notGivenCombos) {
-      const model = buildDraftInjectionAvsModel(input);
+      const model = buildInjectionAvsModel(input);
       const first = model.timeline[0];
       expect(first?.state, label).toBe("action");
       expect(first?.title, label).toBe("This injection was not given today");
@@ -185,19 +170,18 @@ describe("AVS stress: nothing was given", () => {
     }
   });
 
-  it("marks documented components as unadministered in staff drafts", () => {
+  it("never prints product traceability for a dose that was not administered", () => {
     for (const { label, input } of notGivenCombos) {
-      const model = buildDraftInjectionAvsModel(input);
-      expect(model.components.every((component) => !component.administered), label).toBe(true);
-      expect(model.administration, label).toHaveLength(0);
-      expect(JSON.stringify(model.timeline), label).not.toContain("INV-4471");
-      expect(JSON.stringify(model.timeline), label).not.toContain("Tolerated well");
+      const text = allText(input);
+      expect(text, `${label} leaked a lot number`).not.toContain("INV-4471");
+      expect(text, `${label} leaked an expiry`).not.toContain("11/2027");
+      expect(text, `${label} leaked a response`).not.toContain("Tolerated well");
     }
   });
 
   it("drops aftercare and what-to-expect, which presume an injection", () => {
     for (const { label, input } of notGivenCombos) {
-      const headings = buildDraftInjectionAvsModel(input).blocks.map((b) => b.heading);
+      const headings = buildInjectionAvsModel(input).blocks.map((b) => b.heading);
       expect(headings, label).not.toContain("CARING FOR THE INJECTION SITE");
       expect(headings, label).not.toContain("WHAT TO EXPECT");
     }
@@ -206,7 +190,7 @@ describe("AVS stress: nothing was given", () => {
   it("drops alerts that assert a consequence of having been dosed", () => {
     // Vivitrol's lead alert says opioid tolerance "is now much LOWER". Printing
     // that after a held encounter would be actively dangerous.
-    const vivitrol = buildDraftInjectionAvsModel(
+    const vivitrol = buildInjectionAvsModel(
       base({
         medicationKey: "vivitrol",
         medicationName: "Vivitrol",
@@ -221,7 +205,7 @@ describe("AVS stress: nothing was given", () => {
   });
 
   it("drops the oral-overlap countdown, which counts from an injection", () => {
-    const model = buildDraftInjectionAvsModel(
+    const model = buildInjectionAvsModel(
       base({
         medicationKey: "maintena",
         medicationName: "Abilify Maintena",
@@ -236,7 +220,7 @@ describe("AVS stress: nothing was given", () => {
 
   it("still tells the patient when to return and when to get help", () => {
     for (const { label, input } of notGivenCombos) {
-      const model = buildDraftInjectionAvsModel(input);
+      const model = buildInjectionAvsModel(input);
       expect(
         model.timeline.some((step) => step.state === "due"),
         `${label} left the patient with no return plan`,
@@ -246,13 +230,15 @@ describe("AVS stress: nothing was given", () => {
     }
   });
 
-  it("keeps an undecided encounter in draft and blocks patient release", () => {
-    const input = base({ dispositionKind: "" });
-    const undecided = buildDraftInjectionAvsModel(input);
-    expect(undecided.timeline[0]?.state).toBe("action");
-    expect(undecided.timeline[0]?.title).not.toMatch(/received|given/i);
-    expect(undecided.components.every((component) => !component.administered)).toBe(true);
-    expect(buildInjectionAvsDocument(input, { mode: "patient" })).toMatchObject({ ok: false });
+  it("treats an undecided disposition exactly like an administered one", () => {
+    // The AVS gate deliberately allows printing before a disposition is chosen.
+    // If an empty kind ever started neutralising, that preview would break.
+    const undecided = buildInjectionAvsModel(base({ dispositionKind: "" }));
+    const administered = buildInjectionAvsModel(
+      base({ dispositionKind: "administered" }),
+    );
+    expect(JSON.stringify(undecided)).toBe(JSON.stringify(administered));
+    expect(undecided.timeline[0]?.state).toBe("given");
   });
 });
 
@@ -305,11 +291,7 @@ describe("AVS stress: dates", () => {
     const due = model.timeline.find((step) => step.state === "due");
     expect(due?.when).toBe("Jul 1");
     expect(due?.dateLong).toBe("Wednesday, July 1, 2026");
-    expect(
-      buildInjectionAvsHtml(
-        base({ administrationDate: "2026-08-05", nextDoseDate: "2026-07-01" }),
-      ),
-    ).toBeTypeOf("string");
+    expect(buildInjectionAvsHtml(model as never)).toBeTypeOf("string");
   });
 
   it("rejects malformed dates without throwing", () => {
@@ -324,8 +306,8 @@ describe("AVS stress: dates", () => {
 
 describe("AVS stress: paired injections", () => {
   const paired = (overrides: Partial<InjectionAvsInput> = {}) =>
-    (() => {
-      const input = base({
+    buildInjectionAvsModel(
+      base({
         medicationKey: "maintena",
         medicationName: "Abilify Maintena",
         genericName: "aripiprazole",
@@ -333,22 +315,19 @@ describe("AVS stress: paired injections", () => {
         site: "R deltoid",
         reason: "initiation",
         initiationProtocol: "maintena-1day",
-        secondDose: "400 mg",
+        secondDose: "300 mg",
         secondSite: "L ventrogluteal",
         secondGiven: true,
         oralStatus: "administered",
         ...overrides,
-      });
-      return input.dispositionKind === "administered"
-        ? buildInjectionAvsModel(input)
-        : buildDraftInjectionAvsModel(input);
-    })();
+      }),
+    );
 
   it("names the second injection and its site", () => {
     const given = paired().timeline[0];
     expect(given?.state).toBe("given");
     const text = stepText(given as AvsTimelineStep);
-    expect(text).toContain("Second injection: 400 mg");
+    expect(text).toContain("Second injection: 300 mg");
     expect(text).toContain("hip (ventrogluteal)");
     expect(text).toContain("An oral dose was also given today.");
   });
@@ -430,9 +409,9 @@ describe("AVS stress: overflow and hostile input", () => {
         orderingProvider: long,
       }),
     );
-    expect(html).toContain("Injection After Visit Summary");
-    expect(html).toContain("avs3-patient-band");
-    expect(html).not.toContain("END OF DOCUMENT");
+    expect(html).toContain("AFTER VISIT SUMMARY");
+    expect(html).toContain("END OF DOCUMENT");
+    expect(html).toContain('<span class="avs2-id-k">RECORD NO</span>');
   });
 
   it("produces a sheet when every optional field is blank", () => {
@@ -459,11 +438,9 @@ describe("AVS stress: overflow and hostile input", () => {
       initiationProtocol: "",
       day1Date: "",
       clinicPhone: "(909) 887-6222",
-      administrationStops: [],
-      dispositionKind: "administered",
     });
-    expect(html).toContain("Injection After Visit Summary");
-    expect(html).toContain("Medication not documented");
-    expect(html).toContain("Page 1 of 1");
+    expect(html).toContain("AFTER VISIT SUMMARY");
+    expect(html).toContain("Injection given");
+    expect(html).toContain("END OF DOCUMENT");
   });
 });

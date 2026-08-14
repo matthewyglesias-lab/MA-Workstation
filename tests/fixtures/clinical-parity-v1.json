@@ -560,7 +560,7 @@
       "workflow": "injection",
       "id": "avsSheet",
       "printClass": "print-avs",
-      "title": "ipmgBuildInjectionAvsDocument",
+      "title": "AFTER VISIT SUMMARY - LONG-ACTING INJECTION",
       "rootPresent": true,
       "titlePresent": true,
       "printClassPresent": true
