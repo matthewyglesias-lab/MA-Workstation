@@ -149,6 +149,8 @@ export interface InjectionAvsModel {
   documentTitle: string;
   /** Second title line, e.g. the starting-series marker. Empty when routine. */
   documentSubtitle: string;
+  /** Makes the release state explicit without allowing a preview to look final. */
+  documentStatus: "PATIENT COPY" | "STAFF PREVIEW - NOT FINAL" | "CARE HANDOFF";
   identity: AvsDataRow[];
   nextDose: {
     /** Long form, e.g. "Wednesday, September 2, 2026". Empty when unscheduled. */
@@ -368,7 +370,7 @@ interface MedProfile {
 }
 
 const ANTIPSYCHOTIC_EXPECT = [
-  "Keep taking all oral medications exactly as prescribed. Do not stop anything on your own because you received an injection.",
+  "Follow the oral medication plan from your clinician. Do not stop or change a medicine unless they tell you to.",
   "Mild drowsiness or restlessness can happen in the first few days.",
   "Get up slowly from sitting or lying down for the first day or two.",
 ];
@@ -537,7 +539,7 @@ const DEFAULT_PROFILE: MedProfile = {
     "A late injection lets that level fall, so keeping your next date is what keeps the medication working the way it should.",
   ],
   expect: [
-    "Keep taking all oral medications exactly as prescribed unless your provider tells you otherwise.",
+    "Follow the oral medication plan from your clinician. Do not stop or change a medicine unless they tell you to.",
   ],
   callClinic: [],
   emergency: ANTIPSYCHOTIC_ER,
@@ -930,8 +932,6 @@ const buildTimeline = (
       givenDetail.push("An oral dose was also given today.");
     }
 
-    if (input.responseLabel) givenDetail.push(input.responseLabel);
-
     steps.push({
       when: visitWhen,
       whenNote: visitNote,
@@ -1020,30 +1020,32 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   const notes: string[] = [];
   if (!dateLong) {
     notes.push(
-      `Your next injection has not been scheduled yet. Call ${phone} to book it before you leave or as soon as you can.`,
+      `Your next injection has not been scheduled yet. Call ${phone} before you leave or as soon as you can, and we will help you set it up.`,
     );
   } else if (firmness === "firm") {
     notes.push(
-      "This date has very little room to move. If something makes it impossible, call us that same day rather than waiting - the sooner we hear from you, the more likely we can keep your start on track.",
+      "This is your due date, not a scheduled appointment. This starting dose has very little room to move. If the date will not work, call us that same day and we will help keep your start on track.",
     );
   } else if (firmness === "call-first") {
     notes.push(
-      "You need to call ahead for this medication anyway (see below). If your due date will not work, say so on that same call and we will sort it out with you.",
+      "This is your due date, not a scheduled appointment. Call ahead so the medication can be prepared. If the date will not work, tell us on that call and we will help you plan the visit.",
     );
   } else {
     notes.push(
-      "If this day will not work, call us before it. There may be some room to move it, but we need to hear from you so you do not fall behind.",
+      `This is your due date, not a scheduled appointment. Call ${phone} to schedule or change your visit, and we will help you stay on track.`,
     );
   }
 
   const contactLines: AvsDataRow[] = coldChain
     ? [
-        { label: "CALL FIRST", value: phone },
-        { label: "WALK-IN HOURS", value: "9:30 AM - 4:30 PM  (appointments preferred)" },
+        { label: "APPOINTMENTS & QUESTIONS", value: `${phone} - call before coming in` },
+        { label: "CLINIC HOURS", value: "Monday-Friday, 9:30 AM - 4:30 PM (appointments preferred)" },
+        { label: "AFTER HOURS", value: "For concerns that cannot wait, use urgent care. Call 911 for emergencies." },
       ]
     : [
-        { label: "CALL OR SCHEDULE", value: phone },
-        { label: "WALK-IN HOURS", value: "9:30 AM - 4:30 PM  (appointments preferred)" },
+        { label: "APPOINTMENTS & QUESTIONS", value: phone },
+        { label: "CLINIC HOURS", value: "Monday-Friday, 9:30 AM - 4:30 PM (appointments preferred)" },
+        { label: "AFTER HOURS", value: "For concerns that cannot wait, use urgent care. Call 911 for emergencies." },
       ];
 
   /* ---- lead alerts ---- */
@@ -1076,18 +1078,29 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   administration.push({ label: "MEDICATION", value: medLine });
   if (input.dose) administration.push({ label: "DOSE", value: input.dose });
   const siteText = describeSite(input.site, input.route);
-  if (siteText) administration.push({ label: "GIVEN IN", value: siteText });
+  if (siteText) administration.push({ label: "ROUTE / SITE", value: siteText });
   const when = [formatShortDate(input.administrationDate), input.administrationTime]
     .filter(Boolean)
     .join("  ");
   if (when) administration.push({ label: "DATE / TIME", value: when });
-  if (input.administeredBy) administration.push({ label: "GIVEN BY", value: input.administeredBy });
   const traceParts = [input.lot, formatExpiration(input.expiration)].filter(Boolean);
   if (traceParts.length) {
-    administration.push({ label: "LOT / EXP", value: traceParts.join(" / ") });
+    administration.push({ label: "LOT / EXPIRATION", value: traceParts.join(" / ") });
   }
-  if (input.responseLabel) administration.push({ label: "RESPONSE", value: input.responseLabel });
-
+  if (hasSecondInjection(input)) {
+    const secondTrace = [
+      String(input.secondDose ?? "").trim(),
+      describeSite(String(input.secondSite ?? ""), input.route),
+      input.secondLot && `lot ${input.secondLot}`,
+      input.secondExpiration && `exp ${formatExpiration(input.secondExpiration)}`,
+    ]
+      .filter(Boolean)
+      .join(" - ");
+    if (secondTrace) administration.push({ label: "SECOND INJECTION", value: secondTrace });
+  }
+  if (String(input.oralStatus ?? "").trim() === "administered") {
+    administration.push({ label: "ORAL DOSE", value: "Administered today" });
+  }
   /* ---- instruction blocks ---- */
   const blocks: AvsBlock[] = [];
   // Protocol narration ("today you received two injections...") presumes the
@@ -1157,7 +1170,9 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   const nextDose = {
     dateLong,
     heading: plan?.nextHeading ?? "YOUR NEXT INJECTION",
-    instruction: dateLong ? "PLEASE COME IN ON THIS DAY" : "NOT YET SCHEDULED",
+    instruction: dateLong
+      ? "DUE DATE - CALL US TO SCHEDULE OR RESCHEDULE"
+      : "CALL TO SCHEDULE YOUR NEXT INJECTION",
     firmness,
     notes,
     contactLines,
@@ -1166,6 +1181,12 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   return {
     documentTitle: "AFTER VISIT SUMMARY - LONG-ACTING INJECTION",
     documentSubtitle,
+    documentStatus:
+      String(input.dispositionKind ?? "").trim() === "administered"
+        ? "PATIENT COPY"
+        : notGiven
+          ? "CARE HANDOFF"
+          : "STAFF PREVIEW - NOT FINAL",
     identity: [
       { label: "PATIENT", value: input.patientName || "Not documented" },
       { label: "DOB", value: formatShortDate(input.patientDob) || input.patientDob || "-" },

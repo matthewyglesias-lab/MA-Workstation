@@ -4836,3 +4836,513 @@ input[type="radio"]:disabled {
     text-transform: uppercase;
   }
 }
+
+/* ===================== INJECTION AVS (mature clinical refinement) =====================
+ * This is deliberately an evolution of the existing AVS, not a second visual
+ * language imported from another product. It keeps the dose timeline and the
+ * reviewed patient copy, while replacing the editorial/marginalia experiment
+ * with a restrained outpatient-document system: one sans family, a visible
+ * patient banner, a single due-date emphasis, quiet rules, and compact guidance.
+ */
+@media print {
+  body.print-avs #avsSheet {
+    max-width: 7.5in !important;
+  }
+
+  body.print-avs #avsSheet .avs2 {
+    --avs-ink: #17212b;
+    --avs-muted: #586775;
+    --avs-rule: #b8c2ca;
+    --avs-rule-light: #dce2e7;
+    --avs-accent: #244e6b;
+    --avs-accent-soft: #f0f5f8;
+    --avs-alert: #812f2b;
+    --avs-alert-soft: #faf4f3;
+
+    color: var(--avs-ink) !important;
+    font-family: Aptos, "Segoe UI", Arial, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.42 !important;
+  }
+
+  body.print-avs #avsSheet .avs2-page {
+    position: relative;
+    width: 100%;
+    height: 10in;
+    padding-bottom: 0.28in;
+  }
+
+  body.print-avs #avsSheet .avs2-page-continuation {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  body.print-avs #avsSheet .avs2-run {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--avs-accent);
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.055em;
+    line-height: 1.35;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-run > div {
+    gap: 2px;
+  }
+
+  body.print-avs #avsSheet .avs2-brand {
+    text-align: left;
+  }
+
+  body.print-avs #avsSheet .avs2-clinic-contact {
+    text-align: right;
+  }
+
+  body.print-avs #avsSheet .avs2-run-name {
+    color: var(--avs-ink);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.085em;
+  }
+
+  body.print-avs #avsSheet .avs2-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 13px;
+  }
+
+  body.print-avs #avsSheet .avs2-title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: var(--avs-ink);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+    text-align: left;
+  }
+
+  body.print-avs #avsSheet .avs2-title-detail {
+    display: block;
+    margin-top: 4px;
+    color: var(--avs-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.105em;
+    line-height: 1.25;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-subtitle {
+    margin: 7px 0 0;
+    color: var(--avs-alert);
+    font-family: inherit;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-status {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    padding: 4px 7px 3px;
+    border: 1px solid var(--avs-rule);
+    color: var(--avs-muted);
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-id {
+    margin: 14px 0 0;
+    padding: 10px 12px;
+    border: 1px solid var(--avs-rule);
+    border-left: 4px solid var(--avs-accent);
+    background: #f7f9fa;
+    color: var(--avs-ink);
+    font-size: 10px;
+    line-height: 1.3;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-id dl {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px 14px;
+    margin: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-id-pair {
+    min-width: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-id-patient,
+  body.print-avs #avsSheet .avs2-id-provider {
+    grid-column: span 2;
+  }
+
+  body.print-avs #avsSheet .avs2-id-pair:not(:last-child)::after {
+    content: none;
+  }
+
+  body.print-avs #avsSheet .avs2-id-k {
+    display: block;
+    margin: 0 0 2px;
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 7.8px;
+    font-weight: 700;
+    letter-spacing: 0.085em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-id-v {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--avs-ink);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs2-overview {
+    margin-top: 16px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-overview-title,
+  body.print-avs #avsSheet .avs2-lab {
+    margin: 0 0 7px;
+    padding: 0;
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.105em;
+    line-height: 1.25;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-spine {
+    margin-top: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.print-avs #avsSheet .avs2-step {
+    display: grid;
+    grid-template-columns: 92px 18px minmax(0, 1fr);
+    column-gap: 12px;
+    padding: 8px 0 10px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-step-given {
+    border-top: 1px solid var(--avs-rule-light);
+  }
+
+  body.print-avs #avsSheet .avs2-step-due {
+    margin: 2px 0 0;
+    padding: 11px 12px 12px 0;
+    border: 1px solid #aebfca;
+    border-left: 0;
+    background: var(--avs-accent-soft);
+    box-shadow: inset 4px 0 0 var(--avs-accent);
+  }
+
+  body.print-avs #avsSheet .avs2-when {
+    padding-top: 1px;
+    color: var(--avs-ink);
+    text-align: right;
+  }
+
+  body.print-avs #avsSheet .avs2-when b {
+    color: inherit;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  body.print-avs #avsSheet .avs2-when span {
+    margin-top: 3px;
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 7.6px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+  }
+
+  body.print-avs #avsSheet .avs2-step .avs2-rail::before {
+    background: var(--avs-rule);
+  }
+
+  body.print-avs #avsSheet .avs2-step:not(:last-child) .avs2-rail::before {
+    bottom: -12px;
+  }
+
+  body.print-avs #avsSheet .avs2-node {
+    top: 4px;
+    width: 8px;
+    height: 8px;
+    border-color: var(--avs-muted);
+  }
+
+  body.print-avs #avsSheet .avs2-step-given .avs2-node {
+    background: var(--avs-muted);
+  }
+
+  body.print-avs #avsSheet .avs2-step-due .avs2-node {
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    border-color: var(--avs-accent);
+    background: var(--avs-accent);
+  }
+
+  body.print-avs #avsSheet .avs2-b,
+  body.print-avs #avsSheet .avs2-step-body {
+    max-width: none;
+  }
+
+  body.print-avs #avsSheet .avs2-step-title {
+    color: var(--avs-ink);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs2-step-given .avs2-step-title {
+    color: var(--avs-ink);
+    font-size: 16px;
+  }
+
+  body.print-avs #avsSheet .avs2-step-due .avs2-step-title {
+    color: var(--avs-accent);
+    font-size: 18px;
+  }
+
+  body.print-avs #avsSheet .avs2-step-due .avs2-when b {
+    color: var(--avs-accent);
+    font-size: 15px;
+  }
+
+  body.print-avs #avsSheet .avs2-step-date {
+    margin-top: 3px;
+    color: var(--avs-ink);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs2-step-instr {
+    margin-top: 3px;
+    color: var(--avs-accent);
+    font-family: inherit;
+    font-size: 8.4px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+  }
+
+  body.print-avs #avsSheet .avs2-step-body .avs2-p {
+    margin: 4px 0 0;
+  }
+
+  body.print-avs #avsSheet .avs2-p {
+    margin: 0 0 5px;
+  }
+
+  body.print-avs #avsSheet .avs2-ul {
+    margin: 0;
+    padding: 0 0 0 16px;
+    list-style: disc;
+  }
+
+  body.print-avs #avsSheet .avs2-ul li {
+    margin: 0 0 4px;
+    padding: 0 0 0 2px;
+  }
+
+  body.print-avs #avsSheet .avs2-ul li::before {
+    content: none;
+  }
+
+  body.print-avs #avsSheet .avs2-sec {
+    display: block;
+    margin: 0;
+    padding: 7px 0 0;
+    border-top: 1px solid var(--avs-rule-light);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-sec-contact {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+    padding: 9px 11px;
+    border: 1px solid var(--avs-rule);
+    background: #fff;
+  }
+
+  body.print-avs #avsSheet .avs2-sec-contact .avs2-lab {
+    margin: 2px 0 0;
+  }
+
+  body.print-avs #avsSheet .avs2-pairs {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1.45fr);
+    gap: 12px;
+    margin: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-pairs > div {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    padding-left: 10px;
+    border-left: 1px solid var(--avs-rule-light);
+  }
+
+  body.print-avs #avsSheet .avs2-pairs dt {
+    min-width: 0;
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs2-pairs dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    margin-top: 2px;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.28;
+  }
+
+  body.print-avs #avsSheet .avs2-guidance {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 22px;
+    margin-top: 12px;
+  }
+
+  body.print-avs #avsSheet .avs2-continuation {
+    display: none;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-continuation {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 0 0 9px;
+    border-bottom: 2px solid var(--avs-accent);
+    color: var(--avs-ink);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-continuation h2 {
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-continuation > span:last-child {
+    color: var(--avs-muted);
+    font-size: 8px;
+    letter-spacing: 0.045em;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-guidance {
+    margin-top: 14px;
+  }
+
+  body.print-avs #avsSheet .avs2-sec-call,
+  body.print-avs #avsSheet .avs2-sec-general {
+    grid-column: 1 / -1;
+  }
+
+  body.print-avs #avsSheet .avs2-alert {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.38fr) minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid #d7c0bd;
+    border-left: 4px solid var(--avs-alert);
+    background: var(--avs-alert-soft);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-alert-bar {
+    margin: 0;
+    color: var(--avs-alert);
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    line-height: 1.35;
+  }
+
+  body.print-avs #avsSheet .avs2-alert-body {
+    max-width: none;
+    margin: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin-top: 13px;
+    padding-top: 7px;
+    border-top: 1px solid var(--avs-rule);
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 7.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-foot > span:last-child {
+    text-align: right;
+  }
+}

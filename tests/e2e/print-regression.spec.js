@@ -80,6 +80,29 @@ async function preparePrintableInjection(page) {
     .toHaveText('Administration documented');
 }
 
+async function prepareInitiationInjection(page) {
+  await bootWorkstation(page);
+  await openWorkflow(page, 'Injection', 'administer');
+  const panel = page.locator('.wfp-panel');
+  await panel.locator('input[placeholder="Last, First"]').fill('Print, Initiation');
+  await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('09/22/1991');
+  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
+  await panel.locator('select[name="inj-dose"]').selectOption('234 mg');
+  await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.getByText('R deltoid', { exact: true }).click();
+  await panel.locator('input[type="date"]').first().fill('2026-07-30');
+  await panel.locator('input[type="time"]').first().fill('09:41');
+  await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
+  await panel.getByRole('tab', { name: 'Product', exact: true }).click();
+  await panel.locator('input[placeholder="LOT123"]').fill('START-PRINT-001');
+  await panel.locator('input[type="month"]').first().fill('2027-12');
+  await panel.getByRole('tab', { name: 'Schedule', exact: true }).click();
+  await panel.locator('label:has-text("Day 1 initiation")').click();
+}
+
 async function setFieldsAndRender(page, {
   bodyClass,
   renderName,
@@ -159,17 +182,17 @@ function canonicalPrintHtml(html) {
   // anything else; the record id is read out of the identity band and then
   // replaced wherever it appears, because the footer repeats it.
   canonical = canonical.replace(
-    /RUN(?:&nbsp;|\s)+\d{2}\/\d{2}\/\d{2} \d{4}/g,
-    'RUN <stamp>'
+    /Printed \d{2}\/\d{2}\/\d{2} \d{4}/g,
+    'Printed <stamp>'
   );
 
-  // Anchored to the marginalia record run's key/value spans. This regex has to
+  // Anchored to the patient band's semantic key/value elements. This regex has to
   // move whenever the identity markup changes: if it stops matching it fails
   // silently, leaving the per-draft record id in the hashed output and turning
   // this parity check non-deterministic rather than red.
   const recordId = (
     canonical.match(
-      /<span class="avs2-id-k">RECORD NO<\/span>\s*<span class="avs2-id-v">([^<]*)/
+      /<dt class="avs2-id-k">RECORD NO<\/dt>\s*<dd class="avs2-id-v">([^<]*)/
     )?.[1] ?? ''
   ).trim();
   // Guard against blanking the document when nothing meaningful is documented.
@@ -372,13 +395,18 @@ async function prepareMinimalAvsInjection(page) {
 test.describe('unchanged clinical print surfaces', () => {
   test('keeps the injection record-actions bar and shell out of an early AVS printout', async ({ page }) => {
     await prepareMinimalAvsInjection(page);
+    await expect(page.locator('#avsSheet .avs2-status')).toHaveText(
+      'STAFF PREVIEW - NOT FINAL'
+    );
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
-        /AFTER VISIT SUMMARY - LONG-ACTING INJECTION/i,
+        /AFTER VISIT SUMMARY/i,
+        /LONG-ACTING INJECTION/i,
         /Print, Early AVS/i
       ],
-      checkParity: false
+      checkParity: false,
+      maxPages: 1
     });
   });
 
@@ -389,20 +417,63 @@ test.describe('unchanged clinical print surfaces', () => {
       renderName: 'renderAVS',
       rootId: 'avsSheet'
     });
+    const avs = page.locator('#avsSheet');
+    await expect(avs.locator('article.avs2')).toHaveCount(1);
+    await expect(avs.locator('header.avs2-run')).toHaveCount(1);
+    await expect(avs.locator('h1.avs2-title')).toHaveCount(1);
+    await expect(avs.locator('section.avs2-id')).toHaveCount(1);
+    await expect(avs.locator('.avs2-status')).toHaveText('PATIENT COPY');
+    await expect(avs.locator('ol.avs2-spine > li.avs2-step')).toHaveCount(2);
+    await expect(avs.locator('.avs2-step-given')).toContainText('Other, 100 mg');
+    await expect(avs.getByText('Print QA, MA', { exact: true })).toHaveCount(1);
+    await expect(avs.locator('dl.avs2-pairs')).toContainText('AFTER HOURS');
+    await expect(avs.locator('.avs2-page')).toHaveCount(1);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
-        /AFTER VISIT SUMMARY - LONG-ACTING INJECTION/i,
+        /AFTER VISIT SUMMARY/i,
+        /LONG-ACTING INJECTION/i,
         /Print, Injection/i,
         // The due date is the sheet's primary call to action, and the window
         // is deliberately not printed - patients are asked for the exact day.
         /YOUR NEXT INJECTION/i,
-        /PLEASE COME IN ON THIS DAY/i,
+        /DUE DATE - CALL US TO SCHEDULE OR RESCHEDULE/i,
+        /not a scheduled appointment/i,
         /PRINT-LOT-001/i,
         // Walk-in policy and the San Bernardino number appear on every sheet.
         /9:30 AM - 4:30 PM/i,
         /\(909\) 887-6222/i
-      ]
+      ],
+      maxPages: 1
+    });
+  });
+
+  test('prints initiation guidance as two complete identified pages', async ({ page }) => {
+    await prepareInitiationInjection(page);
+    await setFieldsAndRender(page, {
+      bodyClass: 'print-avs',
+      renderName: 'renderAVS',
+      rootId: 'avsSheet'
+    });
+    const avs = page.locator('#avsSheet');
+    await expect(avs.locator('.avs2-page')).toHaveCount(2);
+    await expect(avs.locator('footer.avs2-foot')).toHaveCount(2);
+    await expect(avs.locator('footer.avs2-foot').first()).toContainText('Page 1 of 2');
+    await expect(avs.locator('footer.avs2-foot').last()).toContainText('Page 2 of 2');
+    await expect(avs.locator('.avs2-continuation')).toContainText(
+      /Print, Initiation - DOB 09\/22\/1991/i
+    );
+    await expectPrintContract(page, {
+      rootId: 'avsSheet',
+      content: [
+        /STARTING SERIES - DOSE 1 OF 2/i,
+        /Come back for your second starting injection/i,
+        /After Visit Summary - Continued/i,
+        /START-PRINT-001/i
+      ],
+      minPages: 2,
+      maxPages: 2,
+      checkParity: false
     });
   });
 
