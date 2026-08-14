@@ -267,7 +267,7 @@ const timingNoteText = (
   const daysPhrase = days === null ? "" : `${days} day${days === 1 ? "" : "s"} since prior inj`;
   if (timing.state === "ok") {
     // The actual prior-dose -> administration span, not the theoretical
-    // permitted window - a chart reviewer wants to see what happened, and
+    // scheduling window - a chart reviewer wants to see what happened, and
     // "within expected maintenance interval" already says it was on time.
     const range =
       encounter.priorDoseDate && encounter.administrationDate
@@ -279,11 +279,7 @@ const timingNoteText = (
     return `${daysPhrase || "Timing reviewed"}; outside routine maintenance interval. Med-specific missed-dose guidance reviewed.${lateDoseReviewText}`;
   }
   if (timing.relativeToExpected) {
-    const cadencePosition =
-      timing.relativeToExpected === "on"
-        ? "matched the calculated expected cadence date"
-        : "was before the calculated expected cadence date";
-    return `${daysPhrase || "Timing reviewed"}; administration date ${cadencePosition}. Active-order timing reviewed.`;
+    return `${daysPhrase || "Timing reviewed"}; administration date was earlier than the displayed scheduling window. Active-order timing review required.`;
   }
   const reinit = phase === "reinitiation" ? "Re-initiation interval" : "Interval";
   return daysPhrase
