@@ -102,23 +102,27 @@ describe("InjectionClinicalReferenceBundle", () => {
 
     for (const medication of orderReviewMedications) {
       const encounter = administered(medication.key);
+      const intervalKey = medication.intervalKey;
+      if (!intervalKey) {
+        throw new Error(`${medication.key} is missing its maintenance interval`);
+      }
       encounter.dose = medication.doses[0] ?? "100 mg";
       encounter.route = medication.route;
       encounter.site = medication.defaultSite || "R deltoid per active order";
-      encounter.intervalKey = medication.intervalKey;
+      encounter.intervalKey = intervalKey;
       const expectedDate = calculateNextInjectionDate(
         medication,
-        encounter.intervalKey,
+        intervalKey,
         encounter.priorDoseDate,
       );
-      const window = effectiveInjectionWindow(medication, encounter.intervalKey);
+      const window = effectiveInjectionWindow(medication, intervalKey);
       const earliestDate = addCalendarDays(expectedDate, -window.windowBefore);
       const latestDate = addCalendarDays(expectedDate, window.windowAfter);
       const evaluateAt = (administrationDate: string) => {
         encounter.administrationDate = administrationDate;
         encounter.nextDoseDate = calculateNextInjectionDate(
           medication,
-          encounter.intervalKey,
+          intervalKey,
           administrationDate,
         );
         return InjectionEngine.evaluate(encounter, { today: administrationDate });
