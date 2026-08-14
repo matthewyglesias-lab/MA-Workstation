@@ -140,9 +140,17 @@ export interface InjectionAdministrationDetails {
   exceptionRecipient?: string;
   exceptionTime?: string;
   exceptionOutcome?: string;
-  /** Staff's brief acknowledgement of a late-dose warning; never blocks finalizing. */
+  /**
+   * Staff's structured review of a late-dose warning. This never overrides an
+   * unrelated clinical stop and never prevents truthful documentation of an
+   * administration that already occurred.
+   */
   lateDoseReview?: "" | "provider-authorized" | "other";
   lateDoseReviewNote?: string;
+  lateDoseReviewProvider?: string;
+  lateDoseReviewTime?: string;
+  /** Binds the review to the exact medication/cadence/date facts reviewed. */
+  lateDoseReviewFingerprint?: string;
   /** Optional one-tap note additions; never pre-checked/pre-selected, never required. */
   siteAssessed?: boolean;
   postInjectionObservation?: boolean;
@@ -198,6 +206,45 @@ export interface InjectionEncounter {
   details?: InjectionAdministrationDetails;
 }
 
+/**
+ * A provider review must never silently carry forward after the medication,
+ * dose, cadence, visit reason, or relevant dates change. The fingerprint is
+ * persisted with the review and rechecked before it is displayed or emitted
+ * into documentation.
+ */
+export const injectionTimingReviewFingerprint = (
+  encounter: InjectionEncounter,
+): string =>
+  JSON.stringify([
+    encounter.medicationKey,
+    encounter.dose.trim(),
+    encounter.intervalKey,
+    encounter.reason,
+    encounter.priorDoseDate,
+    encounter.administrationDate,
+    encounter.initiation?.protocol ?? "",
+    encounter.initiation?.day1Date ?? "",
+    encounter.initiation?.sustennaOrder ?? "",
+  ]);
+
+export const hasCurrentLateDoseReview = (
+  encounter: InjectionEncounter,
+): boolean => {
+  const details = encounter.details;
+  if (
+    !details?.lateDoseReview ||
+    details.lateDoseReviewFingerprint !== injectionTimingReviewFingerprint(encounter)
+  ) {
+    return false;
+  }
+  if (details.lateDoseReview === "provider-authorized") {
+    return Boolean(
+      details.lateDoseReviewProvider?.trim() && details.lateDoseReviewTime?.trim(),
+    );
+  }
+  return Boolean(details.lateDoseReviewNote?.trim());
+};
+
 export interface InjectionEngineContext {
   today?: string;
   previousSite?: string;
@@ -212,8 +259,15 @@ export interface InjectionTimingEvaluation {
   earliestDate?: string;
   latestDate?: string;
   cadenceLabel?: string;
-  /** True only for a warning specifically because the dose was given after the window, not before it or for another reason. */
+  /** True only when the administration is after the applicable window or expected-cadence boundary. */
   late: boolean;
+  /**
+   * Order-verification products do not expose a calculated permitted window,
+   * but the expected cadence date is still useful operational context. This
+   * lets the UI distinguish "due today" from a genuinely overdue dose without
+   * treating the calculated date as clinical clearance.
+   */
+  relativeToExpected?: "before" | "on" | "after";
   message: string;
 }
 
@@ -1076,6 +1130,18 @@ const evaluateTimingWithCadence = (
     };
   }
   if (medication.timingMode === "orderVerify") {
+    const relativeToExpected =
+      encounter.administrationDate < expectedDate
+        ? "before"
+        : encounter.administrationDate > expectedDate
+          ? "after"
+          : "on";
+    const timingSummary =
+      relativeToExpected === "on"
+        ? `matches the expected ${cadence.label} date ${expectedDate}`
+        : relativeToExpected === "after"
+          ? `is after the expected ${cadence.label} date ${expectedDate}`
+          : `is before the expected ${cadence.label} date ${expectedDate}`;
     return {
       state: "warning",
       daysSincePrior,
@@ -1085,8 +1151,9 @@ const evaluateTimingWithCadence = (
       earliestDate: "",
       latestDate: "",
       cadenceLabel: cadence.label,
-      late: false,
-      message: `${daysSincePrior} day(s) since the prior dose. Expected ${cadence.label} date: ${expectedDate}. Verify timing and any re-initiation decision against the active provider order and current product information.`,
+      late: relativeToExpected === "after",
+      relativeToExpected,
+      message: `${daysSincePrior} day(s) since the prior dose; this ${timingSummary}. Verify timing and any re-initiation decision against the active provider order and current product information.`,
     };
   }
 

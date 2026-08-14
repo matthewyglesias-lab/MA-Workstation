@@ -113,10 +113,22 @@ function presentationReadiness(
     return { readiness: legacy, typedReady: false };
   }
   const projection = projectClinicalReadiness(workflow, evaluation);
+  const injectionReadyToLock =
+    workflow === 'administer' &&
+    (evaluation.output as { recordStatus?: string }).recordStatus === 'ready-to-lock';
   return {
     readiness: projection.items,
-    typedReady: projection.readiness === 'ready',
-    firstBlockingDetail: projection.firstBlockingDetail,
+    // Injection warnings are review findings, not unfinished fields. The
+    // injection engine already exposes the stricter, disposition-aware lock
+    // decision, so use it instead of requiring the generic readiness state to
+    // be completely warning-free. Otherwise an on-cadence product that still
+    // requires active-order review (for example Vivitrol) can never reach the
+    // local attestation dialog.
+    typedReady: projection.readiness === 'ready' || injectionReadyToLock,
+    // A warning may be the first actionable review item, but it must not be
+    // described as the first *blocker* in the record action strip.
+    firstBlockingDetail:
+      evaluation.stops.length > 0 ? projection.firstBlockingDetail : undefined,
   };
 }
 
