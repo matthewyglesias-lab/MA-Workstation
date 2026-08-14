@@ -103,6 +103,87 @@ async function prepareInitiationInjection(page) {
   await panel.locator('label:has-text("Day 1 initiation")').click();
 }
 
+async function prepareVivitrolInjection(page) {
+  await bootWorkstation(page);
+  await openWorkflow(page, 'Injection', 'administer');
+  const panel = page.locator('.wfp-panel');
+  await panel.locator('input[placeholder="Last, First"]').fill('Print, Vivitrol');
+  await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/12/1977');
+  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Vivitrol' });
+  await panel.locator('select[name="inj-dose"]').selectOption({ label: '380 mg' });
+  await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.getByText('R ventrogluteal', { exact: true }).click();
+  await panel.locator('input[type="date"]').first().fill('2026-08-14');
+  await panel.locator('input[type="time"]').first().fill('14:59');
+  await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
+
+  await panel.getByRole('tab', { name: 'Product', exact: true }).click();
+  await panel.locator('input[placeholder="LOT123"]').fill('VIV-PRINT-001');
+  await panel.locator('input[type="month"]').first().fill('2028-07');
+
+  await panel.getByRole('tab', { name: 'Schedule', exact: true }).click();
+  await panel.locator('input[type="date"]').nth(1).fill('2026-09-11');
+}
+
+async function expectAvsPagesToFit(page) {
+  const integrity = await page.locator('#avsSheet').evaluate(root => {
+    const overflowState = node => {
+      const style = getComputedStyle(node);
+      return {
+        node: node.id ? `#${node.id}` : node.tagName.toLowerCase(),
+        overflowX: style.overflowX,
+        overflowY: style.overflowY
+      };
+    };
+    const pages = [...root.querySelectorAll('.avs2-page')].map((avsPage, index) => {
+      const footer = avsPage.querySelector(':scope > .avs2-foot');
+      const content = [...avsPage.children].filter(child => child !== footer);
+      const contentBottom = content.length
+        ? Math.max(...content.map(child => child.getBoundingClientRect().bottom))
+        : avsPage.getBoundingClientRect().top;
+      const footerTop = footer?.getBoundingClientRect().top ??
+        avsPage.getBoundingClientRect().bottom;
+      const clippingNodes = [...avsPage.querySelectorAll('*')]
+        .filter(node => {
+          const style = getComputedStyle(node);
+          return style.overflowY !== 'visible' && node.scrollHeight - node.clientHeight > 1;
+        })
+        .map(node => node.className || node.tagName.toLowerCase());
+      return {
+        page: index + 1,
+        ownVerticalOverflow: avsPage.scrollHeight - avsPage.clientHeight,
+        footerOverlap: Math.ceil(contentBottom - footerTop),
+        clippingNodes
+      };
+    });
+    return {
+      scrollContainers: [
+        overflowState(document.documentElement),
+        overflowState(document.body),
+        overflowState(document.getElementById('print-root')),
+        overflowState(root)
+      ],
+      pages
+    };
+  });
+
+  expect(integrity.scrollContainers).toEqual([
+    { node: 'html', overflowX: 'visible', overflowY: 'visible' },
+    { node: 'body', overflowX: 'visible', overflowY: 'visible' },
+    { node: '#print-root', overflowX: 'visible', overflowY: 'visible' },
+    { node: '#avsSheet', overflowX: 'visible', overflowY: 'visible' }
+  ]);
+  for (const result of integrity.pages) {
+    expect(result.ownVerticalOverflow, `AVS page ${result.page} overflows vertically`).toBeLessThanOrEqual(1);
+    expect(result.footerOverlap, `AVS page ${result.page} content overlaps its footer`).toBeLessThanOrEqual(0);
+    expect(result.clippingNodes, `AVS page ${result.page} contains a vertical clip`).toEqual([]);
+  }
+}
+
 async function setFieldsAndRender(page, {
   bodyClass,
   renderName,
@@ -428,6 +509,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.getByText('Print QA, MA', { exact: true })).toHaveCount(1);
     await expect(avs.locator('dl.avs2-pairs')).toContainText('AFTER HOURS');
     await expect(avs.locator('.avs2-page')).toHaveCount(1);
+    await expectAvsPagesToFit(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
@@ -448,6 +530,39 @@ test.describe('unchanged clinical print surfaces', () => {
     });
   });
 
+  test('paginates Vivitrol safety guidance without clipping or printable scrollbars', async ({ page }) => {
+    await prepareVivitrolInjection(page);
+    await setFieldsAndRender(page, {
+      bodyClass: 'print-avs',
+      renderName: 'renderAVS',
+      rootId: 'avsSheet'
+    });
+    const avs = page.locator('#avsSheet');
+    await expect(avs.locator('.avs2-page')).toHaveCount(2);
+    await expect(avs.locator('footer.avs2-foot')).toHaveCount(2);
+    await expect(avs.locator('footer.avs2-foot').first()).toContainText('Page 1 of 2');
+    await expect(avs.locator('footer.avs2-foot').last()).toContainText('Page 2 of 2');
+    await expect(avs.locator('.avs2-page-primary')).toContainText(
+      'IMPORTANT - OPIOID TOLERANCE AND OVERDOSE RISK'
+    );
+    await expect(avs.locator('.avs2-page-continuation')).toContainText(
+      'EMERGENCY - CALL 911 OR GO TO THE NEAREST ER NOW IF'
+    );
+    await expectAvsPagesToFit(page);
+    await expectPrintContract(page, {
+      rootId: 'avsSheet',
+      content: [
+        /Vivitrol, 380 mg/i,
+        /CALL BEFORE YOU COME IN/i,
+        /After Visit Summary - Continued/i,
+        /VIV-PRINT-001/i
+      ],
+      minPages: 2,
+      maxPages: 2,
+      checkParity: false
+    });
+  });
+
   test('prints initiation guidance as two complete identified pages', async ({ page }) => {
     await prepareInitiationInjection(page);
     await setFieldsAndRender(page, {
@@ -463,6 +578,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('.avs2-continuation')).toContainText(
       /Print, Initiation - DOB 09\/22\/1991/i
     );
+    await expectAvsPagesToFit(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
