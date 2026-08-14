@@ -45,14 +45,6 @@ export type AvsSiteRegion =
 /** How hard the sheet pushes the patient to hit the exact due date. */
 export type AvsDateFirmness = "standard" | "firm" | "call-first";
 
-/** Staff previews and releasable patient copies are deliberately distinct. */
-export type InjectionAvsDocumentMode = "draft" | "patient";
-
-/** Page count is selected from encounter facts, never accidental pagination. */
-export type InjectionAvsLayoutVariant =
-  | "routine-one-page"
-  | "complex-two-page";
-
 export interface InjectionAvsInput {
   patientName: string;
   patientDob: string;
@@ -82,25 +74,22 @@ export interface InjectionAvsInput {
   /** Day 1 date for the Invega Sustenna day-8 protocol. */
   day1Date: string;
   clinicPhone: string;
-  /** Fresh release-gate stops projected immediately before patient rendering. */
-  administrationStops: string[];
   /**
    * Clinical disposition: "" | "administered" | "held" | "escalated" |
-   * "provider". An empty value is valid only for a watermarked staff preview;
-   * a patient copy requires the explicit "administered" value.
+   * "provider". The AVS is printable before a disposition is chosen so staff
+   * can preview it, so an empty value must behave exactly like "administered".
+   * Only an explicit non-administration choice neutralises the sheet.
    */
   dispositionKind?: string;
   /**
    * The paired second injection, for the one-day dual protocols that give two
-   * injections in different muscles at the same visit. Product identity may
-   * differ from the primary (Asimtufii/Maintena and Aristada/Initio), so its
-   * configured product key/name are projected when available. `secondGiven`
-   * gates affirmative patient narration.
+   * injections in different muscles at the same visit. Component 2 is the same
+   * product as the primary on every protocol that populates it, so it needs no
+   * separate medication name. `secondGiven` gates the whole thing: a
+   * part-filled paired protocol must never have the sheet claim a second
+   * injection that was not administered.
    */
   secondDose?: string;
-  secondMedicationKey?: string;
-  secondMedicationName?: string;
-  secondAdministrationTime?: string;
   secondSite?: string;
   secondLot?: string;
   secondExpiration?: string;
@@ -156,31 +145,7 @@ export interface AvsTimelineStep {
   state: AvsTimelineState;
 }
 
-export interface AvsAdministrationComponent {
-  productKey: string;
-  productLabel: string;
-  dose: string;
-  route: string;
-  site: string;
-  siteRegion: AvsSiteRegion;
-  administrationTime: string;
-  lot: string;
-  expiration: string;
-  administered: boolean;
-}
-
-export interface AvsPatientSections {
-  timing: string[];
-  siteCare: string[];
-  expectedEffects: string[];
-  medicationReminders: string[];
-  callClinicReasons: string[];
-  emergencyGuidance: string[];
-}
-
 export interface InjectionAvsModel {
-  mode: InjectionAvsDocumentMode;
-  layoutVariant: InjectionAvsLayoutVariant;
   documentTitle: string;
   /** Second title line, e.g. the starting-series marker. Empty when routine. */
   documentSubtitle: string;
@@ -207,8 +172,6 @@ export interface InjectionAvsModel {
   scheduleNote: string;
   administration: AvsDataRow[];
   administrationNote: string;
-  components: AvsAdministrationComponent[];
-  patientSections: AvsPatientSections;
   /** Ordered instruction blocks between the record and the emergency banner. */
   blocks: AvsBlock[];
   emergency: AvsBlock;
@@ -233,17 +196,6 @@ const isoParts = (iso: string): [number, number, number] | null => {
   // The year bound rejects two-digit input like "26-08-05", which otherwise
   // parses as year 26 and prints as "Aug 5, 26".
   if (!y || !m || !d || y < 1000 || m < 1 || m > 12 || d < 1 || d > 31) {
-    return null;
-  }
-  // Date.UTC normalizes impossible input (2026-02-31 becomes March 3). A
-  // patient document must reject that value rather than print a contradictory
-  // weekday and date, so require an exact calendar round trip.
-  const roundTrip = new Date(Date.UTC(y, m - 1, d));
-  if (
-    roundTrip.getUTCFullYear() !== y ||
-    roundTrip.getUTCMonth() !== m - 1 ||
-    roundTrip.getUTCDate() !== d
-  ) {
     return null;
   }
   return [y, m, d];
@@ -911,8 +863,7 @@ const buildTimeline = (
   nextDose: InjectionAvsModel["nextDose"],
   nextDoseIso: string,
   medicationLabel: string,
-  finalizedAdministration: boolean,
-  explicitlyNotGiven: boolean,
+  notGiven: boolean,
 ): AvsTimelineStep[] => {
   const protocol = String(input.initiationProtocol ?? "").trim();
   const phone = input.clinicPhone;
@@ -927,7 +878,7 @@ const buildTimeline = (
   // gutter, claiming "TODAY" with nothing beside it.
   const visitNote = visitWhen ? "Today" : "";
 
-  if (explicitlyNotGiven) {
+  if (notGiven) {
     // Nothing was administered, so this step says that and nothing more: no
     // medication headline, no site, no lot or expiry. Printing product
     // traceability for a dose that never left the vial would read as a record
@@ -941,7 +892,7 @@ const buildTimeline = (
       ],
       state: "action",
     });
-  } else if (finalizedAdministration) {
+  } else {
     // The headline carries the brand name and strength only. The generic name
     // is real information but it is not what the patient recognises the
     // injection by, so it drops to the supporting line rather than diluting the
@@ -990,27 +941,10 @@ const buildTimeline = (
       detail: givenDetail,
       state: "given",
     });
-  } else {
-    const detail = [
-      input.genericName,
-      describeSite(input.site, input.route),
-    ].filter(Boolean);
-    steps.push({
-      when: visitWhen,
-      whenNote: visitNote,
-      title:
-        [medicationLabel, input.dose].filter(Boolean).join(", ") ||
-        "Treatment details awaiting final review",
-      detail: [
-        ...detail,
-        "These details are a staff preview and do not confirm that medication was administered.",
-      ],
-      state: "action",
-    });
   }
 
   /* ---- anything that has to continue in between ---- */
-  if (plan?.oralDays && plan.oralLastDay && !explicitlyNotGiven) {
+  if (plan?.oralDays && plan.oralLastDay && !notGiven) {
     // Deliberately terse. The gutter already carries the last day and the alert
     // block above carries the reasoning and the what-if-you-run-out line, so
     // restating either here would read as padding rather than emphasis.
@@ -1058,103 +992,25 @@ const REASON_SUBTITLE: Record<string, string> = {
   loading: "LOADING DOSE",
 };
 
-const secondProductFor = (
-  input: InjectionAvsInput,
-): { key: string; label: string } => {
-  const configuredKey = String(input.secondMedicationKey ?? "").trim();
-  const configuredLabel = String(input.secondMedicationName ?? "").trim();
-  if (configuredKey || configuredLabel) {
-    return {
-      key: configuredKey,
-      label: configuredLabel || "Second injection",
-    };
-  }
-  switch (String(input.initiationProtocol ?? "").trim()) {
-    case "maintena-1day":
-    case "asimtufii-1day":
-      return { key: "maintena", label: "Abilify Maintena" };
-    case "aristada-initio-sameday":
-      return String(input.medicationKey ?? "").trim() === "initio"
-        ? { key: "aristada", label: "Aristada" }
-        : { key: "initio", label: "Aristada Initio" };
-    default:
-      return { key: "", label: "Second injection" };
-  }
-};
-
 /**
  * Builds the full patient-facing model. Every branch degrades to something
  * printable: an uncatalogued medication, a missing next date, and a missing
  * site all still produce a usable sheet rather than a blank one.
  */
-export const buildInjectionAvsModel = (
-  input: InjectionAvsInput,
-  mode: InjectionAvsDocumentMode,
-): InjectionAvsModel => {
+export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsModel => {
   const profile = profileFor(input.medicationKey);
   const phone = input.clinicPhone;
   const plan = initiationPlan(input);
-  const dispositionKind = String(input.dispositionKind ?? "").trim();
-  const explicitlyNotGiven = NON_ADMINISTERED_KINDS.has(dispositionKind);
-  const finalizedAdministration = dispositionKind === "administered";
-  if (mode === "patient") {
-    if (!finalizedAdministration) {
-      throw new Error(
-        "Patient AVS release requires an explicit administered disposition.",
-      );
-    }
-    if (!Array.isArray(input.administrationStops)) {
-      throw new Error("Patient AVS release requires a fresh administration review.");
-    }
-    if (input.administrationStops.length) {
-      throw new Error("Resolve all administration stops before releasing the patient AVS.");
-    }
-  }
+  // Held, escalated, and provider-directed all mean the injection was not
+  // given. An empty kind is the ordinary mid-documentation preview state and
+  // must keep rendering the full sheet, or the deliberately loosened AVS gate
+  // stops working.
+  const notGiven = NON_ADMINISTERED_KINDS.has(
+    String(input.dispositionKind ?? "").trim(),
+  );
   const subcutaneous = /subq|subcut/i.test(input.route ?? "");
   const region = siteRegion(input.site);
   const coldChain = Boolean(profile.coldChain);
-
-  const components: AvsAdministrationComponent[] = [
-    {
-      productKey: input.medicationKey,
-      productLabel: input.medicationName || "Medication not documented",
-      dose: input.dose,
-      route: input.route,
-      site: describeSite(input.site, input.route) || input.site,
-      siteRegion: region,
-      administrationTime: input.administrationTime,
-      lot: input.lot,
-      expiration: formatExpiration(input.expiration),
-      administered: finalizedAdministration,
-    },
-  ];
-  if (hasSecondInjection(input)) {
-    const secondProduct = secondProductFor(input);
-    components.push({
-      productKey: secondProduct.key,
-      productLabel: secondProduct.label,
-      dose: String(input.secondDose ?? "").trim(),
-      route: input.route,
-      site:
-        describeSite(String(input.secondSite ?? ""), input.route) ||
-        String(input.secondSite ?? ""),
-      siteRegion: siteRegion(String(input.secondSite ?? "")),
-      administrationTime:
-        String(input.secondAdministrationTime ?? "").trim() ||
-        input.administrationTime,
-      lot: String(input.secondLot ?? "").trim(),
-      expiration: formatExpiration(String(input.secondExpiration ?? "")),
-      administered: finalizedAdministration && Boolean(input.secondGiven),
-    });
-  }
-  const reason = String(input.reason ?? "").trim();
-  const layoutVariant: InjectionAvsLayoutVariant =
-    input.initiationProtocol ||
-    ["initiation", "reinit", "loading"].includes(reason) ||
-    Boolean(plan?.oralDays) ||
-    components.length > 1
-      ? "complex-two-page"
-      : "routine-one-page";
 
   /* ---- next dose ---- */
   const nextDoseIso = plan?.nextDoseDateOverride || input.nextDoseDate;
@@ -1164,7 +1020,7 @@ export const buildInjectionAvsModel = (
   const notes: string[] = [];
   if (!dateLong) {
     notes.push(
-      `Your next injection due date has not been set yet. Call ${phone} to schedule it before you leave or as soon as you can.`,
+      `Your next injection has not been scheduled yet. Call ${phone} to book it before you leave or as soon as you can.`,
     );
   } else if (firmness === "firm") {
     notes.push(
@@ -1183,11 +1039,11 @@ export const buildInjectionAvsModel = (
   const contactLines: AvsDataRow[] = coldChain
     ? [
         { label: "CALL FIRST", value: phone },
-        { label: "INJECTION HOURS", value: "Monday-Friday, 9:30 AM-4:30 PM" },
+        { label: "WALK-IN HOURS", value: "9:30 AM - 4:30 PM  (appointments preferred)" },
       ]
     : [
-        { label: "CALL TO SCHEDULE", value: phone },
-        { label: "INJECTION HOURS", value: "Monday-Friday, 9:30 AM-4:30 PM" },
+        { label: "CALL OR SCHEDULE", value: phone },
+        { label: "WALK-IN HOURS", value: "9:30 AM - 4:30 PM  (appointments preferred)" },
       ];
 
   /* ---- lead alerts ---- */
@@ -1197,17 +1053,8 @@ export const buildInjectionAvsModel = (
   // counts days from an injection. Printing either after a held encounter would
   // be actively wrong, so they are gated. The cold-chain alert is about the
   // next visit and stays either way.
-  if (profile.leadAlert && finalizedAdministration) leadAlerts.push(profile.leadAlert);
-  if (plan?.alert && finalizedAdministration) leadAlerts.push(plan.alert);
-  if (plan?.alert && mode === "draft" && !explicitlyNotGiven) {
-    leadAlerts.push({
-      heading: "ORAL MEDICATION PLAN — STAFF MUST CONFIRM",
-      emphasis: true,
-      paragraphs: [
-        "If administration is finalized today, confirm the protocol-generated oral-overlap instructions and recorded oral status before releasing a patient copy.",
-      ],
-    });
-  }
+  if (profile.leadAlert && !notGiven) leadAlerts.push(profile.leadAlert);
+  if (plan?.alert && !notGiven) leadAlerts.push(plan.alert);
   if (coldChain) {
     leadAlerts.push({
       heading: `CALL BEFORE YOU COME IN - ${phone}`,
@@ -1234,12 +1081,7 @@ export const buildInjectionAvsModel = (
     .filter(Boolean)
     .join("  ");
   if (when) administration.push({ label: "DATE / TIME", value: when });
-  if (input.administeredBy) {
-    administration.push({
-      label: finalizedAdministration ? "GIVEN BY" : "DOCUMENTED BY",
-      value: input.administeredBy,
-    });
-  }
+  if (input.administeredBy) administration.push({ label: "GIVEN BY", value: input.administeredBy });
   const traceParts = [input.lot, formatExpiration(input.expiration)].filter(Boolean);
   if (traceParts.length) {
     administration.push({ label: "LOT / EXP", value: traceParts.join(" / ") });
@@ -1250,7 +1092,7 @@ export const buildInjectionAvsModel = (
   const blocks: AvsBlock[] = [];
   // Protocol narration ("today you received two injections...") presumes the
   // dose landed.
-  if (plan?.block && finalizedAdministration) blocks.push(plan.block);
+  if (plan?.block && !notGiven) blocks.push(plan.block);
 
   blocks.push({
     heading: "WHY YOUR TIMING MATTERS FOR THIS MEDICATION",
@@ -1276,11 +1118,11 @@ export const buildInjectionAvsModel = (
   ]);
   // No site was used and nothing was absorbed, so neither aftercare nor
   // what-to-expect applies to a visit where the injection was not given.
-  if (siteCare.length && !explicitlyNotGiven) {
+  if (siteCare.length && !notGiven) {
     blocks.push({ heading: "CARING FOR THE INJECTION SITE", paragraphs: siteCare });
   }
 
-  if (profile.expect?.length && finalizedAdministration) {
+  if (profile.expect?.length && !notGiven) {
     blocks.push({ heading: "WHAT TO EXPECT", items: profile.expect });
   }
 
@@ -1292,15 +1134,15 @@ export const buildInjectionAvsModel = (
     /injection site|the site/i.test(item),
   );
   const callItems = [
-    ...(explicitlyNotGiven
+    ...(notGiven
       ? profileCallItems.filter((item) => !/injection site|the site/i.test(item))
       : profileCallItems),
-    ...(hasOwnSiteWarning || explicitlyNotGiven
+    ...(hasOwnSiteWarning || notGiven
       ? []
       : ["Pain, swelling, warmth, drainage, or a rash at the injection site gets worse."]),
     dateLong
       ? "You cannot make your due date - call before that day, not after."
-      : "You still do not have a due date for your next injection.",
+      : "You still do not have your next injection scheduled.",
     "Anything feels unusual or worries you.",
   ];
   blocks.push({ heading: `CALL THE CLINIC AT ${phone} IF`, items: callItems });
@@ -1308,39 +1150,20 @@ export const buildInjectionAvsModel = (
   /* ---- subtitle ---- */
   // Overrides any initiation subtitle: "STARTING SERIES - DOSE 1 OF 2" on a
   // sheet where dose 1 was never given would be actively misleading.
-  const documentSubtitle = explicitlyNotGiven
+  const documentSubtitle = notGiven
     ? "INJECTION NOT GIVEN TODAY"
-    : !finalizedAdministration
-      ? "STAFF PREVIEW — ADMINISTRATION NOT FINALIZED"
-      : plan?.subtitle ?? REASON_SUBTITLE[String(input.reason ?? "").trim()] ?? "";
+    : plan?.subtitle ?? REASON_SUBTITLE[String(input.reason ?? "").trim()] ?? "";
 
   const nextDose = {
     dateLong,
-    heading: plan?.nextHeading ?? "YOUR NEXT INJECTION IS DUE",
-    instruction: dateLong ? "CALL TO SCHEDULE OR RESCHEDULE" : "CALL TO SCHEDULE",
+    heading: plan?.nextHeading ?? "YOUR NEXT INJECTION",
+    instruction: dateLong ? "PLEASE COME IN ON THIS DAY" : "NOT YET SCHEDULED",
     firmness,
     notes,
     contactLines,
   };
 
-  const medicationReminders = explicitlyNotGiven
-    ? []
-    : finalizedAdministration
-      ? (profile.expect ?? []).filter((item) =>
-          /oral medication|medicines|prescribed|do not stop/i.test(item),
-        )
-      : [
-          "Keep taking medicines exactly as prescribed. Do not change or stop them unless your provider tells you to.",
-        ];
-  const expectedEffects = finalizedAdministration
-    ? (profile.expect ?? []).filter(
-        (item) => !medicationReminders.includes(item),
-      )
-    : [];
-
   return {
-    mode,
-    layoutVariant,
     documentTitle: "AFTER VISIT SUMMARY - LONG-ACTING INJECTION",
     documentSubtitle,
     identity: [
@@ -1349,10 +1172,7 @@ export const buildInjectionAvsModel = (
       { label: "PROVIDER", value: input.orderingProvider || "-" },
       { label: "RECORD NO", value: input.recordNumber || "-" },
       { label: "VISIT DATE", value: formatShortDate(input.administrationDate) || "-" },
-      {
-        label: finalizedAdministration ? "GIVEN BY" : "DOCUMENTED BY",
-        value: input.administeredBy || "-",
-      },
+      { label: "GIVEN BY", value: input.administeredBy || "-" },
     ],
     nextDose,
     leadAlerts,
@@ -1362,24 +1182,14 @@ export const buildInjectionAvsModel = (
       nextDose,
       nextDoseIso,
       input.medicationName,
-      finalizedAdministration,
-      explicitlyNotGiven,
+      notGiven,
     ),
     schedule: plan?.schedule ?? [],
     scheduleNote: plan?.scheduleNote ?? "",
-    administration: finalizedAdministration ? administration : [],
-    administrationNote: !finalizedAdministration
+    administration: notGiven ? [] : administration,
+    administrationNote: notGiven
       ? ""
       : doseNote(input.medicationKey, input.dose, input.intervalKey),
-    components,
-    patientSections: {
-      timing: profile.timingReason,
-      siteCare: explicitlyNotGiven ? [] : siteCare,
-      expectedEffects,
-      medicationReminders,
-      callClinicReasons: callItems,
-      emergencyGuidance: profile.emergency ?? ANTIPSYCHOTIC_ER,
-    },
     blocks,
     emergency: {
       heading: "EMERGENCY - CALL 911 OR GO TO THE NEAREST ER NOW IF",
