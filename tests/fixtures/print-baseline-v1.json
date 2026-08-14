@@ -11,10 +11,10 @@
   },
   "outputs": {
     "avsSheet": {
-      "sha256": "82302c655dc3d5641306b93f531868dfec98f9c3d45339a558134ed9872cf5f2",
-      "bytes": 4347,
+      "sha256": "daec291da30ed9c9199938d95dff35ff41de9e4d9c10a332f44f805ca367cb88",
+      "bytes": 5705,
       "topLevelClass": "avs2",
-      "note": "Intentionally diverges from the production commit. The injection After Visit Summary was rebuilt as a marginalia sheet organised around a dated dose spine; its patient wording and its timeline live in src/domain/injection-avs-content.ts and its markup in src/domain/injection-avs-render.ts. Every other print root in this fixture is still pinned to production output."
+      "note": "Intentionally diverges from the production commit. The injection After Visit Summary now uses a mature clinical-document hierarchy with a semantic patient band, dated treatment timeline, restrained due-date emphasis, and deterministic routine/complex pages. Patient wording and timeline rules remain in src/domain/injection-avs-content.ts; semantic markup remains in src/domain/injection-avs-render.ts. Every other print root in this fixture is still pinned to production output."
     },
     "injWorksheetSheet": {
       "sha256": "b0edc70d9f4cbded0b3b3979484488aa968b81c0df8e8648d8124e0fc2fd6380",

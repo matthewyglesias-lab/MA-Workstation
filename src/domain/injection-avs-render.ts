@@ -68,18 +68,33 @@ const renderBlockBody = (block: AvsBlock): string => {
   return parts.join("");
 };
 
-/**
- * A section on the page grid: heading in the gutter, content in the wide
- * column. The gutter label is allowed to wrap - a two- or three-line
- * right-aligned label is the marginalia device working as intended, not an
- * overflow.
- */
-const renderSection = (heading: string, body: string): string =>
-  `<section class="avs2-sec">` +
-  `<div class="avs2-lab">${escapeHtml(heading)}</div>` +
-  `<div class="avs2-rail"></div>` +
-  `<div class="avs2-b">${body}</div>` +
-  `</section>`;
+const sectionVariant = (heading: string): string => {
+  const normalized = heading.toLowerCase();
+  if (normalized === "contact") return "contact";
+  if (normalized.startsWith("call the clinic")) return "call";
+  if (normalized.includes("timing matters")) return "timing";
+  if (normalized.includes("injection site")) return "site";
+  if (normalized.includes("what to expect")) return "expect";
+  return "general";
+};
+
+const sectionId = (heading: string): string =>
+  `avs-${sectionVariant(heading)}-${heading
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}`;
+
+/** A patient instruction section with a full-width, scan-friendly heading. */
+const renderSection = (heading: string, body: string): string => {
+  const variant = sectionVariant(heading);
+  const id = sectionId(heading);
+  return (
+    `<section class="avs2-sec avs2-sec-${variant}" aria-labelledby="${id}">` +
+    `<h2 class="avs2-lab" id="${id}">${escapeHtml(heading)}</h2>` +
+    `<div class="avs2-b">${body}</div>` +
+    `</section>`
+  );
+};
 
 /**
  * Alerts break the grid on purpose. Spanning the full measure over a heavy rule
@@ -87,11 +102,18 @@ const renderSection = (heading: string, body: string): string =>
  * gone, and it keeps long safety headings ("EMERGENCY - CALL 911 OR GO TO THE
  * NEAREST ER NOW IF") out of a narrow gutter that would wrap them to four lines.
  */
-const renderAlert = (block: AvsBlock): string =>
-  `<div class="avs2-alert">` +
-  `<div class="avs2-alert-bar">${escapeHtml(block.heading)}</div>` +
-  `<div class="avs2-alert-body">${renderBlockBody(block)}</div>` +
-  `</div>`;
+const renderAlert = (block: AvsBlock): string => {
+  const id = `avs-alert-${block.heading
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}`;
+  return (
+    `<section class="avs2-alert" aria-labelledby="${id}">` +
+    `<h2 class="avs2-alert-bar" id="${id}">${escapeHtml(block.heading)}</h2>` +
+    `<div class="avs2-alert-body">${renderBlockBody(block)}</div>` +
+    `</section>`
+  );
+};
 
 const renderBlock = (block: AvsBlock): string =>
   block.emphasis
@@ -101,8 +123,7 @@ const renderBlock = (block: AvsBlock): string =>
 /**
  * One node on the spine: date in the gutter, marker on the rail, step body.
  *
- * `instruction` is the model's imperative for the due step ("PLEASE COME IN ON
- * THIS DAY", or "NOT YET SCHEDULED" when no date is documented). It rides above
+ * `instruction` is the model's imperative for the due step. It rides above
  * the step's caveats so the call to action is read before the exceptions to it.
  */
 const renderStep = (step: AvsTimelineStep, instruction = ""): string => {
@@ -122,7 +143,7 @@ const renderStep = (step: AvsTimelineStep, instruction = ""): string => {
     : "";
 
   return (
-    `<div class="avs2-step avs2-step-${escapeHtml(step.state)}">` +
+    `<li class="avs2-step avs2-step-${escapeHtml(step.state)}">` +
     `<div class="${whenClass}">${when}${whenNote}</div>` +
     `<div class="avs2-rail"><i class="avs2-node"></i></div>` +
     `<div class="${bodyClass}">` +
@@ -134,7 +155,7 @@ const renderStep = (step: AvsTimelineStep, instruction = ""): string => {
       ? `<div class="avs2-step-instr">${escapeHtml(instruction)}</div>`
       : "") +
     paragraphs(step.detail) +
-    `</div></div>`
+    `</div></li>`
   );
 };
 
@@ -150,31 +171,66 @@ const renderSpine = (
   // last nodes instead of running past a marker-less row.
   const steps = timeline
     .map((step) => {
-      const isDue = step.state === "due";
       const detail =
         step.state === "given" && administrationNote
           ? [...step.detail, administrationNote]
           : step.detail;
-      return renderStep({ ...step, detail }, isDue ? instruction : "");
+      return renderStep(
+        { ...step, detail },
+        step.state === "due" ? instruction : "",
+      );
     })
     .join("");
-  return `<div class="avs2-spine">${steps}</div>`;
+  return `<ol class="avs2-spine" aria-label="Treatment timeline">${steps}</ol>`;
 };
 
-/** The tier-3 record run: small, quiet, and deliberately last. */
-const renderRecord = (identity: readonly AvsDataRow[]): string =>
-  `<div class="avs2-id">` +
-  identity
+const IDENTITY_ORDER = [
+  "PATIENT",
+  "DOB",
+  "RECORD NO",
+  "PROVIDER",
+  "VISIT DATE",
+  "GIVEN BY",
+];
+
+/** Patient and visit facts, promoted from a footer run to a visible banner. */
+const renderRecord = (identity: readonly AvsDataRow[]): string => {
+  const ordered = [...identity].sort(
+    (left, right) =>
+      IDENTITY_ORDER.indexOf(left.label) - IDENTITY_ORDER.indexOf(right.label),
+  );
+  return (
+    `<section class="avs2-id" aria-label="Patient and visit details"><dl>` +
+    ordered
     .filter((row) => String(row.value ?? "").trim())
     .map(
       (row) =>
-        `<span class="avs2-id-pair">` +
-        `<span class="avs2-id-k">${escapeHtml(row.label)}</span> ` +
-        `<span class="avs2-id-v">${escapeHtml(row.value)}</span>` +
-        `</span>`,
+        `<div class="avs2-id-pair avs2-id-${row.label
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")}">` +
+        `<dt class="avs2-id-k">${escapeHtml(row.label)}</dt>` +
+        `<dd class="avs2-id-v">${escapeHtml(row.value)}</dd>` +
+        `</div>`,
     )
     .join("") +
-  `</div>`;
+    `</dl></section>`
+  );
+};
+
+const renderTitle = (title: string, status: string): string => {
+  const [primary, ...rest] = title.split(" - ");
+  const descriptor = rest.join(" - ");
+  return (
+    `<div class="avs2-heading">` +
+    `<h1 class="avs2-title" id="avs-document-title">${escapeHtml(primary)}` +
+    (descriptor
+      ? `<span class="avs2-title-detail">${escapeHtml(descriptor)}</span>`
+      : "") +
+    `</h1>` +
+    `<span class="avs2-status">${escapeHtml(status)}</span>` +
+    `</div>`
+  );
+};
 
 export interface InjectionAvsChrome {
   facilityName: string;
@@ -208,40 +264,69 @@ export const renderInjectionAvsHtml = (
     ? renderSection("Contact", pairList(model.nextDose.contactLines))
     : "";
 
+  const patientName =
+    model.identity.find((row) => row.label === "PATIENT")?.value ?? "";
+  const patientDob = model.identity.find((row) => row.label === "DOB")?.value ?? "";
+  const complex = model.timeline.length > 2 || Boolean(model.documentSubtitle);
+  const continuation = complex
+    ? `<header class="avs2-continuation">` +
+      `<h2>After Visit Summary - Continued</h2>` +
+      `<span>${escapeHtml(patientName)} - DOB ${escapeHtml(patientDob)}</span>` +
+      `</header>`
+    : "";
+  const renderFooter = (pageNumber: number, pageTotal: number): string =>
+    `<footer class="avs2-foot">` +
+    `<span class="avs2-foot-patient">${escapeHtml(patientName)} - DOB ${escapeHtml(patientDob)}</span>` +
+    `<span>${escapeHtml(chrome.formId)} - ${escapeHtml(chrome.reportId)}` +
+    ` - Page ${pageNumber} of ${pageTotal}` +
+    (chrome.runStamp ? ` - Printed ${escapeHtml(chrome.runStamp)}` : "") +
+    `</span>` +
+    `</footer>`;
+
+  const guidance =
+    `<div class="avs2-guidance">${model.blocks.map(renderBlock).join("")}</div>` +
+    renderAlert(model.emergency);
+
   // The spine is the record of what was given and when, so model.administration
   // is not drawn a second time here; its dose-specific note rides with the step
   // it belongs to.
   return (
-    `<div class="avs2">` +
-    `<div class="avs2-run">` +
-    `<div><span class="avs2-run-name">${escapeHtml(chrome.facilityName)}</span>` +
+    `<article class="avs2${complex ? " avs2-complex" : ""}" aria-labelledby="avs-document-title">` +
+    `<div class="avs2-page avs2-page-primary">` +
+    `<header class="avs2-run">` +
+    `<div class="avs2-brand">` +
+    `<span class="avs2-run-name">${escapeHtml(chrome.facilityName)}</span>` +
     `<span>${escapeHtml(chrome.facilityUnit)}</span>` +
-    `<span>TEL ${escapeHtml(chrome.clinicPhone)}</span></div>` +
-    // No page counter. The sheet reliably runs to two printed pages now that it
-    // is set in Palatino at reading size, and the old hardcoded "PAGE 1 OF 1"
-    // was simply wrong on every one of them. A real count cannot be computed
-    // here - it is a paged-media property, not a property of the markup - and a
-    // patient handout does not need one, so it is dropped rather than faked.
-    `<div><span>RUN&nbsp; ${escapeHtml(chrome.runStamp)}</span>` +
-    `<span>RPT&nbsp; ${escapeHtml(chrome.reportId)}</span></div>` +
     `</div>` +
-    `<div class="avs2-title">${escapeHtml(model.documentTitle)}</div>` +
+    `<div class="avs2-clinic-contact">` +
+    `<span>San Bernardino clinic</span>` +
+    `<span>${escapeHtml(chrome.clinicPhone)}</span>` +
+    `</div>` +
+    `</header>` +
+    renderTitle(model.documentTitle, model.documentStatus) +
     subtitle +
+    renderRecord(model.identity) +
     model.leadAlerts.map(renderAlert).join("") +
+    `<section class="avs2-overview" aria-labelledby="avs-treatment-summary">` +
+    `<h2 class="avs2-overview-title" id="avs-treatment-summary">Treatment summary</h2>` +
     renderSpine(
       model.timeline,
       model.administrationNote,
       model.nextDose.instruction,
     ) +
+    `</section>` +
     contact +
-    model.blocks.map(renderBlock).join("") +
-    renderAlert(model.emergency) +
-    renderRecord(model.identity) +
-    `<div class="avs2-foot">` +
-    `<span>${escapeHtml(chrome.formId)}</span>` +
-    `<span>END OF DOCUMENT</span>` +
+    (complex ? "" : guidance) +
+    renderFooter(1, complex ? 2 : 1) +
     `</div>` +
-    `</div>`
+    (complex
+      ? `<div class="avs2-page avs2-page-continuation">` +
+        continuation +
+        guidance +
+        renderFooter(2, 2) +
+        `</div>`
+      : "") +
+    `</article>`
   );
 };
 

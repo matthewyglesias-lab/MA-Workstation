@@ -163,7 +163,9 @@ describe("due-date framing", () => {
   it("names the exact day and never prints a come-any-day range", () => {
     const model = buildInjectionAvsModel(base());
     expect(model.nextDose.dateLong).toBe("Wednesday, September 2, 2026");
-    expect(model.nextDose.instruction).toBe("PLEASE COME IN ON THIS DAY");
+    expect(model.nextDose.instruction).toBe(
+      "DUE DATE - CALL US TO SCHEDULE OR RESCHEDULE",
+    );
     const text = allText(base());
     expect(text).not.toMatch(/any day from/i);
     expect(text).not.toMatch(/come in between/i);
@@ -171,14 +173,15 @@ describe("due-date framing", () => {
 
   it("still offers the call path so a patient who cannot attend does not just skip", () => {
     const text = allText(base());
-    expect(text).toContain("call us before it");
+    expect(text).toContain("not a scheduled appointment");
+    expect(text).toContain("schedule or change your visit");
     expect(text).toContain("(909) 887-6222");
   });
 
   it("degrades to a scheduling prompt when no next date exists", () => {
     const model = buildInjectionAvsModel(base({ nextDoseDate: "" }));
     expect(model.nextDose.dateLong).toBe("");
-    expect(model.nextDose.instruction).toBe("NOT YET SCHEDULED");
+    expect(model.nextDose.instruction).toBe("CALL TO SCHEDULE YOUR NEXT INJECTION");
     expect(model.nextDose.notes.join(" ")).toContain("has not been scheduled");
   });
 });
@@ -330,12 +333,13 @@ describe("medication-specific safety", () => {
 });
 
 describe("rendered sheet", () => {
-  it("emits the lab-report structure the print stylesheet targets", () => {
+  it("emits the semantic clinical-document structure the print stylesheet targets", () => {
     const html = buildInjectionAvsHtml(base(), { runStamp: "08/05/26 1024" });
     for (const hook of [
       "avs2-run",
       "avs2-title",
       "avs2-id",
+      "avs2-page-primary",
       "avs2-next",
       "avs2-date",
       "avs2-sec",
@@ -344,9 +348,40 @@ describe("rendered sheet", () => {
     ]) {
       expect(html).toContain(hook);
     }
+    expect(html).toContain('<article class="avs2" aria-labelledby="avs-document-title">');
+    expect(html).toContain('<header class="avs2-run">');
+    expect(html).toContain('<h1 class="avs2-title" id="avs-document-title">');
+    expect(html).toContain('<section class="avs2-overview"');
+    expect(html).toContain('<ol class="avs2-spine" aria-label="Treatment timeline">');
+    expect(html).toContain("Invega Sustenna, 156 mg");
     expect(html).toContain("IPMG - SAN BERNARDINO");
     expect(html).toContain("(909) 887-6222");
-    expect(html).toContain("END OF DOCUMENT");
+    expect(html).toContain("Printed 08/05/26 1024");
+    expect(html).not.toContain("END OF DOCUMENT");
+    expect(html).not.toContain("RUN&nbsp;");
+  });
+
+  it("uses one deterministic page for routine care and two for initiation", () => {
+    const routine = buildInjectionAvsHtml(base());
+    const initiation = buildInjectionAvsHtml(
+      base({ initiationProtocol: "sustenna-day1", reason: "Initiation" }),
+    );
+    expect(routine.match(/class="avs2-page /g)).toHaveLength(1);
+    expect(initiation.match(/class="avs2-page /g)).toHaveLength(2);
+    expect(initiation).toContain("After Visit Summary - Continued");
+  });
+
+  it("labels previews and released copies without changing clinical content", () => {
+    const preview = buildInjectionAvsModel(base({ dispositionKind: "" }));
+    const patient = buildInjectionAvsModel(base({ dispositionKind: "administered" }));
+    expect(preview.documentStatus).toBe("STAFF PREVIEW - NOT FINAL");
+    expect(patient.documentStatus).toBe("PATIENT COPY");
+  });
+
+  it("keeps response off the patient AVS and names administering staff only once", () => {
+    const html = buildInjectionAvsHtml(base({ responseLabel: "Tolerated well" }));
+    expect(html).not.toContain("Tolerated well");
+    expect(html.match(/Chen, M\. LVN/g)).toHaveLength(1);
   });
 
   it("escapes documented values instead of trusting them as markup", () => {
@@ -371,7 +406,7 @@ describe("rendered sheet", () => {
       }),
     );
     expect(html).toContain("AFTER VISIT SUMMARY");
-    expect(html).toContain("NOT YET SCHEDULED");
+    expect(html).toContain("CALL TO SCHEDULE YOUR NEXT INJECTION");
   });
 });
 
@@ -483,7 +518,7 @@ describe("printed timeline", () => {
     expect(due.when).toBe("");
     expect(due.whenNote).toBe("");
     expect(due.title).toBe("Your next dose, as your provider directed");
-    expect(due.detail.join(" ")).toContain("has not been scheduled yet");
+    expect(due.detail.join(" ")).toContain("has not been scheduled");
   });
 
   it("still produces a usable timeline when nothing is documented", () => {

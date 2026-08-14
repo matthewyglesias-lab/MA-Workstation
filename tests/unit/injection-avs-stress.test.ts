@@ -143,11 +143,9 @@ describe("AVS stress: every medication x every protocol", () => {
     for (const { label, input } of combinations) {
       const html = buildInjectionAvsHtml(input, { runStamp: "08/05/26 1024" });
       expect(html, label).toContain("AFTER VISIT SUMMARY");
-      expect(html, label).toContain("END OF DOCUMENT");
-      // The record run is what the print-parity canonicaliser anchors on; if
-      // this markup moves, tests/e2e/print-regression.spec.js goes silently
-      // non-deterministic rather than red.
-      expect(html, label).toContain('<span class="avs2-id-k">RECORD NO</span>');
+      expect(html, label).toContain('class="avs2-page avs2-page-primary"');
+      // The identity band is what the print-parity canonicaliser anchors on.
+      expect(html, label).toContain('<dt class="avs2-id-k">RECORD NO</dt>');
     }
   });
 });
@@ -230,14 +228,18 @@ describe("AVS stress: nothing was given", () => {
     }
   });
 
-  it("treats an undecided disposition exactly like an administered one", () => {
+  it("keeps preview content clinically equivalent while marking its release state", () => {
     // The AVS gate deliberately allows printing before a disposition is chosen.
     // If an empty kind ever started neutralising, that preview would break.
     const undecided = buildInjectionAvsModel(base({ dispositionKind: "" }));
     const administered = buildInjectionAvsModel(
       base({ dispositionKind: "administered" }),
     );
-    expect(JSON.stringify(undecided)).toBe(JSON.stringify(administered));
+    expect(undecided.documentStatus).toBe("STAFF PREVIEW - NOT FINAL");
+    expect(administered.documentStatus).toBe("PATIENT COPY");
+    const { documentStatus: _undecidedStatus, ...undecidedContent } = undecided;
+    const { documentStatus: _administeredStatus, ...administeredContent } = administered;
+    expect(undecidedContent).toEqual(administeredContent);
     expect(undecided.timeline[0]?.state).toBe("given");
   });
 });
@@ -410,8 +412,8 @@ describe("AVS stress: overflow and hostile input", () => {
       }),
     );
     expect(html).toContain("AFTER VISIT SUMMARY");
-    expect(html).toContain("END OF DOCUMENT");
-    expect(html).toContain('<span class="avs2-id-k">RECORD NO</span>');
+    expect(html).toContain('class="avs2-page avs2-page-primary"');
+    expect(html).toContain('<dt class="avs2-id-k">RECORD NO</dt>');
   });
 
   it("produces a sheet when every optional field is blank", () => {
@@ -441,6 +443,6 @@ describe("AVS stress: overflow and hostile input", () => {
     });
     expect(html).toContain("AFTER VISIT SUMMARY");
     expect(html).toContain("Injection given");
-    expect(html).toContain("END OF DOCUMENT");
+    expect(html).toContain('class="avs2-page avs2-page-primary"');
   });
 });
