@@ -63,6 +63,17 @@ import {
   printInjectionPatientScreening,
 } from "./patient-screening-print";
 
+type InjectionAvsPrintMode = "draft" | "patient";
+
+const requestInjectionAvsPrint = (mode: InjectionAvsPrintMode): void => {
+  const bridge = (
+    window as typeof window & {
+      ipmgRequestInjectionAvsPrint?: (requestedMode: InjectionAvsPrintMode) => unknown;
+    }
+  ).ipmgRequestInjectionAvsPrint;
+  if (typeof bridge === "function") bridge(mode);
+};
+
 // The tabs are the blocks of a medication administration record, not a
 // decomposition of the form. A MAR is organised around the administration
 // event: what authorises this dose, when it is due, what was actually given,
@@ -1291,11 +1302,8 @@ export function InjectionPanel({
   );
 
   const administered = encounter.disposition.kind === "administered";
-  // AVS is deliberately gated separately from `administered`: it only needs
-  // enough to describe what was given, not the final disposition choice or
-  // complete safety record. The legacy engine's own AVS-availability check
-  // (`canPrintAvs()` in the RC535 clinical-safety module) mirrors this same,
-  // narrower set of fields.
+  // Draft preview uses the core facts; clean patient release is checked again
+  // against disposition and evaluator stops immediately before printing.
   const hasAdministrationDetailsForAvs = Boolean(
     encounter.medicationKey &&
       encounter.dose.trim() &&
@@ -1319,6 +1327,8 @@ export function InjectionPanel({
   const noteInput = evaluation ? injectionEncounterToDocumentationInput(encounter, evaluation) : null;
   const noteText = noteInput ? DocumentationEngine.format("injection", noteInput).text : "";
   const stops = evaluation?.stops ?? [];
+  const canReleasePatientAvs =
+    hasAdministrationDetailsForAvs && administered && stops.length === 0;
   // The routine timing warning and the Sustenna Day 8 window warning are
   // different checks with different messages - the timing readout's own
   // message only covers the former, so the late-dose dialog needs to look up
@@ -1564,23 +1574,25 @@ export function InjectionPanel({
             Session staff: {sessionStaff}
           </span>
         )}
-        {/* Printing is read-only output; a quick-access copy lives here so it's
-            reachable from any tab, not just Outcome's "Document output"
-            section - staff shouldn't have to navigate to the last tab just to
-            discover AVS is available once the minimal fields exist. */}
+        {/* Quick access is context-sensitive: before a valid administered
+            disposition it can only produce the watermarked staff preview. */}
         <button
           type="button"
           class="cd2004-link-button wfp-summary-print-avs"
-          onClick={() => clickLegacyControl("printAVS")}
+          onClick={() =>
+            requestInjectionAvsPrint(canReleasePatientAvs ? "patient" : "draft")
+          }
           disabled={!hasAdministrationDetailsForAvs}
           title={
-            hasAdministrationDetailsForAvs
+            canReleasePatientAvs
               ? "Print the patient after-visit summary"
+              : hasAdministrationDetailsForAvs
+                ? "Preview a watermarked staff draft"
               : "Available once medication, dose, route, site, and administration date are documented."
           }
         >
           <DesktopIcon name="print" />
-          Print AVS
+          {canReleasePatientAvs ? "Print patient AVS" : "Preview AVS"}
         </button>
         {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
           <button
@@ -3007,16 +3019,30 @@ export function InjectionPanel({
               <button
                 type="button"
                 class="cd2004-command-button"
-                onClick={() => clickLegacyControl("printAVS")}
+                onClick={() => requestInjectionAvsPrint("draft")}
                 disabled={!hasAdministrationDetailsForAvs}
                 title={
                   hasAdministrationDetailsForAvs
-                    ? undefined
+                    ? "Print a watermarked staff preview"
                     : "Available once medication, dose, route, site, and administration date are documented."
                 }
               >
                 <DesktopIcon name="print" />
-                Print AVS
+                Preview AVS
+              </button>
+              <button
+                type="button"
+                class="cd2004-command-button"
+                onClick={() => requestInjectionAvsPrint("patient")}
+                disabled={!canReleasePatientAvs}
+                title={
+                  canReleasePatientAvs
+                    ? "Print the unmarked patient copy"
+                    : "Requires an administered disposition, complete AVS facts, and no administration stops."
+                }
+              >
+                <DesktopIcon name="print" />
+                Print patient AVS
               </button>
               {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
                 <button

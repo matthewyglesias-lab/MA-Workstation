@@ -14,6 +14,464 @@
   }
 }
 
+/* ===================== REFINED INJECTION AVS ===================== */
+@media print {
+  body.print-avs #avsSheet {
+    max-width: 7.5in !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+
+  body.print-avs #avsSheet .avs3 {
+    --avs3-ink: #24302a;
+    --avs3-muted: #5b665f;
+    --avs3-line: #93a097;
+    --avs3-sage: #e8eee8;
+    --avs3-sage-strong: #cad8cd;
+    --avs3-warm: #f5f0e7;
+    --avs3-amber: #f2e4be;
+    --avs3-danger: #f2dfd9;
+    color: var(--avs3-ink) !important;
+    background: #fff !important;
+    font-family: Aptos, "Segoe UI", Arial, sans-serif !important;
+    font-size: 14.7px !important;
+    line-height: 1.34 !important;
+  }
+
+  body.print-avs #avsSheet .avs3,
+  body.print-avs #avsSheet .avs3 * {
+    box-sizing: border-box;
+  }
+
+  body.print-avs #avsSheet .avs3-page {
+    position: relative;
+    display: flex;
+    min-height: 9.72in;
+    flex-direction: column;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  body.print-avs #avsSheet .avs3-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  body.print-avs #avsSheet .avs3-draft-banner {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 7px;
+    padding: 5px 9px;
+    border: 2px solid #5d4931;
+    background: var(--avs3-amber);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+
+  body.print-avs #avsSheet .avs3-watermark {
+    position: absolute;
+    z-index: 3;
+    top: 45%;
+    left: 7%;
+    width: 86%;
+    color: var(--avs3-ink);
+    opacity: 0.09;
+    font-size: 58px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-align: center;
+    transform: rotate(-28deg);
+    pointer-events: none;
+  }
+
+  body.print-avs #avsSheet .avs3-header,
+  body.print-avs #avsSheet .avs3-patient-band,
+  body.print-avs #avsSheet .avs3-overview,
+  body.print-avs #avsSheet .avs3-alert,
+  body.print-avs #avsSheet .avs3-timeline,
+  body.print-avs #avsSheet .avs3-care-grid,
+  body.print-avs #avsSheet .avs3-contact,
+  body.print-avs #avsSheet .avs3-trace,
+  body.print-avs #avsSheet .avs3-footer {
+    position: relative;
+    z-index: 1;
+  }
+
+  body.print-avs #avsSheet .avs3-header {
+    display: grid;
+    grid-template-columns: 1fr 1.45fr auto;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--avs3-ink);
+  }
+
+  body.print-avs #avsSheet .avs3-header > div:first-child {
+    display: flex;
+    flex-direction: column;
+    color: var(--avs3-muted);
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  body.print-avs #avsSheet .avs3-header .avs3-clinic {
+    color: var(--avs3-ink);
+    font-size: 10.5px;
+  }
+
+  body.print-avs #avsSheet .avs3-title-block {
+    text-align: center;
+  }
+
+  body.print-avs #avsSheet .avs3-title-block h1 {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.1;
+  }
+
+  body.print-avs #avsSheet .avs3-title-block p {
+    margin: 2px 0 0;
+    color: var(--avs3-muted);
+    font-size: 10px;
+  }
+
+  body.print-avs #avsSheet .avs3-copy-status {
+    padding: 4px 7px;
+    border: 1px solid var(--avs3-line);
+    border-radius: 4px;
+    background: var(--avs3-sage);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+  }
+
+  body.print-avs #avsSheet .avs3-patient-band {
+    display: grid;
+    grid-template-columns: 1.45fr 0.75fr 0.75fr 1.2fr 1.1fr;
+    margin-top: 7px;
+    border: 1px solid var(--avs3-line);
+    background: var(--avs3-sage);
+  }
+
+  body.print-avs #avsSheet .avs3-patient-band > div {
+    min-width: 0;
+    padding: 5px 7px;
+    border-right: 1px solid var(--avs3-line);
+  }
+
+  body.print-avs #avsSheet .avs3-patient-band > div:last-child {
+    border-right: 0;
+  }
+
+  body.print-avs #avsSheet .avs3-patient-band span,
+  body.print-avs #avsSheet .avs3-contact span {
+    display: block;
+    color: var(--avs3-muted);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs3-patient-band strong {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs3-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(2.3in, 1fr);
+    gap: 9px;
+    margin-top: 9px;
+  }
+
+  body.print-avs #avsSheet .avs3-treatment-card,
+  body.print-avs #avsSheet .avs3-due-card,
+  body.print-avs #avsSheet .avs3-card,
+  body.print-avs #avsSheet .avs3-alert,
+  body.print-avs #avsSheet .avs3-timeline {
+    border: 1px solid var(--avs3-line);
+    border-radius: 7px;
+  }
+
+  body.print-avs #avsSheet .avs3-treatment-card {
+    padding: 8px;
+    background: #fff;
+  }
+
+  body.print-avs #avsSheet .avs3 h2 {
+    margin: 0 0 5px;
+    font-size: 12.5px;
+    line-height: 1.15;
+  }
+
+  body.print-avs #avsSheet .avs3-component {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    gap: 5px;
+    padding: 6px 0;
+    border-top: 1px solid #cbd2cc;
+    break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs3-component:first-child {
+    border-top: 0;
+  }
+
+  body.print-avs #avsSheet .avs3-component-eyebrow {
+    color: var(--avs3-muted);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs3-component h3 {
+    margin: 1px 0 4px;
+    font-size: 16px;
+    line-height: 1.1;
+  }
+
+  body.print-avs #avsSheet .avs3-component-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 8px;
+    font-size: 12px;
+  }
+
+  body.print-avs #avsSheet .avs3-component-facts span,
+  body.print-avs #avsSheet .avs3-component-facts b {
+    display: block;
+  }
+
+  body.print-avs #avsSheet .avs3-component-facts b {
+    color: var(--avs3-muted);
+    font-size: 7.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs3-site-svg {
+    width: 46px;
+    height: 52px;
+  }
+
+  body.print-avs #avsSheet .avs3-site-head,
+  body.print-avs #avsSheet .avs3-site-body {
+    fill: var(--avs3-sage);
+    stroke: var(--avs3-muted);
+    stroke-width: 2;
+  }
+
+  body.print-avs #avsSheet .avs3-site-mark {
+    fill: #7b5638;
+    stroke: #fff;
+    stroke-width: 2;
+  }
+
+  body.print-avs #avsSheet .avs3-due-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px 12px;
+    border-width: 2px;
+    background: var(--avs3-amber);
+    text-align: center;
+  }
+
+  body.print-avs #avsSheet .avs3-due-card > span,
+  body.print-avs #avsSheet .avs3-due-card > b {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs3-due-card > strong {
+    margin: 4px 0;
+    font-size: 20px;
+    line-height: 1.08;
+  }
+
+  body.print-avs #avsSheet .avs3-due-card p {
+    margin: 5px 0 0;
+    font-size: 14.7px;
+    line-height: 1.28;
+  }
+
+  body.print-avs #avsSheet .avs3-alert {
+    margin-top: 8px;
+    padding: 7px 9px;
+    border-width: 2px;
+    background: var(--avs3-amber);
+    break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs3-alert p {
+    margin: 3px 0 0;
+  }
+
+  body.print-avs #avsSheet .avs3-timeline {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--avs3-warm);
+  }
+
+  body.print-avs #avsSheet .avs3-timeline ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.print-avs #avsSheet .avs3-timeline > ol > li {
+    display: grid;
+    grid-template-columns: 1.05in minmax(0, 1fr);
+    gap: 10px;
+    padding: 6px 0;
+    border-top: 1px solid var(--avs3-line);
+    break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs3-timeline > ol > li:first-child {
+    border-top: 0;
+  }
+
+  body.print-avs #avsSheet .avs3-timeline h3 {
+    margin: 0 0 2px;
+    font-size: 13px;
+  }
+
+  body.print-avs #avsSheet .avs3-timeline-when span {
+    display: block;
+    color: var(--avs3-muted);
+    font-size: 8px;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs3-timeline-date {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+  }
+
+  body.print-avs #avsSheet .avs3-plain-list,
+  body.print-avs #avsSheet .avs3-list {
+    margin: 0;
+    padding-left: 17px;
+  }
+
+  body.print-avs #avsSheet .avs3-timeline .avs3-plain-list > li {
+    display: list-item !important;
+    grid-template-columns: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    break-inside: auto;
+  }
+
+  body.print-avs #avsSheet .avs3-care-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 9px;
+  }
+
+  body.print-avs #avsSheet .avs3-card {
+    padding: 7px 9px;
+    background: var(--avs3-warm);
+    break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs3-card-wide {
+    grid-column: 1 / -1;
+    background: var(--avs3-sage);
+  }
+
+  body.print-avs #avsSheet .avs3-card-reminder {
+    background: var(--avs3-amber);
+  }
+
+  body.print-avs #avsSheet .avs3-card-call {
+    border-width: 2px;
+    background: #fff;
+  }
+
+  body.print-avs #avsSheet .avs3-card-emergency {
+    border-width: 2px;
+    background: var(--avs3-danger);
+  }
+
+  body.print-avs #avsSheet .avs3-card p {
+    margin: 3px 0;
+  }
+
+  body.print-avs #avsSheet .avs3-card li,
+  body.print-avs #avsSheet .avs3-alert li,
+  body.print-avs #avsSheet .avs3-timeline li li {
+    margin: 0 0 3px;
+  }
+
+  body.print-avs #avsSheet .avs3-contact {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    margin-top: 8px;
+    border: 2px solid var(--avs3-ink);
+    background: var(--avs3-sage-strong);
+  }
+
+  body.print-avs #avsSheet .avs3-contact > div {
+    padding: 6px 9px;
+    border-right: 1px solid var(--avs3-line);
+  }
+
+  body.print-avs #avsSheet .avs3-contact > div:last-child {
+    border-right: 0;
+  }
+
+  body.print-avs #avsSheet .avs3-contact strong {
+    font-size: 14.7px;
+  }
+
+  body.print-avs #avsSheet .avs3-trace {
+    margin-top: 6px;
+    padding-top: 5px;
+    border-top: 1px solid var(--avs3-line);
+    font-size: 8.5px;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs3-trace h2 {
+    margin-bottom: 2px;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs3-trace p {
+    margin: 1px 0;
+  }
+
+  body.print-avs #avsSheet .avs3-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 5px;
+    color: var(--avs3-muted);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs3-blocked {
+    display: none !important;
+  }
+}
+
 /*
  * Structural base for the body-appended legacy surfaces (records drawer,
  * injection-completion receipt, toast). legacy.css owned their layout -

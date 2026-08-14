@@ -20,8 +20,9 @@ import {
   type LocalAttestationReview,
 } from './presentation';
 import {
-  buildInjectionAvsHtml,
-  type InjectionAvsChrome,
+  buildInjectionAvsDocument,
+  type InjectionAvsBuildResult,
+  type InjectionAvsDocumentRequest,
   type InjectionAvsInput,
 } from './domain/injection-avs-render';
 import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
@@ -748,17 +749,19 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
  * lives in one reviewable, unit-tested module instead of the runtime blob.
  *
  * Installed before the legacy runtime loads so a print can never race the
- * bridge. renderAVS() still has its own fallback if this is ever missing.
+ * bridge. The result contract fails closed instead of returning an unmarked
+ * fallback sheet when a patient copy is not eligible.
  */
 function installInjectionAvsBridge(): void {
   (
     window as unknown as {
-      ipmgBuildInjectionAvsHtml?: (
+      ipmgBuildInjectionAvsDocument?: (
         input: InjectionAvsInput,
-        chrome?: Partial<InjectionAvsChrome>,
-      ) => string;
+        request: InjectionAvsDocumentRequest,
+      ) => InjectionAvsBuildResult;
     }
-  ).ipmgBuildInjectionAvsHtml = (input, chrome) => buildInjectionAvsHtml(input, chrome ?? {});
+  ).ipmgBuildInjectionAvsDocument = (input, request) =>
+    buildInjectionAvsDocument(input, request);
 }
 
 async function boot(): Promise<void> {

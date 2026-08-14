@@ -84,9 +84,10 @@ async function setFieldsAndRender(page, {
   bodyClass,
   renderName,
   rootId,
-  fields = {}
+  fields = {},
+  renderArgs = []
 }) {
-  await page.evaluate(({ bodyClass, renderName, rootId, fields, printRootIds }) => {
+  await page.evaluate(({ bodyClass, renderName, rootId, fields, renderArgs, printRootIds }) => {
     const printClasses = [
       'print-avs',
       'print-uds',
@@ -117,7 +118,7 @@ async function setFieldsAndRender(page, {
     if (typeof renderer !== 'function') {
       throw new Error(`Print renderer window.${renderName} is unavailable`);
     }
-    renderer();
+    renderer(...renderArgs);
 
     const root = document.getElementById(rootId);
     if (!root || !root.textContent.trim()) {
@@ -129,9 +130,14 @@ async function setFieldsAndRender(page, {
     }
 
     document.body.classList.add(bodyClass);
-  }, { bodyClass, renderName, rootId, fields, printRootIds: PRINT_ROOT_IDS });
+  }, { bodyClass, renderName, rootId, fields, renderArgs, printRootIds: PRINT_ROOT_IDS });
 
   await page.emulateMedia({ media: 'print' });
+  // The production shell has focus/visibility cleanup backstops for a print
+  // class left after a cancelled dialog. Let any boot-time focus cleanup
+  // settle, then stage the synthetic print job once, deterministically.
+  await page.waitForTimeout(400);
+  await page.evaluate(className => document.body.classList.add(className), bodyClass);
 }
 
 function inspectPdf(pdf) {
@@ -152,24 +158,12 @@ function canonicalPrintHtml(html) {
     .replace(/>\s+</g, '><')
     .replace(/\s+/g, ' ');
 
-  // The injection AVS carries two values that legitimately differ on every run:
-  // the actual print time (to the minute) and the local record id, which is
-  // generated per draft. Normalise both so the hash still pins every other byte
-  // of the sheet. The stamp pattern is tight enough that it cannot match
-  // anything else; the record id is read out of the identity band and then
-  // replaced wherever it appears, because the footer repeats it.
-  canonical = canonical.replace(
-    /RUN(?:&nbsp;|\s)+\d{2}\/\d{2}\/\d{2} \d{4}/g,
-    'RUN <stamp>'
-  );
-
-  // Anchored to the marginalia record run's key/value spans. This regex has to
-  // move whenever the identity markup changes: if it stops matching it fails
-  // silently, leaving the per-draft record id in the hashed output and turning
-  // this parity check non-deterministic rather than red.
+  // The local record id is generated per draft. Read it from the refined
+  // patient band and replace it wherever it appears so every other byte stays
+  // pinned without reintroducing the removed RUN/RPT chrome.
   const recordId = (
     canonical.match(
-      /<span class="avs2-id-k">RECORD NO<\/span>\s*<span class="avs2-id-v">([^<]*)/
+      /<span>Record no\.<\/span><strong>([^<]*)<\/strong>/i
     )?.[1] ?? ''
   ).trim();
   // Guard against blanking the document when nothing meaningful is documented.
@@ -329,11 +323,11 @@ async function prepareMinimalAvsInjection(page) {
   const panel = page.locator('.wfp-panel');
   await expect(panel).toBeVisible();
 
-  // Deliberately fill only what the loosened AVS gate requires - medication,
+  // Deliberately fill only what the draft-preview gate requires - medication,
   // dose, route, site, and administration date - and nothing from
   // Verification/Outcome (no attestations, no disposition). This is the
-  // real early-print path: AVS must be available, and clean, well before a
-  // full administration is documented.
+  // real early-preview path: a conspicuously watermarked staff copy is
+  // available well before a full administration is documented.
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Early AVS');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('05/06/1990');
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
@@ -346,12 +340,15 @@ async function prepareMinimalAvsInjection(page) {
 
   await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
   // Prove the real user-facing gate: the button is reachable and enabled
-  // with only the minimal fields above, matching the loosened AVS gate.
+  // with only the minimal fields above, while patient release stays disabled.
   // Scoped to the Outcome tab's "Document output" section specifically -
   // a second, always-visible quick-access "Print AVS" now also lives in
   // the summary bar, so a bare text match would hit both.
-  const printButton = panel.locator('.cd2004-command-button:has-text("Print AVS")');
+  const printButton = panel.locator('.cd2004-command-button:has-text("Preview AVS")');
   await expect(printButton).toBeEnabled();
+  await expect(
+    panel.locator('.cd2004-command-button:has-text("Print patient AVS")')
+  ).toBeDisabled();
 
   // Deliberately do NOT click it: its handler adds the print-avs body
   // class, calls window.print(), and clears the class again via a bare
@@ -365,8 +362,57 @@ async function prepareMinimalAvsInjection(page) {
   await setFieldsAndRender(page, {
     bodyClass: 'print-avs',
     renderName: 'renderAVS',
-    rootId: 'avsSheet'
+    rootId: 'avsSheet',
+    renderArgs: ['draft']
   });
+}
+
+const injectionAvsFixture = (overrides = {}) => ({
+  patientName: 'Print, Complex AVS',
+  patientDob: '1990-01-02',
+  recordNumber: 'AVS-COMPLEX',
+  orderingProvider: 'Print Ordering Provider',
+  administeredBy: 'Print QA, MA',
+  medicationKey: 'sustenna',
+  medicationName: 'Invega Sustenna',
+  genericName: 'paliperidone palmitate',
+  dose: '156 mg',
+  route: 'IM',
+  site: 'R deltoid',
+  intervalKey: 'q4wk',
+  administrationDate: '2026-07-30',
+  administrationTime: '09:41',
+  nextDoseDate: '2026-08-27',
+  lot: 'PRINT-LOT-001',
+  expiration: '2027-12',
+  responseLabel: 'Tolerated well',
+  reason: 'scheduled',
+  initiationProtocol: '',
+  day1Date: '',
+  clinicPhone: '(909) 887-6222',
+  administrationStops: [],
+  dispositionKind: 'administered',
+  ...overrides
+});
+
+async function renderInjectionAvsFixture(page, input, mode = 'patient') {
+  await bootWorkstation(page);
+  await page.evaluate(({ input, mode, printRootIds }) => {
+    const result = window.ipmgBuildInjectionAvsDocument?.(input, { mode });
+    if (!result?.ok) throw new Error(result?.reason || 'AVS fixture build failed');
+    for (const className of [...document.body.classList]) {
+      if (className.startsWith('print-')) document.body.classList.remove(className);
+    }
+    for (const id of printRootIds) {
+      const root = document.getElementById(id);
+      if (root) root.innerHTML = '';
+    }
+    document.getElementById('avsSheet').innerHTML = result.html;
+    document.body.classList.add('print-avs');
+  }, { input, mode, printRootIds: PRINT_ROOT_IDS });
+  await page.emulateMedia({ media: 'print' });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => document.body.classList.add('print-avs'));
 }
 
 test.describe('unchanged clinical print surfaces', () => {
@@ -375,34 +421,142 @@ test.describe('unchanged clinical print surfaces', () => {
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
-        /AFTER VISIT SUMMARY - LONG-ACTING INJECTION/i,
-        /Print, Early AVS/i
+        /Injection After Visit Summary/i,
+        /Print, Early AVS/i,
+        /STAFF DRAFT — ADMINISTRATION NOT FINALIZED/i
       ],
+      minPages: 1,
+      maxPages: 1,
       checkParity: false
     });
   });
 
   test('isolates the injection AVS on a sane Letter printout', async ({ page }) => {
     await preparePrintableInjection(page);
+    const panel = page.locator('.wfp-panel');
+    await expect(
+      panel.locator('.cd2004-command-button:has-text("Print patient AVS")')
+    ).toBeEnabled();
     await setFieldsAndRender(page, {
       bodyClass: 'print-avs',
       renderName: 'renderAVS',
-      rootId: 'avsSheet'
+      rootId: 'avsSheet',
+      renderArgs: ['patient']
     });
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
-        /AFTER VISIT SUMMARY - LONG-ACTING INJECTION/i,
+        /Injection After Visit Summary/i,
         /Print, Injection/i,
         // The due date is the sheet's primary call to action, and the window
         // is deliberately not printed - patients are asked for the exact day.
-        /YOUR NEXT INJECTION/i,
-        /PLEASE COME IN ON THIS DAY/i,
+        /Your next injection is due/i,
+        /CALL TO SCHEDULE OR RESCHEDULE/i,
         /PRINT-LOT-001/i,
         // Walk-in policy and the San Bernardino number appear on every sheet.
-        /9:30 AM - 4:30 PM/i,
+        /Monday-Friday, 9:30 AM-4:30 PM/i,
         /\(909\) 887-6222/i
-      ]
+      ],
+      minPages: 1,
+      maxPages: 1
+    });
+
+    // A material administration change invalidates the release immediately,
+    // while the core facts remain sufficient for a watermarked preview.
+    await page.emulateMedia({ media: 'screen' });
+    await page.evaluate(() => document.body.classList.remove('print-avs'));
+    await panel.getByRole('tab', { name: 'Order', exact: true }).click();
+    await panel.locator('input[name="inj-dose"]').fill('101 mg');
+    await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
+    await expect(
+      panel.locator('.cd2004-command-button:has-text("Preview AVS")')
+    ).toBeEnabled();
+    await expect(
+      panel.locator('.cd2004-command-button:has-text("Print patient AVS")')
+    ).toBeDisabled();
+  });
+
+  test('keeps complex initiation, oral-overlap, and paired AVSs to two identified pages', async ({ page }) => {
+    test.setTimeout(45000);
+    const scenarios = [
+      injectionAvsFixture({
+        dose: '234 mg',
+        reason: 'initiation',
+        initiationProtocol: 'sustenna-day1'
+      }),
+      injectionAvsFixture({
+        medicationKey: 'maintena',
+        medicationName: 'Abilify Maintena',
+        genericName: 'aripiprazole',
+        dose: '400 mg',
+        reason: 'initiation',
+        initiationProtocol: 'maintena-14day'
+      }),
+      injectionAvsFixture({
+        medicationKey: 'asimtufii',
+        medicationName: 'Abilify Asimtufii',
+        genericName: 'aripiprazole',
+        dose: '960 mg',
+        site: 'R ventrogluteal',
+        intervalKey: 'q8wk',
+        reason: 'initiation',
+        initiationProtocol: 'asimtufii-1day',
+        secondDose: '400 mg',
+        secondSite: 'L deltoid',
+        secondLot: 'PAIR-LOT-2',
+        secondExpiration: '2028-06',
+        secondGiven: true,
+        oralStatus: 'administered'
+      })
+    ];
+
+    for (const input of scenarios) {
+      await renderInjectionAvsFixture(page, input);
+      await expectPrintContract(page, {
+        rootId: 'avsSheet',
+        content: [
+          /Print, Complex AVS/i,
+          /Page 1 of 2/i,
+          /Page 2 of 2/i,
+          /Call to schedule or reschedule/i
+        ],
+        minPages: 2,
+        maxPages: 2,
+        checkParity: false
+      });
+      const semantics = await page.locator('#avsSheet').evaluate(root => ({
+        pages: root.querySelectorAll('.avs3-page').length,
+        patientBands: root.querySelectorAll('.avs3-patient-band').length,
+        headings: [...root.querySelectorAll('h1,h2,h3')].map(node => node.tagName),
+        siteLabels: [...root.querySelectorAll('svg[role="img"]')]
+          .map(node => node.getAttribute('aria-label'))
+      }));
+      expect(semantics.pages).toBe(2);
+      expect(semantics.patientBands).toBe(2);
+      expect(semantics.headings[0]).toBe('H1');
+      expect(semantics.siteLabels.every(label => /^Injection site:/.test(label))).toBe(true);
+    }
+  });
+
+  test('repeats the draft banner and watermark on every complex preview page', async ({ page }) => {
+    await renderInjectionAvsFixture(
+      page,
+      injectionAvsFixture({
+        dispositionKind: '',
+        reason: 'initiation',
+        initiationProtocol: 'maintena-14day'
+      }),
+      'draft'
+    );
+    await expect(page.locator('#avsSheet .avs3-draft-banner')).toHaveCount(2);
+    await expect(page.locator('#avsSheet .avs3-watermark')).toHaveCount(2);
+    await expect(page.locator('#avsSheet')).not.toContainText(/Today you received|Injection given/i);
+    await expectPrintContract(page, {
+      rootId: 'avsSheet',
+      content: [/STAFF DRAFT — ADMINISTRATION NOT FINALIZED/i],
+      minPages: 2,
+      maxPages: 2,
+      checkParity: false
     });
   });
 
@@ -736,6 +890,7 @@ test.describe('unchanged clinical print surfaces', () => {
       ],
       maxPages: 1
     });
+
   });
 
   test('isolates a populated daily-closeout ledger on Letter pages', async ({ page }) => {
