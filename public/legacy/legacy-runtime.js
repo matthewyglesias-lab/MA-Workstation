@@ -984,9 +984,13 @@ function render(){
 
 /* ---------- After-Visit Summary ---------- */
 function cleanPrintClasses(){document.body.classList.remove("print-avs","print-uds","print-uds-patient","print-sample","print-daily","print-letter","print-sample-worksheet","print-inj-worksheet","print-inj-patient-screen");}
-$("printAVS").addEventListener("click",()=>{
-  if(!S.med){toast("Pick a drug first");return;}
-  renderAVS();cleanPrintClasses();document.body.classList.add("print-avs");window.print();setTimeout(cleanPrintClasses,500);
+$("printAVS").addEventListener("click",event=>{
+  event.preventDefault();
+  if(typeof window.ipmgRequestInjectionAvsPrint==='function'){
+    window.ipmgRequestInjectionAvsPrint('patient');
+    return;
+  }
+  toast("The patient AVS release check is unavailable. Nothing was printed.");
 });
 
 function udsPrintStatusClass(){
@@ -5479,29 +5483,28 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   };
   /* The After Visit Summary body is built by the typed content engine in
      src/domain/injection-avs-content.ts, exposed here as
-     window.ipmgBuildInjectionAvsHtml. This function's job is only to collect
+     window.ipmgBuildInjectionAvsDocument. This function's job is only to collect
      the documented values out of the legacy fields and chip state and hand
      them over, so the patient wording stays reviewable in one typed file
      instead of being spread through this runtime.
-
-     If the typed bundle has not attached yet (a print fired before mount, or
-     a bundle load failure) we still render a readable minimal sheet rather
-     than leaving the print root blank. */
-  function avsRunStamp(){
-    try{
-      const now=new Date();
-      const p=n=>String(n).padStart(2,'0');
-      return `${p(now.getMonth()+1)}/${p(now.getDate())}/${String(now.getFullYear()).slice(2)} ${p(now.getHours())}${p(now.getMinutes())}`;
-    }catch(e){return '';}
-  }
+     Patient release never falls back to an unmarked minimal sheet. */
   function avsInput(){
     const med=(typeof S!=='undefined'&&S.med)?S.med:{};
     let init={protocol:'',day1Date:''};
     try{ if(typeof window.ipmgInitiationProtocolSnapshot==='function')init=window.ipmgInitiationProtocolSnapshot()||init; }catch(e){}
     const resp=(typeof RESP!=='undefined'&&typeof S!=='undefined'?(RESP.find(r=>r.k===S.resp)||{}).l:'')||'';
     const second=(init&&typeof init.second==='object'&&init.second)?init.second:{};
+    const protocol=String(init.protocol||'');
+    const primaryKey=String(med.key||'');
+    const secondProduct=protocol==='maintena-1day'||protocol==='asimtufii-1day'
+      ?{key:'maintena',name:'Abilify Maintena'}
+      :protocol==='aristada-initio-sameday'
+        ?(primaryKey==='initio'?{key:'aristada',name:'Aristada'}:{key:'initio',name:'Aristada Initio'})
+        :{key:String(second.productKey||''),name:String(second.productName||'')};
     let disposition={kind:''};
     try{ if(typeof window.ipmgClinicalDispositionSnapshot==='function')disposition=window.ipmgClinicalDispositionSnapshot()||disposition; }catch(e){}
+    let releaseReview={stops:[]};
+    try{if(typeof window.ipmgInjectionAvsReleaseReview==='function')releaseReview=window.ipmgInjectionAvsReleaseReview()||releaseReview;}catch(e){}
     let recordNumber='';
     try{
       const records=window.IPMGRecords;
@@ -5537,17 +5540,19 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       initiationProtocol:init.protocol||'',
       day1Date:init.day1Date||'',
       clinicPhone:'(909) 887-6222',
-      /* Held / escalated / provider-directed all mean the injection was not
-         given. The AVS gate above deliberately does not require a disposition
-         so staff can preview the sheet mid-documentation, which is why an
-         empty kind has to keep rendering the full sheet - only an explicit
-         non-administration choice neutralises it. */
+      administrationStops:Array.isArray(releaseReview.stops)?releaseReview.stops:[],
+      /* The disposition is part of the explicit document-mode contract. Blank
+         remains valid only for a watermarked staff preview; patient mode is
+         rejected unless this is the final administered disposition. */
       dispositionKind:disposition.kind||'',
       /* The one-day dual protocols give a second injection in another muscle at
          the same visit. The snapshot has carried these all along; the AVS just
          was not reading them, so the sheet described one injection and one site
          when the patient had two of each to look after. */
       secondDose:second.dose||'',
+      secondMedicationKey:secondProduct.key,
+      secondMedicationName:secondProduct.name,
+      secondAdministrationTime:raw('injSecondAdminTime',''),
       secondSite:second.site||'',
       secondLot:second.lot||'',
       secondExpiration:second.exp||'',
@@ -5555,29 +5560,26 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       oralStatus:init.oralStatus||''
     };
   }
-  function avsFallback(data){
-    const line=(k,v)=>v?`<div class="avs2-row"><span class="avs2-k">${h(k)}</span> <span class="avs2-v">${h(v)}</span></div>`:'';
-    return `<div class="avs2"><div class="avs2-title">AFTER VISIT SUMMARY - LONG-ACTING INJECTION</div>`+
-      `<section class="avs2-sec"><h2 class="avs2-h">WHAT YOU RECEIVED TODAY</h2><div class="avs2-b">`+
-      line('MEDICATION......',data.medicationName)+line('DOSE............',data.dose)+
-      line('SITE............',data.site)+line('DATE............',data.administrationDate)+
-      `</div></section>`+
-      `<section class="avs2-sec"><h2 class="avs2-h">NEXT INJECTION</h2><div class="avs2-b">`+
-      `<p class="avs2-p">${h(data.nextDoseDate||'Not yet scheduled')} - please call (909) 887-6222 with any questions about this visit.</p>`+
-      `</div></section></div>`;
+  function avsBlocked(reason){
+    return `<article class="avs3 avs3-blocked"><section class="avs3-blocked-card"><h1>Injection AVS unavailable</h1><p>${h(reason||'The document could not be built safely.')}</p></section></article>`;
   }
-  window.renderAVS=function renderAVSInjection(){
+  window.renderAVS=function renderAVSInjection(mode){
     const sheet=q('avsSheet'); if(!sheet) return;
+    if(mode!=='draft'&&mode!=='patient'){
+      sheet.innerHTML=avsBlocked('Choose staff preview or patient release.');
+      return {ok:false,html:'',reason:'A document mode is required.'};
+    }
     let data;
     try{ data=avsInput(); }catch(e){ data=null; }
-    if(!data){ sheet.innerHTML='<div class="avs2"><div class="avs2-title">AFTER VISIT SUMMARY</div></div>'; return; }
-    let html='';
+    if(!data){const result={ok:false,html:'',reason:'Encounter details are unavailable.'};sheet.innerHTML=avsBlocked(result.reason);return result;}
+    let result={ok:false,html:'',reason:'The typed AVS builder is unavailable.'};
     try{
-      if(typeof window.ipmgBuildInjectionAvsHtml==='function'){
-        html=window.ipmgBuildInjectionAvsHtml(data,{runStamp:avsRunStamp()});
+      if(typeof window.ipmgBuildInjectionAvsDocument==='function'){
+        result=window.ipmgBuildInjectionAvsDocument(data,{mode:mode});
       }
-    }catch(e){ html=''; }
-    sheet.innerHTML=html||avsFallback(data);
+    }catch(e){result={ok:false,html:'',reason:e&&e.message?e.message:'The injection AVS could not be built.'};}
+    sheet.innerHTML=result&&result.ok?result.html:avsBlocked(result&&result.reason);
+    return result;
   };
   window.IPMG_RC_VERSION='RC5.11 Output Tray + Guided Card Formatting Pass';
 })();
@@ -8735,13 +8737,11 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
   function recordLocked(){const panel=by('panel-administer');return !!(panel&&panel.classList.contains('record-readonly'));}
   function canAdminister(){return state.kind==='administered'&&review({requireAdministrationDetail:true}).stops.length===0;}
-  /* AVS only needs enough to describe what was given - medication, dose,
-     route, site, and an administration date - not the final disposition
-     choice or the full safety-record checklist canAdminister() requires.
-     Deliberately separate from canAdminister() so this can be looser
-     without touching the administration-note gate or the disposition/lock
-     safety record itself. */
-  function canPrintAvs(){return !!(med()&&String(S.dose||'').trim()&&String(S.route||'').trim()&&String(S.site||'').trim()&&text('adminDate'));}
+  /* Staff preview needs only the core facts. Patient release additionally
+     requires an explicit administered disposition and a fresh, stop-free
+     administration review. */
+  function canPreviewAvs(){return !!(med()&&String(S.dose||'').trim()&&String(S.route||'').trim()&&String(S.site||'').trim()&&text('adminDate'));}
+  function canReleasePatientAvs(){return canPreviewAvs()&&canAdminister();}
   function canHandoff(){const f=fields();return !!(state.kind&&state.kind!=='administered'&&f.provider&&f.time&&f.outcome&&!optionalDetailStops().length);}
   function dispositionSnapshot(){const f=fields();return {kind:state.kind||'',provider:f.provider||'',time:f.time||'',outcome:f.outcome||''};}
   function restoreDisposition(data){
@@ -8795,7 +8795,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const list=by('clinicalDispositionList');
     if(list)list.innerHTML=[...r.stops.map(x=>`<div class="cd-line">${safe(x)}</div>`),...r.warnings.map(x=>`<div class="cd-line warn">${safe(x)}</div>`)].join('');
     const handoff=by('clinicalDispositionHandoff'); if(handoff)handoff.classList.toggle('show',!!hasHandoff);
-    const print=by('printAVS'); if(print){print.classList.toggle('clinical-output-pending',!!med()&&!canPrintAvs());print.title=med()&&!canPrintAvs()?'Available once medication, dose, route, site, and administration date are documented.':print.dataset.clinicalDefaultTitle||print.title;}
+    const print=by('printAVS'); if(print){const releasable=canReleasePatientAvs();print.disabled=!releasable;print.setAttribute('aria-disabled',String(!releasable));print.classList.toggle('clinical-output-pending',!!med()&&!releasable);print.title=!canPreviewAvs()?'Available once medication, dose, route, site, and administration date are documented.':!releasable?'Patient release requires a completed, stop-free administered disposition.':print.dataset.clinicalDefaultTitle||'Print patient AVS';}
   }
   function neutralNote(){
     const r=review({requireAdministrationDetail:false}), f=fields(), decision=state.kind?labels[state.kind]:'No administration disposition documented',details=documentationDetails(),context=documentationContextLines(details);
@@ -8813,7 +8813,24 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const sheet=by('avsSheet'); if(!sheet)return;
     sheet.innerHTML=`<div class="beauty-page beauty-avs"><div class="beauty-head"><div class="beauty-kicker">IPMG</div><h1>Injection visit status</h1><p>Medication, dose, route, site, and administration date are not yet fully documented.</p></div><div class="beauty-card"><h2>After-visit summary not yet available</h2><p>Enter the medication, dose, route, site, and administration date on the Administration tab to generate a patient after-visit summary.</p></div></div>`;
   }
-  function neutralizeIfNeeded(){if(!canAdminister())neutralNote();if(!canPrintAvs())pendingAvs();}
+  function neutralizeIfNeeded(){if(!canAdminister())neutralNote();if(!canPreviewAvs())pendingAvs();}
+  function requestInjectionAvsPrint(mode){
+    const requested=String(mode||'');
+    if(requested!=='draft'&&requested!=='patient'){
+      const reason='Choose staff preview or patient release.';toastSafe(reason);return {ok:false,html:'',reason};
+    }
+    if(!canPreviewAvs()){
+      const reason='Medication, dose, route, site, and administration date are required.';toastSafe(reason);pendingAvs();return {ok:false,html:'',reason};
+    }
+    if(requested==='patient'&&!canReleasePatientAvs()){
+      const reason=state.kind!=='administered'?'Patient AVS release requires an administered disposition.':'Resolve all administration stops before releasing the patient AVS.';
+      toastSafe(reason);return {ok:false,html:'',reason};
+    }
+    const result=typeof window.renderAVS==='function'?window.renderAVS(requested):{ok:false,html:'',reason:'The AVS renderer is unavailable.'};
+    if(!result||!result.ok){toastSafe(result&&result.reason||'The injection AVS could not be built. Nothing was printed.');return result||{ok:false,html:'',reason:'The injection AVS could not be built.'};}
+    try{if(typeof cleanPrintClasses==='function')cleanPrintClasses();document.body.classList.add('print-avs');window.print();setTimeout(()=>{try{if(typeof cleanPrintClasses==='function')cleanPrintClasses();}catch(e){}},500);}catch(e){toastSafe('The print dialog could not be opened.');return {ok:false,html:'',reason:'The print dialog could not be opened.'};}
+    return result;
+  }
   function toastSafe(message){try{if(typeof toast==='function')toast(message);}catch(e){}}
   function addHandoffLog(){
     const f=fields(), r=review({requireAdministrationDetail:false}), m=med(),details=documentationDetails(),context=documentationContextLines(details,true);
@@ -8848,7 +8865,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function bindOutputGuards(){
     document.addEventListener('click',function(e){
       const print=e.target&&e.target.closest&&e.target.closest('#printAVS');
-      if(print&&med()&&!canPrintAvs()){e.preventDefault();e.stopImmediatePropagation();toastSafe('Patient AVS is unavailable until medication, dose, route, site, and administration date are documented.');return false;}
+      if(print&&!canReleasePatientAvs()){e.preventDefault();e.stopImmediatePropagation();requestInjectionAvsPrint('patient');return false;}
       const add=e.target&&e.target.closest&&e.target.closest('#addLog');
       if(add&&med()&&!canAdminister()){
         e.preventDefault();e.stopImmediatePropagation();
@@ -8867,7 +8884,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     }
     const oldAvs=window.renderAVS;
     if(typeof oldAvs==='function'&&!oldAvs.__rc535ClinicalSafetyWrap){
-      const wrappedAvs=function(){if(med()&&!canPrintAvs())return pendingAvs();return oldAvs.apply(this,arguments);};
+      const wrappedAvs=function(mode){if((mode==='draft'||mode==='patient')&&med()&&!canPreviewAvs())return pendingAvs();return oldAvs.apply(this,arguments);};
       wrappedAvs.__rc535ClinicalSafetyWrap=true; window.renderAVS=wrappedAvs; try{renderAVS=wrappedAvs;}catch(e){}
     }
     const oldReset=window.softReset;
@@ -8886,6 +8903,8 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     window.ipmgClinicalDispositionSnapshot=dispositionSnapshot;
     window.restoreClinicalDisposition=restoreDisposition;
     window.ipmgClinicalDispositionCanFinalize=()=>canAdminister()||canHandoff();
+    window.ipmgInjectionAvsReleaseReview=()=>review({requireAdministrationDetail:true});
+    window.ipmgRequestInjectionAvsPrint=requestInjectionAvsPrint;
     renderDisposition(); neutralizeIfNeeded(); try{window.IPMG_RC_VERSION='RC5.35 Clinical Disposition Safety Gate';}catch(e){}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
