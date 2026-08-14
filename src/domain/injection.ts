@@ -261,12 +261,7 @@ export interface InjectionTimingEvaluation {
   cadenceLabel?: string;
   /** True only when the administration is after the applicable window or expected-cadence boundary. */
   late: boolean;
-  /**
-   * Order-verification products do not expose a calculated permitted window,
-   * but the expected cadence date is still useful operational context. This
-   * lets the UI distinguish "due today" from a genuinely overdue dose without
-   * treating the calculated date as clinical clearance.
-   */
+  /** Position relative to the expected cadence date for order-review products. */
   relativeToExpected?: "before" | "on" | "after";
   message: string;
 }
@@ -987,16 +982,6 @@ const evaluateTiming = (
       message: "The administration date is before the prior-dose date — verify the dates.",
     };
   }
-  if (medication.timingMode === "orderVerify") {
-    return {
-      state: "warning",
-      daysSincePrior,
-      earliestDay: null,
-      latestDay: null,
-      late: false,
-      message: `${daysSincePrior} day(s) since the prior dose. Verify timing and any re-initiation decision against the active provider order and current product information.`,
-    };
-  }
   const intervalDays = INJECTION_INTERVAL_DAYS[encounter.intervalKey];
   const window = effectiveInjectionWindow(medication, encounter.intervalKey);
   const earliestDay = intervalDays - window.windowBefore;
@@ -1008,7 +993,10 @@ const evaluateTiming = (
       earliestDay,
       latestDay,
       late: false,
-      message: `Given ${daysSincePrior} day(s) after the prior dose — earlier than the displayed window (about ${earliestDay}–${latestDay} days). Confirm provider direction.`,
+      message:
+        medication.timingMode === "orderVerify"
+          ? `Given ${daysSincePrior} day(s) after the prior dose — earlier than the displayed scheduling window (about ${earliestDay}–${latestDay} days). Confirm timing and any re-initiation decision against the active provider order and current product information.`
+          : `Given ${daysSincePrior} day(s) after the prior dose — earlier than the displayed window (about ${earliestDay}–${latestDay} days). Confirm provider direction.`,
     };
   }
   if (daysSincePrior <= latestDay) {
@@ -1018,7 +1006,10 @@ const evaluateTiming = (
       earliestDay,
       latestDay,
       late: false,
-      message: `Given ${daysSincePrior} day(s) after the prior dose — within the displayed window (about ${earliestDay}–${latestDay} days).`,
+      message:
+        medication.timingMode === "orderVerify"
+          ? `Given ${daysSincePrior} day(s) after the prior dose — within the displayed scheduling window (about ${earliestDay}–${latestDay} days). Continue the required active-order and product-specific safety checks.`
+          : `Given ${daysSincePrior} day(s) after the prior dose — within the displayed window (about ${earliestDay}–${latestDay} days).`,
     };
   }
   const farLate = daysSincePrior > Math.round(intervalDays * 1.5);
@@ -1028,17 +1019,22 @@ const evaluateTiming = (
     earliestDay,
     latestDay,
     late: true,
-    message: `Given ${daysSincePrior} day(s) after the prior dose — beyond the displayed window (about ${earliestDay}–${latestDay} days).${
-      farLate ? " A gap this long may require re-initiation/loading." : ""
-    } Confirm timing and dosing with the provider.`,
+    message:
+      medication.timingMode === "orderVerify"
+        ? `Given ${daysSincePrior} day(s) after the prior dose — beyond the displayed scheduling window (about ${earliestDay}–${latestDay} days).${
+            farLate ? " A gap this long may require re-initiation/loading." : ""
+          } Confirm timing and any re-initiation decision against the active provider order and current product information.`
+        : `Given ${daysSincePrior} day(s) after the prior dose — beyond the displayed window (about ${earliestDay}–${latestDay} days).${
+            farLate ? " A gap this long may require re-initiation/loading." : ""
+          } Confirm timing and dosing with the provider.`,
   };
 };
 
 /**
- * Product-aware timing.  Order-verification products receive an expected date
- * as an operational aid but deliberately never get an automatic within-window
- * clearance.  Calendar-month products calculate from calendar dates instead
- * of 84/182-day approximations.
+ * Product-aware scheduling. Configured windows decide whether timing needs a
+ * warning; order-review products still retain active-order and product-safety
+ * guidance even when the scheduling status is neutral. Calendar-month products
+ * calculate from calendar dates instead of 84/182-day approximations.
  */
 const evaluateTimingWithCadence = (
   encounter: InjectionEncounter,
@@ -1129,34 +1125,6 @@ const evaluateTimingWithCadence = (
       message: "The administration date is before the prior-dose date; verify the dates.",
     };
   }
-  if (medication.timingMode === "orderVerify") {
-    const relativeToExpected =
-      encounter.administrationDate < expectedDate
-        ? "before"
-        : encounter.administrationDate > expectedDate
-          ? "after"
-          : "on";
-    const timingSummary =
-      relativeToExpected === "on"
-        ? `matches the expected ${cadence.label} date ${expectedDate}`
-        : relativeToExpected === "after"
-          ? `is after the expected ${cadence.label} date ${expectedDate}`
-          : `is before the expected ${cadence.label} date ${expectedDate}`;
-    return {
-      state: "warning",
-      daysSincePrior,
-      earliestDay: null,
-      latestDay: null,
-      expectedDate,
-      earliestDate: "",
-      latestDate: "",
-      cadenceLabel: cadence.label,
-      late: relativeToExpected === "after",
-      relativeToExpected,
-      message: `${daysSincePrior} day(s) since the prior dose; this ${timingSummary}. Verify timing and any re-initiation decision against the active provider order and current product information.`,
-    };
-  }
-
   const window = effectiveInjectionWindow(medication, encounter.intervalKey);
   const earliestDate = addCalendarDays(expectedDate, -window.windowBefore);
   const latestDate = addCalendarDays(expectedDate, window.windowAfter);
@@ -1176,6 +1144,14 @@ const evaluateTimingWithCadence = (
       message: "Verify the prior-dose date before using displayed timing guidance.",
     };
   }
+  const relativeToExpected =
+    medication.timingMode === "orderVerify"
+      ? encounter.administrationDate < expectedDate
+        ? "before"
+        : encounter.administrationDate > expectedDate
+          ? "after"
+          : "on"
+      : undefined;
   if (encounter.administrationDate < earliestDate) {
     return {
       state: "warning",
@@ -1187,7 +1163,11 @@ const evaluateTimingWithCadence = (
       latestDate,
       cadenceLabel: cadence.label,
       late: false,
-      message: `Given ${daysSincePrior} day(s) after the prior dose; earlier than the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}). Confirm provider direction.`,
+      relativeToExpected,
+      message:
+        medication.timingMode === "orderVerify"
+          ? `Given ${daysSincePrior} day(s) after the prior dose; earlier than the displayed scheduling window (${earliestDate} to ${latestDate}; expected ${expectedDate}). Confirm timing and any re-initiation decision against the active provider order and current product information.`
+          : `Given ${daysSincePrior} day(s) after the prior dose; earlier than the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}). Confirm provider direction.`,
     };
   }
   if (encounter.administrationDate <= latestDate) {
@@ -1201,7 +1181,11 @@ const evaluateTimingWithCadence = (
       latestDate,
       cadenceLabel: cadence.label,
       late: false,
-      message: `Given ${daysSincePrior} day(s) after the prior dose; within the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}).`,
+      relativeToExpected,
+      message:
+        medication.timingMode === "orderVerify"
+          ? `Given ${daysSincePrior} day(s) after the prior dose; within the displayed scheduling window (${earliestDate} to ${latestDate}; expected ${expectedDate}). Continue the required active-order and product-specific safety checks.`
+          : `Given ${daysSincePrior} day(s) after the prior dose; within the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}).`,
     };
   }
   const daysPastExpected = differenceInCalendarDays(expectedDate, encounter.administrationDate) ?? 0;
@@ -1219,9 +1203,15 @@ const evaluateTimingWithCadence = (
     latestDate,
     cadenceLabel: cadence.label,
     late: true,
-    message: `Given ${daysSincePrior} day(s) after the prior dose; beyond the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}).${
-      farLate ? " A gap this long may require re-initiation/loading." : ""
-    } Confirm timing and dosing with the provider.`,
+    relativeToExpected,
+    message:
+      medication.timingMode === "orderVerify"
+        ? `Given ${daysSincePrior} day(s) after the prior dose; beyond the displayed scheduling window (${earliestDate} to ${latestDate}; expected ${expectedDate}).${
+            farLate ? " A gap this long may require re-initiation/loading." : ""
+          } Confirm timing and any re-initiation decision against the active provider order and current product information.`
+        : `Given ${daysSincePrior} day(s) after the prior dose; beyond the displayed window (${earliestDate} to ${latestDate}; expected ${expectedDate}).${
+            farLate ? " A gap this long may require re-initiation/loading." : ""
+          } Confirm timing and dosing with the provider.`,
   };
 };
 

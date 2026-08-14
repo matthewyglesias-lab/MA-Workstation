@@ -204,7 +204,7 @@ test.describe('MA Workstation browser journeys', () => {
     return panel;
   }
 
-  test('allows an on-cadence Vivitrol review warning to finish and attest', async ({ page }) => {
+  test('keeps an expected-date Vivitrol administration neutral and allows attestation', async ({ page }) => {
     const panel = await prepareScheduledVivitrol(page, {
       patient: 'QA, Vivitrol Due',
       priorDoseDate: '2026-07-17',
@@ -213,12 +213,21 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await openInjectionTab(page, 'Schedule');
-    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText(
-      'Expected date — verify active order.'
-    );
+    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText('On schedule.');
+    await expect(panel.locator('.wfp-timing-banner')).toHaveClass(/is-ok/);
+    await expect(panel.locator('.wfp-timing-banner')).not.toHaveClass(/is-warning/);
     await expect(panel.locator('.wfp-timing-banner-message')).toContainText(
-      'matches the expected q4 wk date 2026-08-14'
+      'within the displayed scheduling window (2026-08-11 to 2026-08-21; expected 2026-08-14)'
     );
+    await expect(
+      panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
+    ).toHaveCount(0);
+    await expect(
+      panel.locator('.wfp-operator-guidance-action', { hasText: 'Verify timing' })
+    ).toHaveCount(0);
+    await expect(
+      panel.locator('.wfp-operator-guidance-action', { hasText: 'expected q4 wk date' })
+    ).toHaveCount(0);
 
     await openInjectionTab(page, 'Outcome');
     await panel
@@ -228,7 +237,7 @@ test.describe('MA Workstation browser journeys', () => {
       'Administration documented'
     );
     await expect(page.locator('#outAS')).toContainText(
-      'administration date matched the calculated expected cadence date'
+      'within expected maintenance interval'
     );
 
     const finish = page.locator('[data-injection-record-actions] [data-injection-finish]');
@@ -236,6 +245,31 @@ test.describe('MA Workstation browser journeys', () => {
     await finish.click();
     await confirmLocalAttestation(page);
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
+  });
+
+  test('keeps the final configured Vivitrol window day neutral', async ({ page }) => {
+    const panel = await prepareScheduledVivitrol(page, {
+      patient: 'QA, Vivitrol Window Edge',
+      priorDoseDate: '2026-07-17',
+      administrationDate: '2026-08-21',
+      nextDoseDate: '2026-09-18'
+    });
+
+    await openInjectionTab(page, 'Schedule');
+    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText('On schedule.');
+    await expect(panel.locator('.wfp-timing-banner')).toHaveClass(/is-ok/);
+    await expect(panel.locator('.wfp-timing-banner-message')).toContainText(
+      'within the displayed scheduling window (2026-08-11 to 2026-08-21; expected 2026-08-14)'
+    );
+    await expect(
+      panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
+    ).toHaveCount(0);
+    await expect(
+      panel.locator('.wfp-operator-guidance-action', { hasText: 'Verify timing' })
+    ).toHaveCount(0);
+    await expect(
+      panel.locator('.wfp-operator-guidance-action', { hasText: 'expected q4 wk date' })
+    ).toHaveCount(0);
   });
 
   test('documents context-bound provider approval for an overdue Vivitrol dose and carries it into the note', async ({ page }) => {

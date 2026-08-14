@@ -423,17 +423,11 @@ function OptionList<T extends string>({ name, value, onChange, options, inline }
 function injectionTimingStatusLabel(timing: InjectionEvaluationOutput["timing"]): string {
   switch (timing.state) {
     case "ok":
-      return "Within the permitted window.";
+      return "On schedule.";
     case "stop":
       return "Dates don't add up — check them.";
     case "warning":
       if (timing.late) return "Late — needs provider review.";
-      if (timing.relativeToExpected === "on") {
-        return "Expected date — verify active order.";
-      }
-      if (timing.relativeToExpected === "before") {
-        return "Before expected date — confirm with provider.";
-      }
       if (
         timing.daysSincePrior !== null &&
         timing.earliestDay !== null &&
@@ -1936,7 +1930,7 @@ export function InjectionPanel({
                         evaluation.output.timing.latestDay !== null && (
                           <>
                             {" "}
-                            · permitted window day {evaluation.output.timing.earliestDay}–
+                            · scheduling window day {evaluation.output.timing.earliestDay}–
                             {evaluation.output.timing.latestDay}
                           </>
                         )}

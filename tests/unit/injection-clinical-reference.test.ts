@@ -4,9 +4,11 @@ import {
   INJECTION_CLINICAL_REFERENCE_BUNDLE,
   INJECTION_CLINICAL_REFERENCE_REVIEWED_ON,
   InjectionEngine,
+  addCalendarDays,
   allowedDosesForInterval,
   calculateNextInjectionDate,
   compatibleIntervalsForDose,
+  effectiveInjectionWindow,
   emptyInjectionEncounter,
   emptyInjectionInitiation,
   preferredIntervalForDose,
@@ -93,6 +95,54 @@ describe("InjectionClinicalReferenceBundle", () => {
     expect(preferredIntervalForDose(aristada, "882 mg", "q6wk")).toBe("q6wk");
   });
 
+  it("keeps every configured order-review scheduling window neutral and warns immediately outside it", () => {
+    const orderReviewMedications = Object.values(INJECTION_MEDICATIONS).filter(
+      (medication) => medication.timingMode === "orderVerify",
+    );
+
+    for (const medication of orderReviewMedications) {
+      const encounter = administered(medication.key);
+      encounter.dose = medication.doses[0] ?? "100 mg";
+      encounter.route = medication.route;
+      encounter.site = medication.defaultSite || "R deltoid per active order";
+      encounter.intervalKey = medication.intervalKey;
+      const expectedDate = calculateNextInjectionDate(
+        medication,
+        encounter.intervalKey,
+        encounter.priorDoseDate,
+      );
+      const window = effectiveInjectionWindow(medication, encounter.intervalKey);
+      const earliestDate = addCalendarDays(expectedDate, -window.windowBefore);
+      const latestDate = addCalendarDays(expectedDate, window.windowAfter);
+      const evaluateAt = (administrationDate: string) => {
+        encounter.administrationDate = administrationDate;
+        encounter.nextDoseDate = calculateNextInjectionDate(
+          medication,
+          encounter.intervalKey,
+          administrationDate,
+        );
+        return InjectionEngine.evaluate(encounter, { today: administrationDate });
+      };
+
+      for (const scheduledDate of new Set([earliestDate, expectedDate, latestDate])) {
+        const result = evaluateAt(scheduledDate);
+        expect(result.output.timing.state, `${medication.key} ${scheduledDate}`).toBe("ok");
+        expect(warningCodes(result), `${medication.key} ${scheduledDate}`).not.toContain(
+          "timing.review",
+        );
+      }
+
+      const tooEarly = evaluateAt(addCalendarDays(earliestDate, -1));
+      expect(tooEarly.output.timing.state, `${medication.key} early`).toBe("warning");
+      expect(warningCodes(tooEarly), `${medication.key} early`).toContain("timing.review");
+
+      const tooLate = evaluateAt(addCalendarDays(latestDate, 1));
+      expect(tooLate.output.timing.state, `${medication.key} late`).toBe("warning");
+      expect(tooLate.output.timing.late, `${medication.key} late`).toBe(true);
+      expect(warningCodes(tooLate), `${medication.key} late`).toContain("timing.review");
+    }
+  });
+
   it("keeps provider-directed dose and interval overrides as review warnings", () => {
     const providerDirectedOrders: Array<{
       medicationKey: InjectionMedicationKey;
@@ -144,7 +194,8 @@ describe("phase-specific Injection guidance", () => {
     expect(result.output.requiredVerifications).toEqual(["resuspend"]);
     expect(stopCodes(result)).not.toContain("verification.oralOverlap");
     expect(result.output.requirements["verifications.oralOverlap"]?.state).toBe("hidden");
-    expect(result.output.timing.state).toBe("warning");
+    expect(result.output.timing.state).toBe("ok");
+    expect(warningCodes(result)).not.toContain("timing.review");
     expect(result.output.canFinalize).toBe(true);
   });
 
