@@ -5,6 +5,7 @@ import {
   type InjectionClinicalPhase,
   type InjectionMedicationClinicalReference,
   type InjectionSiteGuidance,
+  type InjectionSiteGroup,
 } from "./injection-clinical-reference";
 
 export type InjectionIntervalKey =
@@ -326,6 +327,23 @@ export const injectionMuscleKey = (site: string): string => {
   if (normalized.includes("deltoid")) return `${side}-deltoid`;
   if (normalized.includes("gluteal")) return `${side}-gluteal`;
   return normalized;
+};
+
+/**
+ * Anatomical family a documented site belongs to, for needle selection. Every
+ * label expresses needle choice as "deltoid vs gluteal", never per-side.
+ *
+ * Returns "" for free-text sites, which is the correct answer for the
+ * order-directed products: their labels name a gauge but no anatomical site,
+ * so there is nothing to key a site-scoped rule to.
+ */
+export const injectionSiteGroup = (site: string): InjectionSiteGroup | "" => {
+  const normalized = normalizeInjectionSite(site).toLowerCase().trim();
+  if (!normalized) return "";
+  if (normalized.includes("deltoid")) return "deltoid";
+  if (normalized.includes("gluteal")) return "gluteal";
+  if (normalized.includes("subq") || normalized.includes("subcutaneous")) return "subq";
+  return "";
 };
 
 const mirrorSite = (site: string): string => {

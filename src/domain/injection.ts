@@ -36,7 +36,15 @@ import {
   medicationVerificationsForPhase,
   type ClinicalReferenceClassification,
   type InjectionClinicalPhase,
+  type InjectionHabitusBand,
+  type InjectionTechniqueNote,
 } from "./injection-clinical-reference";
+import {
+  normalizeWeightKg,
+  resolveNeedle,
+  techniqueNotesFor,
+  type NeedleResolution,
+} from "./injection-needle";
 import type {
   InjectionNdcSelectionMetadata,
   InjectionNextDoseProvenance,
@@ -57,6 +65,10 @@ export interface InjectionVitals {
   temperature?: string;
   rr?: string;
   spo2?: string;
+  /** As entered by staff; `weightUnit` says which scale it came off.
+   * Needle rules compare against kilograms - use `normalizeWeightKg`. */
+  weight?: string;
+  weightUnit?: "kg" | "lb";
 }
 
 export interface InjectionResponse {
@@ -184,6 +196,10 @@ export interface InjectionEncounter {
   secondAdministrationTime?: string;
   allergies: string;
   technique?: string;
+  /** Tissue depth over the injection site, for needle selection. Assessed per
+   * encounter rather than carried forward: the VIVITROL label requires body
+   * habitus be assessed prior to each injection. */
+  habitus?: InjectionHabitusBand;
   traceability: InjectionTraceability;
   vitals?: InjectionVitals;
   response: InjectionResponse;
@@ -235,6 +251,16 @@ export interface InjectionGuidanceCard {
   action?: string;
 }
 
+export interface InjectionNeedleProjection {
+  resolution: NeedleResolution;
+  notes: InjectionTechniqueNote[];
+  angle?: { degrees: string; note: string };
+  siteRestriction?: { headline: string; detail: string };
+  maxVolumePerSite?: number;
+  /** Canonical kilograms derived from the documented vitals, or null. */
+  weightKg: number | null;
+}
+
 export interface InjectionEvaluationOutput {
   medication: InjectionMedication | null;
   timing: InjectionTimingEvaluation;
@@ -252,9 +278,42 @@ export interface InjectionEvaluationOutput {
   requiredVerifications: MedicationVerificationKey[];
   requirements: Record<string, InjectionRequirement>;
   guidance: InjectionGuidanceCard[];
+  needle: InjectionNeedleProjection;
   expectedNextDoseDate: string;
   clinicalReferenceVersion?: string;
 }
+
+/**
+ * Needle and technique guidance for the documented encounter. Everything here
+ * is read from the sourced administration reference - this function selects,
+ * it never authors clinical content.
+ */
+const buildNeedleProjection = (
+  encounter: InjectionEncounter,
+  medication: InjectionMedication | null,
+): InjectionNeedleProjection => {
+  const weightKg = normalizeWeightKg(
+    encounter.vitals?.weight,
+    encounter.vitals?.weightUnit ?? "kg",
+  );
+  const resolution = resolveNeedle(medication, encounter.dose, encounter.site, {
+    habitus: encounter.habitus ?? "",
+    weightKg,
+  });
+  const administration = medication?.clinicalReference?.administration;
+  return {
+    resolution,
+    notes: techniqueNotesFor(medication, encounter.dose, encounter.site),
+    ...(administration ? { angle: administration.angle } : {}),
+    ...(administration?.siteRestriction
+      ? { siteRestriction: administration.siteRestriction }
+      : {}),
+    ...(administration?.maxVolumePerSite
+      ? { maxVolumePerSite: administration.maxVolumePerSite.milliliters }
+      : {}),
+    weightKg,
+  };
+};
 
 const pairedProtocols = new Set<InjectionInitiationProtocol>([
   "maintena-1day",
@@ -2478,6 +2537,33 @@ export const InjectionEngine: ClinicalEngine<
       );
     }
 
+    const needle = buildNeedleProjection(encounter, medication);
+    // Needle guidance is advisory everywhere and never gates finalizing: an MA
+    // may have a valid reason to deviate, and a stop on a free-text field
+    // would just get worked around. The panel shows an unresolved
+    // recommendation on its own.
+    //
+    // A warning is raised only where the label itself requires habitus be
+    // assessed before administration, because a warning also moves the record
+    // from "ready" to "review". Applying it wherever a rule merely needs input
+    // would soft-gate every ordinary encounter.
+    if (
+      needle.resolution.unresolved &&
+      dispositionKind === "administered" &&
+      medication?.clinicalReference?.administration.requiresHabitusAssessment
+    ) {
+      warnings.push(
+        issue(
+          "warning",
+          "needle.unresolved",
+          needle.resolution.unresolvedReason ??
+            "Needle selection for this product depends on documented body habitus or weight.",
+          "habitus",
+          "administration",
+        ),
+      );
+    }
+
     const uniqueStops = uniqueIssues(stops);
     const uniqueWarnings = uniqueIssues(warnings);
     // Both the routine interval window and the Sustenna Day 8 window can
@@ -2540,6 +2626,7 @@ export const InjectionEngine: ClinicalEngine<
         requiredVerifications,
         requirements,
         guidance,
+        needle,
         expectedNextDoseDate,
         ...(medication?.clinicalReference
           ? { clinicalReferenceVersion: INJECTION_CLINICAL_REFERENCE_VERSION }
