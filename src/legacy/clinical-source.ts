@@ -222,6 +222,10 @@ const normalizeDocumentation = (value: unknown): InjectionDocumentationMetadata 
         calculatedFrom: asString(rawNextDose.calculatedFrom),
       }
     : undefined;
+  const lateDoseReview =
+    raw.lateDoseReview === "provider-authorized" || raw.lateDoseReview === "other"
+      ? raw.lateDoseReview
+      : undefined;
   return {
     ...(asString(raw.clinicalReferenceVersion)
       ? { clinicalReferenceVersion: asString(raw.clinicalReferenceVersion) }
@@ -235,6 +239,15 @@ const normalizeDocumentation = (value: unknown): InjectionDocumentationMetadata 
         }
       : {}),
     ...(nextDose && Object.values(nextDose).some(Boolean) ? { nextDose } : {}),
+    ...(lateDoseReview
+      ? {
+          lateDoseReview,
+          lateDoseReviewNote: asString(raw.lateDoseReviewNote),
+          lateDoseReviewProvider: asString(raw.lateDoseReviewProvider),
+          lateDoseReviewTime: asString(raw.lateDoseReviewTime),
+          lateDoseReviewFingerprint: asString(raw.lateDoseReviewFingerprint),
+        }
+      : {}),
   };
 };
 
