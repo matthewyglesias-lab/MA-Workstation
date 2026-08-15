@@ -2092,7 +2092,7 @@ export function InjectionPanel({
               <Field
                 label="Needle / technique"
                 field="technique"
-                hint="Auto-filled from the product's labeled needle once a site is selected — editable"
+                hint="Auto-filled from the product label — editable"
               >
                 <input
                   value={encounter.technique ?? ""}
