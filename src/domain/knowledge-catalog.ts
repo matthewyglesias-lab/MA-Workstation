@@ -5,7 +5,11 @@ import {
   type InjectionMedicationKey,
   type InjectionIntervalKey,
 } from "./injection-catalog";
-import { INJECTION_CLINICAL_REFERENCE_BUNDLE } from "./injection-clinical-reference";
+import {
+  INJECTION_CLINICAL_REFERENCE_BUNDLE,
+  type InjectionMedicationClinicalReference,
+} from "./injection-clinical-reference";
+import { formatNeedleSpec } from "./injection-needle";
 
 /**
  * A single labeled fact within a knowledge entry. Faithfully mirrors the
@@ -86,6 +90,34 @@ const windowSummary = (med: InjectionMedication): string => {
     : `${med.windowBefore}/${med.windowAfter} days`;
 };
 
+/**
+ * Renders the product's needle table for the reference panel, reading the same
+ * administration block the evaluator resolves against so this cannot drift
+ * into a second hand-maintained needle list.
+ */
+const needleSummary = (reference: InjectionMedicationClinicalReference): string => {
+  const rules = reference.administration.needleRules;
+  if (!rules.length) return "—";
+  return rules
+    .map((rule) => {
+      const scope = [
+        rule.siteGroups?.length ? rule.siteGroups.join("/") : "",
+        rule.doses?.length ? rule.doses.join("/") : "",
+        rule.weightKg
+          ? `${rule.weightKg.kind === "below" ? "<" : "≥"}${rule.weightKg.kg} kg`
+          : "",
+        rule.habitus?.length ? rule.habitus.join("/") : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const needle = [formatNeedleSpec(rule.needle), rule.alternate ? `or ${formatNeedleSpec(rule.alternate)}` : ""]
+        .filter(Boolean)
+        .join(" ");
+      return scope ? `${scope}: ${needle}` : needle;
+    })
+    .join(" · ");
+};
+
 const medicationKnowledgeEntries = (): KnowledgeEntry[] =>
   (Object.keys(INJECTION_MEDICATIONS) as InjectionMedicationKey[])
     .filter((key): key is Exclude<InjectionMedicationKey, "other"> => key !== "other")
@@ -115,6 +147,7 @@ const medicationKnowledgeEntries = (): KnowledgeEntry[] =>
             `${med.route || "—"} · ${med.defaultSite || "—"} · interval ${medIntervalSummary(med)} · window ${windowSummary(med)}`,
           ),
           text("Technique", supplement.tech || "—"),
+          text("Needle", needleSummary(reference)),
           text("Prep/storage", `${supplement.recon || "—"} ${supplement.storage || "—"}`.trim()),
           text("Late/missed", med.missedDoseGuidance || "Verify against current PI and prescriber direction."),
           text(

@@ -18,6 +18,13 @@ import type { InjectionComponent, InjectionDocumentationInput, InjectionNoteFact
 const trimmed = (value?: string): string => (value ?? "").trim();
 const unique = (items: string[]): string[] => [...new Set(items.filter(Boolean))];
 
+/** Staff-entered text sometimes already ends in punctuation ('22G 1.5".'), so
+ * only add a period when one is missing - a label line must never double up.
+ * Mirrors the same helper in ../injection.ts, which applies it at render time
+ * to single-value facts; this file needs it before joining multiple sentences. */
+const endSentence = (value: string): string =>
+  /[.!?]$/.test(value) ? value : `${value}.`;
+
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
@@ -287,19 +294,22 @@ const timingNoteText = (
     : `${reinit} reviewed per med-specific guidance.`;
 };
 
-const documentedFacts = (
-  encounter: InjectionEncounter,
-): { assessment: string[]; plan: string[] } => {
+/**
+ * Assessment-destined attestation/verification sentences for the pre-
+ * administration review block.
+ *
+ * Plan-destined wording (hand hygiene, and the needle/technique verifications
+ * in VERIFICATION_PLAN_FACTS) is deliberately skipped here: those reach the
+ * note through `noteFacts.asepticTechnique` and `noteFacts.technique`
+ * respectively. The two PLAN tables are still consulted so a key that owns
+ * plan wording can never also emit an assessment sentence.
+ */
+const documentedAssessmentFacts = (encounter: InjectionEncounter): string[] => {
   const assessment: string[] = [];
-  const plan: string[] = [];
   (Object.keys(encounter.attestations) as Array<keyof InjectionEncounter["attestations"]>).forEach(
     (key) => {
       if (!encounter.attestations[key]) return;
-      const planFact = ATTESTATION_PLAN_FACTS[key];
-      if (planFact) {
-        plan.push(planFact);
-        return;
-      }
+      if (ATTESTATION_PLAN_FACTS[key]) return;
       const fact = ATTESTATION_ASSESSMENT_FACTS[key];
       if (fact) assessment.push(fact);
     },
@@ -311,18 +321,11 @@ const documentedFacts = (
   }
   (Object.keys(encounter.verifications) as MedicationVerificationKey[]).forEach((key) => {
     if (!encounter.verifications[key]) return;
-    const planFact = VERIFICATION_PLAN_FACTS[key];
-    if (planFact) {
-      plan.push(planFact);
-      return;
-    }
+    if (VERIFICATION_PLAN_FACTS[key]) return;
     const fact = VERIFICATION_ASSESSMENT_FACTS[key];
     if (fact) assessment.push(fact);
   });
-  if (trimmed(encounter.technique)) {
-    plan.push(`Needle / technique: ${trimmed(encounter.technique)}`);
-  }
-  return { assessment: unique(assessment), plan: unique(plan) };
+  return unique(assessment);
 };
 
 const responseFact = (encounter: InjectionEncounter): string => {
@@ -495,6 +498,33 @@ const responseNoteText = (encounter: InjectionEncounter): string => {
   return RESPONSE_NOTE_TEXT[encounter.response.kind] ?? "";
 };
 
+/**
+ * Needle/technique documentation for the compact note. Two sources feed it:
+ * the staff-entered needle/technique text, and the product-specific technique
+ * verifications whose wording lives in VERIFICATION_PLAN_FACTS. Both were
+ * previously assembled by `documentedFacts` into a `plan` array that nothing
+ * read, so a checked "gluteal-only" or "no massage" box produced no note text
+ * at all. Ordering is fixed by VERIFICATION_PLAN_ORDER rather than by object
+ * key order, so the same encounter always reads the same way.
+ */
+const VERIFICATION_PLAN_ORDER: ReadonlyArray<MedicationVerificationKey> = [
+  "suppliedNeedle",
+  "glutealOnly",
+  "noMassage",
+  "deepZtrack",
+];
+
+const techniqueNoteText = (encounter: InjectionEncounter): string => {
+  const technique = trimmed(encounter.technique);
+  const lines = [technique ? `Needle / technique: ${endSentence(technique)}` : ""];
+  VERIFICATION_PLAN_ORDER.forEach((key) => {
+    if (!encounter.verifications[key]) return;
+    const fact = VERIFICATION_PLAN_FACTS[key];
+    if (fact) lines.push(fact);
+  });
+  return unique(lines.filter(Boolean)).join(" ");
+};
+
 const departureStatusLine = (encounter: InjectionEncounter): string => {
   const details = encounter.details ?? {};
   if (!details.departureStatus) return "";
@@ -558,6 +588,7 @@ const buildInjectionNoteFacts = (
     administration: administration || undefined,
     dateTime: formatCompactDateTime(encounter.administrationDate, encounter.administrationTime) || undefined,
     asepticTechnique: asepticSentence || undefined,
+    technique: techniqueNoteText(encounter) || undefined,
     response: responseNoteText(encounter) || undefined,
     observation: details.postInjectionObservation
       ? "Pt observed post-inj w/o adverse reaction."
@@ -669,9 +700,8 @@ export function injectionEncounterToDocumentationInput(
     ? `Injection visit — ${medicationLine || "medication administration"}.`
     : `Injection visit — ${medicationLine || "selected medication"}; medication not administered.`;
 
-  const facts = documentedFacts(encounter);
   const reviewItems = unique([
-    ...facts.assessment,
+    ...documentedAssessmentFacts(encounter),
     ...(encounter.acuteSafetyScreenConfirmed ? ["No acute concerns today confirmed."] : []),
   ]);
   const activeSafetyConcerns = new Set(encounter.activeSafetyConcerns ?? []);

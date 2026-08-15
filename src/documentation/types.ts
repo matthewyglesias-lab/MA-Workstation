@@ -168,6 +168,9 @@ export interface InjectionNoteFacts {
   administration?: string;
   dateTime?: string;
   asepticTechnique?: string;
+  /** Needle/technique documentation plus any product-specific technique
+   * verifications (supplied needle, gluteal-only, no-massage, Z-track). */
+  technique?: string;
   response?: string;
   observation?: string;
   departureStatus?: string;

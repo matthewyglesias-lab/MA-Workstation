@@ -350,6 +350,7 @@ const formatNoteFactsPlan = (
       facts.dateTime ? `Date/time: ${endSentence(facts.dateTime)}` : "",
     ]).join("\n"),
     facts.asepticTechnique ?? "",
+    facts.technique ?? "",
     formatInitiation(input.initiation),
     noteLines([
       facts.response ? `Response: ${facts.response}` : "",

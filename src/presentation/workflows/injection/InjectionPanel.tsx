@@ -22,6 +22,7 @@ import {
   type InjectionEncounter,
   type InjectionEvaluationOutput,
   type InjectionInitiationProtocol,
+  type InjectionNeedleProjection,
   type InjectionReason,
   type InjectionResponse,
 } from "../../../domain/injection";
@@ -29,11 +30,18 @@ import {
   ALL_INJECTION_SITES,
   INJECTION_INTERVAL_OPTIONS,
   INJECTION_MEDICATIONS,
+  injectionSiteGroup,
   preferredIntervalForDose,
   type InjectionIntervalKey,
+  type InjectionMedication,
   type InjectionMedicationKey,
   type MedicationVerificationKey,
 } from "../../../domain/injection-catalog";
+import {
+  formatNeedleSpec,
+  formatTechniquePrefill,
+} from "../../../domain/injection-needle";
+import type { InjectionHabitusBand } from "../../../domain/injection-clinical-reference";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { firstActionableClinicalIssue } from "../../../application/readiness-projection";
 import {
@@ -789,6 +797,221 @@ function OperatorGuidance({
   );
 }
 
+const HABITUS_OPTIONS: ReadonlyArray<{ key: InjectionHabitusBand; label: string; hint: string }> = [
+  { key: "lean", label: "Lean", hint: "Little subcutaneous tissue over the muscle" },
+  { key: "average", label: "Average", hint: "Typical tissue depth" },
+  { key: "larger", label: "Larger SubQ", hint: "Greater subcutaneous tissue over the muscle" },
+];
+
+/** A dotted-leader readout row, the way a MAGIC report prints a field. The
+ * leader is drawn in CSS so it stretches to the panel width instead of being
+ * a fixed run of periods that wraps badly at narrow widths. */
+function NeedleReadout({ label, value }: { label: string; value: string }) {
+  return (
+    <div class="wfp-needle-readout">
+      <span class="wfp-needle-readout-label">{label}</span>
+      <span class="wfp-needle-readout-dots" aria-hidden="true" />
+      <span class="wfp-needle-readout-value">{value}</span>
+    </div>
+  );
+}
+
+/**
+ * Tissue-layer diagram. Drawn flat in the --cd-* palette rather than ported
+ * from the legacy runtime, which carried its own colors. Straight edges and
+ * hatched bands only, so it reads as terminal graphics and survives the
+ * greyscale print path the AVS renderer already holds the line on.
+ */
+function NeedleDiagram({ subcutaneous }: { subcutaneous: boolean }) {
+  // A SubQ needle stops in the fatty layer at a shallower angle; an IM needle
+  // passes through it into muscle at 90°.
+  const needlePath = subcutaneous ? "M 96 14 L 150 68" : "M 120 12 L 120 104";
+  return (
+    <svg
+      class="wfp-needle-diagram"
+      viewBox="0 0 240 132"
+      role="img"
+      aria-label={
+        subcutaneous
+          ? "Cross-section: needle entering the subcutaneous layer at an angle"
+          : "Cross-section: needle passing through skin and subcutaneous tissue into muscle"
+      }
+    >
+      <rect x="8" y="16" width="224" height="20" class="wfp-needle-layer-skin" />
+      <rect x="8" y="36" width="224" height="34" class="wfp-needle-layer-subq" />
+      <rect x="8" y="70" width="224" height="46" class="wfp-needle-layer-muscle" />
+      <text class="wfp-needle-layer-label" x="14" y="30">SKIN</text>
+      <text class="wfp-needle-layer-label" x="14" y="57">SUBQ</text>
+      <text class="wfp-needle-layer-label" x="14" y="97">MUSCLE</text>
+      <path d={needlePath} class="wfp-needle-shaft" />
+      <text class="wfp-needle-depth-label" x={subcutaneous ? 158 : 128} y={subcutaneous ? 76 : 112}>
+        {subcutaneous ? "45–90°" : "90°"}
+      </text>
+    </svg>
+  );
+}
+
+function NeedleTechniquePanel({
+  needle,
+  medication,
+  encounter,
+  patch,
+  referenceVersion,
+}: {
+  needle: InjectionNeedleProjection;
+  medication: InjectionMedication | null;
+  encounter: InjectionEncounter;
+  patch: (partial: Partial<InjectionEncounter>) => void;
+  referenceVersion?: string;
+}) {
+  if (!medication?.clinicalReference) return null;
+
+  const { resolution, angle, maxVolumePerSite } = needle;
+  const primary = resolution.needle ? formatNeedleSpec(resolution.needle) : "";
+  const alternate = resolution.alternate ? formatNeedleSpec(resolution.alternate) : "";
+  // Fall back to the group the resolver used, so a gluteal-only product reads
+  // correctly before a specific side has been chosen.
+  const placement = injectionSiteGroup(encounter.site) || resolution.siteGroup;
+  const subcutaneous = placement === "subq";
+  const placementLabel =
+    placement === "deltoid"
+      ? "Deltoid IM"
+      : placement === "gluteal"
+        ? "Gluteal IM"
+        : placement === "subq"
+          ? "Subcutaneous"
+          : "Per active order";
+  // Cautions earn the alarm treatment; the rest stay in the reference list so
+  // a genuinely binding instruction is not buried among routine ones.
+  const cautions = needle.notes.filter((note) => note.severity === "caution");
+  const informational = needle.notes.filter((note) => note.severity === "info");
+
+  return (
+    <div class="wfp-section wfp-needle-section" role="group" aria-label="Needle and technique">
+      <div class="wfp-section-head">
+        Needle &amp; technique
+        {referenceVersion && <span class="wfp-needle-ref">REF {referenceVersion}</span>}
+      </div>
+      <div class="wfp-section-body">
+        <div class="wfp-needle-inputs">
+          <div class="wfp-needle-input-group">
+            <span class="wfp-needle-input-caption">Body habitus</span>
+            <div class="wfp-needle-band">
+              {HABITUS_OPTIONS.map((option) => (
+                <label
+                  key={option.key}
+                  class={`wfp-needle-band-option ${
+                    encounter.habitus === option.key ? "is-selected" : ""
+                  }`}
+                  title={option.hint}
+                >
+                  <input
+                    type="radio"
+                    name="inj-habitus"
+                    checked={encounter.habitus === option.key}
+                    onChange={() => patch({ habitus: option.key })}
+                  />
+                  <span class="wfp-needle-band-mark" aria-hidden="true">
+                    {encounter.habitus === option.key ? "X" : "\u00a0"}
+                  </span>
+                  <span class="wfp-needle-band-label">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div class="wfp-needle-input-group">
+            <span class="wfp-needle-input-caption">Weight</span>
+            <div class="wfp-needle-weight">
+              <input
+                class="wfp-needle-weight-value"
+                inputMode="decimal"
+                value={encounter.vitals?.weight ?? ""}
+                placeholder="—"
+                aria-label="Patient weight"
+                onInput={(event) =>
+                  patch({
+                    vitals: { ...encounter.vitals, weight: event.currentTarget.value },
+                  })
+                }
+              />
+              {(["kg", "lb"] as const).map((unit) => (
+                <label
+                  key={unit}
+                  class={`wfp-needle-band-option ${
+                    (encounter.vitals?.weightUnit ?? "kg") === unit ? "is-selected" : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="inj-weight-unit"
+                    checked={(encounter.vitals?.weightUnit ?? "kg") === unit}
+                    onChange={() =>
+                      patch({ vitals: { ...encounter.vitals, weightUnit: unit } })
+                    }
+                  />
+                  <span class="wfp-needle-band-mark" aria-hidden="true">
+                    {(encounter.vitals?.weightUnit ?? "kg") === unit ? "X" : "\u00a0"}
+                  </span>
+                  <span class="wfp-needle-band-label">{unit.toUpperCase()}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div class="wfp-needle-panel">
+          <div class="wfp-needle-readouts">
+            <NeedleReadout label="Needle" value={primary || "Not resolved"} />
+            {alternate && <NeedleReadout label="Or" value={alternate} />}
+            <NeedleReadout label="Route" value={placementLabel} />
+            {angle && <NeedleReadout label="Angle" value={`${angle.degrees}°`} />}
+            {maxVolumePerSite !== undefined && (
+              <NeedleReadout label="Max vol" value={`${maxVolumePerSite} mL / site`} />
+            )}
+          </div>
+          <NeedleDiagram subcutaneous={subcutaneous} />
+        </div>
+
+        {resolution.unresolved && resolution.unresolvedReason && (
+          <div class="wfp-operator-guidance-row is-warning" data-needle-unresolved>
+            <strong>! Needle not resolved:</strong>
+            <span>{resolution.unresolvedReason}</span>
+          </div>
+        )}
+        {resolution.rationale && !resolution.unresolved && (
+          <p class="wfp-field-hint">{resolution.rationale}</p>
+        )}
+
+        {cautions.map((note) => (
+          <div key={note.id} class="wfp-operator-guidance-row is-warning" data-needle-caution>
+            <strong>!</strong>
+            <span>{note.statement}</span>
+          </div>
+        ))}
+
+        {informational.length > 0 && (
+          <details class="wfp-reference wfp-needle-reference">
+            <summary>
+              Technique reference — {informational.length}{" "}
+              {informational.length === 1 ? "item" : "items"}
+            </summary>
+            <div class="wfp-reference-body">
+              <dl class="wfp-report-meta">
+                {informational.map((note) => (
+                  <Fragment key={note.id}>
+                    <dt key={`${note.id}-term`}>{note.phase}</dt>
+                    <dd key={`${note.id}-detail`}>{note.statement}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            </div>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function NdcPicker({
   inputId,
   query,
@@ -1266,6 +1489,28 @@ export function InjectionPanel({
     // prevents a manual site choice from being overwritten.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounter.site, locked, nonAdministration, recommendedSite, siteRequiresActiveOrderEntry]);
+
+  const needleProjection = presentationOutput?.needle;
+
+  // Prefill the editable Needle / technique field, the way the legacy app did
+  // ($('tech').value = m.tech). Gated on the field being empty so a staff edit
+  // is never overwritten — same "suggest once, never clobber" contract as the
+  // rotation-site effect above.
+  const techniquePrefill = medication
+    ? formatTechniquePrefill(
+        medication,
+        needleProjection?.resolution ?? { unresolved: false },
+        encounter.route,
+      )
+    : "";
+  useEffect(() => {
+    if (locked || nonAdministration || !techniquePrefill || (encounter.technique ?? "").trim()) {
+      return;
+    }
+    patch({ technique: techniquePrefill });
+    // Value dependencies only, so re-running cannot overwrite a manual edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [encounter.technique, locked, nonAdministration, techniquePrefill]);
 
   // The dose-history grid — the most recognisably-MAR artifact, and the one
   // that makes LAI site rotation legible at a glance. Read-only, and read
@@ -1844,7 +2089,11 @@ export function InjectionPanel({
                   </select>
                 </Field>
               </div>
-              <Field label="Needle / technique" field="technique" hint="Editable local documentation">
+              <Field
+                label="Needle / technique"
+                field="technique"
+                hint="Auto-filled from the product label — editable"
+              >
                 <input
                   value={encounter.technique ?? ""}
                   placeholder="Needle gauge, length, or technique note"
@@ -2269,6 +2518,15 @@ export function InjectionPanel({
               )}
             </div>
             <div class="wfp-section-body">
+              {/* A filtered site list previously just showed fewer tiles. State
+                  the restriction instead, so "gluteal only" reads as a named
+                  label constraint rather than tiles that silently vanished. */}
+              {needleProjection?.siteRestriction && (
+                <div class="wfp-site-restriction" data-site-restriction>
+                  <strong>! {needleProjection.siteRestriction.headline.toUpperCase()}</strong>
+                  <span>{needleProjection.siteRestriction.detail}</span>
+                </div>
+              )}
               {repeatsPreviousSite && (
                 <p class="wfp-field-hint">
                   Today's selected site repeats the prior documented site; consider rotation when clinically
@@ -2344,6 +2602,16 @@ export function InjectionPanel({
               )}
             </div>
           </div>
+
+          {needleProjection && (
+            <NeedleTechniquePanel
+              needle={needleProjection}
+              medication={medication}
+              encounter={encounter}
+              patch={patch}
+              referenceVersion={presentationOutput?.clinicalReferenceVersion}
+            />
+          )}
 
           <div class="wfp-section" role="group" aria-label="Given by / time">
             <div class="wfp-section-head">Given by / time</div>

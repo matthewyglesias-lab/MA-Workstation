@@ -174,3 +174,80 @@ describe("RC6.1 injection note format", () => {
     );
   });
 });
+
+// These lock a defect fixed alongside the needle-guidance work: the adapter
+// assembled needle/technique wording into a `plan` array that no caller ever
+// read, so the technique field and every technique verification produced no
+// note text at all.
+describe("RC6.1 injection note — needle / technique", () => {
+  const asimtufiiAdministered = (): InjectionEncounter => ({
+    ...sustennaAdministered(),
+    medicationKey: "asimtufii",
+    dose: "960 mg",
+    site: "R ventrogluteal",
+    intervalKey: "q8wk",
+    nextDoseDate: "2026-10-07",
+    traceability: { ndc: "59148-100-70", lot: "AB1234", expiration: "2027-10" },
+    verifications: { resuspend: true, glutealOnly: true, noMassage: true },
+  });
+
+  it("states the staff-entered needle / technique in the plan", () => {
+    const encounter = sustennaAdministered();
+    encounter.technique = '23G 1" deltoid';
+    const note = formatFor(encounter);
+
+    expect(note.plan).toContain('Needle / technique: 23G 1" deltoid.');
+  });
+
+  it("does not double-punctuate technique text that already ends in a period", () => {
+    const encounter = sustennaAdministered();
+    encounter.technique = 'Kit needle, 22G 1.5".';
+    const note = formatFor(encounter);
+
+    expect(note.plan).toContain('Needle / technique: Kit needle, 22G 1.5".');
+    expect(note.plan).not.toContain('1.5"..');
+  });
+
+  it("states the gluteal-only and no-massage verifications that previously vanished", () => {
+    const note = formatFor(asimtufiiAdministered());
+
+    expect(note.plan).toContain(
+      "Gluteal-only route requirement verified against the actual administration site.",
+    );
+    expect(note.plan).toContain(
+      "Injection site was not massaged after administration per product instructions.",
+    );
+  });
+
+  it("states the Vivitrol supplied-needle / body-habitus verification", () => {
+    const encounter: InjectionEncounter = {
+      ...asimtufiiAdministered(),
+      medicationKey: "vivitrol",
+      dose: "380 mg",
+      intervalKey: "q4wk",
+      nextDoseDate: "2026-09-04",
+      verifications: { opioidFree: true, naltrexHS: true, suppliedNeedle: true },
+    };
+    const note = formatFor(encounter);
+
+    expect(note.plan).toContain(
+      "Kit-supplied needle and body-habitus selection verified; " +
+        "ordered deep gluteal IM route/site documented.",
+    );
+  });
+
+  it("keeps technique wording out of the assessment review block", () => {
+    const encounter = asimtufiiAdministered();
+    encounter.technique = '21G 2" gluteal';
+    const note = formatFor(encounter);
+
+    expect(note.assessment).not.toContain("Needle / technique:");
+    expect(note.assessment).not.toContain("Gluteal-only route requirement");
+  });
+
+  it("emits no technique label when nothing was documented", () => {
+    const note = formatFor(sustennaAdministered());
+
+    expect(note.plan).not.toContain("Needle / technique:");
+  });
+});

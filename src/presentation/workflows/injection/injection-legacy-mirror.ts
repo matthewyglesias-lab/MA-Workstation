@@ -146,12 +146,21 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
 
   const initiation = encounter.initiation;
   const disposition = encounter.disposition;
+  // Habitus and weight have no legacy DOM field and the compatibility markup
+  // is frozen, so they ride the documentation-metadata channel into the saved
+  // snapshot. clinical-source restores them onto the typed encounter.
+  const administration = {
+    ...(encounter.habitus ? { habitus: encounter.habitus } : {}),
+    ...(encounter.vitals?.weight ? { weight: encounter.vitals.weight } : {}),
+    ...(encounter.vitals?.weightUnit ? { weightUnit: encounter.vitals.weightUnit } : {}),
+  };
   const documentation: InjectionDocumentationMetadata = {
     ...(details.clinicalReferenceVersion
       ? { clinicalReferenceVersion: details.clinicalReferenceVersion }
       : {}),
     ...(details.ndcSelection ? { ndcSelection: details.ndcSelection } : {}),
     ...(details.nextDose ? { nextDose: details.nextDose } : {}),
+    ...(Object.keys(administration).length ? { administration } : {}),
     ...(details.lateDoseReview
       ? {
           lateDoseReview: details.lateDoseReview,

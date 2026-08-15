@@ -1846,3 +1846,253 @@
     margin-left: 0;
   }
 }
+
+/* ── Needle & technique ─────────────────────────────────────────────────────
+   MEDITECH MAGIC readout conventions, reusing the shell's existing devices:
+   Win9x inset bevels for chrome, "Courier New" for every clinical value, and
+   the same --cd-amber alarm treatment the operator-guidance rows already use.
+   No new colour literals, no radii, no gradients, no transitions. */
+
+.cd2004-shell .wfp-site-restriction {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 8px;
+  padding: 5px 8px;
+  color: var(--cd-ink);
+  background: var(--cd-amber-soft);
+  border: 1px solid var(--cd-amber);
+  border-left: 4px solid var(--cd-amber);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.cd2004-shell .wfp-site-restriction strong {
+  color: var(--cd-amber);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-needle-section .wfp-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cd2004-shell .wfp-needle-ref {
+  color: var(--cd-ink-muted);
+  font: 9px "Courier New", Consolas, monospace;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.cd2004-shell .wfp-needle-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-bottom: 8px;
+}
+
+.cd2004-shell .wfp-needle-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cd2004-shell .wfp-needle-input-caption {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-needle-band,
+.cd2004-shell .wfp-needle-weight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Bracket toggles rather than a modern segmented control: the [X] / [ ] glyph
+   is the period-correct affordance and stays legible in mono print. */
+.cd2004-shell .wfp-needle-band-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: var(--cd-face);
+  border: 1px solid var(--cd-border-mid);
+  box-shadow:
+    inset 1px 1px var(--cd-white),
+    inset -2px -1px var(--cd-border-mid);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.cd2004-shell .wfp-needle-band-option.is-selected {
+  background: var(--cd-selection);
+  box-shadow:
+    inset 1px 1px var(--cd-border-mid),
+    inset -2px -1px var(--cd-white);
+}
+
+.cd2004-shell .wfp-needle-band-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cd2004-shell .wfp-needle-band-mark {
+  min-width: 12px;
+  color: var(--cd-ink);
+  font: 10px "Courier New", Consolas, monospace;
+  text-align: center;
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-dark);
+}
+
+.cd2004-shell .wfp-needle-band-label {
+  color: var(--cd-ink);
+  letter-spacing: 0.03em;
+}
+
+.cd2004-shell .wfp-needle-weight-value {
+  width: 62px;
+  padding: 1px 4px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-dark);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+  font: 11px "Courier New", Consolas, monospace;
+  text-align: right;
+}
+
+.cd2004-shell .wfp-needle-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 268px;
+  gap: 12px;
+  align-items: start;
+  padding: 8px;
+  background: var(--cd-paper);
+  border: 1px solid var(--cd-border-dark);
+  box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
+}
+
+.cd2004-shell .wfp-needle-readouts {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  max-width: 340px;
+}
+
+/* Dotted leader, drawn in CSS so it stretches to the panel width the way a
+   printed report's leader does, instead of a fixed run of periods. */
+.cd2004-shell .wfp-needle-readout {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(12px, 1fr) minmax(0, auto);
+  gap: 4px;
+  align-items: baseline;
+  font: 11px "Courier New", Consolas, monospace;
+}
+
+.cd2004-shell .wfp-needle-readout-label {
+  color: var(--cd-ink-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-needle-readout-dots {
+  align-self: center;
+  height: 0;
+  border-bottom: 1px dotted var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-needle-readout-value {
+  color: var(--cd-ink);
+  font-weight: 700;
+  text-align: right;
+}
+
+.cd2004-shell .wfp-needle-diagram {
+  width: 100%;
+  height: auto;
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-dark);
+}
+
+/* Flat bands with hard edges. The subcutaneous layer is hatched rather than
+   tinted so the three layers stay distinguishable in greyscale print. */
+.cd2004-shell .wfp-needle-layer-skin {
+  fill: var(--cd-chrome);
+  stroke: var(--cd-border-dark);
+  stroke-width: 1;
+}
+
+.cd2004-shell .wfp-needle-layer-subq {
+  fill: var(--cd-chrome-light);
+  stroke: var(--cd-border-dark);
+  stroke-width: 1;
+}
+
+.cd2004-shell .wfp-needle-layer-muscle {
+  fill: var(--cd-face);
+  stroke: var(--cd-border-dark);
+  stroke-width: 1;
+}
+
+.cd2004-shell .wfp-needle-layer-label {
+  fill: var(--cd-ink-muted);
+  font: 700 8px "Courier New", Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+.cd2004-shell .wfp-needle-shaft {
+  stroke: var(--cd-red);
+  stroke-width: 2;
+  fill: none;
+}
+
+.cd2004-shell .wfp-needle-depth-label {
+  fill: var(--cd-red);
+  font: 700 9px "Courier New", Consolas, monospace;
+}
+
+.cd2004-shell .wfp-needle-section .wfp-operator-guidance-row {
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  margin-top: 6px;
+  border-bottom: none;
+}
+
+.cd2004-shell .wfp-needle-reference {
+  margin-top: 8px;
+}
+
+.cd2004-shell .wfp-needle-reference dt {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* The readout column and diagram stack rather than compress: the gauge and
+   length must stay readable at the 390px width the smoke tests exercise. */
+@media (max-width: 720px) {
+  .cd2004-shell .wfp-needle-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cd2004-shell .wfp-needle-diagram {
+    max-width: 240px;
+  }
+
+  .cd2004-shell .wfp-needle-inputs {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
