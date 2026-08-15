@@ -198,6 +198,40 @@ describe("choice-of-two-needles products", () => {
   });
 });
 
+describe("resolving before a specific side is chosen", () => {
+  // The MA draws the needle up before deciding left versus right, so a
+  // single-group product must resolve as soon as drug and dose are set.
+  it("resolves a gluteal-only product with no site documented yet", () => {
+    const resolution = resolveNeedle(med("asimtufii"), "960 mg", "", { habitus: "larger" });
+    expect(formatNeedleSpec(resolution.needle!)).toBe('21G 2" (green pack)');
+    expect(resolution.siteGroup).toBe("gluteal");
+  });
+
+  it("resolves a SubQ-only product with no site documented yet", () => {
+    const resolution = resolveNeedle(med("uzedy"), "100 mg", "", {});
+    expect(formatNeedleSpec(resolution.needle!)).toBe(
+      '21G 5⁄8" (attached to prefilled syringe)',
+    );
+    expect(resolution.siteGroup).toBe("subq");
+  });
+
+  it("waits for the site when the product permits more than one muscle group", () => {
+    // Sustenna's needle genuinely differs between deltoid and gluteal, so
+    // guessing a group here would put a specific wrong needle on screen.
+    const resolution = resolveNeedle(med("sustenna"), "156 mg", "", { weightKg: 70 });
+    expect(resolution.needle).toBeUndefined();
+    expect(resolution.unresolved).toBe(false);
+  });
+
+  it("prefers the documented site over the implied group once one is chosen", () => {
+    const resolution = resolveNeedle(med("maintena"), "400 mg", "R deltoid", {
+      habitus: "larger",
+    });
+    expect(resolution.siteGroup).toBe("deltoid");
+    expect(formatNeedleSpec(resolution.needle!)).toBe('22G 1½"');
+  });
+});
+
 describe("order-directed products", () => {
   it("recommends the Haldol gauge without implying a site", () => {
     const resolution = resolveNeedle(med("haldol"), "100 mg", "", {});
@@ -238,20 +272,20 @@ describe("technique prefill string", () => {
       habitus: "larger",
     });
     expect(
-      formatTechniquePrefill(med("asimtufii"), resolution, "R ventrogluteal", "IM"),
+      formatTechniquePrefill(med("asimtufii"), resolution, "IM"),
     ).toBe('21G 2" (green pack), gluteal IM at 90°.');
   });
 
   it("uses the subcutaneous angle range for Uzedy", () => {
     const resolution = resolveNeedle(med("uzedy"), "100 mg", "Abdomen RUQ (SubQ)", {});
-    expect(formatTechniquePrefill(med("uzedy"), resolution, "Abdomen RUQ (SubQ)", "SubQ")).toBe(
+    expect(formatTechniquePrefill(med("uzedy"), resolution, "SubQ")).toBe(
       '21G 5⁄8" (attached to prefilled syringe), SubQ at 45–90°.',
     );
   });
 
   it("produces nothing when the needle is unresolved", () => {
     const resolution = resolveNeedle(med("sustenna"), "156 mg", "L deltoid", {});
-    expect(formatTechniquePrefill(med("sustenna"), resolution, "L deltoid", "IM")).toBe("");
+    expect(formatTechniquePrefill(med("sustenna"), resolution, "IM")).toBe("");
   });
 });
 

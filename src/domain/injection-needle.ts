@@ -3,6 +3,7 @@ import type { InjectionMedication } from "./injection-catalog";
 import type {
   InjectionAdministrationReference,
   InjectionHabitusBand,
+  InjectionSiteGroup,
   InjectionTechniqueNote,
   NeedleRecommendationRule,
   NeedleSpec,
@@ -30,6 +31,9 @@ export interface NeedleResolution {
   /** Present only where the label offers a documented choice of two needles. */
   alternate?: NeedleSpec;
   rationale?: string;
+  /** The anatomical family the recommendation was resolved against, whether
+   * taken from the documented site or implied by the product's allowed sites. */
+  siteGroup?: InjectionSiteGroup;
   /** True when a rule exists but the habitus/weight it depends on is missing. */
   unresolved: boolean;
   /** The product's own wording for what is still needed. */
@@ -74,6 +78,24 @@ const matchesStaticSelectors = (
   return true;
 };
 
+/**
+ * The site group a product implies before a specific side is chosen.
+ *
+ * A gluteal-only product's needle is knowable as soon as the drug and dose
+ * are set - which is when the MA actually draws it up, before deciding left
+ * versus right. Returns "" where the product permits more than one group and
+ * the needle genuinely depends on which is used.
+ */
+const impliedSiteGroup = (
+  medication: InjectionMedication | null,
+  dose: string,
+): InjectionSiteGroup | "" => {
+  const sites = medication?.administrationRule(dose).sites ?? [];
+  if (!sites.length) return "";
+  const groups = new Set(sites.map((entry) => injectionSiteGroup(entry)).filter(Boolean));
+  return groups.size === 1 ? ([...groups][0] as InjectionSiteGroup) : "";
+};
+
 export const resolveNeedle = (
   medication: InjectionMedication | null,
   dose: string,
@@ -83,7 +105,7 @@ export const resolveNeedle = (
   const administration = administrationFor(medication);
   if (!administration?.needleRules.length) return { unresolved: false };
 
-  const siteGroup = injectionSiteGroup(site);
+  const siteGroup = injectionSiteGroup(site) || impliedSiteGroup(medication, dose);
   const habitus = context.habitus || "";
   const weightKg = context.weightKg ?? null;
   const candidates = administration.needleRules.filter((rule) =>
@@ -115,6 +137,7 @@ export const resolveNeedle = (
       needle: rule.needle,
       ...(rule.alternate ? { alternate: rule.alternate } : {}),
       rationale: rule.rationale,
+      ...(siteGroup ? { siteGroup } : {}),
       unresolved: false,
     };
   }
@@ -157,8 +180,7 @@ export const formatNeedleSpec = (needle: NeedleSpec): string => {
   return measurement ? `${measurement} (${needle.descriptor})` : needle.descriptor;
 };
 
-const routeLabel = (site: string, route: string): string => {
-  const siteGroup = injectionSiteGroup(site);
+const routeLabel = (siteGroup: InjectionSiteGroup | undefined, route: string): string => {
   if (siteGroup === "subq") return "SubQ";
   if (siteGroup === "deltoid") return "deltoid IM";
   if (siteGroup === "gluteal") return "gluteal IM";
@@ -174,13 +196,12 @@ const routeLabel = (site: string, route: string): string => {
 export const formatTechniquePrefill = (
   medication: InjectionMedication | null,
   resolution: NeedleResolution,
-  site: string,
   route: string,
 ): string => {
   if (!resolution.needle) return "";
   const administration = administrationFor(medication);
   const parts = [formatNeedleSpec(resolution.needle)];
-  const placement = routeLabel(site, route);
+  const placement = routeLabel(resolution.siteGroup, route);
   const angle = administration?.angle.degrees;
   if (placement && angle) parts.push(`${placement} at ${angle}°`);
   else if (placement) parts.push(placement);

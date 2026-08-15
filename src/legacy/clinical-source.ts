@@ -15,6 +15,7 @@ import {
   type MedicationVerificationKey,
 } from "../domain/injection-catalog";
 import type {
+  InjectionAdministrationMetadata,
   InjectionDocumentationMetadata,
   InjectionNdcSelection,
   InjectionNextDoseProvenance,
@@ -222,6 +223,26 @@ const normalizeDocumentation = (value: unknown): InjectionDocumentationMetadata 
         calculatedFrom: asString(rawNextDose.calculatedFrom),
       }
     : undefined;
+  const rawAdministration = asRecord(raw.administration);
+  const habitus =
+    rawAdministration?.habitus === "lean" ||
+    rawAdministration?.habitus === "average" ||
+    rawAdministration?.habitus === "larger"
+      ? rawAdministration.habitus
+      : undefined;
+  const weightUnit =
+    rawAdministration?.weightUnit === "lb" || rawAdministration?.weightUnit === "kg"
+      ? rawAdministration.weightUnit
+      : undefined;
+  const administration: InjectionAdministrationMetadata | undefined = rawAdministration
+    ? {
+        ...(habitus ? { habitus } : {}),
+        ...(asString(rawAdministration.weight)
+          ? { weight: asString(rawAdministration.weight) }
+          : {}),
+        ...(weightUnit ? { weightUnit } : {}),
+      }
+    : undefined;
   return {
     ...(asString(raw.clinicalReferenceVersion)
       ? { clinicalReferenceVersion: asString(raw.clinicalReferenceVersion) }
@@ -235,6 +256,9 @@ const normalizeDocumentation = (value: unknown): InjectionDocumentationMetadata 
         }
       : {}),
     ...(nextDose && Object.values(nextDose).some(Boolean) ? { nextDose } : {}),
+    ...(administration && Object.values(administration).some(Boolean)
+      ? { administration }
+      : {}),
   };
 };
 
@@ -404,12 +428,24 @@ export function createLegacyClinicalSource(
         lot: value("lot"),
         expiration: value("exp"),
       },
+      // Habitus and weight have no legacy DOM field; they round-trip through
+      // the documentation-metadata channel and are restored onto the typed
+      // encounter here so the needle recommendation survives a reload.
+      ...(documentation.administration?.habitus
+        ? { habitus: documentation.administration.habitus }
+        : {}),
       vitals: {
         bp: value("bp"),
         hr: value("hr"),
         temperature: value("temp"),
         rr: value("rr"),
         spo2: value("spo2"),
+        ...(documentation.administration?.weight
+          ? { weight: documentation.administration.weight }
+          : {}),
+        ...(documentation.administration?.weightUnit
+          ? { weightUnit: documentation.administration.weightUnit }
+          : {}),
       },
       response: {
         kind: responseKind,

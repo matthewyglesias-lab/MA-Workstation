@@ -41,10 +41,25 @@ export interface InjectionNextDoseProvenance {
   calculatedFrom?: string;
 }
 
+/**
+ * Body-habitus and weight backing the needle recommendation.
+ *
+ * These ride the documentation-metadata channel rather than the legacy DOM
+ * because the compatibility markup has no field for either, and it is frozen.
+ * This channel already exists for exactly this case - typed data with no
+ * legacy counterpart - and round-trips through the saved snapshot.
+ */
+export interface InjectionAdministrationMetadata {
+  habitus?: "lean" | "average" | "larger";
+  weight?: string;
+  weightUnit?: "kg" | "lb";
+}
+
 export interface InjectionDocumentationMetadata {
   clinicalReferenceVersion?: string;
   ndcSelection?: InjectionNdcSelectionMetadata;
   nextDose?: InjectionNextDoseProvenance;
+  administration?: InjectionAdministrationMetadata;
 }
 
 export interface NdcOptionQuery {
