@@ -371,6 +371,26 @@ describe("rendered sheet", () => {
     expect(initiation).toContain("After Visit Summary - Continued");
   });
 
+  it("uses an identified continuation page when Vivitrol safety copy cannot fit safely", () => {
+    const vivitrol = buildInjectionAvsHtml(
+      base({
+        medicationKey: "vivitrol",
+        medicationName: "Vivitrol",
+        genericName: "naltrexone ER",
+        dose: "380 mg",
+        intervalKey: "q4wk",
+        site: "R ventrogluteal",
+      }),
+    );
+
+    expect(vivitrol.match(/class="avs2-page /g)).toHaveLength(2);
+    expect(vivitrol).toContain("IMPORTANT - OPIOID TOLERANCE AND OVERDOSE RISK");
+    expect(vivitrol).toContain("CALL BEFORE YOU COME IN");
+    expect(vivitrol).toContain("After Visit Summary - Continued");
+    expect(vivitrol).toContain("Page 1 of 2");
+    expect(vivitrol).toContain("Page 2 of 2");
+  });
+
   it("labels previews and released copies without changing clinical content", () => {
     const preview = buildInjectionAvsModel(base({ dispositionKind: "" }));
     const patient = buildInjectionAvsModel(base({ dispositionKind: "administered" }));

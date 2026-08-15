@@ -267,7 +267,15 @@ export const renderInjectionAvsHtml = (
   const patientName =
     model.identity.find((row) => row.label === "PATIENT")?.value ?? "";
   const patientDob = model.identity.find((row) => row.label === "DOB")?.value ?? "";
-  const complex = model.timeline.length > 2 || Boolean(model.documentSubtitle);
+  // A routine sheet normally fits on one page, but Vivitrol carries both its
+  // opioid-tolerance warning and the refrigerated-product call-ahead. Keeping
+  // both on the fixed-height routine page clips the guidance under the footer.
+  // Use the existing fully identified continuation page whenever the lead
+  // material is similarly content-rich instead of silently truncating it.
+  const complex =
+    model.timeline.length > 2 ||
+    Boolean(model.documentSubtitle) ||
+    model.leadAlerts.length > 1;
   const continuation = complex
     ? `<header class="avs2-continuation">` +
       `<h2>After Visit Summary - Continued</h2>` +

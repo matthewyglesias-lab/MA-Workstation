@@ -161,6 +161,15 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
     ...(details.ndcSelection ? { ndcSelection: details.ndcSelection } : {}),
     ...(details.nextDose ? { nextDose: details.nextDose } : {}),
     ...(Object.keys(administration).length ? { administration } : {}),
+    ...(details.lateDoseReview
+      ? {
+          lateDoseReview: details.lateDoseReview,
+          lateDoseReviewNote: details.lateDoseReviewNote,
+          lateDoseReviewProvider: details.lateDoseReviewProvider,
+          lateDoseReviewTime: details.lateDoseReviewTime,
+          lateDoseReviewFingerprint: details.lateDoseReviewFingerprint,
+        }
+      : {}),
   };
 
   window.ipmgSetInjectionChipState?.({

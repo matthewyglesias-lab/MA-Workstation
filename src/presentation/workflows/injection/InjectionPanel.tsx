@@ -11,9 +11,11 @@ import {
   INJECTION_RESPONSE_OPTIONS,
   INJECTION_SAFETY_TRIGGERS,
   emptyInjectionInitiation,
+  hasCurrentLateDoseReview,
   injectionInitiationConfig,
   injectionInitiationOptions,
   injectionInitiationSecondarySites,
+  injectionTimingReviewFingerprint,
   verificationLabels,
   type InjectionAdministrationDetails,
   type InjectionDisposition,
@@ -98,8 +100,8 @@ const LATE_DOSE_REVIEW_OPTIONS: ReadonlyArray<{
   key: "provider-authorized" | "other";
   label: string;
 }> = [
-  { key: "provider-authorized", label: "Reviewed with provider — administration authorized" },
-  { key: "other", label: "Other" },
+  { key: "provider-authorized", label: "Provider approved this administration" },
+  { key: "other", label: "Other review / plan (does not state approval)" },
 ];
 
 /**
@@ -429,7 +431,7 @@ function OptionList<T extends string>({ name, value, onChange, options, inline }
 function injectionTimingStatusLabel(timing: InjectionEvaluationOutput["timing"]): string {
   switch (timing.state) {
     case "ok":
-      return "Within the permitted window.";
+      return "On schedule.";
     case "stop":
       return "Dates don't add up — check them.";
     case "warning":
@@ -464,6 +466,10 @@ function injectionTimingStatusIcon(
     default:
       return "note";
   }
+}
+
+function formatReviewDateTime(value: string): string {
+  return value.trim().replace("T", " at ");
 }
 
 function CheckList({
@@ -1163,8 +1169,10 @@ export function InjectionPanel({
     "provider-authorized",
   );
   const [lateDoseReviewNoteDraft, setLateDoseReviewNoteDraft] = useState("");
-  // Prompt once per late administration date, not on every render while the
-  // dialog is open or after staff already reviewed it.
+  const [lateDoseReviewProviderDraft, setLateDoseReviewProviderDraft] = useState("");
+  const [lateDoseReviewTimeDraft, setLateDoseReviewTimeDraft] = useState("");
+  // Prompt once per exact set of timing facts, not on every render while the
+  // dialog is open or after staff already reviewed this same context.
   const lateDosePromptedFor = useRef("");
   // Vitals are optional and rarely used for a routine maintenance dose - stay
   // out of the way by default, but a reopened record that already carries a
@@ -1571,6 +1579,10 @@ export function InjectionPanel({
   const lateDoseWarningMessage = evaluation?.warnings.find(
     (item) => item.code === "timing.review" || item.code === "initiation.sustenna.outside-window",
   )?.message;
+  const currentLateDoseReview = Boolean(
+    evaluation?.output.lateDoseWarning && hasCurrentLateDoseReview(encounter),
+  );
+  const lateDoseReviewFingerprint = injectionTimingReviewFingerprint(encounter);
   const incompleteFields = useMemo(
     () => new Set(stops.flatMap((item) => (item.field ? [item.field] : []))),
     [stops],
@@ -1749,15 +1761,22 @@ export function InjectionPanel({
   // one just reopened from a saved draft) would show a stale/default choice
   // instead of what staff actually recorded.
   const openLateDoseDialog = () => {
-    const stored = encounter.details?.lateDoseReview;
+    const stored = currentLateDoseReview ? encounter.details?.lateDoseReview : undefined;
     setLateDoseReviewChoice(stored === "other" ? "other" : "provider-authorized");
-    setLateDoseReviewNoteDraft(stored === "other" ? encounter.details?.lateDoseReviewNote ?? "" : "");
+    setLateDoseReviewNoteDraft(currentLateDoseReview ? encounter.details?.lateDoseReviewNote ?? "" : "");
+    setLateDoseReviewProviderDraft(
+      stored === "provider-authorized" ? encounter.details?.lateDoseReviewProvider ?? "" : "",
+    );
+    setLateDoseReviewTimeDraft(
+      stored === "provider-authorized" ? encounter.details?.lateDoseReviewTime ?? "" : "",
+    );
     setLateDoseDialogOpen(true);
   };
 
-  // A dose given after its safe window gets a brief MEDITECH-style review
-  // prompt - it records the review, it does not gate finalizing (the engine
-  // only warns, never stops, on this). It fires on arrival at Outcome, the
+  // A dose documented after its expected/window boundary gets a brief
+  // MEDITECH-style review prompt. It records provider approval or another
+  // documented plan, but it never overrides an unrelated clinical stop. It
+  // fires on arrival at Outcome, the
   // last tab, rather than the instant the fields read as late: administration
   // date defaults to today, so entering an old prior-dose date alone (before
   // the actual administration date is even typed) would otherwise read as
@@ -1765,17 +1784,17 @@ export function InjectionPanel({
   // nobody has finished typing yet. By Outcome the real dates are in.
   useEffect(() => {
     if (locked || tab !== "outcome" || !evaluation?.output.lateDoseWarning) return;
-    if (encounter.details?.lateDoseReview) return;
-    if (lateDosePromptedFor.current === encounter.administrationDate) return;
-    lateDosePromptedFor.current = encounter.administrationDate;
+    if (currentLateDoseReview) return;
+    if (lateDosePromptedFor.current === lateDoseReviewFingerprint) return;
+    lateDosePromptedFor.current = lateDoseReviewFingerprint;
     openLateDoseDialog();
     // `openLateDoseDialog` reads current encounter/details by closure and is
     // recreated each render; including it would refire this on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     tab,
-    encounter.administrationDate,
-    encounter.details?.lateDoseReview,
+    currentLateDoseReview,
+    lateDoseReviewFingerprint,
     evaluation?.output.lateDoseWarning,
     locked,
   ]);
@@ -1783,7 +1802,16 @@ export function InjectionPanel({
   const confirmLateDoseReview = () => {
     patchDetails({
       lateDoseReview: lateDoseReviewChoice,
-      lateDoseReviewNote: lateDoseReviewChoice === "other" ? lateDoseReviewNoteDraft.trim() : "",
+      lateDoseReviewNote: lateDoseReviewNoteDraft.trim(),
+      lateDoseReviewProvider:
+        lateDoseReviewChoice === "provider-authorized"
+          ? lateDoseReviewProviderDraft.trim()
+          : "",
+      lateDoseReviewTime:
+        lateDoseReviewChoice === "provider-authorized"
+          ? lateDoseReviewTimeDraft.trim()
+          : "",
+      lateDoseReviewFingerprint,
     });
     setLateDoseDialogOpen(false);
   };
@@ -2151,7 +2179,7 @@ export function InjectionPanel({
                         evaluation.output.timing.latestDay !== null && (
                           <>
                             {" "}
-                            · permitted window day {evaluation.output.timing.earliestDay}–
+                            · scheduling window day {evaluation.output.timing.earliestDay}–
                             {evaluation.output.timing.latestDay}
                           </>
                         )}
@@ -2170,12 +2198,12 @@ export function InjectionPanel({
               )}
               {!nonAdministration && evaluation?.output.lateDoseWarning && (
                 <p class="wfp-field-hint">
-                  {encounter.details?.lateDoseReview ? (
+                  {currentLateDoseReview ? (
                     <>
                       Late-dose review:{" "}
-                      {encounter.details.lateDoseReview === "provider-authorized"
-                        ? "reviewed with provider, administration authorized."
-                        : encounter.details.lateDoseReviewNote || "other (see note)."}{" "}
+                      {encounter.details?.lateDoseReview === "provider-authorized"
+                        ? `provider approval documented — ${encounter.details?.lateDoseReviewProvider} · ${formatReviewDateTime(encounter.details?.lateDoseReviewTime ?? "")}.`
+                        : `${encounter.details?.lateDoseReviewNote || "Other review documented"} (does not state provider approval).`}{" "}
                       {!locked && (
                         <button
                           type="button"
@@ -2193,7 +2221,7 @@ export function InjectionPanel({
                         class="cd2004-link-button"
                         onClick={openLateDoseDialog}
                       >
-                        Document late-dose review
+                        Document provider approval / late-dose review
                       </button>
                     )
                   )}
@@ -3434,16 +3462,53 @@ export function InjectionPanel({
             </div>
             <div class="cd2004-dialog-body">
               <p>{lateDoseWarningMessage}</p>
+              <p class="wfp-field-hint">
+                Record the provider who approved proceeding and the decision time. This timing review
+                does not override any other medication, safety, product, or documentation stop.
+              </p>
               <OptionList<"provider-authorized" | "other">
                 name="late-dose-review"
                 value={lateDoseReviewChoice}
                 onChange={setLateDoseReviewChoice}
                 options={LATE_DOSE_REVIEW_OPTIONS}
               />
+              {lateDoseReviewChoice === "provider-authorized" && (
+                <>
+                  <div class="wfp-row">
+                    <Field label="Approving provider" hint="Required for provider approval">
+                      <input
+                        aria-label="Approving provider"
+                        value={lateDoseReviewProviderDraft}
+                        placeholder="Name and role"
+                        onInput={(event) =>
+                          setLateDoseReviewProviderDraft(event.currentTarget.value)
+                        }
+                      />
+                    </Field>
+                    <Field label="Approval / decision time" hint="Required for provider approval">
+                      <input
+                        aria-label="Approval / decision time"
+                        type="datetime-local"
+                        value={lateDoseReviewTimeDraft}
+                        onInput={(event) => setLateDoseReviewTimeDraft(event.currentTarget.value)}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Approval direction / context" hint="Optional concise detail">
+                    <textarea
+                      aria-label="Approval direction / context"
+                      value={lateDoseReviewNoteDraft}
+                      placeholder="Optional concise direction or re-initiation context"
+                      onInput={(event) => setLateDoseReviewNoteDraft(event.currentTarget.value)}
+                    />
+                  </Field>
+                </>
+              )}
               {lateDoseReviewChoice === "other" && (
                 <textarea
+                  aria-label="Other late-dose review or plan"
                   value={lateDoseReviewNoteDraft}
-                  placeholder="Briefly describe"
+                  placeholder="Describe the review or plan; this does not state provider approval"
                   onInput={(event) => setLateDoseReviewNoteDraft(event.currentTarget.value)}
                 />
               )}
@@ -3456,10 +3521,14 @@ export function InjectionPanel({
               <button
                 type="button"
                 class="is-primary"
-                disabled={lateDoseReviewChoice === "other" && !lateDoseReviewNoteDraft.trim()}
+                disabled={
+                  lateDoseReviewChoice === "provider-authorized"
+                    ? !lateDoseReviewProviderDraft.trim() || !lateDoseReviewTimeDraft.trim()
+                    : !lateDoseReviewNoteDraft.trim()
+                }
                 onClick={confirmLateDoseReview}
               >
-                Confirm
+                Record review
               </button>
             </div>
           </div>

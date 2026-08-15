@@ -4845,6 +4845,21 @@ input[type="radio"]:disabled {
  * patient banner, a single due-date emphasis, quiet rules, and compact guidance.
  */
 @media print {
+  /* legacy.css globally sets overflow-x:hidden. Per the overflow shorthand
+     rules that computes the other axis to auto, turning the printable document
+     into a scroll viewport. Edge then paints that scrollbar into the PDF and
+     clips content below the fixed AVS page. Dedicated AVS printing must be a
+     normal paged flow from the root through the staged sheet. */
+  html:has(body.print-avs),
+  body.print-avs,
+  body.print-avs #print-root,
+  body.print-avs #avsSheet {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
   body.print-avs #avsSheet {
     max-width: 7.5in !important;
   }

@@ -60,6 +60,12 @@ export interface InjectionDocumentationMetadata {
   ndcSelection?: InjectionNdcSelectionMetadata;
   nextDose?: InjectionNextDoseProvenance;
   administration?: InjectionAdministrationMetadata;
+  /** Structured, context-bound review of a dose administered after cadence. */
+  lateDoseReview?: "provider-authorized" | "other";
+  lateDoseReviewNote?: string;
+  lateDoseReviewProvider?: string;
+  lateDoseReviewTime?: string;
+  lateDoseReviewFingerprint?: string;
 }
 
 export interface NdcOptionQuery {

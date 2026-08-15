@@ -123,7 +123,9 @@ test.describe('MA Workstation browser journeys', () => {
     if (medication === 'Other') {
       await panel.locator('input[name="inj-dose"]').fill('100 mg');
     } else {
-      await panel.locator('select[name="inj-dose"]').selectOption('50 mg');
+      await panel
+        .locator('select[name="inj-dose"]')
+        .selectOption(medication === 'Vivitrol' ? '380 mg' : '50 mg');
     }
     await panel.locator('input[name="inj-route"]').fill('IM');
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
@@ -170,6 +172,156 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
     return panel;
   }
+
+  async function prepareScheduledVivitrol(page, {
+    patient,
+    priorDoseDate,
+    administrationDate,
+    nextDoseDate
+  }) {
+    const panel = await prepareRoutineInjection(page, {
+      patient,
+      medication: 'Vivitrol'
+    });
+    await openInjectionTab(page, 'Order');
+    await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
+
+    await openInjectionTab(page, 'Administration');
+    await panel.locator('input[type="date"]').first().fill(administrationDate);
+
+    await openInjectionTab(page, 'Schedule');
+    await panel.locator('input[type="date"]').first().fill(priorDoseDate);
+    await panel.locator('input[type="date"]').nth(1).fill(nextDoseDate);
+
+    await openInjectionTab(page, 'Verification');
+    for (const label of [
+      'Current opioid-risk / provider plan verified',
+      'Naltrexone/hepatic review verified',
+      'Supplied needle / body-habitus check'
+    ]) {
+      await panel.locator('label.wfp-option-row', { hasText: label }).click();
+    }
+    return panel;
+  }
+
+  test('keeps an expected-date Vivitrol administration neutral and allows attestation', async ({ page }) => {
+    const panel = await prepareScheduledVivitrol(page, {
+      patient: 'QA, Vivitrol Due',
+      priorDoseDate: '2026-07-17',
+      administrationDate: '2026-08-14',
+      nextDoseDate: '2026-09-11'
+    });
+
+    await openInjectionTab(page, 'Schedule');
+    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText('On schedule.');
+    await expect(panel.locator('.wfp-timing-banner')).toHaveClass(/is-ok/);
+    await expect(panel.locator('.wfp-timing-banner')).not.toHaveClass(/is-warning/);
+    await expect(panel.locator('.wfp-timing-banner-message')).toContainText(
+      'within the displayed scheduling window (2026-08-11 to 2026-08-21; expected 2026-08-14)'
+    );
+    await expect(
+      panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
+    ).toHaveCount(0);
+    await expect(
+      panel.locator('.wfp-operator-guidance-action', { hasText: 'Verify timing' })
+    ).toHaveCount(0);
+    await expect(
+      panel.locator('.wfp-operator-guidance-action', { hasText: 'expected q4 wk date' })
+    ).toHaveCount(0);
+
+    await openInjectionTab(page, 'Outcome');
+    await panel
+      .locator('label.wfp-option-row', { hasText: 'Review complete — document administration' })
+      .click();
+    await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
+      'Administration documented'
+    );
+    await expect(page.locator('#outAS')).toContainText(
+      'within expected maintenance interval'
+    );
+
+    const finish = page.locator('[data-injection-record-actions] [data-injection-finish]');
+    await expect(finish).toBeEnabled();
+    await finish.click();
+    await confirmLocalAttestation(page);
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
+  });
+
+  test('keeps the final configured Vivitrol window day neutral', async ({ page }) => {
+    const panel = await prepareScheduledVivitrol(page, {
+      patient: 'QA, Vivitrol Window Edge',
+      priorDoseDate: '2026-07-17',
+      administrationDate: '2026-08-21',
+      nextDoseDate: '2026-09-18'
+    });
+
+    await openInjectionTab(page, 'Schedule');
+    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText('On schedule.');
+    await expect(panel.locator('.wfp-timing-banner')).toHaveClass(/is-ok/);
+    await expect(panel.locator('.wfp-timing-banner-message')).toContainText(
+      'within the displayed scheduling window (2026-08-11 to 2026-08-21; expected 2026-08-14)'
+    );
+    await expect(
+      panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
+    ).toHaveCount(0);
+    await expect(
+      panel.locator('.wfp-operator-guidance-action', { hasText: 'Verify timing' })
+    ).toHaveCount(0);
+    await expect(
+      panel.locator('.wfp-operator-guidance-action', { hasText: 'expected q4 wk date' })
+    ).toHaveCount(0);
+  });
+
+  test('documents context-bound provider approval for an overdue Vivitrol dose and carries it into the note', async ({ page }) => {
+    const panel = await prepareScheduledVivitrol(page, {
+      patient: 'QA, Vivitrol Overdue',
+      priorDoseDate: '2026-07-17',
+      administrationDate: '2026-08-22',
+      nextDoseDate: '2026-09-19'
+    });
+
+    await openInjectionTab(page, 'Schedule');
+    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText(
+      'Late — needs provider review.'
+    );
+    await expect(
+      panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
+    ).toBeVisible();
+
+    await openInjectionTab(page, 'Outcome');
+    const reviewDialog = page.getByRole('dialog', { name: 'Late-dose review' });
+    await expect(reviewDialog).toBeVisible();
+    await reviewDialog.getByRole('textbox', { name: 'Approving provider' })
+      .fill('A. Provider, PMHNP');
+    await reviewDialog.locator('input[aria-label="Approval / decision time"]')
+      .fill('2026-08-22T09:05');
+    await reviewDialog.getByRole('textbox', { name: 'Approval direction / context' })
+      .fill('Proceed today per active order.');
+    await reviewDialog.getByRole('button', { name: 'Record review', exact: true }).click();
+    await expect(reviewDialog).toBeHidden();
+
+    await panel
+      .locator('label.wfp-option-row', { hasText: 'Review complete — document administration' })
+      .click();
+    await expect(page.locator('#outAS')).toContainText(
+      'Provider approval documented: A. Provider, PMHNP; decision Aug 22, 2026 at 9:05 AM; direction: Proceed today per active order.'
+    );
+
+    const finish = page.locator('[data-injection-record-actions] [data-injection-finish]');
+    await expect(finish).toBeEnabled();
+    await finish.click();
+    await confirmLocalAttestation(page);
+    await expect.poll(() => page.evaluate(() => {
+      const records = JSON.parse(localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]');
+      return records.find(record => record?.patient?.name === 'QA, Vivitrol Overdue')
+        ?.snapshot?.documentation;
+    })).toMatchObject({
+      lateDoseReview: 'provider-authorized',
+      lateDoseReviewProvider: 'A. Provider, PMHNP',
+      lateDoseReviewTime: '2026-08-22T09:05',
+      lateDoseReviewNote: 'Proceed today per active order.'
+    });
+  });
 
   test('boots in a clearly local environment and exposes the local EMR record list', async ({ page }) => {
     const pageErrors = [];

@@ -2,6 +2,7 @@ import {
   INJECTION_DEPARTURE_STATUS_OPTIONS,
   INJECTION_RESPONSE_OPTIONS,
   INJECTION_SAFETY_TRIGGERS,
+  hasCurrentLateDoseReview,
   injectionReasonLabel,
   type InjectionEncounter,
   type InjectionEvaluationOutput,
@@ -53,6 +54,29 @@ const formatDateTime = (raw?: string): string => {
   const dateLabel = formatIsoDate(date);
   const timeLabel = formatTime(time);
   return [dateLabel, timeLabel].filter(Boolean).join(" at ");
+};
+
+const lateDoseReviewDocumentationText = (
+  evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
+  encounter: InjectionEncounter,
+): string => {
+  if (!evaluation.output.lateDoseWarning || !hasCurrentLateDoseReview(encounter)) {
+    return "";
+  }
+  const details = encounter.details ?? {};
+  if (details.lateDoseReview === "provider-authorized") {
+    const provider = trimmed(details.lateDoseReviewProvider);
+    const decisionTime = formatDateTime(details.lateDoseReviewTime);
+    const direction = trimmed(details.lateDoseReviewNote);
+    return [
+      `Provider approval documented: ${provider}`,
+      decisionTime ? `decision ${decisionTime}` : "",
+      direction ? `direction: ${direction}` : "",
+    ]
+      .filter(Boolean)
+      .join("; ") + ".";
+  }
+  return `Late-dose review documented: ${trimmed(details.lateDoseReviewNote)} (does not state provider approval).`;
 };
 
 // Compact military-style charting (RC6.1 note format): "8/7/26 1750" for a
@@ -221,23 +245,17 @@ const formatVitalsLine = (encounter: InjectionEncounter): string => {
 /** Compact Timing sentence. Never states an interval as acceptable unless
  * the engine's own timing evaluation already reached that conclusion -
  * this only re-words `timing`/`phase`, it does not re-derive the judgment.
- * A late dose (routine window or the Sustenna Day 8 window) always carries
- * staff's late-dose review acknowledgement, not just the bare late finding -
- * "reviewed with the provider" is the fact a chart reviewer needs to see. */
+ * A late dose (routine window or the Sustenna Day 8 window) carries the
+ * structured review only when it is complete and still bound to the current
+ * timing facts; stale approval must never leak into a generated note. */
 const timingNoteText = (
   evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
   encounter: InjectionEncounter,
 ): string => {
   const timing = evaluation.output.timing;
   const phase = evaluation.output.phase;
-  const details = encounter.details ?? {};
-  const lateDoseReviewText = evaluation.output.lateDoseWarning
-    ? details.lateDoseReview === "provider-authorized"
-      ? " Reviewed with provider; administration authorized."
-      : details.lateDoseReview === "other"
-        ? ` Reviewed: ${trimmed(details.lateDoseReviewNote) || "other"}.`
-        : ""
-    : "";
+  const reviewDocumentation = lateDoseReviewDocumentationText(evaluation, encounter);
+  const lateDoseReviewText = reviewDocumentation ? ` ${reviewDocumentation}` : "";
   if (timing.state === "idle") {
     if (!evaluation.output.lateDoseWarning) return "";
     // The Sustenna Day 8 window check runs independently of the routine
@@ -256,7 +274,7 @@ const timingNoteText = (
   const daysPhrase = days === null ? "" : `${days} day${days === 1 ? "" : "s"} since prior inj`;
   if (timing.state === "ok") {
     // The actual prior-dose -> administration span, not the theoretical
-    // permitted window - a chart reviewer wants to see what happened, and
+    // scheduling window - a chart reviewer wants to see what happened, and
     // "within expected maintenance interval" already says it was on time.
     const range =
       encounter.priorDoseDate && encounter.administrationDate
@@ -267,10 +285,13 @@ const timingNoteText = (
   if (timing.late) {
     return `${daysPhrase || "Timing reviewed"}; outside routine maintenance interval. Med-specific missed-dose guidance reviewed.${lateDoseReviewText}`;
   }
+  if (timing.relativeToExpected) {
+    return `${daysPhrase || "Timing reviewed"}; administration date was earlier than the displayed scheduling window. Active-order timing review required.`;
+  }
   const reinit = phase === "reinitiation" ? "Re-initiation interval" : "Interval";
   return daysPhrase
-    ? `${daysPhrase}; ${reinit.toLowerCase()} reviewed per med-specific guidance. Provider direction confirmed.`
-    : `${reinit} reviewed per med-specific guidance; provider-directed regimen confirmed.`;
+    ? `${daysPhrase}; ${reinit.toLowerCase()} reviewed per med-specific guidance.`
+    : `${reinit} reviewed per med-specific guidance.`;
 };
 
 /**
@@ -705,13 +726,7 @@ export function injectionEncounterToDocumentationInput(
   // Gated on the dose still being late, not merely on the field being set -
   // an edited-back-to-on-time date must not carry a stale "reviewed as late"
   // note forward into the chart.
-  const lateDoseReviewText = evaluation.output.lateDoseWarning
-    ? details.lateDoseReview === "provider-authorized"
-      ? "Late-dose review: reviewed with provider, administration authorized."
-      : details.lateDoseReview === "other"
-        ? `Late-dose review: ${trimmed(details.lateDoseReviewNote) || "other"}.`
-        : ""
-    : "";
+  const lateDoseReviewText = lateDoseReviewDocumentationText(evaluation, encounter);
 
   return {
     chiefComplaint: {

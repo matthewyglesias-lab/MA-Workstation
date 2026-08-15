@@ -11,6 +11,8 @@ import {
   emptyInjectionEncounter,
   emptySamplesEncounter,
   emptyUdsEncounter,
+  hasCurrentLateDoseReview,
+  injectionTimingReviewFingerprint,
   type InjectionEncounter,
   type SamplesEncounter,
   type UdsEncounter,
@@ -101,6 +103,104 @@ describe("InjectionEngine safety matrix", () => {
     expect(lateResult.output.canFinalize).toBe(true);
     expect(lateResult.output.timing.late).toBe(true);
     expect(lateResult.output.lateDoseWarning).toBe(true);
+  });
+
+  it("keeps expected and configured-window Vivitrol dates neutral while warning outside the window", () => {
+    const encounter = routineInjection();
+    encounter.medicationKey = "vivitrol";
+    encounter.dose = "380 mg";
+    encounter.site = "L ventrogluteal";
+    encounter.verifications = {
+      opioidFree: true,
+      naltrexHS: true,
+      suppliedNeedle: true,
+    };
+
+    const onCadence = InjectionEngine.evaluate(encounter, {
+      today: encounter.administrationDate,
+    });
+    expect(onCadence.output.timing.state).toBe("ok");
+    expect(onCadence.output.timing.relativeToExpected).toBe("on");
+    expect(onCadence.output.timing.late).toBe(false);
+    expect(onCadence.output.lateDoseWarning).toBe(false);
+    expect(onCadence.output.canFinalize).toBe(true);
+    expect(issueCodes(onCadence, "warnings")).not.toContain("timing.review");
+    expect(onCadence.output.timing.message).toContain(
+      "within the displayed scheduling window (2026-01-27 to 2026-02-06; expected 2026-01-30)",
+    );
+
+    encounter.administrationDate = "2026-01-27";
+    encounter.nextDoseDate = "2026-02-24";
+    const firstAcceptableDay = InjectionEngine.evaluate(encounter, {
+      today: encounter.administrationDate,
+    });
+    expect(firstAcceptableDay.output.timing.state).toBe("ok");
+    expect(issueCodes(firstAcceptableDay, "warnings")).not.toContain("timing.review");
+
+    encounter.administrationDate = "2026-02-06";
+    encounter.nextDoseDate = "2026-03-06";
+    const lastAcceptableDay = InjectionEngine.evaluate(encounter, {
+      today: encounter.administrationDate,
+    });
+    expect(lastAcceptableDay.output.timing.state).toBe("ok");
+    expect(lastAcceptableDay.output.timing.relativeToExpected).toBe("after");
+    expect(lastAcceptableDay.output.lateDoseWarning).toBe(false);
+    expect(issueCodes(lastAcceptableDay, "warnings")).not.toContain("timing.review");
+
+    encounter.administrationDate = "2026-01-26";
+    encounter.nextDoseDate = "2026-02-23";
+    const tooEarly = InjectionEngine.evaluate(encounter, {
+      today: encounter.administrationDate,
+    });
+    expect(tooEarly.output.timing.state).toBe("warning");
+    expect(tooEarly.output.timing.late).toBe(false);
+    expect(issueCodes(tooEarly, "warnings")).toContain("timing.review");
+
+    encounter.administrationDate = "2026-02-07";
+    encounter.nextDoseDate = "2026-03-07";
+    const overdue = InjectionEngine.evaluate(encounter, {
+      today: encounter.administrationDate,
+    });
+    expect(overdue.output.timing.relativeToExpected).toBe("after");
+    expect(overdue.output.timing.state).toBe("warning");
+    expect(overdue.output.timing.late).toBe(true);
+    expect(overdue.output.lateDoseWarning).toBe(true);
+    expect(issueCodes(overdue, "warnings")).toContain("timing.review");
+    expect(overdue.output.canFinalize).toBe(true);
+  });
+
+  it("binds provider approval to the exact overdue timing facts without overriding other stops", () => {
+    const encounter = routineInjection();
+    encounter.medicationKey = "erzofri";
+    encounter.dose = "117 mg";
+    encounter.verifications = { resuspend: true };
+    encounter.administrationDate = "2026-02-10";
+    encounter.nextDoseDate = "2026-03-10";
+    encounter.details = {
+      lateDoseReview: "provider-authorized",
+      lateDoseReviewProvider: "A. Provider, PMHNP",
+      lateDoseReviewTime: "2026-02-10T09:05",
+      lateDoseReviewNote: "Proceed per active order.",
+      lateDoseReviewFingerprint: injectionTimingReviewFingerprint(encounter),
+    };
+
+    expect(hasCurrentLateDoseReview(encounter)).toBe(true);
+    const reviewed = InjectionEngine.evaluate(encounter, {
+      today: encounter.administrationDate,
+    });
+    expect(reviewed.output.lateDoseWarning).toBe(true);
+    expect(reviewed.output.canFinalize).toBe(true);
+
+    encounter.allergies = "";
+    const unrelatedStop = InjectionEngine.evaluate(encounter, {
+      today: encounter.administrationDate,
+    });
+    expect(issueCodes(unrelatedStop, "stops")).toContain("allergy.status");
+    expect(unrelatedStop.output.canFinalize).toBe(false);
+
+    encounter.allergies = "NKDA verified in active record";
+    encounter.administrationDate = "2026-02-11";
+    expect(hasCurrentLateDoseReview(encounter)).toBe(false);
   });
 
   it.each([

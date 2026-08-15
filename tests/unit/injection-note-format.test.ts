@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { InjectionEngine, emptyInjectionEncounter, type InjectionEncounter } from "../../src/domain/injection";
+import {
+  InjectionEngine,
+  emptyInjectionEncounter,
+  injectionTimingReviewFingerprint,
+  type InjectionEncounter,
+} from "../../src/domain/injection";
 import { injectionEncounterToDocumentationInput } from "../../src/documentation/adapters/injection-from-encounter";
 import { DocumentationEngine } from "../../src/documentation";
 
@@ -117,17 +122,32 @@ describe("RC6.1 injection note format", () => {
     );
   });
 
-  it("does not gate finalizing and states the late-dose review when the dose was given late", () => {
+  it("does not gate finalizing and records context-bound provider approval for a late dose", () => {
     const encounter = sustennaAdministered();
     encounter.administrationDate = "2026-08-25"; // well beyond the q4wk window
-    encounter.details = { ...encounter.details, lateDoseReview: "provider-authorized" };
+    encounter.details = {
+      ...encounter.details,
+      lateDoseReview: "provider-authorized",
+      lateDoseReviewProvider: "A. Provider, PMHNP",
+      lateDoseReviewTime: "2026-08-25T09:05",
+      lateDoseReviewNote: "Proceed today per active order.",
+      lateDoseReviewFingerprint: injectionTimingReviewFingerprint(encounter),
+    };
     const evaluation = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
     expect(evaluation.stops).toEqual([]);
     expect(evaluation.output.lateDoseWarning).toBe(true);
 
     const note = formatFor(encounter);
     expect(note.assessment).toMatch(/outside routine maintenance interval/);
-    expect(note.assessment).toContain("Reviewed with provider; administration authorized.");
+    expect(note.assessment).toContain(
+      "Provider approval documented: A. Provider, PMHNP; decision Aug 25, 2026 at 9:05 AM; direction: Proceed today per active order.",
+    );
+
+    // A later date edit invalidates the prior approval instead of silently
+    // carrying it into the regenerated note.
+    encounter.administrationDate = "2026-08-26";
+    const regenerated = formatFor(encounter);
+    expect(regenerated.assessment).not.toContain("Provider approval documented:");
   });
 
   it("preserves custom departure-status text verbatim", () => {

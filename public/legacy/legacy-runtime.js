@@ -9408,6 +9408,12 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       if(typeof raw.nextDose.calculatedFrom==='string'&&raw.nextDose.calculatedFrom.trim())provenance.calculatedFrom=raw.nextDose.calculatedFrom.trim();
       if(Object.keys(provenance).length)next.nextDose=provenance;
     }
+    if(['provider-authorized','other'].includes(raw.lateDoseReview)){
+      next.lateDoseReview=raw.lateDoseReview;
+      ['lateDoseReviewNote','lateDoseReviewProvider','lateDoseReviewTime','lateDoseReviewFingerprint'].forEach(key=>{
+        if(typeof raw[key]==='string'&&raw[key].trim())next[key]=raw[key].trim();
+      });
+    }
     return next;
   }
   function captureSnapshot(previousSnapshot){
