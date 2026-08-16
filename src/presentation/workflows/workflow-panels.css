@@ -281,6 +281,12 @@
   font-size: 11px;
 }
 
+.cd2004-shell .wfp-done-line.is-info {
+  color: #173a74;
+  background: var(--cd-info-soft);
+  border-color: var(--cd-info);
+}
+
 /* Exception block. Checkboxes that *raise* a hold must not wear the same
    clothes as checkboxes that confirm a step was done - amber edge, amber
    header, and a lead line stating the polarity outright. */
@@ -365,6 +371,22 @@
   border-top: none;
 }
 
+.cd2004-shell .wfp-workflow-title {
+  margin: 0;
+  font: inherit;
+  line-height: inherit;
+}
+
+.cd2004-shell h2.wfp-section-head {
+  margin: 0;
+  font: inherit;
+}
+
+.cd2004-shell .wfp-tabpanel + .wfp-tabpanel-continuation {
+  margin-top: -7px;
+  border-top: 1px solid var(--cd-border-mid);
+}
+
 /* Field groups */
 
 .cd2004-shell .wfp-section {
@@ -413,10 +435,13 @@
    distinguished from its value by weight and tone rather than by shouting.
    The colon comes from CSS so it stays out of the accessible name and out of
    the selectors the tests match on. */
-.cd2004-shell .wfp-field label {
+.cd2004-shell .wfp-field label,
+.cd2004-shell .wfp-field-label {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   align-items: baseline;
+  min-width: 0;
   color: var(--cd-ink-muted);
   font-size: 11px;
   font-weight: 400;
@@ -448,16 +473,16 @@
   font-style: italic;
 }
 
-.cd2004-shell .wfp-field.is-required > input,
-.cd2004-shell .wfp-field.is-required > select,
-.cd2004-shell .wfp-field.is-required > textarea,
+.cd2004-shell .wfp-field.is-required input,
+.cd2004-shell .wfp-field.is-required select,
+.cd2004-shell .wfp-field.is-required textarea,
 .cd2004-shell .wfp-field.is-required .wfp-select-group select {
   background: var(--cd-amber-soft);
 }
 
-.cd2004-shell .wfp-field.is-required > input:focus-visible,
-.cd2004-shell .wfp-field.is-required > select:focus-visible,
-.cd2004-shell .wfp-field.is-required > textarea:focus-visible {
+.cd2004-shell .wfp-field.is-required input:focus-visible,
+.cd2004-shell .wfp-field.is-required select:focus-visible,
+.cd2004-shell .wfp-field.is-required textarea:focus-visible {
   background: var(--cd-white);
 }
 
@@ -499,11 +524,11 @@
 
 /* Explicit width hints, for free-text fields whose content has a fixed shape
    and so should not stretch to whatever the grid offers. */
-.cd2004-shell .wfp-field.is-w-date > input {
+.cd2004-shell .wfp-field.is-w-date input {
   max-width: 130px;
 }
 
-.cd2004-shell .wfp-field.is-w-short > input {
+.cd2004-shell .wfp-field.is-w-short input {
   max-width: 180px;
 }
 
@@ -615,6 +640,76 @@
   background: none;
 }
 
+.cd2004-shell .wfp-field-caption {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cd2004-shell .wfp-pending {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+  font-style: italic;
+}
+
+.cd2004-shell .wfp-review-contract {
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--cd-amber);
+  border-left-width: 4px;
+  background: var(--cd-amber-soft);
+  color: #4a2d00;
+}
+
+.cd2004-shell .wfp-review-contract.is-confirmed {
+  border-color: var(--cd-border-mid);
+  border-left-color: var(--cd-green);
+  background: var(--cd-chrome-light);
+  color: var(--cd-ink);
+}
+
+.cd2004-shell .wfp-review-contract-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: 9px;
+  letter-spacing: 0.035em;
+}
+
+.cd2004-shell .wfp-review-contract-head span {
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-review-contract p {
+  margin: 3px 0 0;
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.cd2004-shell .wfp-review-state {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 3px;
+  border: 1px solid currentColor;
+  color: var(--cd-amber);
+  background: var(--cd-amber-soft);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+
+.cd2004-shell .wfp-review-state.is-confirmed {
+  color: var(--cd-green);
+  background: var(--cd-green-soft);
+}
+
+.cd2004-shell .wfp-review-state.is-exception {
+  color: var(--cd-red);
+  background: var(--cd-red-soft);
+}
+
 .cd2004-shell .wfp-option-row input[type="radio"] {
   margin-top: 2px;
 }
@@ -682,11 +777,22 @@
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
-  background: var(--cd-green-soft);
+  background: var(--cd-chrome-light);
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
   background: var(--cd-amber-soft);
+}
+
+.cd2004-shell .wfp-disposition-list .wfp-option-row.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.cd2004-shell .wfp-review-blocker {
+  margin: 5px 0 0;
+  color: var(--cd-amber);
+  font-weight: 700;
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-title {
@@ -889,7 +995,7 @@
    to the toggle strip (387px), and the columns drift apart. */
 .cd2004-shell .wfp-grid-lab .wfp-grid-head,
 .cd2004-shell .wfp-grid-lab .wfp-grid-row {
-  grid-template-columns: minmax(0, 1fr) 392px 30px 74px;
+  grid-template-columns: minmax(0, 1fr) 132px 30px 86px;
 }
 
 /* Toggles keep their natural widths inside that pinned column — equalising
@@ -897,6 +1003,75 @@
    result vocabulary, which print depends on. */
 .cd2004-shell .wfp-grid-lab .wfp-grid-toggle {
   flex: 0 0 auto;
+}
+
+.cd2004-shell .wfp-result-cycle {
+  width: 100%;
+  min-height: 24px;
+  padding: 2px 6px;
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 2px outset var(--cd-face);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cd2004-shell .wfp-result-cycle b {
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+
+.cd2004-shell .wfp-result-cycle:hover,
+.cd2004-shell .wfp-result-cycle:focus-visible {
+  background: var(--cd-selection);
+}
+
+.cd2004-shell .wfp-result-cycle.is-neg {
+  color: #285538;
+  background: var(--cd-white);
+  border-color: #66806a;
+  box-shadow: inset 3px 0 var(--cd-green);
+}
+
+.cd2004-shell .wfp-result-cycle.is-neg:hover,
+.cd2004-shell .wfp-result-cycle.is-neg:focus-visible {
+  background: var(--cd-selection);
+}
+
+.cd2004-shell .wfp-result-cycle.is-pos {
+  color: #651111;
+  border-color: var(--cd-red);
+  background: var(--cd-red-soft);
+}
+
+.cd2004-shell .wfp-result-cycle.is-invalid {
+  color: #4a2d00;
+  border-color: var(--cd-amber);
+  background: var(--cd-amber-soft);
+}
+
+.cd2004-shell .wfp-result-cycle.is-nt {
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome-light);
+}
+
+.cd2004-shell .wfp-result-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  padding: 3px 7px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-face);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-size: 9px;
+}
+
+.cd2004-shell .wfp-results-sticky-status {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
 }
 
 /* A one-click default offered beneath its field - the computed value the
@@ -1271,6 +1446,119 @@
   color: #145b31;
 }
 
+/* System-owned clinical values use a register-like readout instead of an
+   editable field. The double rule, fixed state stamp, and source line carry
+   the hierarchy in grayscale as well as colour. */
+.cd2004-shell .wfp-clinical-readout {
+  color: var(--cd-ink);
+  background: var(--cd-white);
+  border: 3px double var(--cd-border-dark);
+  box-shadow: inset 1px 1px var(--cd-border-light);
+}
+
+.cd2004-shell .wfp-clinical-readout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+  padding: 2px 6px;
+  color: #fff;
+  background: var(--cd-navy);
+  border-bottom: 1px solid var(--cd-border-dark);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+}
+
+.cd2004-shell .wfp-clinical-readout-marker {
+  padding: 0 5px;
+  color: var(--cd-ink);
+  background: var(--cd-face);
+  border: 1px solid #fff;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 9px;
+  line-height: 15px;
+}
+
+.cd2004-shell .wfp-clinical-readout-body {
+  display: grid;
+  grid-template-columns: minmax(180px, auto) minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 7px 9px;
+}
+
+.cd2004-shell .wfp-clinical-readout-value {
+  color: var(--cd-ink);
+  font-family: "Arial Narrow", Tahoma, Arial, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  line-height: 1;
+}
+
+.cd2004-shell .wfp-clinical-readout-copy {
+  min-width: 0;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.cd2004-shell .wfp-clinical-readout-detail {
+  font-weight: 600;
+}
+
+.cd2004-shell .wfp-clinical-readout-source {
+  display: block;
+  margin-top: 2px;
+  color: var(--cd-ink-muted);
+}
+
+.cd2004-shell .wfp-clinical-readout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.cd2004-shell .wfp-clinical-readout.is-attention {
+  border-color: var(--cd-amber);
+  background: var(--cd-amber-soft);
+}
+
+.cd2004-shell .wfp-clinical-readout.is-success {
+  border-color: var(--cd-green);
+  background: var(--cd-green-soft);
+}
+
+.cd2004-shell .wfp-clinical-readout.is-info {
+  border-color: var(--cd-info);
+  background: var(--cd-info-soft);
+}
+
+.cd2004-shell .wfp-clinical-readout.is-danger {
+  border-color: var(--cd-red);
+  background: var(--cd-red-soft);
+}
+
+.cd2004-shell .wfp-clinical-readout.is-compact .wfp-clinical-readout-body {
+  padding-block: 5px;
+}
+
+.cd2004-shell .wfp-clinical-readout.is-compact .wfp-clinical-readout-value {
+  font-size: 17px;
+}
+
+@media (max-width: 700px) {
+  .cd2004-shell .wfp-clinical-readout-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cd2004-shell .wfp-clinical-readout-actions {
+    justify-content: flex-start;
+  }
+}
+
 .cd2004-shell .wfp-operator-guidance {
   border: 1px solid var(--cd-border-mid);
   border-left: 4px solid var(--cd-focus);
@@ -1516,9 +1804,9 @@
 }
 
 .cd2004-shell .wfp-site-tile-badge {
-  color: #145b31;
-  background: var(--cd-green-soft);
-  border: 1px solid var(--cd-green);
+  color: #173a74;
+  background: var(--cd-info-soft);
+  border: 1px solid var(--cd-info);
   padding: 0 3px;
   font-size: 8px;
   font-weight: 700;
@@ -1532,15 +1820,15 @@
   gap: 6px 10px;
   align-items: center;
   padding: 4px 7px;
-  color: #145b31;
-  background: var(--cd-green-soft);
-  border: 1px solid var(--cd-green);
+  color: #173a74;
+  background: var(--cd-info-soft);
+  border: 1px solid var(--cd-info);
   font-size: 10px;
 }
 
 .cd2004-shell .wfp-site-suggestion .cd2004-link-button {
   margin-left: auto;
-  color: #145b31;
+  color: #173a74;
 }
 
 .cd2004-shell .wfp-checkbox-row.is-required {
@@ -1655,6 +1943,10 @@
     gap: 3px;
   }
 
+  .cd2004-shell [data-workflow="administer"] .wfp-tabpanel + .wfp-tabpanel-continuation {
+    margin-top: -3px;
+  }
+
   .cd2004-shell [data-workflow="administer"] .wfp-section {
     border-color: #7883a8;
     box-shadow: none;
@@ -1677,7 +1969,8 @@
     gap: 3px 6px;
   }
 
-  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > label {
+.cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > label,
+.cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-field-label {
     grid-column: 1;
   }
 
@@ -1686,6 +1979,7 @@
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > textarea,
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-option-list,
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-select-group,
+  .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-field-entry,
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-ndc-picker {
     grid-column: 2;
   }
@@ -2094,5 +2388,290 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+}
+.wfp-register-markers {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  font: 700 9px/1 "Segoe UI", Arial, sans-serif;
+  letter-spacing: .03em;
+}
+
+.wfp-register-source,
+.wfp-register-change,
+.wfp-register-state {
+  border: 1px solid #7d8a86;
+  background: #f4f1e8;
+  color: #33413e;
+  padding: 2px 4px;
+}
+
+.wfp-register-change {
+  border-color: #8c6719;
+  background: #fff0bb;
+  color: #624408;
+  cursor: help;
+}
+
+.wfp-register-state.is-stop { background: #f7d8d1; border-color: #a94537; color: #7e2118; }
+.wfp-register-state.is-rev { background: #f7e8b8; border-color: #947220; }
+.wfp-register-state.is-ok { background: #dce8dc; border-color: #66806a; }
+.wfp-register-state.is-opt { color: #606b68; }
+.wfp-register-state.is-pend { color: #5f6966; background: #eef0ea; border-color: #9ca5a1; }
+
+.wfp-field > label,
+.wfp-field > .wfp-field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wfp-context-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin: 0;
+  border: 1px solid #667773;
+  border-top: 0;
+  background: #e9eee9;
+}
+
+.wfp-context-item { min-width: 0; padding: 4px 7px; border-right: 1px solid #9ba7a4; }
+.wfp-context-item:last-child { border-right: 0; }
+.wfp-context-item dt { font: 700 9px/1.1 "Segoe UI", Arial, sans-serif; color: #52605d; }
+.wfp-context-item dd { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 11px/1.2 "Segoe UI", Arial, sans-serif; color: #14231f; }
+.wfp-context-item.is-attention { background: #f7efcf; }
+.wfp-context-item.is-stop { background: #f5d7d0; }
+
+.wfp-field-action { display: flex; flex-direction: column; align-self: end; gap: 3px; padding-bottom: 2px; }
+.wfp-field-action small { max-width: 250px; color: #56615f; }
+
+.wfp-custom-device-register { border: 1px solid #80908c; background: #f5f7f3; padding: 7px; margin: 7px 0; }
+.wfp-panel-sequence { list-style: none; padding: 0; margin: 5px 0; border: 1px solid #a4aeab; background: #fff; }
+.wfp-panel-sequence li { display: grid; grid-template-columns: 28px minmax(190px, 1fr) 30px 30px auto; align-items: center; gap: 3px; padding: 3px; border-bottom: 1px solid #d4d9d7; }
+.wfp-panel-sequence li:last-child { border-bottom: 0; }
+.wfp-sequence-number { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border: 1px solid #788783; background: #edf1ed; font: 700 10px/1 monospace; }
+
+.wfp-device-ledger .wfp-grid-row { min-height: 33px; }
+.wfp-grid-empty { padding: 14px; color: #5d6865; font-style: italic; }
+
+.wfp-exception-register { margin: 7px 0; border: 1px solid #6e7d79; background: #fff; }
+.wfp-exception-head { display: flex; justify-content: space-between; padding: 5px 7px; background: #dfe7df; border-bottom: 1px solid #6e7d79; font-size: 10px; letter-spacing: .04em; }
+.wfp-exception-line { width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 6px; text-align: left; align-items: center; padding: 5px 7px; border: 0; border-bottom: 1px solid #ccd2d0; background: #fff7dc; color: #2f3025; }
+.wfp-exception-line:hover, .wfp-exception-line:focus { background: #e9f0e7; outline: 2px solid #4f6f68; outline-offset: -2px; }
+
+.cd2004-shell .wfp-prerequisite-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  margin: 4px;
+  padding: 4px 6px;
+  color: #26315d;
+  background: #ececfa;
+  border: 1px solid #737da8;
+  box-shadow: inset 1px 1px #fff, inset -1px -1px #bcc0dc;
+  font: 11px/1.25 Tahoma, "MS Sans Serif", sans-serif;
+}
+
+.cd2004-shell .wfp-prerequisite-line > strong {
+  padding-right: 7px;
+  color: #7d4e00;
+  border-right: 1px solid #a5aac8;
+  font: 700 9px/1.2 "Arial Narrow", "MS Sans Serif", sans-serif;
+  letter-spacing: 0.07em;
+}
+
+.cd2004-shell .wfp-report-preview {
+  margin: 4px 0 6px;
+  background: var(--cd-paper);
+  border: 1px solid var(--cd-border-dark);
+}
+
+.cd2004-shell .wfp-report-preview > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 3px 6px;
+  color: #172450;
+  background: #d5d7eb;
+  border-bottom: 1px solid transparent;
+  cursor: default;
+  list-style: none;
+  font: 700 10px/1.2 "Arial Narrow", "MS Sans Serif", sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.cd2004-shell .wfp-report-preview > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cd2004-shell .wfp-report-preview > summary::before {
+  content: "[+]";
+  color: #314879;
+  font-family: "Courier New", monospace;
+}
+
+.cd2004-shell .wfp-report-preview[open] > summary {
+  border-bottom-color: var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-report-preview[open] > summary::before {
+  content: "[−]";
+}
+
+.cd2004-shell .wfp-report-preview > summary strong {
+  margin-left: auto;
+  color: #4e587c;
+  font-size: 9px;
+}
+
+@media (max-width: 700px) {
+  .cd2004-shell .wfp-prerequisite-line {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cd2004-shell .wfp-prerequisite-line > button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+.wfp-exception-line > span:first-child { font: 700 9px/1 monospace; color: #8a5211; }
+.wfp-exception-line > span:last-child { font-size: 9px; }
+.wfp-exception-clear { padding: 7px; color: #4f6458; }
+
+.wfp-transaction { border: 1px solid #798783; margin: 5px 0; }
+.wfp-transaction-line { width: 100%; display: grid; grid-template-columns: 20px 1fr auto; gap: 5px; text-align: left; padding: 5px 7px; background: #e7ece7; border: 0; color: #172420; }
+.wfp-transaction-state { font: 700 9px/1.2 monospace; color: #68716f; }
+.wfp-transaction-state.is-documented { color: #315d43; }
+.wfp-transaction-body { padding: 7px; border-top: 1px solid #9aa5a2; background: #f9faf7; }
+.wfp-output-option { border: 1px solid #9ca7a3; background: #eef2ed; padding: 6px; margin-bottom: 7px; }
+.wfp-invalidation-receipt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 7px; padding: 4px 7px; border: 1px solid #9a7426; border-top: 0; background: #fff0c8; color: #4e3b15; font-size: 10px; }
+.wfp-invalidation-receipt strong { font: 700 9px/1 monospace; letter-spacing: .04em; }
+
+/*
+ * The active field is the workstation cursor. It is deliberately a square,
+ * one-row highlight rather than a modern floating focus halo; the native
+ * control outline remains visible inside it for keyboard and low-vision use.
+ */
+.cd2004-shell .wfp-field:focus-within {
+  background: #fff4bc;
+  box-shadow: inset 3px 0 #244f94;
+  outline: 1px solid #8d8252;
+  outline-offset: 1px;
+}
+
+.cd2004-shell .wfp-field:focus-within > .wfp-field-label {
+  color: #101828;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-field-entry {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-field-entry > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cd2004-shell .wfp-field-entry > select {
+  flex: 1 1 auto;
+}
+
+.cd2004-shell .wfp-field-lookup-button {
+  flex: 0 0 24px;
+  min-width: 24px;
+  min-height: 23px;
+  padding: 0 4px;
+  color: #101010;
+  background: linear-gradient(#f7f7f7, #d4d0c8);
+  border: 2px outset #d4d0c8;
+  border-radius: 0;
+  font: 700 13px/1 Tahoma, Arial, sans-serif;
+}
+
+.cd2004-shell .wfp-field-lookup-button:active {
+  border-style: inset;
+}
+
+.cd2004-shell .wfp-field-lookup-button:focus-visible {
+  outline: 1px dotted #101010;
+  outline-offset: -4px;
+}
+
+/* Tabs double as the transaction ledger: one navigation surface, with the
+   small sequence and state stamps an operator can scan without opening it. */
+.cd2004-shell .wfp-ledger-tabs .wfp-tab {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px;
+  text-align: left;
+}
+
+.cd2004-shell .wfp-ledger-sequence {
+  color: #68716f;
+  font: 700 8px/1 Consolas, monospace;
+}
+
+.cd2004-shell .wfp-ledger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cd2004-shell .wfp-ledger-state {
+  min-width: 31px;
+  padding: 1px 3px;
+  border: 1px solid #8b9693;
+  background: #eff1ec;
+  color: #596360;
+  font: 700 8px/1.15 Consolas, monospace;
+  text-align: center;
+}
+
+.cd2004-shell .wfp-ledger-state.is-entry {
+  border-color: #244f94;
+  background: #dbe5f5;
+  color: #173a74;
+}
+
+.cd2004-shell .wfp-ledger-state.is-complete,
+.cd2004-shell .wfp-ledger-state.is-locked {
+  border-color: #66806a;
+  background: #dce8dc;
+  color: #285538;
+}
+
+.cd2004-shell .wfp-ledger-state.is-review {
+  border-color: #947220;
+  background: #f7e8b8;
+  color: #654700;
+}
+
+.cd2004-shell .wfp-ledger-state.is-stop {
+  border-color: #a94537;
+  background: #f7d8d1;
+  color: #7e2118;
+}
+
+@media (max-width: 900px) {
+  .cd2004-shell .wfp-ledger-tabs .wfp-tab {
+    gap: 3px;
+    padding-inline: 3px;
+  }
+
+  .cd2004-shell .wfp-ledger-label {
+    font-size: 8px;
+  }
+
+  .cd2004-shell .wfp-ledger-state {
+    min-width: 26px;
+    padding-inline: 2px;
   }
 }

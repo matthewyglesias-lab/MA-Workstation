@@ -8,13 +8,20 @@ async function openInjection(page) {
 }
 
 async function openTab(panel, name) {
-  await panel.getByRole('tab', { name, exact: true }).click();
+  const currentLabel = {
+    Order: 'Order & Timing',
+    Schedule: 'Order & Timing',
+    Verification: 'Administration',
+    Outcome: 'Review'
+  }[name] ?? name;
+  await panel.getByRole('tab', { name: currentLabel, exact: true }).click();
 }
 
 async function enterRoutineOrder(panel, patient) {
   await openTab(panel, 'Order');
   await panel.locator('input[placeholder="Last, First"]').fill(patient);
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
+  await panel.locator('select[name="inj-reason"]').selectOption('scheduled');
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
   await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
   await panel.locator('select[name="inj-dose"]').selectOption('156 mg');
@@ -124,24 +131,26 @@ test.describe('Injection decision support', () => {
     const panel = await openInjection(page);
     await enterRoutineOrder(panel, 'QA, Next Due');
 
-    // Actual administration date lives on Administration (with the time it
-    // pairs with); Expected next due, calculated from it, stays on Schedule.
-    await openTab(panel, 'Administration');
+    // Administration date belongs to the order/timing context. The return
+    // target is a readout; changing it requires the audited exception dialog.
+    await openTab(panel, 'Order');
     const administrationDate = panel
-      .locator('.wfp-field', { hasText: 'Actual administration date' })
+      .locator('.wfp-field', { hasText: 'Administration date' })
       .locator('input[type="date"]');
     await administrationDate.fill('2026-07-30');
 
-    await openTab(panel, 'Schedule');
-    const dueDate = panel
-      .locator('.wfp-field', { hasText: 'Expected next due' })
-      .locator('input[type="date"]');
-    await expect(dueDate).not.toHaveValue('');
-    await expect(panel.locator('.wfp-field', { hasText: 'Expected next due' }).locator('.wfp-calculated-value')).toBeVisible();
-
-    await dueDate.fill('2030-01-15');
-    const dueField = panel.locator('.wfp-field', { hasText: 'Expected next due' });
-    await expect(dueField.getByRole('button', { name: /Reset to calculated/ })).toBeVisible();
+    const dueField = panel.locator(
+      '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
+    );
+    await expect(dueField.locator('output')).toHaveText('08/27/2026');
+    await dueField.getByRole('button', { name: 'Override…' }).click();
+    const override = page.getByRole('dialog', { name: 'Override calculated return target' });
+    await override.getByLabel('Override date').fill('2030-01-15');
+    await override.locator('.wfp-field', { hasText: 'Reason / order context' })
+      .locator('textarea').fill('Active order specifies this return date');
+    await override.getByRole('button', { name: 'Record override' }).click();
+    await expect(dueField.locator('output')).toHaveText('01/15/2030');
+    await expect(dueField.locator('.wfp-clinical-readout-marker')).toHaveText('OVERRIDE');
 
     const actions = page.locator('[data-injection-record-actions]');
     await expect(actions.locator('[data-injection-save]')).toBeEnabled();
@@ -156,28 +165,27 @@ test.describe('Injection decision support', () => {
     await page.getByRole('button', { name: /Resume draft for QA, Next Due/ }).click();
 
     const resumedPanel = page.locator('.wfp-panel');
-    await openTab(resumedPanel, 'Schedule');
-    const resumedDue = resumedPanel
-      .locator('.wfp-field', { hasText: 'Expected next due' })
-      .locator('input[type="date"]');
-    await expect(resumedDue).toHaveValue('2030-01-15');
-    await expect(
-      resumedPanel
-        .locator('.wfp-field', { hasText: 'Expected next due' })
-        .getByRole('button', { name: /Reset to calculated/ }),
-    ).toBeVisible();
+    await openTab(resumedPanel, 'Order');
+    const resumedDue = resumedPanel.locator(
+      '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
+    );
+    await expect(resumedDue.locator('output')).toHaveText('01/15/2030');
+    await expect(resumedDue).toContainText('Active order specifies this return date');
+    await expect(resumedDue.getByRole('button', { name: 'Review override…' })).toBeVisible();
   });
 
   test('keeps the legacy completion gate aligned with phase-aware routine checks', async ({ page }) => {
     const panel = await openInjection(page);
     await enterRoutineOrder(panel, 'QA, Routine Bridge');
 
-    await openTab(panel, 'Schedule');
-    await panel.locator('input[type="date"]').nth(0).fill('2026-07-02');
+    await openTab(panel, 'Order');
+    await panel.locator('.wfp-field', { hasText: 'Prior dose' })
+      .locator('input[type="date"]').fill('2026-07-02');
+    await panel.locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[type="date"]').fill('2026-07-30');
 
     await openTab(panel, 'Administration');
     await panel.getByText('R deltoid', { exact: true }).click();
-    await panel.locator('input[type="date"]').first().fill('2026-07-30');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
     await panel.locator('input[type="time"]').fill('10:30');
 

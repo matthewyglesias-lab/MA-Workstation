@@ -62,6 +62,54 @@ const issueCodes = (
 ) => evaluation[kind].map((entry) => entry.code);
 
 describe("InjectionEngine safety matrix", () => {
+  it("blocks impossible dates, malformed expiration, and backwards follow-up dates", () => {
+    const encounter = routineInjection();
+    encounter.administrationDate = "2026-02-30";
+    encounter.nextDoseDate = "2026-01-01";
+    encounter.traceability.expiration = "not-a-month";
+    const result = InjectionEngine.evaluate(encounter, { today: "2026-08-14" });
+    expect(issueCodes(result, "stops")).toEqual(
+      expect.arrayContaining([
+        "administration.date-invalid",
+        "trace.expiration-invalid",
+      ]),
+    );
+    expect(result.output.canFinalize).toBe(false);
+    encounter.administrationDate = "2026-01-30";
+    const backwards = InjectionEngine.evaluate(encounter, { today: "2026-08-14" });
+    expect(issueCodes(backwards, "stops")).toContain("followup.next-dose-before-administration");
+  });
+
+  it("does not let hidden administration details block a documented handoff", () => {
+    const encounter = routineInjection();
+    encounter.disposition = {
+      kind: "held",
+      provider: "Safety Provider",
+      time: "09:20",
+      outcome: "Hold today; provider will reassess.",
+    };
+    encounter.details = { device: "Other", siteCondition: "Other", preparation: "Other" };
+    const result = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+    expect(result.output.canFinalize).toBe(true);
+    expect(issueCodes(result, "stops")).not.toEqual(
+      expect.arrayContaining([
+        "administration.device-other",
+        "administration.site-condition-other",
+        "trace.preparation-other",
+      ]),
+    );
+  });
+
+  it("enforces the Haldol per-site volume limit and numeric input", () => {
+    const encounter = routineInjection();
+    encounter.details = { volume: "3.1", volumeUnit: "mL" };
+    expect(issueCodes(InjectionEngine.evaluate(encounter, { today: encounter.administrationDate }), "stops"))
+      .toContain("administration.volume-max");
+    encounter.details = { volume: "abc", volumeUnit: "mL" };
+    expect(issueCodes(InjectionEngine.evaluate(encounter, { today: encounter.administrationDate }), "stops"))
+      .toContain("administration.volume-invalid");
+  });
+
   it("reviews both an early and a late administration as soft warnings, never a hard stop", () => {
     const early = routineInjection();
     // Haldol timing is now an order-dependent review rather than an invented
@@ -295,6 +343,15 @@ const routineUds = (): UdsEncounter => ({
 });
 
 describe("UdsEngine control and reconciliation matrix", () => {
+  it("blocks an impossible collection datetime even when the cup is otherwise valid", () => {
+    const encounter = routineUds();
+    encounter.collectionDateTime = "2026-02-30T09:00";
+    const result = UdsEngine.evaluate(encounter, { today: "2026-08-14" });
+    expect(result.stops.map((entry) => entry.code)).toContain("collection.datetime-invalid");
+    expect(result.output.finalizedOutputAllowed).toBe(false);
+    expect(result.output.interpretationAllowed).toBe(false);
+  });
+
   it("prevents final output for an invalid control or expired device", () => {
     const invalid = routineUds();
     invalid.control = "invalid";
@@ -366,6 +423,22 @@ const routineSample = (): SamplesEncounter => ({
 });
 
 describe("SamplesEngine package and final-review matrix", () => {
+  it("blocks impossible dispense/start dates and malformed package expiration", () => {
+    const encounter = routineSample();
+    encounter.dispenseDate = "2026-02-30";
+    encounter.startDate = "not-a-date";
+    encounter.packages[0]!.expiration = "not-a-month";
+    const result = SamplesEngine.evaluate(encounter, { today: "2026-08-14" });
+    expect(result.stops.map((entry) => entry.code)).toEqual(
+      expect.arrayContaining([
+        "samples.dispenseDate-invalid",
+        "samples.startDate-invalid",
+        "samples.package.primary.expiration-invalid",
+      ]),
+    );
+    expect(result.output.finalizedOutputAllowed).toBe(false);
+  });
+
   it("requires every physical package to have independent in-date traceability", () => {
     const encounter = routineSample();
     encounter.packages.push({
@@ -422,6 +495,7 @@ describe("FormsEngine release matrix", () => {
       patient: { name: "SAFETY, FORMS", dob: "04/04/1993" },
       provider: "Safety Provider",
       staff: "Safety MA",
+      requestDate: "2026-08-01",
       status: "provider_review" as const,
       diagnosisWording: "Provider-approved clinical wording.",
     };
@@ -439,6 +513,7 @@ describe("FormsEngine release matrix", () => {
       patient: { name: "SAFETY, FORMS", dob: "04/04/1993" },
       provider: "Safety Provider",
       staff: "Safety MA",
+      requestDate: "2026-08-01",
       status: "ready" as const,
       diagnosisWording: "Provider-approved clinical wording.",
     };
@@ -452,5 +527,23 @@ describe("FormsEngine release matrix", () => {
     const approved = FormsEngine.evaluate(encounter, {});
     expect(approved.stops).toEqual([]);
     expect(approved.output.releaseAllowed).toBe(true);
+  });
+
+  it("does not release a form without identity DOB and request date", () => {
+    const encounter = {
+      ...emptyFormsEncounter(),
+      patient: { name: "SAFETY, FORMS", dob: "" },
+      provider: "Safety Provider",
+      staff: "Safety MA",
+      requestDate: "",
+      status: "ready" as const,
+      diagnosisWording: "Provider-approved clinical wording.",
+      providerApprovalConfirmed: true,
+    };
+    const result = FormsEngine.evaluate(encounter, {});
+    expect(result.output.releaseAllowed).toBe(false);
+    expect(result.warnings.map((entry) => entry.code)).toEqual(
+      expect.arrayContaining(["forms.patient-dob", "forms.request-date"]),
+    );
   });
 });

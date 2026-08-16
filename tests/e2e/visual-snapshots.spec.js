@@ -251,7 +251,13 @@ async function openFixtureDraft(page) {
 }
 
 async function selectInjectionTab(page, name) {
-  await page.locator('.wfp-panel').getByRole('tab', { name, exact: true }).click();
+  const currentLabel = {
+    Order: 'Order & Timing',
+    Schedule: 'Order & Timing',
+    Verification: 'Administration',
+    Outcome: 'Review'
+  }[name] ?? name;
+  await page.locator('.wfp-panel').getByRole('tab', { name: currentLabel, exact: true }).click();
 }
 
 async function prepareReadyInjection(page) {
@@ -268,14 +274,14 @@ async function prepareReadyInjection(page) {
   await panel.locator('input[name="inj-dose"]').fill('100 mg');
   await panel.locator('input[name="inj-route"]').fill('IM');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
-
-  await selectInjectionTab(page, 'Schedule');
-  await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
+  await panel
+    .locator('.wfp-field', { hasText: 'Administration date' })
+    .locator('input[type="date"]')
+    .fill(FIXED_DATE_KEY);
 
   await selectInjectionTab(page, 'Administration');
   await panel.getByText('R deltoid', { exact: true }).click();
   await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Alex Rivera, MA');
-  await panel.locator('input[type="date"]').first().fill(FIXED_DATE_KEY);
   await panel.locator('input[type="time"]').first().fill('10:30');
 
   await selectInjectionTab(page, 'Product');
@@ -301,6 +307,7 @@ async function prepareReadyInjection(page) {
   await panel.getByRole('checkbox', { name: 'No acute concerns today confirmed' }).check();
 
   await selectInjectionTab(page, 'Outcome');
+  await panel.locator('select[name="inj-response"]').selectOption('well');
   await panel
     .getByRole('radio', { name: 'Review complete — document administration', exact: true })
     .check();
@@ -450,7 +457,10 @@ test.describe('Client/Server workstation visual snapshots', () => {
     await prepareReadyInjection(page);
     await settleForCapture(page);
 
-    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+    // Evaluate both terminal states in one run. Soft screenshot assertions
+    // still fail the test, but a ready-state mismatch no longer prevents CI
+    // from capturing and reporting the subsequent locked state as well.
+    await expect.soft(page.locator('.cd2004-shell')).toHaveScreenshot(
       'ready-to-attest-1440x900.png',
       SNAPSHOT_OPTIONS
     );
@@ -458,7 +468,7 @@ test.describe('Client/Server workstation visual snapshots', () => {
     await lockReadyInjection(page);
     await settleForCapture(page);
 
-    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+    await expect.soft(page.locator('.cd2004-shell')).toHaveScreenshot(
       'locked-local-record-1440x900.png',
       SNAPSHOT_OPTIONS
     );

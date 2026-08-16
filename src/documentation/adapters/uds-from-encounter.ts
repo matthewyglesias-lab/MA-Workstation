@@ -1,5 +1,5 @@
 import {
-  UDS_PANELS,
+  displayedUdsPanels,
   udsControlLabel,
   udsPanelName,
   udsReasonLabel,
@@ -8,15 +8,15 @@ import {
   type UdsEncounter,
 } from "../../domain/uds";
 import type { UdsDocumentationInput } from "../types";
+import { isValidLocalDateTime } from "../../domain/dates";
 
 const trimmed = (value?: string): string => (value ?? "").trim();
 
 const unique = (items: string[]): string[] => [...new Set(items)];
 
 const formatDateTime = (isoLocal: string): string => {
-  if (!isoLocal) return "";
+  if (!isoLocal || !isValidLocalDateTime(isoLocal)) return "";
   const date = new Date(isoLocal);
-  if (Number.isNaN(date.getTime())) return isoLocal;
   return date.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
@@ -43,6 +43,7 @@ export function udsEncounterToDocumentationInput(
   const started = Boolean(
     trimmed(encounter.patient.name) ||
       trimmed(encounter.patient.dob) ||
+      encounter.reason ||
       trimmed(encounter.device) ||
       trimmed(encounter.lot) ||
       trimmed(encounter.expiration) ||
@@ -52,11 +53,12 @@ export function udsEncounterToDocumentationInput(
   if (!started) return null;
 
   const verified = encounter.physicalReadingsVerified;
+  const displayedPanels = displayedUdsPanels(encounter);
   const resultGroups = verified
     ? [
         {
           label: "Point-of-care panel results",
-          results: UDS_PANELS.map((panel) => ({
+          results: displayedPanels.map((panel) => ({
             analyte: udsPanelName(panel),
             result: UDS_RESULT_LABEL[encounter.results[panel] ?? "nt"],
           })).filter((entry) => entry.result !== "Not tested"),
@@ -71,7 +73,7 @@ export function udsEncounterToDocumentationInput(
   if (/invalid|not documented/i.test(control)) {
     attention.push(`${control}; do not interpret the screening result.`);
   }
-  UDS_PANELS.forEach((panel) => {
+  displayedPanels.forEach((panel) => {
     const state = encounter.results[panel] ?? "nt";
     if (state === "pos") {
       attention.push(`${udsPanelName(panel)} preliminary positive requires provider review.`);
@@ -93,9 +95,9 @@ export function udsEncounterToDocumentationInput(
   }
   if (/invalid|not documented/i.test(control)) {
     plan.push("Do not interpret; repeat collection or use outside laboratory confirmation per provider direction.");
-  } else if (UDS_PANELS.some((panel) => encounter.results[panel] === "invalid")) {
+  } else if (displayedPanels.some((panel) => encounter.results[panel] === "invalid")) {
     plan.push("Repeat affected invalid panel(s) or use outside laboratory confirmation per provider direction.");
-  } else if (UDS_PANELS.some((panel) => encounter.results[panel] === "pos")) {
+  } else if (displayedPanels.some((panel) => encounter.results[panel] === "pos")) {
     plan.push("Route preliminary positive finding(s) for clinician review in clinical context.");
   }
 
@@ -107,11 +109,18 @@ export function udsEncounterToDocumentationInput(
     patient: trimmed(encounter.patient.name) || undefined,
     dob: trimmed(encounter.patient.dob) || undefined,
     collection: {
-      reason: udsReasonLabel(encounter.reason),
-      collectedAt: verified && encounter.collectionDateTime ? formatDateTime(encounter.collectionDateTime) : undefined,
+      reason: encounter.reason
+        ? encounter.reason === "other" && trimmed(encounter.reasonDetail)
+          ? `${udsReasonLabel(encounter.reason)} — ${trimmed(encounter.reasonDetail)}`
+          : udsReasonLabel(encounter.reason)
+        : undefined,
+      collectedAt:
+        verified && isValidLocalDateTime(encounter.collectionDateTime)
+          ? formatDateTime(encounter.collectionDateTime)
+          : undefined,
       collectedBy: trimmed(encounter.collector) || undefined,
       specimen: verified ? "Urine" : undefined,
-      device: trimmed(encounter.device) || undefined,
+      device: trimmed(encounter.customDeviceName) || trimmed(encounter.device) || undefined,
       lot: trimmed(encounter.lot) || undefined,
       expiration: formatMonth(encounter.expiration) || trimmed(encounter.expiration) || undefined,
       temperature: verified ? udsTempLabel(encounter.temperature) : undefined,
@@ -125,7 +134,9 @@ export function udsEncounterToDocumentationInput(
       : undefined,
     resultGroups: resultGroups.length && resultGroups[0]!.results.length ? resultGroups : undefined,
     medicationAlignment:
-      encounter.medicationAlignment !== "no unexpected" ? encounter.medicationAlignment : undefined,
+      encounter.medicationAlignment && encounter.medicationAlignment !== "no unexpected"
+        ? encounter.medicationAlignment
+        : undefined,
     clinicianAttention: attention.length ? unique(attention) : undefined,
     patientContext: trimmed(encounter.comment ?? "") || undefined,
     plan: plan.length ? unique(plan) : undefined,

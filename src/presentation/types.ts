@@ -1,14 +1,11 @@
 import type { ComponentChildren, Ref } from "preact";
+import type {
+  WorkstationReadinessItem,
+  WorkstationRecordLifecycle,
+  WorkstationWorkflowId,
+} from "../application/workstation-projection";
 
-export type WorkflowId =
-  | "home"
-  | "administer"
-  | "uds"
-  | "samples"
-  | "forms"
-  | "reference"
-  | "log"
-  | "tms";
+export type WorkflowId = WorkstationWorkflowId;
 
 export type DesktopPane = "navigator" | "work" | "inspector";
 export type ClinicalTone = "neutral" | "ready" | "warning" | "stop" | "info";
@@ -51,12 +48,7 @@ export interface WorkflowSummary {
   count?: number;
 }
 
-export interface ReadinessItem {
-  id: string;
-  label: string;
-  detail?: string;
-  state: "complete" | "pending" | "warning" | "stop";
-}
+export type ReadinessItem = WorkstationReadinessItem;
 
 export interface WorkQueueItem {
   id: string;
@@ -82,15 +74,11 @@ export interface NoteSection {
   label: string;
   content: string;
   destination?: string;
+  sourceTarget?: { workflow: "administer" | "uds"; tab: string; field?: string };
 }
 
 /** The persistence/lock state of the active local injection record. */
-export type InjectionRecordLifecycle =
-  | "new"
-  | "draft"
-  | "locked"
-  | "saving"
-  | "error";
+export type InjectionRecordLifecycle = WorkstationRecordLifecycle;
 
 /**
  * Injection lifecycle controls have one visible home in the worksheet. The
@@ -129,7 +117,6 @@ export interface WorkflowRenderContext {
 
 export interface ClinicalDesktopShellProps {
   organizationName?: string;
-  versionLabel?: string;
   activeWorkflow?: WorkflowId;
   defaultActiveWorkflow?: WorkflowId;
   onWorkflowChange?: (workflow: WorkflowId) => void;

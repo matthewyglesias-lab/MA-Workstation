@@ -283,6 +283,11 @@ describe("technique prefill string", () => {
     );
   });
 
+  it("does not carry the IM angle into a Prolixin SubQ technique prefill", () => {
+    const resolution = resolveNeedle(med("prolixin"), "25 mg", "abdomen", {});
+    expect(formatTechniquePrefill(med("prolixin"), resolution, "SubQ")).not.toMatch(/90°/);
+  });
+
   it("produces nothing when the needle is unresolved", () => {
     const resolution = resolveNeedle(med("sustenna"), "156 mg", "L deltoid", {});
     expect(formatTechniquePrefill(med("sustenna"), resolution, "IM")).toBe("");

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { projectClinicalReadiness } from "../../src/application/readiness-projection";
+import {
+  projectCarriedFieldSource,
+  projectRecordLifecycle,
+  projectWorkflowLedgerState,
+  projectWorkflowTransactionStatus,
+  WORKSTATION_TRANSACTION_CODE,
+} from "../../src/application/workstation-projection";
 import type { ClinicalEvaluation, ClinicalIssue } from "../../src/domain/contracts";
 import {
   FUNCTION_KEY_DECK_PROFILE,
@@ -152,6 +159,87 @@ describe("typed readiness projection", () => {
 
     expect(projected.items.length).toBeGreaterThan(0);
     expect(projected.items.every((item) => item.state === "complete")).toBe(true);
+  });
+});
+
+describe("workstation status projection", () => {
+  it.each([
+    ["idle", "NOT STARTED", "start"],
+    ["blocked", "ENTRY", "resolve-requirement"],
+    ["review", "REVIEW", "review"],
+    ["ready", "READY TO ATTEST", "attest"],
+  ] as const)("maps %s readiness to one honest transaction state", (readiness, label, nextCommand) => {
+    const status = projectWorkflowTransactionStatus({
+      evaluation: evaluation("uds", readiness),
+    });
+    expect(status).toMatchObject({ label, nextCommand });
+  });
+
+  it("lets a lock state override editable readiness", () => {
+    expect(
+      projectWorkflowTransactionStatus({
+        evaluation: evaluation("injection", "ready"),
+        locked: true,
+      }),
+    ).toMatchObject({ label: "LOCKED", phase: "locked" });
+  });
+
+  it("uses deterministic transaction codes for every workstation module", () => {
+    expect(WORKSTATION_TRANSACTION_CODE).toEqual({
+      home: "WKL",
+      administer: "INJ",
+      uds: "UDS",
+      samples: "SMP",
+      forms: "FRM",
+      reference: "REF",
+      log: "LOG",
+      tms: "TMS",
+    });
+  });
+
+  it("projects record lifecycle with safety-state precedence", () => {
+    expect(projectRecordLifecycle({})).toMatchObject({ state: "new" });
+    expect(projectRecordLifecycle({ recordId: "local-1" })).toMatchObject({ state: "draft" });
+    expect(projectRecordLifecycle({ recordId: "local-1", locked: true })).toMatchObject({ state: "locked" });
+    expect(projectRecordLifecycle({ recordId: "local-1", locked: true, saving: true })).toMatchObject({ state: "saving" });
+    expect(projectRecordLifecycle({ recordId: "local-1", locked: true, saving: true, error: true })).toMatchObject({ state: "error" });
+  });
+
+  it("keeps transaction-ledger states honest and gives safety stops precedence", () => {
+    expect(projectWorkflowLedgerState({})).toBe("pending");
+    expect(projectWorkflowLedgerState({ started: true, active: true })).toBe("entry");
+    expect(projectWorkflowLedgerState({ started: true, complete: true })).toBe("complete");
+    expect(
+      projectWorkflowLedgerState({
+        started: true,
+        complete: true,
+        warningCount: 1,
+      }),
+    ).toBe("review");
+    expect(
+      projectWorkflowLedgerState({
+        started: true,
+        complete: true,
+        warningCount: 1,
+        stopCount: 1,
+      }),
+    ).toBe("stop");
+    expect(
+      projectWorkflowLedgerState({ locked: true, stopCount: 1 }),
+    ).toBe("locked");
+  });
+
+  it("marks carried chart and session values as overrides after staff change them", () => {
+    expect(projectCarriedFieldSource("PATEL, ROWAN", "Patel, Rowan", "CHART"))
+      .toBe("CHART");
+    expect(projectCarriedFieldSource("Patel, Riley", "Patel, Rowan", "CHART"))
+      .toBe("OVR");
+    expect(projectCarriedFieldSource("A. Rivera, MA", "A. Rivera, MA", "SESSION"))
+      .toBe("SESSION");
+    expect(projectCarriedFieldSource("J. Staff, MA", "A. Rivera, MA", "SESSION"))
+      .toBe("OVR");
+    expect(projectCarriedFieldSource("Entered locally", "", "CHART"))
+      .toBe("ENTRY");
   });
 });
 

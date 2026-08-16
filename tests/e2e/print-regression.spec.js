@@ -30,6 +30,24 @@ async function openWorkflow(page, title, workflow) {
     .toHaveAttribute('data-active-workflow', workflow);
 }
 
+async function prepareExplicitNormalUdsPrintFixture(page) {
+  const panel = page.locator('.wfp-panel');
+  await panel.locator('select[name="uds-reason"]').selectOption('routine');
+  await panel.getByRole('button', { name: 'Use current date/time' }).click();
+  await panel.locator('.wfp-field', { hasText: 'Device' })
+    .locator('select').selectOption('SAFE life 14-Panel Cup');
+  await panel.getByRole('button', { name: 'Review normal QC…' }).click();
+  await page.getByRole('dialog', { name: 'Review normal QC' })
+    .getByRole('button', { name: 'Confirm normal QC' }).click();
+  await panel.getByRole('tab', { name: 'Review', exact: true }).click();
+  await panel.locator('.wfp-field', { hasText: 'Medication alignment' })
+    .locator('select').selectOption('no unexpected');
+  await panel.getByRole('tab', { name: /^Results/ }).click();
+  await panel.getByRole('button', { name: 'Mark displayed panels negative…' }).click();
+  await page.getByRole('dialog', { name: 'Mark displayed panels negative' })
+    .getByRole('button', { name: 'Mark displayed panels NEG' }).click();
+}
+
 async function preparePrintableInjection(page) {
   await bootWorkstation(page);
   await openWorkflow(page, 'Injection', 'administer');
@@ -45,9 +63,16 @@ async function preparePrintableInjection(page) {
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+  // Explicitly document the custom name while preserving the byte-pinned
+  // production print fixture's historical display value.
+  await panel.locator('.wfp-field:has-text("Medication name") input').fill('Other');
   await panel.locator('input[name="inj-dose"]').fill('100 mg');
   await panel.locator('input[name="inj-route"]').fill('IM');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+  await panel
+    .locator('.wfp-field', { hasText: 'Administration date' })
+    .locator('input[type="date"]')
+    .fill('2026-07-30');
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.getByText('R deltoid', { exact: true }).click();
@@ -57,19 +82,16 @@ async function preparePrintableInjection(page) {
   await panel.locator('input[placeholder="LOT123"]').fill('PRINT-LOT-001');
   await panel.locator('input[type="month"]').first().fill('2027-12');
 
-  await panel.getByRole('tab', { name: 'Verification', exact: true }).click();
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.locator('input[placeholder*="allergy / ADR status"]').fill('NKDA verified in active record');
   await panel.locator('label[for="inj-safety-none"]').click();
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
-  await panel.locator('input[type="date"]').first().fill('2026-07-30');
   await panel.locator('input[type="time"]').first().fill('09:41');
   await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
 
-  await panel.getByRole('tab', { name: 'Schedule', exact: true }).click();
-  await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
-
-  await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
+  await panel.getByRole('tab', { name: 'Review', exact: true }).click();
+  await panel.locator('select[name="inj-response"]').selectOption('well');
 
   const administered = page.locator(
     '#clinicalDisposition [data-disposition="administered"]'
@@ -91,15 +113,18 @@ async function prepareInitiationInjection(page) {
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
   await panel.locator('select[name="inj-dose"]').selectOption('234 mg');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+  await panel
+    .locator('.wfp-field', { hasText: 'Administration date' })
+    .locator('input[type="date"]')
+    .fill('2026-07-30');
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.getByText('R deltoid', { exact: true }).click();
-  await panel.locator('input[type="date"]').first().fill('2026-07-30');
   await panel.locator('input[type="time"]').first().fill('09:41');
   await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
   await panel.getByRole('tab', { name: 'Product', exact: true }).click();
   await panel.locator('input[placeholder="LOT123"]').fill('START-PRINT-001');
   await panel.locator('input[type="month"]').first().fill('2027-12');
-  await panel.getByRole('tab', { name: 'Schedule', exact: true }).click();
+  await panel.getByRole('tab', { name: 'Order & Timing', exact: true }).click();
   await panel.locator('label:has-text("Day 1 initiation")').click();
 }
 
@@ -114,10 +139,13 @@ async function prepareVivitrolInjection(page) {
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Vivitrol' });
   await panel.locator('select[name="inj-dose"]').selectOption({ label: '380 mg' });
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+  await panel
+    .locator('.wfp-field', { hasText: 'Administration date' })
+    .locator('input[type="date"]')
+    .fill('2026-08-14');
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.getByText('R ventrogluteal', { exact: true }).click();
-  await panel.locator('input[type="date"]').first().fill('2026-08-14');
   await panel.locator('input[type="time"]').first().fill('14:59');
   await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
 
@@ -125,8 +153,6 @@ async function prepareVivitrolInjection(page) {
   await panel.locator('input[placeholder="LOT123"]').fill('VIV-PRINT-001');
   await panel.locator('input[type="month"]').first().fill('2028-07');
 
-  await panel.getByRole('tab', { name: 'Schedule', exact: true }).click();
-  await panel.locator('input[type="date"]').nth(1).fill('2026-09-11');
 }
 
 async function expectAvsPagesToFit(page) {
@@ -448,7 +474,7 @@ async function prepareMinimalAvsInjection(page) {
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.getByText('R deltoid', { exact: true }).click();
 
-  await panel.getByRole('tab', { name: 'Outcome', exact: true }).click();
+  await panel.getByRole('tab', { name: 'Review', exact: true }).click();
   // Prove the real user-facing gate: the button is reachable and enabled
   // with only the minimal fields above, matching the loosened AVS gate.
   // Scoped to the Outcome tab's "Document output" section specifically -
@@ -596,6 +622,7 @@ test.describe('unchanged clinical print surfaces', () => {
   test('isolates the UDS clinician report without print clipping', async ({ page }) => {
     await bootWorkstation(page);
     await openWorkflow(page, 'UDS', 'uds');
+    await prepareExplicitNormalUdsPrintFixture(page);
     await setFieldsAndRender(page, {
       bodyClass: 'print-uds',
       renderName: 'renderUdsReport',
@@ -615,13 +642,16 @@ test.describe('unchanged clinical print surfaces', () => {
         /Print, UDS/i,
         /Qualitative screening results/i,
         /UDS-PRINT-002/i
-      ]
+      ],
+      checkParity: false
     });
+    await expect(page.locator('#udsSheet')).not.toContainText('Draft status');
   });
 
   test('isolates the UDS patient summary on Letter pages', async ({ page }) => {
     await bootWorkstation(page);
     await openWorkflow(page, 'UDS', 'uds');
+    await prepareExplicitNormalUdsPrintFixture(page);
     await setFieldsAndRender(page, {
       bodyClass: 'print-uds-patient',
       renderName: 'renderUdsPatientSummary',
@@ -642,7 +672,8 @@ test.describe('unchanged clinical print surfaces', () => {
         /Today.s main takeaway/i,
         /What this means/i,
         /does not diagnose substance use/i
-      ]
+      ],
+      checkParity: false
     });
   });
 

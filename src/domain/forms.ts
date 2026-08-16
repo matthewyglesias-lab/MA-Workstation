@@ -8,6 +8,7 @@ import {
   type ClinicalRecommendation,
   type PatientIdentity,
 } from "./contracts";
+import { isValidIsoDate } from "./dates";
 
 export type FormRequestType = "work" | "disability" | "fmla" | "records" | "med" | "other";
 export type FormRequestStatus =
@@ -97,6 +98,17 @@ export const FormsEngine: ClinicalEngine<
         issue("warning", "forms.patient", "Document the patient name.", "patient.name", "request"),
       );
     }
+    if (started && !encounter.patient.dob.trim()) {
+      warnings.push(
+        issue(
+          "warning",
+          "forms.patient-dob",
+          "Document the patient date of birth before release.",
+          "patient.dob",
+          "request",
+        ),
+      );
+    }
     if (started && !encounter.provider.trim()) {
       warnings.push(
         issue(
@@ -116,6 +128,38 @@ export const FormsEngine: ClinicalEngine<
           "Document the prepared-by/assigned staff member.",
           "staff",
           "assignment",
+        ),
+      );
+    }
+    if (started && !encounter.requestDate.trim()) {
+      warnings.push(
+        issue(
+          "warning",
+          "forms.request-date",
+          "Document the date the form request was received.",
+          "requestDate",
+          "tracking",
+        ),
+      );
+    } else if (started && !isValidIsoDate(encounter.requestDate)) {
+      warnings.push(
+        issue(
+          "warning",
+          "forms.request-date-invalid",
+          "Verify the request date; use a real calendar date.",
+          "requestDate",
+          "tracking",
+        ),
+      );
+    }
+    if (encounter.targetDate && !isValidIsoDate(encounter.targetDate)) {
+      warnings.push(
+        issue(
+          "warning",
+          "forms.target-date-invalid",
+          "Verify the target date; use a real calendar date.",
+          "targetDate",
+          "tracking",
         ),
       );
     }
@@ -194,6 +238,7 @@ export const FormsEngine: ClinicalEngine<
     const releaseAllowed =
       started &&
       uniqueStops.length === 0 &&
+      uniqueWarnings.length === 0 &&
       (!requireApproval || Boolean(encounter.providerApprovalConfirmed));
     const terminal = encounter.status === "notified" || encounter.status === "completed";
 

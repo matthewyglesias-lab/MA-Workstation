@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyUdsDeviceProfileDefaults,
+  deriveUdsReportStatus,
+  displayedUdsPanels,
   emptyUdsEncounter,
+  nextUdsResultState,
   UDS_PANELS,
   UdsEngine,
   type UdsEncounter,
@@ -13,6 +16,7 @@ import { DocumentationEngine } from "../../src/documentation";
 const baseEncounter = (): UdsEncounter => ({
   ...emptyUdsEncounter(),
   patient: { name: "Draft, Patient", dob: "01/02/1990" },
+  reason: "routine",
   collector: "Staff, MA",
   device: "SAFE life 14-Panel Cup",
   lot: "LOT-1",
@@ -21,28 +25,27 @@ const baseEncounter = (): UdsEncounter => ({
 });
 
 describe("applyUdsDeviceProfileDefaults", () => {
-  it("pre-fills every panel negative for the 14-panel cup and resets verification", () => {
+  it("leaves every 14-panel result neutral and resets device QC", () => {
     const encounter: UdsEncounter = {
       ...emptyUdsEncounter(),
       physicalReadingsVerified: true,
       device: "SAFE life 14-Panel Cup",
     };
     const next = applyUdsDeviceProfileDefaults(encounter);
-    UDS_PANELS.forEach((panel) => expect(next.results[panel]).toBe("neg"));
+    UDS_PANELS.forEach((panel) => expect(next.results[panel]).toBe("nt"));
     expect(next.physicalReadingsVerified).toBe(false);
+    expect(next.control).toBe("not documented");
+    expect(next.validity).toBe("not documented");
   });
 
-  it("pre-fills all but the omitted panel for the 13-panel cup", () => {
+  it("leaves every 13-panel result neutral even after the omitted panel is chosen", () => {
     const encounter: UdsEncounter = {
       ...emptyUdsEncounter(),
       device: "SAFE life 13-Panel Cup",
       omittedPanel: "THC",
     };
     const next = applyUdsDeviceProfileDefaults(encounter);
-    expect(next.results.THC).toBe("nt");
-    UDS_PANELS.filter((panel) => panel !== "THC").forEach((panel) =>
-      expect(next.results[panel]).toBe("neg"),
-    );
+    UDS_PANELS.forEach((panel) => expect(next.results[panel]).toBe("nt"));
   });
 
   it("leaves every panel not-tested for the 13-panel cup until an omitted panel is chosen", () => {
@@ -161,6 +164,8 @@ describe("UdsEngine device-profile gating", () => {
       physicalReadingsVerified: true,
       temperature: "acceptable",
       control: "valid",
+      validity: "acceptable",
+      medicationAlignment: "no unexpected",
       results,
     });
     expect(evaluation.stops).toHaveLength(0);
@@ -180,6 +185,8 @@ describe("UdsEngine device-profile gating", () => {
       physicalReadingsVerified: true,
       temperature: "acceptable",
       control: "valid",
+      validity: "acceptable",
+      medicationAlignment: "no unexpected",
       results,
     });
     expect(evaluation.stops.map((stop) => stop.code)).toContain("device.13.omitted-result");
@@ -196,13 +203,146 @@ describe("UdsEngine device-profile gating", () => {
       ...baseEncounter(),
       device: "Other point-of-care UDS cup",
       customPanelSetVerified: true,
+      customDeviceName: "Clinic 14-panel cup",
+      customPanels: [...UDS_PANELS],
       temperature: "acceptable",
       control: "valid",
+      validity: "acceptable",
+      medicationAlignment: "no unexpected",
       results,
     };
     expect(ready({ ...other, physicalReadingsVerified: false }).stops.map((s) => s.code)).toContain(
       "device.readings",
     );
     expect(ready({ ...other, physicalReadingsVerified: true }).stops).toHaveLength(0);
+  });
+
+  it("does not normalize an impossible local collection date into documentation", () => {
+    const input = udsEncounterToDocumentationInput({
+      ...baseEncounter(),
+      collectionDateTime: "2026-02-30T10:30",
+      physicalReadingsVerified: true,
+    });
+    expect(input?.collection?.collectedAt).toBeUndefined();
+  });
+});
+
+describe("physical device panel sequence", () => {
+  it("preserves the exact custom top-to-bottom panel order", () => {
+    const encounter = {
+      ...emptyUdsEncounter(),
+      device: "Other point-of-care UDS cup",
+      customDeviceName: "Clinic five-panel card",
+      customPanels: ["THC", "COC", "BZO", "OXY", "BUP"],
+    } satisfies UdsEncounter;
+    expect(displayedUdsPanels(encounter)).toEqual(["THC", "COC", "BZO", "OXY", "BUP"]);
+  });
+
+  it("fails closed when a result exists outside the documented custom device", () => {
+    const encounter = {
+      ...baseEncounter(),
+      device: "Other point-of-care UDS cup",
+      customDeviceName: "Clinic two-panel card",
+      customPanels: ["THC", "COC"],
+      physicalReadingsVerified: true,
+      temperature: "acceptable",
+      control: "valid",
+      validity: "acceptable",
+      medicationAlignment: "no unexpected",
+      results: { ...emptyUdsEncounter().results, THC: "neg", COC: "neg", BZO: "pos" },
+    } satisfies UdsEncounter;
+    const evaluation = UdsEngine.evaluate(encounter, { today: "2026-08-03" });
+    expect(evaluation.stops.map((stop) => stop.code)).toContain("results.outside-profile");
+    expect(evaluation.output.testedCount).toBe(2);
+    expect(evaluation.output.preliminaryPositive).not.toContain("BZO");
+  });
+});
+
+describe("intentional UDS entry states", () => {
+  it("starts every safety-relevant default as not documented", () => {
+    const encounter = emptyUdsEncounter();
+    expect(encounter.reason).toBe("");
+    expect(encounter.temperature).toBe("not documented");
+    expect(encounter.control).toBe("not documented");
+    expect(encounter.validity).toBe("not documented");
+    expect(encounter.medicationAlignment).toBe("");
+    expect(Object.values(encounter.results).every((result) => result === "nt")).toBe(true);
+  });
+
+  it("requires an explicit encounter type once UDS documentation starts", () => {
+    const encounter = { ...baseEncounter(), reason: "" as const };
+    const evaluation = UdsEngine.evaluate(encounter, { today: "2026-08-03" });
+    expect(evaluation.stops.map((stop) => stop.code)).toContain("reason.required");
+  });
+
+  it("projects untouched fields as pending context while encounter type stays explicitly required", () => {
+    const evaluation = UdsEngine.evaluate(emptyUdsEncounter(), { today: "2026-08-03" });
+    expect(evaluation.output.requirements.reason?.state).toBe("required");
+    expect(evaluation.output.requirements["patient.name"]?.state).toBe("pending");
+    expect(evaluation.output.requirements.device?.state).toBe("pending");
+    expect(evaluation.output.requirements.medicationAlignment?.state).toBe("pending");
+    expect(evaluation.output.requirements.devicePhoto?.state).toBe("optional");
+  });
+
+  it("uses encounter type as the context-setting action for the remaining requirements", () => {
+    const evaluation = UdsEngine.evaluate(
+      { ...emptyUdsEncounter(), reason: "routine" },
+      { today: "2026-08-03" },
+    );
+    expect(evaluation.readiness).toBe("blocked");
+    expect(evaluation.output.requirements["patient.name"]?.state).toBe("required");
+    expect(evaluation.output.requirements.collectionDateTime?.state).toBe("required");
+    expect(evaluation.output.requirements.medicationAlignment?.state).toBe("required");
+  });
+
+  it("projects conditional device fields without making irrelevant fields loud", () => {
+    const thirteenPanel = UdsEngine.evaluate(
+      { ...baseEncounter(), device: "SAFE life 13-Panel Cup" },
+      { today: "2026-08-03" },
+    );
+    expect(thirteenPanel.output.requirements.omittedPanel?.state).toBe("required");
+    expect(thirteenPanel.output.requirements.customDeviceName?.state).toBe("hidden");
+
+    const custom = UdsEngine.evaluate(
+      { ...baseEncounter(), device: "Clinic-approved other" },
+      { today: "2026-08-03" },
+    );
+    expect(custom.output.requirements.omittedPanel?.state).toBe("hidden");
+    expect(custom.output.requirements.customDeviceName?.state).toBe("required");
+    expect(custom.output.requirements.customPanels?.state).toBe("required");
+  });
+
+  it("cycles a result through NT, NEG, POS, INV, and back to NT", () => {
+    expect(nextUdsResultState("nt")).toBe("neg");
+    expect(nextUdsResultState("neg")).toBe("pos");
+    expect(nextUdsResultState("pos")).toBe("invalid");
+    expect(nextUdsResultState("invalid")).toBe("nt");
+  });
+
+  it("derives the preliminary all-negative report status only after explicit review", () => {
+    const encounter: UdsEncounter = {
+      ...baseEncounter(),
+      physicalReadingsVerified: true,
+      temperature: "acceptable",
+      control: "valid",
+      validity: "acceptable",
+      medicationAlignment: "no unexpected",
+      results: Object.fromEntries(UDS_PANELS.map((panel) => [panel, "neg"])),
+    };
+    const evaluation = UdsEngine.evaluate(encounter, { today: "2026-08-03" });
+    expect(deriveUdsReportStatus(encounter, evaluation).label).toBe(
+      "PRELIMINARY — ALL NEGATIVE",
+    );
+  });
+
+  it("uses a STOP marker, rather than a second pending label, for an incomplete report", () => {
+    const encounter: UdsEncounter = { ...baseEncounter(), medicationAlignment: "" };
+    const evaluation = UdsEngine.evaluate(encounter, { today: "2026-08-03" });
+
+    expect(deriveUdsReportStatus(encounter, evaluation)).toMatchObject({
+      state: "incomplete",
+      label: "INCOMPLETE",
+      marker: "STOP",
+    });
   });
 });

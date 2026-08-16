@@ -10,6 +10,7 @@ import {
 } from "preact/hooks";
 import "./clinical-desktop.css";
 import "./meditech-workstation.css";
+import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
 import {
@@ -31,6 +32,15 @@ import {
 } from "./RecordLifecycleActions";
 import { StartCenter } from "./StartCenter";
 import {
+  WorkstationLookupDialog,
+  type WorkstationLookupOption,
+  type WorkstationLookupTransaction,
+} from "./WorkstationLookupDialog";
+import {
+  WORKSTATION_FIELD_LOOKUP_REQUEST,
+  type WorkstationFieldLookupRequestDetail,
+} from "./workstation-events";
+import {
   WORKFLOW_LABELS,
   LOCKED_RECORD_ACTION_SELECTOR,
   type ClinicalDesktopShellProps,
@@ -49,6 +59,14 @@ const MENU_MNEMONICS: Record<string, string> = {
   t: "tools",
   h: "help",
 };
+
+const WORKFLOW_SUMMARY_STATE_LABEL = {
+  idle: "Not started",
+  draft: "In progress",
+  ready: "Ready",
+  attention: "Needs review",
+  locked: "Locked local record",
+} as const;
 
 const shortcutWorkflows: WorkflowId[] = [
   "home",
@@ -74,12 +92,43 @@ function normalizedPromptText(value?: string | null) {
  * orientation without introducing a second, potentially divergent source of
  * clinical guidance.
  */
-function promptForFocusedControl(target: EventTarget | null) {
+interface FocusedControlContext {
+  prompt: string;
+  fieldCode?: string;
+  fieldLabel: string;
+  fieldState?: string;
+  lookupSelect?: HTMLSelectElement;
+}
+
+function contextForFocusedControl(
+  target: EventTarget | null,
+): FocusedControlContext | null {
   if (!(target instanceof HTMLElement)) return null;
   const control = target.closest<HTMLElement>(
     "button, input, select, textarea, [role='tab'], [role='menuitem']",
   );
   if (!control || control.matches(":disabled")) return null;
+  const register = control.closest<HTMLElement>("[data-field-code]");
+  if (register) {
+    const code = register.dataset.fieldCode || "FIELD";
+    const label = register.dataset.fieldLabel || "Entry";
+    const state = register.dataset.fieldState || "OK";
+    const lookupSelect =
+      register.querySelector<HTMLSelectElement>("select:not(:disabled)") ??
+      undefined;
+    const prompt =
+      register.dataset.fieldPrompt ||
+      (lookupSelect
+        ? `Select ${label.toLowerCase()} or press F9 for available values`
+        : `Enter ${label.toLowerCase()}`);
+    return {
+      prompt: `${code} | ${label} | ${state} | ${prompt}`,
+      fieldCode: code,
+      fieldLabel: label,
+      fieldState: state,
+      lookupSelect,
+    };
+  }
 
   const labelledControl = control as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
   const associatedLabel = labelledControl.labels?.[0];
@@ -106,9 +155,17 @@ function promptForFocusedControl(target: EventTarget | null) {
       ? normalizedPromptText(control.placeholder)
       : "";
   const detail = title || placeholder;
-  return detail && !detail.toLocaleLowerCase().includes(label.toLocaleLowerCase())
-    ? `${label} — ${detail}`
-    : `Current field: ${label}`;
+  return {
+    prompt:
+      detail && !detail.toLocaleLowerCase().includes(label.toLocaleLowerCase())
+        ? `${label} — ${detail}`
+        : `Current field: ${label}`,
+    fieldLabel: label,
+    lookupSelect:
+      control instanceof HTMLSelectElement && !control.disabled
+        ? control
+        : undefined,
+  };
 }
 
 function contextsMismatch(
@@ -128,7 +185,6 @@ function contextsMismatch(
 
 export function ClinicalDesktopShell({
   organizationName = "Integrated Psychiatric Medical Group",
-  versionLabel = "MAGIC Ambulatory",
   activeWorkflow,
   defaultActiveWorkflow = "home",
   onWorkflowChange,
@@ -176,6 +232,10 @@ export function ClinicalDesktopShell({
   const [focusedPane, setFocusedPane] = useState<DesktopPane>("work");
   const [internalStatus, setInternalStatus] = useState<string | null>(null);
   const [fieldPrompt, setFieldPrompt] = useState<string | null>(null);
+  const [focusedControl, setFocusedControl] =
+    useState<FocusedControlContext | null>(null);
+  const [fieldLookup, setFieldLookup] =
+    useState<WorkstationLookupTransaction | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -197,6 +257,7 @@ export function ClinicalDesktopShell({
     fieldPrompt ??
     statusMessage ??
     "Ready. Select a workflow to begin.";
+  const hasOutstandingStops = readiness.some((item) => item.state === "stop");
 
   const openWorkflow = (workflow: WorkflowId) => {
     const scrollBody = shellRef.current?.querySelector<HTMLElement>(
@@ -288,6 +349,51 @@ export function ClinicalDesktopShell({
     return true;
   }, [focusWorksheetSection]);
 
+  const focusNextStop = useCallback(() => {
+    const worksheet = workHostRef.current;
+    if (!worksheet) return false;
+    const findCandidates = () =>
+      Array.from(
+        worksheet.querySelectorAll<HTMLElement>(
+          ".wfp-field.is-incomplete, .wfp-checkbox-row.is-required, [role='radiogroup'][data-requirement='required']",
+        ),
+      ).filter((element) => {
+        if (!element.getClientRects().length) return false;
+        if (element.classList.contains("wfp-field")) return true;
+        return !element.querySelector<HTMLInputElement>("input:checked");
+      });
+    const candidates = findCandidates();
+    if (!candidates.length) {
+      const stoppedPage = worksheet.querySelector<HTMLButtonElement>(
+        "[role='tab'].is-stop:not([aria-selected='true'])",
+      );
+      if (!stoppedPage) return focusWorksheetSection(1);
+      stoppedPage.click();
+      globalThis.setTimeout(() => {
+        const target = findCandidates()[0];
+        const focusTarget = target?.querySelector<HTMLElement>(
+          "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex='0']",
+        );
+        (focusTarget ?? target)?.focus({ preventScroll: true });
+      }, 0);
+      setFocusedPane("work");
+      setInternalStatus(null);
+      return true;
+    }
+
+    const active = document.activeElement as HTMLElement | null;
+    const current = candidates.findIndex((candidate) => candidate.contains(active));
+    const target = candidates[(current + 1 + candidates.length) % candidates.length]!;
+    target.scrollIntoView({ block: "center" });
+    const focusTarget = target.querySelector<HTMLElement>(
+      "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex='0']",
+    );
+    (focusTarget ?? target).focus({ preventScroll: true });
+    setFocusedPane("work");
+    setInternalStatus(null);
+    return true;
+  }, [focusWorksheetSection]);
+
   const cycleFocusZone = useCallback(() => {
     const shell = shellRef.current;
     if (!shell) return;
@@ -318,22 +424,90 @@ export function ClinicalDesktopShell({
     }
   }, []);
 
+  const openFieldLookup = useCallback((select: HTMLSelectElement) => {
+    if (select.disabled || !select.isConnected) return false;
+    const field = select.closest<HTMLElement>("[data-field-code]");
+    const options: WorkstationLookupOption[] = Array.from(select.options)
+      .filter((option) => !option.disabled && option.value !== "")
+      .map((option, index) => ({
+        value: option.value,
+        label: normalizedPromptText(option.label || option.textContent) || option.value,
+        description: normalizedPromptText(option.title) || undefined,
+        selected: option.selected,
+        ordinal: index + 1,
+      }));
+    if (!options.length) {
+      setInternalStatus("No local values are available for this field.");
+      return false;
+    }
+    previousFocusRef.current = select;
+    setFieldLookup({
+      control: select,
+      fieldCode: field?.dataset.fieldCode || select.name || "FIELD",
+      fieldLabel:
+        field?.dataset.fieldLabel ||
+        normalizedPromptText(select.labels?.[0]?.textContent) ||
+        "Available values",
+      prompt: field?.dataset.fieldPrompt,
+      options,
+    });
+    setInternalStatus("Local field value table opened.");
+    return true;
+  }, []);
+
   const openContextualLookup = useCallback(() => {
     const active = document.activeElement as HTMLElement | null;
-    const select = active?.closest<HTMLSelectElement>("select:not([disabled])");
-    if (select) {
-      select.focus({ preventScroll: true });
-      select.click();
-      setInternalStatus("Local field lookup opened.");
-      return;
-    }
+    const select =
+      active?.closest<HTMLSelectElement>("select:not([disabled])") ??
+      active
+        ?.closest<HTMLElement>("[data-field-code]")
+        ?.querySelector<HTMLSelectElement>("select:not([disabled])") ??
+      focusedControl?.lookupSelect;
+    if (select && openFieldLookup(select)) return;
     if (onLookup) {
       onLookup();
       setInternalStatus("Local Record List opened.");
       return;
     }
     setInternalStatus("No local lookup is available in this context.");
-  }, [onLookup]);
+  }, [focusedControl?.lookupSelect, onLookup, openFieldLookup]);
+
+  const dismissFieldLookup = useCallback(() => {
+    const control = fieldLookup?.control;
+    setFieldLookup(null);
+    globalThis.setTimeout(() => {
+      control?.focus({ preventScroll: true });
+      setInternalStatus("Lookup closed. No value changed.");
+    }, 0);
+  }, [fieldLookup]);
+
+  const chooseFieldLookupValue = useCallback(
+    (option: WorkstationLookupOption) => {
+      if (!fieldLookup) return;
+      const { control, fieldCode } = fieldLookup;
+      if (control.value === option.value) {
+        setFieldLookup(null);
+        globalThis.setTimeout(() => {
+          control.focus({ preventScroll: true });
+          setInternalStatus(`${fieldCode} unchanged — ${option.label} remains selected.`);
+        }, 0);
+        return;
+      }
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype,
+        "value",
+      )?.set;
+      if (setter) setter.call(control, option.value);
+      else control.value = option.value;
+      control.dispatchEvent(new Event("change", { bubbles: true }));
+      setFieldLookup(null);
+      globalThis.setTimeout(() => {
+        control.focus({ preventScroll: true });
+        setInternalStatus(`${fieldCode} filed as ${option.label}.`);
+      }, 0);
+    },
+    [fieldLookup],
+  );
 
   const safeBack = useCallback(() => {
     // Menus own the first Escape. Nothing here navigates away from a draft or
@@ -369,11 +543,43 @@ export function ClinicalDesktopShell({
     const shell = shellRef.current;
     if (!shell) return;
     const handleFocus = (event: FocusEvent) => {
-      setFieldPrompt(promptForFocusedControl(event.target));
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest(".meditech-command-deck, .cd2004-lookup-dialog")
+      ) {
+        // The fixed keys and their lookup dialog operate on the last
+        // worksheet field. Retaining that context while F9 or the modal owns
+        // focus prevents a field lookup from degrading into a generic record
+        // lookup or replacing the field prompt with dialog chrome.
+        return;
+      }
+      const context = contextForFocusedControl(event.target);
+      setFocusedControl(context);
+      setFieldPrompt(context?.prompt ?? null);
+      if (context) setInternalStatus(null);
     };
     shell.addEventListener("focusin", handleFocus);
     return () => shell.removeEventListener("focusin", handleFocus);
   }, []);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const handleLookupRequest = (event: Event) => {
+      const detail = (
+        event as CustomEvent<WorkstationFieldLookupRequestDetail>
+      ).detail;
+      if (!detail?.select) return;
+      event.stopPropagation();
+      openFieldLookup(detail.select);
+    };
+    shell.addEventListener(WORKSTATION_FIELD_LOOKUP_REQUEST, handleLookupRequest);
+    return () =>
+      shell.removeEventListener(
+        WORKSTATION_FIELD_LOOKUP_REQUEST,
+        handleLookupRequest,
+      );
+  }, [openFieldLookup]);
 
   useEffect(() => {
     // Command feedback takes precedence long enough to be announced. A later
@@ -537,7 +743,8 @@ export function ClinicalDesktopShell({
           focusWorksheetPage(-1);
           return;
         case "focus-next-zone":
-          cycleFocusZone();
+          if (hasOutstandingStops) focusNextStop();
+          else cycleFocusZone();
           return;
         case "lookup":
           openContextualLookup();
@@ -563,8 +770,10 @@ export function ClinicalDesktopShell({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     cycleFocusZone,
+    focusNextStop,
     focusWorksheetPage,
     focusWorksheetSection,
+    hasOutstandingStops,
     openContextualLookup,
     onOpenRecords,
     openShortcutHelp,
@@ -624,6 +833,7 @@ export function ClinicalDesktopShell({
     selectedWorkflow === "home"
       ? "Current Worklist"
       : `${WORKFLOW_LABELS[selectedWorkflow]} Worksheet`;
+  const transactionCode = WORKSTATION_TRANSACTION_CODE[selectedWorkflow];
 
   const workflowContent = renderWorkflowContent({
     workflow: selectedWorkflow,
@@ -683,8 +893,8 @@ export function ClinicalDesktopShell({
           </span>
           <span class="cd2004-app-title">
             <b>MA</b>
-            <span>MEDICATION ADMINISTRATION</span>
-            <small>{versionLabel}</small>
+            <span>CLINICAL WORKSTATION</span>
+            <small>{transactionCode}</small>
           </span>
           <span class="cd2004-app-environment">
             <b>LOCAL / TRAINING</b>
@@ -812,7 +1022,9 @@ export function ClinicalDesktopShell({
                     <strong>Local state:</strong>{" "}
                     {postState === "posted"
                       ? "Locked local record"
-                      : workflowSummaries[selectedWorkflow]?.state ?? "Draft"}
+                      : WORKFLOW_SUMMARY_STATE_LABEL[
+                          workflowSummaries[selectedWorkflow]?.state ?? "idle"
+                        ]}
                   </span>
                 )}
                 {isMismatch && <span class="is-warning">Patient mismatch</span>}
@@ -885,14 +1097,24 @@ export function ClinicalDesktopShell({
 
       <MeditechCommandDeck
         selectedWorkflow={selectedWorkflow}
+        contextCode={focusedControl?.fieldCode}
         actions={{
           help: { onInvoke: openShortcutHelp },
           "next-section": { onInvoke: () => focusWorksheetSection(1) },
           "previous-section": { onInvoke: () => focusWorksheetSection(-1) },
           "next-page": { onInvoke: () => focusWorksheetPage(1) },
           "previous-page": { onInvoke: () => focusWorksheetPage(-1) },
-          "focus-next-zone": { onInvoke: cycleFocusZone },
-          lookup: { onInvoke: openContextualLookup },
+          "focus-next-zone": {
+            onInvoke: hasOutstandingStops ? focusNextStop : cycleFocusZone,
+            label: hasOutstandingStops ? "Next stop" : "Next zone",
+            active: hasOutstandingStops,
+          },
+          lookup: {
+            onInvoke: openContextualLookup,
+            disabled: !focusedControl?.lookupSelect && !onLookup,
+            label: focusedControl?.lookupSelect ? "Field values" : "Lookup",
+            active: Boolean(focusedControl?.lookupSelect),
+          },
           "local-emr": {
             onInvoke: onOpenRecords,
             disabled: !onOpenRecords,
@@ -900,6 +1122,7 @@ export function ClinicalDesktopShell({
           file: {
             onInvoke: requestDraftSave,
             disabled: !onSaveDraft,
+            label: selectedWorkflow === "home" ? "File / save" : `Save ${transactionCode}`,
           },
           back: { onInvoke: safeBack },
         } satisfies FunctionKeyActions}
@@ -928,6 +1151,16 @@ export function ClinicalDesktopShell({
           {localStorageAvailable ? "LOCAL" : "STORAGE ERROR"}
         </div>
       </footer>
+
+      {fieldLookup && (
+        <WorkstationLookupDialog
+          key={`${fieldLookup.fieldCode}:${fieldLookup.control.name}`}
+          transaction={fieldLookup}
+          transactionCode={transactionCode}
+          onChoose={chooseFieldLookupValue}
+          onDismiss={dismissFieldLookup}
+        />
+      )}
 
       {showShortcutHelp && (
         <ModalDialog
@@ -1147,7 +1380,7 @@ function InjectionRecordActions({
               <span class="cd2004-action-glyph" aria-hidden="true">
                 <DesktopIcon name="discard" />
               </span>
-              Discard local draft...
+              Discard local draft…
             </button>
           )}
         </>
@@ -1248,36 +1481,37 @@ function PatientBanner({
       patient.visitLabel?.trim() ||
       patient.medicalRecordNumber?.trim(),
   );
+  const patientNameLabel = hasActiveChart
+    ? patient.name?.trim() || "LOCAL CHART"
+    : "NO ACTIVE CHART";
+  const dobLabel = hasActiveChart ? patient.dob || "—" : "—";
+  const recordLabel = patient.visitLabel || patient.localRecordId || "Not selected";
   return (
     <div
       class={`cd2004-patient-banner ${
         hasActiveChart ? "has-active-chart" : "is-no-active-chart"
       } ${mismatch ? "has-mismatch" : ""}`}
     >
-      <div class="cd2004-patient-primary">
+      <div class="cd2004-patient-primary" title={patientNameLabel}>
         <DesktopIcon name={mismatch ? "alert" : hasActiveChart ? "patient" : "records"} />
         <span>
           <small>{hasActiveChart ? "Local chart" : "Chart context"}</small>
-          <strong>
-            {hasActiveChart
-              ? patient.name?.trim() || "LOCAL CHART"
-              : "NO ACTIVE CHART"}
-          </strong>
+          <strong>{patientNameLabel}</strong>
         </span>
       </div>
-      <div class="cd2004-patient-field">
+      <div class="cd2004-patient-field" title={`DOB: ${dobLabel}`}>
         <small>DOB</small>
-        <strong>{hasActiveChart ? patient.dob || "—" : "—"}</strong>
+        <strong>{dobLabel}</strong>
       </div>
-      <div class="cd2004-patient-field">
+      <div class="cd2004-patient-field" title={`Local visit / record: ${recordLabel}`}>
         <small>Local visit / record</small>
-        <strong>{patient.visitLabel || patient.localRecordId || "Not selected"}</strong>
+        <strong>{recordLabel}</strong>
       </div>
-      <div class="cd2004-patient-field cd2004-banner-location">
+      <div class="cd2004-patient-field cd2004-banner-location" title={`Clinic: ${locationLabel}`}>
         <small>Clinic</small>
         <strong>{locationLabel}</strong>
       </div>
-      <div class="cd2004-patient-field cd2004-banner-staff">
+      <div class="cd2004-patient-field cd2004-banner-staff" title={`Staff: ${staffLabel}`}>
         <small>Staff</small>
         <strong>{staffLabel}</strong>
       </div>

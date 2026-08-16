@@ -18,6 +18,31 @@ export const parseIsoDate = (value: string): Date | null => {
   return date;
 };
 
+/** Strict calendar validation.  Do not let Date normalize impossible input
+ * such as 2026-02-30 into a different, silently contradictory date. */
+export const isValidIsoDate = (value: string): boolean =>
+  Boolean(parseIsoDate(String(value ?? "").trim()));
+
+export const isValidExpirationMonth = (value: string): boolean => {
+  const match = /^(\d{4})-(\d{2})$/.exec(String(value ?? "").trim());
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  return Number.isInteger(year) && year >= 1 && month >= 1 && month <= 12;
+};
+
+/** Validate the local datetime format used by the collection/admin forms. */
+export const isValidLocalDateTime = (value: string): boolean => {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(
+    String(value ?? "").trim(),
+  );
+  if (!match || !match[1] || !parseIsoDate(match[1])) return false;
+  const hour = Number(match[2]);
+  const minute = Number(match[3]);
+  const second = match[4] ? Number(match[4]) : 0;
+  return hour <= 23 && minute <= 59 && second <= 59;
+};
+
 export const toIsoDate = (date: Date): string =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(
     date.getUTCDate(),

@@ -202,7 +202,14 @@ export const formatTechniquePrefill = (
   const administration = administrationFor(medication);
   const parts = [formatNeedleSpec(resolution.needle)];
   const placement = routeLabel(resolution.siteGroup, route);
-  const angle = administration?.angle.degrees;
+  // Prolixin may be administered SubQ. Its catalog angle is an IM reference;
+  // never carry it into SubQ prose or the staff technique field.
+  const isSubcutaneous =
+    medication?.key === "prolixin" &&
+    (route.trim().toLowerCase() === "subq" ||
+      route.trim().toLowerCase().includes("subcut") ||
+      resolution.siteGroup === "subq");
+  const angle = isSubcutaneous ? undefined : administration?.angle.degrees;
   if (placement && angle) parts.push(`${placement} at ${angle}°`);
   else if (placement) parts.push(placement);
   return `${parts.join(", ")}.`;

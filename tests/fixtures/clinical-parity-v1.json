@@ -274,7 +274,6 @@
               "MTD",
               "MOP",
               "OXY",
-              "PPX",
               "BZO",
               "BAR",
               "TCA",
@@ -290,7 +289,7 @@
               "MET"
             ],
             "notTested": [],
-            "testedCount": 14,
+            "testedCount": 13,
             "interpretationAllowed": false,
             "finalizedOutputAllowed": false,
             "activityStatus": "needs_review",

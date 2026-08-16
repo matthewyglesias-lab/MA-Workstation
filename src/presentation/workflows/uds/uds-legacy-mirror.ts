@@ -12,6 +12,9 @@ declare global {
       omittedPanel?: string;
       readingsVerified?: boolean;
       customPanelSetVerified?: boolean;
+      reasonDetail?: string;
+      customDeviceName?: string;
+      customPanels?: string[];
     }) => void;
   }
 }
@@ -51,6 +54,9 @@ export function mirrorUdsEncounterToLegacyDom(
     // false, so the "Other point-of-care UDS cup" stop could never clear no
     // matter what the operator checked.
     customPanelSetVerified: encounter.customPanelSetVerified ?? false,
+    reasonDetail: encounter.reasonDetail ?? "",
+    customDeviceName: encounter.customDeviceName ?? "",
+    customPanels: encounter.customPanels ?? [],
   });
 }
 

@@ -724,6 +724,9 @@ const projectInjection = (
 
 const projectUds = (encounter: UdsEncounter, context: { today: string }) => {
   const result = UdsEngine.evaluate(encounter, context);
+  // Requirement presentation is a workstation projection, not a change to
+  // the reviewed clinical-output parity contract captured by this fixture.
+  const { requirements: _requirements, ...decisions } = result.output;
   return {
     workflow: result.workflow,
     readiness: result.readiness,
@@ -731,7 +734,7 @@ const projectUds = (encounter: UdsEncounter, context: { today: string }) => {
     warnings: result.warnings,
     recommendations: result.recommendations,
     calculatedDates: result.calculatedDates,
-    decisions: result.output,
+    decisions,
   };
 };
 

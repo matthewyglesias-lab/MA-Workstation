@@ -1,14 +1,10 @@
 import type { ComponentChildren } from "preact";
+import {
+  WORKSTATION_RECORD_LIFECYCLE_LABEL,
+  type WorkstationRecordLifecycle,
+} from "../application/workstation-projection";
 
-export type RecordLifecycle = "new" | "draft" | "locked" | "saving" | "error";
-
-const LIFECYCLE_LABEL: Record<RecordLifecycle, string> = {
-  new: "NEW LOCAL DRAFT",
-  draft: "SAVED LOCAL DRAFT",
-  locked: "LOCAL RECORD LOCKED",
-  saving: "SAVING LOCAL DRAFT",
-  error: "SAVE ATTENTION REQUIRED",
-};
+export type RecordLifecycle = WorkstationRecordLifecycle;
 
 export interface RecordLifecycleActionsProps {
   /** e.g. "INJECTION RECORD" / "UDS RECORD". */
@@ -59,7 +55,7 @@ export function RecordLifecycleActions({
         data-locked-record-action={locked ? true : undefined}
       >
         <span>{recordLabel}</span>
-        <strong>{LIFECYCLE_LABEL[lifecycle]}</strong>
+        <strong>{WORKSTATION_RECORD_LIFECYCLE_LABEL[lifecycle]}</strong>
         <small role="status" aria-live="polite">
           {detail}
         </small>

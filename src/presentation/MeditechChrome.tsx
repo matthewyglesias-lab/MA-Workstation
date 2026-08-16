@@ -145,6 +145,8 @@ export function MeditechRecordRail({
 
 interface MeditechCommandDeckProps {
   selectedWorkflow: WorkflowId;
+  /** Field register code currently owning focus, when a worksheet field is active. */
+  contextCode?: string;
   /** Injectable command behavior, keyed by the shared Client/Server profile. */
   actions?: FunctionKeyActions;
 }
@@ -152,6 +154,7 @@ interface MeditechCommandDeckProps {
 /** Fixed function keys mirror the physical-key command deck used at the desk. */
 export function MeditechCommandDeck({
   selectedWorkflow,
+  contextCode,
   actions = {},
 }: MeditechCommandDeckProps) {
   return (
@@ -162,7 +165,7 @@ export function MeditechCommandDeck({
     >
       <span class="meditech-command-prompt">
         <strong>CMD</strong>
-        <span>{WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}</span>
+        <span>{contextCode ?? WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}</span>
       </span>
       {FUNCTION_KEY_DECK_PROFILE.map((command) => {
         const action = actions[command.id] ?? {};

@@ -27,6 +27,7 @@ export function NoteInspector({
   const warnings = readiness.filter((item) => item.state === "warning").length;
   const pending = readiness.filter((item) => item.state === "pending").length;
   const readinessTotal = readiness.length;
+  const documentIsDraft = blockers > 0 || pending > 0;
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
@@ -91,9 +92,14 @@ export function NoteInspector({
           class="cd2004-command-button cd2004-note-copy-all"
           disabled={!sections.length}
           onClick={onCopyAll}
+          title={
+            documentIsDraft
+              ? "Copy the current incomplete documentation as a draft."
+              : "Copy the completed local documentation."
+          }
         >
           <DesktopIcon name="copy" />
-          Copy note
+          {documentIsDraft ? "Copy draft note" : "Copy note"}
         </button>
       </div>
 
@@ -111,6 +117,15 @@ export function NoteInspector({
                       <small>{section.destination}</small>
                     )}
                 </span>
+                {section.sourceTarget && (
+                  <button
+                    type="button"
+                    class="cd2004-link-button cd2004-note-source"
+                    onClick={() => window.dispatchEvent(new CustomEvent("ipmg:navigate-workflow-source", { detail: section.sourceTarget }))}
+                  >
+                    Source →
+                  </button>
+                )}
                 <button
                   type="button"
                   class="cd2004-command-button cd2004-note-copy"

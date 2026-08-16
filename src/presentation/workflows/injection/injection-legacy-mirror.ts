@@ -53,6 +53,9 @@ declare global {
         provider?: string;
         time?: string;
         outcome?: string;
+        reviewedBy?: string;
+        reviewedAt?: string;
+        reviewFingerprint?: string;
       };
       documentation?: InjectionDocumentationMetadata;
     }) => void;
@@ -211,6 +214,9 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
       provider: disposition.provider,
       time: disposition.time,
       outcome: disposition.outcome,
+      reviewedBy: disposition.reviewedBy,
+      reviewedAt: disposition.reviewedAt,
+      reviewFingerprint: disposition.reviewFingerprint,
     },
     documentation,
   });

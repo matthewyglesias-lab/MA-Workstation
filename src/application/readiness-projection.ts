@@ -1,5 +1,8 @@
 import type { ClinicalEvaluation, ClinicalIssue, ReadinessState } from "../domain/contracts";
-import type { ReadinessItem, WorkflowId } from "../presentation/types";
+import type {
+  WorkstationReadinessItem as ReadinessItem,
+  WorkstationWorkflowId as WorkflowId,
+} from "./workstation-projection";
 
 /**
  * Presentation-facing readiness is deliberately derived from the typed

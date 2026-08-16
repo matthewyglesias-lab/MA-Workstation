@@ -99,6 +99,29 @@ describe("RC6.1 injection note format", () => {
     expect(note.plan).not.toContain("Post-inj education provided");
   });
 
+  it("documents an intentional return-target override and its authority", () => {
+    const encounter = sustennaAdministered();
+    encounter.nextDoseDate = "2026-09-11";
+    encounter.details = {
+      ...encounter.details,
+      nextDose: {
+        value: "2026-09-11",
+        source: "manual",
+        calculatedFrom: "2026-08-07|q4wk",
+        overrideKind: "provider-direction",
+        overrideProvider: "Jane Doe, MD",
+        overrideReason: "Return in five weeks per active treatment plan",
+        recordedAt: "2026-08-07T18:00:00.000Z",
+      },
+    };
+
+    const note = formatFor(encounter);
+    expect(note.plan).toContain("Next dose due 9/11/26.");
+    expect(note.plan).toContain(
+      "Return target override documented per provider direction (Jane Doe, MD): Return in five weeks per active treatment plan.",
+    );
+  });
+
   it("includes each optional one-tap line only once its control is selected", () => {
     const encounter = sustennaAdministered();
     encounter.details = {

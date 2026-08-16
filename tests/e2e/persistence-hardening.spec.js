@@ -18,7 +18,13 @@ async function openWorkflow(page, workflow) {
 
 async function openInjectionTab(page, tabName) {
   const panel = page.locator('.wfp-panel');
-  await panel.getByRole('tab', { name: tabName, exact: true }).click();
+  const currentLabel = {
+    Order: 'Order & Timing',
+    Schedule: 'Order & Timing',
+    Verification: 'Administration',
+    Outcome: 'Review'
+  }[tabName] ?? tabName;
+  await panel.getByRole('tab', { name: currentLabel, exact: true }).click();
   return panel;
 }
 

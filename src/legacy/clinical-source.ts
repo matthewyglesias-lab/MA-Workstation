@@ -33,6 +33,7 @@ import {
   type SamplesEncounter,
 } from "../domain/samples";
 import {
+  normalizeUdsPanelSequence,
   UDS_PANELS,
   type UdsEncounter,
   type UdsPanel,
@@ -90,6 +91,9 @@ declare global {
       omitted?: string;
       readingsVerified?: boolean;
       customPanelSetVerified?: boolean;
+      reasonDetail?: string;
+      customDeviceName?: string;
+      customPanels?: string[];
     };
     samplePackageTraceEntries?: () => Array<{
       id?: string;
@@ -216,11 +220,20 @@ const normalizeDocumentation = (value: unknown): InjectionDocumentationMetadata 
     rawNextDose?.source === "calculated" || rawNextDose?.source === "manual"
       ? rawNextDose.source
       : undefined;
+  const nextDoseOverrideKind: InjectionNextDoseProvenance["overrideKind"] =
+    rawNextDose?.overrideKind === "active-order" ||
+    rawNextDose?.overrideKind === "provider-direction"
+      ? rawNextDose.overrideKind
+      : undefined;
   const nextDose = rawNextDose
     ? {
         value: asString(rawNextDose.value),
         source: nextDoseSource,
         calculatedFrom: asString(rawNextDose.calculatedFrom),
+        overrideKind: nextDoseOverrideKind,
+        overrideReason: asString(rawNextDose.overrideReason),
+        overrideProvider: asString(rawNextDose.overrideProvider),
+        recordedAt: asString(rawNextDose.recordedAt),
       }
     : undefined;
   const rawAdministration = asRecord(raw.administration);
@@ -403,7 +416,7 @@ export function createLegacyClinicalSource(
       : "";
     const reason = INJECTION_REASONS.has(raw.reason as InjectionReason)
       ? (raw.reason as InjectionReason)
-      : "scheduled";
+      : "";
     const responseKind = INJECTION_RESPONSES.has(
       raw.response as InjectionResponse["kind"],
     )
@@ -501,6 +514,9 @@ export function createLegacyClinicalSource(
         provider: asString(rawDisposition.provider),
         time: asString(rawDisposition.time),
         outcome: asString(rawDisposition.outcome),
+        reviewedBy: asString(rawDisposition.reviewedBy),
+        reviewedAt: asString(rawDisposition.reviewedAt),
+        reviewFingerprint: asString(rawDisposition.reviewFingerprint),
       },
       initiation: normalizeInitiation(raw.initiation, medicationKey),
       details: {
@@ -604,11 +620,16 @@ export function createLegacyClinicalSource(
         raw.reason === "ordered" ||
         raw.reason === "other"
           ? raw.reason
-          : "routine",
+          : "",
       device,
       omittedPanel: omitted,
       physicalReadingsVerified: Boolean(profile.readingsVerified),
       customPanelSetVerified: Boolean(profile.customPanelSetVerified),
+      reasonDetail: asString(profile.reasonDetail),
+      customDeviceName: asString(profile.customDeviceName),
+      customPanels: normalizeUdsPanelSequence(
+        Array.isArray(profile.customPanels) ? profile.customPanels.map(String) : [],
+      ),
       lot: value("udsLot"),
       expiration: value("udsExp"),
       collector: value("udsCollector"),
@@ -631,13 +652,14 @@ export function createLegacyClinicalSource(
           ? raw.validity
           : "not documented",
       medicationAlignment:
+        raw.medicationAlignment === "" ||
         raw.medicationAlignment === "no unexpected" ||
         raw.medicationAlignment === "not aligned" ||
         raw.medicationAlignment === "needs review" ||
         raw.medicationAlignment === "patient explanation" ||
         raw.medicationAlignment === "unavailable"
           ? raw.medicationAlignment
-          : "unavailable",
+          : "",
       results,
       labPlan: asString(raw.labPlan) || value("udsLab"),
       comment: value("udsComment"),

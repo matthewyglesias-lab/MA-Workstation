@@ -215,18 +215,20 @@ function noteSectionsFor(workflow: WorkflowId): NoteSection[] {
   if (workflow === 'administer') {
     const note = window._note ?? {};
     return [
-      { id: 'cc', label: 'CC', destination: 'CC', content: note.cc ?? '' },
+      { id: 'cc', label: 'CC', destination: 'CC', content: note.cc ?? '', sourceTarget: { workflow: 'administer', tab: 'order', field: 'reason' } as NoteSection['sourceTarget'] },
       {
         id: 'assessment',
         label: 'Assessment',
         destination: 'Assessment',
         content: note.as ?? '',
+        sourceTarget: { workflow: 'administer', tab: 'administration', field: 'site' } as NoteSection['sourceTarget'],
       },
       {
         id: 'plan',
         label: 'Plan',
         destination: 'Plan',
         content: note.pl ?? '',
+        sourceTarget: { workflow: 'administer', tab: 'review', field: 'response' } as NoteSection['sourceTarget'],
       },
     ].filter((section) => section.content);
   }
@@ -234,9 +236,9 @@ function noteSectionsFor(workflow: WorkflowId): NoteSection[] {
   if (workflow === 'uds') {
     const note = window._udsNote ?? {};
     return [
-      { id: 'cc', label: 'First line', content: note.cc ?? '' },
-      { id: 'assessment', label: 'Handoff body', content: note.as ?? '' },
-      { id: 'plan', label: 'Footer details', content: note.pl ?? '' },
+      { id: 'cc', label: 'First line', content: note.cc ?? '', sourceTarget: { workflow: 'uds', tab: 'specimen', field: 'reason' } as NoteSection['sourceTarget'] },
+      { id: 'assessment', label: 'Handoff body', content: note.as ?? '', sourceTarget: { workflow: 'uds', tab: 'results', field: 'results' } as NoteSection['sourceTarget'] },
+      { id: 'plan', label: 'Footer details', content: note.pl ?? '', sourceTarget: { workflow: 'uds', tab: 'review', field: 'medicationAlignment' } as NoteSection['sourceTarget'] },
     ].filter((section) => section.content);
   }
 
@@ -313,19 +315,85 @@ function storageAvailable(): boolean {
   }
 }
 
-function summaryState(workflow: WorkflowId): WorkflowSummary['state'] {
-  const panel = document.querySelector<HTMLElement>(
-    workflow === 'reference' ? '#panel-reference' : `#panel-${workflow}`,
-  );
-  if (!panel) return 'idle';
-  if (panel.classList.contains('record-readonly')) return 'locked';
-  const hasValue = [...panel.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+function clinicalBridgeSnapshot(): ReturnType<
+  NonNullable<Window['ipmgLegacyClinicalStateSnapshot']>
+> {
+  try {
+    return window.ipmgLegacyClinicalStateSnapshot?.() ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Intentional defaults are reminders, not evidence that a transaction was
+ * started. Keep the shell/worklist state aligned with the typed evaluators so
+ * a blank Injection or UDS worksheet does not light up as a draft or warning.
+ */
+function hasMeaningfulWorkflowDocumentation(
+  workflow: WorkflowId,
+  panel: HTMLElement,
+): boolean {
+  const bridge = clinicalBridgeSnapshot();
+  const hasText = (...ids: string[]) => ids.some((id) => Boolean(value(id)));
+
+  if (workflow === 'administer') {
+    const injection = bridge.injection ?? {};
+    const disposition = injection.disposition as { kind?: unknown } | undefined;
+    return Boolean(
+      hasText('ptName', 'ptDOB', 'lot') ||
+        String(injection.medicationKey ?? '').trim() ||
+        String(injection.dose ?? '').trim() ||
+        String(injection.reason ?? '').trim() ||
+        String(disposition?.kind ?? '').trim(),
+    );
+  }
+
+  if (workflow === 'uds') {
+    const uds = bridge.uds ?? {};
+    const profile = window.__IPMG_RC538_UDS_PROFILE__;
+    const anyResult = Object.values(uds.results ?? {}).some(
+      (state) => String(state) !== 'nt',
+    );
+    return Boolean(
+      hasText(
+        'udsPtName',
+        'udsDOB',
+        'udsCollector',
+        'udsDateTime',
+        'udsDevice',
+        'udsLot',
+        'udsExp',
+        'udsComment',
+      ) ||
+        String(uds.reason ?? '').trim() ||
+        (uds.temperature && uds.temperature !== 'not documented') ||
+        (uds.control && uds.control !== 'not documented') ||
+        (uds.validity && uds.validity !== 'not documented') ||
+        String(uds.medicationAlignment ?? '').trim() ||
+        (uds.labPlan && uds.labPlan !== 'provider to decide') ||
+        String(profile?.reasonDetail ?? '').trim() ||
+        String(profile?.customDeviceName ?? '').trim() ||
+        anyResult,
+    );
+  }
+
+  return [...panel.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
     'input, select, textarea',
   )].some((control) =>
     control instanceof HTMLInputElement && ['checkbox', 'radio'].includes(control.type)
       ? control.checked
       : Boolean(control.value.trim()),
   );
+}
+
+function summaryState(workflow: WorkflowId): WorkflowSummary['state'] {
+  const panel = document.querySelector<HTMLElement>(
+    workflow === 'reference' ? '#panel-reference' : `#panel-${workflow}`,
+  );
+  if (!panel) return 'idle';
+  if (panel.classList.contains('record-readonly')) return 'locked';
+  const hasValue = hasMeaningfulWorkflowDocumentation(workflow, panel);
   if (!hasValue) return 'idle';
   const blocked = panel.querySelector(
     '[aria-invalid="true"], .danger, .error, .rc530-block',
