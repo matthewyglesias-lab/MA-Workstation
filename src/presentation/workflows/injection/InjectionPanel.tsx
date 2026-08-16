@@ -72,6 +72,7 @@ import { StatusFlag } from "../StatusFlag";
 import { ClinicalReadout } from "../ClinicalReadout";
 import { RegisterMarkers, WorkflowSummaryFact, TransactionLine, type ClinicalFieldSource } from "../ClinicalRegister";
 import { OptionList, WorkflowField } from "../WorkflowField";
+import { WorkstationDateField } from "../WorkstationDateField";
 import {
   workflowLedgerPanelId,
   workflowLedgerTabId,
@@ -2076,10 +2077,10 @@ export function InjectionPanel({
                   />
                 </Field>
                 <Field label="Notification / decision time" field="details.exceptionTime">
-                  <input
-                    type="datetime-local"
+                  <WorkstationDateField
+                    mode="datetime"
                     value={encounter.details?.exceptionTime ?? ""}
-                    onInput={(event) => patchDetails({ exceptionTime: event.currentTarget.value })}
+                    onCommit={(next) => patchDetails({ exceptionTime: next })}
                   />
                 </Field>
               </div>
@@ -2390,10 +2391,9 @@ export function InjectionPanel({
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Prior dose" field="priorDoseDate">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.priorDoseDate}
-                    onInput={(event) => patch({ priorDoseDate: event.currentTarget.value })}
+                    onCommit={(next) => patch({ priorDoseDate: next })}
                   />
                 </Field>
                 <Field label="Prior site" field="priorSite">
@@ -2411,10 +2411,9 @@ export function InjectionPanel({
                 </Field>
                 {!nonAdministration && (
                   <Field label="Administration date" field="administrationDate">
-                    <input
-                      type="date"
+                    <WorkstationDateField
                       value={encounter.administrationDate}
-                      onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
+                      onCommit={(next) => patch({ administrationDate: next })}
                     />
                   </Field>
                 )}
@@ -2817,10 +2816,9 @@ export function InjectionPanel({
                           </Field>
                           {initiationConfig.kind === "sustenna-day8" && (
                             <Field label="Documented Day 1 date" field="initiation.day1Date">
-                              <input
-                                type="date"
+                              <WorkstationDateField
                                 value={encounter.initiation?.day1Date ?? ""}
-                                onInput={(event) => patchInitiation({ day1Date: event.currentTarget.value })}
+                                onCommit={(next) => patchInitiation({ day1Date: next })}
                               />
                             </Field>
                           )}
@@ -3235,12 +3233,10 @@ export function InjectionPanel({
                       />
                     </Field>
                     <Field label="Notification / decision time" field="details.productIssueNotificationTime">
-                      <input
-                        type="datetime-local"
+                      <WorkstationDateField
+                        mode="datetime"
                         value={encounter.details?.productIssueNotificationTime ?? ""}
-                        onInput={(event) =>
-                          patchDetails({ productIssueNotificationTime: event.currentTarget.value })
-                        }
+                        onCommit={(next) => patchDetails({ productIssueNotificationTime: next })}
                       />
                     </Field>
                   </div>
@@ -3668,10 +3664,10 @@ export function InjectionPanel({
                         />
                       </Field>
                       <Field label="Contact / decision time" field="disposition.time">
-                        <input
-                          type="datetime-local"
+                        <WorkstationDateField
+                          mode="datetime"
                           value={encounter.disposition.time ?? ""}
-                          onInput={(event) => patchDisposition({ time: event.currentTarget.value })}
+                          onCommit={(next) => patchDisposition({ time: next })}
                         />
                       </Field>
                     </div>
@@ -3919,11 +3915,10 @@ export function InjectionPanel({
                       />
                     </Field>
                     <Field label="Approval / decision time" field="details.lateDoseReviewTime" state="required" hint="Required for provider approval">
-                      <input
-                        aria-label="Approval / decision time"
-                        type="datetime-local"
+                      <WorkstationDateField
+                        mode="datetime"
                         value={lateDoseReviewTimeDraft}
-                        onInput={(event) => setLateDoseReviewTimeDraft(event.currentTarget.value)}
+                        onCommit={(next) => setLateDoseReviewTimeDraft(next)}
                       />
                     </Field>
                   </div>
@@ -3994,11 +3989,9 @@ export function InjectionPanel({
               </p>
               <div class="wfp-row">
               <Field label="Override date" state="required" hint="Required">
-                  <input
-                    aria-label="Override date"
-                    type="date"
+                  <WorkstationDateField
                     value={nextDoseOverrideDate}
-                    onInput={(event) => setNextDoseOverrideDate(event.currentTarget.value)}
+                    onCommit={(next) => setNextDoseOverrideDate(next)}
                   />
                 </Field>
                 <Field label="Authority" state="required" hint="Required">

@@ -12,6 +12,10 @@ import type {
 } from "../../application/workstation-projection";
 import { requestWorkstationFieldLookup } from "../workstation-events";
 import { RegisterMarkers } from "./ClinicalRegister";
+import {
+  WorkstationDateField,
+  type WorkstationDateMode,
+} from "./WorkstationDateField";
 
 export interface OptionListProps<T extends string> {
   name: string;
@@ -96,7 +100,10 @@ function labelControls(
   return toChildArray(children).map((child) => {
     if (!isValidElement(child)) return child;
     const vnode = child as VNode<Record<string, unknown>>;
-    if ((vnode.type as unknown) === OptionList) {
+    if (
+      (vnode.type as unknown) === OptionList ||
+      (vnode.type as unknown) === WorkstationDateField
+    ) {
       return cloneElement(vnode, {
         labelledBy: accessibility.labelledBy,
         describedBy: accessibility.describedBy,
@@ -139,6 +146,22 @@ function containsSelectControl(children: ComponentChildren): boolean {
   });
 }
 
+function findDateControl(children: ComponentChildren): WorkstationDateMode | undefined {
+  let found: WorkstationDateMode | undefined;
+  toChildArray(children).forEach((child) => {
+    if (found || !isValidElement(child)) return;
+    const vnode = child as VNode<Record<string, unknown>>;
+    if ((vnode.type as unknown) === WorkstationDateField) {
+      found = (vnode.props?.mode as WorkstationDateMode) ?? "date";
+      return;
+    }
+    if (typeof vnode.type === "string" && vnode.props?.children) {
+      found = findDateControl(vnode.props.children as ComponentChildren);
+    }
+  });
+  return found;
+}
+
 export function WorkflowField({
   label,
   hint,
@@ -176,11 +199,16 @@ export function WorkflowField({
     invalid: incomplete,
   });
   const hasLookup = containsSelectControl(children);
+  const dateMode = findDateControl(children);
   const fieldPrompt =
     prompt ??
     (hasLookup
       ? `Select ${label.toLowerCase()} or press F9 for available values`
-      : `Enter ${label.toLowerCase()}`);
+      : dateMode
+        ? `Enter ${label.toLowerCase()} as ${
+            dateMode === "date" ? "MMDDYY" : "MMDDYY HHMM"
+          } — T today, T-1 yesterday${dateMode === "datetime" ? ", N now" : ""}`
+        : `Enter ${label.toLowerCase()}`);
 
   return (
     <div

@@ -19,6 +19,7 @@ import { formsEncounterToDocumentationInput } from "../../../documentation/adapt
 import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
 import { StatusFlag } from "../StatusFlag";
+import { WorkstationDateField } from "../WorkstationDateField";
 import { mirrorFormsEncounterToLegacyDom } from "./forms-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { formatDobAsTyped } from "../../format-dob";
@@ -283,10 +284,9 @@ export function FormsPanel({
                   />
                 </Field>
                 <Field label="Requested date">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.requestDate}
-                    onInput={(event) => patch({ requestDate: event.currentTarget.value })}
+                    onCommit={(next) => patch({ requestDate: next })}
                   />
                 </Field>
               </div>
@@ -316,10 +316,9 @@ export function FormsPanel({
                   />
                 </Field>
                 <Field label="Due / target date">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.targetDate}
-                    onInput={(event) => patch({ targetDate: event.currentTarget.value })}
+                    onCommit={(next) => patch({ targetDate: next })}
                   />
                 </Field>
               </div>
@@ -486,10 +485,9 @@ export function FormsPanel({
                   />
                 </Field>
                 <Field label="Letter date">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.letterDate ?? ""}
-                    onInput={(event) => patch({ letterDate: event.currentTarget.value })}
+                    onCommit={(next) => patch({ letterDate: next })}
                   />
                 </Field>
               </div>
@@ -548,24 +546,21 @@ export function FormsPanel({
               </div>
               <div class="wfp-row">
                 <Field label="Off work from">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.offWorkStart ?? ""}
-                    onInput={(event) => patch({ offWorkStart: event.currentTarget.value })}
+                    onCommit={(next) => patch({ offWorkStart: next })}
                   />
                 </Field>
                 <Field label="Through">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.offWorkEnd ?? ""}
-                    onInput={(event) => patch({ offWorkEnd: event.currentTarget.value })}
+                    onCommit={(next) => patch({ offWorkEnd: next })}
                   />
                 </Field>
                 <Field label="Return date">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.returnDate ?? ""}
-                    onInput={(event) => patch({ returnDate: event.currentTarget.value })}
+                    onCommit={(next) => patch({ returnDate: next })}
                   />
                 </Field>
               </div>

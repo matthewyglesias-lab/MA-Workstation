@@ -41,6 +41,7 @@ import { browserSafeStorage } from "../../../persistence/storage";
 import { ClinicalReadout } from "../ClinicalReadout";
 import { RegisterMarkers, WorkflowSummaryFact, type ClinicalFieldSource } from "../ClinicalRegister";
 import { OptionList, WorkflowField } from "../WorkflowField";
+import { WorkstationDateField } from "../WorkstationDateField";
 import { isValidLocalDateTime } from "../../../domain/dates";
 import {
   projectCarriedFieldSource,
@@ -1080,10 +1081,10 @@ export function UdsPanel({
               </div>
               <div class="wfp-row">
                 <Field label="Collection date / time" field="collectionDateTime" hint="required">
-                  <input
-                    type="datetime-local"
+                  <WorkstationDateField
+                    mode="datetime"
                     value={encounter.collectionDateTime}
-                    onInput={(event) => patch({ collectionDateTime: event.currentTarget.value })}
+                    onCommit={(next) => patch({ collectionDateTime: next })}
                   />
                 </Field>
                 <div class="wfp-field-action">

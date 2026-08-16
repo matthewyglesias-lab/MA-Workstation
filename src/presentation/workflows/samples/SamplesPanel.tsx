@@ -24,6 +24,7 @@ import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { StatusFlag } from "../StatusFlag";
+import { WorkstationDateField } from "../WorkstationDateField";
 import { mirrorSamplesEncounterToLegacyDom } from "./samples-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { formatDobAsTyped } from "../../format-dob";
@@ -554,17 +555,15 @@ export function SamplesPanel({
                   />
                 </Field>
                 <Field label="Date dispensed">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.dispenseDate}
-                    onInput={(event) => patch({ dispenseDate: event.currentTarget.value })}
+                    onCommit={(next) => patch({ dispenseDate: next })}
                   />
                 </Field>
                 <Field label="Start date">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.startDate}
-                    onInput={(event) => patch({ startDate: event.currentTarget.value })}
+                    onCommit={(next) => patch({ startDate: next })}
                   />
                 </Field>
               </div>
