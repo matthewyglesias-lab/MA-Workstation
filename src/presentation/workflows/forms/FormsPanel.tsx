@@ -1,6 +1,5 @@
 import type { ComponentChildren, Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import "../workflow-panels.css";
 import {
   emptyFormsEncounter,
   FORM_REQUEST_TYPE_OPTIONS,

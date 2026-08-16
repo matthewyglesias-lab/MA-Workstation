@@ -151,6 +151,27 @@ interface MeditechCommandDeckProps {
   actions?: FunctionKeyActions;
 }
 
+function compactCommandLabel(commandId: string, label: string): string {
+  switch (commandId) {
+    case "next-section":
+      return "Section";
+    case "next-page":
+      return "Page";
+    case "focus-next-zone": {
+      const zoneLabel = label.replace(/^Next\s+/i, "");
+      return `${zoneLabel.charAt(0).toLocaleUpperCase()}${zoneLabel.slice(1)}`;
+    }
+    case "local-emr":
+      return "EMR";
+    case "file":
+      return label.toLocaleLowerCase().startsWith("save") ? "Save" : "File";
+    case "back":
+      return "Back";
+    default:
+      return label;
+  }
+}
+
 /** Fixed function keys mirror the physical-key command deck used at the desk. */
 export function MeditechCommandDeck({
   selectedWorkflow,
@@ -169,6 +190,7 @@ export function MeditechCommandDeck({
       </span>
       {FUNCTION_KEY_DECK_PROFILE.map((command) => {
         const action = actions[command.id] ?? {};
+        const commandLabel = action.label ?? command.label;
 
         return (
           <button
@@ -180,7 +202,9 @@ export function MeditechCommandDeck({
             title={command.description}
           >
             <kbd>{command.keyLabel}</kbd>
-            <span>{action.label ?? command.label}</span>
+            <span data-compact-label={compactCommandLabel(command.id, commandLabel)}>
+              {commandLabel}
+            </span>
           </button>
         );
       })}

@@ -1,5 +1,4 @@
 import { useState } from "preact/hooks";
-import "../workflow-panels.css";
 import {
   ACTIVITY_LOG_FILTERS,
   activityLogStats,
