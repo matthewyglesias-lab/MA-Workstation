@@ -887,30 +887,6 @@ input[type="radio"]:disabled {
   grid-column: 2;
 }
 
-.cd2004-work-context-strip {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  min-height: 25px;
-  padding: 3px 7px;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.cd2004-work-context-strip span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cd2004-work-context-strip .is-warning {
-  margin-left: auto;
-  padding: 1px 6px;
-  color: #4b3000;
-  background: var(--cd-amber-soft);
-  border: 1px solid #bd8a20;
-  font-weight: 700;
-}
-
 /* Navigator */
 
 /*
@@ -2471,7 +2447,7 @@ input[type="radio"]:disabled {
 }
 
 .cd2004-lookup-row.is-selected {
-  background: #e5eddd;
+  background: var(--cd-selection);
 }
 
 .cd2004-lookup-row:hover,
@@ -2553,34 +2529,34 @@ input[type="radio"]:disabled {
 /* Dock the inspector when three readable columns no longer fit. */
 
 @media (max-width: 1040px) {
-  .cd2004-workspace {
+  .cd2004-workspace:where(.has-central-preview) {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(330px, 1fr) minmax(230px, 38%);
   }
 
-  .cd2004-work-window {
+  :where(.cd2004-workspace.has-central-preview) > .cd2004-work-window {
     grid-column: 1;
     grid-row: 1;
   }
 
-  .cd2004-inspector-window {
+  :where(.cd2004-workspace.has-central-preview .cd2004-document-split) > .cd2004-inspector-window {
     grid-column: 1;
     grid-row: 2;
   }
 
-  .cd2004-inspector {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-inspector {
     display: grid;
     grid-template-columns: minmax(240px, 0.65fr) minmax(300px, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
     min-height: 0;
   }
 
-  .cd2004-readiness-summary {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-summary {
     grid-column: 1;
     grid-row: 1;
   }
 
-  .cd2004-readiness-list {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-list {
     grid-column: 1;
     grid-row: 2 / span 2;
     max-height: none;
@@ -2588,18 +2564,18 @@ input[type="radio"]:disabled {
     border-bottom: 0;
   }
 
-  .cd2004-note-heading {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-heading {
     grid-column: 2;
     grid-row: 1;
   }
 
-  .cd2004-note-sections {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-sections {
     grid-column: 2;
     grid-row: 2;
     min-height: 0;
   }
 
-  .cd2004-post-zone {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-post-zone {
     grid-column: 2;
     grid-row: 3;
   }

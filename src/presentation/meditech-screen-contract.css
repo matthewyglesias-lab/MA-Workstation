@@ -1,0 +1,303 @@
+/*
+ * Final on-screen visual contract for the workstation.  This file is loaded
+ * after the legacy shell, the shared workflow panels, and the MEDITECH
+ * composition pass so component import order cannot create a second visual
+ * language.  Patient-facing print documents deliberately remain outside this
+ * screen-only contract.
+ */
+
+@media screen {
+  .cd2004-shell {
+    --mt-screen-chrome: #c9cce3;
+    --mt-screen-face: #e6e7f3;
+    --mt-screen-paper: #f8f8fe;
+    --mt-screen-line: #68729b;
+    --mt-screen-line-light: #ffffff;
+    --mt-screen-muted: #55617b;
+    --mt-screen-selected: #fff0a5;
+    --mt-screen-patient: #c8efbf;
+    --mt-screen-complete: #dce8dc;
+    --mt-screen-review: #fff2c2;
+    --mt-screen-stop: #f7d8d1;
+    --cd-chrome: var(--mt-screen-chrome);
+    --cd-chrome-light: var(--mt-screen-face);
+    --cd-face: #d9dbf4;
+    --cd-paper: var(--mt-screen-paper);
+    --cd-border-dark: var(--mt-screen-line);
+    --cd-border-mid: #949bbc;
+    --cd-border-light: var(--mt-screen-line-light);
+    --cd-selection: var(--mt-screen-selected);
+    --cd-selection-strong: #f4dc72;
+    --cd-green-soft: var(--mt-screen-complete);
+    --cd-amber-soft: var(--mt-screen-review);
+    --cd-red-soft: var(--mt-screen-stop);
+  }
+
+  /* A classic workstation has one control grammar: square edges, a simple
+     raised bezel, a sunken active state, and a visible keyboard cue. */
+  .cd2004-shell :is(
+      .cd2004-nav-item,
+      .cd2004-worklist-new,
+      .cd2004-worklist-action,
+      .meditech-command-deck button,
+      .cd2004-record-actions-buttons button,
+      .cd2004-launcher-tile,
+      .wfp-field-lookup-button,
+      .wfp-site-tile,
+      .wfp-disposition-list .wfp-option-row
+    ) {
+    border-radius: 0;
+  }
+
+  .cd2004-shell button.cd2004-nav-item,
+  .cd2004-shell button.cd2004-worklist-new,
+  .cd2004-shell button.cd2004-worklist-action,
+  .cd2004-shell .meditech-command-deck button,
+  .cd2004-shell .cd2004-record-actions-buttons button,
+  .cd2004-shell .cd2004-launcher-tile {
+    background-image: none;
+    box-shadow:
+      inset 1px 1px var(--mt-screen-line-light),
+      inset -1px -1px #8b93ad;
+  }
+
+  .cd2004-shell button.cd2004-nav-item.is-active,
+  .cd2004-shell button.cd2004-nav-item[aria-current="page"],
+  .cd2004-shell button.cd2004-worklist-new:active,
+  .cd2004-shell button.cd2004-worklist-action:active,
+  .cd2004-shell .meditech-command-deck button:active,
+  .cd2004-shell .cd2004-record-actions-buttons button:active {
+    background-image: none;
+    box-shadow:
+      inset 1px 1px #8b93ad,
+      inset -1px -1px var(--mt-screen-line-light);
+  }
+
+  .cd2004-shell .wfp-panel {
+    color: #101010;
+    background: var(--mt-screen-paper);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-panel,
+  .cd2004-shell [data-workflow="administer"] .wfp-transaction-chrome {
+    background: var(--mt-screen-paper);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-tabbar {
+    background: var(--mt-screen-chrome);
+  }
+
+  .cd2004-shell .wfp-summary-bar,
+  .cd2004-shell .wfp-section-head {
+    background: #d9dbf4;
+  }
+
+  .cd2004-shell .wfp-tabbar {
+    background: var(--mt-screen-chrome);
+    border-bottom-color: var(--mt-screen-line);
+  }
+
+  .cd2004-shell .wfp-tab {
+    border-radius: 0;
+  }
+
+  .cd2004-shell .wfp-field-lookup-button {
+    min-height: 22px;
+    color: #182750;
+    background: #e6e7f3;
+    border: 1px solid var(--mt-screen-line);
+    box-shadow:
+      inset 1px 1px var(--mt-screen-line-light),
+      inset -1px -1px #9ca3c3;
+  }
+
+  .cd2004-shell .wfp-field-lookup-button:active {
+    background: #d4d7e8;
+    border-style: solid;
+    box-shadow:
+      inset 1px 1px #8c94b5,
+      inset -1px -1px var(--mt-screen-line-light);
+  }
+
+  .cd2004-shell .wfp-ledger-sequence,
+  .cd2004-shell .wfp-ledger-state,
+  .cd2004-shell .wfp-result-cycle b,
+  .cd2004-shell .wfp-result-flag {
+    font-family: "Courier New", monospace;
+  }
+
+  /* Shared workflow surfaces inherit the workstation palette instead of the
+     older sage terminal palette.  Green remains clinical state, never chrome. */
+  .cd2004-shell .wfp-custom-device-register,
+  .cd2004-shell .wfp-panel-sequence,
+  .cd2004-shell .wfp-exception-register {
+    border-color: var(--mt-screen-line);
+    background: var(--mt-screen-paper);
+  }
+
+  .cd2004-shell .wfp-panel-sequence li,
+  .cd2004-shell .wfp-exception-line {
+    border-color: #c6c9dd;
+  }
+
+  .cd2004-shell .wfp-sequence-number,
+  .cd2004-shell .wfp-exception-head {
+    color: #182750;
+    background: #e1e3f1;
+    border-color: var(--mt-screen-line);
+  }
+
+  .cd2004-shell .wfp-exception-line {
+    color: #3e3517;
+    background: var(--mt-screen-review);
+  }
+
+  .cd2004-shell .wfp-exception-line:hover,
+  .cd2004-shell .wfp-exception-line:focus {
+    background: var(--mt-screen-selected);
+    outline-color: var(--mt-screen-line);
+  }
+
+  /* Injection site selection becomes a compact MAR-style register.  The
+     illustration remains a quick anatomical cue, not a dashboard tile. */
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-grid {
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-quadrant-grid {
+    gap: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile {
+    display: grid;
+    grid-template-columns: 15px 24px minmax(0, 1fr);
+    align-items: center;
+    gap: 5px;
+    min-height: 34px;
+    padding: 4px 5px;
+    color: #182750;
+    background: var(--mt-screen-paper);
+    border-color: #858eb2;
+    text-align: left;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile input[type="radio"] {
+    position: static;
+    grid-column: 1;
+    margin: 0;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-icon {
+    grid-column: 2;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-title {
+    grid-column: 3;
+    font-size: 9px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-badge {
+    grid-column: 2 / -1;
+    justify-self: start;
+    color: #624d00;
+    background: var(--mt-screen-review);
+    border-color: #8c7118;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile:hover {
+    background: #eef0fa;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile.is-selected {
+    background: var(--mt-screen-selected);
+    border-color: #5d6790;
+    box-shadow: inset 3px 0 #244f94;
+  }
+
+  /* The final disposition is visually important but belongs to the same
+     command-register vocabulary as the rest of the transaction. */
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list.wfp-option-list-inline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row {
+    min-height: 34px;
+    padding: 4px 6px;
+    border: 1px solid #858eb2;
+    border-left-width: 3px;
+    box-shadow: none;
+    background: var(--mt-screen-paper);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-ready {
+    border-left-color: var(--cd-green);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-warning {
+    border-left-color: #8c7118;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-selected,
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-selected {
+    background: var(--mt-screen-selected);
+    border-color: #5d6790;
+    border-left-color: #244f94;
+    box-shadow: inset 2px 0 #244f94;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
+    background: var(--mt-screen-selected);
+    border-color: #5d6790;
+    border-left-color: var(--cd-green);
+    box-shadow: inset 2px 0 var(--cd-green);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
+    background: var(--mt-screen-review);
+    border-left-color: #8c7118;
+    box-shadow: inset 2px 0 #8c7118;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-title {
+    gap: 5px;
+    font-size: 10px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* UDS result states retain their clinical colors, but use the same square
+     register-control structure and neutral paper surface as Injection. */
+  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle {
+    border-width: 1px;
+    border-style: solid;
+    box-shadow: inset 1px 1px var(--mt-screen-line-light);
+  }
+
+  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-neg {
+    color: #285538;
+    background: #fff;
+    border-color: #66806a;
+    box-shadow: inset 3px 0 #51765a;
+  }
+
+  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-pos {
+    background: var(--mt-screen-stop);
+  }
+
+  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-invalid {
+    background: var(--mt-screen-review);
+  }
+}

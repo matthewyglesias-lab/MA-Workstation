@@ -247,6 +247,11 @@ async function openFixtureDraft(page) {
     .click();
   await expect(page.locator('dialog.records-drawer-layer')).toBeHidden();
   await expect(page.locator('.cd2004-patient-primary')).toContainText('Patel, Rowan');
+  await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/has-active-chart/);
+  await expect(page.locator('.cd2004-patient-banner')).toHaveCSS(
+    'background-color',
+    'rgb(200, 239, 191)'
+  );
   await expect(page.locator('[data-injection-record-actions]')).toContainText('SAVED LOCAL DRAFT');
 }
 
@@ -418,14 +423,47 @@ test.describe('Client/Server workstation visual snapshots', () => {
     const deck = page.locator('.meditech-command-deck');
     const statusbar = page.locator('.cd2004-statusbar');
     const recordActions = page.locator('[data-injection-record-actions]');
+    const transaction = page.locator('.cd2004-transaction-window.has-document-split');
+    const inspector = page.locator('.cd2004-inspector-window');
+    const workWindow = page.locator('.cd2004-work-window');
     const deckBox = await deck.boundingBox();
     const statusBox = await statusbar.boundingBox();
     const recordBox = await recordActions.boundingBox();
+    const inspectorBox = await inspector.boundingBox();
+    const workWindowBox = await workWindow.boundingBox();
     expect(deckBox).not.toBeNull();
     expect(statusBox).not.toBeNull();
     expect(recordBox).not.toBeNull();
+    expect(inspectorBox).not.toBeNull();
+    expect(workWindowBox).not.toBeNull();
     expect(deckBox.y + deckBox.height).toBeLessThanOrEqual(statusBox.y + 1);
     expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
+    expect(inspectorBox.y + inspectorBox.height).toBeLessThanOrEqual(
+      workWindowBox.y + workWindowBox.height + 1
+    );
+    expect(await deck.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+    expect(await transaction.evaluate((node) => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(1);
+
+    const clippedCoreIdentifiers = await page
+      .locator('.cd2004-patient-banner strong')
+      .evaluateAll((labels) => labels.slice(0, 2)
+        .filter((label) => label.scrollWidth > label.clientWidth + 1)
+        .map((label) => label.textContent?.trim()));
+    expect(clippedCoreIdentifiers).toEqual([]);
+
+    const compactCommandLabels = await deck.locator('button > span').evaluateAll((labels) =>
+      labels.map((label) => getComputedStyle(label, '::after').content.replace(/^"|"$/g, ''))
+    );
+    expect(compactCommandLabels).toEqual([
+      'Help',
+      'Section',
+      'Page',
+      'Stop',
+      'Lookup',
+      'EMR',
+      'Save',
+      'Back'
+    ]);
 
     for (const button of await deck.locator('button:visible').all()) {
       const box = await button.boundingBox();

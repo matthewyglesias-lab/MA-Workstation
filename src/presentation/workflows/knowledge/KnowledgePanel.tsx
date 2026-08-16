@@ -1,5 +1,4 @@
 import { useMemo, useState } from "preact/hooks";
-import "../workflow-panels.css";
 import {
   KNOWLEDGE_CATEGORIES,
   allKnowledgeEntries,

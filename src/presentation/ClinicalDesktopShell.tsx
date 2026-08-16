@@ -9,7 +9,9 @@ import {
   useState,
 } from "preact/hooks";
 import "./clinical-desktop.css";
+import "./workflows/workflow-panels.css";
 import "./meditech-workstation.css";
+import "./meditech-screen-contract.css";
 import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
@@ -987,6 +989,13 @@ export function ClinicalDesktopShell({
           workflowPatient={workflowPatient}
           mismatch={isMismatch}
           selectedWorkflow={selectedWorkflow}
+          workflowStateLabel={
+            postState === "posted"
+              ? "Locked local record"
+              : WORKFLOW_SUMMARY_STATE_LABEL[
+                  workflowSummaries[selectedWorkflow]?.state ?? "idle"
+                ]
+          }
           staffLabel={staffLabel}
           locationLabel={locationLabel}
           onUseWorkflowPatient={onUseWorkflowPatient}
@@ -1008,29 +1017,6 @@ export function ClinicalDesktopShell({
           }
           active={focusedPane === "work"}
           onActivate={setFocusedPane}
-          toolbar={
-            selectedWorkflow !== "home" ? (
-              <div class="cd2004-work-context-strip">
-                <span>
-                  <strong>Document:</strong>{" "}
-                  {selectedWorkflow === "administer"
-                    ? "Medication administration"
-                    : WORKFLOW_LABELS[selectedWorkflow]}
-                </span>
-                {selectedWorkflow !== "administer" && (
-                  <span>
-                    <strong>Local state:</strong>{" "}
-                    {postState === "posted"
-                      ? "Locked local record"
-                      : WORKFLOW_SUMMARY_STATE_LABEL[
-                          workflowSummaries[selectedWorkflow]?.state ?? "idle"
-                        ]}
-                  </span>
-                )}
-                {isMismatch && <span class="is-warning">Patient mismatch</span>}
-              </div>
-            ) : undefined
-          }
         >
           <div
             class={`cd2004-transaction-window ${
@@ -1457,6 +1443,7 @@ interface PatientBannerProps {
   workflowPatient?: PatientContext;
   mismatch: boolean;
   selectedWorkflow: WorkflowId;
+  workflowStateLabel: string;
   staffLabel: string;
   locationLabel: string;
   onUseWorkflowPatient?: (workflow: WorkflowId) => void;
@@ -1468,24 +1455,41 @@ function PatientBanner({
   workflowPatient,
   mismatch,
   selectedWorkflow,
+  workflowStateLabel,
   staffLabel,
   locationLabel,
   onUseWorkflowPatient,
   onSelectLocalRecord,
 }: PatientBannerProps) {
-  // A typed name alone is not a selected chart. The banner changes to the
-  // pale-green chart context only once a truthful local record, visit, or MRN
-  // is present; until then the worksheet owns the unsaved draft details.
-  const hasActiveChart = Boolean(
+  // The masthead follows a complete patient identity across workflows. Local
+  // record persistence remains a separate status in the rail and action bar.
+  const hasLocalRecord = Boolean(
     patient.localRecordId?.trim() ||
       patient.visitLabel?.trim() ||
       patient.medicalRecordNumber?.trim(),
   );
+  const hasIdentifiedPatient = Boolean(patient.name?.trim() && patient.dob?.trim());
+  const hasActiveChart = hasLocalRecord || hasIdentifiedPatient;
   const patientNameLabel = hasActiveChart
     ? patient.name?.trim() || "LOCAL CHART"
     : "NO ACTIVE CHART";
   const dobLabel = hasActiveChart ? patient.dob || "—" : "—";
   const recordLabel = patient.visitLabel || patient.localRecordId || "Not selected";
+  const chartContextLabel = hasLocalRecord
+    ? "Local chart"
+    : hasIdentifiedPatient
+      ? "Patient context"
+      : "Chart context";
+  const workflowContextLabel = `${WORKFLOW_LABELS[selectedWorkflow]} — ${workflowStateLabel}`;
+  const medicationContextPrefix = patient.medicationLabel
+    ? `MEDICATION: ${patient.medicationLabel} · `
+    : "";
+  const safetyContextLabel =
+    selectedWorkflow === "home"
+      ? patient.medicationLabel
+        ? `MEDICATION: ${patient.medicationLabel}`
+        : `WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
+      : `${medicationContextPrefix}WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · STATE: ${workflowStateLabel.toUpperCase()}`;
   return (
     <div
       class={`cd2004-patient-banner ${
@@ -1495,7 +1499,7 @@ function PatientBanner({
       <div class="cd2004-patient-primary" title={patientNameLabel}>
         <DesktopIcon name={mismatch ? "alert" : hasActiveChart ? "patient" : "records"} />
         <span>
-          <small>{hasActiveChart ? "Local chart" : "Chart context"}</small>
+          <small>{chartContextLabel}</small>
           <strong>{patientNameLabel}</strong>
         </span>
       </div>
@@ -1520,13 +1524,13 @@ function PatientBanner({
         <b>
           {hasActiveChart
             ? patient.allergyStatus || "Not available in this local record"
-            : "No local record selected"}
+            : selectedWorkflow === "home"
+              ? "No local record selected"
+              : `No local record selected · ${workflowContextLabel}`}
         </b>
         {hasActiveChart ? (
-          <small>
-            {patient.medicationLabel
-              ? `MEDICATION: ${patient.medicationLabel}`
-              : `WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`}
+          <small title={workflowContextLabel}>
+            {safetyContextLabel}
           </small>
         ) : (
           <button type="button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>

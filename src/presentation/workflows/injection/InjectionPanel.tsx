@@ -1,6 +1,5 @@
 import { createContext, Fragment, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
-import "../workflow-panels.css";
 import { DesktopIcon } from "../../DesktopIcon";
 import { ModalDialog } from "../../ModalDialog";
 import { SiteIcon } from "../../SiteIcon";
@@ -71,7 +70,7 @@ import { injectionEncounterToDocumentationInput } from "../../../documentation/a
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { StatusFlag } from "../StatusFlag";
 import { ClinicalReadout } from "../ClinicalReadout";
-import { RegisterMarkers, WorkflowContextStrip, TransactionLine, type ClinicalFieldSource } from "../ClinicalRegister";
+import { RegisterMarkers, WorkflowSummaryFact, TransactionLine, type ClinicalFieldSource } from "../ClinicalRegister";
 import { OptionList, WorkflowField } from "../WorkflowField";
 import {
   workflowLedgerPanelId,
@@ -2099,98 +2098,92 @@ export function InjectionPanel({
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <InjectionRequirementsContext.Provider value={requirements}>
         <InjectionIncompleteFieldsContext.Provider value={incompleteFields}>
-        <div class="wfp-summary-bar wfp-injection-context">
-        <h1 class="wfp-workflow-title"><strong>Injection worksheet</strong></h1>
-        {locked ? (
-          <span class="wfp-status-flag is-idle">Read only</span>
-        ) : (
-          <StatusFlag
-            idle={(evaluation?.readiness ?? "idle") === "idle"}
-            stopCount={stops.length}
-            warningCount={evaluation?.warnings.length ?? 0}
-            onOpenRequirements={() => setRequirementsOpen(true)}
-          />
-        )}
-        {sessionStaff && (
-          <span class="wfp-session-context" title="Editable documenting-staff default">
-            Session staff: {sessionStaff}
-          </span>
-        )}
-        {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
-          <button
-            type="button"
-            class="cd2004-link-button wfp-summary-print-avs"
-            data-patient-screening-print="summary"
-            aria-haspopup="dialog"
-            onClick={() => setPatientScreeningDialogOpen(true)}
-            disabled={!patientScreeningReady}
-            title={
-              patientScreeningReady
-                ? "Print the patient screening and consent form."
-                : patientScreeningDisabledReason
-            }
-          >
-            <DesktopIcon name="print" />
-            Print patient screening
-          </button>
-        )}
-        <span class="wfp-summary-spacer" />
-        <span class="wfp-transaction-readout" aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}>
-          <b>{transactionStatus.label}</b>
-          <span>PG {activePage}/{visibleTabs.length}</span>
-        </span>
-        {!locked && patientNeedsRestore && (
-          <button
-            type="button"
-            class="cd2004-link-button"
-            onClick={() =>
-              patch({ patient: { name: activePatientName, dob: activePatientDob } })
-            }
-          >
-            Use selected local patient
-          </button>
-        )}
-        {!locked && staffNeedsRestore && (
-          <button
-            type="button"
-            class="cd2004-link-button"
-            onClick={() => patch({ administeredBy: sessionStaff })}
-          >
-            Restore session staff
-          </button>
-        )}
-      </div>
+          <div class="wfp-transaction-chrome">
+            <div class="wfp-summary-bar wfp-injection-context">
+              <h1 class="wfp-workflow-title"><strong>Injection worksheet</strong></h1>
+              {locked ? (
+                <span class="wfp-status-flag is-idle">Read only</span>
+              ) : (
+                <StatusFlag
+                  idle={(evaluation?.readiness ?? "idle") === "idle"}
+                  stopCount={stops.length}
+                  warningCount={evaluation?.warnings.length ?? 0}
+                  onOpenRequirements={() => setRequirementsOpen(true)}
+                />
+              )}
+              <WorkflowSummaryFact
+                label="DUE"
+                value={suggestedNextDose || "PENDING"}
+                tone={suggestedNextDose ? "normal" : "attention"}
+              />
+              <WorkflowSummaryFact
+                label="PKG"
+                value={packageState}
+                tone={packageState === "INCOMPLETE" ? "attention" : "normal"}
+              />
+              {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
+                <button
+                  type="button"
+                  class="cd2004-link-button wfp-summary-print-avs"
+                  data-patient-screening-print="summary"
+                  aria-haspopup="dialog"
+                  onClick={() => setPatientScreeningDialogOpen(true)}
+                  disabled={!patientScreeningReady}
+                  title={
+                    patientScreeningReady
+                      ? "Print the patient screening and consent form."
+                      : patientScreeningDisabledReason
+                  }
+                >
+                  <DesktopIcon name="print" />
+                  Print patient screening
+                </button>
+              )}
+              <span class="wfp-summary-spacer" />
+              <span
+                class="wfp-transaction-readout"
+                aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}
+              >
+                <b>{transactionStatus.label}</b>
+                <span>PG {activePage}/{visibleTabs.length}</span>
+              </span>
+              {!locked && patientNeedsRestore && (
+                <button
+                  type="button"
+                  class="cd2004-link-button"
+                  onClick={() =>
+                    patch({ patient: { name: activePatientName, dob: activePatientDob } })
+                  }
+                >
+                  Use selected local patient
+                </button>
+              )}
+              {!locked && staffNeedsRestore && (
+                <button
+                  type="button"
+                  class="cd2004-link-button"
+                  onClick={() => patch({ administeredBy: sessionStaff })}
+                >
+                  Restore session staff
+                </button>
+              )}
+            </div>
 
-      <WorkflowLedgerTabs
-        tabs={injectionLedgerTabs}
-        activeTab={tab}
-        onChange={setTab}
-        ariaLabel="Injection transaction pages and state"
-        idPrefix="injection-ledger"
-      />
+            <WorkflowLedgerTabs
+              tabs={injectionLedgerTabs}
+              activeTab={tab}
+              onChange={setTab}
+              ariaLabel="Injection transaction pages and state"
+              idPrefix="injection-ledger"
+            />
+          </div>
 
-      <WorkflowContextStrip
-        items={[
-          { label: "PATIENT", value: encounter.patient.name || "NOT SELECTED", tone: encounter.patient.name ? "normal" : "attention" },
-          { label: "ORDER", value: medication?.label || encounter.customMedication || "NOT SELECTED", tone: medication || encounter.customMedication ? "normal" : "attention" },
-          { label: "TARGET", value: suggestedNextDose || "PENDING", tone: suggestedNextDose ? "normal" : "attention" },
-          {
-            label: "PACKAGE",
-            value: packageState,
-            tone: packageState === "INCOMPLETE" ? "attention" : "normal",
-          },
-          {
-            label: "STATE",
-            value: transactionStatus.label,
-            tone:
-              transactionStatus.tone === "stop"
-                ? "stop"
-                : transactionStatus.tone === "attention"
-                  ? "attention"
-                  : "normal",
-          },
-        ]}
-      />
+      <div
+        class="wfp-transaction-page"
+        role="region"
+        aria-label="Injection clinical page"
+        tabIndex={0}
+      >
       {invalidationReceipt && (
         <div class="wfp-invalidation-receipt" role="status">
           <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
@@ -3832,6 +3825,8 @@ export function InjectionPanel({
           </div>
         </div>
       )}
+
+      </div>
 
       {patientScreeningDialogOpen && (
         <ModalDialog

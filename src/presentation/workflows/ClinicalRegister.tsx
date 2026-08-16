@@ -31,20 +31,24 @@ export function RegisterMarkers({
   );
 }
 
-export function WorkflowContextStrip({
-  items,
+export function WorkflowSummaryFact({
+  label,
+  value,
+  tone = "normal",
 }: {
-  items: ReadonlyArray<{ label: string; value: string; tone?: "normal" | "attention" | "stop" }>;
+  label: string;
+  value: string;
+  tone?: "normal" | "attention" | "stop";
 }) {
   return (
-    <dl class="wfp-context-strip" aria-label="Current workflow context">
-      {items.map((item) => (
-        <div class={`wfp-context-item is-${item.tone ?? "normal"}`} key={item.label}>
-          <dt>{item.label}</dt>
-          <dd>{item.value}</dd>
-        </div>
-      ))}
-    </dl>
+    <span
+      class={`wfp-summary-fact is-${tone}`}
+      title={`${label}: ${value}`}
+      aria-label={`${label}: ${value}`}
+    >
+      <b>{label}</b>
+      <span>{value}</span>
+    </span>
   );
 }
 

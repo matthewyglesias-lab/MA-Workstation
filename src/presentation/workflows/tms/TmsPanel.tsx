@@ -1,4 +1,3 @@
-import "../workflow-panels.css";
 
 const PLANNED_CAPABILITIES: ReadonlyArray<{ title: string; detail: string }> = [
   {

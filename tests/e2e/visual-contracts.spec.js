@@ -345,10 +345,10 @@ function expectedContract(workflow) {
         boxShadow: expect.any(String),
         hasRelief: true
       },
-      representativeSquare: false,
+      representativeSquare: true,
       representativeFlat: false,
       representativeHasRelief: true,
-      controlSquare: false,
+      controlSquare: true,
       focusedControlBorder: 'rgb(245, 179, 0)',
       focusedControlHasGlow: false,
       recordLedgerHorizontalOverflow: false,

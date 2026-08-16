@@ -340,7 +340,8 @@
     text-transform: uppercase;
   }
 
-  /* Green is reserved for a record the local workstation can actually name. */
+  /* Green is reserved for an identified patient context: either a local
+     record identifier or the two displayed patient identifiers. */
   .cd2004-patient-banner.has-active-chart {
     background: var(--mt-mint);
     border-bottom-color: #4c8551;
@@ -1662,6 +1663,12 @@
     grid-template-columns: minmax(265px, 1.5fr) auto auto minmax(130px, 0.62fr) minmax(150px, 0.7fr);
     grid-template-rows: minmax(41px, auto) 19px;
     min-height: 60px;
+  }
+
+  /* Compact desktop layout must not erase the semantic chart state. A blank
+     context stays lavender; identified patients remain green and a mismatch
+     remains amber through the higher-priority state rules above. */
+  .cd2004-patient-banner.is-no-active-chart:not(.has-mismatch) {
     background: #d9dbef;
   }
 
@@ -2314,29 +2321,29 @@
      to fall back to a plain scrollbar-color/width:thin declaration in
      clinical-desktop.css because they were never added to this list; that
      now-redundant declaration is removed below. */
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar) {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar) {
     scrollbar-color: #7e88ac #d6d8ec;
     scrollbar-width: auto;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar {
     width: 15px;
     height: 15px;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-track {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-track {
     background: #d6d8ec;
     border: 1px solid #8a92b3;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-thumb {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-thumb {
     min-height: 24px;
     background: #aeb3d0;
     border: 1px solid;
     border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button {
     display: block;
     width: 15px;
     height: 15px;
@@ -2347,23 +2354,23 @@
     border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:vertical:start:decrement {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:vertical:start:decrement {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 2L9 8H1Z' fill='%23404868'/%3E%3C/svg%3E");
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:vertical:end:increment {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:vertical:end:increment {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 8L9 2H1Z' fill='%23404868'/%3E%3C/svg%3E");
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:horizontal:start:decrement {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:horizontal:start:decrement {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5L8 9V1Z' fill='%23404868'/%3E%3C/svg%3E");
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:horizontal:end:increment {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:horizontal:end:increment {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M8 5L2 9V1Z' fill='%23404868'/%3E%3C/svg%3E");
   }
 
-  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-corner {
+  .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-corner {
     background: #d6d8ec;
   }
 
@@ -2864,33 +2871,33 @@
 }
 
 @media screen and (min-width: 701px) and (max-width: 1040px) {
-  .cd2004-inspector {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-inspector {
     grid-template-rows: auto auto minmax(0, 1fr) auto;
   }
 
-  .cd2004-readiness-list {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-list {
     grid-column: 1;
     grid-row: 2 / span 3;
     max-height: none;
   }
 
-  .cd2004-note-heading {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-heading {
     grid-column: 2;
     grid-row: 1;
   }
 
-  .cd2004-note-toolbar {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-toolbar {
     grid-column: 2;
     grid-row: 2;
   }
 
-  .cd2004-note-sections {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-sections {
     grid-column: 2;
     grid-row: 3;
     margin-top: 0;
   }
 
-  .cd2004-post-zone {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-post-zone {
     grid-column: 2;
     grid-row: 4;
   }
@@ -3581,12 +3588,82 @@
     grid-template-columns: minmax(0, 1fr) clamp(168px, 14vw, 188px);
   }
 
+  /* Non-Injection modules share the right rail with Clinical Documentation.
+     Reserve enough height to keep every clinical module reachable, then let
+     the inspector consume and scroll within the remaining space. */
+  .cd2004-workspace:not(.has-central-preview):not([data-workflow="home"]) > .meditech-context-rail {
+    grid-template-rows: clamp(174px, 42%, 240px) minmax(0, 1fr);
+  }
+
   .cd2004-workspace.has-central-preview .cd2004-readiness-list {
     max-height: 118px;
   }
 }
 
+@media screen and (min-width: 800px) and (max-width: 1181px) and (min-height: 600px) and (max-height: 760px) {
+  /* The one-column Injection composition must share the available window
+     height instead of retaining the tall desktop minimums. The worksheet
+     remains scrollable, while the clinical-documentation pane stays wholly
+     inside the workstation frame. */
+  .cd2004-transaction-window.has-document-split {
+    grid-template-rows: minmax(230px, 1fr) minmax(126px, 0.52fr);
+  }
+}
+
 @media screen and (min-width: 800px) and (max-width: 900px) and (min-height: 600px) {
+  /* At the protected workstation minimum, identifiers stack within their
+     existing cells. This preserves every safety field while giving the
+     patient name and DOB their full column width. */
+  .cd2004-patient-primary,
+  .cd2004-patient-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: 0;
+    padding-block: 2px;
+  }
+
+  .cd2004-patient-primary span {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: 0;
+  }
+
+  .cd2004-patient-banner small,
+  .cd2004-patient-banner strong {
+    line-height: 1.08;
+  }
+
+  /* Keep the physical-key deck fully visible. Descriptions may ellipsize,
+     but every keycap and every command remains on screen without panning. */
+  .meditech-command-deck {
+    display: grid;
+    grid-template-columns: 118px repeat(8, minmax(0, 1fr));
+    gap: 1px;
+    overflow-x: hidden;
+  }
+
+  .meditech-command-deck::after {
+    display: none;
+  }
+
+  .meditech-command-prompt,
+  .meditech-command-deck button {
+    min-width: 0;
+    width: auto;
+    padding-inline: 3px;
+  }
+
+  .meditech-command-deck button > span {
+    font-size: 0;
+  }
+
+  .meditech-command-deck button > span::after {
+    content: attr(data-compact-label);
+    font-size: 8px;
+  }
+
   .cd2004-worklist-table {
     min-width: 0;
   }

@@ -45,8 +45,108 @@
   font-size: 11px;
 }
 
+@media screen {
+  /* Injection and UDS are transaction workstations: their title/register and
+     page tabs are fixed chrome, while the active clinical page is the only
+     scrolling surface. This also prevents the shell and worksheet from
+     competing for the same wheel/keyboard scroll at short window heights. */
+  .cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) > .cd2004-workflow-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) > .cd2004-workflow-body > .wfp-panel {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cd2004-shell [data-workflow="uds"] .cd2004-record-actions {
+    flex: 0 0 auto;
+  }
+}
+
+.cd2004-shell .wfp-transaction-chrome {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  background: #eff0ed;
+}
+
+.cd2004-shell .wfp-transaction-page {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 1px;
+  overflow: auto;
+}
+
+.cd2004-shell .wfp-summary-fact {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 3px;
+  min-width: 0;
+  max-width: 150px;
+  min-height: 17px;
+  padding: 1px 4px;
+  color: #172341;
+  background: #fff;
+  border: 1px solid #7c86a8;
+  font-family: "Arial Narrow", Tahoma, sans-serif;
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+.cd2004-shell .wfp-summary-fact > b {
+  color: #4b5579;
+  font-size: 8px;
+  letter-spacing: 0.05em;
+}
+
+.cd2004-shell .wfp-summary-fact > span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.cd2004-shell .wfp-summary-fact.is-attention {
+  color: #684300;
+  background: #fff1bf;
+  border-color: #9b7118;
+}
+
+.cd2004-shell .wfp-summary-fact.is-stop {
+  color: #7e2118;
+  background: #f7d8d1;
+  border-color: #a94537;
+}
+
 .cd2004-shell .wfp-summary-spacer {
   flex: 1 1 auto;
+}
+
+.cd2004-shell .wfp-uds-context {
+  gap: 5px;
 }
 
 .cd2004-shell .wfp-summary-print-avs {
@@ -771,13 +871,17 @@
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-selected {
+  background: var(--cd-selection);
+  border-top-color: var(--cd-border-dark);
+  border-right-color: var(--cd-border-light);
+  border-bottom-color: var(--cd-border-light);
   box-shadow:
     inset 1px 1px var(--cd-border-mid),
     inset -2px -1px var(--cd-white);
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
-  background: var(--cd-chrome-light);
+  background: var(--cd-selection);
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
@@ -1399,15 +1503,6 @@
    gets the few facts that affect the next action, while reference detail is
    available one disclosure deeper. */
 
-.cd2004-shell .wfp-session-context {
-  padding: 1px 5px;
-  color: var(--cd-ink-muted);
-  background: var(--cd-chrome-light);
-  border: 1px solid var(--cd-border-mid);
-  font-size: 9px;
-  white-space: nowrap;
-}
-
 .cd2004-shell .wfp-transaction-readout {
   display: inline-grid;
   grid-auto-flow: column;
@@ -1894,19 +1989,32 @@
     font-size: 10px;
   }
 
+  .cd2004-shell [data-workflow="administer"] .wfp-transaction-chrome,
+  .cd2004-shell [data-workflow="administer"] .wfp-transaction-page {
+    gap: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-transaction-chrome {
+    background: #f4f4fb;
+  }
+
   .cd2004-shell [data-workflow="administer"] .wfp-summary-bar {
     min-height: 22px;
-    gap: 5px;
+    gap: 4px;
     padding: 2px 5px;
     background: #d6d9e5;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-summary-spacer {
+    flex-basis: 0;
+    min-width: 0;
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-summary-bar strong {
     font-size: 10px;
   }
 
-  .cd2004-shell [data-workflow="administer"] .wfp-injection-context .wfp-status-flag,
-  .cd2004-shell [data-workflow="administer"] .wfp-session-context {
+  .cd2004-shell [data-workflow="administer"] .wfp-injection-context .wfp-status-flag {
     padding: 1px 4px;
     font-size: 8px;
   }
@@ -2111,11 +2219,6 @@
 @media (max-width: 600px) {
   .cd2004-shell .wfp-injection-context {
     gap: 5px;
-  }
-
-  .cd2004-shell .wfp-injection-context .wfp-session-context {
-    order: 4;
-    flex-basis: 100%;
   }
 
   .cd2004-shell .wfp-operator-guidance-row {
@@ -2426,22 +2529,6 @@
   align-items: center;
   gap: 4px;
 }
-
-.wfp-context-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  margin: 0;
-  border: 1px solid #667773;
-  border-top: 0;
-  background: #e9eee9;
-}
-
-.wfp-context-item { min-width: 0; padding: 4px 7px; border-right: 1px solid #9ba7a4; }
-.wfp-context-item:last-child { border-right: 0; }
-.wfp-context-item dt { font: 700 9px/1.1 "Segoe UI", Arial, sans-serif; color: #52605d; }
-.wfp-context-item dd { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 11px/1.2 "Segoe UI", Arial, sans-serif; color: #14231f; }
-.wfp-context-item.is-attention { background: #f7efcf; }
-.wfp-context-item.is-stop { background: #f5d7d0; }
 
 .wfp-field-action { display: flex; flex-direction: column; align-self: end; gap: 3px; padding-bottom: 2px; }
 .wfp-field-action small { max-width: 250px; color: #56615f; }

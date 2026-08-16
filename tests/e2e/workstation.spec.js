@@ -243,7 +243,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-prerequisite-line')).toHaveCount(0);
     await expect(panel.getByRole('group', { name: 'Lot & traceability' })).toBeVisible();
     await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
-    await expect(panel.locator('.wfp-context-item').filter({ hasText: 'PACKAGE' }))
+    await expect(panel.locator('.wfp-summary-fact').filter({ hasText: 'PKG' }))
       .toContainText('MANUAL');
 
     await openInjectionTab(page, 'Outcome');
@@ -276,9 +276,19 @@ test.describe('MA Workstation browser journeys', () => {
     ).toHaveCount(0);
 
     await openInjectionTab(page, 'Outcome');
-    await panel
-      .locator('label.wfp-option-row', { hasText: 'Review complete — document administration' })
-      .click();
+    const administeredDisposition = panel.locator('label.wfp-option-row', {
+      hasText: 'Review complete — document administration'
+    });
+    await administeredDisposition.click();
+    await expect(administeredDisposition).toHaveClass(/is-selected/);
+    await expect(administeredDisposition).toHaveCSS(
+      'background-color',
+      'rgb(255, 240, 165)'
+    );
+    await expect(administeredDisposition).toHaveCSS(
+      'border-left-color',
+      'rgb(34, 116, 66)'
+    );
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
     );
@@ -534,8 +544,8 @@ test.describe('MA Workstation browser journeys', () => {
     await openWorkflow(page, 'uds');
     await expect(transactionCode).toHaveText('UDS');
     const panel = page.locator('.wfp-panel');
-    await expect(page.locator('.cd2004-work-context-strip')).toContainText(
-      'Local state: Not started'
+    await expect(page.locator('.meditech-patient-safety')).toContainText(
+      'UDS — Not started'
     );
     await expect(
       page.locator('.meditech-command-deck button').filter({ hasText: 'F9' })
@@ -610,8 +620,11 @@ test.describe('MA Workstation browser journeys', () => {
     });
     await panel.getByRole('button', { name: 'Open Encounter type field lookup (F9)' }).click();
     await expect(page.locator('.meditech-command-prompt')).toContainText('INJ-REASON');
-    await expect(lookup.getByRole('option', { name: /05 PRN \/ ordered CURRENT/ }))
-      .toHaveAttribute('aria-selected', 'true');
+    const currentLookupRow = lookup.getByRole('option', {
+      name: /05 PRN \/ ordered CURRENT/
+    });
+    await expect(currentLookupRow).toHaveAttribute('aria-selected', 'true');
+    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(255, 240, 165)');
     await lookup.getByRole('searchbox', { name: 'Find value' }).press('Enter');
     await expect(reason).toHaveValue('prn');
     await expect(page.locator('.cd2004-status-message')).toContainText(
@@ -1019,13 +1032,17 @@ test.describe('MA Workstation browser journeys', () => {
     const injectionPanel = page.locator('.wfp-panel');
     await injectionPanel.locator('input[placeholder="Last, First"]').fill('Alpha, Patient');
     await injectionPanel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
-    // A typed draft alone is not a selected chart. Filing a local draft gives
-    // the banner a truthful local-record context and only then uses the
-    // established green chart-context treatment.
-    await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/is-no-active-chart/);
+    // Once both patient identifiers are present, the persistent masthead is
+    // the active patient context even before the local draft is filed. Record
+    // persistence remains a separate status in the rail and action bar.
+    const patientBanner = page.locator('.cd2004-patient-banner');
+    await expect(patientBanner).toHaveClass(/has-active-chart/);
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    await expect(page.locator('.cd2004-patient-primary')).toContainText('Patient context');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
-    await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/has-active-chart/);
+    await expect(patientBanner).toHaveClass(/has-active-chart/);
+    await expect(page.locator('.cd2004-patient-primary')).toContainText('Local chart');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Alpha, Patient');
 
     await openWorkflow(page, 'samples');
@@ -1038,8 +1055,11 @@ test.describe('MA Workstation browser journeys', () => {
     const mismatch = page.locator('.cd2004-context-mismatch');
     await expect(mismatch).toBeVisible();
     await expect(mismatch).toContainText('Bravo, Patient');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 241, 188)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
-    await expect(page.locator('.cd2004-patient-banner')).toContainText('NO ACTIVE CHART');
+    await expect(patientBanner).toHaveClass(/has-active-chart/);
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');
     await expect(page.locator('#udsPtName')).toHaveValue('Bravo, Patient');
@@ -1183,11 +1203,73 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(patientName).toHaveValue('QA, Resize Safety');
   });
 
+  test('keeps Injection and UDS transaction chrome fixed while only the clinical page scrolls', async ({ page }) => {
+    await page.setViewportSize({ width: 800, height: 600 });
+    await page.goto('/?fixed-transaction-chrome=1');
+
+    const verifyTransactionChrome = async ({ workflow, facts }) => {
+      await openWorkflow(page, workflow);
+      const slot = page.locator(`.cd2004-workflow-slot[data-workflow="${workflow}"]`);
+      const panel = slot.locator('.wfp-panel');
+      const chrome = panel.locator('.wfp-transaction-chrome');
+      const tabs = chrome.locator('.wfp-tabbar');
+      const clinicalPage = panel.locator('.wfp-transaction-page');
+      const actions = slot.locator('.cd2004-record-actions');
+
+      await expect(panel.locator('.wfp-context-strip')).toHaveCount(0);
+      await expect(chrome).toBeVisible();
+      await expect(tabs).toBeVisible();
+      await expect(actions).toBeVisible();
+      for (const fact of facts) {
+        await expect(chrome.locator(`.wfp-summary-fact[aria-label^="${fact}:"]`)).toBeVisible();
+      }
+
+      const scrollCapacity = await clinicalPage.evaluate(
+        node => node.scrollHeight - node.clientHeight
+      );
+      expect(scrollCapacity).toBeGreaterThan(0);
+      const before = {
+        chrome: await chrome.boundingBox(),
+        tabs: await tabs.boundingBox(),
+        actions: await actions.boundingBox()
+      };
+
+      await clinicalPage.focus();
+      await page.keyboard.press('PageDown');
+      await expect.poll(() => clinicalPage.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+
+      const after = {
+        chrome: await chrome.boundingBox(),
+        tabs: await tabs.boundingBox(),
+        actions: await actions.boundingBox()
+      };
+      for (const key of ['chrome', 'tabs', 'actions']) {
+        expect(before[key]).not.toBeNull();
+        expect(after[key]).not.toBeNull();
+        expect(Math.abs(after[key].y - before[key].y)).toBeLessThanOrEqual(1);
+      }
+      expect(await slot.evaluate(node => node.scrollTop)).toBe(0);
+      expect(await slot.locator(':scope > .cd2004-workflow-body').evaluate(node => node.scrollTop)).toBe(0);
+    };
+
+    await verifyTransactionChrome({
+      workflow: 'administer',
+      facts: ['DUE', 'PKG']
+    });
+    await verifyTransactionChrome({
+      workflow: 'uds',
+      facts: ['DEVICE', 'PANELS', 'QC']
+    });
+  });
+
   test('keeps every clinical workspace contained at supported workstation widths', async ({ page }) => {
+    test.setTimeout(120_000);
     const viewports = [
       { width: 1440, height: 900 },
       { width: 1181, height: 900 },
       { width: 1040, height: 900 },
+      { width: 1024, height: 768 },
+      { width: 900, height: 700 },
       { width: 840, height: 720 },
       { width: 800, height: 600 }
     ];
@@ -1209,6 +1291,11 @@ test.describe('MA Workstation browser journeys', () => {
       expect(shellBox.x).toBeGreaterThanOrEqual(0);
       expect(shellBox.width).toBeLessThanOrEqual(width);
 
+      const commandDeckOverflow = await page
+        .locator('.meditech-command-deck')
+        .evaluate((deck) => deck.scrollWidth - deck.clientWidth);
+      expect(commandDeckOverflow).toBeLessThanOrEqual(1);
+
       // Start Center owns one worklist window. Clinical workflows add the
       // documentation child window throughout the supported desktop range.
       const visibleWindows = page.locator('.cd2004-workspace .cd2004-window:visible');
@@ -1223,8 +1310,23 @@ test.describe('MA Workstation browser journeys', () => {
         const inspectorBox = await page
           .locator('.cd2004-inspector-window')
           .boundingBox();
+        const workspaceBox = await page.locator('.cd2004-workspace').boundingBox();
         expect(inspectorBox.x).toBeGreaterThanOrEqual(0);
         expect(inspectorBox.x + inspectorBox.width).toBeLessThanOrEqual(width + 1);
+        expect(inspectorBox.y).toBeGreaterThanOrEqual(workspaceBox.y - 1);
+        expect(inspectorBox.y + inspectorBox.height).toBeLessThanOrEqual(
+          workspaceBox.y + workspaceBox.height + 1
+        );
+        const inspectorOverflow = await page
+          .locator('.cd2004-inspector')
+          .evaluate((inspector) => inspector.scrollWidth - inspector.clientWidth);
+        expect(inspectorOverflow).toBeLessThanOrEqual(1);
+        if (tab === 'administer') {
+          const transactionOverflow = await page
+            .locator('.cd2004-transaction-window.has-document-split')
+            .evaluate((transaction) => transaction.scrollHeight - transaction.clientHeight);
+          expect(transactionOverflow).toBeLessThanOrEqual(1);
+        }
         const internalOverflow = await page.locator(selector).evaluate(node =>
           node.scrollWidth - node.clientWidth
         );
@@ -2279,10 +2381,10 @@ test.describe('MA Workstation browser journeys', () => {
     await page.goto('/');
     await openWorkflow(page, 'uds');
     const panel = page.locator('.wfp-panel');
-    const contextItem = (label) => panel.locator('.wfp-context-item').filter({ hasText: label });
+    const summaryFact = (label) => panel.locator('.wfp-summary-fact').filter({ hasText: label });
 
     await expect(panel.getByRole('heading', { name: 'Urine drug screen' })).toBeVisible();
-    await expect(contextItem('PANELS')).toContainText('PENDING');
+    await expect(summaryFact('PANELS')).toContainText('PENDING');
 
     const specimenTab = panel.getByRole('tab', { name: 'Specimen', exact: true });
     const resultsTab = panel.getByRole('tab', { name: 'Results', exact: true });
@@ -2302,7 +2404,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await panel.locator('.wfp-field', { hasText: 'Device' }).locator('select')
       .selectOption('SAFE life 14-Panel Cup');
-    await expect(contextItem('PANELS')).toContainText('0/14 ENTERED');
+    await expect(summaryFact('PANELS')).toContainText('0/14');
     await reviewTab.click();
 
     const outsideLab = panel.locator('.wfp-field', { hasText: 'Outside lab' });

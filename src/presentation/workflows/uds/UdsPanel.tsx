@@ -1,6 +1,5 @@
 import { createContext, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
-import "../workflow-panels.css";
 import {
   applyUdsDeviceProfileDefaults,
   displayedUdsPanels,
@@ -40,7 +39,7 @@ import { UdsRecordsWindow } from "../../UdsRecordsWindow";
 import { UdsRecordRepository, type UdsAddendum, type UdsRecord } from "../../../persistence/uds-records";
 import { browserSafeStorage } from "../../../persistence/storage";
 import { ClinicalReadout } from "../ClinicalReadout";
-import { RegisterMarkers, WorkflowContextStrip, type ClinicalFieldSource } from "../ClinicalRegister";
+import { RegisterMarkers, WorkflowSummaryFact, type ClinicalFieldSource } from "../ClinicalRegister";
 import { OptionList, WorkflowField } from "../WorkflowField";
 import { isValidLocalDateTime } from "../../../domain/dates";
 import {
@@ -824,6 +823,14 @@ export function UdsPanel({
     tabForUdsField,
   );
   const transactionStatus = projectWorkflowTransactionStatus({ evaluation, locked });
+  const qcStatus =
+    encounter.control === "invalid"
+      ? { value: "INVALID", tone: "stop" as const }
+      : encounter.validity === "needs review"
+        ? { value: "REVIEW", tone: "attention" as const }
+        : encounter.control === "valid" && encounter.validity === "acceptable"
+          ? { value: "ACCEPTABLE", tone: "normal" as const }
+          : { value: "PENDING", tone: "attention" as const };
   const recordLifecycle = projectRecordLifecycle({
     locked,
     error: recordStatusIsError,
@@ -900,111 +907,114 @@ export function UdsPanel({
     <UdsIncompleteFieldsContext.Provider value={incompleteFields}>
     <UdsRequirementsContext.Provider value={evaluation.output.requirements}>
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
-      <div class="wfp-summary-bar">
-        <h1 class="wfp-workflow-title"><strong>Urine drug screen</strong></h1>
-        {locked ? (
-          <span class="wfp-status-flag is-idle">Read only</span>
-        ) : (
-          <StatusFlag
-            idle={(evaluation?.readiness ?? "idle") === "idle"}
-            stopCount={stops.length}
-            warningCount={evaluation?.warnings.length ?? 0}
-            onOpenRequirements={() => setRequirementsOpen(true)}
+      <div class="wfp-transaction-chrome">
+        <div class="wfp-summary-bar wfp-uds-context">
+          <h1 class="wfp-workflow-title"><strong>Urine drug screen</strong></h1>
+          {locked ? (
+            <span class="wfp-status-flag is-idle">Read only</span>
+          ) : (
+            <StatusFlag
+              idle={(evaluation?.readiness ?? "idle") === "idle"}
+              stopCount={stops.length}
+              warningCount={evaluation?.warnings.length ?? 0}
+              onOpenRequirements={() => setRequirementsOpen(true)}
+            />
+          )}
+          <WorkflowSummaryFact
+            label="DEVICE"
+            value={encounter.customDeviceName?.trim() || encounter.device || "NOT SELECTED"}
+            tone={panelProfileReady ? "normal" : "attention"}
           />
-        )}
-        <span class="wfp-summary-spacer" />
-        <span class="wfp-transaction-readout" aria-label={`Worksheet page ${UDS_TABS.indexOf(tab) + 1} of ${UDS_TABS.length}`}>
-          <b>{transactionStatus.label}</b>
-          <span>PG {UDS_TABS.indexOf(tab) + 1}/{UDS_TABS.length}</span>
-        </span>
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() => setRecordsOpen(true)}
-        >
-          UDS records…
-        </button>
-        {!locked && (
+          <WorkflowSummaryFact
+            label="PANELS"
+            value={panelProfileReady ? `${testedCount}/${displayedPanels.length}` : "PENDING"}
+            tone={panelProfileReady ? "normal" : "attention"}
+          />
+          <WorkflowSummaryFact label="QC" value={qcStatus.value} tone={qcStatus.tone} />
+          <span class="wfp-summary-spacer" />
+          <span
+            class="wfp-transaction-readout"
+            aria-label={`Worksheet page ${UDS_TABS.indexOf(tab) + 1} of ${UDS_TABS.length}`}
+          >
+            <b>{transactionStatus.label}</b>
+            <span>PG {UDS_TABS.indexOf(tab) + 1}/{UDS_TABS.length}</span>
+          </span>
           <button
             type="button"
             class="cd2004-link-button"
-            onClick={() =>
-              patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } })
-            }
-            disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
-            title={
-              activePatient.name?.trim() || activePatient.dob?.trim()
-                ? "Carry the selected local patient into this UDS record."
-                : "Select a local patient first."
-            }
+            onClick={() => setRecordsOpen(true)}
           >
-            Use current patient
+            UDS records…
           </button>
-        )}
-        {!locked && (
+          {!locked && (
+            <button
+              type="button"
+              class="cd2004-link-button"
+              onClick={() =>
+                patch({
+                  patient: {
+                    name: activePatient.name ?? "",
+                    dob: activePatient.dob ?? "",
+                  },
+                })
+              }
+              disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
+              title={
+                activePatient.name?.trim() || activePatient.dob?.trim()
+                  ? "Carry the selected local patient into this UDS record."
+                  : "Select a local patient first."
+              }
+            >
+              Use current patient
+            </button>
+          )}
+          {!locked && (
+            <button
+              type="button"
+              class="cd2004-link-button"
+              onClick={() => {
+                if (staffSignInValue) patch({ collector: staffSignInValue });
+              }}
+              disabled={!staffSignInValue}
+              title={
+                staffSignInValue
+                  ? "Carry the signed-in staff member into the collector field."
+                  : "Sign in a staff member first."
+              }
+            >
+              Use signed-in staff
+            </button>
+          )}
           <button
             type="button"
-            class="cd2004-link-button"
-            onClick={() => {
-              if (staffSignInValue) patch({ collector: staffSignInValue });
-            }}
-            disabled={!staffSignInValue}
+            class="cd2004-command-button"
             title={
-              staffSignInValue
-                ? "Carry the signed-in staff member into the collector field."
-                : "Sign in a staff member first."
+              udsReadyForFinalOutput
+                ? "Add the finalized UDS documentation to today's local activity log."
+                : "Add this incomplete UDS documentation to today's local activity log as needs review."
             }
+            onClick={() => clickLegacyControl("addUdsLog")}
+            disabled={evaluation.readiness === "idle"}
           >
-            Use signed-in staff
+            {udsLogLabel}
           </button>
-        )}
-        <button
-          type="button"
-          class="cd2004-command-button"
-          title={
-            udsReadyForFinalOutput
-              ? "Add the finalized UDS documentation to today's local activity log."
-              : "Add this incomplete UDS documentation to today's local activity log as needs review."
-          }
-          onClick={() => clickLegacyControl("addUdsLog")}
-          disabled={evaluation.readiness === "idle"}
-        >
-          {udsLogLabel}
-        </button>
+        </div>
+
+        <WorkflowLedgerTabs
+          tabs={udsLedgerTabs}
+          activeTab={tab}
+          onChange={setTab}
+          ariaLabel="UDS transaction pages and state"
+          idPrefix="uds-ledger"
+        />
       </div>
 
-      <WorkflowLedgerTabs
-        tabs={udsLedgerTabs}
-        activeTab={tab}
-        onChange={setTab}
-        ariaLabel="UDS transaction pages and state"
-        idPrefix="uds-ledger"
-      />
-
-      <WorkflowContextStrip
-        items={[
-          { label: "PATIENT", value: encounter.patient.name || "NOT SELECTED", tone: encounter.patient.name ? "normal" : "attention" },
-          { label: "DEVICE", value: encounter.customDeviceName?.trim() || encounter.device || "NOT SELECTED", tone: panelProfileReady ? "normal" : "attention" },
-          {
-            label: "PANELS",
-            value: panelProfileReady
-              ? `${testedCount}/${displayedPanels.length} ENTERED`
-              : "PENDING",
-            tone: panelProfileReady ? "normal" : "attention",
-          },
-          { label: "QC", value: encounter.control === "valid" && encounter.validity === "acceptable" ? "ACCEPTABLE" : "PENDING", tone: encounter.control === "invalid" ? "stop" : "attention" },
-          {
-            label: "STATE",
-            value: transactionStatus.label,
-            tone:
-              transactionStatus.tone === "stop"
-                ? "stop"
-                : transactionStatus.tone === "attention"
-                  ? "attention"
-                  : "normal",
-          },
-        ]}
-      />
+      <div
+        class="wfp-transaction-page"
+        role="region"
+        aria-label="UDS clinical page"
+        tabIndex={0}
+      >
       {invalidationReceipt && (
         <div class="wfp-invalidation-receipt" role="status">
           <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
@@ -1630,6 +1640,8 @@ export function UdsPanel({
           </div>
         </div>
       )}
+
+      </div>
 
       <RecordLifecycleActions
         recordLabel="UDS RECORD"
