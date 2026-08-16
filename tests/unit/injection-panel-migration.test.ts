@@ -4,6 +4,7 @@ import {
   InjectionEngine,
   emptyInjectionEncounter,
   emptyInjectionInitiation,
+  injectionAdministrationReviewFingerprint,
   injectionInitiationConfig,
   injectionInitiationOptions,
   type InjectionEncounter,
@@ -63,6 +64,23 @@ describe("injectionEncounterToDocumentationInput", () => {
     const evaluation = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
     expect(evaluation.output.administrationDocumented).toBe(false);
     expect(injectionEncounterToDocumentationInput(encounter, evaluation)).toBeNull();
+  });
+
+  it("invalidates a newly attributed administration review when a material fact changes", () => {
+    const encounter = routineInjection();
+    encounter.disposition = { kind: "" };
+    encounter.disposition = {
+      kind: "administered",
+      reviewedBy: "Draft MA",
+      reviewedAt: "2026-01-30T09:20:00.000Z",
+      reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
+    };
+    const reviewed = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+    expect(injectionEncounterToDocumentationInput(encounter, reviewed)).not.toBeNull();
+
+    encounter.site = "R deltoid";
+    const changed = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+    expect(injectionEncounterToDocumentationInput(encounter, changed)).toBeNull();
   });
 
   it("maps a fully-documented administered encounter into the documentation input shape", () => {

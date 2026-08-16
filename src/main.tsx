@@ -27,7 +27,9 @@ import {
 import { FormsPanel } from './presentation/workflows/forms/FormsPanel';
 import { UdsPanel } from './presentation/workflows/uds/UdsPanel';
 import { InjectionPanel } from './presentation/workflows/injection/InjectionPanel';
+import { isCompatibilityProjectionEvent } from './presentation/workflows/legacy-mirror';
 import { SamplesPanel } from './presentation/workflows/samples/SamplesPanel';
+import { requestWorkstationDraftSave } from './presentation/workstation-events';
 import { TmsPanel } from './presentation/workflows/tms/TmsPanel';
 import { KnowledgePanel } from './presentation/workflows/knowledge/KnowledgePanel';
 import { DailyCloseoutPanel } from './presentation/workflows/log/DailyCloseoutPanel';
@@ -43,7 +45,12 @@ import {
 import { loadLegacyRuntime, type LegacyRuntime } from './legacy/loader';
 import { installLegacyDocumentationAdapter } from './legacy/documentation-adapter';
 import { createLegacyClinicalSource } from './legacy/clinical-source';
-import type { InjectionEncounter } from './domain/injection';
+import type {
+  InjectionEncounter,
+  InjectionEvaluationOutput,
+} from './domain/injection';
+import type { ClinicalEvaluation } from './domain/contracts';
+import type { UdsEncounter, UdsEvaluationOutput } from './domain/uds';
 import {
   copyAllLegacyNotes,
   copyLegacyNoteSection,
@@ -100,15 +107,16 @@ function presentationReadiness(
   legacy: LegacyShellSnapshot['readiness'],
   clinical: ClinicalCoordinatorSnapshot,
   workflow: WorkflowId,
+  evaluationOverride?: ClinicalEvaluation,
 ): {
   readiness: LegacyShellSnapshot['readiness'];
   typedReady: boolean;
   firstBlockingDetail?: string;
 } {
   const clinicalWorkflow = DESKTOP_TO_CLINICAL[workflow];
-  const evaluation = clinicalWorkflow
+  const evaluation = evaluationOverride ?? (clinicalWorkflow
     ? selectClinicalEvaluation(clinical, clinicalWorkflow)
-    : undefined;
+    : undefined);
   if (!evaluation) {
     return { readiness: legacy, typedReady: false };
   }
@@ -213,6 +221,15 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   // internal typed state can be reset via `key` without discarding in-flight
   // typing on every autosave tick.
   const [injectionRecordEpoch, setInjectionRecordEpoch] = useState(0);
+  const [typedInjectionState, setTypedInjectionState] = useState<{
+    encounter: InjectionEncounter;
+    evaluation: ClinicalEvaluation<InjectionEvaluationOutput>;
+  } | null>(null);
+  const [typedUdsState, setTypedUdsState] = useState<{
+    encounter: UdsEncounter;
+    evaluation: ClinicalEvaluation<UdsEvaluationOutput>;
+    locked: boolean;
+  } | null>(null);
   const [recordsOpen, setRecordsOpen] = useState(false);
   const [recordAction, setRecordAction] = useState<RecordActionKind | null>(null);
   const injectionRecordGenerationRef = useRef(0);
@@ -237,6 +254,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       const nextRecordGeneration = window.ipmgInjectionRecordGeneration?.() ?? 0;
       if (nextRecordGeneration !== injectionRecordGenerationRef.current) {
         injectionRecordGenerationRef.current = nextRecordGeneration;
+        setTypedInjectionState(null);
         setInjectionRecordEpoch((value) => value + 1);
         // A genuine record switch (opening a different saved record, or
         // starting a new one) must not let the coordinator's cross-workflow
@@ -259,7 +277,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   );
 
   useEffect(() => {
-    const observers = Object.values(runtime.panels).map((panel) => {
+    const observers = Object.entries(runtime.panels)
+      .filter(([workflow]) => workflow !== 'administer' && workflow !== 'uds')
+      .map(([, panel]) => {
       const observer = new MutationObserver(refresh);
       observer.observe(panel, {
         subtree: true,
@@ -277,7 +297,16 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       });
       return observer;
     });
-    const shellObserver = new MutationObserver(refresh);
+    const shellObserver = new MutationObserver((records) => {
+      const hasNonProjectionMutation = records.some((record) => {
+        const target =
+          record.target instanceof Element
+            ? record.target
+            : record.target.parentElement;
+        return !target?.closest('#panel-administer, #panel-uds');
+      });
+      if (hasNonProjectionMutation) refresh();
+    });
     shellObserver.observe(runtime.legacyWrap, {
       subtree: true,
       childList: true,
@@ -286,7 +315,10 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       attributeFilter: ['class', 'disabled', 'aria-disabled', 'aria-invalid'],
     });
 
-    const handleChange = () => refresh();
+    const handleChange = (event: Event) => {
+      if (isCompatibilityProjectionEvent(event)) return;
+      refresh();
+    };
     const handleTabChange = () => refresh();
     document.addEventListener('input', handleChange, true);
     document.addEventListener('change', handleChange, true);
@@ -376,9 +408,16 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         <UdsPanel
           initialEncounter={clinical.state.workflows.uds.encounter}
           activePatient={context.patient}
-          evaluation={selectClinicalEvaluation(clinical, 'uds')}
           staffSignInValue={activeStaffValue()}
           previewRef={udsPanelRef}
+          onWorkflowStateChange={(encounter, evaluation, state) => {
+            setTypedUdsState({ encounter, evaluation, locked: state.locked });
+            const next = readLegacyShellSnapshot(runtime);
+            if (!sameSnapshot(snapshotRef.current, next)) {
+              snapshotRef.current = next;
+              setSnapshot(next);
+            }
+          }}
         />
       );
     }
@@ -388,10 +427,19 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           key={injectionRecordEpoch}
           initialEncounter={rawInjectionEncounter(clinicalSource)}
           activePatient={context.patient}
-          evaluation={selectClinicalEvaluation(clinical, 'injection')}
           staffSignInValue={activeStaffValue()}
           previewRef={injectionPanelRef}
           locked={snapshot.postState === 'posted'}
+          onWorkflowStateChange={(encounter, evaluation) =>
+            {
+              setTypedInjectionState({ encounter, evaluation });
+              const next = readLegacyShellSnapshot(runtime);
+              if (!sameSnapshot(snapshotRef.current, next)) {
+                snapshotRef.current = next;
+                setSnapshot(next);
+              }
+            }
+          }
         />
       );
     }
@@ -445,6 +493,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     const nextRecordGeneration = window.ipmgInjectionRecordGeneration?.() ?? 0;
     if (nextRecordGeneration !== injectionRecordGenerationRef.current) {
       injectionRecordGenerationRef.current = nextRecordGeneration;
+      setTypedInjectionState(null);
       setInjectionRecordEpoch((value) => value + 1);
     }
     coordinator.navigate('injection');
@@ -479,17 +528,24 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       : undefined;
   const injectionEncounter =
     activeWorkflow === 'administer'
-      ? rawInjectionEncounter(clinicalSource)
+      ? typedInjectionState?.encounter ?? rawInjectionEncounter(clinicalSource)
       : undefined;
+  const udsEncounter =
+    activeWorkflow === 'uds' ? typedUdsState?.encounter : undefined;
   const injectionPatient = injectionEncounter?.patient;
   const patient: PatientContext = {
-    name: injectionPatient?.name ?? clinical.state.activePatient.name,
-    dob: injectionPatient?.dob ?? clinical.state.activePatient.dob,
+    name: injectionPatient?.name ?? udsEncounter?.patient.name ?? clinical.state.activePatient.name,
+    dob: injectionPatient?.dob ?? udsEncounter?.patient.dob ?? clinical.state.activePatient.dob,
     localRecordId: injectionAttestation?.activeRecordId,
     medicationLabel: injectionAttestation?.medication || undefined,
     allergyStatus: injectionEncounter?.allergies.trim() || undefined,
   };
-  const workflowPatient: PatientContext | undefined = activeClinicalWorkflow
+  const workflowPatient: PatientContext | undefined =
+    activeWorkflow === 'administer' && typedInjectionState
+      ? { ...typedInjectionState.encounter.patient, sourceWorkflow: 'administer' }
+      : activeWorkflow === 'uds' && typedUdsState
+        ? { ...typedUdsState.encounter.patient, sourceWorkflow: 'uds' }
+        : activeClinicalWorkflow
     ? {
         name:
           clinical.state.workflows[activeClinicalWorkflow].encounter.patient
@@ -510,12 +566,20 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     snapshot.readiness,
     clinical,
     activeWorkflow,
+    activeWorkflow === 'administer'
+      ? typedInjectionState?.evaluation
+      : activeWorkflow === 'uds'
+        ? typedUdsState?.evaluation
+        : undefined,
   );
   const localAttestationReady = Boolean(
     injectionAttestation?.canAttest && injectionAttestation.staff.trim(),
   );
   const attestationBlockingDetail =
-    activeWorkflow === 'administer' && !localAttestationReady
+    activeWorkflow === 'administer' &&
+    typedInjectionState?.evaluation.readiness !== 'idle' &&
+    readinessModel.typedReady &&
+    !localAttestationReady
       ? injectionAttestation?.staff.trim()
         ? 'The editable local record is not ready to attest and lock.'
         : 'Enter the signed-in documenting staff before local attestation.'
@@ -546,7 +610,6 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     const attestation = injectionAttestation;
     if (
       activeWorkflow !== 'administer' ||
-      !snapshot.canComplete ||
       !readinessModel.typedReady ||
       !localAttestationReady ||
       !attestation ||
@@ -588,7 +651,6 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     }
     if (
       activeWorkflow !== 'administer' ||
-      !snapshot.canComplete ||
       !readinessModel.typedReady ||
       !localAttestationReady ||
       posting
@@ -636,7 +698,6 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     <WorkstationViewportBoundary>
       <ClinicalDesktopShell
         organizationName="Integrated Psychiatric Medical Group"
-        versionLabel="INJ"
         activeWorkflow={activeWorkflow}
         onWorkflowChange={openWorkflow}
         patient={patient}
@@ -666,7 +727,6 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         }
         canComplete={
           activeWorkflow === 'administer' &&
-          snapshot.canComplete &&
           readinessModel.typedReady &&
           localAttestationReady
         }
@@ -674,7 +734,11 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         onSaveDraft={
           activeWorkflow === 'administer'
             ? saveInjectionDraft
-            : undefined
+            : activeWorkflow === 'uds' &&
+                typedUdsState?.evaluation.readiness !== 'idle' &&
+                !typedUdsState?.locked
+              ? () => requestWorkstationDraftSave('uds')
+              : undefined
         }
         onReviewComplete={reviewOrComplete}
         injectionRecordActions={

@@ -3,10 +3,13 @@ import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import "../workflow-panels.css";
 import {
   applyUdsDeviceProfileDefaults,
+  displayedUdsPanels,
+  deriveUdsReportStatus,
   emptyUdsEncounter,
+  nextUdsResultState,
   profileFor,
+  UdsEngine,
   UDS_CONTROL_OPTIONS,
-  UDS_GROUPS,
   UDS_PANELS,
   UDS_REASON_OPTIONS,
   UDS_RESULT_LABEL,
@@ -16,6 +19,7 @@ import {
   type UdsEncounter,
   type UdsEvaluationOutput,
   type UdsPanel as UdsPanelKey,
+  type UdsRequirement,
   type UdsResultState,
   type UdsTemperatureState,
 } from "../../../domain/uds";
@@ -28,16 +32,47 @@ import { StatusFlag } from "../StatusFlag";
 import { mirrorUdsEncounterToLegacyDom, mirrorUdsSignatureToggle } from "./uds-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { DesktopIcon } from "../../DesktopIcon";
+import { ModalDialog } from "../../ModalDialog";
 import { formatDobAsTyped } from "../../format-dob";
 import { RecordActionDialog, type RecordActionKind } from "../../RecordActionDialog";
 import { RecordLifecycleActions } from "../../RecordLifecycleActions";
 import { UdsRecordsWindow } from "../../UdsRecordsWindow";
 import { UdsRecordRepository, type UdsAddendum, type UdsRecord } from "../../../persistence/uds-records";
 import { browserSafeStorage } from "../../../persistence/storage";
+import { ClinicalReadout } from "../ClinicalReadout";
+import { RegisterMarkers, WorkflowContextStrip, type ClinicalFieldSource } from "../ClinicalRegister";
+import { OptionList, WorkflowField } from "../WorkflowField";
+import { isValidLocalDateTime } from "../../../domain/dates";
+import {
+  projectCarriedFieldSource,
+  projectWorkflowLedgerState,
+  projectWorkflowTransactionStatus,
+  projectRecordLifecycle,
+  type WorkflowFieldState,
+} from "../../../application/workstation-projection";
+import { requestClinicalPrint } from "../clinical-print";
+import {
+  workflowLedgerPanelId,
+  workflowLedgerTabId,
+  WorkflowLedgerTabs,
+} from "../WorkflowLedgerTabs";
+import {
+  WORKSTATION_DRAFT_SAVE_REQUEST,
+  type WorkstationDraftSaveRequestDetail,
+} from "../../workstation-events";
 
-type UdsTab = "specimen" | "results" | "interpretation";
+type UdsTab = "specimen" | "results" | "review";
 
-const UDS_TABS: readonly UdsTab[] = ["specimen", "results", "interpretation"];
+const UDS_TABS: readonly UdsTab[] = ["specimen", "results", "review"];
+
+const currentLocalDateTime = (): string => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 16);
+};
+
+const emptyUdsResults = (): UdsEncounter["results"] =>
+  Object.fromEntries(UDS_PANELS.map((panel) => [panel, "nt"])) as UdsEncounter["results"];
 
 // A point-of-care immunoassay report has three parts in every lab system that
 // ever rendered one: what was collected, what the analyzer said, and what a
@@ -45,7 +80,7 @@ const UDS_TABS: readonly UdsTab[] = ["specimen", "results", "interpretation"];
 const UDS_TAB_LABEL: Record<UdsTab, string> = {
   specimen: "Specimen",
   results: "Results",
-  interpretation: "Interpretation",
+  review: "Review",
 };
 
 /**
@@ -61,8 +96,11 @@ function tabForUdsField(field?: string): UdsTab {
     case "collector":
     case "temperature":
     case "reason":
+    case "reasonDetail":
     case "device":
     case "omittedPanel":
+    case "customDeviceName":
+    case "customPanels":
     case "customPanelSetVerified":
     case "physicalReadingsVerified":
     case "lot":
@@ -73,10 +111,11 @@ function tabForUdsField(field?: string): UdsTab {
       return "results";
     // What a human made of it.
     case "validity":
+      return "specimen";
     case "medicationAlignment":
     case "labPlan":
     case "comment":
-      return "interpretation";
+      return "review";
     default:
       return "specimen";
   }
@@ -88,7 +127,7 @@ function tabForUdsField(field?: string): UdsTab {
 // earned ink.
 const UDS_RESULT_FLAG: Record<UdsResultState, { flag: string; status: string; abnormal: boolean }> =
   {
-    nt: { flag: "", status: "Not performed", abnormal: false },
+    nt: { flag: "", status: "Not tested", abnormal: false },
     neg: { flag: "", status: "Preliminary", abnormal: false },
     pos: { flag: "A", status: "Preliminary", abnormal: true },
     invalid: { flag: "INV", status: "Invalid", abnormal: true },
@@ -97,9 +136,13 @@ const UDS_RESULT_FLAG: Record<UdsResultState, { flag: string; status: string; ab
 interface UdsPanelProps {
   initialEncounter: UdsEncounter;
   activePatient: PatientContext;
-  evaluation?: ClinicalEvaluation<UdsEvaluationOutput>;
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
+  onWorkflowStateChange?: (
+    encounter: UdsEncounter,
+    evaluation: ClinicalEvaluation<UdsEvaluationOutput>,
+    state: { locked: boolean },
+  ) => void;
 }
 
 const patientIsEmpty = (patient: UdsEncounter["patient"]): boolean =>
@@ -110,52 +153,16 @@ const patientIsEmpty = (patient: UdsEncounter["patient"]): boolean =>
  * still-incomplete required field gets the same visual language on every
  * workflow instead of relearning one per panel. */
 const UdsIncompleteFieldsContext = createContext<ReadonlySet<string>>(new Set());
-
-interface OptionListProps<T extends string> {
-  name: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: ReadonlyArray<{ key: T; label: string; description?: string }>;
-  inline?: boolean;
-}
-
-function OptionList<T extends string>({
-  name,
-  value,
-  onChange,
-  options,
-  inline,
-}: OptionListProps<T>) {
-  // Native <select> rather than a custom radio-row list: the OS draws the
-  // popup, keyboard type-ahead comes for free, and a closed control costs one
-  // line instead of one per option. The selected option's description stays
-  // visible beneath it - clinical guidance should not hide inside a tooltip.
-  const selected = options.find((option) => option.key === value);
-  return (
-    <div class={`wfp-select-group ${inline ? "wfp-select-group-inline" : ""}`}>
-      <select
-        name={name}
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value as T)}
-      >
-        {options.map((option) => (
-          <option key={option.key} value={option.key} title={option.description}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {selected?.description && (
-        <small class="wfp-select-desc">{selected.description}</small>
-      )}
-    </div>
-  );
-}
+const UdsRequirementsContext = createContext<Readonly<Record<string, UdsRequirement>>>({});
 
 function Field({
   label,
   hint,
   width,
   field,
+  source = "ENTRY",
+  state,
+  prompt,
   children,
 }: {
   label: string;
@@ -167,6 +174,10 @@ function Field({
   /** Issue `field` this control edits, so an active stop on it can be shown
    * here instead of only in the aggregate outstanding-requirements list. */
   field?: string;
+  source?: ClinicalFieldSource;
+  /** Explicit state for command-dialog fields that are not encounter facts. */
+  state?: WorkflowFieldState;
+  prompt?: string;
   children: ComponentChildren;
 }) {
   // Requirement is marked on the field itself - a red asterisk on the caption
@@ -176,6 +187,8 @@ function Field({
   const required = hint?.startsWith("required") ?? false;
   const optional = hint?.startsWith("optional") ?? false;
   const incompleteFields = useContext(UdsIncompleteFieldsContext);
+  const requirements = useContext(UdsRequirementsContext);
+  const requirement = field ? requirements[field] : undefined;
   const incomplete = Boolean(field && incompleteFields.has(field));
   // A hint that only says "required"/"optional" is fully replaced by the
   // marker. One that qualifies it keeps the qualifier, minus the leading word
@@ -184,26 +197,38 @@ function Field({
     hint && hint !== "required" && hint !== "optional"
       ? hint.replace(/^(required|optional)[;:,]?\s*/i, "")
       : "";
+  const code = `UDS-${field?.replace(/[^a-z0-9]+/gi, "-").toUpperCase() ?? label.replace(/[^a-z0-9]+/gi, "-").toUpperCase()}`;
   return (
-    <div
-      class={`wfp-field ${required ? "is-required" : ""} ${incomplete ? "is-incomplete" : ""} ${width ? `is-w-${width}` : ""}`}
+    <WorkflowField
+      label={label}
+      hint={requirement?.reason ?? detail}
+      field={field}
+      width={width}
+      prompt={prompt}
+      presentation={{
+        state: state ?? (
+          requirement?.state === "hidden"
+            ? "not-applicable"
+            : requirement?.state === "pending"
+              ? "pending-context"
+              : requirement?.state === "required"
+                ? "required"
+                : requirement?.state === "optional"
+                  ? "optional"
+                  : required
+                    ? "required"
+                    : optional || !hint
+                      ? "optional"
+                      : "pending-context"),
+        source,
+        fieldCode: code,
+      }}
+      incomplete={incomplete}
     >
-      <label>
-        <span class="wfp-field-caption">{label}</span>
-        {required && (
-          <abbr class="wfp-req" title="Required">
-            *
-          </abbr>
-        )}
-        {optional && <span class="wfp-opt">optional</span>}
-      </label>
       {children}
-      {detail && <span class="wfp-field-hint">{detail}</span>}
-    </div>
+    </WorkflowField>
   );
 }
-
-const RESULT_CYCLE: UdsResultState[] = ["nt", "neg", "pos", "invalid"];
 
 function ClinicianLabSheet({
   encounter,
@@ -214,7 +239,8 @@ function ClinicianLabSheet({
   omittedPanel?: UdsPanelKey;
   includeSignatureFields: boolean;
 }) {
-  const collected = encounter.collectionDateTime
+  const hasValidCollectionTime = isValidLocalDateTime(encounter.collectionDateTime);
+  const collected = hasValidCollectionTime
     ? new Date(encounter.collectionDateTime).toLocaleString(undefined, {
         month: "2-digit",
         day: "2-digit",
@@ -222,8 +248,11 @@ function ClinicianLabSheet({
         hour: "2-digit",
         minute: "2-digit",
       })
-    : "NOT ENTERED";
-  const reported = encounter.collectionDateTime ? collected : "PENDING";
+    : encounter.collectionDateTime
+      ? "INVALID / NOT ENTERED"
+      : "NOT ENTERED";
+  const reported = hasValidCollectionTime ? collected : "PENDING";
+  const reportPanels = displayedUdsPanels(encounter);
 
   return (
     <section class="meditech-lab-sheet" aria-label="UDS clinician laboratory report preview">
@@ -277,7 +306,7 @@ function ClinicianLabSheet({
         </div>
         <div>
           <dt>DEVICE / METHOD</dt>
-          <dd>{encounter.device || "Device not entered"} · waived immunoassay</dd>
+          <dd>{encounter.customDeviceName?.trim() || encounter.device || "Device not entered"} · waived immunoassay</dd>
         </div>
         <div>
           <dt>LOT / EXP</dt>
@@ -304,7 +333,7 @@ function ClinicianLabSheet({
           </tr>
         </thead>
         <tbody>
-          {UDS_PANELS.map((panel) => {
+          {reportPanels.map((panel) => {
             const notOnCup = panel === omittedPanel;
             const state: UdsResultState = notOnCup
               ? "nt"
@@ -342,7 +371,7 @@ function ClinicianLabSheet({
         </div>
         <div>
           <b>MEDICATION ALIGNMENT</b>
-          <span>{encounter.medicationAlignment}</span>
+          <span>{encounter.medicationAlignment || "NOT DOCUMENTED"}</span>
         </div>
         <div>
           <b>OUTSIDE LAB</b>
@@ -373,14 +402,26 @@ function ClinicianLabSheet({
 export function UdsPanel({
   initialEncounter,
   activePatient,
-  evaluation,
   staffSignInValue,
   previewRef,
+  onWorkflowStateChange,
 }: UdsPanelProps) {
   const [encounter, setEncounter] = useState<UdsEncounter>(initialEncounter);
+  // UDS field edits are evaluated from the typed encounter in the same render
+  // cycle. The legacy DOM remains a print/report compatibility projection; it
+  // is no longer the authority for readiness, field state, or attestation.
+  const evaluation = useMemo(() => UdsEngine.evaluate(encounter, {}), [encounter]);
   const [photoData, setPhotoData] = useState<string>("");
   const [tab, setTab] = useState<UdsTab>("specimen");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [normalQcReviewOpen, setNormalQcReviewOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<{
+    state: "neg" | "nt";
+    panels: readonly UdsPanelKey[];
+    title: string;
+  } | null>(null);
+  const [activeResultPanel, setActiveResultPanel] = useState<UdsPanelKey | undefined>();
+  const [invalidationReceipt, setInvalidationReceipt] = useState<string | null>(null);
   // Seeded from whatever the hidden legacy checkbox already holds at mount
   // (its own boot-time default) rather than forced, so a fresh encounter
   // doesn't silently flip the print report's signature-block default.
@@ -409,7 +450,25 @@ export function UdsPanel({
   const [recordStatus, setRecordStatus] = useState<string | undefined>(undefined);
   const [recordStatusIsError, setRecordStatusIsError] = useState(false);
   const [recordsRefreshToken, setRecordsRefreshToken] = useState(0);
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
   const addendumTextRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    onWorkflowStateChange?.(encounter, evaluation, { locked });
+    // Notification boundary only; callback identity follows the shell render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [encounter, evaluation, locked]);
+
+  useEffect(() => {
+    const navigate = (event: Event) => {
+      const detail = (event as CustomEvent<{ workflow?: string; tab?: UdsTab; field?: string }>).detail;
+      if (detail?.workflow !== "uds" || !detail.tab) return;
+      setTab(detail.tab);
+      if (detail.field) window.setTimeout(() => (document.querySelector(`[data-field-path="${detail.field}"] input, [data-field-path="${detail.field}"] select, [data-field-path="${detail.field}"] textarea, [data-field-path^="${detail.field}."] button`) as HTMLElement | null)?.focus(), 0);
+    };
+    window.addEventListener("ipmg:navigate-workflow-source", navigate);
+    return () => window.removeEventListener("ipmg:navigate-workflow-source", navigate);
+  }, []);
 
   useEffect(() => {
     if (mirroredOnMount.current) return;
@@ -457,14 +516,97 @@ export function UdsPanel({
     patch({ results });
   };
 
+  const confirmBulkAction = () => {
+    if (!bulkAction) return;
+    setAllPanels(bulkAction.panels, bulkAction.state);
+    setBulkAction(null);
+  };
+
+  const confirmNormalQcReview = () => {
+    patch({
+      temperature: "acceptable",
+      control: "valid",
+      validity: "acceptable",
+      physicalReadingsVerified: true,
+    });
+    setNormalQcReviewOpen(false);
+  };
+
   const onDeviceChange = (device: string) => {
-    const defaults = applyUdsDeviceProfileDefaults({ ...encounter, device, omittedPanel: "" });
-    patch(defaults);
+    if (encounter.device && encounter.device !== device) {
+      setInvalidationReceipt("DEVICE CHANGED · cleared panel readings and physical-reading verification");
+    }
+    const defaults = applyUdsDeviceProfileDefaults({
+      ...encounter,
+      device,
+      omittedPanel: "",
+      customDeviceName: "",
+      customPanels: [],
+    });
+    patch({
+      ...defaults,
+      results: Object.fromEntries(UDS_PANELS.map((panel) => [panel, "nt"])) as UdsEncounter["results"],
+      physicalReadingsVerified: false,
+    });
   };
 
   const onOmittedPanelChange = (omittedPanel: UdsPanelKey | "") => {
     const defaults = applyUdsDeviceProfileDefaults({ ...encounter, omittedPanel });
-    patch(defaults);
+    // Choosing which window is absent completes the already-selected device
+    // profile. Clear readings/verification, but preserve QC facts staff just
+    // documented for that same physical cup.
+    patch({
+      ...defaults,
+      results: Object.fromEntries(UDS_PANELS.map((panel) => [panel, "nt"])) as UdsEncounter["results"],
+      physicalReadingsVerified: false,
+      control: encounter.control,
+      validity: encounter.validity,
+      temperature: encounter.temperature,
+    });
+  };
+
+  const replaceCustomPanel = (index: number, panel: UdsPanelKey) => {
+    const next = [...(encounter.customPanels ?? [])];
+    next[index] = panel;
+    patch({
+      customPanels: next,
+      results: emptyUdsResults(),
+      physicalReadingsVerified: false,
+    });
+    setInvalidationReceipt("PANEL PROFILE CHANGED · cleared panel readings and physical-reading verification");
+  };
+
+  const moveCustomPanel = (index: number, direction: -1 | 1) => {
+    const next = [...(encounter.customPanels ?? [])];
+    const target = index + direction;
+    if (target < 0 || target >= next.length) return;
+    const current = next[index]!;
+    next[index] = next[target]!;
+    next[target] = current;
+    patch({ customPanels: next, results: emptyUdsResults(), physicalReadingsVerified: false });
+    setInvalidationReceipt("PANEL PROFILE CHANGED · cleared panel readings and physical-reading verification");
+  };
+
+  const removeCustomPanel = (index: number) => {
+    const next = (encounter.customPanels ?? []).filter((_, position) => position !== index);
+    patch({
+      customPanels: next,
+      results: emptyUdsResults(),
+      physicalReadingsVerified: false,
+    });
+    setInvalidationReceipt("PANEL PROFILE CHANGED · cleared panel readings and physical-reading verification");
+  };
+
+  const addCustomPanel = () => {
+    const nextPanel = UDS_PANELS.find((panel) => !(encounter.customPanels ?? []).includes(panel));
+    if (nextPanel) {
+      patch({
+        customPanels: [...(encounter.customPanels ?? []), nextPanel],
+        results: emptyUdsResults(),
+        physicalReadingsVerified: false,
+      });
+      setInvalidationReceipt("PANEL PROFILE CHANGED · cleared panel readings and physical-reading verification");
+    }
   };
 
   const onPhotoChange = (event: Event) => {
@@ -485,14 +627,13 @@ export function UdsPanel({
   // is passed in, not the closed-over one, so it stays correct for a
   // just-locked snapshot rather than a stale render.
   const summaryFor = (source: UdsEncounter): string => {
-    const tested =
-      UDS_PANELS.length -
-      UDS_PANELS.filter((panel) => (source.results[panel] ?? "nt") === "nt").length;
-    const positive = UDS_PANELS.filter((panel) => source.results[panel] === "pos").length;
-    const device = source.device || "No device selected";
+    const panels = displayedUdsPanels(source);
+    const tested = panels.filter((panel) => (source.results[panel] ?? "nt") !== "nt").length;
+    const positive = panels.filter((panel) => source.results[panel] === "pos").length;
+    const device = source.customDeviceName?.trim() || source.device || "No device selected";
     return positive > 0
-      ? `${device} · ${positive} preliminary positive, ${tested}/${UDS_PANELS.length} tested`
-      : `${device} · ${tested}/${UDS_PANELS.length} tested`;
+      ? `${device} · ${positive} preliminary positive, ${tested}/${panels.length} tested`
+      : `${device} · ${tested}/${panels.length} tested`;
   };
 
   // A preliminary positive panel, an unreadable result, or an unresolved
@@ -524,6 +665,16 @@ export function UdsPanel({
       setRecordStatusIsError(true);
     }
   };
+
+  useEffect(() => {
+    const handleDraftSave = (event: Event) => {
+      const detail = (event as CustomEvent<WorkstationDraftSaveRequestDetail>).detail;
+      if (detail?.workflow !== "uds" || locked || evaluation.readiness === "idle") return;
+      saveLocalDraft();
+    };
+    window.addEventListener(WORKSTATION_DRAFT_SAVE_REQUEST, handleDraftSave);
+    return () => window.removeEventListener(WORKSTATION_DRAFT_SAVE_REQUEST, handleDraftSave);
+  }, [activeRecordId, encounter, evaluation.readiness, locked]);
 
   const discardLocalDraft = (): boolean => {
     if (!activeRecordId) return false;
@@ -622,9 +773,45 @@ export function UdsPanel({
   const noteText = noteInput ? DocumentationEngine.format("uds", noteInput).text : "";
 
   const profile = profileFor(encounter.device);
-  const testedCount = UDS_PANELS.length - UDS_PANELS.filter((panel) => (encounter.results[panel] ?? "nt") === "nt").length;
-  const positiveCount = UDS_PANELS.filter((panel) => encounter.results[panel] === "pos").length;
-  const invalidCount = UDS_PANELS.filter((panel) => encounter.results[panel] === "invalid").length;
+  const displayedPanels = displayedUdsPanels(encounter);
+  const panelProfileReady =
+    profile === "14" ||
+    (profile === "13" && Boolean(encounter.omittedPanel)) ||
+    (profile === "other" && Boolean(encounter.customDeviceName?.trim()) && displayedPanels.length > 0);
+  const testedCount = displayedPanels.filter((panel) => (encounter.results[panel] ?? "nt") !== "nt").length;
+  const positiveCount = displayedPanels.filter((panel) => encounter.results[panel] === "pos").length;
+  const invalidCount = displayedPanels.filter((panel) => encounter.results[panel] === "invalid").length;
+  useEffect(() => {
+    if (testedCount > 0 || locked) setReportPreviewOpen(true);
+  }, [locked, testedCount]);
+  const reviewContextStarted = Boolean(
+    encounter.collectionDateTime.trim() || encounter.device.trim() || testedCount > 0,
+  );
+  const udsExceptions = [
+    ...displayedPanels.filter((panel) => encounter.results[panel] === "pos").map((panel) => ({ label: `${panel} preliminary positive`, tab: "results" as const, field: `results.${panel}` })),
+    ...displayedPanels.filter((panel) => encounter.results[panel] === "invalid").map((panel) => ({ label: `${panel} invalid / unreadable`, tab: "results" as const, field: `results.${panel}` })),
+    ...(encounter.temperature === "not acceptable" || encounter.control === "invalid" || encounter.validity === "needs review" ? [{ label: "Specimen or device QC requires review", tab: "specimen" as const, field: "control" }] : []),
+    ...(reviewContextStarted &&
+    (encounter.medicationAlignment === "needs review" ||
+      encounter.medicationAlignment === "not aligned")
+      ? [
+          {
+            label: "Medication alignment requires review",
+            tab: "review" as const,
+            field: "medicationAlignment",
+          },
+        ]
+      : []),
+  ];
+  const reportStatus = evaluation
+    ? deriveUdsReportStatus(encounter, evaluation, locked)
+    : ({
+        state: "not-started",
+        label: "NOT STARTED",
+        marker: "PENDING",
+        tone: "neutral",
+        detail: "Enter specimen facts and read the physical device before review.",
+      } as const);
 
   const stops = evaluation?.stops ?? [];
   const incompleteFields = useMemo(
@@ -632,6 +819,16 @@ export function UdsPanel({
     [stops],
   );
   const stopsByTab = countStopsByTab(stops, tabForUdsField);
+  const warningsByTab = countStopsByTab(
+    evaluation?.warnings ?? [],
+    tabForUdsField,
+  );
+  const transactionStatus = projectWorkflowTransactionStatus({ evaluation, locked });
+  const recordLifecycle = projectRecordLifecycle({
+    locked,
+    error: recordStatusIsError,
+    recordId: activeRecordId,
+  });
   // Same fix as canAttest: a preliminary positive, an unreadable panel, or a
   // medication-alignment flag pins readiness at "review" forever - those are
   // genuine findings, not something staff can edit away. Printing (like
@@ -642,19 +839,69 @@ export function UdsPanel({
     evaluation !== undefined &&
     evaluation.readiness !== "idle" &&
     evaluation.readiness !== "blocked";
-  const firstStopMessage = stops[0]?.message;
+  const firstStopMessage = stops[0]?.message.replace(/[.!?]+\s*$/, "");
   // Unlike print/attest, the daily-log label is purely informational (never
   // disables the button), so it keeps the stricter "no warnings either"
   // reading - a preliminary positive genuinely does need review, even though
   // it must not block printing or attesting.
   const udsLogLabel =
-    evaluation?.readiness === "ready" ? "Finalize & add to daily log" : "Log as needs review";
+    evaluation.readiness === "idle"
+      ? "Add to daily log"
+      : evaluation.readiness === "ready"
+        ? "Finalize & add to daily log"
+        : "Log as needs review";
+  const transactionStarted = evaluation.readiness !== "idle";
+  const udsLedgerTabs = UDS_TABS.map((key) => {
+    const stopCount = stopsByTab.get(key) ?? 0;
+    const warningCount = warningsByTab.get(key) ?? 0;
+    const complete = {
+      specimen: Boolean(
+        encounter.patient.name.trim() &&
+          encounter.patient.dob.trim() &&
+          encounter.reason &&
+          encounter.collectionDateTime &&
+          encounter.collector.trim() &&
+          panelProfileReady &&
+          encounter.physicalReadingsVerified,
+      ),
+      results: Boolean(
+        displayedPanels.length > 0 &&
+          testedCount === displayedPanels.length &&
+          stopCount === 0,
+      ),
+      review: Boolean(encounter.medicationAlignment && stopCount === 0),
+    }[key];
+    return {
+      key,
+      label: UDS_TAB_LABEL[key],
+      stopCount,
+      state: projectWorkflowLedgerState({
+        locked,
+        started: transactionStarted,
+        active: tab === key,
+        stopCount,
+        warningCount,
+        complete,
+      }),
+      detail:
+        key === "results"
+          ? `${testedCount}/${displayedPanels.length} panels entered`
+          : stopCount > 0
+            ? `${stopCount} unresolved requirement${stopCount === 1 ? "" : "s"}`
+            : warningCount > 0
+              ? `${warningCount} review item${warningCount === 1 ? "" : "s"}`
+              : complete
+                ? "Transaction page complete"
+                : "Transaction page pending",
+    };
+  });
 
   return (
     <UdsIncompleteFieldsContext.Provider value={incompleteFields}>
+    <UdsRequirementsContext.Provider value={evaluation.output.requirements}>
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <div class="wfp-summary-bar">
-        <strong>UDS screen</strong>
+        <h1 class="wfp-workflow-title"><strong>Urine drug screen</strong></h1>
         {locked ? (
           <span class="wfp-status-flag is-idle">Read only</span>
         ) : (
@@ -667,7 +914,7 @@ export function UdsPanel({
         )}
         <span class="wfp-summary-spacer" />
         <span class="wfp-transaction-readout" aria-label={`Worksheet page ${UDS_TABS.indexOf(tab) + 1} of ${UDS_TABS.length}`}>
-          <b>{locked ? "REVIEW" : "ENTRY"}</b>
+          <b>{transactionStatus.label}</b>
           <span>PG {UDS_TABS.indexOf(tab) + 1}/{UDS_TABS.length}</span>
         </span>
         <button
@@ -685,6 +932,11 @@ export function UdsPanel({
               patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } })
             }
             disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
+            title={
+              activePatient.name?.trim() || activePatient.dob?.trim()
+                ? "Carry the selected local patient into this UDS record."
+                : "Select a local patient first."
+            }
           >
             Use current patient
           </button>
@@ -697,6 +949,11 @@ export function UdsPanel({
               if (staffSignInValue) patch({ collector: staffSignInValue });
             }}
             disabled={!staffSignInValue}
+            title={
+              staffSignInValue
+                ? "Carry the signed-in staff member into the collector field."
+                : "Sign in a staff member first."
+            }
           >
             Use signed-in staff
           </button>
@@ -710,58 +967,50 @@ export function UdsPanel({
               : "Add this incomplete UDS documentation to today's local activity log as needs review."
           }
           onClick={() => clickLegacyControl("addUdsLog")}
+          disabled={evaluation.readiness === "idle"}
         >
           {udsLogLabel}
         </button>
       </div>
 
-      <div class="wfp-tabbar" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          class="wfp-tab"
-          aria-selected={tab === "specimen"}
-          onClick={() => setTab("specimen")}
-        >
-          {UDS_TAB_LABEL.specimen}
-          {(stopsByTab.get("specimen") ?? 0) > 0 && (
-            <span class="wfp-tab-badge" aria-hidden="true">
-              {stopsByTab.get("specimen")}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="wfp-tab"
-          aria-selected={tab === "results"}
-          onClick={() => setTab("results")}
-        >
-          {UDS_TAB_LABEL.results}
-          {(stopsByTab.get("results") ?? 0) > 0 && (
-            <span class="wfp-tab-badge" aria-hidden="true">
-              {stopsByTab.get("results")}
-            </span>
-          )}
-          <span class="wfp-tab-badge wfp-tab-badge-muted">
-            {testedCount}/{UDS_PANELS.length}
-          </span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="wfp-tab"
-          aria-selected={tab === "interpretation"}
-          onClick={() => setTab("interpretation")}
-        >
-          {UDS_TAB_LABEL.interpretation}
-          {(stopsByTab.get("interpretation") ?? 0) > 0 && (
-            <span class="wfp-tab-badge" aria-hidden="true">
-              {stopsByTab.get("interpretation")}
-            </span>
-          )}
-        </button>
-      </div>
+      <WorkflowLedgerTabs
+        tabs={udsLedgerTabs}
+        activeTab={tab}
+        onChange={setTab}
+        ariaLabel="UDS transaction pages and state"
+        idPrefix="uds-ledger"
+      />
+
+      <WorkflowContextStrip
+        items={[
+          { label: "PATIENT", value: encounter.patient.name || "NOT SELECTED", tone: encounter.patient.name ? "normal" : "attention" },
+          { label: "DEVICE", value: encounter.customDeviceName?.trim() || encounter.device || "NOT SELECTED", tone: panelProfileReady ? "normal" : "attention" },
+          {
+            label: "PANELS",
+            value: panelProfileReady
+              ? `${testedCount}/${displayedPanels.length} ENTERED`
+              : "PENDING",
+            tone: panelProfileReady ? "normal" : "attention",
+          },
+          { label: "QC", value: encounter.control === "valid" && encounter.validity === "acceptable" ? "ACCEPTABLE" : "PENDING", tone: encounter.control === "invalid" ? "stop" : "attention" },
+          {
+            label: "STATE",
+            value: transactionStatus.label,
+            tone:
+              transactionStatus.tone === "stop"
+                ? "stop"
+                : transactionStatus.tone === "attention"
+                  ? "attention"
+                  : "normal",
+          },
+        ]}
+      />
+      {invalidationReceipt && (
+        <div class="wfp-invalidation-receipt" role="status">
+          <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
+          <button type="button" class="cd2004-link-button" aria-label="Dismiss invalidation receipt" onClick={() => setInvalidationReceipt(null)}>×</button>
+        </div>
+      )}
 
       <OutstandingRequirements<UdsTab>
         open={requirementsOpen}
@@ -775,9 +1024,14 @@ export function UdsPanel({
       <fieldset disabled={locked} style="border:none;padding:0;margin:0;display:contents">
 
       {tab === "specimen" && (
-        <div class="wfp-tabpanel" role="tabpanel">
+        <div
+          class="wfp-tabpanel"
+          role="tabpanel"
+          id={workflowLedgerPanelId("uds-ledger", "specimen")}
+          aria-labelledby={workflowLedgerTabId("uds-ledger", "specimen")}
+        >
           <div class="wfp-section" role="group" aria-label="Specimen & collection">
-            <div class="wfp-section-head">Specimen &amp; collection</div>
+            <h2 class="wfp-section-head">Specimen &amp; collection</h2>
             <div class="wfp-section-body">
               {/* Source and method are fixed for this workflow, but a lab
                   report always states them - a result with no named specimen
@@ -789,14 +1043,14 @@ export function UdsPanel({
                 <dd>Point-of-care immunoassay (waived)</dd>
               </dl>
               <div class="wfp-row">
-                <Field label="Patient name" field="patient.name" hint="required">
+                <Field label="Patient name" field="patient.name" hint="required" source={projectCarriedFieldSource(encounter.patient.name, activePatient.name, "CHART")}>
                   <input
                     value={encounter.patient.name}
                     placeholder="Last, First"
                     onInput={(event) => patchPatient({ name: event.currentTarget.value })}
                   />
                 </Field>
-                <Field label="DOB" width="date" field="patient.dob" hint="required">
+                <Field label="DOB" width="date" field="patient.dob" hint="required" source={projectCarriedFieldSource(encounter.patient.dob, activePatient.dob, "CHART")}>
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"
@@ -806,7 +1060,7 @@ export function UdsPanel({
                     }
                   />
                 </Field>
-                <Field label="Collected by" field="collector" hint="required">
+                <Field label="Collected by" field="collector" hint="required" source={projectCarriedFieldSource(encounter.collector, staffSignInValue, "SESSION")}>
                   <input
                     value={encounter.collector}
                     placeholder="Staff initials / name"
@@ -822,6 +1076,10 @@ export function UdsPanel({
                     onInput={(event) => patch({ collectionDateTime: event.currentTarget.value })}
                   />
                 </Field>
+                <div class="wfp-field-action">
+                  <button type="button" class="cd2004-command-button" onClick={() => patch({ collectionDateTime: currentLocalDateTime() })}>Use current date/time</button>
+                  <small>Captured only when selected; it will not refresh automatically.</small>
+                </div>
               </div>
               <Field label="Specimen temperature" field="temperature" hint="required">
                 <OptionList<UdsTemperatureState>
@@ -832,20 +1090,26 @@ export function UdsPanel({
                   inline
                 />
               </Field>
-              <Field label="Reason">
+              <Field label="Encounter type" field="reason" hint="required">
                 <OptionList<UdsEncounter["reason"]>
                   name="uds-reason"
                   value={encounter.reason}
                   onChange={(value) => patch({ reason: value })}
                   options={UDS_REASON_OPTIONS}
+                  placeholder="Select encounter type"
                   inline
                 />
               </Field>
+              {encounter.reason === "other" && (
+                <Field label="Reason detail" field="reasonDetail" hint="required for Other">
+                  <input value={encounter.reasonDetail ?? ""} onInput={(event) => patch({ reasonDetail: event.currentTarget.value })} placeholder="Document the collection purpose" />
+                </Field>
+              )}
             </div>
           </div>
 
           <div class="wfp-section" role="group" aria-label="Device & quality control">
-            <div class="wfp-section-head">Device &amp; quality control</div>
+            <h2 class="wfp-section-head">Device &amp; quality control</h2>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Device" field="device" hint="required">
@@ -895,18 +1159,28 @@ export function UdsPanel({
                 </Field>
               )}
               {profile === "other" && (
-                <div class="wfp-checkbox-row">
-                  <input
-                    type="checkbox"
-                    id="uds-custom-panel-verified"
-                    checked={encounter.customPanelSetVerified ?? false}
-                    onChange={(event) =>
-                      patch({ customPanelSetVerified: event.currentTarget.checked })
-                    }
-                  />
-                  <label for="uds-custom-panel-verified">
-                    The device's exact visible panel set has been verified
-                  </label>
+                <div class="wfp-custom-device-register">
+                  <Field label="Device/package name" field="customDeviceName" hint="required">
+                    <input value={encounter.customDeviceName ?? ""} onInput={(event) => patch({ customDeviceName: event.currentTarget.value })} placeholder="Name printed on package" />
+                  </Field>
+                  <div class="wfp-field" data-field-code="UDS-CUSTOM-PANELS" data-field-label="Physical panel sequence" data-field-state={(encounter.customPanels?.length ?? 0) ? "OK" : "STOP"} data-field-prompt="Build the panel order exactly as it appears on the device" data-field-path="customPanels">
+                    <label><span class="wfp-field-caption">Physical panel sequence</span><RegisterMarkers state={(encounter.customPanels?.length ?? 0) ? "OK" : "STOP"} source="ENTRY" /></label>
+                    <ol class="wfp-panel-sequence">
+                      {(encounter.customPanels ?? []).map((panel, index) => (
+                        <li key={`${panel}-${index}`}>
+                          <span class="wfp-sequence-number">{index + 1}</span>
+                          <select value={panel} aria-label={`Panel ${index + 1}`} onChange={(event) => replaceCustomPanel(index, event.currentTarget.value as UdsPanelKey)}>
+                            {UDS_PANELS.map((option) => <option value={option} disabled={option !== panel && (encounter.customPanels ?? []).includes(option)}>{option} — {udsPanelName(option)}</option>)}
+                          </select>
+                          <button type="button" class="cd2004-link-button" aria-label={`Move ${panel} up`} disabled={index === 0} onClick={() => moveCustomPanel(index, -1)}>↑</button>
+                          <button type="button" class="cd2004-link-button" aria-label={`Move ${panel} down`} disabled={index === (encounter.customPanels?.length ?? 0) - 1} onClick={() => moveCustomPanel(index, 1)}>↓</button>
+                          <button type="button" class="cd2004-link-button" onClick={() => removeCustomPanel(index)}>Remove</button>
+                        </li>
+                      ))}
+                    </ol>
+                    <button type="button" class="cd2004-command-button" disabled={(encounter.customPanels?.length ?? 0) >= UDS_PANELS.length} onClick={addCustomPanel}>+ Add panel</button>
+                    <small class="wfp-field-hint">Enter top-to-bottom physical device order. Results follow this exact sequence.</small>
+                  </div>
                 </div>
               )}
               {/* The engine requires this confirmation for every named device,
@@ -914,10 +1188,14 @@ export function UdsPanel({
                   made "Other point-of-care UDS cup" unfinishable: the stop
                   fired with no control anywhere in the UI that could clear it. */}
               {profile !== "none" && (
-                <div class="wfp-checkbox-row">
+                <div
+                  class={`wfp-checkbox-row ${evaluation.output.requirements.physicalReadingsVerified?.state === "required" ? "is-required" : ""}`}
+                  data-requirement={evaluation.output.requirements.physicalReadingsVerified?.state ?? "unprojected"}
+                >
                   <input
                     type="checkbox"
                     id="uds-readings-verified"
+                    aria-required={evaluation.output.requirements.physicalReadingsVerified?.state === "required" || undefined}
                     checked={encounter.physicalReadingsVerified}
                     onChange={(event) =>
                       patch({ physicalReadingsVerified: event.currentTarget.checked })
@@ -925,6 +1203,13 @@ export function UdsPanel({
                   />
                   <label for="uds-readings-verified">
                     Physical cup and displayed panel readings verified for this encounter
+                    {evaluation.output.requirements.physicalReadingsVerified?.state === "required" && (
+                      <abbr class="wfp-req" title="Required">*</abbr>
+                    )}
+                    <RegisterMarkers
+                      source="ENTRY"
+                      state={encounter.physicalReadingsVerified ? "OK" : "REQ"}
+                    />
                   </label>
                 </div>
               )}
@@ -938,8 +1223,34 @@ export function UdsPanel({
                   inline
                 />
               </Field>
+              <Field label="Validity markers" field="validity" hint="required">
+                <select
+                  value={encounter.validity}
+                  onChange={(event) =>
+                    patch({ validity: event.currentTarget.value as UdsEncounter["validity"] })
+                  }
+                >
+                  <option value="not documented">Not documented</option>
+                  <option value="acceptable">Acceptable</option>
+                  <option value="needs review">Needs review</option>
+                </select>
+              </Field>
 
-              <Field label="Device photo" hint="optional for report">
+              <div class="wfp-actions">
+                <button
+                  type="button"
+                  class="cd2004-command-button"
+                  disabled={profile === "none"}
+                  onClick={() => setNormalQcReviewOpen(true)}
+                >
+                  Review normal QC…
+                </button>
+                <span class="wfp-field-hint">
+                  Confirms acceptable temperature, control, validity, and physical reading review.
+                </span>
+              </div>
+
+              <Field label="Device photo" field="devicePhoto" hint="optional for report">
                 <input type="file" accept="image/*" onChange={onPhotoChange} />
               </Field>
             </div>
@@ -948,9 +1259,24 @@ export function UdsPanel({
       )}
 
       {tab === "results" && (
-        <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section" role="group" aria-label="Result detail">
-            <div class="wfp-section-head">Result detail</div>
+        <div
+          class="wfp-tabpanel"
+          role="tabpanel"
+          id={workflowLedgerPanelId("uds-ledger", "results")}
+          aria-labelledby={workflowLedgerTabId("uds-ledger", "results")}
+        >
+          <div
+            class="wfp-section"
+            role="group"
+            aria-label="Result detail"
+            data-requirement={evaluation.output.requirements.results?.state ?? "unprojected"}
+          >
+            <h2 class="wfp-section-head">
+              Result detail
+              {evaluation.output.requirements.results?.state === "required" && (
+                <abbr class="wfp-req" title="Required">*</abbr>
+              )}
+            </h2>
             <div class="wfp-section-body">
               {/* Every point-of-care immunoassay result is presumptive until a
                   confirmatory method says otherwise. Old lab reports carried
@@ -966,120 +1292,91 @@ export function UdsPanel({
               <div class="wfp-actions">
                 <button
                   type="button"
-                  class="cd2004-link-button"
-                  onClick={() => setAllPanels(UDS_PANELS, "neg")}
+                  class="cd2004-command-button"
+                  disabled={!panelProfileReady}
+                  title={
+                    panelProfileReady
+                      ? "Review before applying NEG to every displayed panel."
+                      : "Identify and verify the physical device panel profile first."
+                  }
+                  onClick={() =>
+                    setBulkAction({
+                      state: "neg",
+                      panels: displayedPanels,
+                      title: "Mark displayed panels negative",
+                    })
+                  }
                 >
-                  All tested negative
+                  Mark displayed panels negative…
                 </button>
                 <button
                   type="button"
                   class="cd2004-link-button"
-                  onClick={() => setAllPanels(UDS_PANELS, "nt")}
+                  onClick={() =>
+                    setBulkAction({
+                      state: "nt",
+                      panels: displayedPanels,
+                      title: "Reset displayed panels to not tested",
+                    })
+                  }
                 >
-                  Mark all not tested
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => {
-                    const results = { ...encounter.results };
-                    UDS_PANELS.forEach((panel) => {
-                      if (panel === omittedPanel) return;
-                      results[panel] = panel === "THC" ? "pos" : "neg";
-                    });
-                    patch({ results });
-                  }}
-                >
-                  THC positive · rest negative
-                </button>
-                <button
-                  type="button"
-                  class="cd2004-link-button"
-                  onClick={() => {
-                    const results = { ...encounter.results };
-                    UDS_PANELS.forEach((panel) => {
-                      if (results[panel] === "pos" || results[panel] === "invalid") {
-                        results[panel] = panel === omittedPanel ? "nt" : "neg";
-                      }
-                    });
-                    patch({ results });
-                  }}
-                >
-                  Clear positives / invalids
+                  Reset displayed panels to NT…
                 </button>
               </div>
 
-              {UDS_GROUPS.map((group) => (
-                <div class="wfp-section" key={group.key} role="group" aria-label={group.label}>
-                  <div class="wfp-section-head">
-                    {group.label}
-                    <button
-                      type="button"
-                      class="cd2004-link-button wfp-group-action"
-                      onClick={() => setAllPanels(group.panels, "neg")}
-                    >
-                      Group negative
-                    </button>
-                    <button
-                      type="button"
-                      class="cd2004-link-button wfp-group-action"
-                      onClick={() => setAllPanels(group.panels, "nt")}
-                    >
-                      Group not tested
-                    </button>
-                  </div>
-                  <div class="wfp-grid wfp-grid-lab">
-                    <div class="wfp-grid-head">
-                      <span>Analyte</span>
-                      <span>Result</span>
-                      <span>Flag</span>
-                      <span>Status</span>
-                    </div>
-                    {group.panels.map((panel) => {
-                      const state = encounter.results[panel] ?? "nt";
-                      const derived = UDS_RESULT_FLAG[state];
-                      // The analyte named as absent from a 13-panel cup has no
-                      // result to record - the device never displayed one. A
-                      // lab report says so on the line itself rather than
-                      // offering buttons that only produce a stop.
-                      const notOnCup = panel === omittedPanel;
-                      return (
-                        <div class={`wfp-grid-row ${notOnCup ? "is-not-on-cup" : ""}`} key={panel}>
-                          <span class="wfp-grid-cell">
-                            <strong>{panel}</strong> {udsPanelName(panel)}
-                          </span>
-                          <span class="wfp-grid-cell wfp-grid-cell-actions">
-                            {notOnCup ? (
-                              <span class="wfp-grid-note">Not on this cup</span>
-                            ) : (
-                              RESULT_CYCLE.map((candidate) => (
-                                <button
-                                  key={candidate}
-                                  type="button"
-                                  class={`wfp-grid-toggle ${state === candidate ? "is-selected" : ""} is-${candidate}`}
-                                  onClick={() => setPanelResult(panel, candidate)}
-                                >
-                                  {UDS_RESULT_LABEL[candidate]}
-                                </button>
-                              ))
-                            )}
-                          </span>
-                          <span
-                            class={`wfp-grid-cell wfp-result-flag ${derived.abnormal ? "is-abnormal" : ""}`}
-                          >
-                            {notOnCup ? "" : derived.flag}
-                          </span>
-                          <span class="wfp-grid-cell wfp-result-status">
-                            {notOnCup ? "Not on device" : derived.status}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+              <div class="wfp-result-legend" aria-label="Result entry cycle">
+                <strong>ACTIVATE CELL TO CYCLE:</strong>
+                <span>NT Not tested</span>
+                <span>NEG Negative</span>
+                <span>POS* Preliminary positive</span>
+                <span>INV! Invalid / unreadable</span>
+              </div>
 
-              <div class="wfp-summary-bar">
+              <div class="wfp-section wfp-device-ledger" role="group" aria-label="Physical device panel order">
+                <h3 class="wfp-section-head">Physical device order</h3>
+                <div class="wfp-grid wfp-grid-lab">
+                  <div class="wfp-grid-head"><span>Position / analyte</span><span>Result</span><span>Flag</span><span>Status</span></div>
+                  {displayedPanels.map((panel, index) => {
+                    const state = encounter.results[panel] ?? "nt";
+                    const derived = UDS_RESULT_FLAG[state];
+                    return (
+                      <div class="wfp-grid-row" key={panel} data-field-path={`results.${panel}`}>
+                        <span class="wfp-grid-cell"><span class="wfp-sequence-number">{index + 1}</span> <strong>{panel}</strong> {udsPanelName(panel)}</span>
+                        <span class="wfp-grid-cell wfp-grid-cell-actions">
+                          <button
+                            type="button"
+                            class={`wfp-result-cycle is-${state}`}
+                            data-result-panel={panel}
+                            tabIndex={(activeResultPanel ?? displayedPanels[0]) === panel ? 0 : -1}
+                            aria-label={`${panel} ${udsPanelName(panel)}. Current result: ${UDS_RESULT_LABEL[state]}. N negative, P positive, I invalid, T not tested.`}
+                            title="N negative · P positive · I invalid · T not tested · arrows move"
+                            onFocus={() => setActiveResultPanel(panel)}
+                            onKeyDown={(event) => {
+                              const keyState: Record<string, UdsResultState> = { n: "neg", p: "pos", i: "invalid", t: "nt" };
+                              const direct = keyState[event.key.toLowerCase()];
+                              if (direct) { event.preventDefault(); setPanelResult(panel, direct); return; }
+                              const direction = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+                              if (!direction) return;
+                              event.preventDefault();
+                              const target = displayedPanels[index + direction];
+                              if (target) {
+                                setActiveResultPanel(target);
+                                setTimeout(() => (document.querySelector(`[data-result-panel="${target}"]`) as HTMLElement | null)?.focus(), 0);
+                              }
+                            }}
+                            onClick={() => setPanelResult(panel, nextUdsResultState(state))}
+                          ><b>{state === "nt" ? "NT" : state === "neg" ? "NEG" : state === "pos" ? "POS*" : "INV!"}</b></button>
+                        </span>
+                        <span class={`wfp-grid-cell wfp-result-flag ${derived.abnormal ? "is-abnormal" : ""}`}>{derived.flag}</span>
+                        <span class="wfp-grid-cell wfp-result-status">{derived.status}</span>
+                      </div>
+                    );
+                  })}
+                  {displayedPanels.length === 0 && <div class="wfp-grid-empty">Select a device and define its physical panels before entering results.</div>}
+                </div>
+              </div>
+
+              <div class="wfp-summary-bar wfp-results-sticky-status">
                 <span>Tested: {testedCount}</span>
                 <span>Preliminary positive: {positiveCount}</span>
                 <span>Invalid: {invalidCount}</span>
@@ -1089,25 +1386,34 @@ export function UdsPanel({
         </div>
       )}
 
-      {tab === "interpretation" && (
-        <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section" role="group" aria-label="Interpretation & review">
-            <div class="wfp-section-head">Interpretation &amp; review</div>
+      {tab === "review" && (
+        <div
+          class="wfp-tabpanel"
+          role="tabpanel"
+          id={workflowLedgerPanelId("uds-ledger", "review")}
+          aria-labelledby={workflowLedgerTabId("uds-ledger", "review")}
+        >
+          <ClinicalReadout
+            label="Point-of-care report status"
+            value={reportStatus.label}
+            marker={reportStatus.marker}
+            tone={reportStatus.tone}
+            detail={reportStatus.detail}
+            source={`${testedCount} tested · ${positiveCount} preliminary positive · ${invalidCount} invalid`}
+          />
+          <div class="wfp-exception-register" aria-label="Exception register">
+            <div class="wfp-exception-head"><strong>EXCEPTION REGISTER</strong><span>{udsExceptions.length ? `${udsExceptions.length} ACTIVE` : "CLEAR"}</span></div>
+            {udsExceptions.length ? udsExceptions.map((item) => (
+              <button type="button" class="wfp-exception-line" onClick={() => { setTab(item.tab); setTimeout(() => (document.querySelector(`[data-field-path="${item.field}"] input, [data-field-path="${item.field}"] select, [data-field-path="${item.field}"] button`) as HTMLElement | null)?.focus(), 0); }}>
+                <span>REV</span><strong>{item.label}</strong><span>GO TO {UDS_TAB_LABEL[item.tab].toUpperCase()} →</span>
+              </button>
+            )) : <div class="wfp-exception-clear">No result, QC, or reconciliation exceptions documented.</div>}
+          </div>
+          <div class="wfp-section" role="group" aria-label="Clinical review">
+            <h2 class="wfp-section-head">Clinical review</h2>
             <div class="wfp-section-body">
               <div class="wfp-row">
-                <Field label="Validity markers" field="validity" hint="required">
-                  <select
-                    value={encounter.validity}
-                    onChange={(event) =>
-                      patch({ validity: event.currentTarget.value as UdsEncounter["validity"] })
-                    }
-                  >
-                    <option value="acceptable">Acceptable</option>
-                    <option value="needs review">Needs review</option>
-                    <option value="not documented">Not documented</option>
-                  </select>
-                </Field>
-                <Field label="Medication alignment">
+                <Field label="Medication alignment" field="medicationAlignment" hint="required">
                   <select
                     value={encounter.medicationAlignment}
                     onChange={(event) =>
@@ -1117,6 +1423,7 @@ export function UdsPanel({
                       })
                     }
                   >
+                    <option value="">Select review status</option>
                     <option value="no unexpected">No unexpected findings noted by staff</option>
                     <option value="not aligned">Not readily explained by available med list</option>
                     <option value="needs review">Provider review requested</option>
@@ -1126,7 +1433,15 @@ export function UdsPanel({
                     <option value="unavailable">Medication list unavailable / not reviewed</option>
                   </select>
                 </Field>
-                <Field label="Outside lab">
+                <Field
+                  label="Outside lab"
+                  field="labPlan"
+                  source={
+                    !encounter.labPlan || encounter.labPlan === "provider to decide"
+                      ? "REF"
+                      : "ENTRY"
+                  }
+                >
                   <select
                     value={encounter.labPlan ?? "provider to decide"}
                     onChange={(event) => patch({ labPlan: event.currentTarget.value })}
@@ -1138,28 +1453,13 @@ export function UdsPanel({
                   </select>
                 </Field>
               </div>
-              <Field label="Patient comment / context">
+              <Field label="Patient comment / context" field="comment">
                 <textarea
                   value={encounter.comment ?? ""}
                   placeholder="Optional: patient explanation, prescribed meds, provider instruction, or follow-up context"
                   onInput={(event) => patch({ comment: event.currentTarget.value })}
                 />
               </Field>
-              <div class="wfp-checkbox-row">
-                <input
-                  type="checkbox"
-                  id="uds-sig-toggle"
-                  checked={includeSignatureFields}
-                  onChange={(event) => {
-                    const checked = event.currentTarget.checked;
-                    setIncludeSignatureFields(checked);
-                    mirrorUdsSignatureToggle(checked);
-                  }}
-                />
-                <label for="uds-sig-toggle">
-                  Include review / signature fields on clinician report
-                </label>
-              </div>
             </div>
           </div>
 
@@ -1173,20 +1473,47 @@ export function UdsPanel({
           must stay reachable after lock instead of being disabled by the
           same native <fieldset disabled> that makes editable fields
           read-only. */}
-      {tab === "interpretation" && (
+      {tab === "review" && (
         <div class="wfp-section" role="group" aria-label="Clinician result report">
-          <div class="wfp-section-head">Clinician result report</div>
+          <h2 class="wfp-section-head">Clinician result report</h2>
           <div class="wfp-section-body">
-            <ClinicianLabSheet
-              encounter={encounter}
-              omittedPanel={omittedPanel || undefined}
-              includeSignatureFields={includeSignatureFields}
-            />
+            <div class="wfp-checkbox-row wfp-output-option">
+              <input
+                type="checkbox"
+                id="uds-sig-toggle"
+                checked={includeSignatureFields}
+                onChange={(event) => {
+                  const checked = event.currentTarget.checked;
+                  setIncludeSignatureFields(checked);
+                  mirrorUdsSignatureToggle(checked);
+                }}
+              />
+              <label for="uds-sig-toggle">Include review / signature fields on this printed clinician report</label>
+            </div>
+            <details
+              class="wfp-report-preview"
+              open={reportPreviewOpen}
+              onToggle={(event) => setReportPreviewOpen(event.currentTarget.open)}
+            >
+              <summary>
+                <span>REPORT PREVIEW</span>
+                <strong>
+                  {testedCount > 0
+                    ? `${testedCount}/${displayedPanels.length} PANELS ENTERED`
+                    : "WAITING FOR RESULTS"}
+                </strong>
+              </summary>
+              <ClinicianLabSheet
+                encounter={encounter}
+                omittedPanel={omittedPanel || undefined}
+                includeSignatureFields={includeSignatureFields}
+              />
+            </details>
             <div class="wfp-actions">
               <button
                 type="button"
                 class="cd2004-command-button"
-                onClick={() => clickLegacyControl("printUdsReport")}
+                onClick={() => requestClinicalPrint("uds-clinician-report")}
                 disabled={!udsReadyForFinalOutput}
                 title={
                   udsReadyForFinalOutput
@@ -1200,7 +1527,7 @@ export function UdsPanel({
               <button
                 type="button"
                 class="cd2004-link-button"
-                onClick={() => clickLegacyControl("printUdsPatient")}
+                onClick={() => requestClinicalPrint("uds-patient-summary")}
                 disabled={!udsReadyForFinalOutput}
                 title={
                   udsReadyForFinalOutput
@@ -1209,7 +1536,7 @@ export function UdsPanel({
                 }
               >
                 <DesktopIcon name="print" />
-                Patient summary
+                Print patient summary
               </button>
               <span class="wfp-actions-divider" aria-hidden="true" />
               <button
@@ -1217,9 +1544,14 @@ export function UdsPanel({
                 class="cd2004-link-button"
                 onClick={() => navigator.clipboard?.writeText(noteText)}
                 disabled={!noteText}
+                title={
+                  udsReadyForFinalOutput
+                    ? "Copy the completed UDS note."
+                    : "Copy the current incomplete UDS note as a draft."
+                }
               >
                 <DesktopIcon name="copy" />
-                Copy Tebra UDS note
+                {udsReadyForFinalOutput ? "Copy Tebra UDS note" : "Copy draft Tebra note"}
               </button>
             </div>
             {!udsReadyForFinalOutput && (
@@ -1249,7 +1581,7 @@ export function UdsPanel({
 
       {locked && (
         <div class="wfp-section" role="group" aria-label="Addendum">
-          <div class="wfp-section-head">Addendum</div>
+          <h2 class="wfp-section-head">Addendum</h2>
           <div class="wfp-section-body">
             <p class="wfp-field-hint">
               Read-only completed record. The original encounter snapshot is locked. Add a dated
@@ -1269,14 +1601,14 @@ export function UdsPanel({
                 {entry.text}
               </div>
             ))}
-            <Field label="Addendum entered by">
+            <Field label="Addendum entered by" state="required">
               <input
                 value={addendumAuthor}
                 placeholder="Current staff name or initials"
                 onInput={(event) => setAddendumAuthor(event.currentTarget.value)}
               />
             </Field>
-            <Field label="Dated addendum">
+            <Field label="Dated addendum" state="required">
               <textarea
                 ref={addendumTextRef}
                 data-addendum-input
@@ -1302,9 +1634,7 @@ export function UdsPanel({
       <RecordLifecycleActions
         recordLabel="UDS RECORD"
         ariaLabel="UDS record actions"
-        lifecycle={
-          recordStatusIsError ? "error" : locked ? "locked" : activeRecordId ? "draft" : "new"
-        }
+        lifecycle={recordLifecycle.state}
         detail={
           recordStatus ??
           (locked
@@ -1336,6 +1666,7 @@ export function UdsPanel({
                   type="button"
                   class="is-save"
                   onClick={saveLocalDraft}
+                  disabled={evaluation.readiness === "idle"}
                   title="Save this editable UDS draft locally."
                 >
                   <span class="cd2004-action-glyph" aria-hidden="true">
@@ -1388,7 +1719,7 @@ export function UdsPanel({
                 <span class="cd2004-action-glyph" aria-hidden="true">
                   <DesktopIcon name="discard" />
                 </span>
-                Discard local draft...
+                Discard local draft…
               </button>
             )}
           </>
@@ -1402,6 +1733,90 @@ export function UdsPanel({
         onCreate={startNewUdsScreen}
         refreshToken={recordsRefreshToken}
       />
+
+      {normalQcReviewOpen && (
+        <ModalDialog
+          class="cd2004-dialog-layer cd2004-dialog"
+          labelledBy="uds-normal-qc-title"
+          onDismiss={() => setNormalQcReviewOpen(false)}
+        >
+          <div class="cd2004-dialog-frame">
+            <div class="cd2004-dialog-titlebar">
+              <span id="uds-normal-qc-title">Review normal QC</span>
+              <button type="button" aria-label="Close" onClick={() => setNormalQcReviewOpen(false)}>
+                X
+              </button>
+            </div>
+            <div class="cd2004-dialog-body">
+              <p>
+                <strong>{encounter.device || "No device selected"}</strong>
+                <br />
+                Lot {encounter.lot || "NOT ENTERED"} · Exp {encounter.expiration || "NOT ENTERED"}
+              </p>
+              <p>Confirm all four observations from this encounter:</p>
+              <ul>
+                <li>Specimen temperature is acceptable.</li>
+                <li>The device control line is valid.</li>
+                <li>Validity markers are acceptable.</li>
+                <li>The physical cup and displayed panel readings were reviewed.</li>
+              </ul>
+              <p class="wfp-field-hint">
+                This action does not set medication alignment and does not enter any analyte result.
+              </p>
+            </div>
+            <div class="cd2004-dialog-actions">
+              <button type="button" onClick={() => setNormalQcReviewOpen(false)}>
+                Cancel
+              </button>
+              <span />
+              <button type="button" class="is-primary" onClick={confirmNormalQcReview}>
+                Confirm normal QC
+              </button>
+            </div>
+          </div>
+        </ModalDialog>
+      )}
+
+      {bulkAction && (
+        <ModalDialog
+          class="cd2004-dialog-layer cd2004-dialog"
+          labelledBy="uds-bulk-action-title"
+          onDismiss={() => setBulkAction(null)}
+        >
+          <div class="cd2004-dialog-frame">
+            <div class="cd2004-dialog-titlebar">
+              <span id="uds-bulk-action-title">{bulkAction.title}</span>
+              <button type="button" aria-label="Close" onClick={() => setBulkAction(null)}>
+                X
+              </button>
+            </div>
+            <div class="cd2004-dialog-body">
+              <p>
+                <strong>{encounter.device || "No device selected"}</strong>
+                <br />
+                {bulkAction.panels.filter((panel) => panel !== omittedPanel).length} displayed panel(s)
+                {omittedPanel ? ` · ${omittedPanel} remains NT because it is not on this cup` : ""}
+              </p>
+              <p>
+                {bulkAction.state === "neg"
+                  ? "Confirm that every displayed panel was physically read as negative. Existing positive or invalid entries will be replaced."
+                  : "All entered results will return to not tested. This does not change specimen or QC documentation."}
+              </p>
+            </div>
+            <div class="cd2004-dialog-actions">
+              <button type="button" onClick={() => setBulkAction(null)}>
+                Cancel
+              </button>
+              <span />
+              <button type="button" class="is-primary" onClick={confirmBulkAction}>
+                {bulkAction.state === "neg"
+                  ? "Mark displayed panels NEG"
+                  : "Reset displayed panels to NT"}
+              </button>
+            </div>
+          </div>
+        </ModalDialog>
+      )}
 
       {recordAction && (
         <RecordActionDialog
@@ -1435,6 +1850,7 @@ export function UdsPanel({
         clinical context; outside lab order may be placed when clinically indicated.
       </p>
     </div>
+    </UdsRequirementsContext.Provider>
     </UdsIncompleteFieldsContext.Provider>
   );
 }

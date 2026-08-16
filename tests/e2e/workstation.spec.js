@@ -63,7 +63,13 @@ test.describe('MA Workstation browser journeys', () => {
 
   async function openInjectionTab(page, tabName) {
     const panel = page.locator('.wfp-panel');
-    await panel.getByRole('tab', { name: tabName, exact: true }).click();
+    const currentLabel = {
+      Order: 'Order & Timing',
+      Schedule: 'Order & Timing',
+      Verification: 'Administration',
+      Outcome: 'Review'
+    }[tabName] ?? tabName;
+    await panel.getByRole('tab', { name: currentLabel, exact: true }).click();
     return panel;
   }
 
@@ -121,6 +127,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await panel.locator('select[name="inj-medication"]').selectOption({ label: medication });
     if (medication === 'Other') {
+      await panel.locator('.wfp-field:has-text("Medication name") input').fill('QA custom medication');
       await panel.locator('input[name="inj-dose"]').fill('100 mg');
     } else {
       await panel
@@ -129,6 +136,10 @@ test.describe('MA Workstation browser journeys', () => {
     }
     await panel.locator('input[name="inj-route"]').fill('IM');
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+    await panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[type="date"]')
+      .fill('2026-07-30');
 
     await openInjectionTab(page, 'Administration');
     if (medication === 'Haldol Dec.' || medication === 'Prolixin Dec.') {
@@ -163,13 +174,12 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Administration');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
-    await panel.locator('input[type="date"]').first().fill('2026-07-30');
     if (includeAdministrationTime) {
       await panel.locator('input[type="time"]').first().fill(administrationTime);
     }
-
-    await openInjectionTab(page, 'Schedule');
-    await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
+    await openInjectionTab(page, 'Outcome');
+    await panel.locator('select[name="inj-response"]').selectOption('well');
+    await openInjectionTab(page, 'Administration');
     return panel;
   }
 
@@ -185,13 +195,14 @@ test.describe('MA Workstation browser journeys', () => {
     });
     await openInjectionTab(page, 'Order');
     await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
-
-    await openInjectionTab(page, 'Administration');
-    await panel.locator('input[type="date"]').first().fill(administrationDate);
-
-    await openInjectionTab(page, 'Schedule');
-    await panel.locator('input[type="date"]').first().fill(priorDoseDate);
-    await panel.locator('input[type="date"]').nth(1).fill(nextDoseDate);
+    await panel
+      .locator('.wfp-field', { hasText: 'Prior dose' })
+      .locator('input[type="date"]')
+      .fill(priorDoseDate);
+    await panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[type="date"]')
+      .fill(administrationDate);
 
     await openInjectionTab(page, 'Verification');
     for (const label of [
@@ -203,6 +214,41 @@ test.describe('MA Workstation browser journeys', () => {
     }
     return panel;
   }
+
+  test('uses purposeful Injection prerequisites and distinguishes current from blank printing', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+
+    await openInjectionTab(page, 'Product');
+    const prerequisite = panel.locator('.wfp-prerequisite-line');
+    await expect(prerequisite).toContainText('ORDER REQUIRED');
+    await expect(prerequisite).toContainText('load package and traceability fields');
+    await expect(panel.getByRole('group', { name: 'Lot & traceability' })).toHaveCount(0);
+
+    await openInjectionTab(page, 'Administration');
+    await expect(panel.locator('.wfp-prerequisite-line')).toContainText(
+      'Select the ordered medication before documenting administration details.'
+    );
+
+    await openInjectionTab(page, 'Outcome');
+    await expect(panel.getByRole('button', { name: 'Print current worksheet' })).toBeDisabled();
+    await expect(panel.getByRole('button', { name: 'Blank worksheet' })).toBeEnabled();
+
+    await openInjectionTab(page, 'Order');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+    await panel.locator('.wfp-field:has-text("Medication name") input').fill('QA manual product');
+    await panel.locator('input[name="inj-dose"]').fill('100 mg');
+    await openInjectionTab(page, 'Product');
+    await expect(panel.locator('.wfp-prerequisite-line')).toHaveCount(0);
+    await expect(panel.getByRole('group', { name: 'Lot & traceability' })).toBeVisible();
+    await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
+    await expect(panel.locator('.wfp-context-item').filter({ hasText: 'PACKAGE' }))
+      .toContainText('MANUAL');
+
+    await openInjectionTab(page, 'Outcome');
+    await expect(panel.getByRole('button', { name: 'Print current worksheet' })).toBeEnabled();
+  });
 
   test('keeps an expected-date Vivitrol administration neutral and allows attestation', async ({ page }) => {
     const panel = await prepareScheduledVivitrol(page, {
@@ -329,7 +375,8 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.goto('/');
     await expect(page.locator('.cd2004-shell')).toBeVisible();
-    await expect(page.locator('.cd2004-app-title')).toContainText('MEDICATION ADMINISTRATION');
+    await expect(page.locator('.cd2004-app-title')).toContainText('CLINICAL WORKSTATION');
+    await expect(page.locator('.cd2004-app-title small')).toHaveText('WKL');
     await expect(page.locator('.cd2004-app-environment')).toContainText('LOCAL / TRAINING');
     await expect(page.locator('.cd2004-app-environment')).not.toContainText('LIVE');
     const chartBanner = page.locator('.cd2004-patient-banner');
@@ -455,6 +502,138 @@ test.describe('MA Workstation browser journeys', () => {
     await expect.poll(() =>
       workBody.evaluate((node, expected) => Math.abs(node.scrollTop - expected), savedScroll)
     ).toBeLessThan(80);
+  });
+
+  test('keeps module codes, field states, and blank-record commands honest', async ({ page }) => {
+    await page.goto('/');
+    const transactionCode = page.locator('.cd2004-app-title small');
+    await expect(transactionCode).toHaveText('WKL');
+
+    await openWorkflow(page, 'administer');
+    await expect(transactionCode).toHaveText('INJ');
+    await expect(page.getByRole('heading', { name: 'Injection worksheet', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Patient & ordering provider', level: 2 })).toBeVisible();
+    const injectionReason = page.getByLabel('Encounter type', { exact: true });
+    await expect(injectionReason).toHaveAttribute('aria-required', 'true');
+    await expect(
+      page.locator('.wfp-field[data-field-path="patient.name"] .wfp-register-source')
+    ).toHaveText('ENTRY');
+    const orderingProvider = page.locator(
+      '.wfp-field[data-field-path="orderingProvider"]'
+    );
+    await expect(orderingProvider.locator('.wfp-register-source')).toHaveText('ENTRY');
+    await orderingProvider.locator('input').focus();
+    await expect(page.locator('.cd2004-status-message')).toContainText(
+      'Enter the ordering provider from the active order'
+    );
+    await expect(page.locator('.cd2004-status-message')).not.toContainText('F9');
+    await expect(page.locator('[data-injection-record-actions]')).not.toContainText(
+      'Enter the signed-in documenting staff'
+    );
+
+    await openWorkflow(page, 'uds');
+    await expect(transactionCode).toHaveText('UDS');
+    const panel = page.locator('.wfp-panel');
+    await expect(page.locator('.cd2004-work-context-strip')).toContainText(
+      'Local state: Not started'
+    );
+    await expect(
+      page.locator('.meditech-command-deck button').filter({ hasText: 'F9' })
+    ).toContainText('Lookup');
+    await expect(panel.getByRole('button', { name: 'Add to daily log' })).toBeDisabled();
+    await expect(panel.getByRole('button', { name: 'Save local draft' })).toBeDisabled();
+    await expect(
+      panel.locator('.wfp-field[data-field-path="patient.name"] .wfp-register-source')
+    ).toHaveText('ENTRY');
+
+    await panel.getByLabel('Encounter type', { exact: true }).selectOption('routine');
+    await expect(panel.locator('.wfp-transaction-readout b')).toHaveText('ENTRY');
+    await expect(panel.locator('.wfp-field[data-field-path="patient.name"]'))
+      .toHaveAttribute('data-requirement', 'required');
+    await expect(panel.locator('.wfp-field[data-field-path="patient.name"] input'))
+      .toHaveAttribute('aria-required', 'true');
+    await expect(panel.getByRole('button', { name: 'Log as needs review' })).toBeEnabled();
+  });
+
+  test('uses field-owned F9 lookups and evaluator-stamped transaction ledgers', async ({ page }) => {
+    await page.setViewportSize({ width: 840, height: 720 });
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+    const reason = panel.getByLabel('Encounter type', { exact: true });
+    const orderTab = panel.getByRole('tab', { name: 'Order & Timing', exact: true });
+    const f8 = page.locator('.meditech-command-deck button').filter({ hasText: 'F8' });
+    const f9 = page.locator('.meditech-command-deck button').filter({ hasText: 'F9' });
+
+    await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('PEND');
+    await reason.focus();
+    await expect(page.locator('.cd2004-status-message')).toContainText(
+      'INJ-REASON | Encounter type'
+    );
+    await expect(page.locator('.meditech-command-prompt')).toContainText('INJ-REASON');
+    await expect(f9).toContainText('Field values');
+    await expect(
+      panel.getByRole('button', { name: 'Open Encounter type field lookup (F9)' })
+    ).toBeVisible();
+
+    await f9.click();
+    const lookup = page.getByRole('dialog', { name: 'INJ FIELD LOOKUP · INJ-REASON' });
+    await expect(lookup).toBeVisible();
+    const lookupBox = await lookup.locator('.cd2004-dialog-frame').boundingBox();
+    expect(lookupBox).not.toBeNull();
+    expect(lookupBox.x).toBeGreaterThanOrEqual(0);
+    expect(lookupBox.x + lookupBox.width).toBeLessThanOrEqual(840);
+    await expect.poll(() => lookup.locator('.cd2004-lookup-results').evaluate(node =>
+      node.scrollWidth - node.clientWidth
+    )).toBeLessThanOrEqual(1);
+    await expect(lookup.getByRole('option')).toHaveCount(5);
+    await lookup.getByRole('searchbox', { name: 'Find value' }).fill('PRN');
+    await lookup.getByRole('option', { name: /PRN \/ ordered/ }).click();
+
+    await expect(reason).toHaveValue('prn');
+    await expect(reason).toBeFocused();
+    await expect(page.locator('.cd2004-status-message')).toContainText(
+      'INJ-REASON filed as PRN / ordered.'
+    );
+    await expect(orderTab).toHaveClass(/is-stop/);
+    await expect(orderTab.locator('.wfp-ledger-state')).toContainText('STOP');
+    await expect(f8).toContainText('Next stop');
+
+    // Reconfirming the current lookup row is a no-op. It must not emit the
+    // material change event that can invalidate downstream disposition and
+    // attestation state in a completed transaction.
+    await reason.evaluate((control) => {
+      window.__ipmgLookupChangeCount = 0;
+      control.addEventListener('change', () => {
+        window.__ipmgLookupChangeCount += 1;
+      });
+    });
+    await panel.getByRole('button', { name: 'Open Encounter type field lookup (F9)' }).click();
+    await expect(page.locator('.meditech-command-prompt')).toContainText('INJ-REASON');
+    await expect(lookup.getByRole('option', { name: /05 PRN \/ ordered CURRENT/ }))
+      .toHaveAttribute('aria-selected', 'true');
+    await lookup.getByRole('searchbox', { name: 'Find value' }).press('Enter');
+    await expect(reason).toHaveValue('prn');
+    await expect(page.locator('.cd2004-status-message')).toContainText(
+      'INJ-REASON unchanged — PRN / ordered remains selected.'
+    );
+    await expect.poll(() => page.evaluate(() => window.__ipmgLookupChangeCount)).toBe(0);
+
+    await openWorkflow(page, 'uds');
+    const udsPanel = page.locator('.wfp-panel');
+    const specimenTab = udsPanel.getByRole('tab', { name: 'Specimen', exact: true });
+    await expect(specimenTab.locator('.wfp-ledger-state')).toHaveText('PEND');
+    await signInLocalStaff(page, 'Alex Rivera, MA');
+    await udsPanel.getByLabel('Encounter type', { exact: true }).selectOption('routine');
+    await expect(specimenTab).toHaveClass(/is-stop/);
+    await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('STOP');
+
+    await udsPanel.getByRole('button', { name: 'Use signed-in staff', exact: true }).click();
+    const collectorField = udsPanel.locator('.wfp-field[data-field-path="collector"]');
+    await expect(collectorField.locator('.wfp-register-source')).toHaveText('SESSION');
+    await udsPanel.getByLabel('Collected by', { exact: true }).fill('Jordan Lee, MA');
+    await expect(collectorField.locator('.wfp-register-source')).toHaveText('OVR');
+    await expect(collectorField.locator('.wfp-register-change')).toHaveText('CHG');
   });
 
   test('keeps each local activity in one Start Center queue register', async ({ page }) => {
@@ -616,6 +795,22 @@ test.describe('MA Workstation browser journeys', () => {
     await page.keyboard.press('Escape');
     await expect(helpDialog).toBeHidden();
 
+    // With no clinical stops active, F8 retains the classic zone cycle.
+    const startInjection = page.getByRole('button', { name: 'Start new injection', exact: true });
+    await startInjection.focus();
+    await page.keyboard.press('F8');
+    await expect.poll(() => page.evaluate(() =>
+      Boolean(document.activeElement?.closest('.meditech-record-list'))
+    )).toBe(true);
+    await page.keyboard.press('F8');
+    await expect.poll(() => page.evaluate(() =>
+      Boolean(document.activeElement?.closest('.meditech-command-deck'))
+    )).toBe(true);
+    await page.keyboard.press('F8');
+    await expect.poll(() => page.evaluate(() =>
+      Boolean(document.activeElement?.closest('.cd2004-work-window'))
+    )).toBe(true);
+
     await page.keyboard.press('Alt+2');
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
     const injectionPanel = page.locator('.wfp-panel');
@@ -644,30 +839,23 @@ test.describe('MA Workstation browser journeys', () => {
     )).toBe(sectionBefore);
 
     // F7 / Shift+F7 cycle the selected worksheet page (tab).
-    await expect(injectionPanel.getByRole('tab', { name: 'Order', exact: true }))
+    await expect(injectionPanel.getByRole('tab', { name: 'Order & Timing', exact: true }))
       .toHaveAttribute('aria-selected', 'true');
     await page.keyboard.press('F7');
-    await expect(injectionPanel.getByRole('tab', { name: 'Schedule', exact: true }))
+    await expect(injectionPanel.getByRole('tab', { name: 'Product', exact: true }))
       .toHaveAttribute('aria-selected', 'true');
     await page.keyboard.press('Shift+F7');
-    await expect(injectionPanel.getByRole('tab', { name: 'Order', exact: true }))
+    await expect(injectionPanel.getByRole('tab', { name: 'Order & Timing', exact: true }))
       .toHaveAttribute('aria-selected', 'true');
 
-    // F8 cycles worksheet → Record List rail → command deck, never a hidden
-    // note-pane-only shortcut.
+    // Once the evaluator has active stops, the same visible F8 key becomes
+    // the purposeful Next stop command and lands on the first missing field.
     await patientName.focus();
+    await expect(deck.locator('button').filter({ hasText: 'F8' })).toContainText('Next stop');
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.meditech-record-list'))
-    )).toBe(true);
-    await page.keyboard.press('F8');
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.meditech-command-deck'))
-    )).toBe(true);
-    await page.keyboard.press('F8');
-    await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.cd2004-work-window'))
-    )).toBe(true);
+      document.activeElement?.getAttribute('name')
+    )).toBe('inj-reason');
 
     // F9 provides the truthful contextual local lookup; F11 is the direct
     // Local EMR / Record List accelerator.
@@ -702,7 +890,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('[data-injection-record-actions]')).toContainText('SAVED LOCAL DRAFT');
   });
 
-  test('routes typed workflows through the clinical coordinator and files only editable injection drafts', async ({ page }) => {
+  test('routes typed workflows through the clinical coordinator and files editable drafts with F12', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('body')).toHaveAttribute(
       'data-clinical-coordinator',
@@ -743,15 +931,32 @@ test.describe('MA Workstation browser journeys', () => {
         )
       )
     )).toBe(storageBefore);
+
+    const udsPanel = page.locator('.wfp-panel');
+    await udsPanel.locator('select[name="uds-reason"]').selectOption('routine');
+    const udsFileCommand = page
+      .locator('[role="toolbar"][aria-label="MEDITECH function key commands"]')
+      .getByRole('button', { name: 'F12 Save UDS' });
+    await expect(udsFileCommand).toBeEnabled();
+    await page.keyboard.press('F12');
+    await expect(udsPanel.getByRole('region', { name: 'UDS record actions' }))
+      .toContainText('SAVED LOCAL DRAFT');
+    await expect.poll(() => page.evaluate(() => {
+      const records = JSON.parse(localStorage.getItem('ipmgMedAssistUdsRecordsV1') || '[]');
+      return records.at(0)?.status;
+    })).toBe('draft');
   });
 
   test('keeps non-injection activity logging distinct from the injection lifecycle', async ({ page }) => {
     await page.goto('/');
 
     await openWorkflow(page, 'uds');
-    await expect(
-      page.locator('.wfp-panel').getByRole('button', { name: 'Log as needs review', exact: true })
-    ).toBeVisible();
+    const blankUdsLog = page.locator('.wfp-panel').getByRole('button', {
+      name: 'Add to daily log',
+      exact: true,
+    });
+    await expect(blankUdsLog).toBeVisible();
+    await expect(blankUdsLog).toBeDisabled();
 
     await openWorkflow(page, 'samples');
     const sampleLog = page.locator('.wfp-panel').getByRole('button', {
@@ -770,14 +975,27 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(
       page.locator('.wfp-panel').getByRole('button', { name: 'Add to daily activity', exact: true })
     ).toHaveCount(0);
-    await expect(page.locator('[data-injection-record-actions]')).toContainText(
-      'First blocker:'
-    );
+    await expect(page.locator('[data-injection-record-actions]')).toContainText('NEW LOCAL DRAFT');
+    await expect(page.locator('[data-injection-record-actions]')).not.toContainText('First blocker:');
   });
 
   test('projects untouched typed workflows as pending instead of falsely confirmed', async ({ page }) => {
     await page.goto('/');
     const inspector = page.locator('.cd2004-inspector-window');
+
+    await openWorkflow(page, 'administer');
+    const injectionPanel = page.locator('.wfp-panel');
+    await expect(injectionPanel.locator('select[name="inj-reason"]')).toHaveValue('');
+    await expect(
+      injectionPanel.locator('.wfp-field', { hasText: 'Encounter type' }).locator('.wfp-req')
+    ).toHaveCount(1);
+
+    await openWorkflow(page, 'uds');
+    const udsPanel = page.locator('.wfp-panel');
+    await expect(udsPanel.locator('select[name="uds-reason"]')).toHaveValue('');
+    await expect(
+      udsPanel.locator('.wfp-field', { hasText: 'Encounter type' }).locator('.wfp-req')
+    ).toHaveCount(1);
 
     for (const workflow of ['administer', 'uds', 'samples', 'forms']) {
       await openWorkflow(page, workflow);
@@ -789,9 +1007,8 @@ test.describe('MA Workstation browser journeys', () => {
     }
 
     await openWorkflow(page, 'administer');
-    await expect(page.locator('[data-injection-record-actions]')).toContainText(
-      'First blocker:'
-    );
+    await expect(page.locator('[data-injection-record-actions]')).toContainText('NEW LOCAL DRAFT');
+    await expect(page.locator('[data-injection-record-actions]')).not.toContainText('First blocker:');
     await expect(page.locator('[data-injection-record-actions] [data-injection-finish]'))
       .toBeDisabled();
   });
@@ -1197,9 +1414,9 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.wfp-field:has-text("Waste witness") input').fill('QA Witness');
     await expect(administered).toBeEnabled();
 
-    await openInjectionTab(page, 'Outcome');
+    await openInjectionTab(page, 'Administration');
     await panel
-      .getByText('Administration exception / escalation', { exact: false })
+      .getByText('Something changed during or after administration', { exact: false })
       .click();
     await expect(disposition).toContainText('Describe what changed or was observed for the administration exception.');
     await expect(administered).toBeDisabled();
@@ -1327,6 +1544,10 @@ test.describe('MA Workstation browser journeys', () => {
       .locator('.wfp-field:has-text("Site condition") select')
       .selectOption({ label: 'Skin/site intact before administration' });
 
+    await openInjectionTab(page, 'Administration');
+    await expect(panel.locator('.wfp-review-contract')).toContainText(
+      '6 EXPECTED · REVIEW PENDING'
+    );
     await openInjectionTab(page, 'Outcome');
     const administered = panel
       .locator('label.wfp-option-row', { hasText: 'Review complete' })
@@ -1334,6 +1555,21 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administered).toBeEnabled();
     await administered.check();
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Administration documented');
+    await openInjectionTab(page, 'Administration');
+    await expect(panel.locator('.wfp-review-contract')).toContainText(
+      'CONFIRMED · QA Staff, MA'
+    );
+    await expect(panel.locator('.wfp-review-state.is-confirmed')).toHaveCount(6);
+
+    // Any post-review clinical change invalidates attribution immediately.
+    await openInjectionTab(page, 'Outcome');
+    await panel.getByRole('checkbox', { name: 'Post-injection education provided' }).check();
+    await expect(administered).not.toBeChecked();
+    await openInjectionTab(page, 'Administration');
+    await expect(panel.locator('.wfp-review-contract')).toContainText('REVIEW PENDING');
+    await expect(page.locator('#clinicalDispositionBadge')).toHaveText('Needs disposition');
+    await openInjectionTab(page, 'Outcome');
+    await administered.check();
     // RC6.1's compact Plan carries the strongest single administration
     // sentence, compact military date/time, response wording, and
     // traceability - not every individual field entered on the worksheet
@@ -1395,6 +1631,14 @@ test.describe('MA Workstation browser journeys', () => {
     })).toMatchObject({
       staff: 'QA Staff, MA',
       statementVersion: 'local-attestation-v1'
+    });
+    await expect.poll(() => page.evaluate(() => {
+      const records = JSON.parse(localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]');
+      return records.find(record => record?.patient?.name === 'QA, Formatted Note')
+        ?.snapshot?.disposition;
+    })).toMatchObject({
+      kind: 'administered',
+      reviewedBy: 'QA Staff, MA'
     });
     await expect(page.locator('#panel-administer')).toHaveClass(/record-readonly/);
     await expect(page.locator('#rc526Flow .rc526-mode b')).toHaveText('Locked injection record');
@@ -1473,6 +1717,10 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('select[name="inj-dose"]').selectOption('400 mg');
     await panel.locator('input[name="inj-route"]').fill('IM');
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+    await panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[type="date"]')
+      .fill('2026-07-30');
 
     await openInjectionTab(page, 'Administration');
     await panel.getByText('R deltoid', { exact: true }).click();
@@ -1525,15 +1773,11 @@ test.describe('MA Workstation browser journeys', () => {
       .click();
 
     await openInjectionTab(page, 'Administration');
-    await panel.locator('input[type="date"]').first().fill('2026-07-30');
     await panel.locator('input[type="time"]').first().fill('10:15');
     await panel.locator('.wfp-field:has-text("Component 2 actual time") input').fill('10:18');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
 
-    await openInjectionTab(page, 'Schedule');
-    await panel.locator('input[type="date"]').nth(1).fill('2026-08-27');
-
-    await openInjectionTab(page, 'Outcome');
+    await openInjectionTab(page, 'Administration');
     const administered = page.locator('#clinicalDisposition [data-disposition="administered"]');
     await expect(page.locator('#clinicalDisposition')).toContainText(
       'Injection component 2 expiration appears past; obtain in-date product before documenting administration.'
@@ -1646,7 +1890,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(save).toHaveAccessibleName('Save local draft F12');
     await expect(finish).toHaveAccessibleName('Attest & lock local record');
     await expect(startNew).toHaveAccessibleName('Start new injection');
-    await expect(discard).toHaveAccessibleName('Discard local draft...');
+    await expect(discard).toHaveAccessibleName('Discard local draft…');
     await startNew.focus();
     await expect(page.locator('.cd2004-status-message')).toContainText('Start new injection');
     await panel.locator('input[placeholder="Last, First"]').focus();
@@ -2011,11 +2255,126 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="Staff initials / name"]').fill('A. Rivera, MA');
     await panel.locator('input[type="datetime-local"]').fill('2026-08-03T09:15');
     await panel.locator('select[name="uds-temperature"]').selectOption('acceptable');
+    await panel.locator('select[name="uds-reason"]').selectOption('routine');
     await field('Device').locator('select').selectOption(device);
     await panel.locator('input[placeholder="LOT123"]').fill('UDS4471');
     await panel.locator('input[type="month"]').fill('2027-04');
     await panel.locator('select[name="uds-control"]').selectOption('valid');
+    await field('Validity markers').locator('select').selectOption('acceptable');
+    await panel.getByRole('tab', { name: /^Review/ }).click();
+    await field('Medication alignment').locator('select').selectOption('no unexpected');
+    await panel.getByRole('tab', { name: /^Specimen/ }).click();
   }
+
+  async function applyDisplayedPanelsNegative(page, panel) {
+    await panel.getByRole('button', { name: 'Mark displayed panels negative…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Mark displayed panels negative' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Mark displayed panels NEG' }).click();
+    await expect(dialog).toBeHidden();
+  }
+
+  test('keeps UDS register states, draft commands, and tab behavior precise', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    const contextItem = (label) => panel.locator('.wfp-context-item').filter({ hasText: label });
+
+    await expect(panel.getByRole('heading', { name: 'Urine drug screen' })).toBeVisible();
+    await expect(contextItem('PANELS')).toContainText('PENDING');
+
+    const specimenTab = panel.getByRole('tab', { name: 'Specimen', exact: true });
+    const resultsTab = panel.getByRole('tab', { name: 'Results', exact: true });
+    const reviewTab = panel.getByRole('tab', { name: 'Review', exact: true });
+    await expect(specimenTab).toHaveAttribute('tabindex', '0');
+    await expect(resultsTab).toHaveAttribute('tabindex', '-1');
+    await expect(specimenTab).toHaveAttribute('aria-controls', 'uds-ledger-panel-specimen');
+    await specimenTab.focus();
+    await specimenTab.press('ArrowRight');
+    await expect(resultsTab).toBeFocused();
+    await expect(resultsTab).toHaveAttribute('aria-selected', 'true');
+    await expect(panel.locator('#uds-ledger-panel-results')).toBeVisible();
+    await resultsTab.press('End');
+    await expect(reviewTab).toBeFocused();
+    await reviewTab.press('Home');
+    await expect(specimenTab).toBeFocused();
+
+    await panel.locator('.wfp-field', { hasText: 'Device' }).locator('select')
+      .selectOption('SAFE life 14-Panel Cup');
+    await expect(contextItem('PANELS')).toContainText('0/14 ENTERED');
+    await reviewTab.click();
+
+    const outsideLab = panel.locator('.wfp-field', { hasText: 'Outside lab' });
+    await expect(outsideLab.locator('.wfp-register-source')).toHaveText('REF');
+    await expect(panel.locator('.wfp-exception-register'))
+      .not.toContainText('Medication alignment requires review');
+    await expect(panel.locator('.wfp-clinical-readout')).toContainText('INCOMPLETE');
+    await expect(panel.locator('.wfp-clinical-readout')).toContainText('STOP');
+    await expect(panel.getByRole('button', { name: 'Copy draft Tebra note' })).toBeEnabled();
+    await expect(page.locator('.cd2004-inspector').getByRole('button', { name: 'Copy draft note' }))
+      .toBeEnabled();
+    await expect(panel.getByRole('button', { name: 'Print patient summary' })).toBeDisabled();
+
+    await panel.locator('.wfp-field', { hasText: 'Medication alignment' }).locator('select')
+      .selectOption('needs review');
+    await expect(panel.locator('.wfp-exception-register'))
+      .toContainText('Medication alignment requires review');
+    await outsideLab.locator('select').selectOption('ordered');
+    await expect(outsideLab.locator('.wfp-register-source')).toHaveText('ENTRY');
+    const printHint = await panel.locator('.wfp-print-block-hint').textContent();
+    expect(printHint).not.toContain('..');
+  });
+
+  test('starts UDS neutral, reviews normal QC explicitly, and cycles one result cell', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    const field = (label) => panel.locator('.wfp-field').filter({ hasText: label });
+
+    await expect(panel.locator('select[name="uds-temperature"]')).toHaveValue('not documented');
+    await expect(panel.locator('select[name="uds-control"]')).toHaveValue('not documented');
+    await expect(field('Validity markers').locator('select')).toHaveValue('not documented');
+
+    await field('Device').locator('select').selectOption('SAFE life 14-Panel Cup');
+    await panel.getByRole('button', { name: 'Review normal QC…' }).click();
+    const qcDialog = page.getByRole('dialog', { name: 'Review normal QC' });
+    await expect(qcDialog).toContainText('does not enter any analyte result');
+    await qcDialog.getByRole('button', { name: 'Confirm normal QC' }).click();
+    await expect(panel.locator('select[name="uds-temperature"]')).toHaveValue('acceptable');
+    await expect(panel.locator('select[name="uds-control"]')).toHaveValue('valid');
+    await expect(field('Validity markers').locator('select')).toHaveValue('acceptable');
+    await expect(page.locator('#uds-readings-verified')).toBeChecked();
+
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    const bup = panel.locator('.wfp-grid-row', { hasText: 'Buprenorphine' })
+      .locator('.wfp-result-cycle');
+    await expect(bup).toHaveText('NT');
+    await bup.click();
+    await expect(bup).toHaveText('NEG');
+    await bup.press('Enter');
+    await expect(bup).toHaveText('POS*');
+    await bup.press('Space');
+    await expect(bup).toHaveText('INV!');
+    await bup.click();
+    await expect(bup).toHaveText('NT');
+
+    // Direct single-key entry and row navigation preserve the physical device
+    // sequence without forcing repeated click cycling.
+    await bup.press('n');
+    await expect(bup).toHaveText('NEG');
+    await bup.press('ArrowDown');
+    const mtd = panel.locator('.wfp-grid-row', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
+    await expect(mtd).toBeFocused();
+    await mtd.press('p');
+    await expect(mtd).toHaveText('POS*');
+    await mtd.press('t');
+    await expect(mtd).toHaveText('NT');
+    await bup.press('t');
+
+    await panel.getByRole('tab', { name: /^Review/ }).click();
+    await expect(field('Medication alignment').locator('select')).toHaveValue('');
+    await expect(panel.locator('.wfp-clinical-readout')).toContainText('INCOMPLETE');
+  });
 
   test('keeps the analyte a 13-panel cup omits out of every bulk result action', async ({ page }) => {
     await page.goto('/');
@@ -2028,28 +2387,32 @@ test.describe('MA Workstation browser journeys', () => {
 
     await panel.getByRole('tab', { name: /^Results/ }).click();
     const omittedRow = panel.locator('.wfp-grid-row', { hasText: 'Propoxyphene' });
-    // The cup physically has no PPX window, so the row carries no result
-    // control at all - there is nothing to click into a stop.
-    await expect(omittedRow).toHaveClass(/is-not-on-cup/);
-    await expect(omittedRow.locator('.wfp-grid-toggle')).toHaveCount(0);
+    // The result register follows the physical device order exactly. The cup
+    // has no PPX window, so no PPX transaction row is rendered.
+    await expect(omittedRow).toHaveCount(0);
 
     // The obvious shortcut has to leave the encounter finishable. Before this
     // guard it wrote a negative into the omitted analyte and immediately
     // blocked the screen on a stop the operator never chose.
-    await panel.getByRole('button', { name: 'All tested negative' }).click();
+    await applyDisplayedPanelsNegative(page, panel);
     await expect(panel.locator('.wfp-status-flag')).toHaveText('Ready');
 
-    await panel.getByRole('button', { name: 'THC positive · rest negative' }).click();
-    await expect(omittedRow).toContainText('Not on this cup');
+    await panel.locator('.wfp-grid-row', { hasText: 'Cannabinoids / THC' })
+      .locator('.wfp-result-cycle').click();
+    await expect(omittedRow).toHaveCount(0);
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
   });
 
   test('renders the UDS clinician view as a dense preliminary laboratory report', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'uds');
-    await page.getByRole('tab', { name: 'Interpretation' }).click();
+    await page.getByRole('tab', { name: 'Review' }).click();
 
+    const reportPreview = page.locator('.wfp-report-preview');
     const report = page.locator('.meditech-lab-sheet');
+    await expect(reportPreview.getByText('WAITING FOR RESULTS')).toBeVisible();
+    await expect(report).toBeHidden();
+    await reportPreview.locator('summary').click();
     await expect(report).toBeVisible();
     await expect(report).toContainText('POINT OF CARE LABORATORY');
     await expect(report).toContainText('PRELIMINARY / PRESUMPTIVE');
@@ -2070,17 +2433,43 @@ test.describe('MA Workstation browser journeys', () => {
     const panel = page.locator('.wfp-panel');
     await fillUdsSpecimen(page, panel, 'Other point-of-care UDS cup');
 
-    // Both confirmations the engine gates an uncatalogued device on must be
-    // reachable. The readings confirmation used to render only for the two
-    // catalogued cups, and the panel-set confirmation never survived the
-    // round-trip through the legacy mirror, so this path could not finish.
-    await page.locator('#uds-custom-panel-verified').check();
+    // Custom devices capture the package name and exact top-to-bottom physical
+    // panel sequence rather than a generic confirmation checkbox.
+    await panel.locator('.wfp-field', { hasText: 'Device/package name' }).locator('input').fill('Clinic single-panel card');
+    await panel.getByRole('button', { name: '+ Add panel' }).click();
     await page.locator('#uds-readings-verified').check();
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    await panel.getByRole('button', { name: 'All tested negative' }).click();
+    await applyDisplayedPanelsNegative(page, panel);
 
     await expect(panel.locator('.wfp-status-flag')).toHaveText('Ready');
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
+
+    // The panel sequence is part of the physical device identity. Changing it
+    // after results were read must invalidate every old reading rather than
+    // silently carrying those readings onto a different profile.
+    await panel.getByRole('tab', { name: /^Specimen/ }).click();
+    await panel.getByRole('button', { name: '+ Add panel' }).click();
+    await expect(page.locator('#uds-readings-verified')).not.toBeChecked();
+    await expect(panel.locator('.wfp-invalidation-receipt')).toContainText('PANEL PROFILE CHANGED');
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    await expect(panel.locator('.wfp-grid-row')).toHaveCount(2);
+    await expect(panel.locator('.wfp-result-cycle')).toHaveText(['NT', 'NT']);
+  });
+
+  test('groups collection actions and an Other reason detail with the specimen facts', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    const specimen = panel.getByRole('group', { name: 'Specimen & collection' });
+    const device = panel.getByRole('group', { name: 'Device & quality control' });
+
+    const collectionRow = specimen.locator('.wfp-row', { has: page.locator('input[type="datetime-local"]') });
+    await expect(collectionRow.getByRole('button', { name: 'Use current date/time' })).toBeVisible();
+    await expect(specimen.locator('.wfp-row').first().getByRole('button', { name: 'Use current date/time' })).toHaveCount(0);
+
+    await specimen.locator('select[name="uds-reason"]').selectOption('other');
+    await expect(specimen.locator('.wfp-field', { hasText: 'Reason detail' })).toBeVisible();
+    await expect(device.locator('.wfp-field', { hasText: 'Reason detail' })).toHaveCount(0);
   });
 
   test('saves a local UDS draft and resumes it from the UDS records window', async ({ page }) => {
@@ -2147,8 +2536,8 @@ test.describe('MA Workstation browser journeys', () => {
     await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
     await page.locator('#uds-readings-verified').check();
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    await panel.getByRole('button', { name: 'All tested negative' }).click();
-    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+    await applyDisplayedPanelsNegative(page, panel);
+    await panel.getByRole('tab', { name: /^Review/ }).click();
 
     const attestButton = panel.locator('.cd2004-record-actions button.is-primary');
     await expect(attestButton).toBeEnabled();
@@ -2166,7 +2555,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await panel.getByRole('tab', { name: /^Specimen/ }).click();
     await expect(panel.locator('input[placeholder="Last, First"]')).toBeDisabled();
-    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+    await panel.getByRole('tab', { name: /^Review/ }).click();
 
     const addendumBox = panel.locator('textarea[data-addendum-input]');
     await addendumBox.fill('Follow-up clarification.');
@@ -2189,8 +2578,10 @@ test.describe('MA Workstation browser journeys', () => {
     await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
     await page.locator('#uds-readings-verified').check();
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    await panel.getByRole('button', { name: 'THC positive · rest negative' }).click();
-    await panel.getByRole('tab', { name: /^Interpretation/ }).click();
+    await applyDisplayedPanelsNegative(page, panel);
+    await panel.locator('.wfp-grid-row', { hasText: 'Cannabinoids / THC' })
+      .locator('.wfp-result-cycle').click();
+    await panel.getByRole('tab', { name: /^Review/ }).click();
 
     const attestButton = panel.locator('.cd2004-record-actions button.is-primary');
     await expect(attestButton).toBeEnabled();
@@ -2202,7 +2593,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-status-flag.is-idle')).toHaveText('Read only');
 
     await expect(panel.getByRole('button', { name: 'Print clinician report' })).toBeEnabled();
-    await expect(panel.getByRole('button', { name: 'Patient summary' })).toBeEnabled();
+    await expect(panel.getByRole('button', { name: 'Print patient summary' })).toBeEnabled();
     await expect(panel.locator('.wfp-print-block-hint')).toHaveCount(0);
   });
 
@@ -2249,10 +2640,10 @@ test.describe('MA Workstation browser journeys', () => {
     const panel = page.locator('.wfp-panel');
 
     await panel.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
+    await panel.locator('select[name="inj-reason"]').selectOption('scheduled');
     await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
-    await panel.getByRole('tab', { name: /^Schedule/ }).click();
     const priorDose = panel.locator('.wfp-field').filter({ hasText: 'Prior dose' });
 
     // A scheduled dose stops on the prior-dose date, because that date is the
@@ -2263,29 +2654,25 @@ test.describe('MA Workstation browser journeys', () => {
 
     // A PRN dose has no window to evaluate, so the same field is genuinely
     // optional and must stop claiming otherwise.
-    await panel.getByRole('tab', { name: /^Order/ }).click();
     await panel.locator('select[name="inj-reason"]').selectOption('prn');
-    await panel.getByRole('tab', { name: /^Schedule/ }).click();
     await expect(priorDose.locator('.wfp-req')).toHaveCount(0);
     await expect(priorDose.locator('.wfp-opt')).toHaveCount(1);
 
     // Expected next due is a visible calculation from the actual date and
-    // selected cadence. Staff can still override it explicitly when the
-    // active order says otherwise. Actual administration date lives on
-    // Administration (with the time it pairs with); Expected next due
-    // stays on Schedule.
-    await panel.getByRole('tab', { name: /^Administration/ }).click();
+    // selected cadence. It is a read-only clinical result; changing it
+    // requires the explicit, audited override dialog.
     const actualDate = panel
-      .locator('.wfp-field', { hasText: 'Actual administration date' })
+      .locator('.wfp-field', { hasText: 'Administration date' })
       .locator('input[type="date"]');
     await actualDate.fill('2026-07-30');
 
-    await panel.getByRole('tab', { name: /^Schedule/ }).click();
-    const nextDue = panel
-      .locator('.wfp-field', { hasText: 'Expected next due' });
-    await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-27');
-    await expect(nextDue.locator('.wfp-calculated-value')).toBeVisible();
-    await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);
+    const nextDue = panel.locator(
+      '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
+    );
+    await expect(nextDue.locator('output')).toHaveText('08/27/2026');
+    await expect(nextDue.locator('.wfp-clinical-readout-marker')).toHaveText('CALC');
+    await expect(nextDue.locator('input[type="date"]')).toHaveCount(0);
+    await expect(nextDue.getByRole('button', { name: 'Override…' })).toBeVisible();
   });
 
   test('targets the Sustenna Day 8 date on a Day 1 initiation and clears a stale calculated date on a provider-directed path', async ({ page }) => {
@@ -2297,30 +2684,29 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
     await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
-    await panel.getByRole('tab', { name: /^Administration/ }).click();
     const actualDate = panel
-      .locator('.wfp-field', { hasText: 'Actual administration date' })
+      .locator('.wfp-field', { hasText: 'Administration date' })
       .locator('input[type="date"]');
     await actualDate.fill('2026-07-30');
 
-    await panel.getByRole('tab', { name: /^Schedule/ }).click();
-    const nextDue = panel.locator('.wfp-field', { hasText: 'Expected next due' });
+    const nextDue = panel.locator('.wfp-clinical-readout').filter({
+      hasText: 'Return target — next injection due'
+    });
     // Baseline: with no initiation protocol selected, the ordered q4wk
     // interval drives the suggestion, same as the previous test.
-    await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-27');
+    await expect(nextDue.locator('output')).toHaveText('08/27/2026');
 
     // Day 1 initiation is followed by Day 8, not by the ordered maintenance
     // interval - the suggestion must switch to admin date + 7 days.
     await panel.locator('label:has-text("Day 1 initiation")').click();
-    await expect(nextDue.locator('input[type="date"]')).toHaveValue('2026-08-06');
-    await expect(nextDue.locator('.wfp-calculated-value')).toContainText('Day 8 target');
+    await expect(nextDue.locator('output')).toHaveText('08/06/2026');
+    await expect(nextDue).toContainText('Day 8 target');
 
     // A provider-directed re-initiation is explicitly a non-calculating
     // path - the stale Day 8 (or interval) suggestion must be cleared, not
     // left sitting in the field looking like a still-valid value.
     await panel.locator('label:has-text("Re-initiation / provider plan")').click();
-    await expect(nextDue.locator('input[type="date"]')).toHaveValue('');
-    await expect(nextDue.locator('.wfp-calculated-value')).toHaveCount(0);
-    await expect(nextDue.locator('.wfp-field-action')).toHaveCount(0);
+    await expect(nextDue.locator('output')).toHaveText('—');
+    await expect(nextDue.locator('.wfp-clinical-readout-marker')).toHaveText('PENDING');
   });
 });

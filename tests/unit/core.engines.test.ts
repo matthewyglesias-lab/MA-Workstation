@@ -49,6 +49,17 @@ const validInjection = (): InjectionEncounter => ({
 });
 
 describe("InjectionEngine", () => {
+  it("starts without an encounter type and requires one after documentation begins", () => {
+    const blank = emptyInjectionEncounter();
+    expect(blank.reason).toBe("");
+    expect(InjectionEngine.evaluate(blank, {}).readiness).toBe("idle");
+
+    blank.patient = { name: "PATIENT, TEST", dob: "01/01/1990" };
+    expect(InjectionEngine.evaluate(blank, {}).stops.map((entry) => entry.code)).toContain(
+      "reason.required",
+    );
+  });
+
   it("calculates Sustenna Day 8 and monthly dates without deciding the dose", () => {
     const encounter = validInjection();
     encounter.initiation = {
@@ -208,12 +219,17 @@ describe("InjectionEngine", () => {
 const readyUds = (): UdsEncounter => ({
   ...emptyUdsEncounter(),
   patient: { name: "PATIENT, TEST", dob: "01/01/1990" },
+  reason: "routine",
   collectionDateTime: "2026-07-30T09:00",
   device: "SAFE life 14-Panel Cup",
   physicalReadingsVerified: true,
   lot: "CUP-1",
   expiration: "2027-06",
   collector: "MA",
+  temperature: "acceptable",
+  control: "valid",
+  validity: "acceptable",
+  medicationAlignment: "no unexpected",
   results: Object.fromEntries(UDS_PANELS.map((panel) => [panel, "neg"])),
 });
 
@@ -309,6 +325,7 @@ describe("FormsEngine", () => {
       patient: { name: "PATIENT, TEST", dob: "01/01/1990" },
       provider: "Dr Test",
       staff: "MA",
+      requestDate: "2026-08-01",
       status: "ready" as const,
       diagnosisWording: "Provider-approved wording",
     };

@@ -7,7 +7,12 @@ import {
   type ClinicalIssue,
   type PatientIdentity,
 } from "./contracts";
-import { isExpiredMonth, localIsoDate } from "./dates";
+import {
+  isExpiredMonth,
+  isValidExpirationMonth,
+  isValidLocalDateTime,
+  localIsoDate,
+} from "./dates";
 
 export const UDS_PANELS = [
   "BUP",
@@ -90,6 +95,43 @@ export const UDS_RESULT_LABEL: Record<UdsResultState, string> = {
   nt: "Not tested",
 };
 
+export const UDS_RESULT_CYCLE: readonly UdsResultState[] = ["nt", "neg", "pos", "invalid"];
+
+export interface UdsDeviceProfileDefinition {
+  id: "safe-life-13" | "safe-life-14";
+  label: string;
+  orderedPanels: readonly UdsPanel[];
+}
+
+/** The result worksheet follows the audited physical cup order. */
+export const UDS_DEVICE_PROFILES: readonly UdsDeviceProfileDefinition[] = [
+  { id: "safe-life-13", label: "SAFE life 13-Panel Cup", orderedPanels: UDS_PANELS },
+  { id: "safe-life-14", label: "SAFE life 14-Panel Cup", orderedPanels: UDS_PANELS },
+];
+
+const isUdsPanel = (value: string): value is UdsPanel =>
+  (UDS_PANELS as readonly string[]).includes(value);
+
+export const normalizeUdsPanelSequence = (
+  panels: readonly (UdsPanel | string)[] | undefined,
+): UdsPanel[] => {
+  const seen = new Set<UdsPanel>();
+  const normalized: UdsPanel[] = [];
+  for (const panel of panels ?? []) {
+    if (!isUdsPanel(panel) || seen.has(panel)) continue;
+    seen.add(panel);
+    normalized.push(panel);
+  }
+  return normalized;
+};
+
+/** One deliberate keyboard/click action advances one result through the same
+ * compact cycle used by the worksheet cell. */
+export const nextUdsResultState = (value: UdsResultState): UdsResultState => {
+  const index = UDS_RESULT_CYCLE.indexOf(value);
+  return UDS_RESULT_CYCLE[(index + 1) % UDS_RESULT_CYCLE.length] ?? "nt";
+};
+
 export const udsPanelName = (panel: UdsPanel): string => UDS_PANEL_INFO[panel]?.name ?? panel;
 export const udsReasonLabel = (key: UdsEncounter["reason"]): string =>
   UDS_REASON_OPTIONS.find((option) => option.key === key)?.label ?? key;
@@ -99,38 +141,33 @@ export const udsControlLabel = (key: UdsControlState): string =>
   UDS_CONTROL_OPTIONS.find((option) => option.key === key)?.label ?? key;
 
 /**
- * Faithful port of legacy-runtime.js's applyUdsDeviceProfile() default-fill
- * behavior: selecting a named cup device pre-fills all its panels as
- * negative (13-panel cups leave the omitted panel not-tested), so staff
- * only need to mark exceptions. Device profile changes always reset
- * physicalReadingsVerified — a fresh cup needs a fresh confirmation.
+ * Selecting a physical device identifies the panel profile, but never invents
+ * readings. A new device requires an explicit QC review and explicit results.
  */
 export function applyUdsDeviceProfileDefaults(encounter: UdsEncounter): UdsEncounter {
-  const profile = profileFor(encounter.device);
-  const results: Partial<Record<UdsPanel, UdsResultState>> = {};
-  if (profile === "14") {
-    UDS_PANELS.forEach((panel) => {
-      results[panel] = "neg";
-    });
-  } else if (profile === "13" && encounter.omittedPanel) {
-    UDS_PANELS.forEach((panel) => {
-      results[panel] = panel === encounter.omittedPanel ? "nt" : "neg";
-    });
-  } else {
-    UDS_PANELS.forEach((panel) => {
-      results[panel] = "nt";
-    });
-  }
-  return { ...encounter, results, physicalReadingsVerified: false };
+  const results = Object.fromEntries(
+    UDS_PANELS.map((panel) => [panel, "nt"]),
+  ) as Record<UdsPanel, UdsResultState>;
+  return {
+    ...encounter,
+    results,
+    physicalReadingsVerified: false,
+    control: "not documented",
+    validity: "not documented",
+  };
 }
 
 export interface UdsEncounter {
   patient: PatientIdentity;
   collectionDateTime: string;
-  reason: "routine" | "medmgmt" | "preinj" | "ordered" | "other";
+  reason: "" | "routine" | "medmgmt" | "preinj" | "ordered" | "other";
+  reasonDetail?: string;
   device: string;
   omittedPanel?: UdsPanel | "";
   physicalReadingsVerified: boolean;
+  customDeviceName?: string;
+  customPanels?: UdsPanel[];
+  /** Legacy compatibility only; new custom devices capture exact panels. */
   customPanelSetVerified?: boolean;
   lot: string;
   expiration: string;
@@ -139,6 +176,7 @@ export interface UdsEncounter {
   control: UdsControlState;
   validity: "acceptable" | "needs review" | "not documented";
   medicationAlignment:
+    | ""
     | "no unexpected"
     | "not aligned"
     | "needs review"
@@ -153,6 +191,14 @@ export interface UdsEngineContext {
   today?: string;
 }
 
+export type UdsRequirementState = "pending" | "required" | "optional" | "hidden";
+
+export interface UdsRequirement {
+  state: UdsRequirementState;
+  section: "specimen" | "results" | "review";
+  reason?: string;
+}
+
 export interface UdsEvaluationOutput {
   negative: UdsPanel[];
   preliminaryPositive: UdsPanel[];
@@ -163,11 +209,29 @@ export interface UdsEvaluationOutput {
   finalizedOutputAllowed: boolean;
   activityStatus: "completed" | "needs_review";
   deviceProfile: "14" | "13" | "other" | "none";
+  requirements: Record<string, UdsRequirement>;
+}
+
+export type UdsReportStatusState =
+  | "not-started"
+  | "incomplete"
+  | "all-negative"
+  | "review-required"
+  | "invalid"
+  | "locked";
+
+export interface UdsReportStatus {
+  state: UdsReportStatusState;
+  label: string;
+  marker: "PENDING" | "STOP" | "REVIEW" | "PRELIM" | "INVALID" | "LOCKED";
+  tone: "neutral" | "attention" | "success" | "danger";
+  detail: string;
 }
 
 const resultGroups = (encounter: UdsEncounter) => {
+  const panels = displayedUdsPanels(encounter);
   const by = (state: UdsResultState): UdsPanel[] =>
-    UDS_PANELS.filter((panel) => (encounter.results[panel] ?? "nt") === state);
+    panels.filter((panel) => (encounter.results[panel] ?? "nt") === state);
   return {
     negative: by("neg"),
     preliminaryPositive: by("pos"),
@@ -182,15 +246,93 @@ export const profileFor = (device: string): UdsEvaluationOutput["deviceProfile"]
   return device.trim() ? "other" : "none";
 };
 
+export const displayedUdsPanels = (encounter: UdsEncounter): UdsPanel[] => {
+  const profile = profileFor(encounter.device);
+  if (profile === "13" && encounter.omittedPanel) {
+    return UDS_PANELS.filter((panel) => panel !== encounter.omittedPanel);
+  }
+  if (profile === "other") {
+    return normalizeUdsPanelSequence(encounter.customPanels);
+  }
+  return [...UDS_PANELS];
+};
+
 const hasStarted = (encounter: UdsEncounter): boolean => {
   const anyResult = UDS_PANELS.some((panel) => (encounter.results[panel] ?? "nt") !== "nt");
   return Boolean(
     encounter.patient.name.trim() ||
       encounter.patient.dob.trim() ||
+      encounter.reason ||
+      encounter.reasonDetail?.trim() ||
+      encounter.collector.trim() ||
+      encounter.collectionDateTime.trim() ||
       encounter.device.trim() ||
       encounter.lot.trim() ||
+      encounter.expiration.trim() ||
+      encounter.temperature !== "not documented" ||
+      encounter.control !== "not documented" ||
+      encounter.validity !== "not documented" ||
+      encounter.medicationAlignment ||
+      (encounter.labPlan?.trim() && encounter.labPlan !== "provider to decide") ||
+      encounter.comment?.trim() ||
       anyResult,
   );
+};
+
+const buildUdsRequirementProjection = (
+  encounter: UdsEncounter,
+  started: boolean,
+  profile: UdsEvaluationOutput["deviceProfile"],
+): Record<string, UdsRequirement> => {
+  const contextState: UdsRequirementState = started ? "required" : "pending";
+  const requirement = (
+    state: UdsRequirementState,
+    section: UdsRequirement["section"],
+    reason?: string,
+  ): UdsRequirement => ({ state, section, ...(reason ? { reason } : {}) });
+
+  return {
+    "patient.name": requirement(contextState, "specimen"),
+    "patient.dob": requirement(contextState, "specimen"),
+    collector: requirement(contextState, "specimen"),
+    collectionDateTime: requirement(contextState, "specimen"),
+    temperature: requirement(contextState, "specimen"),
+    // Encounter type is deliberately the one required choice on an untouched
+    // screen. It establishes why the transaction exists and activates the
+    // rest of the context-dependent requirements.
+    reason: requirement("required", "specimen"),
+    reasonDetail: requirement(
+      encounter.reason === "other" ? "required" : "hidden",
+      "specimen",
+      "Required when encounter type is Other.",
+    ),
+    device: requirement(contextState, "specimen"),
+    omittedPanel: requirement(
+      profile === "13" ? "required" : "hidden",
+      "specimen",
+      "Required for a 13-panel device.",
+    ),
+    customDeviceName: requirement(
+      profile === "other" ? "required" : "hidden",
+      "specimen",
+      "Required for an unlisted device.",
+    ),
+    customPanels: requirement(
+      profile === "other" ? "required" : "hidden",
+      "specimen",
+      "Required for an unlisted device.",
+    ),
+    lot: requirement(contextState, "specimen"),
+    expiration: requirement(contextState, "specimen"),
+    control: requirement(contextState, "specimen"),
+    validity: requirement(contextState, "specimen"),
+    physicalReadingsVerified: requirement(contextState, "specimen"),
+    results: requirement(contextState, "results"),
+    medicationAlignment: requirement(contextState, "review"),
+    labPlan: requirement("optional", "review"),
+    comment: requirement("optional", "review"),
+    devicePhoto: requirement("optional", "specimen"),
+  };
 };
 
 export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvaluationOutput> = {
@@ -203,16 +345,17 @@ export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvalua
     const recommendations = [];
     const calculatedDates: Record<string, string> = {};
     const started = hasStarted(encounter);
-    const groups = resultGroups(encounter);
-    const testedCount = UDS_PANELS.length - groups.notTested.length;
+    const displayedPanels = displayedUdsPanels(encounter);
+    const allGroups = resultGroups(encounter);
+    const inDisplayedSet = (panel: UdsPanel) => displayedPanels.includes(panel);
+    const groups = allGroups;
+    const testedCount = displayedPanels.length - groups.notTested.length;
     const profile = profileFor(encounter.device);
-    const expirationReference =
-      encounter.collectionDateTime.slice(0, 10) ||
-      context.today ||
-      localIsoDate();
-    const expirationMonthVerified = /^\d{4}-(0[1-9]|1[0-2])$/.test(
-      encounter.expiration.trim(),
-    );
+    const requirements = buildUdsRequirementProjection(encounter, started, profile);
+    const expirationReference = isValidLocalDateTime(encounter.collectionDateTime)
+      ? encounter.collectionDateTime.slice(0, 10)
+      : context.today || localIsoDate();
+    const expirationMonthVerified = isValidExpirationMonth(encounter.expiration);
     const deviceExpired = Boolean(
       expirationMonthVerified &&
         isExpiredMonth(encounter.expiration, expirationReference),
@@ -228,6 +371,17 @@ export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvalua
         issue("stop", "patient.dob", "Document the patient date of birth.", "patient.dob", "patient"),
       );
     }
+    if (started && !encounter.reason) {
+      stops.push(
+        issue(
+          "stop",
+          "reason.required",
+          "Select the UDS encounter type.",
+          "reason",
+          "collection",
+        ),
+      );
+    }
     if (started && !encounter.collectionDateTime.trim()) {
       stops.push(
         issue(
@@ -235,6 +389,27 @@ export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvalua
           "collection.datetime",
           "Document the collection date and time.",
           "collectionDateTime",
+          "collection",
+        ),
+      );
+    } else if (started && !isValidLocalDateTime(encounter.collectionDateTime)) {
+      stops.push(
+        issue(
+          "stop",
+          "collection.datetime-invalid",
+          "Verify the collection date and time; use a real local calendar date and time.",
+          "collectionDateTime",
+          "collection",
+        ),
+      );
+    }
+    if (started && encounter.reason === "other" && !encounter.reasonDetail?.trim()) {
+      stops.push(
+        issue(
+          "stop",
+          "reason.other-detail",
+          "Describe the provider-directed or other screening reason.",
+          "reasonDetail",
           "collection",
         ),
       );
@@ -273,14 +448,39 @@ export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvalua
         );
       }
     }
-    if (profile === "other" && !encounter.customPanelSetVerified) {
+    if (profile === "other" && !encounter.customDeviceName?.trim()) {
+      stops.push(
+        issue(
+          "stop",
+          "device.other.name",
+          "Enter the device name shown on the package.",
+          "customDeviceName",
+          "device",
+        ),
+      );
+    }
+    if (profile === "other" && displayedPanels.length === 0) {
       stops.push(
         issue(
           "stop",
           "device.other.profile",
-          "Verify the exact panel set visible on the selected device.",
-          "customPanelSetVerified",
+          "Build the exact panel sequence shown on the physical device.",
+          "customPanels",
           "device",
+        ),
+      );
+    }
+    const resultsOutsideProfile = UDS_PANELS.filter(
+      (panel) => !inDisplayedSet(panel) && (encounter.results[panel] ?? "nt") !== "nt",
+    );
+    if (profile === "other" && resultsOutsideProfile.length) {
+      stops.push(
+        issue(
+          "stop",
+          "results.outside-profile",
+          `Clear result(s) not present on this device: ${resultsOutsideProfile.join(", ")}.`,
+          "results",
+          "results",
         ),
       );
     }
@@ -413,6 +613,17 @@ export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvalua
         ),
       );
     }
+    if (started && !encounter.medicationAlignment) {
+      stops.push(
+        issue(
+          "stop",
+          "reconciliation.required",
+          "Review medication alignment or document that the medication list is unavailable.",
+          "medicationAlignment",
+          "reconciliation",
+        ),
+      );
+    }
     if (
       encounter.medicationAlignment === "not aligned" ||
       encounter.medicationAlignment === "needs review"
@@ -457,9 +668,12 @@ export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvalua
       (profile === "13" &&
         Boolean(encounter.omittedPanel) &&
         (encounter.results[encounter.omittedPanel as UdsPanel] ?? "nt") === "nt") ||
-      (profile === "other" && Boolean(encounter.customPanelSetVerified));
+      (profile === "other" &&
+        Boolean(encounter.customDeviceName?.trim()) &&
+        displayedPanels.length > 0);
     const interpretationAllowed =
       started &&
+      isValidLocalDateTime(encounter.collectionDateTime) &&
       profileVerified &&
       encounter.physicalReadingsVerified &&
       expirationMonthVerified &&
@@ -484,26 +698,112 @@ export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvalua
         finalizedOutputAllowed,
         activityStatus: requiresReview ? "needs_review" : "completed",
         deviceProfile: profile,
+        requirements,
       },
     };
   },
 };
 
+/** Patient-facing/report readiness language derived from documented facts.
+ * Point-of-care results remain preliminary in every interpretable state. */
+export function deriveUdsReportStatus(
+  encounter: UdsEncounter,
+  evaluation: ClinicalEvaluation<UdsEvaluationOutput>,
+  locked = false,
+): UdsReportStatus {
+  const anyResult = UDS_PANELS.some(
+    (panel) => (encounter.results[panel] ?? "nt") !== "nt",
+  );
+  const started = Boolean(
+    encounter.patient.name.trim() ||
+      encounter.patient.dob.trim() ||
+      encounter.reason ||
+      encounter.device.trim() ||
+      encounter.lot.trim() ||
+      anyResult,
+  );
+  const preliminaryDetail =
+    "Point-of-care immunoassay result; confirm unexpected findings by definitive laboratory method.";
+
+  if (locked) {
+    return {
+      state: "locked",
+      label: "LOCAL RECORD LOCKED",
+      marker: "LOCKED",
+      tone: "neutral",
+      detail: preliminaryDetail,
+    };
+  }
+  if (!started) {
+    return {
+      state: "not-started",
+      label: "NOT STARTED",
+      marker: "PENDING",
+      tone: "neutral",
+      detail: "Enter specimen facts and read the physical device before review.",
+    };
+  }
+  if (
+    evaluation.output.invalid.length > 0 ||
+    encounter.control === "invalid"
+  ) {
+    return {
+      state: "invalid",
+      label: "INVALID — DO NOT INTERPRET",
+      marker: "INVALID",
+      tone: "danger",
+      detail: "Repeat or route per clinic procedure before interpretation.",
+    };
+  }
+  if (evaluation.stops.length > 0) {
+    return {
+      state: "incomplete",
+      label: "INCOMPLETE",
+      marker: "STOP",
+      tone: "attention",
+      detail: "Resolve the outstanding specimen, QC, result, or review requirements.",
+    };
+  }
+  if (
+    evaluation.output.preliminaryPositive.length > 0 ||
+    evaluation.warnings.length > 0 ||
+    encounter.medicationAlignment !== "no unexpected"
+  ) {
+    return {
+      state: "review-required",
+      label: "PRELIMINARY — REVIEW REQUIRED",
+      marker: "REVIEW",
+      tone: "attention",
+      detail: preliminaryDetail,
+    };
+  }
+  return {
+    state: "all-negative",
+    label: "PRELIMINARY — ALL NEGATIVE",
+    marker: "PRELIM",
+    tone: "success",
+    detail: preliminaryDetail,
+  };
+}
+
 export const emptyUdsEncounter = (): UdsEncounter => ({
   patient: { name: "", dob: "" },
   collectionDateTime: "",
-  reason: "routine",
+  reason: "",
+  reasonDetail: "",
   device: "",
   omittedPanel: "",
   physicalReadingsVerified: false,
+  customDeviceName: "",
+  customPanels: [],
   customPanelSetVerified: false,
   lot: "",
   expiration: "",
   collector: "",
-  temperature: "acceptable",
-  control: "valid",
-  validity: "acceptable",
-  medicationAlignment: "no unexpected",
+  temperature: "not documented",
+  control: "not documented",
+  validity: "not documented",
+  medicationAlignment: "",
   results: Object.fromEntries(UDS_PANELS.map((panel) => [panel, "nt"])) as Record<
     UdsPanel,
     UdsResultState

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createLegacyClinicalSource } from "../../src/legacy/clinical-source";
 import type { UdsEncounter } from "../../src/domain/uds";
+import type { InjectionEncounter } from "../../src/domain/injection";
 
 /**
  * The typed panels hold their own encounter state, but the shell re-reads the
@@ -40,5 +41,45 @@ describe("legacy clinical source: UDS device profile", () => {
   it("only accepts an omitted panel that is a real analyte", () => {
     expect(readUds({ omitted: "PPX" }).omittedPanel).toBe("PPX");
     expect(readUds({ omitted: "NOPE" }).omittedPanel).toBe("");
+  });
+
+  it("does not turn a blank medication review into an affirmative default", () => {
+    const encounter = sourceWith({}).read("uds").encounter as UdsEncounter;
+    expect(encounter.medicationAlignment).toBe("");
+  });
+});
+
+describe("legacy clinical source: injection documentation metadata", () => {
+  it("round-trips the audited next-dose override fields", () => {
+    const source = createLegacyClinicalSource({
+      document: { getElementById: () => null } as unknown as Document,
+      window: {
+        ipmgLegacyClinicalStateSnapshot: () => ({
+          injection: {
+            documentation: {
+              nextDose: {
+                value: "2030-01-15",
+                source: "manual",
+                calculatedFrom: "2026-07-30|q4wk",
+                overrideKind: "provider-direction",
+                overrideReason: "Documented treatment-plan date",
+                overrideProvider: "Jane Doe, MD",
+                recordedAt: "2026-07-30T17:00:00.000Z",
+              },
+            },
+          },
+        }),
+      } as unknown as Window & typeof globalThis,
+    });
+    const encounter = source.read("injection").encounter as InjectionEncounter;
+    expect(encounter.details?.nextDose).toEqual({
+      value: "2030-01-15",
+      source: "manual",
+      calculatedFrom: "2026-07-30|q4wk",
+      overrideKind: "provider-direction",
+      overrideReason: "Documented treatment-plan date",
+      overrideProvider: "Jane Doe, MD",
+      recordedAt: "2026-07-30T17:00:00.000Z",
+    });
   });
 });

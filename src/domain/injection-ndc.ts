@@ -39,6 +39,12 @@ export interface InjectionNextDoseProvenance {
   value?: string;
   source?: "calculated" | "manual";
   calculatedFrom?: string;
+  /** Why staff intentionally replaced the calculated target. Older records
+   * may omit these fields and remain readable as legacy manual values. */
+  overrideKind?: "active-order" | "provider-direction";
+  overrideReason?: string;
+  overrideProvider?: string;
+  recordedAt?: string;
 }
 
 /**

@@ -7,7 +7,13 @@ import {
   type ClinicalIssue,
   type PatientIdentity,
 } from "./contracts";
-import { isExpiredMonth, localDayFromTimestamp, localIsoDate } from "./dates";
+import {
+  isExpiredMonth,
+  isValidExpirationMonth,
+  isValidIsoDate,
+  localDayFromTimestamp,
+  localIsoDate,
+} from "./dates";
 
 export interface SamplePackage {
   id: string;
@@ -203,6 +209,43 @@ export const SamplesEngine: ClinicalEngine<
           stops.push(issue("stop", `samples.${field}`, message, field, "dispense"));
         }
       });
+      if (encounter.dispenseDate && !isValidIsoDate(encounter.dispenseDate)) {
+        stops.push(
+          issue(
+            "stop",
+            "samples.dispenseDate-invalid",
+            "Verify the dispense date; use a real calendar date.",
+            "dispenseDate",
+            "dispense",
+          ),
+        );
+      }
+      if (encounter.startDate && !isValidIsoDate(encounter.startDate)) {
+        stops.push(
+          issue(
+            "stop",
+            "samples.startDate-invalid",
+            "Verify the planned start date; use a real calendar date.",
+            "startDate",
+            "dispense",
+          ),
+        );
+      }
+      if (
+        isValidIsoDate(encounter.dispenseDate) &&
+        isValidIsoDate(encounter.startDate) &&
+        encounter.startDate < encounter.dispenseDate
+      ) {
+        stops.push(
+          issue(
+            "stop",
+            "samples.start-date-before-dispense",
+            "The planned start date cannot be before the dispense date.",
+            "startDate",
+            "dispense",
+          ),
+        );
+      }
     }
     if (started && !packages.length) {
       stops.push(
@@ -256,6 +299,16 @@ export const SamplesEngine: ClinicalEngine<
             "stop",
             `samples.package.${entry.id}.expiration`,
             `${label}: document the expiration.`,
+            `packages.${index}.expiration`,
+            "traceability",
+          ),
+        );
+      } else if (!isValidExpirationMonth(entry.expiration)) {
+        stops.push(
+          issue(
+            "stop",
+            `samples.package.${entry.id}.expiration-invalid`,
+            `${label}: verify the expiration month.`,
             `packages.${index}.expiration`,
             "traceability",
           ),

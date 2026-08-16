@@ -2388,6 +2388,131 @@ input[type="radio"]:disabled {
   }
 }
 
+/* F9 value table: an application-owned lookup transaction, not a reskinned
+   browser dropdown. The selected row and keyboard legend deliberately echo a
+   late Client/Server list window while retaining native dialog semantics. */
+.cd2004-lookup-dialog .cd2004-dialog-frame {
+  width: min(560px, 100%);
+}
+
+.cd2004-lookup-context {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid #7f8785;
+  background: #e8ebf4;
+  font: 11px Tahoma, Arial, sans-serif;
+}
+
+.cd2004-lookup-context span {
+  overflow: hidden;
+  color: #4d5654;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-lookup-body {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+}
+
+.cd2004-lookup-results {
+  max-height: min(330px, 48vh);
+  overflow: auto;
+  border: 2px inset #d4d0c8;
+  background: #fff;
+}
+
+.cd2004-lookup-columns,
+.cd2004-lookup-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 64px;
+  align-items: center;
+}
+
+.cd2004-lookup-columns {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid #77827f;
+  background: #d6dbea;
+  color: #333e3b;
+  font: 700 9px/1.2 Tahoma, Arial, sans-serif;
+}
+
+.cd2004-lookup-columns span,
+.cd2004-lookup-row > span {
+  min-width: 0;
+  padding: 3px 5px;
+  border-right: 1px solid #c0c6c4;
+}
+
+.cd2004-lookup-columns span:last-child,
+.cd2004-lookup-row > span:last-child {
+  border-right: 0;
+}
+
+.cd2004-lookup-row {
+  width: 100%;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #d3d8d6;
+  background: #fff;
+  color: #101820;
+  font: 11px/1.2 Tahoma, Arial, sans-serif;
+  text-align: left;
+}
+
+.cd2004-lookup-row:nth-child(odd) {
+  background: #f5f6f2;
+}
+
+.cd2004-lookup-row.is-selected {
+  background: #e5eddd;
+}
+
+.cd2004-lookup-row:hover,
+.cd2004-lookup-row:focus-visible {
+  background: #244f94;
+  color: #fff;
+  outline: 1px dotted #fff;
+  outline-offset: -3px;
+}
+
+.cd2004-lookup-row small {
+  display: block;
+  overflow: hidden;
+  color: inherit;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd2004-lookup-row > span:first-child,
+.cd2004-lookup-row > span:last-child {
+  font: 700 9px/1 Consolas, monospace;
+}
+
+.cd2004-lookup-empty {
+  padding: 16px 8px;
+  color: #5e6664;
+  font: 700 10px/1.2 Consolas, monospace;
+  text-align: center;
+}
+
+.cd2004-lookup-actions {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.cd2004-lookup-actions > span:first-child {
+  color: #4d5654;
+  font: 700 9px/1 Consolas, monospace;
+}
+
 /* Compact three-pane clinic widths. */
 
 @media (max-width: 1181px) {

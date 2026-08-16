@@ -357,11 +357,11 @@ const CLINICS=[
 ];
 
 /* ---------- state ---------- */
-const S={ med:null, dose:"", site:"", route:"", intervalKey:"", reason:"scheduled",
+const S={ med:null, dose:"", site:"", route:"", intervalKey:"", reason:"",
           resp:"well", attest:{}, flags:{}, guard:{}, retCustom:false, adminGuideCollapsed:false, needleGuideOpen:false };
 ATTEST.forEach(a=>S.attest[a.id]=!a.off&&a.id!=="prior");
-const UDS={reason:"routine",temp:"acceptable",control:"valid",results:{},validity:"acceptable",consistent:"no unexpected",lab:"provider to decide",photoData:""};
-UDS_PANELS.forEach(p=>UDS.results[p]="neg");
+const UDS={reason:"",temp:"not documented",control:"not documented",results:{},validity:"not documented",consistent:"",lab:"provider to decide",photoData:""};
+UDS_PANELS.forEach(p=>UDS.results[p]="nt");
 let LOG=[];
 function localDateKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 const LOG_STORAGE_KEY="ipmgMedAssistActivityLog_"+localDateKey();
@@ -661,12 +661,22 @@ function renderUdsResults(){
   const s=$("udsSummaryBadges");
   if(s){
     const needs=UDS.control!=="valid"||inv.length||pos.length||UDS.validity==="needs review"||UDS.consistent==="not aligned"||UDS.consistent==="needs review";
-    const tested=UDS_PANELS.length-nt.length;
+    const tested=udsDisplayedPanels().length-nt.length;
     s.innerHTML=`<span class="uds-badge ${needs?"pos":""}">${needs?"Provider review":"No flagged findings"}</span><span class="uds-badge">Tested: ${tested}</span><span class="uds-badge">Negative: ${neg.length}</span><span class="uds-badge pos">Prelim positive: ${pos.length}</span><span class="uds-badge invalid">Invalid: ${inv.length}</span><span class="uds-badge nt">Not tested: ${nt.length}</span>`;
   }
 }
-function udsPanelsByState(state){return UDS_PANELS.filter(p=>(UDS.results[p]||"nt")===state);}
-function udsReasonObj(){return UDS_REASONS.find(r=>r.k===UDS.reason)||UDS_REASONS[0];}
+function udsDisplayedPanels(){
+  const state=window.__IPMG_RC538_UDS_PROFILE__||{},device=$('udsDevice')?$('udsDevice').value:'';
+  if(device==='SAFE life 13-Panel Cup')return UDS_PANELS.filter(panel=>panel!==state.omitted);
+  if(device&&device!=='SAFE life 14-Panel Cup'&&Array.isArray(state.customPanels)&&state.customPanels.length)return [...new Set(state.customPanels.filter(panel=>UDS_PANELS.includes(panel)))];
+  return UDS_PANELS;
+}
+function udsDocumentedDeviceName(){
+  const state=window.__IPMG_RC538_UDS_PROFILE__||{},device=$('udsDevice')?$('udsDevice').value:'';
+  return device&&device!=='SAFE life 13-Panel Cup'&&device!=='SAFE life 14-Panel Cup'&&String(state.customDeviceName||'').trim()?String(state.customDeviceName).trim():device;
+}
+function udsPanelsByState(state){return udsDisplayedPanels().filter(p=>(UDS.results[p]||"nt")===state);}
+function udsReasonObj(){return UDS_REASONS.find(r=>r.k===UDS.reason)||{k:'',l:'Not selected',cc:'an unspecified encounter'};}
 function udsTempObj(){return UDS_TEMP.find(r=>r.k===UDS.temp)||UDS_TEMP[0];}
 function udsControlObj(){return UDS_CONTROL.find(r=>r.k===UDS.control)||UDS_CONTROL[0];}
 function shortList(items,noneText="none"){return items&&items.length?items.join("/"):noneText;}
@@ -674,8 +684,13 @@ function commaList(items,noneText="none"){return items&&items.length?items.join(
 function udsCollectionDateText(){
   const raw=$("udsDateTime")?$("udsDateTime").value:"";
   if(!raw)return "";
+  const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(raw);
+  if(!match)return "";
+  const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]),hour=Number(match[4]),minute=Number(match[5]),second=Number(match[6]||0);
+  const calendar=new Date(Date.UTC(year,month-1,day));
+  if(calendar.getUTCFullYear()!==year||calendar.getUTCMonth()!==month-1||calendar.getUTCDate()!==day||hour>23||minute>59||second>59)return "";
   const d=new Date(raw);
-  if(Number.isNaN(d.getTime()))return raw.replace("T"," ");
+  if(Number.isNaN(d.getTime()))return "";
   return d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});
 }
 function udsLabText(){
@@ -710,10 +725,11 @@ function udsAlignmentShort(){
   return map[UDS.consistent]||map["not aligned"];
 }
 function udsGroupedResultLines(){
+  const visible=new Set(udsDisplayedPanels());
   return UDS_GROUPS.map(group=>{
-    const parts=group.panels.map(p=>`${p} ${UDS_RESULT_SHORT[UDS.results[p]||"nt"]}`);
+    const parts=group.panels.filter(p=>visible.has(p)).map(p=>`${p} ${UDS_RESULT_SHORT[UDS.results[p]||"nt"]}`);
     return `${group.l}: ${parts.join(", ")}.`;
-  });
+  }).filter(line=>!/: \.$/.test(line));
 }
 function udsClinicianAttentionText(pos,inv,nt){
   const lines=[];
@@ -760,7 +776,8 @@ function renderUdsNote(){
   const reason=udsReasonObj();
   const ccHeadline=udsSnapshot(pos,inv,neg,nt);
   const collectionText=udsCollectionDateText();
-  const ccBody=`Point-of-care urine drug screen completed for ${reason.cc}${collectionText?` on ${collectionText}`:''}. This note is a staff handoff for clinician review; final interpretation deferred to provider.`;
+  const reasonDetail=String((window.__IPMG_RC538_UDS_PROFILE__||{}).reasonDetail||'').trim();
+  const ccBody=`Point-of-care urine drug screen completed for ${reason.cc}${UDS.reason==='other'&&reasonDetail?` (${reasonDetail})`:''}${collectionText?` on ${collectionText}`:''}. This note is a staff handoff for clinician review; final interpretation deferred to provider.`;
   $('udsScanPrev').textContent=ccHeadline;
   $('udsOutCC').innerHTML=`<p class="preview-line">${esc(ccHeadline)}</p><p>${esc(ccBody)}</p>`;
 
@@ -795,7 +812,7 @@ function renderUdsNote(){
   ];
   $('udsOutAS').innerHTML=handoffHtml.join('');
 
-  const device=$('udsDevice').value||'not documented',lot=$('udsLot').value.trim()||'not documented',exp=$('udsExp').value.trim()||'not documented',collector=$('udsCollector').value.trim()||'not documented';
+  const device=udsDocumentedDeviceName()||'not documented',lot=$('udsLot').value.trim()||'not documented',exp=$('udsExp').value.trim()||'not documented',collector=$('udsCollector').value.trim()||'not documented';
   const trace=[`Device: ${device}`,`Lot: ${lot}`,`Exp: ${exp}`,collectionText?`Collected: ${collectionText}`:'Collected: not documented',`Collected by: ${collector}`];
   const followLines=[];
   followLines.push('Results documented as point-of-care preliminary screening only.');
@@ -845,12 +862,13 @@ function renderUdsNote(){
   renderUdsQa(pos,inv,neg,nt);renderCommandCenter();
 }
 function softResetUds(){
-  UDS.reason="routine";UDS.temp="acceptable";UDS.control="valid";UDS.validity="acceptable";UDS.consistent="no unexpected";UDS.lab="provider to decide";UDS_PANELS.forEach(p=>UDS.results[p]="neg");
+  UDS.reason="";UDS.temp="not documented";UDS.control="not documented";UDS.validity="not documented";UDS.consistent="";UDS.lab="provider to decide";UDS_PANELS.forEach(p=>UDS.results[p]="nt");
+  const profile=window.__IPMG_RC538_UDS_PROFILE__||(window.__IPMG_RC538_UDS_PROFILE__={});profile.omitted='';profile.readingsVerified=false;profile.customPanelSetVerified=false;profile.reasonDetail='';profile.customDeviceName='';profile.customPanels=[];
   UDS.photoData="";
   ["udsPtName","udsDOB","udsCollector","udsLot","udsExp","udsComment"].forEach(id=>{if($(id))$(id).value="";});
   if($("udsPhoto"))$("udsPhoto").value="";if($("udsPhotoPreview")){$("udsPhotoPreview").src="";$("udsPhotoPreview").classList.add("hidden");}if($("udsPhotoEmpty"))$("udsPhotoEmpty").classList.remove("hidden");
-  if($("udsDevice"))$("udsDevice").value="";if($("udsValidity"))$("udsValidity").value="acceptable";if($("udsConsistent"))$("udsConsistent").value="no unexpected";if($("udsLab"))$("udsLab").value="provider to decide";
-  if($("udsDateTime"))$("udsDateTime").value=localDateTimeValue();
+  if($("udsDevice"))$("udsDevice").value="";if($("udsValidity"))$("udsValidity").value="not documented";if($("udsConsistent"))$("udsConsistent").value="";if($("udsLab"))$("udsLab").value="provider to decide";
+  if($("udsDateTime"))$("udsDateTime").value='';
   renderUdsReasons();renderUdsTemp();renderUdsControl();renderUdsResults();renderUdsNote();toast("UDS cleared");
 }
 
@@ -1057,17 +1075,20 @@ function renderUdsReport(){
   renderUdsNote();
   const n=window._udsNote||{};
   const name=$('udsPtName').value.trim()||'—', dob=$('udsDOB').value.trim()||'—', collector=$('udsCollector').value.trim()||'—';
-  const collection=udsCollectionDateText()||'—', reason=udsReasonObj().l, temp=udsTempObj().l;
-  const device=$('udsDevice').value||'—', lot=$('udsLot').value.trim()||'—', exp=$('udsExp').value.trim()||'—';
-  const pos=udsPanelsByState('pos'), inv=udsPanelsByState('invalid'), nt=udsPanelsByState('nt');
-  const tested=UDS_PANELS.length-nt.length;
+  const collection=udsCollectionDateText()||'—', reasonDetail=String((window.__IPMG_RC538_UDS_PROFILE__||{}).reasonDetail||'').trim(), reason=UDS.reason==='other'&&reasonDetail?`${udsReasonObj().l} — ${reasonDetail}`:udsReasonObj().l, temp=udsTempObj().l;
+  const profileState=window.__IPMG_RC538_UDS_PROFILE__||{};
+  const selectedDevice=$('udsDevice').value||'';
+  const reportPanels=typeof udsDisplayedPanels==='function'?udsDisplayedPanels():UDS_PANELS;
+  const device=(selectedDevice&&selectedDevice!=='SAFE life 13-Panel Cup'&&selectedDevice!=='SAFE life 14-Panel Cup'&&String(profileState.customDeviceName||'').trim())||selectedDevice||'—', lot=$('udsLot').value.trim()||'—', exp=$('udsExp').value.trim()||'—';
+  const pos=reportPanels.filter(panel=>UDS.results[panel]==='pos'), inv=reportPanels.filter(panel=>UDS.results[panel]==='invalid'), nt=reportPanels.filter(panel=>(UDS.results[panel]||'nt')==='nt');
+  const tested=reportPanels.length-nt.length;
   const comment=$('udsComment').value.trim();
   const statusClass=udsPrintStatusClass();
   const attention=(n.attentionLines||udsClinicianAttentionText(pos,inv,nt));
   const attentionClass=statusClass==='danger'?'danger':statusClass==='warn'?'warn':'';
   const attentionHtml=attention.length?attention.slice(0,5).map(l=>`<li>${esc(l)}</li>`).join(''):'<li>No flagged findings documented by staff.</li>';
   const rowHtml=[];
-  const cells=UDS_PANELS.map(panel=>{
+  const cells=reportPanels.map(panel=>{
     const state=UDS.results[panel]||'nt';
     return `<td class="lm-screen">${esc(panel)}<small>${esc(udsPanelName(panel))}</small></td><td><span class="lm-result ${state}">${esc(udsLabResultWord(state))}</span></td>`;
   });
@@ -1217,7 +1238,7 @@ $("resetBtn").addEventListener("click",()=>{if(confirm("Clear the current note? 
 $("udsReset").addEventListener("click",()=>{if(confirm("Clear the current UDS note?")) softResetUds();});
 
 function softReset(){
-  S.med=null;S.dose="";S.flags={};S.guard={};S.reason="scheduled";S.resp="well";S.retCustom=false;
+  S.med=null;S.dose="";S.flags={};S.guard={};S.reason="";S.resp="well";S.retCustom=false;
   ATTEST.forEach(a=>S.attest[a.id]=!a.off&&a.id!=="prior");
   ["ptName","ptDOB","orderingProvider","injOrderPurpose","tech","ndc","lot","exp","injProductSource","injProductSourceOther","injPreparation","injPreparationDetail","injWasteAmount","injWasteWitness","injProductIssueDetail","injProductIssueAction","injProductIssueRecipient","injProductIssueNotificationTime","injProductIssueDirection","injProductIssueNextStep","bp","hr","temp","rr","spo2","vitalRepeatNote","admin","respCustom","injAdminTime","injSecondAdminTime","injVolume","injVolumeUnit","injDevice","injDeviceOther","injSiteCondition","injSiteConditionDetail","injExceptionSummary","injExceptionRecipient","injExceptionTime","injExceptionOutcome","nextDate","priorDose","priorSite"].forEach(id=>{if($(id))$(id).value="";});
   ["injWasteToggle","injProductIssueToggle","injExceptionToggle"].forEach(id=>{if($(id))$(id).checked=false;});
@@ -1728,7 +1749,7 @@ function logStatusLabel(status){return status==="needs_review"?"Needs review":"C
 function activityStatusFromUds(){
   const inv=udsPanelsByState("invalid"),pos=udsPanelsByState("pos");
   const trace=udsTraceIssues();
-  const tested=UDS_PANELS.filter(p=>UDS.results[p]&&UDS.results[p]!=="nt");
+  const tested=udsDisplayedPanels().filter(p=>UDS.results[p]&&UDS.results[p]!=="nt");
   const profileIssues=typeof window.ipmgUdsPanelProfileIssues==="function"?window.ipmgUdsPanelProfileIssues():[];
   const additionalIssues=typeof window.ipmgUdsAdditionalOutputIssues==="function"?window.ipmgUdsAdditionalOutputIssues():[];
   if(!$("udsPtName").value.trim()||!$("udsDOB").value.trim()||!$("udsDateTime").value||!$("udsDevice").value||trace.length||profileIssues.length||additionalIssues.length||!tested.length||UDS.control!=="valid"||inv.length||pos.length||UDS.validity!=="acceptable"||UDS.consistent!=="no unexpected"||UDS.temp!=="acceptable"||monthExpired($("udsExp").value,$("udsDateTime").value))return "needs_review";
@@ -1772,7 +1793,7 @@ $("addUdsLog").addEventListener("click",()=>{
   if(!n.cc){toast("Build the UDS note first");return;}
   const traceIssues=udsTraceIssues();
   const pos=udsPanelsByState("pos"),inv=udsPanelsByState("invalid"),neg=udsPanelsByState("neg"),nt=udsPanelsByState("nt");
-  const device=$("udsDevice").value,lot=$("udsLot").value.trim(),exp=$("udsExp").value.trim();
+  const device=typeof udsDocumentedDeviceName==='function'?udsDocumentedDeviceName():$("udsDevice").value,lot=$("udsLot").value.trim(),exp=$("udsExp").value.trim();
   const detail=[pos.length?`Pos ${shortList(pos)}`:"",inv.length?`Invalid ${shortList(inv)}`:"",`Neg ${neg.length}`,nt.length?`Not tested ${shortList(nt)}`:""].filter(Boolean).join(" · ");
   const status=activityStatusFromUds();
   const entry={
@@ -2375,7 +2396,7 @@ if($("udsPhoto"))$("udsPhoto").addEventListener("change",e=>{
 $("udsDOB").addEventListener("input",e=>{e.target.value=fmtDOB(e.target.value);renderUdsNote();});
 
 /* ---------- init ---------- */
-if($("udsDateTime"))$("udsDateTime").value=localDateTimeValue();
+if($("udsDateTime"))$("udsDateTime").value='';
 
 
 
@@ -2618,7 +2639,8 @@ function udsCommandStatus(){
   const patient=($('udsPtName')&&$('udsPtName').value.trim())||'';
   const pos=udsPanelsByState('pos'),inv=udsPanelsByState('invalid'),nt=udsPanelsByState('nt');
   const trace=udsTraceIssues();
-  const hasUds=patient||$('udsLot').value.trim()||$('udsExp').value||pos.length||inv.length||nt.length!==UDS_PANELS.length;
+  const panels=udsDisplayedPanels();
+  const hasUds=patient||$('udsDevice').value||$('udsLot').value.trim()||$('udsExp').value||panels.some(panel=>(UDS.results[panel]||'nt')!=='nt');
   if(!hasUds)return {level:'idle',status:'Idle',detail:'No UDS encounter started.',next:'Open UDS when a point-of-care screen is needed.'};
   if(UDS.control==='invalid'||inv.length||UDS.temp==='not acceptable')return {level:'danger',status:'Do not interpret',detail:'Invalid control/panel or unacceptable temperature. Provider review needed.',next:'Route UDS to provider and do not treat invalid results as interpreted.'};
   if(pos.length||UDS.validity==='needs review'||UDS.consistent==='not aligned'||UDS.consistent==='needs review')return {level:'warn',status:'Handoff',detail:`${pos.length?'Preliminary positive: '+shortList(pos)+'. ':''}${trace.length?'Missing '+trace.join(', ')+'. ':''}`.trim()||'Clinician handoff requested.',next:'Complete UDS traceability, then copy the clinician handoff or print report.'};
@@ -4511,7 +4533,7 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
       const s=$('udsSummaryBadges');
       if(s){
         const needs=UDS.control!=='valid'||inv.length||pos.length||UDS.validity==='needs review'||UDS.consistent==='not aligned'||UDS.consistent==='needs review';
-        const tested=UDS_PANELS.length-nt.length;
+        const tested=udsDisplayedPanels().length-nt.length;
         s.innerHTML=`<span class="uds-badge ${needs?'pos':''}">${needs?'Provider review':'No flagged findings'}</span><span class="uds-badge">Tested: ${tested}</span><span class="uds-badge">Negative: ${neg.length}</span><span class="uds-badge pos">Prelim positive: ${pos.length}</span><span class="uds-badge invalid">Invalid: ${inv.length}</span><span class="uds-badge nt">Not tested: ${nt.length}</span>`;
       }
     }catch(e){}
@@ -5207,13 +5229,13 @@ try{renderSites();renderRoutes();renderAdminGuide();}catch(e){console.warn('site
     const patient=txt('udsPtName'), dob=txt('udsDOB'), collector=txt('udsCollector'), dt=txt('udsDateTime');
     const temp=(typeof UDS!=='undefined'?UDS.temp:'not documented');
     const control=(typeof UDS!=='undefined'?UDS.control:'not documented');
-    const reason=(typeof UDS!=='undefined'?UDS.reason:'routine');
+    const reason=(typeof UDS!=='undefined'?UDS.reason:'');
     const validity=txt('udsValidity') || (typeof UDS!=='undefined'?UDS.validity:'not documented');
     const consistent=txt('udsConsistent') || (typeof UDS!=='undefined'?UDS.consistent:'unavailable');
     const lab=txt('udsLab') || (typeof UDS!=='undefined'?UDS.lab:'provider to decide');
     if(id==='encounter'){
-      const ok=patient&&collector&&dt&&temp!=='not documented';
-      const missing=[!patient?'patient':null,!collector?'collector':null,!dt?'collection time':null,temp==='not documented'?'specimen temperature':null].filter(Boolean);
+      const ok=patient&&collector&&dt&&reason&&temp!=='not documented';
+      const missing=[!patient?'patient':null,!collector?'collector':null,!dt?'collection time':null,!reason?'encounter type':null,temp==='not documented'?'specimen temperature':null].filter(Boolean);
       const tempLabel=labelFrom(typeof UDS_TEMP!=='undefined'?UDS_TEMP:[],temp,temp);
       return {level:ok?'ready':'needs',label:ok?'Ready':'Needs info',preview:ok?`${patient}${dob?' · DOB '+dob:''} · ${pretty(dt)} · ${tempLabel}`:`Add ${missing.join(', ')}.`};
     }
@@ -5456,8 +5478,10 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const sheet=q('udsPatientSheet'); if(!sheet) return;
     const name=raw('udsPtName','Patient'), dob=raw('udsDOB','—');
     const collection=(typeof udsCollectionDateText==='function'?udsCollectionDateText():raw('udsDate','—'))||'—';
-    const reason=(typeof udsReasonObj==='function'?udsReasonObj().l:raw('udsReason','Routine screening'));
-    const panels=(typeof UDS_PANELS!=='undefined'?UDS_PANELS:[]);
+    const reasonBase=(typeof udsReasonObj==='function'?udsReasonObj().l:raw('udsReason','Routine screening'));
+    const reasonDetail=String((window.__IPMG_RC538_UDS_PROFILE__||{}).reasonDetail||'').trim();
+    const reason=(typeof UDS!=='undefined'&&UDS.reason==='other'&&reasonDetail)?`${reasonBase} — ${reasonDetail}`:reasonBase;
+    const panels=(typeof udsDisplayedPanels==='function'?udsDisplayedPanels():(typeof UDS_PANELS!=='undefined'?UDS_PANELS:[]));
     const results=(typeof UDS!=='undefined'&&UDS.results)?UDS.results:{};
     const byState=st=>{try{return typeof udsPanelsByState==='function'?udsPanelsByState(st):panels.filter(p=>(results[p]||'neg')===st);}catch(e){return [];}};
     const pos=byState('pos'), inv=byState('invalid'), nt=byState('nt'), neg=byState('neg');
@@ -7056,7 +7080,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const safe=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const medKey=()=>{try{return (S&&S.med&&S.med.key)||'';}catch(e){return '';}};
   const medLabel=()=>{try{return (S&&S.med&&(S.med.label||S.med.name))||'';}catch(e){return '';}};
-  const currentReason=()=>{try{return (S&&S.reason)||'scheduled';}catch(e){return 'scheduled';}};
+  const currentReason=()=>{try{return (S&&S.reason)||'';}catch(e){return '';}};
   const selectedGuards=()=>{try{return Object.keys(S.guard||{}).filter(k=>S.guard[k]);}catch(e){return [];}};
   const enteredVitals=()=>({bp:!!(byId('bp')&&byId('bp').value.trim()),hr:!!(byId('hr')&&byId('hr').value.trim()),temp:!!(byId('temp')&&byId('temp').value.trim())});
   const hasAnyVitals=()=>{const v=enteredVitals();return v.bp||v.hr||v.temp;};
@@ -8632,7 +8656,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const checked=id=>{const el=by(id);return !!(el&&el.checked);};
   const safe=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const labels={administered:'Administered',held:'Held — not administered',escalated:'Escalated — not administered',provider:'Provider-directed plan — not administered'};
-  const state={kind:''};
+  const state={kind:'',reviewedBy:'',reviewedAt:'',reviewFingerprint:''};
   let priorFingerprint='';
 
   function med(){try{return typeof S!=='undefined'&&S.med?S.med:null;}catch(e){return null;}}
@@ -8649,6 +8673,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(!m){stops.push('Select the medication before documenting a disposition.');return {stops,warnings};}
     if(!text('ptName'))stops.push('Document the patient name.');
     if(!text('ptDOB'))stops.push('Document the patient date of birth.');
+    if(!String(S.reason||'').trim())stops.push('Select the injection encounter type.');
     if(!String(S.dose||'').trim())stops.push('Select or enter the ordered dose.');
     if(!String(S.route||'').trim())stops.push('Document the route used.');
     if(!String(S.site||'').trim())stops.push('Select the injection site used.');
@@ -8734,7 +8759,12 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     neutralizeIfNeeded();
   }
   function recordLocked(){const panel=by('panel-administer');return !!(panel&&panel.classList.contains('record-readonly'));}
-  function canAdminister(){return state.kind==='administered'&&review({requireAdministrationDetail:true}).stops.length===0;}
+  /* Typed and legacy encounters use different canonical fingerprint shapes.
+     Both edit paths clear disposition on material change, so this bridge
+     validates attribution here and leaves exact fingerprint comparison to
+     the owning path rather than comparing unlike signatures. */
+  function administrationReviewCurrent(){return state.kind==='administered'&&(!state.reviewFingerprint||(!!state.reviewedBy&&!!state.reviewedAt));}
+  function canAdminister(){return administrationReviewCurrent()&&review({requireAdministrationDetail:true}).stops.length===0;}
   /* AVS only needs enough to describe what was given - medication, dose,
      route, site, and an administration date - not the final disposition
      choice or the full safety-record checklist canAdminister() requires.
@@ -8743,11 +8773,14 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
      safety record itself. */
   function canPrintAvs(){return !!(med()&&String(S.dose||'').trim()&&String(S.route||'').trim()&&String(S.site||'').trim()&&text('adminDate'));}
   function canHandoff(){const f=fields();return !!(state.kind&&state.kind!=='administered'&&f.provider&&f.time&&f.outcome&&!optionalDetailStops().length);}
-  function dispositionSnapshot(){const f=fields();return {kind:state.kind||'',provider:f.provider||'',time:f.time||'',outcome:f.outcome||''};}
+  function dispositionSnapshot(){const f=fields();return {kind:state.kind||'',provider:f.provider||'',time:f.time||'',outcome:f.outcome||'',reviewedBy:state.reviewedBy||'',reviewedAt:state.reviewedAt||'',reviewFingerprint:state.reviewFingerprint||''};}
   function restoreDisposition(data){
     const source=data&&typeof data==='object'?data:{};
     const allowed=['administered','held','escalated','provider'];
     state.kind=allowed.includes(source.kind)?source.kind:'';
+    state.reviewedBy=String(source.reviewedBy||'');
+    state.reviewedAt=String(source.reviewedAt||'');
+    state.reviewFingerprint=String(source.reviewFingerprint||'');
     ensure();
     const values={clinicalDispositionProvider:source.provider,clinicalDispositionTime:source.time,clinicalDispositionOutcome:source.outcome};
     Object.entries(values).forEach(([id,value])=>{const input=by(id);if(input)input.value=value==null?'':String(value);});
@@ -8771,12 +8804,18 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function choose(kind){
     const r=review({requireAdministrationDetail:kind==='administered'});
     if(kind==='administered'&&r.stops.length){toastSafe('Resolve the listed safety or documentation stops before recording administration.');renderDisposition();return;}
-    state.kind=kind; renderDisposition();
+    state.kind=kind;
+    if(kind==='administered'){
+      state.reviewedBy=text('admin');state.reviewedAt=new Date().toISOString();state.reviewFingerprint=fingerprint();
+    }else{
+      state.reviewedBy='';state.reviewedAt='';state.reviewFingerprint='';
+    }
+    renderDisposition();
     try{if(typeof window.render==='function')window.render();else neutralizeIfNeeded();}catch(e){neutralizeIfNeeded();}
   }
   function clearDisposition(notify){
     const p=ensure(); const had=!!state.kind||Object.values(fields()).some(Boolean);
-    state.kind=''; ['clinicalDispositionProvider','clinicalDispositionTime','clinicalDispositionOutcome'].forEach(id=>{const el=by(id);if(el)el.value='';});
+    state.kind='';state.reviewedBy='';state.reviewedAt='';state.reviewFingerprint=''; ['clinicalDispositionProvider','clinicalDispositionTime','clinicalDispositionOutcome'].forEach(id=>{const el=by(id);if(el)el.value='';});
     if(had&&notify)toastSafe('Clinical disposition reset because material administration details changed.');
     if(p)renderDisposition();
   }
@@ -8994,11 +9033,11 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
   function restoreUds(){
     if(typeof UDS!=='undefined'){
-      UDS.reason='routine';UDS.temp='acceptable';UDS.control='valid';UDS.validity='acceptable';UDS.consistent='no unexpected';UDS.lab='provider to decide';
-      if(typeof UDS_PANELS!=='undefined')UDS_PANELS.forEach(p=>{UDS.results[p]='neg';});
+      UDS.reason='';UDS.temp='not documented';UDS.control='not documented';UDS.validity='not documented';UDS.consistent='';UDS.lab='provider to decide';
+      if(typeof UDS_PANELS!=='undefined')UDS_PANELS.forEach(p=>{UDS.results[p]='nt';});
     }
-    [['udsValidity','acceptable'],['udsConsistent','no unexpected'],['udsLab','provider to decide']].forEach(([id,value])=>{const el=by(id);if(el)el.value=value;});
-    refreshUds();say('Routine UDS screen restored. Change any panel, control, or review exception before output.');
+    [['udsValidity','not documented'],['udsConsistent',''],['udsLab','provider to decide']].forEach(([id,value])=>{const el=by(id);if(el)el.value=value;});
+    refreshUds();say('UDS entry reset to neutral. Review QC and enter the physical panel readings.');
   }
   function restoreSamples(){
     const medCheck=by('sampleMedCheck'),education=by('sampleEdu');
@@ -9109,12 +9148,14 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const p=udsProfile();
     if(!p.kind)return ['a named cup/device'];
     if(p.kind==='13'&&!udsProfileState.omitted)return ['the one panel not on this 13-panel cup'];
-    if(p.kind==='other')return ['the device’s exact panel set'];
+    if(p.kind==='other'&&(!String(udsProfileState.customDeviceName||'').trim()||!Array.isArray(udsProfileState.customPanels)||!udsProfileState.customPanels.length))return ['the device name and exact panel sequence'];
+    const displayed=typeof udsDisplayedPanels==='function'?udsDisplayedPanels():UDS_PANELS;
+    if(UDS_PANELS.some(panel=>!displayed.includes(panel)&&(UDS.results[panel]||'nt')!=='nt'))return ['results recorded outside the documented device profile'];
     return [];
   }
   function udsReadingVerificationIssues(){
     const profile=udsProfile();
-    return (profile.kind==='13'||profile.kind==='14')&&!udsProfileState.readingsVerified?['physical cup and displayed panel readings verified']:[];
+    return profile.kind&&!udsProfileState.readingsVerified?['physical cup and displayed panel readings verified']:[];
   }
   window.ipmgUdsPanelProfileIssues=udsProfileIssues;
     window.ipmgUdsAdditionalOutputIssues=udsReadingVerificationIssues;
@@ -9129,17 +9170,17 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(p.kind==='14'){
       head.textContent='14-panel profile selected';copy.textContent='All displayed panels belong to this named cup. Review the readings, then use the normal result buttons for any exception.';
     }else if(p.kind==='13'){
-      head.textContent='13-panel profile needs one quick choice';copy.textContent='Choose the one displayed panel that is not on this physical cup. The other 13 are prefilled as negative for review by exception.';
+      head.textContent='13-panel profile needs one quick choice';copy.textContent='Choose the one displayed panel that is not on this physical cup. Then document the 13 readings actually visible on the cup.';
       const select=document.createElement('select');select.id='udsOmittedPanel';
       const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Which panel is not on this cup?';select.appendChild(placeholder);
       UDS_PANELS.forEach(panel=>{const option=document.createElement('option');option.value=panel;option.textContent=`${panel} — ${(UDS_PANEL_INFO[panel]||{}).name||panel}`;select.appendChild(option);});
       select.value=udsProfileState.omitted||'';select.addEventListener('change',()=>{udsProfileState.omitted=select.value;applyUdsDeviceProfile();});box.appendChild(select);
     }else if(p.kind==='other'){
-      head.textContent='Other cup: document the actual visible panel set';copy.textContent='This stays a clinician handoff / needs-review record until the exact panel set is confirmed. Mark only the readings visible on the physical cup.';
+      head.textContent='Other cup: document the actual visible panel set';copy.textContent=udsProfileIssues().length?'Enter the package name and top-to-bottom panel sequence in the UDS worksheet.':'Custom device profile documented in the UDS worksheet.';
     }else{
       head.textContent='Choose the actual cup first';copy.textContent='A result screen is kept as a draft until the physical point-of-care device is identified.';
     }
-    if(p.kind==='13'||p.kind==='14'){
+    if(p.kind){
       const confirm=document.createElement('div');confirm.className='uds-profile-confirm';
       const input=document.createElement('input');input.type='checkbox';input.id='udsReadingsVerified';input.checked=!!udsProfileState.readingsVerified;
       const label=document.createElement('label');label.htmlFor=input.id;label.textContent='Physical cup and displayed panel readings verified for this encounter';
@@ -9150,15 +9191,14 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function applyUdsDeviceProfile(){
     udsProfileState.readingsVerified=false;
     const p=udsProfile();
-    if(p.kind==='14')UDS_PANELS.forEach(panel=>{UDS.results[panel]='neg';});
-    else if(p.kind==='13'&&udsProfileState.omitted)UDS_PANELS.forEach(panel=>{UDS.results[panel]=panel===udsProfileState.omitted?'nt':'neg';});
-    else UDS_PANELS.forEach(panel=>{UDS.results[panel]='nt';});
+    UDS_PANELS.forEach(panel=>{UDS.results[panel]='nt';});
     renderUdsProfile();call(window.renderUdsResults);call(window.renderUdsNote);
   }
   function udsOutputIssues(){
     const issues=[];
     if(!val('udsPtName'))issues.push('patient');
     if(!val('udsDOB'))issues.push('DOB');
+    if(!UDS.reason)issues.push('encounter type');
     if(!val('udsDateTime'))issues.push('collection date/time');
     if(!val('udsDevice'))issues.push('cup/device');
     issues.push(...udsProfileIssues());
@@ -9406,6 +9446,10 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       if(typeof raw.nextDose.value==='string'&&raw.nextDose.value.trim())provenance.value=raw.nextDose.value.trim();
       if(['calculated','manual'].includes(raw.nextDose.source))provenance.source=raw.nextDose.source;
       if(typeof raw.nextDose.calculatedFrom==='string'&&raw.nextDose.calculatedFrom.trim())provenance.calculatedFrom=raw.nextDose.calculatedFrom.trim();
+      if(['active-order','provider-direction'].includes(raw.nextDose.overrideKind))provenance.overrideKind=raw.nextDose.overrideKind;
+      ['overrideReason','overrideProvider','recordedAt'].forEach(key=>{
+        if(typeof raw.nextDose[key]==='string'&&raw.nextDose[key].trim())provenance[key]=raw.nextDose[key].trim();
+      });
       if(Object.keys(provenance).length)next.nextDose=provenance;
     }
     if(['provider-authorized','other'].includes(raw.lateDoseReview)){
@@ -9807,7 +9851,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     call(window.softReset);
     window.__IPMG_INJECTION_DOCUMENTATION_METADATA__=clone(snap.documentation||{});
     const med=MEDS.find(item=>item.key===snap.medKey);if(med)call(window.selectMed,med);
-    S.dose=state.dose||'';S.site=state.site||'';S.route=state.route||'';S.intervalKey=state.intervalKey||'';S.reason=state.reason||'scheduled';S.resp=state.resp||'well';S.attest=clone(state.attest||{});S.flags=clone(state.flags||{});S.guard=clone(state.guard||{});S.retCustom=!!state.retCustom;
+    S.dose=state.dose||'';S.site=state.site||'';S.route=state.route||'';S.intervalKey=state.intervalKey||'';S.reason=typeof state.reason==='string'?state.reason:'';S.resp=state.resp||'well';S.attest=clone(state.attest||{});S.flags=clone(state.flags||{});S.guard=clone(state.guard||{});S.retCustom=!!state.retCustom;
     call(window.restoreInitiationProtocol,snap.initiation||{});
     Object.entries(snap.fields||{}).forEach(([id,value])=>{const el=by(id);if(el&&'value' in el){if(el.type==='checkbox')el.checked=!!value;else el.value=value==null?'':value;}});
     if(window.__IPMG_RC530__)window.__IPMG_RC530__.safetyNone=!!snap.safetyNone;
@@ -11194,7 +11238,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       site:S&&S.site||'',
       route:S&&S.route||'',
       intervalKey:S&&S.intervalKey||'',
-      reason:S&&S.reason||'scheduled',
+      reason:S&&S.reason||'',
       response:S&&S.resp||'',
       attestations:S&&S.attest||{},
       verifications:S&&S.flags||{},
@@ -11204,12 +11248,12 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       documentation:window.__IPMG_INJECTION_DOCUMENTATION_METADATA__||{}
     },
     uds:{
-      reason:UDS&&UDS.reason||'routine',
-      temperature:UDS&&UDS.temp||'acceptable',
-      control:UDS&&UDS.control||'valid',
+      reason:UDS&&UDS.reason||'',
+      temperature:UDS&&UDS.temp||'not documented',
+      control:UDS&&UDS.control||'not documented',
       results:UDS&&UDS.results||{},
-      validity:UDS&&UDS.validity||'acceptable',
-      medicationAlignment:UDS&&UDS.consistent||'no unexpected',
+      validity:UDS&&UDS.validity||'not documented',
+      medicationAlignment:UDS&&UDS.consistent||'',
       labPlan:UDS&&UDS.lab||'provider to decide'
     },
     samples:{
@@ -11243,7 +11287,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const RESULT_STATES=['neg','pos','invalid','nt'];
   window.ipmgSetUdsChipState=(patch)=>{
     if(!patch)return;
-    if(patch.reason&&UDS_REASONS.some(x=>x.k===patch.reason))UDS.reason=patch.reason;
+    if('reason' in patch)UDS.reason=patch.reason&&UDS_REASONS.some(x=>x.k===patch.reason)?patch.reason:'';
     if(patch.temp&&UDS_TEMP.some(x=>x.k===patch.temp))UDS.temp=patch.temp;
     if(patch.control&&UDS_CONTROL.some(x=>x.k===patch.control))UDS.control=patch.control;
     if(patch.results&&typeof patch.results==='object'){
@@ -11257,6 +11301,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if('omittedPanel' in patch)profile.omitted=UDS_PANELS.includes(patch.omittedPanel)?patch.omittedPanel:'';
     if('readingsVerified' in patch)profile.readingsVerified=Boolean(patch.readingsVerified);
     if('customPanelSetVerified' in patch)profile.customPanelSetVerified=Boolean(patch.customPanelSetVerified);
+    if(typeof patch.reasonDetail==='string')profile.reasonDetail=patch.reasonDetail;
+    if(typeof patch.customDeviceName==='string')profile.customDeviceName=patch.customDeviceName;
+    if(Array.isArray(patch.customPanels))profile.customPanels=[...new Set(patch.customPanels.filter(panel=>UDS_PANELS.includes(panel)))];
     if(typeof renderUdsReasons==='function')renderUdsReasons();
     if(typeof renderUdsTemp==='function')renderUdsTemp();
     if(typeof renderUdsControl==='function')renderUdsControl();
@@ -11314,7 +11361,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     if(typeof patch.site==='string')S.site=patch.site;
     if(typeof patch.route==='string')S.route=patch.route;
     if(typeof patch.intervalKey==='string')S.intervalKey=patch.intervalKey;
-    if(patch.reason&&REASONS.some(x=>x.k===patch.reason))S.reason=patch.reason;
+    if('reason' in patch)S.reason=patch.reason&&REASONS.some(x=>x.k===patch.reason)?patch.reason:'';
     if(patch.response&&RESP.some(x=>x.k===patch.response))S.resp=patch.response;
     if(patch.attestations&&typeof patch.attestations==='object'){
       ATTEST_KEYS.forEach(key=>{if(key in patch.attestations)S.attest[key]=Boolean(patch.attestations[key]);});

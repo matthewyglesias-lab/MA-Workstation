@@ -170,7 +170,7 @@
           <label>Verified active-order purpose <span class="auto-tag">optional</span></label>
           <input id="injOrderPurpose" data-injection-field="order-purpose" placeholder="Encounter context from the active order — do not enter a diagnosis unless ordered/documented" autocomplete="off" />
         </div>
-        <div class="grp" style="margin-top:14px"><div class="gl">Visit reason</div><div class="chips" id="reasonChips"></div></div>
+        <div class="grp" style="margin-top:14px"><div class="gl">Encounter type <span class="req">*</span></div><div class="chips" id="reasonChips"></div></div>
       </div>
 
       <div class="card inj-card card-medication">
@@ -461,7 +461,7 @@
           <div class="field"><label>Specimen temperature</label><div class="chips" id="udsTempChips"></div></div>
         </div>
         <div class="btnbar" style="margin-top:13px"><button class="btn ghost" id="udsUsePatient" type="button">Use current patient</button><button class="btn ghost" id="udsUseStaff" type="button">Use signed-in staff</button></div>
-        <div class="grp" style="margin-top:14px"><div class="gl">Reason</div><div class="chips" id="udsReasonChips"></div></div>
+        <div class="grp" style="margin-top:14px"><div class="gl">Encounter type <span class="req">*</span></div><div class="chips" id="udsReasonChips"></div></div>
       </div>
 
       <div class="card">
@@ -507,8 +507,8 @@
           <div><h2>Review</h2><div class="hint">Clinical context and follow-up wording</div></div>
         </div>
         <div class="row3">
-          <div class="field"><label>Validity markers</label><select id="udsValidity"><option value="acceptable">Acceptable</option><option value="needs review">Needs review</option><option value="not documented">Not documented</option></select></div>
-          <div class="field"><label>Medication alignment</label><select id="udsConsistent"><option value="no unexpected">No unexpected findings noted by staff</option><option value="not aligned">Not readily explained by available med list</option><option value="needs review">Provider review requested</option><option value="patient explanation">Patient reports prescribed/known explanation</option><option value="unavailable">Medication list unavailable / not reviewed</option></select></div>
+          <div class="field"><label>Validity markers</label><select id="udsValidity"><option value="not documented">Not documented</option><option value="acceptable">Acceptable</option><option value="needs review">Needs review</option></select></div>
+          <div class="field"><label>Medication alignment</label><select id="udsConsistent"><option value="">Select review status</option><option value="no unexpected">No unexpected findings noted by staff</option><option value="not aligned">Not readily explained by available med list</option><option value="needs review">Provider review requested</option><option value="patient explanation">Patient reports prescribed/known explanation</option><option value="unavailable">Medication list unavailable / not reviewed</option></select></div>
           <div class="field"><label>Outside lab</label><select id="udsLab"><option value="provider to decide">Provider to decide</option><option value="not needed">Not needed</option><option value="ordered">Outside lab order placed</option><option value="recommended">Recommended if clinically indicated</option></select></div>
         </div>
         <div class="uds-recon" id="udsReconWrap"></div>

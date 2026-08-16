@@ -671,10 +671,15 @@ export const readLegacyInjectionDocumentation = (
             medicationLine || "selected medication"
           }.`;
 
-  const documentedFacts = injectionFactLines(doc);
+  // A selected medication is only a draft until a disposition is recorded.
+  // Do not turn default chips (NKDA, rights, consent, technique) into
+  // affirmative chart facts while the encounter is still unfinished.
+  const documentedFacts = disposition
+    ? injectionFactLines(doc)
+    : { assessment: [] as string[], plan: [] as string[] };
   const reviewItems = unique([
     ...documentedFacts.assessment,
-    ...(win.__IPMG_RC530__?.safetyNone
+    ...(disposition && win.__IPMG_RC530__?.safetyNone
       ? ["No acute concerns today confirmed."]
       : []),
   ]);
@@ -707,7 +712,7 @@ export const readLegacyInjectionDocumentation = (
     disposition,
     preAdministration: {
       orderPurpose: value("injOrderPurpose", doc) || undefined,
-      allergiesReview: value("allergies", doc) || undefined,
+      allergiesReview: disposition ? value("allergies", doc) || undefined : undefined,
       previousDoseDate: rawValue("priorDose", doc)
         ? formatIsoDate(rawValue("priorDose", doc))
         : undefined,

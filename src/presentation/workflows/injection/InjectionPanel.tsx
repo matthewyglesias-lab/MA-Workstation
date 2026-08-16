@@ -10,8 +10,12 @@ import {
   INJECTION_REASON_OPTIONS,
   INJECTION_RESPONSE_OPTIONS,
   INJECTION_SAFETY_TRIGGERS,
+  InjectionEngine,
   emptyInjectionInitiation,
+  hasCurrentInjectionAdministrationReview,
   hasCurrentLateDoseReview,
+  injectionAdministrationReviewFingerprint,
+  injectionAttestationRequired,
   injectionInitiationConfig,
   injectionInitiationOptions,
   injectionInitiationSecondarySites,
@@ -45,6 +49,13 @@ import type { InjectionHabitusBand } from "../../../domain/injection-clinical-re
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { firstActionableClinicalIssue } from "../../../application/readiness-projection";
 import {
+  projectCarriedFieldSource,
+  projectWorkflowLedgerState,
+  projectWorkflowTransactionStatus,
+  type WorkflowFieldState,
+} from "../../../application/workstation-projection";
+import { isValidIsoDate } from "../../../domain/dates";
+import {
   createNdcOptionResolver,
   formatNdcPackageOption,
   resolveNdcEntry,
@@ -54,11 +65,20 @@ import {
   type NdcOptionQuery,
   type NdcOptionsLookup,
 } from "../../../domain/injection-ndc";
-import { clickLegacyControl, setLegacyFieldValue } from "../legacy-mirror";
+import { setLegacyFieldValue } from "../legacy-mirror";
 import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { StatusFlag } from "../StatusFlag";
+import { ClinicalReadout } from "../ClinicalReadout";
+import { RegisterMarkers, WorkflowContextStrip, TransactionLine, type ClinicalFieldSource } from "../ClinicalRegister";
+import { OptionList, WorkflowField } from "../WorkflowField";
+import {
+  workflowLedgerPanelId,
+  workflowLedgerTabId,
+  WorkflowLedgerTabs,
+} from "../WorkflowLedgerTabs";
+import { requestClinicalPrint } from "../clinical-print";
 import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
@@ -73,28 +93,24 @@ import {
   printInjectionPatientScreening,
 } from "./patient-screening-print";
 
-// The tabs are the blocks of a medication administration record, not a
-// decomposition of the form. A MAR is organised around the administration
-// event: what authorises this dose, when it is due, what was actually given,
-// what product it came from, what was verified first, and what happened after.
-type InjectionTab =
-  | "order"
-  | "schedule"
-  | "administration"
-  | "product"
-  | "verification"
-  | "outcome";
+// Four transaction pages match how staff actually complete the MAR: establish
+// order/timing, identify the physical product, administer and verify, review.
+type InjectionTab = "order" | "product" | "administration" | "review";
 
 const INJECTION_TABS: Array<[InjectionTab, string]> = [
-  ["order", "Order"],
-  ["schedule", "Schedule"],
-  ["administration", "Administration"],
+  ["order", "Order & Timing"],
   ["product", "Product"],
-  ["verification", "Verification"],
-  ["outcome", "Outcome"],
+  ["administration", "Administration"],
+  ["review", "Review"],
 ];
 
 const INJECTION_TAB_LABELS = Object.fromEntries(INJECTION_TABS) as Record<InjectionTab, string>;
+
+const currentAdministrationTimestamp = (): { administrationDate: string; administrationTime: string } => {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString();
+  return { administrationDate: local.slice(0, 10), administrationTime: local.slice(11, 16) };
+};
 
 const LATE_DOSE_REVIEW_OPTIONS: ReadonlyArray<{
   key: "provider-authorized" | "other";
@@ -154,7 +170,7 @@ function groupSitesByRoute(sites: string[]): SiteGroup[] {
  * inferring clinical requirements from label copy. `requirements` stays
  * optional while an older stored/evaluated encounter is still supported.
  */
-type InjectionRequirementState = "required" | "optional" | "hidden";
+type InjectionRequirementState = "pending" | "required" | "optional" | "hidden";
 
 interface InjectionRequirementPresentation {
   state: InjectionRequirementState;
@@ -290,7 +306,7 @@ const pairedMedicationKeyFor = (
 
 // "details.*" is the one field prefix that doesn't map to a single tab - its
 // sub-fields are split across Product (source/prep/waste/product issue),
-// Administration (volume/device/site condition) and Outcome (administration
+// Administration (volume/device/site condition and administration
 // exception). Everything else maps by top-level field name/prefix alone.
 const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
   purpose: "order",
@@ -315,17 +331,17 @@ const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
   deviceOther: "administration",
   siteCondition: "administration",
   siteConditionOther: "administration",
-  administrationException: "outcome",
-  exceptionSummary: "outcome",
-  exceptionRecipient: "outcome",
-  exceptionTime: "outcome",
-  exceptionOutcome: "outcome",
+  administrationException: "administration",
+  exceptionSummary: "administration",
+  exceptionRecipient: "administration",
+  exceptionTime: "administration",
+  exceptionOutcome: "administration",
 };
 
 /**
  * Maps a ClinicalIssue's dot-path `field` back to the tab that actually
  * edits it, so an outstanding stop can be surfaced as a direct "go here"
- * link instead of leaving staff to hunt across all six tabs for whichever
+ * link instead of leaving staff to hunt across all four tabs for whichever
  * field is still blank.
  */
 function tabForInjectionField(field?: string): InjectionTab {
@@ -343,16 +359,16 @@ function tabForInjectionField(field?: string): InjectionTab {
     case "intervalKey":
     case "technique":
       return "order";
-    // When it is due, and the multi-dose protocol that sets the schedule.
+    // Timing is part of the active order context, not a separate transaction.
     case "priorDoseDate":
     case "priorSite":
     case "nextDoseDate":
     case "initiation":
-      return "schedule";
+    case "administrationDate":
+      return "order";
     // The administration event itself: where, by whom, and when.
     case "site":
     case "administeredBy":
-    case "administrationDate":
     case "administrationTime":
     case "secondAdministrationTime":
       return "administration";
@@ -364,12 +380,12 @@ function tabForInjectionField(field?: string): InjectionTab {
     case "allergies":
     case "acuteSafetyScreenConfirmed":
     case "activeSafetyConcerns":
-      return "verification";
+      return "administration";
     case "response":
     case "disposition":
-      return "outcome";
+      return "review";
     case "details":
-      return (sub && INJECTION_DETAILS_FIELD_TAB[sub]) || "outcome";
+      return (sub && INJECTION_DETAILS_FIELD_TAB[sub]) || "review";
     default:
       return "order";
   }
@@ -378,50 +394,19 @@ function tabForInjectionField(field?: string): InjectionTab {
 interface InjectionPanelProps {
   initialEncounter: InjectionEncounter;
   activePatient: PatientContext;
-  evaluation?: ClinicalEvaluation<InjectionEvaluationOutput>;
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
   /** True once the record has been completed and locked (read-only) via the
    * records workspace. Matches legacy's #panel-administer.record-readonly. */
   locked?: boolean;
+  onWorkflowStateChange?: (
+    encounter: InjectionEncounter,
+    evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
+  ) => void;
 }
 
 const patientIsEmpty = (patient: InjectionEncounter["patient"]): boolean =>
   !patient.name.trim() && !patient.dob.trim();
-
-interface OptionListProps<T extends string> {
-  name: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: ReadonlyArray<{ key: T; label: string; description?: string }>;
-  inline?: boolean;
-}
-
-function OptionList<T extends string>({ name, value, onChange, options, inline }: OptionListProps<T>) {
-  // Native <select> rather than a custom radio-row list: the OS draws the
-  // popup, keyboard type-ahead comes for free, and a closed control costs one
-  // line instead of one per option. The selected option's description stays
-  // visible beneath it - clinical guidance should not hide inside a tooltip.
-  const selected = options.find((option) => option.key === value);
-  return (
-    <div class={`wfp-select-group ${inline ? "wfp-select-group-inline" : ""}`}>
-      <select
-        name={name}
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value as T)}
-      >
-        {options.map((option) => (
-          <option key={option.key} value={option.key} title={option.description}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {selected?.description && (
-        <small class="wfp-select-desc">{selected.description}</small>
-      )}
-    </div>
-  );
-}
 
 // A short status stamp for the timing banner - "what does this number mean"
 // answered in three words before staff read the full sentence below it.
@@ -472,11 +457,18 @@ function formatReviewDateTime(value: string): string {
   return value.trim().replace("T", " at ");
 }
 
+function formatClinicalDate(value: string): string {
+  if (!isValidIsoDate(value)) return value || "—";
+  const [year, month, day] = value.split("-");
+  return `${month}/${day}/${year}`;
+}
+
 function CheckList({
   items,
   checked,
   onToggle,
   requirementFor,
+  reviewStateFor,
   quiet,
 }: {
   items: ReadonlyArray<{ key: string; label: string; description?: string }>;
@@ -484,6 +476,8 @@ function CheckList({
   onToggle: (key: string, value: boolean) => void;
   /** The evaluator owns checklist visibility and required markers. */
   requirementFor?: (key: string) => string;
+  /** Review-by-exception semantics for routine preselected items. */
+  reviewStateFor?: (key: string) => "expected" | "confirmed" | "exception" | undefined;
   /** The app-wide "selected" amber fill means "this needs attention" (a
       raised hold, an active exception). A routine attestation that's
       pre-checked by default isn't that - it's the expected state - so this
@@ -498,6 +492,7 @@ function CheckList({
         if (projected?.state === "hidden") return null;
         const required = projected?.state === "required";
         const optional = projected?.state === "optional";
+        const reviewState = reviewStateFor?.(item.key);
         return (
           <label
             key={item.key}
@@ -506,6 +501,7 @@ function CheckList({
           >
             <input
               type="checkbox"
+              aria-required={required || undefined}
               checked={checked(item.key)}
               onChange={(event) => onToggle(item.key, event.currentTarget.checked)}
             />
@@ -513,7 +509,13 @@ function CheckList({
               <span class="wfp-option-title">
                 {item.label}
                 {required && <abbr class="wfp-req" title="Required">*</abbr>}
-                {optional && <span class="wfp-opt">optional</span>}
+                {reviewState ? (
+                  <span class={`wfp-review-state is-${reviewState}`}>
+                    {reviewState.toUpperCase()}
+                  </span>
+                ) : (
+                  optional && <span class="wfp-opt">optional</span>
+                )}
               </span>
               {item.description && <div class="wfp-option-desc">{item.description}</div>}
             </span>
@@ -526,11 +528,9 @@ function CheckList({
 
 const guidanceSectionForTab: Record<InjectionTab, string> = {
   order: "order",
-  schedule: "timing",
-  administration: "administration",
   product: "traceability",
-  verification: "safety",
-  outcome: "disposition",
+  administration: "administration",
+  review: "disposition",
 };
 
 function fallbackGuidance({
@@ -584,15 +584,12 @@ function fallbackGuidance({
               },
             ]
           : []),
-      ];
-    case "schedule":
-      return [
         {
           key: "next-due",
           section: "timing",
           title: "Expected next due",
           message: suggestedNextDose
-            ? `${suggestedNextDose} is calculated from the documented administration date and selected cadence. Confirm or revise it for the actual follow-up plan.`
+            ? `${suggestedNextDose} is calculated from the documented administration date and selected cadence. Use an explicit exception only when the active order or provider direction changes that target.`
             : "Enter the actual administration date and ordered cadence to calculate an expected next due date.",
           classification: "local policy",
         },
@@ -616,6 +613,16 @@ function fallbackGuidance({
               : "Document the actual administration location from the active order. This product has no cataloged anatomical default.",
           classification: "label constraint",
         },
+        {
+          key: "safety-checks",
+          section: "safety",
+          title: "Safety review",
+          message:
+            medication.verifications.length > 0
+              ? `Complete the applicable ${medication.label} verification items below. Record an exception only when it is actually present.`
+              : "Complete the applicable safety review and record an exception only when it is actually present.",
+          classification: "label constraint",
+        },
       ];
     case "product":
       return [
@@ -628,20 +635,7 @@ function fallbackGuidance({
           classification: "local policy",
         },
       ];
-    case "verification":
-      return [
-        {
-          key: "safety-checks",
-          section: "safety",
-          title: "Safety review",
-          message:
-            medication.verifications.length > 0
-              ? `Complete the applicable ${medication.label} verification items below. Record an exception only when it is actually present.`
-              : "Complete the applicable safety review and record an exception only when it is actually present.",
-          classification: "label constraint",
-        },
-      ];
-    case "outcome":
+    case "review":
       return [
         {
           key: "disposition",
@@ -872,7 +866,10 @@ function NeedleTechniquePanel({
   // Fall back to the group the resolver used, so a gluteal-only product reads
   // correctly before a specific side has been chosen.
   const placement = injectionSiteGroup(encounter.site) || resolution.siteGroup;
-  const subcutaneous = placement === "subq";
+  const subcutaneous =
+    placement === "subq" ||
+    encounter.route.trim().toLowerCase() === "subq" ||
+    encounter.route.trim().toLowerCase().includes("subcut");
   const placementLabel =
     placement === "deltoid"
       ? "Deltoid IM"
@@ -888,10 +885,10 @@ function NeedleTechniquePanel({
 
   return (
     <div class="wfp-section wfp-needle-section" role="group" aria-label="Needle and technique">
-      <div class="wfp-section-head">
+      <h2 class="wfp-section-head">
         Needle &amp; technique
         {referenceVersion && <span class="wfp-needle-ref">REF {referenceVersion}</span>}
-      </div>
+      </h2>
       <div class="wfp-section-body">
         <div class="wfp-needle-inputs">
           <div class="wfp-needle-input-group">
@@ -1018,12 +1015,14 @@ function NdcPicker({
   value,
   lookup,
   onChange,
+  required = false,
 }: {
   inputId: string;
   query: NdcOptionQuery;
   value: string;
   lookup: NdcOptionsLookup;
   onChange: (value: string, selection?: InjectionNdcSelection) => void;
+  required?: boolean;
 }) {
   const customInput = useRef<HTMLInputElement>(null);
   // Package lookup is exact medication + exact documented strength. A bare
@@ -1075,6 +1074,7 @@ function NdcPicker({
         id={inputId}
         class="mono"
         aria-label="Scan or enter a different package NDC"
+        aria-required={required || undefined}
         value={value}
         placeholder="00000-0000-00"
         title="Scan or enter a different package NDC"
@@ -1105,6 +1105,9 @@ function Field({
   hint,
   field,
   width,
+  source = "ENTRY",
+  state,
+  prompt,
   children,
 }: {
   label: string;
@@ -1115,12 +1118,15 @@ function Field({
    * shape - a date typed as MM/DD/YYYY, a short code - should not stretch to
    * a full grid column just because the grid offers one. */
   width?: "date" | "short";
+  source?: ClinicalFieldSource;
+  /** Explicit state for command-dialog fields that are not encounter facts. */
+  state?: WorkflowFieldState;
+  prompt?: string;
   children: ComponentChildren;
 }) {
   const requirements = useContext(InjectionRequirementsContext);
   const incompleteFields = useContext(InjectionIncompleteFieldsContext);
   const projected = field ? requirements[field] : undefined;
-  if (projected?.state === "hidden") return null;
   const required = projected?.state === "required";
   const incomplete = Boolean(field && incompleteFields.has(field));
   const optional = projected?.state === "optional";
@@ -1130,23 +1136,33 @@ function Field({
     hint && hint !== "required" && hint !== "optional"
       ? hint.replace(/^(required|optional)[;:,]?\s*/i, "")
       : projected?.reason ?? "";
+  const code = `INJ-${field?.replace(/[^a-z0-9]+/gi, "-").toUpperCase() ?? label.replace(/[^a-z0-9]+/gi, "-").toUpperCase()}`;
   return (
-    <div
-      class={`wfp-field ${required ? "is-required" : ""} ${incomplete ? "is-incomplete" : ""} ${optional ? "is-optional" : ""} ${width ? `is-w-${width}` : ""}`}
-      data-requirement={projected?.state ?? "unprojected"}
+    <WorkflowField
+      label={label}
+      hint={detail}
+      field={field}
+      width={width}
+      prompt={prompt}
+      presentation={{
+        state: state ?? (
+          projected?.state === "hidden"
+            ? "not-applicable"
+            : projected?.state === "pending"
+              ? "pending-context"
+            : required
+              ? "required"
+              : optional
+                ? "optional"
+                : "pending-context"),
+        source,
+        fieldCode: code,
+        ...(projected?.reason ? { detail: projected.reason } : {}),
+      }}
+      incomplete={incomplete}
     >
-      <label>
-        <span class="wfp-field-caption">{label}</span>
-        {required && (
-          <abbr class="wfp-req" title="Required">
-            *
-          </abbr>
-        )}
-        {optional && <span class="wfp-opt">optional</span>}
-      </label>
       {children}
-      {detail && <span class="wfp-field-hint">{detail}</span>}
-    </div>
+    </WorkflowField>
   );
 }
 
@@ -1155,12 +1171,23 @@ const emptyDetails = (): InjectionAdministrationDetails => ({});
 export function InjectionPanel({
   initialEncounter,
   activePatient,
-  evaluation,
   staffSignInValue,
   previewRef,
   locked,
+  onWorkflowStateChange,
 }: InjectionPanelProps) {
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
+  // The typed encounter is the workflow authority. Mirroring to the legacy
+  // document remains a compatibility path for records and print output, but
+  // readiness and commands must update synchronously with the field edit that
+  // caused them rather than after a MutationObserver polling cycle.
+  const evaluation = useMemo(() => InjectionEngine.evaluate(encounter, {}), [encounter]);
+  useEffect(() => {
+    onWorkflowStateChange?.(encounter, evaluation);
+    // The callback is a notification boundary, not an input to evaluation.
+    // Re-notifying on a parent render would create a shell/panel render loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [encounter, evaluation]);
   const [tab, setTab] = useState<InjectionTab>("order");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [patientScreeningDialogOpen, setPatientScreeningDialogOpen] = useState(false);
@@ -1171,6 +1198,25 @@ export function InjectionPanel({
   const [lateDoseReviewNoteDraft, setLateDoseReviewNoteDraft] = useState("");
   const [lateDoseReviewProviderDraft, setLateDoseReviewProviderDraft] = useState("");
   const [lateDoseReviewTimeDraft, setLateDoseReviewTimeDraft] = useState("");
+  const [invalidationReceipt, setInvalidationReceipt] = useState<string | null>(null);
+
+  useEffect(() => {
+    const navigate = (event: Event) => {
+      const detail = (event as CustomEvent<{ workflow?: string; tab?: InjectionTab; field?: string }>).detail;
+      if (detail?.workflow !== "administer" || !detail.tab) return;
+      setTab(detail.tab);
+      if (detail.field) window.setTimeout(() => (document.querySelector(`[data-field-path="${detail.field}"] input, [data-field-path="${detail.field}"] select, [data-field-path="${detail.field}"] textarea, [data-field-path="${detail.field}"] button`) as HTMLElement | null)?.focus(), 0);
+    };
+    window.addEventListener("ipmg:navigate-workflow-source", navigate);
+    return () => window.removeEventListener("ipmg:navigate-workflow-source", navigate);
+  }, []);
+  const [nextDoseOverrideOpen, setNextDoseOverrideOpen] = useState(false);
+  const [nextDoseOverrideDate, setNextDoseOverrideDate] = useState("");
+  const [nextDoseOverrideKind, setNextDoseOverrideKind] = useState<
+    "active-order" | "provider-direction"
+  >("active-order");
+  const [nextDoseOverrideReason, setNextDoseOverrideReason] = useState("");
+  const [nextDoseOverrideProvider, setNextDoseOverrideProvider] = useState("");
   // Prompt once per exact set of timing facts, not on every render while the
   // dialog is open or after staff already reviewed this same context.
   const lateDosePromptedFor = useRef("");
@@ -1244,7 +1290,25 @@ export function InjectionPanel({
 
   const updateEncounter = (updater: (previous: InjectionEncounter) => InjectionEncounter) => {
     setEncounter((previous) => {
-      const next = updater(previous);
+      const candidate = updater(previous);
+      const materialFactsChanged =
+        injectionAdministrationReviewFingerprint(previous) !==
+        injectionAdministrationReviewFingerprint(candidate);
+      const next =
+        materialFactsChanged && previous.disposition.kind
+          ? {
+              ...candidate,
+              disposition: {
+                kind: "" as const,
+                provider: "",
+                time: "",
+                outcome: "",
+                reviewedBy: "",
+                reviewedAt: "",
+                reviewFingerprint: "",
+              },
+            }
+          : candidate;
       mirrorInjectionEncounterToLegacyDom(next);
       return next;
     });
@@ -1294,6 +1358,9 @@ export function InjectionPanel({
     // A different product starts a different order context. Do not carry a
     // prior package choice or follow-up suggestion into it.
     autoCalculatedNextDue.current = "";
+    if (encounter.medicationKey && encounter.medicationKey !== key) {
+      setInvalidationReceipt("ORDER CHANGED · cleared dose-dependent package, site, verification, initiation, and calculated follow-up facts");
+    }
     // "Other" has no real per-product route/cadence in the catalog - its
     // entry is a generic placeholder for site/route UI plumbing, not a
     // labeled fact, so it stays staff-entered like before.
@@ -1333,6 +1400,9 @@ export function InjectionPanel({
   };
 
   const onDoseChange = (dose: string) => {
+    if (encounter.dose && encounter.dose !== dose) {
+      setInvalidationReceipt("DOSE CHANGED · cleared the prior package match and recalculated cadence-dependent facts");
+    }
     const catalogMedication =
       encounter.medicationKey && encounter.medicationKey !== "other"
         ? INJECTION_MEDICATIONS[encounter.medicationKey]
@@ -1459,6 +1529,13 @@ export function InjectionPanel({
   const documentationMetadata = encounter.details as
     | (InjectionAdministrationDetails & InjectionDocumentationMetadata)
     | undefined;
+  const packageState = !encounter.traceability.ndc.trim()
+    ? "INCOMPLETE"
+    : documentationMetadata?.ndcSelection?.primary?.source === "custom"
+      ? "MANUAL"
+      : documentationMetadata?.ndcSelection?.primary
+        ? "MATCH"
+        : "ENTERED";
   // An explicit empty list means the catalog intentionally does not impose a
   // product-specific anatomic default (for example, an active-order site
   // path). It must not silently turn into a generic radio list.
@@ -1503,12 +1580,32 @@ export function InjectionPanel({
         encounter.route,
       )
     : "";
+  const autoTechniquePrefill = useRef("");
   useEffect(() => {
-    if (locked || nonAdministration || !techniquePrefill || (encounter.technique ?? "").trim()) {
+    const current = (encounter.technique ?? "").trim();
+    const previousAuto = autoTechniquePrefill.current;
+    if (nonAdministration) {
+      if (previousAuto && current === previousAuto) {
+        patch({ technique: "" });
+      }
+      if (current === previousAuto) autoTechniquePrefill.current = "";
       return;
     }
-    patch({ technique: techniquePrefill });
-    // Value dependencies only, so re-running cannot overwrite a manual edit.
+    if (locked) return;
+    if (!techniquePrefill) {
+      if (previousAuto && current === previousAuto) patch({ technique: "" });
+      if (current === previousAuto) autoTechniquePrefill.current = "";
+      return;
+    }
+    // A field matching the last suggestion is still app-owned. Update it when
+    // weight/site/route changes; once staff edits it, preserve that edit.
+    if (!current || current === previousAuto) {
+      if (current !== techniquePrefill) patch({ technique: techniquePrefill });
+      autoTechniquePrefill.current = techniquePrefill;
+      return;
+    }
+    autoTechniquePrefill.current = "";
+    // Value dependencies only; manual edits are intentionally never clobbered.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounter.technique, locked, nonAdministration, techniquePrefill]);
 
@@ -1572,6 +1669,24 @@ export function InjectionPanel({
   const noteInput = evaluation ? injectionEncounterToDocumentationInput(encounter, evaluation) : null;
   const noteText = noteInput ? DocumentationEngine.format("injection", noteInput).text : "";
   const stops = evaluation?.stops ?? [];
+  const administrationReviewCurrent = hasCurrentInjectionAdministrationReview(encounter);
+  const administrationReviewEvaluation = useMemo(
+    () =>
+      InjectionEngine.evaluate(
+        {
+          ...encounter,
+          disposition: { kind: "" },
+        },
+        {},
+      ),
+    [encounter],
+  );
+  const administrationReviewStops = administrationReviewEvaluation.stops.filter(
+    (item) => item.code !== "disposition.required",
+  );
+  const canConfirmAdministration =
+    administrationReviewEvaluation.readiness !== "idle" && administrationReviewStops.length === 0;
+  const administrationReviewBlocker = administrationReviewStops[0]?.message;
   // The routine timing warning and the Sustenna Day 8 window warning are
   // different checks with different messages - the timing readout's own
   // message only covers the former, so the late-dose dialog needs to look up
@@ -1588,6 +1703,11 @@ export function InjectionPanel({
     [stops],
   );
   const stopsByTab = countStopsByTab(stops, tabForInjectionField);
+  const warningsByTab = countStopsByTab(
+    evaluation?.warnings ?? [],
+    tabForInjectionField,
+  );
+  const transactionStatus = projectWorkflowTransactionStatus({ evaluation, locked });
 
   const requirements = useMemo(
     () => ({
@@ -1624,6 +1744,65 @@ export function InjectionPanel({
   const suggestedNextDose = calculatedNextDue;
   const nextDoseMetadata = documentationMetadata?.nextDose;
   const nextDoseIsCalculated = nextDoseMetadata?.source === "calculated";
+  const nextDoseIsManual = nextDoseMetadata?.source === "manual";
+  const nextDoseOverrideComplete = Boolean(
+    nextDoseIsManual &&
+      nextDoseMetadata?.overrideKind &&
+      nextDoseMetadata.overrideReason?.trim() &&
+      nextDoseMetadata.recordedAt &&
+      (nextDoseMetadata.overrideKind !== "provider-direction" ||
+        nextDoseMetadata.overrideProvider?.trim()),
+  );
+  const transactionStarted = evaluation?.readiness !== "idle";
+  const injectionLedgerTabs = visibleTabs.map(([key, label]) => {
+    const stopCount = stopsByTab.get(key) ?? 0;
+    const warningCount = warningsByTab.get(key) ?? 0;
+    const complete = {
+      order: Boolean(
+        encounter.patient.name.trim() &&
+          encounter.patient.dob.trim() &&
+          encounter.reason &&
+          encounter.orderingProvider.trim(),
+      ),
+      product: Boolean(
+        encounter.medicationKey &&
+          encounter.traceability.ndc.trim() &&
+          encounter.traceability.lot.trim() &&
+          encounter.traceability.expiration.trim(),
+      ),
+      administration: Boolean(
+        encounter.administrationDate &&
+          encounter.administrationTime &&
+          encounter.administeredBy.trim() &&
+          encounter.route.trim() &&
+          encounter.site.trim() &&
+          encounter.response.kind,
+      ),
+      review: Boolean(encounter.disposition.kind && stopCount === 0),
+    }[key];
+    return {
+      key,
+      label,
+      stopCount,
+      state: projectWorkflowLedgerState({
+        locked,
+        started: transactionStarted,
+        active: tab === key,
+        stopCount,
+        warningCount,
+        complete,
+      }),
+      detail:
+        stopCount > 0
+          ? `${stopCount} unresolved requirement${stopCount === 1 ? "" : "s"}`
+          : warningCount > 0
+            ? `${warningCount} review item${warningCount === 1 ? "" : "s"}`
+            : complete
+              ? "Transaction page complete"
+              : "Transaction page pending",
+    };
+  });
+  const legacyManualNextDoseNeedsReview = nextDoseIsManual && !nextDoseOverrideComplete;
   const nextDoseCalculationInput = `${encounter.administrationDate}|${encounter.intervalKey}`;
 
   const applyCalculatedNextDose = (value: string) => {
@@ -1638,7 +1817,14 @@ export function InjectionPanel({
     });
   };
 
-  const applyManualNextDose = (value: string) => {
+  const applyManualNextDose = (
+    value: string,
+    override: {
+      kind: "active-order" | "provider-direction";
+      reason: string;
+      provider?: string;
+    },
+  ) => {
     autoCalculatedNextDue.current = "";
     patch({ nextDoseDate: value });
     patchDetails({
@@ -1646,8 +1832,57 @@ export function InjectionPanel({
         value,
         source: "manual",
         calculatedFrom: nextDoseCalculationInput,
+        overrideKind: override.kind,
+        overrideReason: override.reason.trim(),
+        overrideProvider:
+          override.kind === "provider-direction" ? override.provider?.trim() : undefined,
+        recordedAt: new Date().toISOString(),
       },
     });
+  };
+
+  const selectDisposition = (kind: InjectionDisposition["kind"]) => {
+    if (kind === "administered") {
+      patchDisposition({
+        kind,
+        provider: "",
+        time: "",
+        outcome: "",
+        reviewedBy: staffSignInValue.trim() || encounter.administeredBy.trim(),
+        reviewedAt: new Date().toISOString(),
+        reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
+      });
+      return;
+    }
+    patchDisposition({
+      kind,
+      reviewedBy: "",
+      reviewedAt: "",
+      reviewFingerprint: "",
+    });
+  };
+
+  const openNextDoseOverride = () => {
+    setNextDoseOverrideDate(
+      nextDoseIsManual && isValidIsoDate(encounter.nextDoseDate)
+        ? encounter.nextDoseDate
+        : suggestedNextDose,
+    );
+    setNextDoseOverrideKind(nextDoseMetadata?.overrideKind ?? "active-order");
+    setNextDoseOverrideReason(nextDoseMetadata?.overrideReason ?? "");
+    setNextDoseOverrideProvider(nextDoseMetadata?.overrideProvider ?? "");
+    setNextDoseOverrideOpen(true);
+  };
+
+  const confirmNextDoseOverride = () => {
+    if (!isValidIsoDate(nextDoseOverrideDate) || !nextDoseOverrideReason.trim()) return;
+    if (nextDoseOverrideKind === "provider-direction" && !nextDoseOverrideProvider.trim()) return;
+    applyManualNextDose(nextDoseOverrideDate, {
+      kind: nextDoseOverrideKind,
+      reason: nextDoseOverrideReason,
+      provider: nextDoseOverrideProvider,
+    });
+    setNextDoseOverrideOpen(false);
   };
 
   const applyPrimaryNdc = (value: string, selection?: InjectionNdcSelection) => {
@@ -1752,7 +1987,7 @@ export function InjectionPanel({
 
   useEffect(() => {
     if (!nonAdministration) return;
-    if (tab === "administration" || tab === "product") setTab("outcome");
+    if (tab === "administration" || tab === "product") setTab("review");
   }, [nonAdministration, tab]);
 
   // Seeds the dialog's editable fields from whatever is actually stored on
@@ -1776,14 +2011,14 @@ export function InjectionPanel({
   // A dose documented after its expected/window boundary gets a brief
   // MEDITECH-style review prompt. It records provider approval or another
   // documented plan, but it never overrides an unrelated clinical stop. It
-  // fires on arrival at Outcome, the
+  // fires on arrival at Review, the
   // last tab, rather than the instant the fields read as late: administration
   // date defaults to today, so entering an old prior-dose date alone (before
   // the actual administration date is even typed) would otherwise read as
   // "40 days late" and pop a modal that blocks staff mid-entry, on a value
-  // nobody has finished typing yet. By Outcome the real dates are in.
+  // nobody has finished typing yet. By Review the real dates are in.
   useEffect(() => {
-    if (locked || tab !== "outcome" || !evaluation?.output.lateDoseWarning) return;
+    if (locked || tab !== "review" || !evaluation?.output.lateDoseWarning) return;
     if (currentLateDoseReview) return;
     if (lateDosePromptedFor.current === lateDoseReviewFingerprint) return;
     lateDosePromptedFor.current = lateDoseReviewFingerprint;
@@ -1816,12 +2051,56 @@ export function InjectionPanel({
     setLateDoseDialogOpen(false);
   };
 
+  const administrationExceptionEditor =
+    nonAdministration ? null : (
+      <TransactionLine
+        label="ADMINISTRATION EXCEPTION — Something changed during or after administration"
+        documented={encounter.details?.administrationException ?? false}
+        open={encounter.details?.administrationException ?? false}
+        onToggle={() => patchDetails({ administrationException: !encounter.details?.administrationException })}
+      >
+          {encounter.details?.administrationException && (
+            <>
+              <Field label="What changed / what was observed" field="details.exceptionSummary">
+                <textarea
+                  value={encounter.details?.exceptionSummary ?? ""}
+                  onInput={(event) => patchDetails({ exceptionSummary: event.currentTarget.value })}
+                />
+              </Field>
+              <div class="wfp-row">
+                <Field label="Recipient notified" field="details.exceptionRecipient">
+                  <input
+                    value={encounter.details?.exceptionRecipient ?? ""}
+                    onInput={(event) =>
+                      patchDetails({ exceptionRecipient: event.currentTarget.value })
+                    }
+                  />
+                </Field>
+                <Field label="Notification / decision time" field="details.exceptionTime">
+                  <input
+                    type="datetime-local"
+                    value={encounter.details?.exceptionTime ?? ""}
+                    onInput={(event) => patchDetails({ exceptionTime: event.currentTarget.value })}
+                  />
+                </Field>
+              </div>
+              <Field label="Direction, action, and next step" field="details.exceptionOutcome">
+                <textarea
+                  value={encounter.details?.exceptionOutcome ?? ""}
+                  onInput={(event) => patchDetails({ exceptionOutcome: event.currentTarget.value })}
+                />
+              </Field>
+            </>
+          )}
+      </TransactionLine>
+    );
+
   return (
     <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
       <InjectionRequirementsContext.Provider value={requirements}>
         <InjectionIncompleteFieldsContext.Provider value={incompleteFields}>
         <div class="wfp-summary-bar wfp-injection-context">
-        <strong>Injection worksheet</strong>
+        <h1 class="wfp-workflow-title"><strong>Injection worksheet</strong></h1>
         {locked ? (
           <span class="wfp-status-flag is-idle">Read only</span>
         ) : (
@@ -1837,24 +2116,6 @@ export function InjectionPanel({
             Session staff: {sessionStaff}
           </span>
         )}
-        {/* Printing is read-only output; a quick-access copy lives here so it's
-            reachable from any tab, not just Outcome's "Document output"
-            section - staff shouldn't have to navigate to the last tab just to
-            discover AVS is available once the minimal fields exist. */}
-        <button
-          type="button"
-          class="cd2004-link-button wfp-summary-print-avs"
-          onClick={() => clickLegacyControl("printAVS")}
-          disabled={!hasAdministrationDetailsForAvs}
-          title={
-            hasAdministrationDetailsForAvs
-              ? "Print the patient after-visit summary"
-              : "Available once medication, dose, route, site, and administration date are documented."
-          }
-        >
-          <DesktopIcon name="print" />
-          Print AVS
-        </button>
         {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
           <button
             type="button"
@@ -1875,7 +2136,7 @@ export function InjectionPanel({
         )}
         <span class="wfp-summary-spacer" />
         <span class="wfp-transaction-readout" aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}>
-          <b>{locked ? "REVIEW" : "ENTRY"}</b>
+          <b>{transactionStatus.label}</b>
           <span>PG {activePage}/{visibleTabs.length}</span>
         </span>
         {!locked && patientNeedsRestore && (
@@ -1900,28 +2161,42 @@ export function InjectionPanel({
         )}
       </div>
 
-      <div class="wfp-tabbar" role="tablist">
-        {visibleTabs.map(([key, label]) => {
-          const tabStopCount = stopsByTab.get(key) ?? 0;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              class="wfp-tab"
-              aria-selected={tab === key}
-              onClick={() => setTab(key)}
-            >
-              {label}
-              {tabStopCount > 0 && (
-                <span class="wfp-tab-badge" aria-hidden="true">
-                  {tabStopCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <WorkflowLedgerTabs
+        tabs={injectionLedgerTabs}
+        activeTab={tab}
+        onChange={setTab}
+        ariaLabel="Injection transaction pages and state"
+        idPrefix="injection-ledger"
+      />
+
+      <WorkflowContextStrip
+        items={[
+          { label: "PATIENT", value: encounter.patient.name || "NOT SELECTED", tone: encounter.patient.name ? "normal" : "attention" },
+          { label: "ORDER", value: medication?.label || encounter.customMedication || "NOT SELECTED", tone: medication || encounter.customMedication ? "normal" : "attention" },
+          { label: "TARGET", value: suggestedNextDose || "PENDING", tone: suggestedNextDose ? "normal" : "attention" },
+          {
+            label: "PACKAGE",
+            value: packageState,
+            tone: packageState === "INCOMPLETE" ? "attention" : "normal",
+          },
+          {
+            label: "STATE",
+            value: transactionStatus.label,
+            tone:
+              transactionStatus.tone === "stop"
+                ? "stop"
+                : transactionStatus.tone === "attention"
+                  ? "attention"
+                  : "normal",
+          },
+        ]}
+      />
+      {invalidationReceipt && (
+        <div class="wfp-invalidation-receipt" role="status">
+          <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
+          <button type="button" class="cd2004-link-button" aria-label="Dismiss invalidation receipt" onClick={() => setInvalidationReceipt(null)}>×</button>
+        </div>
+      )}
 
       <OperatorGuidance
         tab={tab}
@@ -1943,7 +2218,7 @@ export function InjectionPanel({
           tabForField={tabForInjectionField}
           tabLabels={INJECTION_TAB_LABELS}
           onNavigate={(target) =>
-            setTab(nonAdministration && (target === "administration" || target === "product") ? "outcome" : target)
+            setTab(nonAdministration && (target === "administration" || target === "product") ? "review" : target)
           }
         />
       )}
@@ -1951,19 +2226,24 @@ export function InjectionPanel({
       <fieldset disabled={locked} style="border:none;padding:0;margin:0;display:contents">
 
       {tab === "order" && (
-        <div class="wfp-tabpanel" role="tabpanel">
+        <div
+          class="wfp-tabpanel"
+          role="tabpanel"
+          id={workflowLedgerPanelId("injection-ledger", "order")}
+          aria-labelledby={workflowLedgerTabId("injection-ledger", "order")}
+        >
           <div class="wfp-section" role="group" aria-label="Patient & ordering provider">
-            <div class="wfp-section-head">Patient &amp; ordering provider</div>
+            <h2 class="wfp-section-head">Patient &amp; ordering provider</h2>
             <div class="wfp-section-body">
               <div class="wfp-row">
-                <Field label="Patient name" field="patient.name">
+                <Field label="Patient name" field="patient.name" source={projectCarriedFieldSource(encounter.patient.name, activePatientName, "CHART")}>
                   <input
                     value={encounter.patient.name}
                     placeholder="Last, First"
                     onInput={(event) => patchPatient({ name: event.currentTarget.value })}
                   />
                 </Field>
-                <Field label="DOB" field="patient.dob" width="date">
+                <Field label="DOB" field="patient.dob" width="date" source={projectCarriedFieldSource(encounter.patient.dob, activePatientDob, "CHART")}>
                   <input
                     value={encounter.patient.dob}
                     placeholder="MM/DD/YYYY"
@@ -1973,7 +2253,11 @@ export function InjectionPanel({
                     }
                   />
                 </Field>
-                <Field label="Ordering provider" field="orderingProvider">
+                <Field
+                  label="Ordering provider"
+                  field="orderingProvider"
+                  prompt="Enter the ordering provider from the active order"
+                >
                   <input
                     value={encounter.orderingProvider}
                     placeholder="Provider name"
@@ -1992,12 +2276,13 @@ export function InjectionPanel({
                   onInput={(event) => patchDetails({ purpose: event.currentTarget.value })}
                 />
               </Field>
-              <Field label="Visit reason" field="reason">
+              <Field label="Encounter type" field="reason">
                 <OptionList<InjectionReason>
                   name="inj-reason"
                   value={encounter.reason}
                   onChange={(value) => patch({ reason: value })}
                   options={INJECTION_REASON_OPTIONS}
+                  placeholder="Select encounter type"
                   inline
                 />
               </Field>
@@ -2005,7 +2290,7 @@ export function InjectionPanel({
           </div>
 
           <div class="wfp-section" role="group" aria-label="Ordered medication">
-            <div class="wfp-section-head">Ordered medication</div>
+            <h2 class="wfp-section-head">Ordered medication</h2>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Drug" field="medicationKey">
@@ -2105,10 +2390,10 @@ export function InjectionPanel({
         </div>
       )}
 
-      {tab === "schedule" && (
-        <div class="wfp-tabpanel" role="tabpanel">
+      {tab === "order" && (
+        <div class="wfp-tabpanel wfp-tabpanel-continuation">
           <div class="wfp-section" role="group" aria-label="Schedule & next dose">
-            <div class="wfp-section-head">Schedule &amp; next dose</div>
+            <h2 class="wfp-section-head">Schedule &amp; next dose</h2>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Prior dose" field="priorDoseDate">
@@ -2131,30 +2416,79 @@ export function InjectionPanel({
                     ))}
                   </select>
                 </Field>
-                <Field label="Expected next due" field="nextDoseDate">
-                  <input
-                    type="date"
-                    value={encounter.nextDoseDate}
-                    onInput={(event) => applyManualNextDose(event.currentTarget.value)}
-                  />
-                  {nextDoseIsCalculated && (
-                    <span class="wfp-calculated-value">
-                      {encounter.initiation?.protocol === "sustenna-day1"
-                        ? "Calculated as the Day 8 target (Day 1 + 7 days), not the ordered interval"
-                        : "Calculated from documented date + cadence"}
-                    </span>
-                  )}
-                  {suggestedNextDose && !nextDoseIsCalculated && (
+                {!nonAdministration && (
+                  <Field label="Administration date" field="administrationDate">
+                    <input
+                      type="date"
+                      value={encounter.administrationDate}
+                      onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
+                    />
+                  </Field>
+                )}
+                {!nonAdministration && (
+                  <div class="wfp-field-action">
+                    <button type="button" class="cd2004-command-button" onClick={() => patch(currentAdministrationTimestamp())}>Use current date/time</button>
+                    <small>Captures both fields once; it will not refresh automatically.</small>
+                  </div>
+                )}
+              </div>
+              <ClinicalReadout
+                label="Return target — next injection due"
+                value={formatClinicalDate(encounter.nextDoseDate || suggestedNextDose)}
+                marker={
+                  legacyManualNextDoseNeedsReview
+                    ? "REVIEW"
+                    : nextDoseOverrideComplete
+                      ? "OVERRIDE"
+                      : nextDoseIsCalculated
+                        ? "CALC"
+                        : suggestedNextDose
+                          ? "CALC"
+                          : "PENDING"
+                }
+                tone={
+                  legacyManualNextDoseNeedsReview || nextDoseOverrideComplete
+                    ? "attention"
+                    : suggestedNextDose
+                      ? "success"
+                      : "neutral"
+                }
+                detail={
+                  legacyManualNextDoseNeedsReview
+                    ? "Legacy manual date — review the reason or reset to the calculated target before completion."
+                    : nextDoseOverrideComplete
+                      ? `${nextDoseMetadata?.overrideKind === "provider-direction" ? `Provider direction — ${nextDoseMetadata.overrideProvider}` : "Active order"}: ${nextDoseMetadata?.overrideReason}`
+                      : encounter.initiation?.protocol === "sustenna-day1"
+                        ? "Day 8 target: documented Day 1 administration + 7 calendar days."
+                        : "System target from the documented administration date and selected order cadence."
+                }
+                source={
+                  suggestedNextDose
+                    ? `Calculated source ${nextDoseCalculationInput.replace("|", " · ")}`
+                    : "Enter the administration date and order interval to calculate a target."
+                }
+                actions={
+                  <>
                     <button
                       type="button"
-                      class="cd2004-link-button wfp-field-action"
-                      onClick={() => applyCalculatedNextDose(suggestedNextDose)}
+                      class="cd2004-command-button"
+                      onClick={openNextDoseOverride}
+                      disabled={!suggestedNextDose && !encounter.nextDoseDate}
                     >
-                      Reset to calculated {suggestedNextDose}
+                      {nextDoseIsManual ? "Review override…" : "Override…"}
                     </button>
-                  )}
-                </Field>
-              </div>
+                    {suggestedNextDose && nextDoseIsManual && (
+                      <button
+                        type="button"
+                        class="cd2004-link-button"
+                        onClick={() => applyCalculatedNextDose(suggestedNextDose)}
+                      >
+                        Reset to calculated
+                      </button>
+                    )}
+                  </>
+                }
+              />
               {/* The due line a MAR carries: how long since the last dose and
                   what window this one falls in, stamped the way the app's
                   own posted/error banners are (.cd2004-post-stamp /
@@ -2231,12 +2565,12 @@ export function InjectionPanel({
           </div>
 
           <div class="wfp-section" role="group" aria-label="Dose history">
-            <div class="wfp-section-head">
+            <h2 class="wfp-section-head">
               Dose history
               {doseHistory.length > 0 && (
                 <span class="wfp-tab-badge wfp-tab-badge-muted">{doseHistory.length}</span>
               )}
-            </div>
+            </h2>
             <div class="wfp-section-body">
               {doseHistory.length === 0 ? (
                 <p class="wfp-field-hint">
@@ -2272,7 +2606,7 @@ export function InjectionPanel({
 
           {showInitiationPath && (
             <div class="wfp-section" role="group" aria-label="Initiation & paired-injection path">
-              <div class="wfp-section-head">Initiation &amp; paired-injection path</div>
+              <h2 class="wfp-section-head">Initiation &amp; paired-injection path</h2>
               <div class="wfp-section-body">
                 <p class="wfp-field-hint">
                   Select a path only when today is an initiation, restart, or Day 8 initiation encounter. Leaving
@@ -2309,7 +2643,7 @@ export function InjectionPanel({
 
                 {initiationConfig && (
                   <div class="wfp-section" role="group" aria-label="Initiation component">
-                    <div class="wfp-section-head">{initiationConfig.title}</div>
+                    <h2 class="wfp-section-head">{initiationConfig.title}</h2>
                     <div class="wfp-section-body">
                       <p class="wfp-field-hint">{initiationConfig.summary}</p>
                       <div
@@ -2319,6 +2653,7 @@ export function InjectionPanel({
                         <input
                           type="checkbox"
                           id="init-plan-verified"
+                          aria-required={requirements["initiation.planVerified"]?.state === "required" || undefined}
                           checked={encounter.initiation?.planVerified ?? false}
                           onChange={(event) => patchInitiation({ planVerified: event.currentTarget.checked })}
                         />
@@ -2366,6 +2701,7 @@ export function InjectionPanel({
                                 value={encounter.initiation?.second.ndc ?? ""}
                                 lookup={pairedNdcLookup}
                                 onChange={applyPairedNdc}
+                                required
                               />
                             </Field>
                             <Field label="Component 2 — Lot" field="initiation.second.lot">
@@ -2394,6 +2730,7 @@ export function InjectionPanel({
                             <input
                               type="checkbox"
                               id="init-second-order"
+                              aria-required={requirements["initiation.second.orderVerified"]?.state === "required" || undefined}
                               checked={encounter.initiation?.second.orderVerified ?? false}
                               onChange={(event) =>
                                 patchInitiationSecond({ orderVerified: event.currentTarget.checked })
@@ -2413,6 +2750,7 @@ export function InjectionPanel({
                             <input
                               type="checkbox"
                               id="init-second-given"
+                              aria-required={requirements["initiation.second.given"]?.state === "required" || undefined}
                               checked={encounter.initiation?.second.given ?? false}
                               onChange={(event) => patchInitiationSecond({ given: event.currentTarget.checked })}
                             />
@@ -2509,14 +2847,19 @@ export function InjectionPanel({
       )}
 
       {!nonAdministration && tab === "administration" && (
-        <div class="wfp-tabpanel" role="tabpanel">
+        <div
+          class="wfp-tabpanel"
+          role="tabpanel"
+          id={workflowLedgerPanelId("injection-ledger", "administration")}
+          aria-labelledby={workflowLedgerTabId("injection-ledger", "administration")}
+        >
           <div class="wfp-section" role="group" aria-label="Actual administration location">
-            <div class="wfp-section-head">
+            <h2 class="wfp-section-head">
               Actual administration location
               {recommendedSite && (
                 <span class="wfp-tab-badge wfp-tab-badge-muted">rotate: {recommendedSite}</span>
               )}
-            </div>
+            </h2>
             <div class="wfp-section-body">
               {/* A filtered site list previously just showed fewer tiles. State
                   the restriction instead, so "gluteal only" reads as a named
@@ -2546,11 +2889,34 @@ export function InjectionPanel({
                   />
                 </Field>
               ) : (
-                <div class="wfp-choice-field" data-requirement={requirements.site?.state ?? "unprojected"}>
+                <div
+                  class="wfp-choice-field"
+                  role="radiogroup"
+                  aria-label="Actual administration site"
+                  aria-required={requirements.site?.state === "required" || undefined}
+                  data-requirement={requirements.site?.state ?? "unprojected"}
+                  data-field-path="site"
+                  data-field-code="INJ-SITE"
+                  data-field-label="Actual administration site"
+                  data-field-state={
+                    incompleteFields.has("site")
+                      ? "STOP"
+                      : encounter.site
+                        ? "OK"
+                        : requirements.site?.state === "required"
+                          ? "REQ"
+                          : "OPT"
+                  }
+                  data-field-prompt="Select the actual site documented for this administration"
+                >
                   <span class="wfp-choice-caption">
                     Actual administration site
                     {requirements.site?.state === "required" && <abbr class="wfp-req" title="Required">*</abbr>}
                     {requirements.site?.state === "optional" && <span class="wfp-opt">optional</span>}
+                    <RegisterMarkers
+                      source="ENTRY"
+                      state={incompleteFields.has("site") ? "STOP" : encounter.site ? "OK" : requirements.site?.state === "required" ? "REQ" : "OPT"}
+                    />
                   </span>
                   {(() => {
                     const groups = groupSitesByRoute(allowedSites);
@@ -2559,7 +2925,13 @@ export function InjectionPanel({
                         key={site}
                         class={`wfp-site-tile ${encounter.site === site ? "is-selected" : ""}`}
                       >
-                        <input type="radio" name="inj-site" checked={encounter.site === site} onChange={() => patch({ site })} />
+                        <input
+                          type="radio"
+                          name="inj-site"
+                          aria-required={requirements.site?.state === "required" || undefined}
+                          checked={encounter.site === site}
+                          onChange={() => patch({ site })}
+                        />
                         <span class="wfp-site-tile-icon" aria-hidden="true">
                           <SiteIcon site={site} />
                         </span>
@@ -2614,10 +2986,19 @@ export function InjectionPanel({
           )}
 
           <div class="wfp-section" role="group" aria-label="Given by / time">
-            <div class="wfp-section-head">Given by / time</div>
+            <h2 class="wfp-section-head">Given by / time</h2>
             <div class="wfp-section-body">
+              {!medication && (
+                <div class="wfp-prerequisite-line" role="status">
+                  <strong>ORDER REQUIRED</strong>
+                  <span>Select the ordered medication before documenting administration details.</span>
+                  <button type="button" class="cd2004-link-button" onClick={() => setTab("order")}>
+                    Go to Order &amp; Timing
+                  </button>
+                </div>
+              )}
               <div class="wfp-row">
-                <Field label="Administered by" field="administeredBy">
+                <Field label="Administered by" field="administeredBy" source={projectCarriedFieldSource(encounter.administeredBy, sessionStaff, "SESSION")}>
                   <input
                     value={encounter.administeredBy}
                     placeholder="J. Doe, LVN"
@@ -2626,13 +3007,6 @@ export function InjectionPanel({
                   {staffSignInValue.trim() && (
                     <span class="wfp-session-default">Session-derived default; editable for the documenting staff member.</span>
                   )}
-                </Field>
-                <Field label="Actual administration date" field="administrationDate">
-                  <input
-                    type="date"
-                    value={encounter.administrationDate}
-                    onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
-                  />
                 </Field>
                 <Field label="Actual administration time" field="administrationTime">
                   <input
@@ -2652,7 +3026,7 @@ export function InjectionPanel({
                 )}
               </div>
 
-              <div class="wfp-section-head">Dose delivered &amp; device</div>
+              {medication && <h3 class="wfp-section-head">Dose delivered &amp; device</h3>}
               <div class="wfp-row">
                 <Field label="Administration amount" field="details.volume">
                   <input
@@ -2718,9 +3092,23 @@ export function InjectionPanel({
       )}
 
       {!nonAdministration && tab === "product" && (
-        <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-section" role="group" aria-label="Lot & traceability">
-            <div class="wfp-section-head">Lot &amp; traceability</div>
+        <div
+          class="wfp-tabpanel"
+          role="tabpanel"
+          id={workflowLedgerPanelId("injection-ledger", "product")}
+          aria-labelledby={workflowLedgerTabId("injection-ledger", "product")}
+        >
+          {!medication && (
+            <div class="wfp-prerequisite-line" role="status">
+              <strong>ORDER REQUIRED</strong>
+              <span>Select the ordered medication to load package and traceability fields.</span>
+              <button type="button" class="cd2004-link-button" onClick={() => setTab("order")}>
+                Go to Order &amp; Timing
+              </button>
+            </div>
+          )}
+          {medication && <div class="wfp-section" role="group" aria-label="Lot & traceability">
+            <h2 class="wfp-section-head">Lot &amp; traceability</h2>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="NDC" field="traceability.ndc">
@@ -2730,6 +3118,7 @@ export function InjectionPanel({
                     value={encounter.traceability.ndc}
                     lookup={primaryNdcLookup}
                     onChange={applyPrimaryNdc}
+                    required
                   />
                 </Field>
                 <Field label="Lot #" field="traceability.lot">
@@ -2756,10 +3145,10 @@ export function InjectionPanel({
                 </Field>
               </div>
             </div>
-          </div>
+          </div>}
 
-          <div class="wfp-section" role="group" aria-label="Product handling & trace exceptions">
-            <div class="wfp-section-head">Product handling &amp; trace exceptions</div>
+          {medication && <div class="wfp-section" role="group" aria-label="Product handling & trace exceptions">
+            <h2 class="wfp-section-head">Product handling &amp; trace exceptions</h2>
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Medication source" field="details.productSource">
@@ -2877,25 +3266,48 @@ export function InjectionPanel({
                 </>
               )}
             </div>
-          </div>
+          </div>}
         </div>
       )}
 
-      {tab === "verification" && (
-        <div class="wfp-tabpanel" role="tabpanel">
+      {tab === "administration" && (
+        <div class="wfp-tabpanel wfp-tabpanel-continuation">
           <div class="wfp-section" role="group" aria-label="Verification & safety">
-            <div class="wfp-section-head">Verification &amp; safety</div>
+            <h2 class="wfp-section-head">Verification &amp; safety</h2>
             <div class="wfp-section-body">
+              <div
+                class={`wfp-review-contract ${administrationReviewCurrent ? "is-confirmed" : "is-pending"}`}
+                role="status"
+              >
+                <div class="wfp-review-contract-head">
+                  <strong>STANDARD PRE-ADMIN SET</strong>
+                  <span>
+                    {administrationReviewCurrent
+                      ? `CONFIRMED${encounter.disposition.reviewedBy ? ` · ${encounter.disposition.reviewedBy}` : " · HISTORICAL RECORD"}${encounter.disposition.reviewedAt ? ` · ${new Date(encounter.disposition.reviewedAt).toLocaleString()}` : ""}`
+                      : `${INJECTION_ATTESTATION_OPTIONS.filter((item) => injectionAttestationRequired(item.key)).length} EXPECTED · REVIEW PENDING`}
+                  </span>
+                </div>
+                <p>
+                  Routine checks are preselected as reminders. Clear any step not completed; they
+                  become confirmed only when you select the final administration disposition.
+                </p>
+              </div>
               <CheckList
                 items={INJECTION_ATTESTATION_OPTIONS}
                 checked={(key) => Boolean(encounter.attestations[key as keyof InjectionEncounter["attestations"]])}
                 onToggle={toggleAttestation}
                 requirementFor={(key) => `attestations.${key}`}
+                reviewStateFor={(key) => {
+                  const attestationKey = key as keyof InjectionEncounter["attestations"];
+                  if (!injectionAttestationRequired(attestationKey)) return undefined;
+                  if (!encounter.attestations[attestationKey]) return "exception";
+                  return administrationReviewCurrent ? "confirmed" : "expected";
+                }}
                 quiet
               />
               {medication && visibleMedicationVerifications.length > 0 && (
                 <>
-                  <div class="wfp-section-head">{medication.label} safety</div>
+                  <h2 class="wfp-section-head">{medication.label} safety</h2>
                   <CheckList
                     items={visibleMedicationVerifications.map((key) => ({
                       key,
@@ -3019,7 +3431,7 @@ export function InjectionPanel({
                   </button>
                 ) : (
                   <div class="wfp-exception-block">
-                    <div class="wfp-section-head">Provider review triggers</div>
+                    <h2 class="wfp-section-head">Provider review triggers</h2>
                     <p class="wfp-exception-lead">
                       Tick only what the patient actually reports. Any tick here holds the
                       injection for provider review — leave them clear for a routine dose.
@@ -3046,13 +3458,54 @@ export function InjectionPanel({
                 ))}
             </div>
           </div>
+          {administrationExceptionEditor}
         </div>
       )}
 
-      {tab === "outcome" && (
-        <div class="wfp-tabpanel" role="tabpanel">
+      {tab === "review" && (
+        <div
+          class="wfp-tabpanel"
+          role="tabpanel"
+          id={workflowLedgerPanelId("injection-ledger", "review")}
+          aria-labelledby={workflowLedgerTabId("injection-ledger", "review")}
+        >
+          {!nonAdministration && (
+            <ClinicalReadout
+              label="Return target recap"
+              value={formatClinicalDate(encounter.nextDoseDate || suggestedNextDose)}
+              marker={
+                legacyManualNextDoseNeedsReview
+                  ? "REVIEW"
+                  : nextDoseIsManual
+                    ? "OVERRIDE"
+                    : suggestedNextDose
+                      ? "CALC"
+                      : "PENDING"
+              }
+              tone={
+                legacyManualNextDoseNeedsReview || nextDoseIsManual
+                  ? "attention"
+                  : suggestedNextDose
+                    ? "success"
+                    : "neutral"
+              }
+              compact
+              detail={
+                nextDoseIsManual
+                  ? nextDoseMetadata?.overrideReason || "Legacy manual date requires review."
+                  : "Calculated from the documented administration date and selected order cadence."
+              }
+              actions={
+                !locked && (
+                  <button type="button" class="cd2004-link-button" onClick={() => setTab("order")}>
+                    Review timing
+                  </button>
+                )
+              }
+            />
+          )}
           <div class="wfp-section" role="group" aria-label="Response & follow-up">
-            <div class="wfp-section-head">Response &amp; follow-up</div>
+            <h2 class="wfp-section-head">Response &amp; follow-up</h2>
             <div class="wfp-section-body">
               <Field label="Patient response" field="response">
                 <OptionList<InjectionResponse["kind"]>
@@ -3074,57 +3527,12 @@ export function InjectionPanel({
                 </Field>
               )}
 
-              {requirements["details.administrationException"]?.state !== "hidden" && (
-              <div class="wfp-checkbox-row" data-requirement={requirements["details.administrationException"]?.state ?? "unprojected"}>
-                <input
-                  type="checkbox"
-                  id="inj-exception-toggle"
-                  checked={encounter.details?.administrationException ?? false}
-                  onChange={(event) => patchDetails({ administrationException: event.currentTarget.checked })}
-                />
-                <label for="inj-exception-toggle">
-                  Administration exception / escalation — use only when something changed after or during the
-                  administered encounter
-                </label>
-              </div>
-              )}
-              {requirements["details.administrationException"]?.state !== "hidden" && encounter.details?.administrationException && (
-                <>
-                  <Field label="What changed / what was observed" field="details.exceptionSummary">
-                    <textarea
-                      value={encounter.details?.exceptionSummary ?? ""}
-                      onInput={(event) => patchDetails({ exceptionSummary: event.currentTarget.value })}
-                    />
-                  </Field>
-                  <div class="wfp-row">
-                    <Field label="Recipient notified" field="details.exceptionRecipient">
-                      <input
-                        value={encounter.details?.exceptionRecipient ?? ""}
-                        onInput={(event) => patchDetails({ exceptionRecipient: event.currentTarget.value })}
-                      />
-                    </Field>
-                    <Field label="Notification / decision time" field="details.exceptionTime">
-                      <input
-                        type="datetime-local"
-                        value={encounter.details?.exceptionTime ?? ""}
-                        onInput={(event) => patchDetails({ exceptionTime: event.currentTarget.value })}
-                      />
-                    </Field>
-                  </div>
-                  <Field label="Direction, action, and next step" field="details.exceptionOutcome">
-                    <textarea
-                      value={encounter.details?.exceptionOutcome ?? ""}
-                      onInput={(event) => patchDetails({ exceptionOutcome: event.currentTarget.value })}
-                    />
-                  </Field>
-                </>
-              )}
             </div>
           </div>
 
           {!nonAdministration && (
             <div class="wfp-section" role="group" aria-label="Additional note items">
-              <div class="wfp-section-head">Additional note items</div>
+              <h2 class="wfp-section-head">Additional note items</h2>
               <div class="wfp-section-body">
                 <p class="wfp-field-hint">
                   Optional one-tap additions to the generated note. None are pre-selected or required.
@@ -3164,7 +3572,7 @@ export function InjectionPanel({
                     Post-injection education provided
                   </label>
                 </div>
-                <Field label="Disposition on departure" hint="optional">
+                <Field label="Disposition on departure" field="details.departureStatus" hint="optional">
                   <OptionList<NonNullable<InjectionAdministrationDetails["departureStatus"]>>
                     name="inj-departure-status"
                     value={encounter.details?.departureStatus ?? ""}
@@ -3177,7 +3585,7 @@ export function InjectionPanel({
                   />
                 </Field>
                 {encounter.details?.departureStatus === "custom" && (
-                  <Field label="Describe departure">
+                  <Field label="Describe departure" field="details.departureStatusNote">
                     <input
                       value={encounter.details?.departureStatusNote ?? ""}
                       onInput={(event) => patchDetails({ departureStatusNote: event.currentTarget.value })}
@@ -3189,7 +3597,7 @@ export function InjectionPanel({
           )}
 
           <div class="wfp-section" role="group" aria-label="Clinical disposition">
-            <div
+            <h2
               class="wfp-section-head"
               data-requirement={requirements["disposition.kind"]?.state ?? "unprojected"}
             >
@@ -3197,14 +3605,19 @@ export function InjectionPanel({
               {requirements["disposition.kind"]?.state === "required" && (
                 <abbr class="wfp-req" title="Required">*</abbr>
               )}
-            </div>
+            </h2>
             <div class="wfp-section-body">
               <p class="wfp-field-hint">
                 Use the checked routine review items as a fast review-by-exception sheet, then make one final
                 documentation choice. An administration note remains unavailable until a complete
                 administration is documented.
               </p>
-              <div class="wfp-option-list wfp-option-list-inline wfp-disposition-list">
+              <div
+                class="wfp-option-list wfp-option-list-inline wfp-disposition-list"
+                role="radiogroup"
+                aria-label="Clinical disposition"
+                aria-required={requirements["disposition.kind"]?.state === "required" || undefined}
+              >
                 {(
                   [
                     ["administered", "Review complete — document administration", "ready", "check"],
@@ -3212,29 +3625,46 @@ export function InjectionPanel({
                     ["escalated", "Escalated", "warning", "alert"],
                     ["provider", "Provider-directed plan", "warning", "alert"],
                   ] as Array<[InjectionDisposition["kind"], string, "ready" | "warning", "check" | "alert"]>
-                ).map(([kind, label, tone, iconName]) => (
-                  <label
-                    key={kind}
-                    class={`wfp-option-row is-${tone} ${encounter.disposition.kind === kind ? "is-selected" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="inj-disposition"
-                      checked={encounter.disposition.kind === kind}
-                      onChange={() => patchDisposition({ kind })}
-                    />
-                    <span class="wfp-option-title">
-                      <span class="wfp-option-icon" aria-hidden="true">
-                        <DesktopIcon name={iconName} />
+                ).map(([kind, label, tone, iconName]) => {
+                  const administrationBlocked = kind === "administered" && !canConfirmAdministration;
+                  return (
+                    <label
+                      key={kind}
+                      class={`wfp-option-row is-${tone} ${encounter.disposition.kind === kind ? "is-selected" : ""} ${administrationBlocked ? "is-disabled" : ""}`}
+                      title={administrationBlocked ? administrationReviewBlocker : undefined}
+                    >
+                      <input
+                        type="radio"
+                        name="inj-disposition"
+                        aria-required={requirements["disposition.kind"]?.state === "required" || undefined}
+                        checked={encounter.disposition.kind === kind}
+                        disabled={administrationBlocked}
+                        onChange={() => selectDisposition(kind)}
+                      />
+                      <span class="wfp-option-title">
+                        <span class="wfp-option-icon" aria-hidden="true">
+                          <DesktopIcon name={iconName} />
+                        </span>
+                        {label}
                       </span>
-                      {label}
-                    </span>
-                  </label>
-                ))}
+                    </label>
+                  );
+                })}
               </div>
+              {!canConfirmAdministration && administrationReviewBlocker && (
+                <p class="wfp-field-hint wfp-review-blocker">
+                  Administration review pending: {administrationReviewBlocker}
+                </p>
+              )}
+              {administrationReviewCurrent && (
+                <p class="wfp-done-line">
+                  <strong>Review confirmed.</strong>{" "}
+                  The expected safety set is now attributed to {encounter.disposition.reviewedBy || "the historical completed record"}.
+                </p>
+              )}
               {encounter.disposition.kind && encounter.disposition.kind !== "administered" && (
                 <div class="wfp-section" role="group" aria-label="Required handoff details">
-                  <div class="wfp-section-head">Required handoff details</div>
+                  <h2 class="wfp-section-head">Required handoff details</h2>
                   <div class="wfp-section-body">
                     <div class="wfp-row">
                       <Field label="Provider / recipient" field="disposition.provider">
@@ -3282,9 +3712,9 @@ export function InjectionPanel({
       {/* Printing is read-only output, not an edit - it stays outside the
           locked fieldset so a completed record's AVS/worksheet remain
           reprintable instead of going dead the moment the record locks. */}
-      {tab === "outcome" && (
+      {tab === "review" && (
         <div class="wfp-section" role="group" aria-label="Document output">
-          <div class="wfp-section-head">Document output</div>
+          <h2 class="wfp-section-head">Document output</h2>
           <div class="wfp-section-body">
             <p class="wfp-field-hint wfp-document-output-hint">
               Printing uses the same local encounter snapshot as Clinical Documentation, in the sidebar.
@@ -3303,7 +3733,7 @@ export function InjectionPanel({
               <button
                 type="button"
                 class="cd2004-command-button"
-                onClick={() => clickLegacyControl("printAVS")}
+                onClick={() => requestClinicalPrint("injection-avs")}
                 disabled={!hasAdministrationDetailsForAvs}
                 title={
                   hasAdministrationDetailsForAvs
@@ -3335,15 +3765,21 @@ export function InjectionPanel({
               <button
                 type="button"
                 class="cd2004-link-button"
-                onClick={() => clickLegacyControl("injWorksheetPrint")}
+                onClick={() => requestClinicalPrint("injection-worksheet")}
+                disabled={!transactionStarted}
+                title={
+                  transactionStarted
+                    ? "Print the current injection worksheet."
+                    : "Enter encounter details first, or use Blank worksheet."
+                }
               >
                 <DesktopIcon name="print" />
-                Print injection worksheet
+                Print current worksheet
               </button>
               <button
                 type="button"
                 class="cd2004-link-button"
-                onClick={() => clickLegacyControl("injWorksheetBlank")}
+                onClick={() => requestClinicalPrint("injection-worksheet-blank")}
               >
                 <DesktopIcon name="print" />
                 Blank worksheet
@@ -3355,7 +3791,7 @@ export function InjectionPanel({
 
       {locked && (
         <div class="wfp-section" role="group" aria-label="Addendum">
-          <div class="wfp-section-head">Addendum</div>
+          <h2 class="wfp-section-head">Addendum</h2>
           <div class="wfp-section-body">
             <p class="wfp-field-hint">
               Read-only completed record. The original encounter snapshot is locked. Add a dated addendum
@@ -3368,14 +3804,14 @@ export function InjectionPanel({
                 {entry.text}
               </div>
             ))}
-            <Field label="Addendum entered by">
+            <Field label="Addendum entered by" state="required">
               <input
                 value={addendumAuthor}
                 placeholder="Current staff name or initials"
                 onInput={(event) => onAddendumAuthorChange(event.currentTarget.value)}
               />
             </Field>
-            <Field label="Dated addendum">
+            <Field label="Dated addendum" state="required">
               <textarea
                 data-addendum-input
                 value={addendumText}
@@ -3466,16 +3902,18 @@ export function InjectionPanel({
                 Record the provider who approved proceeding and the decision time. This timing review
                 does not override any other medication, safety, product, or documentation stop.
               </p>
-              <OptionList<"provider-authorized" | "other">
-                name="late-dose-review"
-                value={lateDoseReviewChoice}
-                onChange={setLateDoseReviewChoice}
-                options={LATE_DOSE_REVIEW_OPTIONS}
-              />
+              <Field label="Review outcome" state="required">
+                <OptionList<"provider-authorized" | "other">
+                  name="late-dose-review"
+                  value={lateDoseReviewChoice}
+                  onChange={setLateDoseReviewChoice}
+                  options={LATE_DOSE_REVIEW_OPTIONS}
+                />
+              </Field>
               {lateDoseReviewChoice === "provider-authorized" && (
                 <>
                   <div class="wfp-row">
-                    <Field label="Approving provider" hint="Required for provider approval">
+                    <Field label="Approving provider" field="details.lateDoseReviewProvider" state="required" hint="Required for provider approval">
                       <input
                         aria-label="Approving provider"
                         value={lateDoseReviewProviderDraft}
@@ -3485,7 +3923,7 @@ export function InjectionPanel({
                         }
                       />
                     </Field>
-                    <Field label="Approval / decision time" hint="Required for provider approval">
+                    <Field label="Approval / decision time" field="details.lateDoseReviewTime" state="required" hint="Required for provider approval">
                       <input
                         aria-label="Approval / decision time"
                         type="datetime-local"
@@ -3494,7 +3932,7 @@ export function InjectionPanel({
                       />
                     </Field>
                   </div>
-                  <Field label="Approval direction / context" hint="Optional concise detail">
+                  <Field label="Approval direction / context" state="optional" hint="Optional concise detail">
                     <textarea
                       aria-label="Approval direction / context"
                       value={lateDoseReviewNoteDraft}
@@ -3505,12 +3943,13 @@ export function InjectionPanel({
                 </>
               )}
               {lateDoseReviewChoice === "other" && (
-                <textarea
-                  aria-label="Other late-dose review or plan"
-                  value={lateDoseReviewNoteDraft}
-                  placeholder="Describe the review or plan; this does not state provider approval"
-                  onInput={(event) => setLateDoseReviewNoteDraft(event.currentTarget.value)}
-                />
+                <Field label="Other review / plan" field="details.lateDoseReviewNote" state="required">
+                  <textarea
+                    value={lateDoseReviewNoteDraft}
+                    placeholder="Describe the review or plan; this does not state provider approval"
+                    onInput={(event) => setLateDoseReviewNoteDraft(event.currentTarget.value)}
+                  />
+                </Field>
               )}
             </div>
             <div class="cd2004-dialog-actions">
@@ -3529,6 +3968,96 @@ export function InjectionPanel({
                 onClick={confirmLateDoseReview}
               >
                 Record review
+              </button>
+            </div>
+          </div>
+        </ModalDialog>
+      )}
+
+      {nextDoseOverrideOpen && (
+        <ModalDialog
+          class="cd2004-dialog-layer cd2004-dialog"
+          labelledBy="next-dose-override-title"
+          onDismiss={() => setNextDoseOverrideOpen(false)}
+        >
+          <div class="cd2004-dialog-frame">
+            <div class="cd2004-dialog-titlebar">
+              <span id="next-dose-override-title">Override calculated return target</span>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setNextDoseOverrideOpen(false)}
+              >
+                X
+              </button>
+            </div>
+            <div class="cd2004-dialog-body">
+              <p>
+                Calculated target: <strong>{formatClinicalDate(suggestedNextDose)}</strong>. Use an
+                override only when the active order or documented provider direction establishes a
+                different return target.
+              </p>
+              <div class="wfp-row">
+              <Field label="Override date" state="required" hint="Required">
+                  <input
+                    aria-label="Override date"
+                    type="date"
+                    value={nextDoseOverrideDate}
+                    onInput={(event) => setNextDoseOverrideDate(event.currentTarget.value)}
+                  />
+                </Field>
+                <Field label="Authority" state="required" hint="Required">
+                  <OptionList<"active-order" | "provider-direction">
+                    name="next-dose-override-authority"
+                    value={nextDoseOverrideKind}
+                    onChange={setNextDoseOverrideKind}
+                    options={[
+                      { key: "active-order", label: "Active order" },
+                      { key: "provider-direction", label: "Provider direction" },
+                    ]}
+                  />
+                </Field>
+              </div>
+              {nextDoseOverrideKind === "provider-direction" && (
+                <Field label="Directing provider" state="required" hint="Required">
+                  <input
+                    aria-label="Directing provider"
+                    value={nextDoseOverrideProvider}
+                    placeholder="Name and role"
+                    onInput={(event) => setNextDoseOverrideProvider(event.currentTarget.value)}
+                  />
+                </Field>
+              )}
+              <Field label="Reason / order context" state="required" hint="Required">
+                <textarea
+                  aria-label="Reason / order context"
+                  value={nextDoseOverrideReason}
+                  placeholder="Concise reason this date replaces the calculated target"
+                  onInput={(event) => setNextDoseOverrideReason(event.currentTarget.value)}
+                />
+              </Field>
+              <p class="wfp-field-hint">
+                This changes the documented return target only. It does not override medication,
+                timing, product, or safety stops.
+              </p>
+            </div>
+            <div class="cd2004-dialog-actions">
+              <button type="button" onClick={() => setNextDoseOverrideOpen(false)}>
+                Cancel
+              </button>
+              <span />
+              <button
+                type="button"
+                class="is-primary"
+                disabled={
+                  !isValidIsoDate(nextDoseOverrideDate) ||
+                  !nextDoseOverrideReason.trim() ||
+                  (nextDoseOverrideKind === "provider-direction" &&
+                    !nextDoseOverrideProvider.trim())
+                }
+                onClick={confirmNextDoseOverride}
+              >
+                Record override
               </button>
             </div>
           </div>

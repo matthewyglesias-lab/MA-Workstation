@@ -11,6 +11,8 @@ import {
   addCalendarDays,
   calculateSustennaDay8Window,
   differenceInCalendarDays,
+  isValidExpirationMonth,
+  isValidIsoDate,
   isExpiredMonth,
   localIsoDate,
 } from "./dates";
@@ -50,7 +52,7 @@ import type {
   InjectionNextDoseProvenance,
 } from "./injection-ndc";
 
-export type InjectionReason = "scheduled" | "initiation" | "reinit" | "loading" | "prn";
+export type InjectionReason = "" | "scheduled" | "initiation" | "reinit" | "loading" | "prn";
 export type InjectionDispositionKind = "" | "administered" | "held" | "escalated" | "provider";
 
 export interface InjectionTraceability {
@@ -81,6 +83,12 @@ export interface InjectionDisposition {
   provider?: string;
   time?: string;
   outcome?: string;
+  /** Attribution for the explicit final review that converts the routine
+   * preselected safety set from EXPECTED to CONFIRMED. Optional so historical
+   * completed snapshots remain readable. */
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewFingerprint?: string;
 }
 
 export type InjectionInitiationProtocol =
@@ -282,7 +290,7 @@ export interface InjectionTimingEvaluation {
   message: string;
 }
 
-export type InjectionRequirementState = "required" | "optional" | "hidden";
+export type InjectionRequirementState = "pending" | "required" | "optional" | "hidden";
 
 export interface InjectionRequirement {
   state: InjectionRequirementState;
@@ -611,6 +619,57 @@ export const injectionReasonLabel = (key: InjectionReason): string =>
 export const injectionAttestationRequired = (
   key: keyof InjectionEncounter["attestations"],
 ): boolean => REQUIRED_ATTESTATION_KEYS.has(key);
+
+/**
+ * Stable signature of every encounter fact that participates in the final
+ * administration review. Disposition is deliberately excluded: choosing a
+ * disposition records the review; changing any clinical/documentation fact
+ * after that choice invalidates it.
+ */
+export const injectionAdministrationReviewFingerprint = (
+  encounter: InjectionEncounter,
+): string => {
+  const {
+    ndcSelection: _ndcSelection,
+    nextDose: _nextDoseProvenance,
+    clinicalReferenceVersion: _clinicalReferenceVersion,
+    ...reviewedDetails
+  } = encounter.details ?? {};
+  const { disposition: _disposition, ...encounterFacts } = encounter;
+  // These three detail fields are renderer/catalog provenance that can settle
+  // asynchronously after the visible clinical value is already present. The
+  // actual NDC, next-dose date, and every staff-entered review fact remain in
+  // the signature through their encounter fields.
+  const reviewedFacts = { ...encounterFacts, details: reviewedDetails };
+  const canonicalize = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonicalize);
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, entry]) => [key, canonicalize(entry)]),
+      );
+    }
+    return value;
+  };
+  return JSON.stringify(canonicalize(reviewedFacts));
+};
+
+/** New records carry attribution and a fingerprint. Historical administered
+ * snapshots predate that metadata, so their explicit administered disposition
+ * remains valid for read-only compatibility. */
+export const hasCurrentInjectionAdministrationReview = (
+  encounter: InjectionEncounter,
+): boolean => {
+  if (encounter.disposition.kind !== "administered") return false;
+  const recorded = encounter.disposition.reviewFingerprint?.trim();
+  if (!recorded) return true;
+  return Boolean(
+    encounter.disposition.reviewedBy?.trim() &&
+      encounter.disposition.reviewedAt?.trim() &&
+      recorded === injectionAdministrationReviewFingerprint(encounter),
+  );
+};
 
 /**
  * Faithful port of legacy-runtime.js's protocolOptions()/config() — the
@@ -1464,7 +1523,17 @@ const evaluateInitiation = (
         ),
       );
     }
-    if (
+    if (second.expiration.trim() && !isValidExpirationMonth(second.expiration)) {
+      stops.push(
+        issue(
+          "stop",
+          "initiation.second.expiration-invalid",
+          "Verify the expiration month for injection component 2.",
+          "initiation.second.expiration",
+          "initiation",
+        ),
+      );
+    } else if (
       second.expiration.trim() &&
       isExpiredMonth(second.expiration, referenceDate)
     ) {
@@ -1609,6 +1678,24 @@ const evaluateDetails = (
   stops: ClinicalIssue[],
 ): void => {
   const details = encounter.details ?? {};
+  // Administration-only trace fields are hidden for held/escalated/provider
+  // handoffs.  Never let stale values from a previous draft block that visible
+  // handoff path; only an explicitly opened administration exception remains a
+  // handoff error and is handled below.
+  if (!requireAdministrationDetails) {
+    if (details.administrationException) {
+      stops.push(
+        issue(
+          "stop",
+          "administration.exception-on-handoff",
+          "Administration exception details apply only to an administered encounter. Clear them before documenting a non-administration handoff.",
+          "details.administrationException",
+          "administration",
+        ),
+      );
+    }
+    return;
+  }
   if (requireAdministrationDetails && !encounter.administrationTime.trim()) {
     stops.push(
       issue(
@@ -1648,6 +1735,34 @@ const evaluateDetails = (
       stops.push(issue("stop", code, message, "details.volume", "administration"));
     }
   });
+  if (details.volume?.trim() && details.volumeUnit?.trim()) {
+    const volume = Number(details.volume.trim());
+    if (!Number.isFinite(volume) || volume <= 0) {
+      stops.push(
+        issue(
+          "stop",
+          "administration.volume-invalid",
+          "Enter a positive numeric administration amount.",
+          "details.volume",
+          "administration",
+        ),
+      );
+    } else if (
+      encounter.medicationKey === "haldol" &&
+      details.volumeUnit.trim().toLowerCase() === "ml" &&
+      volume > 3
+    ) {
+      stops.push(
+        issue(
+          "stop",
+          "administration.volume-max",
+          "Haldol volume must be no more than 3 mL per injection site; verify the order and product concentration.",
+          "details.volume",
+          "administration",
+        ),
+      );
+    }
+  }
   if (details.device === "Other" && !details.deviceOther?.trim()) {
     stops.push(
       issue(
@@ -1766,17 +1881,7 @@ const evaluateDetails = (
       }
     });
   }
-  if (details.administrationException && !requireAdministrationDetails) {
-    stops.push(
-      issue(
-        "stop",
-        "administration.exception-on-handoff",
-        "Administration exception details apply only to an administered encounter. Clear them before documenting a non-administration handoff.",
-        "details.administrationException",
-        "administration",
-      ),
-    );
-  } else if (details.administrationException) {
+  if (details.administrationException) {
     const required: Array<[keyof InjectionAdministrationDetails, string, string]> = [
       [
         "exceptionSummary",
@@ -1812,6 +1917,7 @@ const hasStarted = (encounter: InjectionEncounter): boolean =>
     encounter.patient.name.trim() ||
       encounter.patient.dob.trim() ||
       encounter.disposition.kind ||
+      encounter.reason ||
       encounter.medicationKey ||
       encounter.dose.trim() ||
       encounter.traceability.lot.trim(),
@@ -1847,13 +1953,13 @@ const buildRequirementProjection = (
   const initiationPath =
     administrationDocumented && (phase === "initiation" || phase === "reinitiation");
 
-  set("patient.name", started ? "required" : "optional", "patient");
-  set("patient.dob", started ? "required" : "optional", "patient");
-  set("disposition.kind", started ? "required" : "optional", "disposition");
-  set("orderingProvider", orderDocumentStarted ? "required" : "optional", "order");
+  set("patient.name", started ? "required" : "pending", "patient");
+  set("patient.dob", started ? "required" : "pending", "patient");
+  set("disposition.kind", started ? "required" : "pending", "disposition");
+  set("orderingProvider", orderDocumentStarted ? "required" : "pending", "order");
   set("details.purpose", "optional", "order");
-  set("reason", "optional", "order");
-  set("medicationKey", started ? "required" : "optional", "medication");
+  set("reason", "required", "order", "Select the encounter type documented by the active order.");
+  set("medicationKey", started ? "required" : "pending", "medication");
   set(
     "customMedication",
     medication?.key === "other" && administrationDocumented ? "required" : "hidden",
@@ -1936,6 +2042,7 @@ const buildRequirementProjection = (
   ["dose", "site", "ndc", "lot", "expiration", "given", "orderVerified"].forEach((field) =>
     set(`initiation.second.${field}`, paired ? "required" : "hidden", "initiation"),
   );
+  set("initiation.second.note", paired ? "optional" : "hidden", "initiation");
   set("secondAdministrationTime", paired ? "required" : "hidden", "administration");
 
   set("details.volume", administrationDocumented ? "optional" : "hidden", "administration");
@@ -1992,6 +2099,39 @@ const buildRequirementProjection = (
       administrationDocumented && encounter.details?.administrationException ? "required" : "hidden",
       "administration",
     ),
+  );
+  set("details.departureStatus", administrationDocumented ? "optional" : "hidden", "response");
+  set(
+    "details.departureStatusNote",
+    administrationDocumented && encounter.details?.departureStatus === "custom"
+      ? "required"
+      : "hidden",
+    "response",
+  );
+  set("details.lateDoseReview", administrationDocumented ? "optional" : "hidden", "timing");
+  set(
+    "details.lateDoseReviewProvider",
+    administrationDocumented && encounter.details?.lateDoseReview === "provider-authorized"
+      ? "required"
+      : "hidden",
+    "timing",
+  );
+  set(
+    "details.lateDoseReviewTime",
+    administrationDocumented && encounter.details?.lateDoseReview === "provider-authorized"
+      ? "required"
+      : "hidden",
+    "timing",
+  );
+  set(
+    "details.lateDoseReviewNote",
+    administrationDocumented && encounter.details?.lateDoseReview === "other"
+      ? "required"
+      : "hidden",
+    "timing",
+  );
+  ["bp", "hr", "temperature", "rr", "spo2"].forEach((field) =>
+    set(`vitals.${field}`, administrationDocumented ? "optional" : "hidden", "safety"),
   );
 
   const nonAdministration = Boolean(encounter.disposition.kind && encounter.disposition.kind !== "administered");
@@ -2121,6 +2261,18 @@ export const InjectionEngine: ClinicalEngine<
     const phase = injectionClinicalPhaseForReason(encounter.reason);
     let requiredVerifications: MedicationVerificationKey[] = [];
     let expectedNextDoseDate = "";
+
+    if (started && !encounter.reason) {
+      stops.push(
+        issue(
+          "stop",
+          "reason.required",
+          "Select the injection encounter type.",
+          "reason",
+          "order",
+        ),
+      );
+    }
 
     if (!medication) {
       if (started) {
@@ -2352,6 +2504,16 @@ export const InjectionEngine: ClinicalEngine<
               "administration",
             ),
           );
+        } else if (!isValidIsoDate(encounter.administrationDate)) {
+          stops.push(
+            issue(
+              "stop",
+              "administration.date-invalid",
+              "Verify the administration date; use a real calendar date.",
+              "administrationDate",
+              "administration",
+            ),
+          );
         }
         if (
           encounter.initiation?.protocol &&
@@ -2385,6 +2547,32 @@ export const InjectionEngine: ClinicalEngine<
               "stop",
               "followup.next-dose",
               "Confirm the next-dose date or ordered follow-up plan.",
+              "nextDoseDate",
+              "follow-up",
+            ),
+          );
+        } else if (encounter.nextDoseDate && !isValidIsoDate(encounter.nextDoseDate)) {
+          stops.push(
+            issue(
+              "stop",
+              "followup.next-dose-invalid",
+              "Verify the next-dose date; use a real calendar date.",
+              "nextDoseDate",
+              "follow-up",
+            ),
+          );
+        } else if (
+          encounter.administrationDate &&
+          encounter.nextDoseDate &&
+          isValidIsoDate(encounter.administrationDate) &&
+          isValidIsoDate(encounter.nextDoseDate) &&
+          (differenceInCalendarDays(encounter.administrationDate, encounter.nextDoseDate) ?? 0) < 0
+        ) {
+          stops.push(
+            issue(
+              "stop",
+              "followup.next-dose-before-administration",
+              "The next-dose date cannot be before the administration date.",
               "nextDoseDate",
               "follow-up",
             ),
@@ -2511,6 +2699,16 @@ export const InjectionEngine: ClinicalEngine<
               "stop",
               "trace.expiration",
               "Document the medication expiration.",
+              "traceability.expiration",
+              "traceability",
+            ),
+          );
+        } else if (!isValidExpirationMonth(encounter.traceability.expiration)) {
+          stops.push(
+            issue(
+              "stop",
+              "trace.expiration-invalid",
+              "Verify the medication expiration month.",
               "traceability.expiration",
               "traceability",
             ),
@@ -2721,7 +2919,7 @@ export const emptyInjectionEncounter = (): InjectionEncounter => ({
   route: "",
   site: "",
   intervalKey: "",
-  reason: "scheduled",
+  reason: "",
   priorDoseDate: "",
   priorSite: "",
   administrationDate: "",

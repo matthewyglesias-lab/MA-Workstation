@@ -16,8 +16,8 @@ export function setLegacyFieldValue(id: string, value: string): void {
   if (!element) return;
   if (element.value === value) return;
   element.value = value;
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
+  dispatchCompatibilityProjectionEvent(element, "input");
+  dispatchCompatibilityProjectionEvent(element, "change");
 }
 
 export function setLegacyCheckboxValue(id: string, checked: boolean): void {
@@ -25,10 +25,28 @@ export function setLegacyCheckboxValue(id: string, checked: boolean): void {
   if (!element) return;
   if (element.checked === checked) return;
   element.checked = checked;
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
+  dispatchCompatibilityProjectionEvent(element, "input");
+  dispatchCompatibilityProjectionEvent(element, "change");
 }
 
 export function clickLegacyControl(id: string): void {
   document.getElementById(id)?.click();
+}
+const COMPATIBILITY_PROJECTION_EVENT = "ipmgCompatibilityProjection";
+
+type CompatibilityProjectionEvent = Event & {
+  [COMPATIBILITY_PROJECTION_EVENT]?: true;
+};
+
+function dispatchCompatibilityProjectionEvent(
+  element: HTMLElement,
+  type: "input" | "change",
+): void {
+  const event = new Event(type, { bubbles: true }) as CompatibilityProjectionEvent;
+  event[COMPATIBILITY_PROJECTION_EVENT] = true;
+  element.dispatchEvent(event);
+}
+
+export function isCompatibilityProjectionEvent(event: Event): boolean {
+  return Boolean((event as CompatibilityProjectionEvent)[COMPATIBILITY_PROJECTION_EVENT]);
 }

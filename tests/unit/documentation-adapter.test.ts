@@ -3,11 +3,26 @@ import { describe, expect, it } from "vitest";
 import {
   legacyInjectionResponseFact,
   mapLegacyInitiationProtocol,
+  readLegacyInjectionDocumentation,
   readLegacyFormsDocumentation,
   readLegacySamplesDocumentation,
 } from "../../src/legacy/documentation-adapter";
 
 describe("legacy dense-documentation adapter", () => {
+  it("keeps an unfinished injection draft neutral instead of asserting default attestations", () => {
+    const doc = {
+      getElementById: () => null,
+      querySelector: (selector: string) =>
+        selector === "#medHdrName" ? { textContent: "Invega Sustenna" } : null,
+      querySelectorAll: () => [],
+    } as unknown as Document;
+    const input = readLegacyInjectionDocumentation(doc, {} as Window);
+    expect(input?.chiefComplaint?.summary).toMatch(/documentation draft/i);
+    expect(input?.preAdministration?.allergiesReview).toBeUndefined();
+    expect(input?.preAdministration?.reviewItems).toBeUndefined();
+    expect(input?.preAdministration?.clinicianAttention).toBeUndefined();
+  });
+
   it("preserves the selected injection response without inventing negative findings", () => {
     expect(legacyInjectionResponseFact("Tolerated well")).toBe(
       "Tolerated well",

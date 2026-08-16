@@ -2,6 +2,7 @@ import {
   INJECTION_DEPARTURE_STATUS_OPTIONS,
   INJECTION_RESPONSE_OPTIONS,
   INJECTION_SAFETY_TRIGGERS,
+  hasCurrentInjectionAdministrationReview,
   hasCurrentLateDoseReview,
   injectionReasonLabel,
   type InjectionEncounter,
@@ -484,10 +485,19 @@ const followUpLine = (encounter: InjectionEncounter): string => {
   const details = encounter.details ?? {};
   const nextDose = encounter.nextDoseDate ? formatCompactDate(encounter.nextDoseDate) : "";
   const nextDueText = nextDose ? `Next dose due ${nextDose}.` : "";
-  if (!details.educationProvided) return nextDueText;
+  const override = details.nextDose;
+  const overrideText =
+    override?.source === "manual" && trimmed(override.overrideReason)
+      ? `Return target override documented per ${
+          override.overrideKind === "provider-direction"
+            ? `provider direction${trimmed(override.overrideProvider) ? ` (${trimmed(override.overrideProvider)})` : ""}`
+            : "active order"
+        }: ${endSentence(trimmed(override.overrideReason))}`
+      : "";
+  if (!details.educationProvided) return [nextDueText, overrideText].filter(Boolean).join(" ");
   const eduText =
     "Post-inj education provided re: expected effects, s/e to report, and adherence to next dose.";
-  return [eduText, nextDueText].filter(Boolean).join(" ");
+  return [eduText, nextDueText, overrideText].filter(Boolean).join(" ");
 };
 
 /** Preserves custom response text as-is rather than prefixing it with a
@@ -642,6 +652,7 @@ export function injectionEncounterToDocumentationInput(
   if (!dispositionKind) return null;
 
   const administered = dispositionKind === "administered";
+  if (administered && !hasCurrentInjectionAdministrationReview(encounter)) return null;
   if (administered && !evaluation.output.administrationDocumented) return null;
 
   const disposition = administered
