@@ -457,7 +457,10 @@ test.describe('Client/Server workstation visual snapshots', () => {
     await prepareReadyInjection(page);
     await settleForCapture(page);
 
-    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+    // Evaluate both terminal states in one run. Soft screenshot assertions
+    // still fail the test, but a ready-state mismatch no longer prevents CI
+    // from capturing and reporting the subsequent locked state as well.
+    await expect.soft(page.locator('.cd2004-shell')).toHaveScreenshot(
       'ready-to-attest-1440x900.png',
       SNAPSHOT_OPTIONS
     );
@@ -465,7 +468,7 @@ test.describe('Client/Server workstation visual snapshots', () => {
     await lockReadyInjection(page);
     await settleForCapture(page);
 
-    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
+    await expect.soft(page.locator('.cd2004-shell')).toHaveScreenshot(
       'locked-local-record-1440x900.png',
       SNAPSHOT_OPTIONS
     );

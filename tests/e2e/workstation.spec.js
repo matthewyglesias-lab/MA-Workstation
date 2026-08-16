@@ -1020,7 +1020,8 @@ test.describe('MA Workstation browser journeys', () => {
     await injectionPanel.locator('input[placeholder="Last, First"]').fill('Alpha, Patient');
     await injectionPanel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
     // A typed draft alone is not a selected chart. Filing a local draft gives
-    // the banner a truthful local record context and only then turns it green.
+    // the banner a truthful local-record context and only then uses the
+    // established green chart-context treatment.
     await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/is-no-active-chart/);
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -2363,6 +2364,9 @@ test.describe('MA Workstation browser journeys', () => {
     await bup.press('n');
     await expect(bup).toHaveText('NEG');
     await bup.press('ArrowDown');
+    await page.mouse.move(0, 0);
+    await expect(bup).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(bup).toHaveCSS('color', 'rgb(40, 85, 56)');
     const mtd = panel.locator('.wfp-grid-row', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
     await expect(mtd).toBeFocused();
     await mtd.press('p');
@@ -2671,6 +2675,7 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(nextDue.locator('output')).toHaveText('08/27/2026');
     await expect(nextDue.locator('.wfp-clinical-readout-marker')).toHaveText('CALC');
+    await expect(nextDue).toHaveClass(/is-info/);
     await expect(nextDue.locator('input[type="date"]')).toHaveCount(0);
     await expect(nextDue.getByRole('button', { name: 'Override…' })).toBeVisible();
   });

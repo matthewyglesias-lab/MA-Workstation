@@ -2450,7 +2450,7 @@ export function InjectionPanel({
                   legacyManualNextDoseNeedsReview || nextDoseOverrideComplete
                     ? "attention"
                     : suggestedNextDose
-                      ? "success"
+                      ? "info"
                       : "neutral"
                 }
                 detail={
@@ -3486,7 +3486,7 @@ export function InjectionPanel({
                 legacyManualNextDoseNeedsReview || nextDoseIsManual
                   ? "attention"
                   : suggestedNextDose
-                    ? "success"
+                    ? "info"
                     : "neutral"
               }
               compact
@@ -3696,7 +3696,7 @@ export function InjectionPanel({
                   when no medication was administered. Keep that state explicit
                   rather than presenting a competing early completion route. */}
               {evaluation?.output.recordStatus === "handoff-ready" && (
-                <p class="wfp-done-line">
+                <p class="wfp-done-line is-info">
                   <strong>Handoff documented.</strong> No medication administration was recorded, so
                   this local administration record cannot be attested and locked.
                 </p>

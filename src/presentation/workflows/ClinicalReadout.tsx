@@ -1,6 +1,6 @@
 import type { ComponentChildren } from "preact";
 
-export type ClinicalReadoutTone = "neutral" | "attention" | "success" | "danger";
+export type ClinicalReadoutTone = "neutral" | "info" | "attention" | "success" | "danger";
 
 interface ClinicalReadoutProps {
   label: string;

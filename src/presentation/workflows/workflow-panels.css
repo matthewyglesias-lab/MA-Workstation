@@ -281,6 +281,12 @@
   font-size: 11px;
 }
 
+.cd2004-shell .wfp-done-line.is-info {
+  color: #173a74;
+  background: var(--cd-info-soft);
+  border-color: var(--cd-info);
+}
+
 /* Exception block. Checkboxes that *raise* a hold must not wear the same
    clothes as checkboxes that confirm a step was done - amber edge, amber
    header, and a lead line stating the polarity outright. */
@@ -655,9 +661,10 @@
 }
 
 .cd2004-shell .wfp-review-contract.is-confirmed {
-  border-color: var(--cd-green);
-  background: var(--cd-green-soft);
-  color: #06421f;
+  border-color: var(--cd-border-mid);
+  border-left-color: var(--cd-green);
+  background: var(--cd-chrome-light);
+  color: var(--cd-ink);
 }
 
 .cd2004-shell .wfp-review-contract-head {
@@ -770,7 +777,7 @@
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
-  background: var(--cd-green-soft);
+  background: var(--cd-chrome-light);
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
@@ -1022,8 +1029,15 @@
 }
 
 .cd2004-shell .wfp-result-cycle.is-neg {
-  border-color: var(--cd-green);
-  background: var(--cd-green-soft);
+  color: #285538;
+  background: var(--cd-white);
+  border-color: #66806a;
+  box-shadow: inset 3px 0 var(--cd-green);
+}
+
+.cd2004-shell .wfp-result-cycle.is-neg:hover,
+.cd2004-shell .wfp-result-cycle.is-neg:focus-visible {
+  background: var(--cd-selection);
 }
 
 .cd2004-shell .wfp-result-cycle.is-pos {
@@ -1517,6 +1531,11 @@
   background: var(--cd-green-soft);
 }
 
+.cd2004-shell .wfp-clinical-readout.is-info {
+  border-color: var(--cd-info);
+  background: var(--cd-info-soft);
+}
+
 .cd2004-shell .wfp-clinical-readout.is-danger {
   border-color: var(--cd-red);
   background: var(--cd-red-soft);
@@ -1785,9 +1804,9 @@
 }
 
 .cd2004-shell .wfp-site-tile-badge {
-  color: #145b31;
-  background: var(--cd-green-soft);
-  border: 1px solid var(--cd-green);
+  color: #173a74;
+  background: var(--cd-info-soft);
+  border: 1px solid var(--cd-info);
   padding: 0 3px;
   font-size: 8px;
   font-weight: 700;
@@ -1801,15 +1820,15 @@
   gap: 6px 10px;
   align-items: center;
   padding: 4px 7px;
-  color: #145b31;
-  background: var(--cd-green-soft);
-  border: 1px solid var(--cd-green);
+  color: #173a74;
+  background: var(--cd-info-soft);
+  border: 1px solid var(--cd-info);
   font-size: 10px;
 }
 
 .cd2004-shell .wfp-site-suggestion .cd2004-link-button {
   margin-left: auto;
-  color: #145b31;
+  color: #173a74;
 }
 
 .cd2004-shell .wfp-checkbox-row.is-required {
