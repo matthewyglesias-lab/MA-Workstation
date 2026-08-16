@@ -3163,8 +3163,13 @@
     margin-top: 4px;
   }
 
+  /* Closeout is the last group, not a bottom-anchored one. Pinning it with
+     `margin-top: auto` pushed it against the rail's lower edge, so whenever the
+     function list overflowed its track the clip landed mid-row and sheared
+     "Daily Closeout" in half. A classic workstation rail is contiguous anyway:
+     the groups run top-down and the list scrolls as a whole. */
   .meditech-rail-group.is-pinned {
-    margin-top: auto;
+    margin-top: 4px;
   }
 
   .meditech-function-heading {
@@ -3590,9 +3595,15 @@
 
   /* Non-Injection modules share the right rail with Clinical Documentation.
      Reserve enough height to keep every clinical module reachable, then let
-     the inspector consume and scroll within the remaining space. */
+     the inspector consume and scroll within the remaining space.
+
+     The ceiling is the rail's own content height: title 24 + chart context 19 +
+     eight modules and three group headings 226, plus 4 of row gap and 2 of
+     border = 275. The previous 240px ceiling was 35px short, so the last group
+     was always clipped on every module that shares this rail. Below ~598px of
+     rail column the track falls back to a percentage and the list scrolls. */
   .cd2004-workspace:not(.has-central-preview):not([data-workflow="home"]) > .meditech-context-rail {
-    grid-template-rows: clamp(174px, 42%, 240px) minmax(0, 1fr);
+    grid-template-rows: clamp(174px, 46%, 275px) minmax(0, 1fr);
   }
 
   .cd2004-workspace.has-central-preview .cd2004-readiness-list {
