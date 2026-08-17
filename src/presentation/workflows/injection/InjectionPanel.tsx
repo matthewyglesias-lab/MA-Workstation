@@ -1103,6 +1103,15 @@ function NdcPicker({
   );
 }
 
+// OptionList renders `description` as the gloss under the control; the catalog
+// calls that same short clause `fragment` because the note pipelines consume it
+// too. Derived once - the kind list is a constant.
+const RESPONSE_OPTIONS = INJECTION_RESPONSE_OPTIONS.map((option) => ({
+  key: option.key,
+  label: option.label,
+  description: option.fragment,
+}));
+
 function Field({
   label,
   hint,
@@ -1727,18 +1736,6 @@ export function InjectionPanel({
     ? "Select the ordering provider named on the active order — F9 lists the register"
     : "Enter the ordering provider from the active order";
 
-  // OptionList renders `description` as the gloss under the control; the
-  // catalog calls that same short clause `fragment` because the note pipelines
-  // consume it too.
-  const responseOptions = useMemo(
-    () =>
-      INJECTION_RESPONSE_OPTIONS.map((option) => ({
-        key: option.key,
-        label: option.label,
-        description: option.fragment,
-      })),
-    [],
-  );
   const responseDetailOptions = useMemo(() => {
     const details = findInjectionResponseOption(encounter.response.kind)?.details ?? [];
     return details.map((detail) => ({
@@ -3538,7 +3535,7 @@ export function InjectionPanel({
                       response: { ...encounter.response, kind: value, detail: "" },
                     })
                   }
-                  options={responseOptions}
+                  options={RESPONSE_OPTIONS}
                   inline
                 />
               </Field>

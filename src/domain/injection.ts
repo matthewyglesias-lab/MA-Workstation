@@ -739,16 +739,45 @@ export function findInjectionResponseDetail(
   );
 }
 
+const lowerFirst = (value: string): string =>
+  value ? value.charAt(0).toLocaleLowerCase() + value.slice(1) : "";
+
+/**
+ * Resolves one of a response's three voices. Sub-choice wins over its parent,
+ * and an unresolvable kind yields "" so callers keep deciding whether to emit a
+ * line at all.
+ */
+function resolveResponseVoice(
+  response: InjectionResponse,
+  pick: (entry: InjectionResponseOption | InjectionResponseDetailOption) => string,
+): string {
+  const detail = findInjectionResponseDetail(response);
+  if (detail) return pick(detail);
+  const option = findInjectionResponseOption(response.kind);
+  return option ? pick(option) : "";
+}
+
+/** Custom text, punctuated to taste. `undefined` when the kind is not custom. */
+function customResponseText(
+  response: InjectionResponse,
+  { sentence }: { sentence: boolean },
+): string | undefined {
+  if (response.kind !== "custom") return undefined;
+  const custom = response.custom?.trim();
+  if (!custom) return "";
+  const bare = custom.replace(/\.$/, "");
+  return sentence ? `${bare}.` : bare;
+}
+
 /**
  * The full note sentence for a response, sub-choice included. Empty when no
  * response is documented, so callers keep deciding whether to emit a line.
  */
 export function injectionResponseNote(response: InjectionResponse): string {
-  const custom = response.custom?.trim();
-  if (response.kind === "custom") return custom ? `${custom.replace(/\.$/, "")}.` : "";
-  const detail = findInjectionResponseDetail(response);
-  if (detail) return detail.note;
-  return findInjectionResponseOption(response.kind)?.note ?? "";
+  return (
+    customResponseText(response, { sentence: true }) ??
+    resolveResponseVoice(response, (entry) => entry.note)
+  );
 }
 
 /**
@@ -756,15 +785,11 @@ export function injectionResponseNote(response: InjectionResponse): string {
  * compatibility runtime's response slot.
  */
 export function injectionResponseFragment(response: InjectionResponse): string {
-  const custom = response.custom?.trim();
-  if (response.kind === "custom") return custom ? custom.replace(/\.$/, "") : "";
-  const detail = findInjectionResponseDetail(response);
-  if (detail) return detail.fragment;
-  return findInjectionResponseOption(response.kind)?.fragment ?? "";
+  return (
+    customResponseText(response, { sentence: false }) ??
+    resolveResponseVoice(response, (entry) => entry.fragment)
+  );
 }
-
-const lowerFirst = (value: string): string =>
-  value ? value.charAt(0).toLocaleLowerCase() + value.slice(1) : "";
 
 /**
  * The terse clause the CC one-liner takes - a different register from
@@ -773,13 +798,10 @@ const lowerFirst = (value: string): string =>
  * having to supply one.
  */
 export function injectionResponseHeadline(response: InjectionResponse): string {
-  const custom = response.custom?.trim();
-  if (response.kind === "custom") return custom ? custom.replace(/\.$/, "") : "";
-  const detail = findInjectionResponseDetail(response);
-  if (detail) return detail.headline ?? lowerFirst(detail.label);
-  const option = findInjectionResponseOption(response.kind);
-  if (!option) return "";
-  return option.headline ?? lowerFirst(option.label);
+  return (
+    customResponseText(response, { sentence: false }) ??
+    resolveResponseVoice(response, (entry) => entry.headline ?? lowerFirst(entry.label))
+  );
 }
 
 /**

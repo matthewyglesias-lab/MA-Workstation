@@ -82,6 +82,15 @@ export function formatProviderName(provider: RegisteredProvider): string {
 }
 
 /**
+ * One definition of "offerable", shared by the option list and the boolean
+ * check below so the two can never disagree about what is selectable.
+ */
+const isSelectable = (
+  provider: RegisteredProvider,
+  { prescribersOnly }: { prescribersOnly?: boolean },
+): boolean => !provider.inactive && (!prescribersOnly || provider.prescriber);
+
+/**
  * Options for the entry control. Inactive providers are withheld from new
  * entry but still resolve by id, so a stored record keeps rendering its
  * original provider rather than silently falling back to raw text.
@@ -91,8 +100,7 @@ export function providerRegisterOptions(
   options: { prescribersOnly?: boolean } = {},
 ): ReadonlyArray<{ key: string; label: string; description?: string }> {
   return register
-    .filter((provider) => !provider.inactive)
-    .filter((provider) => !options.prescribersOnly || provider.prescriber)
+    .filter((provider) => isSelectable(provider, options))
     .map((provider) => ({
       key: provider.id,
       label: formatProviderName(provider),
@@ -129,5 +137,5 @@ export function hasProviderRegister(
   register: ReadonlyArray<RegisteredProvider> = SAN_BERNARDINO_PROVIDERS,
   options: { prescribersOnly?: boolean } = {},
 ): boolean {
-  return providerRegisterOptions(register, options).length > 0;
+  return register.some((provider) => isSelectable(provider, options));
 }

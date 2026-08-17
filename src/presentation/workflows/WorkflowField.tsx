@@ -87,37 +87,57 @@ function labelControls(
   });
 }
 
-function containsSelectControl(children: ComponentChildren): boolean {
-  return toChildArray(children).some((child) => {
-    if (!isValidElement(child)) return false;
+/**
+ * Walks the control subtree, returning the first non-undefined result.
+ *
+ * Both questions the field asks about its children - "is this a lookup?" and
+ * "is this a date field?" - are the same depth-first walk over the same
+ * intrinsic-element nesting. One traversal keeps them from drifting as more
+ * first-party controls are added.
+ */
+function findInControls<T>(
+  children: ComponentChildren,
+  visit: (vnode: VNode<Record<string, unknown>>) => T | undefined,
+): T | undefined {
+  for (const child of toChildArray(children)) {
+    if (!isValidElement(child)) continue;
     const vnode = child as VNode<Record<string, unknown>>;
-    if ((vnode.type as unknown) === OptionList || vnode.type === "select") return true;
-    if ((vnode.type as unknown) === ProviderField) {
-      return hasProviderRegister(
-        vnode.props?.register as Parameters<typeof hasProviderRegister>[0],
-        { prescribersOnly: Boolean(vnode.props?.prescribersOnly) },
-      );
+    const hit = visit(vnode);
+    if (hit !== undefined) return hit;
+    if (typeof vnode.type === "string" && vnode.props?.children) {
+      const nested = findInControls(vnode.props.children as ComponentChildren, visit);
+      if (nested !== undefined) return nested;
     }
-    return typeof vnode.type === "string" && vnode.props?.children
-      ? containsSelectControl(vnode.props.children as ComponentChildren)
-      : false;
-  });
+  }
+  return undefined;
+}
+
+/**
+ * True when the field's control offers a fixed value set, which is what earns
+ * it the F9 lookup. ProviderField only qualifies when its register can actually
+ * drive a list; with an empty roster it renders free text.
+ */
+function containsSelectControl(children: ComponentChildren): boolean {
+  return (
+    findInControls(children, (vnode) => {
+      if ((vnode.type as unknown) === OptionList || vnode.type === "select") return true;
+      if ((vnode.type as unknown) === ProviderField) {
+        return hasProviderRegister(
+          vnode.props?.register as Parameters<typeof hasProviderRegister>[0],
+          { prescribersOnly: Boolean(vnode.props?.prescribersOnly) },
+        ) || undefined;
+      }
+      return undefined;
+    }) ?? false
+  );
 }
 
 function findDateControl(children: ComponentChildren): WorkstationDateMode | undefined {
-  let found: WorkstationDateMode | undefined;
-  toChildArray(children).forEach((child) => {
-    if (found || !isValidElement(child)) return;
-    const vnode = child as VNode<Record<string, unknown>>;
-    if ((vnode.type as unknown) === WorkstationDateField) {
-      found = (vnode.props?.mode as WorkstationDateMode) ?? "date";
-      return;
-    }
-    if (typeof vnode.type === "string" && vnode.props?.children) {
-      found = findDateControl(vnode.props.children as ComponentChildren);
-    }
-  });
-  return found;
+  return findInControls(children, (vnode) =>
+    (vnode.type as unknown) === WorkstationDateField
+      ? ((vnode.props?.mode as WorkstationDateMode) ?? "date")
+      : undefined,
+  );
 }
 
 export function WorkflowField({

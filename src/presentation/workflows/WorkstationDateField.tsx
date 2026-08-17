@@ -1,5 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 
+import { isValidIsoDate, localIsoDate } from "../../domain/dates";
+
 /**
  * Typed date entry, in place of `<input type="date">`.
  *
@@ -38,19 +40,19 @@ function expandYear(raw: string): number {
   return value <= 49 ? 2000 + value : 1900 + value;
 }
 
+/**
+ * Strict calendar validation, delegated to the domain so 2026-02-30 is rejected
+ * here by exactly the rule the records use.
+ */
 function isRealDate(year: number, month: number, day: number): boolean {
-  if (month < 1 || month > 12 || day < 1) return false;
-  const probe = new Date(year, month - 1, day);
-  return (
-    probe.getFullYear() === year &&
-    probe.getMonth() === month - 1 &&
-    probe.getDate() === day
-  );
+  return isValidIsoDate(`${pad(year, 4)}-${pad(month)}-${pad(day)}`);
 }
 
-function isoDate(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
+/**
+ * Local, not UTC. A date typed at the desk is the desk's calendar date, so this
+ * uses the domain's local formatter rather than its UTC `toIsoDate`.
+ */
+const isoDate = localIsoDate;
 
 /** ISO → the workstation's MM/DD/YY display form. Empty for anything unparseable. */
 export function formatWorkstationDate(value: string, mode: WorkstationDateMode): string {
