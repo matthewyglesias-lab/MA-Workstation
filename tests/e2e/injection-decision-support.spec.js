@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
 
 async function openInjection(page) {
@@ -24,7 +25,7 @@ async function enterRoutineOrder(panel, patient) {
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
   await panel.locator('select[name="inj-reason"]').selectOption('scheduled');
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
-  await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
+  await setProvider(panel, 'QA Ordering Provider');
   await panel.locator('select[name="inj-dose"]').selectOption('156 mg');
   await panel.locator('input[name="inj-route"]').fill('IM');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');

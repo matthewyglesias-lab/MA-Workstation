@@ -95,6 +95,7 @@ function containsSelectControl(children: ComponentChildren): boolean {
     if ((vnode.type as unknown) === ProviderField) {
       return hasProviderRegister(
         vnode.props?.register as Parameters<typeof hasProviderRegister>[0],
+        { prescribersOnly: Boolean(vnode.props?.prescribersOnly) },
       );
     }
     return typeof vnode.type === "string" && vnode.props?.children

@@ -72,6 +72,7 @@ import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirem
 import { StatusFlag } from "../StatusFlag";
 import { ClinicalReadout } from "../ClinicalReadout";
 import { RegisterMarkers, WorkflowSummaryFact, TransactionLine, type ClinicalFieldSource } from "../ClinicalRegister";
+import { hasProviderRegister } from "../../../domain/provider-register";
 import { ProviderField } from "../ProviderField";
 import { OptionList, WorkflowField } from "../WorkflowField";
 import { WorkstationDateField } from "../WorkstationDateField";
@@ -1719,6 +1720,13 @@ export function InjectionPanel({
     [encounter, nonAdministration, presentationOutput?.requirements],
   );
 
+  // The ordering provider is a register when the site has a roster and free
+  // text when it does not, so the prompt has to describe whichever is on screen
+  // while still saying where the name comes from.
+  const orderingProviderPrompt = hasProviderRegister(undefined, { prescribersOnly: true })
+    ? "Select the ordering provider named on the active order — F9 lists the register"
+    : "Enter the ordering provider from the active order";
+
   // OptionList renders `description` as the gloss under the control; the
   // catalog calls that same short clause `fragment` because the note pipelines
   // consume it too.
@@ -2273,9 +2281,10 @@ export function InjectionPanel({
                 <Field
                   label="Ordering provider"
                   field="orderingProvider"
-                  prompt="Enter the ordering provider from the active order"
+                  prompt={orderingProviderPrompt}
                 >
                   <ProviderField
+                    prescribersOnly
                     value={encounter.orderingProvider}
                     onChange={(next) => patch({ orderingProvider: next })}
                   />

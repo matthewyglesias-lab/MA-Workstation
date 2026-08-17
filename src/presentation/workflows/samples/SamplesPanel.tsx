@@ -541,6 +541,7 @@ export function SamplesPanel({
                 </Field>
                 <Field label="Prescriber">
                   <ProviderField
+                    prescribersOnly
                     fallbackLabel="Prescriber"
                     value={encounter.prescriber}
                     onChange={(next) => patch({ prescriber: next })}

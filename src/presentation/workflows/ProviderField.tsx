@@ -28,6 +28,8 @@ export interface ProviderFieldProps {
   fallbackLabel?: string;
   disabled?: boolean;
   register?: ReadonlyArray<RegisteredProvider>;
+  /** Withholds non-prescribing clinicians - an LMFT cannot order a medication. */
+  prescribersOnly?: boolean;
   labelledBy?: string;
   describedBy?: string;
   required?: boolean;
@@ -41,12 +43,13 @@ export function ProviderField({
   fallbackLabel = "Provider",
   disabled,
   register,
+  prescribersOnly,
   labelledBy,
   describedBy,
   required,
   invalid,
 }: ProviderFieldProps) {
-  const options = providerRegisterOptions(register);
+  const options = providerRegisterOptions(register, { prescribersOnly });
   const registered = options.some((option) => option.key === value);
   // Anything not matching a register id is free text: an "Other" entry, or a
   // record written before the register existed.
@@ -72,7 +75,7 @@ export function ProviderField({
     ? { "aria-labelledby": labelledBy }
     : { "aria-label": fallbackLabel };
 
-  if (!hasProviderRegister(register)) {
+  if (!hasProviderRegister(register, { prescribersOnly })) {
     return (
       <input
         value={value}

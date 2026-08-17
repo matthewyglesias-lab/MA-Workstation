@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
 const { createHash } = require('node:crypto');
 const printBaseline = require('../fixtures/print-baseline-v1.json');
@@ -60,7 +61,7 @@ async function preparePrintableInjection(page) {
   // the exact same byte-pinned print output) as the pre-migration fixture.
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Injection');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
-  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
@@ -109,7 +110,7 @@ async function prepareInitiationInjection(page) {
   const panel = page.locator('.wfp-panel');
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Initiation');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('09/22/1991');
-  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
   await panel.locator('select[name="inj-dose"]').selectOption('234 mg');
@@ -135,7 +136,7 @@ async function prepareVivitrolInjection(page) {
   const panel = page.locator('.wfp-panel');
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Vivitrol');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/12/1977');
-  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Vivitrol' });
   await panel.locator('select[name="inj-dose"]').selectOption({ label: '380 mg' });

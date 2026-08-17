@@ -12,18 +12,42 @@ import {
 } from "../../src/domain/provider-register";
 
 const SAMPLE: ReadonlyArray<RegisteredProvider> = [
-  { id: "rivera-a", family: "Rivera", given: "A.", credential: "PMHNP" },
-  { id: "chen-m", family: "Chen", given: "M.", credential: "MD" },
-  { id: "past-p", family: "Past", given: "P.", credential: "DO", inactive: true },
+  { id: "rivera-a", family: "Rivera", given: "A.", credential: "PMHNP", prescriber: true },
+  { id: "chen-m", family: "Chen", given: "M.", credential: "MD", prescriber: true },
+  { id: "talk-t", family: "Talk", given: "T.", credential: "LMFT", prescriber: false },
+  { id: "past-p", family: "Past", given: "P.", credential: "DO", prescriber: true, inactive: true },
 ];
 
 describe("San Bernardino register", () => {
-  // Deliberately empty until the clinic supplies its own roster. Populating it
-  // from a directory aggregator would put departed or wrong-site providers in
-  // the ordering-provider field, which is a documentation error.
-  it("ships empty rather than guessing at a roster", () => {
-    expect(SAN_BERNARDINO_PROVIDERS).toEqual([]);
-    expect(hasProviderRegister()).toBe(false);
+  it("is populated from the clinic's own schedule", () => {
+    expect(SAN_BERNARDINO_PROVIDERS.length).toBe(10);
+    expect(hasProviderRegister()).toBe(true);
+  });
+
+  // An LMFT cannot write a medication order. Nine of the ten San Bernardino
+  // clinicians appear on the licensure tab; Randall Stier correctly does not.
+  it("marks exactly the non-prescribing clinician as such", () => {
+    const nonPrescribers = SAN_BERNARDINO_PROVIDERS.filter((p) => !p.prescriber);
+    expect(nonPrescribers.map((p) => p.id)).toEqual(["stier-randall"]);
+    expect(nonPrescribers[0]!.credential).toBe("LMFT");
+  });
+
+  it("withholds the non-prescriber from ordering fields but keeps them registered", () => {
+    const ordering = providerRegisterOptions(undefined, { prescribersOnly: true });
+    const all = providerRegisterOptions();
+    expect(ordering.length).toBe(9);
+    expect(all.length).toBe(10);
+    expect(ordering.some((o) => o.key === "stier-randall")).toBe(false);
+    expect(resolveProviderDisplay("stier-randall")).toBe("Stier, Randall, LMFT");
+  });
+
+  it("gives every provider a credential and a non-empty name", () => {
+    for (const provider of SAN_BERNARDINO_PROVIDERS) {
+      expect(provider.credential).not.toBe("");
+      expect(provider.family).not.toBe("");
+      expect(provider.given).not.toBe("");
+      expect(provider.id).toMatch(/^[a-z-]+$/);
+    }
   });
 
   it("keeps every id unique so a stored record resolves to one provider", () => {
@@ -38,14 +62,21 @@ describe("formatProviderName", () => {
   });
 
   it("omits a missing credential without leaving a dangling comma", () => {
-    expect(formatProviderName({ id: "x", family: "Solo", given: "S.", credential: "" }))
-      .toBe("Solo, S.");
+    expect(
+      formatProviderName({ id: "x", family: "Solo", given: "S.", credential: "", prescriber: true }),
+    ).toBe("Solo, S.");
   });
 });
 
 describe("providerRegisterOptions", () => {
   it("offers active providers and withholds inactive ones from new entry", () => {
     const keys = providerRegisterOptions(SAMPLE).map((option) => option.key);
+    expect(keys).toEqual(["rivera-a", "chen-m", "talk-t"]);
+  });
+
+  it("withholds non-prescribers when the field orders medication", () => {
+    const keys = providerRegisterOptions(SAMPLE, { prescribersOnly: true })
+      .map((option) => option.key);
     expect(keys).toEqual(["rivera-a", "chen-m"]);
   });
 
@@ -92,8 +123,15 @@ describe("findRegisteredProvider", () => {
 
 describe("hasProviderRegister", () => {
   it("is false when the register holds only inactive providers", () => {
-    expect(hasProviderRegister([SAMPLE[2]!])).toBe(false);
+    expect(hasProviderRegister([SAMPLE[3]!])).toBe(false);
     expect(hasProviderRegister(SAMPLE)).toBe(true);
     expect(hasProviderRegister([])).toBe(false);
+  });
+
+  // A roster of therapists only must still fall back to free text on an
+  // ordering field rather than render an empty dropdown.
+  it("is false for an ordering field when no one can prescribe", () => {
+    expect(hasProviderRegister([SAMPLE[2]!], { prescribersOnly: true })).toBe(false);
+    expect(hasProviderRegister([SAMPLE[2]!])).toBe(true);
   });
 });

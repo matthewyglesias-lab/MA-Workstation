@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
 
 const FIXED_NOW = new Date('2026-07-30T10:30:00-07:00');
@@ -273,7 +274,7 @@ async function prepareReadyInjection(page) {
   await selectInjectionTab(page, 'Order');
   await panel.locator('input[placeholder="Last, First"]').fill('Snapshot, Ready');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
-  await panel.locator('input[placeholder="Provider name"]').fill('Snapshot Provider');
+  await setProvider(panel, 'Snapshot Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
   await panel.locator('.wfp-field:has-text("Medication name") input').fill('Custom Medication');
