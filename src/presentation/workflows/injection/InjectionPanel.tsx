@@ -2929,7 +2929,10 @@ export function InjectionPanel({
                   data-field-prompt="Select the actual site documented for this administration"
                 >
                   <span class="wfp-choice-caption">
-                    Actual administration site
+                    {/* The caption text carries the colon, the way WorkflowField
+                        does it. Hanging it off the row instead put the colon
+                        after the ENTRY/STOP badges at the far right edge. */}
+                    <span class="wfp-field-caption">Actual administration site</span>
                     {requirements.site?.state === "required" && <abbr class="wfp-req" title="Required">*</abbr>}
                     {requirements.site?.state === "optional" && <span class="wfp-opt">optional</span>}
                     <RegisterMarkers

@@ -29,6 +29,16 @@
   border-radius: 0 !important;
 }
 
+/* ...but a radio has to stay round. That circle is the only thing separating
+   "pick one" from "pick any", and the blanket above - aimed at text inputs and
+   selects - was squaring every radio in every workflow panel, so single-select
+   fields like the injection site read as a checkbox list. Restated with the
+   same `!important` weight rather than carved out of the selector above, so
+   legacy.css cannot win the radius back either way. */
+.cd2004-shell .wfp-panel input[type="radio"] {
+  border-radius: 50% !important;
+}
+
 .cd2004-shell .wfp-summary-bar {
   display: flex;
   flex-wrap: wrap;
@@ -1828,9 +1838,11 @@
   font-size: 11px;
 }
 
-.cd2004-shell .wfp-choice-caption::after {
-  content: ":";
-}
+/* No `::after` colon here. This element is the whole caption row - text, the
+   required asterisk, and the register badges, which `margin-left: auto` pushes
+   to the right edge - so a pseudo-element on it is the row's last flex item and
+   the colon landed after STOP. The inner .wfp-field-caption carries it instead,
+   the same way WorkflowField does. */
 
 /* Site tiles: an icon+label card grid, echoing the Start Center launcher
    tiles rather than the plain bordered option-row list used for other

@@ -159,9 +159,15 @@
   }
 
   /* Injection site selection becomes a compact MAR-style register.  The
-     illustration remains a quick anatomical cue, not a dashboard tile. */
+     illustration remains a quick anatomical cue, not a dashboard tile.
+
+     Sites are anatomically paired and rendered in R, L order. An `auto-fill`
+     track count resolved to 5 in this column, which is the one arrangement that
+     splits a pair: R dorsogluteal ended the first row and L dorsogluteal was
+     orphaned alone on the second. Pin an even count so left and right always
+     sit side by side, whatever number of sites the product allows. */
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile-grid {
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 3px;
   }
 
@@ -299,5 +305,15 @@
 
   .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-invalid {
     background: var(--mt-screen-review);
+  }
+}
+
+/* Below the full desktop width four site tracks squeeze the longest site names
+   ("R ventrogluteal") past the point they stay on one line. Drop to two tracks
+   rather than three: an odd count would split the laterality pairs again, which
+   is the whole reason the count is pinned. */
+@media screen and (max-width: 1180px) {
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
