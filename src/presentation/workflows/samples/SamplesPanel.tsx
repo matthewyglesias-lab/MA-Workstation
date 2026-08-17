@@ -23,6 +23,7 @@ import { samplesEncounterToDocumentationInput } from "../../../documentation/ada
 import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
+import { ProviderField } from "../ProviderField";
 import { StatusFlag } from "../StatusFlag";
 import { WorkstationDateField } from "../WorkstationDateField";
 import { mirrorSamplesEncounterToLegacyDom } from "./samples-legacy-mirror";
@@ -539,10 +540,10 @@ export function SamplesPanel({
                   />
                 </Field>
                 <Field label="Prescriber">
-                  <input
+                  <ProviderField
+                    fallbackLabel="Prescriber"
                     value={encounter.prescriber}
-                    placeholder="Provider name"
-                    onInput={(event) => patch({ prescriber: event.currentTarget.value })}
+                    onChange={(next) => patch({ prescriber: next })}
                   />
                 </Field>
               </div>

@@ -72,6 +72,7 @@ import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirem
 import { StatusFlag } from "../StatusFlag";
 import { ClinicalReadout } from "../ClinicalReadout";
 import { RegisterMarkers, WorkflowSummaryFact, TransactionLine, type ClinicalFieldSource } from "../ClinicalRegister";
+import { ProviderField } from "../ProviderField";
 import { OptionList, WorkflowField } from "../WorkflowField";
 import { WorkstationDateField } from "../WorkstationDateField";
 import {
@@ -2274,10 +2275,9 @@ export function InjectionPanel({
                   field="orderingProvider"
                   prompt="Enter the ordering provider from the active order"
                 >
-                  <input
+                  <ProviderField
                     value={encounter.orderingProvider}
-                    placeholder="Provider name"
-                    onInput={(event) => patch({ orderingProvider: event.currentTarget.value })}
+                    onChange={(next) => patch({ orderingProvider: next })}
                   />
                 </Field>
               </div>

@@ -18,6 +18,7 @@ import { formatProviderLetterDraft } from "../../../documentation/forms";
 import { formsEncounterToDocumentationInput } from "../../../documentation/adapters/forms-from-encounter";
 import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
+import { ProviderField } from "../ProviderField";
 import { StatusFlag } from "../StatusFlag";
 import { WorkstationDateField } from "../WorkstationDateField";
 import { mirrorFormsEncounterToLegacyDom } from "./forms-legacy-mirror";
@@ -304,9 +305,10 @@ export function FormsPanel({
               />
               <div class="wfp-row">
                 <Field label="Assigned provider">
-                  <input
+                  <ProviderField
+                    fallbackLabel="Assigned provider"
                     value={encounter.provider}
-                    onInput={(event) => patch({ provider: event.currentTarget.value })}
+                    onChange={(next) => patch({ provider: next })}
                   />
                 </Field>
                 <Field label="Assigned staff">
