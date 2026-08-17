@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const { setProvider, expectProviderValue, providerControl } = require('./provider-entry');
+const { fillDate } = require('./date-entry');
 
 test.describe('MA Workstation browser journeys', () => {
   const workflowLabels = {
@@ -122,7 +124,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill(patient);
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill(dob);
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
+    await setProvider(panel, 'QA Ordering Provider');
     await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
     await panel.locator('select[name="inj-medication"]').selectOption({ label: medication });
@@ -136,10 +138,10 @@ test.describe('MA Workstation browser journeys', () => {
     }
     await panel.locator('input[name="inj-route"]').fill('IM');
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
-    await panel
-      .locator('.wfp-field', { hasText: 'Administration date' })
-      .locator('input[type="date"]')
-      .fill('2026-07-30');
+    await fillDate(
+      panel
+        .locator('.wfp-field', { hasText: 'Administration date' })
+        .locator('input[data-workstation-date="date"]'), '2026-07-30');
 
     await openInjectionTab(page, 'Administration');
     if (medication === 'Haldol Dec.' || medication === 'Prolixin Dec.') {
@@ -195,14 +197,14 @@ test.describe('MA Workstation browser journeys', () => {
     });
     await openInjectionTab(page, 'Order');
     await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
-    await panel
-      .locator('.wfp-field', { hasText: 'Prior dose' })
-      .locator('input[type="date"]')
-      .fill(priorDoseDate);
-    await panel
-      .locator('.wfp-field', { hasText: 'Administration date' })
-      .locator('input[type="date"]')
-      .fill(administrationDate);
+    await fillDate(
+      panel
+        .locator('.wfp-field', { hasText: 'Prior dose' })
+        .locator('input[data-workstation-date="date"]'), priorDoseDate);
+    await fillDate(
+      panel
+        .locator('.wfp-field', { hasText: 'Administration date' })
+        .locator('input[data-workstation-date="date"]'), administrationDate);
 
     await openInjectionTab(page, 'Verification');
     for (const label of [
@@ -349,8 +351,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(reviewDialog).toBeVisible();
     await reviewDialog.getByRole('textbox', { name: 'Approving provider' })
       .fill('A. Provider, PMHNP');
-    await reviewDialog.locator('input[aria-label="Approval / decision time"]')
-      .fill('2026-08-22T09:05');
+    await fillDate(
+      reviewDialog.getByLabel('Approval / decision time'), '2026-08-22T09:05');
     await reviewDialog.getByRole('textbox', { name: 'Approval direction / context' })
       .fill('Proceed today per active order.');
     await reviewDialog.getByRole('button', { name: 'Record review', exact: true }).click();
@@ -532,11 +534,12 @@ test.describe('MA Workstation browser journeys', () => {
       '.wfp-field[data-field-path="orderingProvider"]'
     );
     await expect(orderingProvider.locator('.wfp-register-source')).toHaveText('ENTRY');
-    await orderingProvider.locator('input').focus();
+    // The ordering provider is a register, so its prompt names the register and
+    // F9 genuinely applies. It must still say where the name comes from.
+    await providerControl(orderingProvider).locator('select').focus();
     await expect(page.locator('.cd2004-status-message')).toContainText(
-      'Enter the ordering provider from the active order'
+      'named on the active order'
     );
-    await expect(page.locator('.cd2004-status-message')).not.toContainText('F9');
     await expect(page.locator('[data-injection-record-actions]')).not.toContainText(
       'Enter the signed-in documenting staff'
     );
@@ -830,7 +833,7 @@ test.describe('MA Workstation browser journeys', () => {
     const patientName = injectionPanel.locator('input[placeholder="Last, First"]');
     await patientName.fill('QA, Shortcut');
     await injectionPanel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
-    await injectionPanel.locator('input[placeholder="Provider name"]').fill('QA Provider');
+    await setProvider(injectionPanel, 'QA Provider');
 
     // F6 / Shift+F6 move through the current worksheet's sections, rather
     // than opening records as the retired key map did.
@@ -1424,10 +1427,10 @@ test.describe('MA Workstation browser journeys', () => {
 
     await field('Patient name').locator('input').fill('QA, Browser');
     await field('DOB').locator('input').fill('01/02/1990');
-    await field('Prescriber').locator('input').fill('QA Prescriber');
+    await setProvider(field('Prescriber'), 'QA Prescriber');
     await field('Dispensed by').locator('input').fill('QA Staff');
-    await field('Date dispensed').locator('input').fill('2026-07-29');
-    await field('Start date').locator('input').fill('2026-07-29');
+    await fillDate(field('Date dispensed').locator('input'), '2026-07-29');
+    await fillDate(field('Start date').locator('input'), '2026-07-29');
 
     await tabs.filter({ hasText: 'Medication' }).click();
     await field('Medication').locator('select').selectOption({ label: 'Vraylar' });
@@ -1530,9 +1533,9 @@ test.describe('MA Workstation browser journeys', () => {
     await panel
       .locator('.wfp-field:has-text("Recipient notified") input')
       .fill('QA Provider, notified');
-    await panel
-      .locator('.wfp-field:has-text("Notification / decision time") input')
-      .fill('2026-07-30T09:48');
+    await fillDate(
+      panel.locator('.wfp-field:has-text("Notification / decision time") input'),
+      '2026-07-30T09:48');
     await panel
       .locator('.wfp-field:has-text("Direction, action, and next step") textarea')
       .fill('Provider advised seated observation; staff reassessed and reviewed return precautions.');
@@ -1576,9 +1579,9 @@ test.describe('MA Workstation browser journeys', () => {
     await panel
       .locator('.wfp-field:has-text("Recipient notified") input')
       .fill('QA Ordering Provider');
-    await panel
-      .locator('.wfp-field:has-text("Notification / decision time") input')
-      .fill('2026-07-30T09:35');
+    await fillDate(
+      panel.locator('.wfp-field:has-text("Notification / decision time") input'),
+      '2026-07-30T09:35');
     await panel
       .locator('.wfp-field:has-text("Direction received") textarea')
       .fill('Do not use the affected device; proceed only with the verified replacement.');
@@ -1813,17 +1816,17 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Paired Initiation');
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
+    await setProvider(panel, 'QA Ordering Provider');
     await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
 
     await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Abilify Maintena' });
     await panel.locator('select[name="inj-dose"]').selectOption('400 mg');
     await panel.locator('input[name="inj-route"]').fill('IM');
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
-    await panel
-      .locator('.wfp-field', { hasText: 'Administration date' })
-      .locator('input[type="date"]')
-      .fill('2026-07-30');
+    await fillDate(
+      panel
+        .locator('.wfp-field', { hasText: 'Administration date' })
+        .locator('input[data-workstation-date="date"]'), '2026-07-30');
 
     await openInjectionTab(page, 'Administration');
     await panel.getByText('R deltoid', { exact: true }).click();
@@ -1947,7 +1950,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Draft Detail');
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/03/1991');
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Draft Provider');
+    await setProvider(panel, 'QA Draft Provider');
     await panel.locator('.wfp-field:has-text("Verified active-order purpose") input').fill('Draft order-linked encounter context');
     await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
     await panel.locator('input[name="inj-dose"]').fill('100 mg');
@@ -2006,7 +2009,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Visible Lifecycle');
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Lifecycle Provider');
+    await setProvider(panel, 'QA Lifecycle Provider');
 
     await expect(save).toBeEnabled();
     await expect(discard).toBeEnabled();
@@ -2025,7 +2028,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Discard Me');
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Lifecycle Provider');
+    await setProvider(panel, 'QA Lifecycle Provider');
     await expect(discard).toBeEnabled();
     await discard.click();
     const discardDialog = page.getByRole('dialog', { name: 'Discard Local Draft' });
@@ -2052,7 +2055,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Start Center Open');
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('05/06/1994');
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Start Center Provider');
+    await setProvider(panel, 'QA Start Center Provider');
     await actions.locator('[data-injection-save]').click();
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
@@ -2066,9 +2069,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
     await expect(page.locator('#ptName')).toHaveValue('QA, Start Center Open');
-    await expect(panel.locator('input[placeholder="Provider name"]')).toHaveValue(
-      'QA Start Center Provider',
-    );
+    await expectProviderValue(panel, 'QA Start Center Provider');
   });
 
   test('keeps an editable injection draft in place when Escape is pressed', async ({ page }) => {
@@ -2079,7 +2080,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Safe Exit');
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('06/07/1995');
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Safe Exit Provider');
+    await setProvider(panel, 'QA Safe Exit Provider');
     await page.keyboard.press('Escape');
 
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
@@ -2229,7 +2230,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Smart Vitals Draft');
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
+    await setProvider(panel, 'QA Ordering Provider');
     await openInjectionTab(page, 'Order');
     await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
     await openInjectionTab(page, 'Verification');
@@ -2302,7 +2303,7 @@ test.describe('MA Workstation browser journeys', () => {
     const persistencePanel = page.locator('.wfp-panel');
     await persistencePanel.locator('input[placeholder="Last, First"]').fill('QA, Persistence Guard');
     await persistencePanel.locator('input[placeholder="MM/DD/YYYY"]').fill('03/04/1992');
-    await persistencePanel.locator('input[placeholder="Provider name"]').fill('QA Provider');
+    await setProvider(persistencePanel, 'QA Provider');
 
     await page.locator('[data-injection-record-actions] [data-injection-new]').click();
     await expect(page.locator('#ptName')).toHaveValue('QA, Persistence Guard');
@@ -2323,7 +2324,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Order');
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Smart Rotation');
-    await panel.locator('input[placeholder="Provider name"]').fill('QA Ordering Provider');
+    await setProvider(panel, 'QA Ordering Provider');
 
     await openInjectionTab(page, 'Order');
     await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
@@ -2331,7 +2332,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
     await openInjectionTab(page, 'Schedule');
-    await panel.locator('input[type="date"]').first().fill('2026-07-02');
+    await fillDate(panel.locator('input[data-workstation-date="date"]').first(), '2026-07-02');
     await panel.locator('.wfp-field:has-text("Prior site") select').selectOption('R deltoid');
 
     await openInjectionTab(page, 'Administration');
@@ -2356,7 +2357,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('06/11/1988');
     await panel.locator('input[placeholder="Staff initials / name"]').fill('A. Rivera, MA');
-    await panel.locator('input[type="datetime-local"]').fill('2026-08-03T09:15');
+    await fillDate(panel.locator('input[data-workstation-date="datetime"]'), '2026-08-03T09:15');
     await panel.locator('select[name="uds-temperature"]').selectOption('acceptable');
     await panel.locator('select[name="uds-reason"]').selectOption('routine');
     await field('Device').locator('select').selectOption(device);
@@ -2569,7 +2570,7 @@ test.describe('MA Workstation browser journeys', () => {
     const specimen = panel.getByRole('group', { name: 'Specimen & collection' });
     const device = panel.getByRole('group', { name: 'Device & quality control' });
 
-    const collectionRow = specimen.locator('.wfp-row', { has: page.locator('input[type="datetime-local"]') });
+    const collectionRow = specimen.locator('.wfp-row', { has: page.locator('input[data-workstation-date="datetime"]') });
     await expect(collectionRow.getByRole('button', { name: 'Use current date/time' })).toBeVisible();
     await expect(specimen.locator('.wfp-row').first().getByRole('button', { name: 'Use current date/time' })).toHaveCount(0);
 
@@ -2769,8 +2770,8 @@ test.describe('MA Workstation browser journeys', () => {
     // requires the explicit, audited override dialog.
     const actualDate = panel
       .locator('.wfp-field', { hasText: 'Administration date' })
-      .locator('input[type="date"]');
-    await actualDate.fill('2026-07-30');
+      .locator('input[data-workstation-date="date"]');
+    await fillDate(actualDate, '2026-07-30');
 
     const nextDue = panel.locator(
       '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
@@ -2778,7 +2779,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(nextDue.locator('output')).toHaveText('08/27/2026');
     await expect(nextDue.locator('.wfp-clinical-readout-marker')).toHaveText('CALC');
     await expect(nextDue).toHaveClass(/is-info/);
-    await expect(nextDue.locator('input[type="date"]')).toHaveCount(0);
+    await expect(nextDue.locator('input[data-workstation-date="date"]')).toHaveCount(0);
     await expect(nextDue.getByRole('button', { name: 'Override…' })).toBeVisible();
   });
 
@@ -2793,8 +2794,8 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
     const actualDate = panel
       .locator('.wfp-field', { hasText: 'Administration date' })
-      .locator('input[type="date"]');
-    await actualDate.fill('2026-07-30');
+      .locator('input[data-workstation-date="date"]');
+    await fillDate(actualDate, '2026-07-30');
 
     const nextDue = panel.locator('.wfp-clinical-readout').filter({
       hasText: 'Return target — next injection due'

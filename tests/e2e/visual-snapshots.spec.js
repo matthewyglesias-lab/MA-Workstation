@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const { setProvider, expectProviderValue } = require('./provider-entry');
+const { fillDate } = require('./date-entry');
 
 const FIXED_NOW = new Date('2026-07-30T10:30:00-07:00');
 const FIXED_DATE_KEY = '2026-07-30';
@@ -272,17 +274,17 @@ async function prepareReadyInjection(page) {
   await selectInjectionTab(page, 'Order');
   await panel.locator('input[placeholder="Last, First"]').fill('Snapshot, Ready');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
-  await panel.locator('input[placeholder="Provider name"]').fill('Snapshot Provider');
+  await setProvider(panel, 'Snapshot Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
   await panel.locator('.wfp-field:has-text("Medication name") input').fill('Custom Medication');
   await panel.locator('input[name="inj-dose"]').fill('100 mg');
   await panel.locator('input[name="inj-route"]').fill('IM');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
-  await panel
-    .locator('.wfp-field', { hasText: 'Administration date' })
-    .locator('input[type="date"]')
-    .fill(FIXED_DATE_KEY);
+  await fillDate(
+    panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[data-workstation-date="date"]'), FIXED_DATE_KEY);
 
   await selectInjectionTab(page, 'Administration');
   await panel.getByText('R deltoid', { exact: true }).click();

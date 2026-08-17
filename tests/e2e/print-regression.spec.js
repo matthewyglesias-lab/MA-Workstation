@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const { setProvider, expectProviderValue } = require('./provider-entry');
+const { fillDate } = require('./date-entry');
 const { createHash } = require('node:crypto');
 const printBaseline = require('../fixtures/print-baseline-v1.json');
 
@@ -59,7 +61,7 @@ async function preparePrintableInjection(page) {
   // the exact same byte-pinned print output) as the pre-migration fixture.
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Injection');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
-  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
@@ -69,10 +71,10 @@ async function preparePrintableInjection(page) {
   await panel.locator('input[name="inj-dose"]').fill('100 mg');
   await panel.locator('input[name="inj-route"]').fill('IM');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
-  await panel
-    .locator('.wfp-field', { hasText: 'Administration date' })
-    .locator('input[type="date"]')
-    .fill('2026-07-30');
+  await fillDate(
+    panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[data-workstation-date="date"]'), '2026-07-30');
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.getByText('R deltoid', { exact: true }).click();
@@ -108,15 +110,15 @@ async function prepareInitiationInjection(page) {
   const panel = page.locator('.wfp-panel');
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Initiation');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('09/22/1991');
-  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
   await panel.locator('select[name="inj-dose"]').selectOption('234 mg');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
-  await panel
-    .locator('.wfp-field', { hasText: 'Administration date' })
-    .locator('input[type="date"]')
-    .fill('2026-07-30');
+  await fillDate(
+    panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[data-workstation-date="date"]'), '2026-07-30');
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.getByText('R deltoid', { exact: true }).click();
   await panel.locator('input[type="time"]').first().fill('09:41');
@@ -134,15 +136,15 @@ async function prepareVivitrolInjection(page) {
   const panel = page.locator('.wfp-panel');
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Vivitrol');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/12/1977');
-  await panel.locator('input[placeholder="Provider name"]').fill('Print Ordering Provider');
+  await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Vivitrol' });
   await panel.locator('select[name="inj-dose"]').selectOption({ label: '380 mg' });
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
-  await panel
-    .locator('.wfp-field', { hasText: 'Administration date' })
-    .locator('input[type="date"]')
-    .fill('2026-08-14');
+  await fillDate(
+    panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[data-workstation-date="date"]'), '2026-08-14');
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.getByText('R ventrogluteal', { exact: true }).click();

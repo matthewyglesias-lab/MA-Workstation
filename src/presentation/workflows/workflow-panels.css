@@ -605,17 +605,41 @@
   max-width: 200px;
 }
 
-/* The calendar/clock glyph is a modern flat icon baked into the browser -
-   there's no cross-browser way to replace it without risking the native
-   picker's click behavior. Muting it to a flat, low-contrast mark is the
-   safe partial fix; Chromium-only (::-webkit-*), but that's what every
-   real workstation runs. */
+/* Any date input still reaching the browser keeps the muted-glyph fallback.
+   Encounter dates are typed through .wfp-date-entry instead, which has no
+   native picker to mute. */
 .cd2004-shell .wfp-field input[type="date"]::-webkit-calendar-picker-indicator,
 .cd2004-shell .wfp-field input[type="month"]::-webkit-calendar-picker-indicator,
 .cd2004-shell .wfp-field input[type="time"]::-webkit-calendar-picker-indicator,
 .cd2004-shell .wfp-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: grayscale(1) contrast(0.6) brightness(1.3);
   opacity: 0.65;
+}
+
+/* Typed date entry. A register date is fixed-width so columns of dates line
+   up on the slash, and it is sized to exactly what it holds. */
+.cd2004-shell .wfp-field input.wfp-date-entry {
+  max-width: 104px;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cd2004-shell .wfp-field input.wfp-date-entry[data-workstation-date="datetime"] {
+  max-width: 146px;
+}
+
+.cd2004-shell .wfp-field input.wfp-date-entry::placeholder {
+  color: #8d93ab;
+  letter-spacing: 0.04em;
+}
+
+/* A rejected entry reverts to the stored value and marks the field, the way a
+   terminal refuses a bad entry rather than silently discarding a clinical date. */
+.cd2004-shell .wfp-field input.wfp-date-entry.is-rejected {
+  background: var(--cd-red-soft, #f7d8d1);
+  border-color: #9c5348 #e8c4bc #e8c4bc #9c5348;
 }
 
 .cd2004-shell .wfp-field input.mono {

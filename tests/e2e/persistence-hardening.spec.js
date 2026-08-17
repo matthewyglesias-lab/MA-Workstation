@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { fillDate } = require('./date-entry');
 
 const workflowLabels = {
   administer: 'Injection'
@@ -95,7 +96,7 @@ test('non-administration handoff does not expose an early injection closeout pat
   panel = await openInjectionTab(page, 'Outcome');
   await panel.getByText('Held', { exact: true }).click();
   await panel.locator('.wfp-field:has-text("Provider / recipient") input').fill('QA Provider, MD');
-  await panel.locator('.wfp-field:has-text("Contact / decision time") input').fill('2026-07-30T10:15');
+  await fillDate(panel.locator('.wfp-field:has-text("Contact / decision time") input'), '2026-07-30T10:15');
   await panel.locator('.wfp-field:has-text("Direction / outcome") textarea').fill(
     'Hold medication; provider will reassess before any administration.'
   );

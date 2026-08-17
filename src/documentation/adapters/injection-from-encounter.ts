@@ -1,7 +1,10 @@
 import {
   INJECTION_DEPARTURE_STATUS_OPTIONS,
-  INJECTION_RESPONSE_OPTIONS,
   INJECTION_SAFETY_TRIGGERS,
+  findInjectionResponseDetail,
+  findInjectionResponseOption,
+  injectionResponseHeadline,
+  injectionResponseNote,
   hasCurrentInjectionAdministrationReview,
   hasCurrentLateDoseReview,
   injectionReasonLabel,
@@ -177,12 +180,6 @@ const CLINICAL_REVIEW_NOTE_TEXT: Partial<
   screen: "No acute s/e or contraindications to administration noted on pre-inj screening.",
 };
 
-const RESPONSE_NOTE_TEXT: Partial<Record<Exclude<InjectionEncounter["response"]["kind"], "">, string>> = {
-  well: "Pt tolerated inj well; no immediate complication, bleeding, or swelling at site.",
-  bleed: "Minor bleeding noted post-inj; controlled w/ pressure. No persistent bleeding or significant swelling.",
-  disc: "Mild transient site discomfort reported; no acute reaction noted.",
-};
-
 // Fixed clinical read order, independent of which order staff happened to
 // tap the attestation checkboxes in - the same encounter must produce the
 // same note wording regardless of click order. Matches
@@ -329,11 +326,13 @@ const documentedAssessmentFacts = (encounter: InjectionEncounter): string[] => {
   return unique(assessment);
 };
 
+/** Short label for the structured fact row - the sub-choice when one is set. */
 const responseFact = (encounter: InjectionEncounter): string => {
   const custom = trimmed(encounter.response.custom);
   if (custom) return custom;
-  const option = INJECTION_RESPONSE_OPTIONS.find((item) => item.key === encounter.response.kind);
-  return option?.label ?? "";
+  const detail = findInjectionResponseDetail(encounter.response);
+  if (detail) return detail.label;
+  return findInjectionResponseOption(encounter.response.kind)?.label ?? "";
 };
 
 const primaryMedicationComponent = (
@@ -412,11 +411,14 @@ const PHASE_PRESENTATION_TEXT: Record<InjectionEvaluationOutput["phase"], string
   prn: "Pt presents today for a provider-ordered injection.",
 };
 
+/**
+ * CC-headline clause. The catalog fragments are already written in the
+ * lowercase mid-sentence voice the headline needs, so no case surgery.
+ */
 const headlineResponseText = (encounter: InjectionEncounter): string => {
   const custom = trimmed(encounter.response.custom);
   if (custom) return custom;
-  const label = INJECTION_RESPONSE_OPTIONS.find((item) => item.key === encounter.response.kind)?.label;
-  return label ? label.charAt(0).toLowerCase() + label.slice(1) : "";
+  return injectionResponseHeadline(encounter.response);
 };
 
 /** CC headline + presentation sentence for a completed administration. */
@@ -501,11 +503,11 @@ const followUpLine = (encounter: InjectionEncounter): string => {
 };
 
 /** Preserves custom response text as-is rather than prefixing it with a
- * "tolerated well" framing that might not be accurate for what was typed. */
+ * "tolerated well" framing that might not be accurate for what was typed.
+ * Every other kind, sub-choice included, is worded by the domain catalog. */
 const responseNoteText = (encounter: InjectionEncounter): string => {
   if (encounter.response.kind === "custom") return trimmed(encounter.response.custom);
-  if (!encounter.response.kind) return "";
-  return RESPONSE_NOTE_TEXT[encounter.response.kind] ?? "";
+  return injectionResponseNote(encounter.response);
 };
 
 /**

@@ -11,6 +11,7 @@ import {
   INJECTION_SAFETY_TRIGGERS,
   InjectionEngine,
   emptyInjectionInitiation,
+  findInjectionResponseOption,
   hasCurrentInjectionAdministrationReview,
   hasCurrentLateDoseReview,
   injectionAdministrationReviewFingerprint,
@@ -71,7 +72,10 @@ import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirem
 import { StatusFlag } from "../StatusFlag";
 import { ClinicalReadout } from "../ClinicalReadout";
 import { RegisterMarkers, WorkflowSummaryFact, TransactionLine, type ClinicalFieldSource } from "../ClinicalRegister";
+import { hasProviderRegister } from "../../../domain/provider-register";
+import { ProviderField } from "../ProviderField";
 import { OptionList, WorkflowField } from "../WorkflowField";
+import { WorkstationDateField } from "../WorkstationDateField";
 import {
   workflowLedgerPanelId,
   workflowLedgerTabId,
@@ -1099,6 +1103,15 @@ function NdcPicker({
   );
 }
 
+// OptionList renders `description` as the gloss under the control; the catalog
+// calls that same short clause `fragment` because the note pipelines consume it
+// too. Derived once - the kind list is a constant.
+const RESPONSE_OPTIONS = INJECTION_RESPONSE_OPTIONS.map((option) => ({
+  key: option.key,
+  label: option.label,
+  description: option.fragment,
+}));
+
 function Field({
   label,
   hint,
@@ -1716,6 +1729,22 @@ export function InjectionPanel({
     [encounter, nonAdministration, presentationOutput?.requirements],
   );
 
+  // The ordering provider is a register when the site has a roster and free
+  // text when it does not, so the prompt has to describe whichever is on screen
+  // while still saying where the name comes from.
+  const orderingProviderPrompt = hasProviderRegister(undefined, { prescribersOnly: true })
+    ? "Select the ordering provider named on the active order — F9 lists the register"
+    : "Enter the ordering provider from the active order";
+
+  const responseDetailOptions = useMemo(() => {
+    const details = findInjectionResponseOption(encounter.response.kind)?.details ?? [];
+    return details.map((detail) => ({
+      key: detail.key,
+      label: detail.label,
+      description: detail.fragment,
+    }));
+  }, [encounter.response.kind]);
+
   const showInitiationPath =
     !nonAdministration &&
     initiationOptions.length > 0 &&
@@ -2076,10 +2105,10 @@ export function InjectionPanel({
                   />
                 </Field>
                 <Field label="Notification / decision time" field="details.exceptionTime">
-                  <input
-                    type="datetime-local"
+                  <WorkstationDateField
+                    mode="datetime"
                     value={encounter.details?.exceptionTime ?? ""}
-                    onInput={(event) => patchDetails({ exceptionTime: event.currentTarget.value })}
+                    onCommit={(next) => patchDetails({ exceptionTime: next })}
                   />
                 </Field>
               </div>
@@ -2249,12 +2278,12 @@ export function InjectionPanel({
                 <Field
                   label="Ordering provider"
                   field="orderingProvider"
-                  prompt="Enter the ordering provider from the active order"
+                  prompt={orderingProviderPrompt}
                 >
-                  <input
+                  <ProviderField
+                    prescribersOnly
                     value={encounter.orderingProvider}
-                    placeholder="Provider name"
-                    onInput={(event) => patch({ orderingProvider: event.currentTarget.value })}
+                    onChange={(next) => patch({ orderingProvider: next })}
                   />
                 </Field>
               </div>
@@ -2390,10 +2419,9 @@ export function InjectionPanel({
             <div class="wfp-section-body">
               <div class="wfp-row">
                 <Field label="Prior dose" field="priorDoseDate">
-                  <input
-                    type="date"
+                  <WorkstationDateField
                     value={encounter.priorDoseDate}
-                    onInput={(event) => patch({ priorDoseDate: event.currentTarget.value })}
+                    onCommit={(next) => patch({ priorDoseDate: next })}
                   />
                 </Field>
                 <Field label="Prior site" field="priorSite">
@@ -2411,10 +2439,9 @@ export function InjectionPanel({
                 </Field>
                 {!nonAdministration && (
                   <Field label="Administration date" field="administrationDate">
-                    <input
-                      type="date"
+                    <WorkstationDateField
                       value={encounter.administrationDate}
-                      onInput={(event) => patch({ administrationDate: event.currentTarget.value })}
+                      onCommit={(next) => patch({ administrationDate: next })}
                     />
                   </Field>
                 )}
@@ -2817,10 +2844,9 @@ export function InjectionPanel({
                           </Field>
                           {initiationConfig.kind === "sustenna-day8" && (
                             <Field label="Documented Day 1 date" field="initiation.day1Date">
-                              <input
-                                type="date"
+                              <WorkstationDateField
                                 value={encounter.initiation?.day1Date ?? ""}
-                                onInput={(event) => patchInitiation({ day1Date: event.currentTarget.value })}
+                                onCommit={(next) => patchInitiation({ day1Date: next })}
                               />
                             </Field>
                           )}
@@ -3235,12 +3261,10 @@ export function InjectionPanel({
                       />
                     </Field>
                     <Field label="Notification / decision time" field="details.productIssueNotificationTime">
-                      <input
-                        type="datetime-local"
+                      <WorkstationDateField
+                        mode="datetime"
                         value={encounter.details?.productIssueNotificationTime ?? ""}
-                        onInput={(event) =>
-                          patchDetails({ productIssueNotificationTime: event.currentTarget.value })
-                        }
+                        onCommit={(next) => patchDetails({ productIssueNotificationTime: next })}
                       />
                     </Field>
                   </div>
@@ -3504,11 +3528,36 @@ export function InjectionPanel({
                 <OptionList<InjectionResponse["kind"]>
                   name="inj-response"
                   value={encounter.response.kind}
-                  onChange={(value) => patch({ response: { ...encounter.response, kind: value } })}
-                  options={INJECTION_RESPONSE_OPTIONS}
+                  onChange={(value) =>
+                    patch({
+                      // Changing the kind drops any sub-choice from the previous
+                      // one - detail keys are only meaningful within their parent.
+                      response: { ...encounter.response, kind: value, detail: "" },
+                    })
+                  }
+                  options={RESPONSE_OPTIONS}
                   inline
                 />
               </Field>
+              {requirements.response?.state !== "hidden" && responseDetailOptions.length > 0 && (
+                <Field
+                  label="Response detail"
+                  field="response.detail"
+                  state="optional"
+                  hint="Sharpens the note wording. Leave unset to document the response on its own."
+                >
+                  <OptionList<string>
+                    name="inj-response-detail"
+                    value={encounter.response.detail ?? ""}
+                    onChange={(value) =>
+                      patch({ response: { ...encounter.response, detail: value } })
+                    }
+                    options={responseDetailOptions}
+                    placeholder="No further detail"
+                    inline
+                  />
+                </Field>
+              )}
               {requirements.response?.state !== "hidden" && encounter.response.kind === "custom" && (
                 <Field label="Describe response" field="response.custom">
                   <input
@@ -3668,10 +3717,10 @@ export function InjectionPanel({
                         />
                       </Field>
                       <Field label="Contact / decision time" field="disposition.time">
-                        <input
-                          type="datetime-local"
+                        <WorkstationDateField
+                          mode="datetime"
                           value={encounter.disposition.time ?? ""}
-                          onInput={(event) => patchDisposition({ time: event.currentTarget.value })}
+                          onCommit={(next) => patchDisposition({ time: next })}
                         />
                       </Field>
                     </div>
@@ -3919,11 +3968,10 @@ export function InjectionPanel({
                       />
                     </Field>
                     <Field label="Approval / decision time" field="details.lateDoseReviewTime" state="required" hint="Required for provider approval">
-                      <input
-                        aria-label="Approval / decision time"
-                        type="datetime-local"
+                      <WorkstationDateField
+                        mode="datetime"
                         value={lateDoseReviewTimeDraft}
-                        onInput={(event) => setLateDoseReviewTimeDraft(event.currentTarget.value)}
+                        onCommit={(next) => setLateDoseReviewTimeDraft(next)}
                       />
                     </Field>
                   </div>
@@ -3994,11 +4042,9 @@ export function InjectionPanel({
               </p>
               <div class="wfp-row">
               <Field label="Override date" state="required" hint="Required">
-                  <input
-                    aria-label="Override date"
-                    type="date"
+                  <WorkstationDateField
                     value={nextDoseOverrideDate}
-                    onInput={(event) => setNextDoseOverrideDate(event.currentTarget.value)}
+                    onCommit={(next) => setNextDoseOverrideDate(next)}
                   />
                 </Field>
                 <Field label="Authority" state="required" hint="Required">

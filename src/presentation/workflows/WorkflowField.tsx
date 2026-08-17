@@ -12,61 +12,16 @@ import type {
 } from "../../application/workstation-projection";
 import { requestWorkstationFieldLookup } from "../workstation-events";
 import { RegisterMarkers } from "./ClinicalRegister";
+import { hasProviderRegister } from "../../domain/provider-register";
+import { OptionList, type OptionListProps } from "./OptionList";
+import { ProviderField } from "./ProviderField";
+import {
+  WorkstationDateField,
+  type WorkstationDateMode,
+} from "./WorkstationDateField";
 
-export interface OptionListProps<T extends string> {
-  name: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: ReadonlyArray<{ key: T; label: string; description?: string }>;
-  placeholder?: string;
-  inline?: boolean;
-  labelledBy?: string;
-  describedBy?: string;
-  required?: boolean;
-  invalid?: boolean;
-}
-
-export function OptionList<T extends string>({
-  name,
-  value,
-  onChange,
-  options,
-  placeholder,
-  inline,
-  labelledBy,
-  describedBy,
-  required,
-  invalid,
-}: OptionListProps<T>) {
-  const selected = options.find((option) => option.key === value);
-  return (
-    <div class={`wfp-select-group ${inline ? "wfp-select-group-inline" : ""}`}>
-      <select
-        name={name}
-        value={value}
-        aria-labelledby={labelledBy}
-        aria-describedby={describedBy}
-        aria-required={required || undefined}
-        aria-invalid={invalid || undefined}
-        onChange={(event) => onChange(event.currentTarget.value as T)}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {options.map((option) => (
-          <option key={option.key} value={option.key} title={option.description}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {selected?.description && (
-        <small class="wfp-select-desc">{selected.description}</small>
-      )}
-    </div>
-  );
-}
+export { OptionList };
+export type { OptionListProps };
 
 const registerState = (
   state: WorkflowFieldState,
@@ -96,7 +51,11 @@ function labelControls(
   return toChildArray(children).map((child) => {
     if (!isValidElement(child)) return child;
     const vnode = child as VNode<Record<string, unknown>>;
-    if ((vnode.type as unknown) === OptionList) {
+    if (
+      (vnode.type as unknown) === OptionList ||
+      (vnode.type as unknown) === WorkstationDateField ||
+      (vnode.type as unknown) === ProviderField
+    ) {
       return cloneElement(vnode, {
         labelledBy: accessibility.labelledBy,
         describedBy: accessibility.describedBy,
@@ -128,15 +87,57 @@ function labelControls(
   });
 }
 
-function containsSelectControl(children: ComponentChildren): boolean {
-  return toChildArray(children).some((child) => {
-    if (!isValidElement(child)) return false;
+/**
+ * Walks the control subtree, returning the first non-undefined result.
+ *
+ * Both questions the field asks about its children - "is this a lookup?" and
+ * "is this a date field?" - are the same depth-first walk over the same
+ * intrinsic-element nesting. One traversal keeps them from drifting as more
+ * first-party controls are added.
+ */
+function findInControls<T>(
+  children: ComponentChildren,
+  visit: (vnode: VNode<Record<string, unknown>>) => T | undefined,
+): T | undefined {
+  for (const child of toChildArray(children)) {
+    if (!isValidElement(child)) continue;
     const vnode = child as VNode<Record<string, unknown>>;
-    if ((vnode.type as unknown) === OptionList || vnode.type === "select") return true;
-    return typeof vnode.type === "string" && vnode.props?.children
-      ? containsSelectControl(vnode.props.children as ComponentChildren)
-      : false;
-  });
+    const hit = visit(vnode);
+    if (hit !== undefined) return hit;
+    if (typeof vnode.type === "string" && vnode.props?.children) {
+      const nested = findInControls(vnode.props.children as ComponentChildren, visit);
+      if (nested !== undefined) return nested;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * True when the field's control offers a fixed value set, which is what earns
+ * it the F9 lookup. ProviderField only qualifies when its register can actually
+ * drive a list; with an empty roster it renders free text.
+ */
+function containsSelectControl(children: ComponentChildren): boolean {
+  return (
+    findInControls(children, (vnode) => {
+      if ((vnode.type as unknown) === OptionList || vnode.type === "select") return true;
+      if ((vnode.type as unknown) === ProviderField) {
+        return hasProviderRegister(
+          vnode.props?.register as Parameters<typeof hasProviderRegister>[0],
+          { prescribersOnly: Boolean(vnode.props?.prescribersOnly) },
+        ) || undefined;
+      }
+      return undefined;
+    }) ?? false
+  );
+}
+
+function findDateControl(children: ComponentChildren): WorkstationDateMode | undefined {
+  return findInControls(children, (vnode) =>
+    (vnode.type as unknown) === WorkstationDateField
+      ? ((vnode.props?.mode as WorkstationDateMode) ?? "date")
+      : undefined,
+  );
 }
 
 export function WorkflowField({
@@ -176,11 +177,16 @@ export function WorkflowField({
     invalid: incomplete,
   });
   const hasLookup = containsSelectControl(children);
+  const dateMode = findDateControl(children);
   const fieldPrompt =
     prompt ??
     (hasLookup
       ? `Select ${label.toLowerCase()} or press F9 for available values`
-      : `Enter ${label.toLowerCase()}`);
+      : dateMode
+        ? `Enter ${label.toLowerCase()} as ${
+            dateMode === "date" ? "MMDDYY" : "MMDDYY HHMM"
+          } — T today, T-1 yesterday${dateMode === "datetime" ? ", N now" : ""}`
+        : `Enter ${label.toLowerCase()}`);
 
   return (
     <div
