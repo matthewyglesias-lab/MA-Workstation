@@ -4,6 +4,29 @@ import type { WorkflowFieldSource } from "../../application/workstation-projecti
 export type ClinicalFieldSource = WorkflowFieldSource;
 export type ClinicalFieldState = "REQ" | "OK" | "OPT" | "PEND" | "REV" | "STOP" | "N/A";
 
+/**
+ * ENTRY is the default source - staff typed it here - so it appeared on very
+ * nearly every field and said nothing. Every other source is a real provenance
+ * claim worth a chip: the value came off the chart, the sign-in session, a local
+ * record, the product label, a calculation, an override, or a locked record.
+ */
+const SILENT_SOURCE: ReadonlySet<ClinicalFieldSource> = new Set(["ENTRY"]);
+
+/**
+ * REQ duplicates the caption's red asterisk, OPT duplicates its italic
+ * "optional", and OK / PEND / N/A only restate what the field already looks
+ * like. Two chips on every field was more decoration than a real terminal ever
+ * carried, and it competed with the data. STOP and REV survive: a hard blocker
+ * and a review flag are worth calling out beside the field itself.
+ */
+const SILENT_STATE: ReadonlySet<ClinicalFieldState> = new Set([
+  "REQ",
+  "OPT",
+  "OK",
+  "PEND",
+  "N/A",
+]);
+
 export function RegisterMarkers({
   source = "ENTRY",
   state,
@@ -15,18 +38,24 @@ export function RegisterMarkers({
   changed?: boolean;
   changeDetail?: string;
 }) {
+  const showSource = !SILENT_SOURCE.has(source);
+  const showState = !SILENT_STATE.has(state);
+  // Nothing informative to say: render no wrapper at all, so the caption row
+  // does not reserve a gap for an empty marker group.
+  if (!showSource && !showState && !changed) return null;
+
   return (
     <span
       class="wfp-register-markers"
       aria-label={`Source ${source}; state ${state}${changed ? "; changed from carried or calculated value" : ""}`}
     >
-      <span class="wfp-register-source">{source}</span>
+      {showSource && <span class="wfp-register-source">{source}</span>}
       {changed && (
         <span class="wfp-register-change" title={changeDetail ?? "Changed from carried or calculated value"}>
           CHG
         </span>
       )}
-      <span class={`wfp-register-state is-${state.toLowerCase()}`}>{state}</span>
+      {showState && <span class={`wfp-register-state is-${state.toLowerCase()}`}>{state}</span>}
     </span>
   );
 }

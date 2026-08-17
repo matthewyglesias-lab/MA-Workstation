@@ -527,13 +527,16 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.getByRole('heading', { name: 'Patient & ordering provider', level: 2 })).toBeVisible();
     const injectionReason = page.getByLabel('Encounter type', { exact: true });
     await expect(injectionReason).toHaveAttribute('aria-required', 'true');
-    await expect(
-      page.locator('.wfp-field[data-field-path="patient.name"] .wfp-register-source')
-    ).toHaveText('ENTRY');
+    // ENTRY is the default source and no longer draws a chip; the provenance
+    // attribute is the contract that survived.
+    const patientNameField = page.locator('.wfp-field[data-field-path="patient.name"]');
+    await expect(patientNameField).toHaveAttribute('data-field-source', 'ENTRY');
+    await expect(patientNameField.locator('.wfp-register-source')).toHaveCount(0);
     const orderingProvider = page.locator(
       '.wfp-field[data-field-path="orderingProvider"]'
     );
-    await expect(orderingProvider.locator('.wfp-register-source')).toHaveText('ENTRY');
+    await expect(orderingProvider).toHaveAttribute('data-field-source', 'ENTRY');
+    await expect(orderingProvider.locator('.wfp-register-source')).toHaveCount(0);
     // The ordering provider is a register, so its prompt names the register and
     // F9 genuinely applies. It must still say where the name comes from.
     await providerControl(orderingProvider).locator('select').focus();
@@ -556,8 +559,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.getByRole('button', { name: 'Add to daily log' })).toBeDisabled();
     await expect(panel.getByRole('button', { name: 'Save local draft' })).toBeDisabled();
     await expect(
-      panel.locator('.wfp-field[data-field-path="patient.name"] .wfp-register-source')
-    ).toHaveText('ENTRY');
+      panel.locator('.wfp-field[data-field-path="patient.name"]')
+    ).toHaveAttribute('data-field-source', 'ENTRY');
 
     await panel.getByLabel('Encounter type', { exact: true }).selectOption('routine');
     await expect(panel.locator('.wfp-transaction-readout b')).toHaveText('ENTRY');
@@ -2424,7 +2427,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-exception-register'))
       .toContainText('Medication alignment requires review');
     await outsideLab.locator('select').selectOption('ordered');
-    await expect(outsideLab.locator('.wfp-register-source')).toHaveText('ENTRY');
+    await expect(outsideLab).toHaveAttribute('data-field-source', 'ENTRY');
     const printHint = await panel.locator('.wfp-print-block-hint').textContent();
     expect(printHint).not.toContain('..');
   });

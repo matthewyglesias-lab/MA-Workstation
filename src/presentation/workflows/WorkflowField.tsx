@@ -132,6 +132,34 @@ function containsSelectControl(children: ComponentChildren): boolean {
   );
 }
 
+/**
+ * The value of the field's own control, used to decide whether a required field
+ * still needs an answer. Read from the control's `value` prop rather than the
+ * DOM so it is correct on the first render, and independent of whether the
+ * control sits directly under the field or inside a wrapper.
+ *
+ * A checkbox carries no `value` worth testing, so those fields are left alone -
+ * their state is the checked flag, which the engine already tracks.
+ */
+function isControlFilled(children: ComponentChildren): boolean {
+  return (
+    findInControls(children, (vnode) => {
+      const props = vnode.props ?? {};
+      const isFirstParty =
+        (vnode.type as unknown) === OptionList ||
+        (vnode.type as unknown) === WorkstationDateField ||
+        (vnode.type as unknown) === ProviderField;
+      const isIntrinsic =
+        vnode.type === "input" || vnode.type === "select" || vnode.type === "textarea";
+      if (!isFirstParty && !isIntrinsic) return undefined;
+      if (isIntrinsic && props.type === "checkbox") return undefined;
+      if (!("value" in props)) return undefined;
+      const value = props.value;
+      return typeof value === "string" ? value.trim().length > 0 : value != null;
+    }) ?? false
+  );
+}
+
 function findDateControl(children: ComponentChildren): WorkstationDateMode | undefined {
   return findInControls(children, (vnode) =>
     (vnode.type as unknown) === WorkstationDateField
@@ -178,6 +206,7 @@ export function WorkflowField({
   });
   const hasLookup = containsSelectControl(children);
   const dateMode = findDateControl(children);
+  const filled = isControlFilled(children);
   const fieldPrompt =
     prompt ??
     (hasLookup
@@ -190,11 +219,14 @@ export function WorkflowField({
 
   return (
     <div
-      class={`wfp-field ${required ? "is-required" : ""} ${incomplete ? "is-incomplete" : ""} ${optional ? "is-optional" : ""} ${pending ? "is-pending-context" : ""} ${width ? `is-w-${width}` : ""}`}
+      class={`wfp-field ${required ? "is-required" : ""} ${filled ? "is-filled" : ""} ${incomplete ? "is-incomplete" : ""} ${optional ? "is-optional" : ""} ${pending ? "is-pending-context" : ""} ${width ? `is-w-${width}` : ""}`}
       data-requirement={presentation.state}
       data-field-code={presentation.fieldCode}
       data-field-label={label}
       data-field-state={state}
+      // Provenance stays readable to tests and assistive tooling even where the
+      // chip is now silent, so dropping the decoration costs no contract.
+      data-field-source={presentation.source}
       data-field-prompt={fieldPrompt}
       data-field-path={field}
       data-field-changed={changed || undefined}

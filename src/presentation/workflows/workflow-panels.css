@@ -29,6 +29,16 @@
   border-radius: 0 !important;
 }
 
+/* ...but a radio has to stay round. That circle is the only thing separating
+   "pick one" from "pick any", and the blanket above - aimed at text inputs and
+   selects - was squaring every radio in every workflow panel, so single-select
+   fields like the injection site read as a checkbox list. Restated with the
+   same `!important` weight rather than carved out of the selector above, so
+   legacy.css cannot win the radius back either way. */
+.cd2004-shell .wfp-panel input[type="radio"] {
+  border-radius: 50% !important;
+}
+
 .cd2004-shell .wfp-summary-bar {
   display: flex;
   flex-wrap: wrap;
@@ -573,17 +583,25 @@
   font-style: italic;
 }
 
-.cd2004-shell .wfp-field.is-required input,
-.cd2004-shell .wfp-field.is-required select,
-.cd2004-shell .wfp-field.is-required textarea,
-.cd2004-shell .wfp-field.is-required .wfp-select-group select {
-  background: var(--cd-amber-soft);
+/* Amber means "this still needs an answer", so it clears the moment the field
+   has one. `is-filled` is set from the control's own value rather than from the
+   engine's missing-field list, so it is true as soon as staff type - not only
+   after a save attempt - and it works the same in every workflow.
+
+   `background-color`, never the `background` shorthand: the shorthand also
+   resets `background-image`, which is what draws a select's dropdown arrow.
+   Using it here silently erased the arrow from every required select while
+   leaving the 22px gutter reserved for it. */
+.cd2004-shell .wfp-field.is-required:not(.is-filled) input,
+.cd2004-shell .wfp-field.is-required:not(.is-filled) select,
+.cd2004-shell .wfp-field.is-required:not(.is-filled) textarea {
+  background-color: var(--cd-amber-soft);
 }
 
 .cd2004-shell .wfp-field.is-required input:focus-visible,
 .cd2004-shell .wfp-field.is-required select:focus-visible,
 .cd2004-shell .wfp-field.is-required textarea:focus-visible {
-  background: var(--cd-white);
+  background-color: var(--cd-white);
 }
 
 /* Checkbox and radio captions are sentences, not captions - no colon. */
@@ -1828,9 +1846,11 @@
   font-size: 11px;
 }
 
-.cd2004-shell .wfp-choice-caption::after {
-  content: ":";
-}
+/* No `::after` colon here. This element is the whole caption row - text, the
+   required asterisk, and the register badges, which `margin-left: auto` pushes
+   to the right edge - so a pseudo-element on it is the row's last flex item and
+   the colon landed after STOP. The inner .wfp-field-caption carries it instead,
+   the same way WorkflowField does. */
 
 /* Site tiles: an icon+label card grid, echoing the Start Center launcher
    tiles rather than the plain bordered option-row list used for other
