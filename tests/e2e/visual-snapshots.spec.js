@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { fillDate } = require('./date-entry');
 
 const FIXED_NOW = new Date('2026-07-30T10:30:00-07:00');
 const FIXED_DATE_KEY = '2026-07-30';
@@ -279,10 +280,10 @@ async function prepareReadyInjection(page) {
   await panel.locator('input[name="inj-dose"]').fill('100 mg');
   await panel.locator('input[name="inj-route"]').fill('IM');
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
-  await panel
-    .locator('.wfp-field', { hasText: 'Administration date' })
-    .locator('input[type="date"]')
-    .fill(FIXED_DATE_KEY);
+  await fillDate(
+    panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[data-workstation-date="date"]'), FIXED_DATE_KEY);
 
   await selectInjectionTab(page, 'Administration');
   await panel.getByText('R deltoid', { exact: true }).click();

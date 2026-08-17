@@ -50,6 +50,14 @@ describe("parseWorkstationDate — date mode", () => {
     );
   });
 
+  it("round-trips the stored ISO shape so a pasted value is not rejected", () => {
+    expect(parse("2026-07-30")).toBe("2026-07-30");
+    expect(parse("1995-11-25")).toBe("1995-11-25");
+    expect(parse("2026-02-30")).toBeNull();
+    // A stored datetime narrowed into a date-only field keeps its date.
+    expect(parse("2026-07-30T14:05")).toBe("2026-07-30");
+  });
+
   it("treats empty entry as a cleared value, not a rejection", () => {
     expect(parse("")).toBe("");
     expect(parse("   ")).toBe("");
@@ -98,6 +106,11 @@ describe("parseWorkstationDate — datetime mode", () => {
 
   it("combines relative dates with explicit times", () => {
     expect(parse("T-1 0800")).toBe("2026-07-29T08:00");
+  });
+
+  it("round-trips the stored ISO datetime shape", () => {
+    expect(parse("2026-07-30T14:05")).toBe("2026-07-30T14:05");
+    expect(parse("2026-07-30")).toBe("2026-07-30T00:00");
   });
 
   it("rejects out-of-range times", () => {

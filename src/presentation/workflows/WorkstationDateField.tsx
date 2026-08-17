@@ -79,6 +79,17 @@ function parseDateToken(token: string, now: Date): Date | null {
     return base;
   }
 
+  // ISO in, ISO out. This is the stored shape, so a pasted or programmatically
+  // filled value has to round-trip rather than read as an out-of-range month.
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(token);
+  if (iso) {
+    const year = Number(iso[1]);
+    const month = Number(iso[2]);
+    const day = Number(iso[3]);
+    if (!isRealDate(year, month, day)) return null;
+    return new Date(year, month - 1, day);
+  }
+
   const parts = token.split(/[/-]/).filter((part) => part.length > 0);
   let month: number;
   let day: number;
@@ -144,6 +155,16 @@ export function parseWorkstationDate(
   const trimmed = raw.trim().toUpperCase();
   if (!trimmed) return "";
 
+  // A full stored datetime arrives as one `T`-joined token; split it before
+  // tokenizing so the `T` is not read as the today shortcut.
+  const isoDateTime = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(trimmed);
+  if (isoDateTime) {
+    const datePart = parseDateToken(isoDateTime[1] ?? "", now);
+    if (!datePart) return null;
+    if (mode === "date") return isoDate(datePart);
+    return `${isoDate(datePart)}T${isoDateTime[2]}`;
+  }
+
   const tokens = trimmed.split(/\s+/);
   const dateToken = tokens[0] ?? "";
   const timeToken = tokens[1];
@@ -206,8 +227,11 @@ export function WorkstationDateField({
     setRejected(false);
   }, [display]);
 
-  const commit = () => {
-    const parsed = parseWorkstationDate(draft, mode);
+  // Commit reads the control's live value rather than the `draft` state, which
+  // is a render behind when `input` and `change` arrive in the same tick - as
+  // they do for any programmatic fill.
+  const commit = (raw: string) => {
+    const parsed = parseWorkstationDate(raw, mode);
     if (parsed === null) {
       setDraft(display);
       setRejected(true);
@@ -237,11 +261,15 @@ export function WorkstationDateField({
         setDraft(event.currentTarget.value);
         if (rejected) setRejected(false);
       }}
-      onBlur={commit}
+      onBlur={(event) => commit(event.currentTarget.value)}
+      // A text input fires `change` when the value is committed, including for
+      // programmatic fills that never blur. Commit is idempotent, so the extra
+      // call a real blur produces is harmless.
+      onChange={(event) => commit(event.currentTarget.value)}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
           event.preventDefault();
-          commit();
+          commit(event.currentTarget.value);
         } else if (event.key === "Escape") {
           setDraft(display);
           setRejected(false);

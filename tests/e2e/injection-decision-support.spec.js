@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { fillDate } = require('./date-entry');
 
 async function openInjection(page) {
   await page.goto('/');
@@ -136,8 +137,8 @@ test.describe('Injection decision support', () => {
     await openTab(panel, 'Order');
     const administrationDate = panel
       .locator('.wfp-field', { hasText: 'Administration date' })
-      .locator('input[type="date"]');
-    await administrationDate.fill('2026-07-30');
+      .locator('input[data-workstation-date="date"]');
+    await fillDate(administrationDate, '2026-07-30');
 
     const dueField = panel.locator(
       '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
@@ -145,7 +146,7 @@ test.describe('Injection decision support', () => {
     await expect(dueField.locator('output')).toHaveText('08/27/2026');
     await dueField.getByRole('button', { name: 'Override…' }).click();
     const override = page.getByRole('dialog', { name: 'Override calculated return target' });
-    await override.getByLabel('Override date').fill('2030-01-15');
+    await fillDate(override.getByLabel('Override date'), '2030-01-15');
     await override.locator('.wfp-field', { hasText: 'Reason / order context' })
       .locator('textarea').fill('Active order specifies this return date');
     await override.getByRole('button', { name: 'Record override' }).click();
@@ -179,10 +180,12 @@ test.describe('Injection decision support', () => {
     await enterRoutineOrder(panel, 'QA, Routine Bridge');
 
     await openTab(panel, 'Order');
-    await panel.locator('.wfp-field', { hasText: 'Prior dose' })
-      .locator('input[type="date"]').fill('2026-07-02');
-    await panel.locator('.wfp-field', { hasText: 'Administration date' })
-      .locator('input[type="date"]').fill('2026-07-30');
+    await fillDate(
+      panel.locator('.wfp-field', { hasText: 'Prior dose' })
+        .locator('input[data-workstation-date="date"]'), '2026-07-02');
+    await fillDate(
+      panel.locator('.wfp-field', { hasText: 'Administration date' })
+        .locator('input[data-workstation-date="date"]'), '2026-07-30');
 
     await openTab(panel, 'Administration');
     await panel.getByText('R deltoid', { exact: true }).click();
