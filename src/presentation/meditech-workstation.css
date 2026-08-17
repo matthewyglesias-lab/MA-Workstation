@@ -2583,37 +2583,14 @@
     text-decoration: none;
   }
 
-  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required:not(.is-incomplete) > input,
-  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required:not(.is-incomplete) > select,
-  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required:not(.is-incomplete) > textarea,
-  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required:not(.is-incomplete) .wfp-select-group select {
-    background: #fff;
-  }
-
-  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > input,
-  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > select,
-  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete > textarea,
-  .cd2004-shell [data-workflow="administer"] .wfp-field.is-required.is-incomplete .wfp-select-group select {
-    background: var(--cd-amber-soft);
-  }
-
-  /* Same treatment, same reasoning, as the injection workflow above: UDS has
-     just as many always-required fields, so a persistent amber fill on every
-     one of them (most of the specimen tab) would be exactly the noise that
-     override was built to avoid. */
-  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required:not(.is-incomplete) > input,
-  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required:not(.is-incomplete) > select,
-  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required:not(.is-incomplete) > textarea,
-  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required:not(.is-incomplete) .wfp-select-group select {
-    background: #fff;
-  }
-
-  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete > input,
-  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete > select,
-  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete > textarea,
-  .cd2004-shell [data-workflow="uds"] .wfp-field.is-required.is-incomplete .wfp-select-group select {
-    background: var(--cd-amber-soft);
-  }
+  /* The per-workflow amber overrides that used to live here keyed the fill off
+     the engine's `is-incomplete` flag, so a required field stayed amber until a
+     save attempt marked it missing. They also used `>`, which missed any select
+     wrapped in .wfp-field-entry for its F9 lookup button - those kept the amber
+     fill forever, and with it lost their dropdown arrow to the `background`
+     shorthand. The base rule keys off `is-filled` instead, which is uniform
+     across workflows and clears as soon as the field has a value, so both
+     blocks are gone rather than reconciled. */
 
   .cd2004-shell [data-workflow="administer"][data-post-state="posted"] :where(input, select, textarea):disabled {
     color: #202020;

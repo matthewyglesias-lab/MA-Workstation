@@ -186,10 +186,19 @@
     background: var(--mt-screen-paper);
     border-color: #858eb2;
     text-align: left;
+    /* The selection marker lives in this gutter. Reserved in both states and
+       transparent when unselected, so selecting a tile never overlays the
+       control or shifts the row by the marker's width. */
+    border-left: 3px solid transparent;
   }
 
+  /* `relative`, not `static`. The checked dot is an absolutely positioned
+     `::after` inset inside the control, so a static radio hands it to the
+     nearest positioned ancestor - the tile - and the 13px dot painted as a
+     182x28 slab over the icon and the site name. Relative keeps the radio in
+     the grid flow and still contains its own dot. */
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile input[type="radio"] {
-    position: static;
+    position: relative;
     grid-column: 1;
     margin: 0;
   }
@@ -222,10 +231,13 @@
     background: #eef0fa;
   }
 
+  /* An `inset` shadow paints inside the padding box, over whatever sits there,
+     which is what nibbled the left edge of the content. The reserved border
+     gutter carries the marker instead. */
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile.is-selected {
     background: var(--mt-screen-selected);
     border-color: #5d6790;
-    box-shadow: inset 3px 0 #244f94;
+    border-left-color: #244f94;
   }
 
   /* The final disposition is visually important but belongs to the same
@@ -253,25 +265,25 @@
     border-left-color: #8c7118;
   }
 
-  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-selected,
+  /* These rows already reserve a 3px left border as their state marker, so the
+     `inset` shadows were a second bar drawn on top of it - and unlike a border,
+     an inset shadow paints inside the padding box, over the row's own content.
+     The border alone carries the marker. (The selector was also duplicated.) */
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-selected {
     background: var(--mt-screen-selected);
     border-color: #5d6790;
     border-left-color: #244f94;
-    box-shadow: inset 2px 0 #244f94;
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
     background: var(--mt-screen-selected);
     border-color: #5d6790;
     border-left-color: var(--cd-green);
-    box-shadow: inset 2px 0 var(--cd-green);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
     background: var(--mt-screen-review);
     border-left-color: #8c7118;
-    box-shadow: inset 2px 0 #8c7118;
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-title {
@@ -315,5 +327,78 @@
 @media screen and (max-width: 1180px) {
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Lookup and record-search entry.
+ *
+ * `type="search"` is the right semantics but the browser dresses it: Chromium
+ * adds its own clear button inside the field, which is a 2020s affordance
+ * sitting in a 2004 frame. Strip the native chrome, then treat the field as
+ * what it is on a terminal - a typed query line: sunken square bevel, a
+ * fixed-width face so the caret sits on a character cell, and a text prompt
+ * ahead of it instead of a magnifying glass.
+ *
+ * Unscoped, like the checkbox/radio rules in clinical-desktop.css and for the
+ * same reason: the record drawers render into a <dialog> that is a sibling of
+ * .cd2004-shell, not a descendant, so a shell-scoped selector misses them. */
+@media screen {
+  input[type="search"] {
+    appearance: none;
+    font-family: "Courier New", monospace !important;
+    letter-spacing: 0.01em;
+  }
+
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    display: none;
+    appearance: none;
+  }
+
+  input[type="search"]::placeholder {
+    color: #8d93ab;
+    font-style: normal;
+  }
+
+  /* legacy.css defines .records-sr-only but index.html loads that sheet
+     media="print", so on screen the class styles nothing and the drawer's
+     screen-reader label for this input has been rendering as visible body text
+     above the field. Hide it the standard way, on the screen side where it is
+     actually needed. */
+  .records-sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  /* The record drawer's magnifier is a flat modern glyph. Retire it and label
+     the line the way a terminal prompt is labelled. */
+  .records-drawer-search > span {
+    display: none !important;
+  }
+
+  .records-drawer-search {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 5px;
+  }
+
+  .records-drawer-search::before {
+    content: "FIND";
+    color: #27386f;
+    font: 700 9px Tahoma, "MS Sans Serif", sans-serif;
+    letter-spacing: 0.06em;
+  }
+
+  .records-drawer-search input {
+    /* The 31px right gutter existed only for the retired glyph. */
+    padding-right: 7px !important;
   }
 }
