@@ -11,6 +11,7 @@ import {
   INJECTION_SAFETY_TRIGGERS,
   InjectionEngine,
   emptyInjectionInitiation,
+  findInjectionResponseOption,
   hasCurrentInjectionAdministrationReview,
   hasCurrentLateDoseReview,
   injectionAdministrationReviewFingerprint,
@@ -1716,6 +1717,27 @@ export function InjectionPanel({
     }),
     [encounter, nonAdministration, presentationOutput?.requirements],
   );
+
+  // OptionList renders `description` as the gloss under the control; the
+  // catalog calls that same short clause `fragment` because the note pipelines
+  // consume it too.
+  const responseOptions = useMemo(
+    () =>
+      INJECTION_RESPONSE_OPTIONS.map((option) => ({
+        key: option.key,
+        label: option.label,
+        description: option.fragment,
+      })),
+    [],
+  );
+  const responseDetailOptions = useMemo(() => {
+    const details = findInjectionResponseOption(encounter.response.kind)?.details ?? [];
+    return details.map((detail) => ({
+      key: detail.key,
+      label: detail.label,
+      description: detail.fragment,
+    }));
+  }, [encounter.response.kind]);
 
   const showInitiationPath =
     !nonAdministration &&
@@ -3500,11 +3522,36 @@ export function InjectionPanel({
                 <OptionList<InjectionResponse["kind"]>
                   name="inj-response"
                   value={encounter.response.kind}
-                  onChange={(value) => patch({ response: { ...encounter.response, kind: value } })}
-                  options={INJECTION_RESPONSE_OPTIONS}
+                  onChange={(value) =>
+                    patch({
+                      // Changing the kind drops any sub-choice from the previous
+                      // one - detail keys are only meaningful within their parent.
+                      response: { ...encounter.response, kind: value, detail: "" },
+                    })
+                  }
+                  options={responseOptions}
                   inline
                 />
               </Field>
+              {requirements.response?.state !== "hidden" && responseDetailOptions.length > 0 && (
+                <Field
+                  label="Response detail"
+                  field="response.detail"
+                  state="optional"
+                  hint="Sharpens the note wording. Leave unset to document the response on its own."
+                >
+                  <OptionList<string>
+                    name="inj-response-detail"
+                    value={encounter.response.detail ?? ""}
+                    onChange={(value) =>
+                      patch({ response: { ...encounter.response, detail: value } })
+                    }
+                    options={responseDetailOptions}
+                    placeholder="No further detail"
+                    inline
+                  />
+                </Field>
+              )}
               {requirements.response?.state !== "hidden" && encounter.response.kind === "custom" && (
                 <Field label="Describe response" field="response.custom">
                   <input

@@ -73,8 +73,30 @@ export interface InjectionVitals {
   weightUnit?: "kg" | "lb";
 }
 
+export type InjectionResponseKind =
+  // Present since the original worksheet.
+  | "well"
+  | "bleed"
+  | "disc"
+  // Present in the compatibility runtime's RC5.22 response extension, but
+  // never surfaced by the typed panel until now.
+  | "obsok"
+  | "flowres"
+  | "devicehold"
+  // Added here.
+  | "reaction"
+  | "vasovagal"
+  | "anxiety"
+  | "custom"
+  | "";
+
 export interface InjectionResponse {
-  kind: "well" | "bleed" | "disc" | "custom" | "";
+  kind: InjectionResponseKind;
+  /**
+   * Optional sub-choice within the selected kind. Sharpens the note wording
+   * without adding a completion gate - a bare kind still documents.
+   */
+  detail?: string;
   custom?: string;
 }
 
@@ -497,24 +519,295 @@ export const INJECTION_ATTESTATION_OPTIONS: ReadonlyArray<{
   },
 ];
 
-export const INJECTION_RESPONSE_OPTIONS: ReadonlyArray<{
-  key: Exclude<InjectionResponse["kind"], "">;
+/**
+ * One sub-choice of a patient response.
+ *
+ * `fragment` is the short lowercase clause the CC headline and the
+ * compatibility runtime's response slot both take. `note` is the full
+ * sentence the typed documentation emits. A sub-choice always replaces its
+ * parent's wording rather than appending to it, so each combination reads as
+ * one deliberate clinical sentence instead of two glued together.
+ */
+export interface InjectionResponseDetailOption {
+  key: string;
   label: string;
-  description: string;
-}> = [
+  fragment: string;
+  note: string;
+  /** Defaults to the label with a lowercased first character. */
+  headline?: string;
+}
+
+export interface InjectionResponseOption {
+  key: Exclude<InjectionResponseKind, "">;
+  label: string;
+  fragment: string;
+  note: string;
+  headline?: string;
+  details?: ReadonlyArray<InjectionResponseDetailOption>;
+}
+
+/**
+ * The single source of truth for post-injection response wording.
+ *
+ * Before this catalog the same list was declared three times - the panel's
+ * options, the typed note map, and the compatibility runtime's RESP array plus
+ * its responseSnapshot() ladder. The three had already drifted: the runtime
+ * offered obsok/flowres/devicehold that the typed panel never showed, and
+ * responseSnapshot() ends in a bare `return "tolerated well"`, so any kind it
+ * did not recognize was documented as a well-tolerated injection. Keeping one
+ * catalog and deriving both pipelines from it is what makes that class of
+ * silent mis-documentation impossible.
+ */
+export const INJECTION_RESPONSE_OPTIONS: ReadonlyArray<InjectionResponseOption> = [
   {
     key: "well",
     label: "Tolerated well",
-    description: "no immediate complication, no bleeding or swelling at site",
+    fragment: "no immediate complication, no bleeding or swelling at site",
+    note: "Pt tolerated inj well; no immediate complication, bleeding, or swelling at site.",
+  },
+  {
+    key: "obsok",
+    label: "Observed, no acute reaction",
+    headline: "observed with no acute reaction",
+    fragment: "post-injection observation completed without acute adverse reaction",
+    note: "Post-injection observation completed; no acute adverse reaction noted prior to departure.",
   },
   {
     key: "bleed",
     label: "Minor bleeding, controlled",
-    description: "minor bleeding controlled with pressure, no swelling",
+    headline: "minor bleeding controlled",
+    fragment: "minor bleeding controlled with pressure, no swelling",
+    note: "Minor bleeding noted post-inj; controlled w/ pressure. No persistent bleeding or significant swelling.",
+    details: [
+      {
+        key: "pressure",
+        label: "Controlled with brief pressure",
+        headline: "minor bleeding controlled",
+        fragment: "minor bleeding controlled with brief pressure, no swelling",
+        note: "Minor bleeding noted post-inj; controlled w/ brief pressure. No persistent bleeding or significant swelling.",
+      },
+      {
+        key: "extended",
+        label: "Required extended pressure",
+        headline: "minor bleeding, extended pressure required",
+        fragment: "minor bleeding required extended pressure, resolved before departure",
+        note: "Minor bleeding noted post-inj; required extended pressure to achieve hemostasis. Bleeding resolved prior to departure, no significant swelling.",
+      },
+      {
+        key: "dressing",
+        label: "Dressing applied",
+        headline: "minor bleeding controlled, dressing applied",
+        fragment: "minor bleeding controlled, dressing applied",
+        note: "Minor bleeding noted post-inj; controlled w/ pressure and adhesive dressing applied. Pt advised on dressing removal and site care.",
+      },
+    ],
   },
-  { key: "disc", label: "Mild site discomfort", description: "mild transient site discomfort, no acute reaction" },
-  { key: "custom", label: "Custom…", description: "" },
+  {
+    key: "disc",
+    label: "Site discomfort",
+    headline: "mild site discomfort",
+    fragment: "mild transient site discomfort, no acute reaction",
+    note: "Mild transient site discomfort reported; no acute reaction noted.",
+    details: [
+      {
+        key: "mild",
+        label: "Mild, transient",
+        headline: "mild site discomfort",
+        fragment: "mild transient site discomfort, no acute reaction",
+        note: "Mild transient site discomfort reported; no acute reaction noted.",
+      },
+      {
+        key: "moderate",
+        label: "Moderate, resolved before departure",
+        headline: "moderate site discomfort, resolved",
+        fragment: "moderate site discomfort, resolved before departure",
+        note: "Moderate site discomfort reported at injection site; discomfort resolved prior to departure. No acute reaction noted.",
+      },
+    ],
+  },
+  {
+    key: "reaction",
+    label: "Local site reaction",
+    headline: "local site reaction",
+    fragment: "local site reaction noted, no systemic symptoms",
+    note: "Local injection-site reaction noted; no systemic symptoms reported. Pt advised on site care and return precautions.",
+    details: [
+      {
+        key: "redness",
+        label: "Redness",
+        headline: "localized redness at site",
+        fragment: "localized redness at site, no systemic symptoms",
+        note: "Localized redness noted at injection site w/o induration or drainage; no systemic symptoms reported. Pt advised on site care and return precautions.",
+      },
+      {
+        key: "swelling",
+        label: "Swelling",
+        headline: "localized swelling at site",
+        fragment: "localized swelling at site, no systemic symptoms",
+        note: "Localized swelling noted at injection site w/o drainage; no systemic symptoms reported. Pt advised on site care and return precautions.",
+      },
+      {
+        key: "induration",
+        label: "Induration",
+        headline: "induration at site",
+        fragment: "palpable induration at site, no systemic symptoms",
+        note: "Palpable induration noted at injection site w/o erythema or drainage; no systemic symptoms reported. Pt advised on site care and return precautions.",
+      },
+    ],
+  },
+  {
+    key: "vasovagal",
+    label: "Vasovagal / lightheaded",
+    headline: "vasovagal response, resolved",
+    fragment: "vasovagal response, monitored until resolved",
+    note: "Pt reported lightheadedness following inj; placed in recumbent position and monitored until symptoms resolved. No syncope, injury, or acute distress observed.",
+    details: [
+      {
+        key: "rest",
+        label: "Resolved with brief rest",
+        headline: "lightheadedness, resolved with rest",
+        fragment: "lightheadedness resolved with brief rest",
+        note: "Pt reported lightheadedness following inj; symptoms resolved w/ brief seated rest. No syncope, injury, or acute distress observed.",
+      },
+      {
+        key: "extended",
+        label: "Required extended observation",
+        headline: "vasovagal response, extended observation",
+        fragment: "vasovagal response requiring extended observation",
+        note: "Pt reported lightheadedness following inj; placed in recumbent position and kept for extended observation until symptoms fully resolved. No syncope, injury, or acute distress observed. Pt ambulatory and stable at departure.",
+      },
+    ],
+  },
+  {
+    key: "anxiety",
+    label: "Anxiety / distress re: injection",
+    headline: "injection-related anxiety",
+    fragment: "injection-related anxiety, supported through administration",
+    note: "Pt expressed anxiety regarding inj; reassurance and procedural explanation provided. Administration completed w/o acute reaction.",
+    details: [
+      {
+        key: "redirected",
+        label: "Reassured and proceeded",
+        headline: "injection-related anxiety, proceeded",
+        fragment: "injection-related anxiety, reassured and proceeded",
+        note: "Pt expressed anxiety regarding inj; reassurance and procedural explanation provided and pt proceeded w/o further distress. Administration completed w/o acute reaction.",
+      },
+      {
+        key: "declined-then-agreed",
+        label: "Initially declined, then agreed",
+        headline: "initially declined, then agreed",
+        fragment: "initially declined, agreed after discussion",
+        note: "Pt initially declined inj due to anxiety; concerns discussed and pt agreed to proceed. Administration completed w/o acute reaction.",
+      },
+    ],
+  },
+  {
+    key: "flowres",
+    label: "Slow/firm flow, completed",
+    headline: "slow/firm flow, completed and monitored",
+    fragment:
+      "slow or firm medication flow noted during administration; injection completed and patient monitored without immediate adverse reaction",
+    note: "Slow/firm medication flow noted during administration; inj completed and pt monitored w/o immediate adverse reaction.",
+  },
+  {
+    key: "devicehold",
+    label: "Device/flow concern — provider notified",
+    headline: "device/flow concern, provider notified",
+    fragment:
+      "medication flow/device concern occurred; administration details documented and provider/supervisor notified",
+    note: "Medication flow/device concern documented during administration; provider/supervisor notified and dose-delivery details to be confirmed before closeout.",
+  },
+  { key: "custom", label: "Custom…", fragment: "", note: "" },
 ];
+
+const RESPONSE_BY_KIND = new Map(
+  INJECTION_RESPONSE_OPTIONS.map((option) => [option.key, option] as const),
+);
+
+export function findInjectionResponseOption(
+  kind: InjectionResponseKind,
+): InjectionResponseOption | undefined {
+  return kind ? RESPONSE_BY_KIND.get(kind) : undefined;
+}
+
+export function findInjectionResponseDetail(
+  response: InjectionResponse,
+): InjectionResponseDetailOption | undefined {
+  if (!response.detail) return undefined;
+  return findInjectionResponseOption(response.kind)?.details?.find(
+    (item) => item.key === response.detail,
+  );
+}
+
+/**
+ * The full note sentence for a response, sub-choice included. Empty when no
+ * response is documented, so callers keep deciding whether to emit a line.
+ */
+export function injectionResponseNote(response: InjectionResponse): string {
+  const custom = response.custom?.trim();
+  if (response.kind === "custom") return custom ? `${custom.replace(/\.$/, "")}.` : "";
+  const detail = findInjectionResponseDetail(response);
+  if (detail) return detail.note;
+  return findInjectionResponseOption(response.kind)?.note ?? "";
+}
+
+/**
+ * The descriptive gloss: shown under the control, and handed to the
+ * compatibility runtime's response slot.
+ */
+export function injectionResponseFragment(response: InjectionResponse): string {
+  const custom = response.custom?.trim();
+  if (response.kind === "custom") return custom ? custom.replace(/\.$/, "") : "";
+  const detail = findInjectionResponseDetail(response);
+  if (detail) return detail.fragment;
+  return findInjectionResponseOption(response.kind)?.fragment ?? "";
+}
+
+const lowerFirst = (value: string): string =>
+  value ? value.charAt(0).toLocaleLowerCase() + value.slice(1) : "";
+
+/**
+ * The terse clause the CC one-liner takes - a different register from
+ * `fragment`, which is a full descriptive gloss and reads as a run-on inside
+ * the headline. Falls back to the label so a new entry stays readable without
+ * having to supply one.
+ */
+export function injectionResponseHeadline(response: InjectionResponse): string {
+  const custom = response.custom?.trim();
+  if (response.kind === "custom") return custom ? custom.replace(/\.$/, "") : "";
+  const detail = findInjectionResponseDetail(response);
+  if (detail) return detail.headline ?? lowerFirst(detail.label);
+  const option = findInjectionResponseOption(response.kind);
+  if (!option) return "";
+  return option.headline ?? lowerFirst(option.label);
+}
+
+/**
+ * Kinds the compatibility runtime renders correctly on its own. Anything else -
+ * a newer kind, or any selection carrying a sub-choice - is mirrored through
+ * its `custom` path so the composed wording reaches the copied note instead of
+ * falling through responseSnapshot()'s "tolerated well" default.
+ */
+const LEGACY_NATIVE_RESPONSE_KINDS: ReadonlySet<InjectionResponseKind> = new Set([
+  "well",
+  "bleed",
+  "disc",
+  "custom",
+]);
+
+export function legacyInjectionResponseMirror(response: InjectionResponse): {
+  kind: string;
+  custom: string;
+} {
+  if (!response.kind) return { kind: "", custom: response.custom?.trim() ?? "" };
+  if (response.kind === "custom") {
+    return { kind: "custom", custom: response.custom?.trim() ?? "" };
+  }
+  if (LEGACY_NATIVE_RESPONSE_KINDS.has(response.kind) && !findInjectionResponseDetail(response)) {
+    return { kind: response.kind, custom: response.custom?.trim() ?? "" };
+  }
+  return { kind: "custom", custom: injectionResponseFragment(response) };
+}
 
 /**
  * Optional one-tap departure-status note. Unselected by default and never

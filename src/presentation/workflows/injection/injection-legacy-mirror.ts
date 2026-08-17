@@ -1,6 +1,7 @@
 import {
   INJECTION_SAFETY_TRIGGERS,
   InjectionEngine,
+  legacyInjectionResponseMirror,
   type InjectionEncounter,
 } from "../../../domain/injection";
 import type { MedicationVerificationKey } from "../../../domain/injection-catalog";
@@ -111,7 +112,13 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
   setLegacyFieldValue("temp", encounter.vitals?.temperature ?? "");
   setLegacyFieldValue("rr", encounter.vitals?.rr ?? "");
   setLegacyFieldValue("spo2", encounter.vitals?.spo2 ?? "");
-  setLegacyFieldValue("respCustom", encounter.response.custom ?? "");
+  // The compatibility runtime's responseSnapshot() ends in a bare
+  // `return "tolerated well"`, so a kind it does not recognize - or a kind
+  // whose sub-choice it cannot see - would be copied into the chart as a
+  // well-tolerated injection. The mirror resolves those through the runtime's
+  // own `custom` path, which carries the composed wording verbatim.
+  const responseMirror = legacyInjectionResponseMirror(encounter.response);
+  setLegacyFieldValue("respCustom", responseMirror.custom);
 
   const details = encounter.details ?? {};
   setLegacyFieldValue("injProductSource", details.productSource ?? "");
@@ -183,7 +190,7 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
     route: encounter.route,
     intervalKey: encounter.intervalKey,
     reason: encounter.reason,
-    response: encounter.response.kind,
+    response: responseMirror.kind,
     attestations: encounter.attestations as Record<string, boolean>,
     verifications: encounter.verifications as Record<string, boolean>,
     requiredVerifications,
