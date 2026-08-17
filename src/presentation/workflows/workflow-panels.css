@@ -1258,79 +1258,6 @@
   font-size: 10px;
 }
 
-/* The MAR due line, stamped exactly like the app's own posted/error banners
-   (.cd2004-post-stamp / .cd2004-post-error): a fixed-color 16-bit pictogram
-   in a 27px column beside a double-bordered, soft-filled caption block, big
-   enough to read across the room. Colour tracks the engine's own timing
-   state; it is a readout, never a gate — the engine raises the stop or
-   warning itself. */
-.cd2004-shell .wfp-timing-banner {
-  display: grid;
-  grid-template-columns: 27px minmax(0, 1fr);
-  align-items: start;
-  gap: 7px;
-  margin-top: 8px;
-  padding: 6px 10px;
-  border: 2px double var(--cd-border-mid);
-  background: var(--cd-chrome-light);
-}
-
-.cd2004-shell .wfp-timing-banner svg {
-  width: 22px;
-  height: 22px;
-  margin-top: 1px;
-}
-
-.cd2004-shell .wfp-timing-banner-status {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.045em;
-}
-
-.cd2004-shell .wfp-timing-banner-days {
-  margin-top: 2px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.cd2004-shell .wfp-timing-banner-message {
-  margin: 3px 0 0;
-  font-size: 11px;
-}
-
-.cd2004-shell .wfp-timing-banner-guidance {
-  margin: 5px 0 0;
-  padding-top: 4px;
-  border-top: 1px solid currentColor;
-  font-size: 10.5px;
-  font-style: italic;
-}
-
-.cd2004-shell .wfp-timing-banner.is-idle {
-  color: var(--cd-ink-muted);
-  background: var(--cd-chrome-light);
-  border-color: var(--cd-border-mid);
-}
-
-.cd2004-shell .wfp-timing-banner.is-ok {
-  color: #063d21;
-  background: var(--cd-green-soft);
-  border-color: var(--cd-green);
-}
-
-.cd2004-shell .wfp-timing-banner.is-warning {
-  color: #4a2d00;
-  background: var(--cd-amber-soft);
-  border-color: var(--cd-amber);
-}
-
-.cd2004-shell .wfp-timing-banner.is-stop {
-  color: #651111;
-  background: var(--cd-red-soft);
-  border-color: var(--cd-red);
-}
-
 /* Dose-history MAR grid: Date | Medication | Route | Site. Read-only. */
 .cd2004-shell .wfp-grid-mar .wfp-grid-head,
 .cd2004-shell .wfp-grid-mar .wfp-grid-row {
@@ -1581,119 +1508,6 @@
 .cd2004-shell .wfp-calculated-value {
   padding-left: 1px;
   color: #145b31;
-}
-
-/* System-owned clinical values use a register-like readout instead of an
-   editable field. The double rule, fixed state stamp, and source line carry
-   the hierarchy in grayscale as well as colour. */
-.cd2004-shell .wfp-clinical-readout {
-  color: var(--cd-ink);
-  background: var(--cd-white);
-  border: 3px double var(--cd-border-dark);
-  box-shadow: inset 1px 1px var(--cd-border-light);
-}
-
-.cd2004-shell .wfp-clinical-readout-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 22px;
-  padding: 2px 6px;
-  color: #fff;
-  background: var(--cd-navy);
-  border-bottom: 1px solid var(--cd-border-dark);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.025em;
-}
-
-.cd2004-shell .wfp-clinical-readout-marker {
-  padding: 0 5px;
-  color: var(--cd-ink);
-  background: var(--cd-face);
-  border: 1px solid #fff;
-  font-family: "Courier New", Consolas, monospace;
-  font-size: 9px;
-  line-height: 15px;
-}
-
-.cd2004-shell .wfp-clinical-readout-body {
-  display: grid;
-  grid-template-columns: minmax(180px, auto) minmax(0, 1fr) auto;
-  gap: 8px 12px;
-  align-items: center;
-  padding: 7px 9px;
-}
-
-.cd2004-shell .wfp-clinical-readout-value {
-  color: var(--cd-ink);
-  font-family: "Arial Narrow", Tahoma, Arial, sans-serif;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 0.015em;
-  line-height: 1;
-}
-
-.cd2004-shell .wfp-clinical-readout-copy {
-  min-width: 0;
-  font-size: 10px;
-  line-height: 1.35;
-}
-
-.cd2004-shell .wfp-clinical-readout-detail {
-  font-weight: 600;
-}
-
-.cd2004-shell .wfp-clinical-readout-source {
-  display: block;
-  margin-top: 2px;
-  color: var(--cd-ink-muted);
-}
-
-.cd2004-shell .wfp-clinical-readout-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.cd2004-shell .wfp-clinical-readout.is-attention {
-  border-color: var(--cd-amber);
-  background: var(--cd-amber-soft);
-}
-
-.cd2004-shell .wfp-clinical-readout.is-success {
-  border-color: var(--cd-green);
-  background: var(--cd-green-soft);
-}
-
-.cd2004-shell .wfp-clinical-readout.is-info {
-  border-color: var(--cd-info);
-  background: var(--cd-info-soft);
-}
-
-.cd2004-shell .wfp-clinical-readout.is-danger {
-  border-color: var(--cd-red);
-  background: var(--cd-red-soft);
-}
-
-.cd2004-shell .wfp-clinical-readout.is-compact .wfp-clinical-readout-body {
-  padding-block: 5px;
-}
-
-.cd2004-shell .wfp-clinical-readout.is-compact .wfp-clinical-readout-value {
-  font-size: 17px;
-}
-
-@media (max-width: 700px) {
-  .cd2004-shell .wfp-clinical-readout-body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .cd2004-shell .wfp-clinical-readout-actions {
-    justify-content: flex-start;
-  }
 }
 
 .cd2004-shell .wfp-operator-guidance {
@@ -2806,3 +2620,211 @@
     padding-inline: 2px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Schedule register — the colour-coded readout for system-calculated clinical
+   values. Replaces the 24px-value card and the tinted alert banner beside it.
+
+   State appears in two fixed positions so it is readable before the words are:
+   a spine down the left edge, and a saturated verdict chip in the header. The
+   spine is a border rather than an inset shadow, so it reserves its own width
+   and can never paint over the row it marks.
+
+   Every state also carries its word (ON SCHEDULE / EARLY / OVERDUE), so none of
+   this depends on hue alone - it stays readable with red/green colour
+   deficiency and in monochrome print.
+   ------------------------------------------------------------------------- */
+.cd2004-shell .wfp-schedule-register {
+  background: var(--cd-white);
+  border: 1px solid var(--cd-border-dark);
+  border-left: 6px solid var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-schedule-register.is-ok { border-left-color: var(--cd-green); }
+.cd2004-shell .wfp-schedule-register.is-warning { border-left-color: var(--cd-amber); }
+.cd2004-shell .wfp-schedule-register.is-stop { border-left-color: var(--cd-red); }
+
+.cd2004-shell .wfp-schedule-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  padding: 2px 6px;
+  color: #fff;
+  background: var(--cd-navy);
+  border-bottom: 1px solid var(--cd-border-dark);
+}
+
+.cd2004-shell .wfp-schedule-head > strong {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.cd2004-shell .wfp-schedule-marks {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.cd2004-shell .wfp-schedule-mark {
+  padding: 0 4px;
+  color: #182750;
+  background: var(--cd-face);
+  border: 1px solid #fff;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+/* White on saturated colour. A pale wash over a large panel is weaker signal
+   than a small block of full-strength colour, and costs far more room. */
+.cd2004-shell .wfp-schedule-verdict {
+  padding: 1px 6px;
+  color: #fff;
+  border: 1px solid rgb(0 0 0 / 35%);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.cd2004-shell .wfp-schedule-verdict.is-ok { background: var(--cd-green); }
+.cd2004-shell .wfp-schedule-verdict.is-warning { background: var(--cd-amber); }
+.cd2004-shell .wfp-schedule-verdict.is-stop { background: var(--cd-red); }
+.cd2004-shell .wfp-schedule-verdict.is-neutral {
+  color: #182750;
+  background: var(--cd-face);
+  border-color: var(--cd-border-mid);
+}
+
+.cd2004-shell .wfp-schedule-rows { margin: 0; }
+
+.cd2004-shell .wfp-schedule-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 124px) minmax(0, 1fr);
+  border-bottom: 1px solid #d7dae9;
+}
+
+.cd2004-shell .wfp-schedule-row:last-child { border-bottom: 0; }
+
+.cd2004-shell .wfp-schedule-row > dt,
+.cd2004-shell .wfp-schedule-row > dd {
+  margin: 0;
+  padding: 3px 7px;
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-schedule-row > dt {
+  color: #27386f;
+  background: #eef0fa;
+  border-right: 1px solid #c3c7d7;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-schedule-value {
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-schedule-note {
+  margin-left: 5px;
+  color: var(--cd-ink-muted);
+}
+
+/* The value the verdict is derived from, flagged the way a lab flags a result. */
+.cd2004-shell .wfp-schedule-flag {
+  margin-left: 5px;
+  padding: 0 3px;
+  border: 1px solid;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.cd2004-shell .wfp-schedule-flag.is-ok {
+  color: #14532b;
+  background: var(--cd-green-soft);
+  border-color: var(--cd-green);
+}
+
+.cd2004-shell .wfp-schedule-flag.is-warning {
+  color: #5c3b00;
+  background: var(--cd-amber-soft);
+  border-color: var(--cd-amber);
+}
+
+.cd2004-shell .wfp-schedule-flag.is-stop {
+  color: #6d1010;
+  background: var(--cd-red-soft);
+  border-color: var(--cd-red);
+}
+
+.cd2004-shell .wfp-schedule-flag.is-neutral {
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome-light);
+  border-color: var(--cd-border-mid);
+}
+
+/* One structured tinted row, not a whole-panel wash: the colour field the
+   verdict deserves, without turning the block into a floating alert card. */
+.cd2004-shell .wfp-schedule-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 7px;
+  border-top: 1px solid #c3c7d7;
+  font-size: 10px;
+}
+
+.cd2004-shell .wfp-schedule-band > strong { flex: 0 0 auto; font-size: 10px; }
+.cd2004-shell .wfp-schedule-band > span { min-width: 0; }
+
+.cd2004-shell .wfp-schedule-band.is-ok { color: #14532b; background: var(--cd-green-soft); }
+.cd2004-shell .wfp-schedule-band.is-warning { color: #5c3b00; background: var(--cd-amber-soft); }
+.cd2004-shell .wfp-schedule-band.is-stop { color: #6d1010; background: var(--cd-red-soft); }
+.cd2004-shell .wfp-schedule-band.is-neutral {
+  color: var(--cd-ink-muted);
+  background: var(--cd-chrome-light);
+}
+
+/* Actions sit on their own row rather than sharing the verdict band, so a long
+   sentence can never squeeze the command button out of the block. */
+.cd2004-shell .wfp-schedule-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 3px 7px;
+  background: #eef0fa;
+  border-top: 1px solid #c3c7d7;
+}
+
+/* Aggregate readiness verdict. Same grammar as the schedule register's chip:
+   saturated colour carrying its own word, never hue alone. Scoped to
+   documentation completeness - see the note in NoteInspector for why this must
+   not be worded as clearance to administer. */
+.cd2004-shell .cd2004-readiness-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 7px;
+  color: #fff;
+  border-bottom: 1px solid rgb(0 0 0 / 30%);
+}
+
+.cd2004-shell .cd2004-readiness-verdict > strong {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+
+.cd2004-shell .cd2004-readiness-verdict > span {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.cd2004-shell .cd2004-readiness-verdict.is-blocked { background: var(--cd-red); }
+.cd2004-shell .cd2004-readiness-verdict.is-review { background: var(--cd-amber); }
+.cd2004-shell .cd2004-readiness-verdict.is-clear { background: var(--cd-green); }

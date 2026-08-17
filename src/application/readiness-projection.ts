@@ -106,6 +106,60 @@ export function firstActionableClinicalIssue(
   );
 }
 
+export type ReadinessVerdictTone = "clear" | "review" | "blocked";
+
+export interface ReadinessVerdict {
+  tone: ReadinessVerdictTone;
+  /** The verdict word staff read first. */
+  headline: string;
+  /** The count line beneath it. */
+  detail: string;
+  completed: number;
+  total: number;
+  blockers: number;
+  warnings: number;
+  pending: number;
+}
+
+/**
+ * Roll the readiness rows up into a single colour-coded verdict.
+ *
+ * Scoped to DOCUMENTATION, deliberately. Some stages -- an injection's
+ * Administration and Disposition / follow-up, for instance -- are documented
+ * after the clinical act, so this can only reach green once the encounter is
+ * written up. A verdict worded as clearance to administer would therefore be
+ * red at the exact moment staff are meant to act, and a signal that is red
+ * when you are supposed to act is one people learn to ignore. A genuine
+ * pre-administration gate would need its own subset of stages; this is not it.
+ *
+ * Pending counts as blocking rather than as its own third state: an untouched
+ * requirement and a failed one are equally "not yet filed", and splitting them
+ * would put a second amber verdict beside the review one it already has.
+ */
+export function summarizeReadinessVerdict(
+  items: readonly ReadinessItem[],
+): ReadinessVerdict | null {
+  const total = items.length;
+  if (!total) return null;
+
+  const completed = items.filter((item) => item.state === "complete").length;
+  const blockers = items.filter((item) => item.state === "stop").length;
+  const warnings = items.filter((item) => item.state === "warning").length;
+  const pending = items.filter((item) => item.state === "pending").length;
+
+  const tone: ReadinessVerdictTone =
+    blockers || pending ? "blocked" : warnings ? "review" : "clear";
+  const headline =
+    tone === "blocked"
+      ? "REQUIREMENTS OUTSTANDING"
+      : tone === "review"
+        ? "READY TO FILE — REVIEW FLAGGED"
+        : "READY TO FILE";
+  const detail = `${completed} OF ${total} COMPLETE${warnings > 0 ? ` · ${warnings} REVIEW` : ""}`;
+
+  return { tone, headline, detail, completed, total, blockers, warnings, pending };
+}
+
 /**
  * Translate typed engine validation into a fixed, clinical scanning layout.
  * Until an engine says a record is ready we remain conservative: sections

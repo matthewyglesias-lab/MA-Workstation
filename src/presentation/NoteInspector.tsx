@@ -1,4 +1,5 @@
 import { DesktopIcon } from "./DesktopIcon";
+import { summarizeReadinessVerdict } from "../application/readiness-projection";
 import type { NoteSection, ReadinessItem } from "./types";
 
 interface NoteInspectorProps {
@@ -22,27 +23,28 @@ export function NoteInspector({
   onCopySection,
   onCopyAll,
 }: NoteInspectorProps) {
-  const completed = readiness.filter((item) => item.state === "complete").length;
-  const blockers = readiness.filter((item) => item.state === "stop").length;
-  const warnings = readiness.filter((item) => item.state === "warning").length;
-  const pending = readiness.filter((item) => item.state === "pending").length;
-  const readinessTotal = readiness.length;
-  const documentIsDraft = blockers > 0 || pending > 0;
+  const verdict = summarizeReadinessVerdict(readiness);
+  const documentIsDraft = verdict?.tone === "blocked";
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
-      <div class="cd2004-readiness-summary">
-        <div class="cd2004-readiness-score">
-          <span>Requirements</span>
-          <strong>{completed} OF {readinessTotal || 0}</strong>
+      {/* The aggregate verdict, colour-coded, because a per-row scan is slower
+          than staff need when they are deciding whether a record can be filed.
+          Wording and scope are decided in `summarizeReadinessVerdict`. */}
+      {verdict && (
+        <div class={`cd2004-readiness-verdict is-${verdict.tone}`} role="status">
+          <strong>{verdict.headline}</strong>
+          <span>{verdict.detail}</span>
         </div>
-        <div class="cd2004-readiness-flags">
-          <span class={blockers ? "has-stop" : ""}>
-            {blockers ? `${blockers} INCOMPLETE` : pending ? `${pending} PENDING` : "COMPLETE"}
-          </span>
-          {warnings > 0 && <span class="has-warning">{warnings} REVIEW</span>}
+      )}
+      {!verdict && (
+        <div class="cd2004-readiness-summary">
+          <div class="cd2004-readiness-score">
+            <span>Requirements</span>
+            <strong>0 OF 0</strong>
+          </div>
         </div>
-      </div>
+      )}
 
       <div class="cd2004-readiness-list" aria-label="Readiness checks">
         {readiness.length ? (

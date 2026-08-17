@@ -1,6 +1,15 @@
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue, providerControl } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
+const {
+  scheduleRegister,
+  registerVerdict,
+  registerMarker,
+  registerValue,
+  registerNote,
+  registerFlag,
+  registerBand,
+} = require('./schedule-register');
 
 test.describe('MA Workstation browser journeys', () => {
   const workflowLabels = {
@@ -261,12 +270,19 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await openInjectionTab(page, 'Schedule');
-    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText('On schedule.');
-    await expect(panel.locator('.wfp-timing-banner')).toHaveClass(/is-ok/);
-    await expect(panel.locator('.wfp-timing-banner')).not.toHaveClass(/is-warning/);
-    await expect(panel.locator('.wfp-timing-banner-message')).toContainText(
-      'within the displayed scheduling window (2026-08-11 to 2026-08-21; expected 2026-08-14)'
-    );
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    // State reaches the operator three ways, and all three must agree: the
+    // spine class, the verdict word, and the band sentence. Colour alone would
+    // be unreadable to a staff member with red/green deficiency.
+    await expect(register).toHaveClass(/is-ok/);
+    await expect(register).not.toHaveClass(/is-warning/);
+    await expect(registerVerdict(register)).toHaveText('ON SCHEDULE');
+    await expect(registerBand(register)).toContainText('On schedule.');
+    // The window the old banner spelled out in prose is now a labeled row, in
+    // the same MM/DD/YY the typed date fields use.
+    await expect(registerValue(register, 'Window')).toHaveText('08/11/26 – 08/21/26');
+    await expect(registerNote(register, 'Window')).toContainText('expected 08/14/26');
+    await expect(registerFlag(register, 'Days since prior')).toHaveText('IN WINDOW');
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toHaveCount(0);
@@ -314,11 +330,14 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await openInjectionTab(page, 'Schedule');
-    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText('On schedule.');
-    await expect(panel.locator('.wfp-timing-banner')).toHaveClass(/is-ok/);
-    await expect(panel.locator('.wfp-timing-banner-message')).toContainText(
-      'within the displayed scheduling window (2026-08-11 to 2026-08-21; expected 2026-08-14)'
-    );
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    await expect(register).toHaveClass(/is-ok/);
+    await expect(registerVerdict(register)).toHaveText('ON SCHEDULE');
+    await expect(registerBand(register)).toContainText('On schedule.');
+    // The last day of the window is still inside it: the flag must not read
+    // "1 DAYS LATE" on the boundary.
+    await expect(registerValue(register, 'Window')).toHaveText('08/11/26 – 08/21/26');
+    await expect(registerFlag(register, 'Days since prior')).toHaveText('IN WINDOW');
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toHaveCount(0);
@@ -339,9 +358,14 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await openInjectionTab(page, 'Schedule');
-    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText(
-      'Late — needs provider review.'
-    );
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    // Overdue is amber, not red: the engine classifies a late dose as needing
+    // provider review and reserves its hard stop for a date that cannot be
+    // true. The register reports that severity rather than escalating it.
+    await expect(register).toHaveClass(/is-warning/);
+    await expect(registerVerdict(register)).toHaveText('OVERDUE');
+    await expect(registerBand(register)).toContainText('Late — needs provider review.');
+    await expect(registerFlag(register, 'Days since prior')).toHaveText('1 DAY LATE');
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toBeVisible();
@@ -2415,8 +2439,9 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(outsideLab.locator('.wfp-register-source')).toHaveText('REF');
     await expect(panel.locator('.wfp-exception-register'))
       .not.toContainText('Medication alignment requires review');
-    await expect(panel.locator('.wfp-clinical-readout')).toContainText('INCOMPLETE');
-    await expect(panel.locator('.wfp-clinical-readout')).toContainText('STOP');
+    const udsRegister = scheduleRegister(panel, 'POINT-OF-CARE REPORT');
+    await expect(registerVerdict(udsRegister)).toHaveText('INCOMPLETE');
+    await expect(registerMarker(udsRegister)).toHaveText('STOP');
     await expect(panel.getByRole('button', { name: 'Copy draft Tebra note' })).toBeEnabled();
     await expect(page.locator('.cd2004-inspector').getByRole('button', { name: 'Copy draft note' }))
       .toBeEnabled();
@@ -2483,7 +2508,9 @@ test.describe('MA Workstation browser journeys', () => {
 
     await panel.getByRole('tab', { name: /^Review/ }).click();
     await expect(field('Medication alignment').locator('select')).toHaveValue('');
-    await expect(panel.locator('.wfp-clinical-readout')).toContainText('INCOMPLETE');
+    await expect(
+      registerVerdict(scheduleRegister(panel, 'POINT-OF-CARE REPORT'))
+    ).toHaveText('INCOMPLETE');
   });
 
   test('keeps the analyte a 13-panel cup omits out of every bulk result action', async ({ page }) => {
@@ -2776,14 +2803,14 @@ test.describe('MA Workstation browser journeys', () => {
       .locator('input[data-workstation-date="date"]');
     await fillDate(actualDate, '2026-07-30');
 
-    const nextDue = panel.locator(
-      '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
-    );
-    await expect(nextDue.locator('output')).toHaveText('08/27/2026');
-    await expect(nextDue.locator('.wfp-clinical-readout-marker')).toHaveText('CALC');
-    await expect(nextDue).toHaveClass(/is-info/);
-    await expect(nextDue.locator('input[data-workstation-date="date"]')).toHaveCount(0);
-    await expect(nextDue.getByRole('button', { name: 'Override…' })).toBeVisible();
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    // The date renders in the same MM/DD/YY the typed date fields use, so a
+    // calculated date and a keyed date are never shown two ways on one screen.
+    await expect(registerValue(register, 'Next dose due')).toHaveText('08/27/26');
+    await expect(registerMarker(register)).toHaveText('CALC');
+    await expect(registerNote(register, 'Next dose due')).toContainText('from 07/30/26');
+    await expect(register.locator('input[data-workstation-date="date"]')).toHaveCount(0);
+    await expect(register.getByRole('button', { name: 'Override…' })).toBeVisible();
   });
 
   test('targets the Sustenna Day 8 date on a Day 1 initiation and clears a stale calculated date on a provider-directed path', async ({ page }) => {
@@ -2800,24 +2827,23 @@ test.describe('MA Workstation browser journeys', () => {
       .locator('input[data-workstation-date="date"]');
     await fillDate(actualDate, '2026-07-30');
 
-    const nextDue = panel.locator('.wfp-clinical-readout').filter({
-      hasText: 'Return target — next injection due'
-    });
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    const nextDue = registerValue(register, 'Next dose due');
     // Baseline: with no initiation protocol selected, the ordered q4wk
     // interval drives the suggestion, same as the previous test.
-    await expect(nextDue.locator('output')).toHaveText('08/27/2026');
+    await expect(nextDue).toHaveText('08/27/26');
 
     // Day 1 initiation is followed by Day 8, not by the ordered maintenance
     // interval - the suggestion must switch to admin date + 7 days.
     await panel.locator('label:has-text("Day 1 initiation")').click();
-    await expect(nextDue.locator('output')).toHaveText('08/06/2026');
-    await expect(nextDue).toContainText('Day 8 target');
+    await expect(nextDue).toHaveText('08/06/26');
+    await expect(registerNote(register, 'Next dose due')).toContainText('Day 8');
 
     // A provider-directed re-initiation is explicitly a non-calculating
     // path - the stale Day 8 (or interval) suggestion must be cleared, not
     // left sitting in the field looking like a still-valid value.
     await panel.locator('label:has-text("Re-initiation / provider plan")').click();
-    await expect(nextDue.locator('output')).toHaveText('—');
-    await expect(nextDue.locator('.wfp-clinical-readout-marker')).toHaveText('PENDING');
+    await expect(nextDue).toHaveText('—');
+    await expect(registerMarker(register)).toHaveText('PENDING');
   });
 });
