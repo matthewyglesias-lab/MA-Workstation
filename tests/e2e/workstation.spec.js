@@ -2589,7 +2589,10 @@ test.describe('MA Workstation browser journeys', () => {
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       // Guard the guard: two empty strings also compare equal.
       expect(copied.trim().length).toBeGreaterThan(20);
-      expect(rendered).toBe(copied);
+      // The Windows clipboard serializes line breaks as CRLF even when the
+      // application supplied LF. Compare the text in the DOM's canonical
+      // line-ending form; do not normalize any other character.
+      expect(rendered).toBe(copied.replace(/\r\n/g, '\n'));
     }
 
     // Line numbers are chrome. A hand-dragged selection across the note must
