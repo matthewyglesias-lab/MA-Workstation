@@ -1,15 +1,58 @@
 import { DesktopIcon } from "./DesktopIcon";
-import type { NoteSection, ReadinessItem } from "./types";
+import { summarizeReadinessVerdict } from "../application/readiness-projection";
+import { noteDocumentLines, noteDocumentStats } from "./note-document";
+import type { NoteSection, PatientContext, ReadinessItem } from "./types";
 
 interface NoteInspectorProps {
   title: string;
   subtitle?: string;
   readiness: ReadinessItem[];
   sections: NoteSection[];
+  patient?: PatientContext;
   postState: "idle" | "posting" | "posted" | "error";
   postMessage?: string;
   onCopySection?: (section: NoteSection) => void;
   onCopyAll?: () => void;
+}
+
+/**
+ * One section of the document, rendered as a terminal document viewer renders
+ * one: a numbered gutter beside the text.
+ *
+ * The gutter is a sibling grid cell per line rather than a single column of
+ * numbers beside a single block of text. That is what keeps the numbering
+ * honest once a line wraps - a shared column would drift out of step with the
+ * text the moment any line took two visual rows, and a line number pointing at
+ * the wrong line is worse than none.
+ *
+ * The numbers are `user-select: none` in CSS, so dragging a selection across
+ * the note and copying it by hand cannot pull chrome into the clipboard. The
+ * Copy buttons never touch the DOM at all - they copy `section.content`
+ * directly - so they are unaffected either way.
+ */
+function NoteDocumentBody({ content }: { content: string }) {
+  return (
+    <div class="cd2004-note-body">
+      {noteDocumentLines(content).map((line) => (
+        <>
+          <span class="cd2004-note-lineno" aria-hidden="true">
+            {line.number}
+          </span>
+          <span class={`cd2004-note-line is-${line.kind}`}>
+            {line.segments.map((segment, index) =>
+              segment.role === "plain" ? (
+                segment.text
+              ) : (
+                <span key={index} class={`cd2004-note-seg-${segment.role}`}>
+                  {segment.text}
+                </span>
+              ),
+            )}
+          </span>
+        </>
+      ))}
+    </div>
+  );
 }
 
 export function NoteInspector({
@@ -17,32 +60,39 @@ export function NoteInspector({
   subtitle,
   readiness,
   sections,
+  patient,
   postState,
   postMessage,
   onCopySection,
   onCopyAll,
 }: NoteInspectorProps) {
-  const completed = readiness.filter((item) => item.state === "complete").length;
-  const blockers = readiness.filter((item) => item.state === "stop").length;
-  const warnings = readiness.filter((item) => item.state === "warning").length;
-  const pending = readiness.filter((item) => item.state === "pending").length;
-  const readinessTotal = readiness.length;
-  const documentIsDraft = blockers > 0 || pending > 0;
+  const verdict = summarizeReadinessVerdict(readiness);
+  const documentIsDraft = verdict?.tone === "blocked";
+  const stats = noteDocumentStats(sections.map((section) => section.content));
+  // The record is filed once the local record is locked. Until then it is a
+  // draft, whatever the readiness verdict says - a complete draft is still a
+  // draft, and labelling it otherwise would overstate the record's state.
+  const documentState = postState === "posted" ? "FILED" : "DRAFT";
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
-      <div class="cd2004-readiness-summary">
-        <div class="cd2004-readiness-score">
-          <span>Requirements</span>
-          <strong>{completed} OF {readinessTotal || 0}</strong>
+      {/* The aggregate verdict, colour-coded, because a per-row scan is slower
+          than staff need when they are deciding whether a record can be filed.
+          Wording and scope are decided in `summarizeReadinessVerdict`. */}
+      {verdict && (
+        <div class={`cd2004-readiness-verdict is-${verdict.tone}`} role="status">
+          <strong>{verdict.headline}</strong>
+          <span>{verdict.detail}</span>
         </div>
-        <div class="cd2004-readiness-flags">
-          <span class={blockers ? "has-stop" : ""}>
-            {blockers ? `${blockers} INCOMPLETE` : pending ? `${pending} PENDING` : "COMPLETE"}
-          </span>
-          {warnings > 0 && <span class="has-warning">{warnings} REVIEW</span>}
+      )}
+      {!verdict && (
+        <div class="cd2004-readiness-summary">
+          <div class="cd2004-readiness-score">
+            <span>Requirements</span>
+            <strong>0 OF 0</strong>
+          </div>
         </div>
-      </div>
+      )}
 
       <div class="cd2004-readiness-list" aria-label="Readiness checks">
         {readiness.length ? (
@@ -77,11 +127,42 @@ export function NoteInspector({
         )}
       </div>
 
+      {/* A document header, not a panel caption. It names the document, whose
+          it is, and what state it is in - which is what separates a document
+          viewer from a text box, and what the old preview never said. */}
       <div class="cd2004-note-heading">
         <DesktopIcon name="note" />
         <strong>{title}</strong>
-        <span>REVIEW</span>
+        <span class="cd2004-note-marks">
+          <span class="cd2004-note-mark">LOCAL</span>
+          <span class={`cd2004-note-mark is-${documentState.toLowerCase()}`}>
+            {documentState}
+          </span>
+        </span>
       </div>
+
+      {(patient?.name || patient?.dob || patient?.visitLabel) && (
+        <dl class="cd2004-note-ident">
+          {patient.name && (
+            <div>
+              <dt>Patient</dt>
+              <dd>{patient.name}</dd>
+            </div>
+          )}
+          {patient.dob && (
+            <div>
+              <dt>DOB</dt>
+              <dd>{patient.dob}</dd>
+            </div>
+          )}
+          {patient.visitLabel && (
+            <div>
+              <dt>Visit</dt>
+              <dd>{patient.visitLabel}</dd>
+            </div>
+          )}
+        </dl>
+      )}
 
       <div class="cd2004-note-toolbar" role="toolbar" aria-label="Document review commands">
         <span class="cd2004-note-mode" title={subtitle}>
@@ -109,7 +190,6 @@ export function NoteInspector({
             <section key={section.id} class="cd2004-note-section">
               <header>
                 <span class="cd2004-note-section-id">
-                  <DesktopIcon name="note" />
                   <b>{section.label}</b>
                   {section.destination &&
                     section.destination.trim().toLocaleLowerCase() !==
@@ -120,24 +200,23 @@ export function NoteInspector({
                 {section.sourceTarget && (
                   <button
                     type="button"
-                    class="cd2004-link-button cd2004-note-source"
+                    class="cd2004-note-mark cd2004-note-source"
                     onClick={() => window.dispatchEvent(new CustomEvent("ipmg:navigate-workflow-source", { detail: section.sourceTarget }))}
                   >
-                    Source →
+                    SOURCE
                   </button>
                 )}
                 <button
                   type="button"
-                  class="cd2004-command-button cd2004-note-copy"
+                  class="cd2004-note-mark cd2004-note-copy"
                   aria-label={`Copy ${section.label} section`}
                   title={`Copy ${section.label} section`}
                   onClick={() => onCopySection?.(section)}
                 >
-                  <DesktopIcon name="copy" />
-                  Copy
+                  COPY
                 </button>
               </header>
-              <pre>{section.content}</pre>
+              <NoteDocumentBody content={section.content} />
             </section>
           ))
         ) : (
@@ -147,7 +226,24 @@ export function NoteInspector({
             <span>Document the encounter to build the local note preview.</span>
           </div>
         )}
+        {/* A document that just stops leaves the reader unsure whether more of
+            it failed to render. A terminal viewer says where the end is. */}
+        {sections.length > 0 && (
+          <div class="cd2004-note-eod" aria-hidden="true">
+            ── END OF DOCUMENT ──
+          </div>
+        )}
       </div>
+
+      {sections.length > 0 && (
+        <div class="cd2004-note-foot">
+          <span>
+            {stats.sections} SECTION{stats.sections === 1 ? "" : "S"} · {stats.lines} LINE
+            {stats.lines === 1 ? "" : "S"}
+          </span>
+          <span class="cd2004-note-foot-state">{subtitle ?? "LOCAL PREVIEW"}</span>
+        </div>
+      )}
 
       <div class="cd2004-post-zone">
         {postState === "error" && (

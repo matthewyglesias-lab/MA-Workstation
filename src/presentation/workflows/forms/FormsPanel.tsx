@@ -19,6 +19,7 @@ import { formsEncounterToDocumentationInput } from "../../../documentation/adapt
 import { DesktopIcon } from "../../DesktopIcon";
 import { clickLegacyControl } from "../legacy-mirror";
 import { ProviderField } from "../ProviderField";
+import { resolveProviderDisplay } from "../../../domain/provider-register";
 import { StatusFlag } from "../StatusFlag";
 import { WorkstationDateField } from "../WorkstationDateField";
 import { mirrorFormsEncounterToLegacyDom } from "./forms-legacy-mirror";
@@ -480,7 +481,7 @@ export function FormsPanel({
                 <Field label="Provider name / signature">
                   <input
                     value={encounter.letterProviderName ?? ""}
-                    placeholder={encounter.provider || "Provider"}
+                    placeholder={resolveProviderDisplay(encounter.provider) || "Provider"}
                     onInput={(event) =>
                       patch({ letterProviderName: event.currentTarget.value })
                     }

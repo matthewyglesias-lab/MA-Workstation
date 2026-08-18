@@ -687,10 +687,6 @@ export const readLegacyInjectionDocumentation = (
     selectedControlTexts("injSafetyChips", doc),
   );
   const productSource = selectedOptionText("injProductSource", doc);
-  const preparation =
-    rawValue("injPreparation", doc) === "Other"
-      ? value("injPreparationDetail", doc)
-      : selectedOptionText("injPreparation", doc);
   const waste = checked("injWasteToggle", doc)
     ? value("injWasteAmount", doc)
     : "";
@@ -735,7 +731,6 @@ export const readLegacyInjectionDocumentation = (
     initiation: initiation.protocol,
     handling: {
       source: productSource || undefined,
-      preparation: preparation || undefined,
       waste: waste || undefined,
       wasteWitness: wasteWitness || undefined,
       productIssue: hasIssue

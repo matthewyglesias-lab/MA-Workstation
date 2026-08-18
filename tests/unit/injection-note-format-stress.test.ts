@@ -58,6 +58,7 @@ const baseAdministered = (): InjectionEncounter => ({
   verifications: { resuspend: true },
   acuteSafetyScreenConfirmed: true,
   disposition: { kind: "administered" },
+  details: { productSource: "Clinic sample" },
 });
 
 // --- Paired (dual-injection) initiation protocols ---------------------
@@ -88,6 +89,7 @@ const pairedInjection = (
     verifications: { resuspend: true },
     acuteSafetyScreenConfirmed: true,
     disposition: { kind: "administered" },
+    details: { productSource: "Clinic sample" },
     initiation: {
       ...emptyInjectionInitiation(),
       protocol,
@@ -197,6 +199,7 @@ describe("RC6.1 note stress: oral-overlap initiation protocols", () => {
           : { resuspend: true },
       acuteSafetyScreenConfirmed: true,
       disposition: { kind: "administered" },
+      details: { productSource: "Clinic sample" },
       initiation: {
         ...emptyInjectionInitiation(),
         protocol,
@@ -260,6 +263,7 @@ describe("RC6.1 note stress: provider-directed initiation protocols", () => {
             : { resuspend: true, oralOverlap: true },
       acuteSafetyScreenConfirmed: true,
       disposition: { kind: "administered" },
+      details: { productSource: "Clinic sample" },
       initiation: {
         ...emptyInjectionInitiation(),
         protocol,

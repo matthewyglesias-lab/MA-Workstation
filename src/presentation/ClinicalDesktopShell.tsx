@@ -253,6 +253,21 @@ export function ClinicalDesktopShell({
     Partial<Record<WorkflowId, number>>
   >({});
   const capturedScrollWorkflowRef = useRef<WorkflowId | null>(null);
+  /*
+   * Identity for the document header. The workflow's own patient wins field by
+   * field - it is that encounter's document - but an empty field falls back to
+   * the chart context rather than blanking the header. A plain
+   * `workflowPatient ?? patient` cannot do this: the workflow context is a
+   * defined object well before its fields are filled, so `??` would keep the
+   * empty one and the document would look unidentified while the chart banner
+   * above it named the patient.
+   */
+  const documentPatient: PatientContext = {
+    ...patient,
+    ...workflowPatient,
+    name: workflowPatient?.name || patient.name,
+    dob: workflowPatient?.dob || patient.dob,
+  };
   const isMismatch = contextsMismatch(patient, workflowPatient);
   const effectiveStatus =
     internalStatus ??
@@ -869,6 +884,7 @@ export function ClinicalDesktopShell({
         subtitle={noteSubtitle}
         readiness={readiness}
         sections={noteSections}
+        patient={documentPatient}
         postState={postState}
         postMessage={postMessage}
         onCopySection={onCopyNoteSection}

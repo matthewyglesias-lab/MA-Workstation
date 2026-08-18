@@ -46,6 +46,7 @@ const validInjection = (): InjectionEncounter => ({
   verifications: { resuspend: true, invegaInit: true },
   acuteSafetyScreenConfirmed: true,
   disposition: { kind: "administered" },
+  details: { productSource: "Clinic sample" },
 });
 
 describe("InjectionEngine", () => {

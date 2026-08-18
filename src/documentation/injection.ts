@@ -203,25 +203,23 @@ const formatTraceability = (components: InjectionComponent[]): string => {
   return block("Product traceability", traceLines);
 };
 
-const formatHandling = (
-  input: InjectionDocumentationInput,
-): string => {
-  const handling = input.handling;
+/** Shared by both the block-style and inline-style handling formatters below. */
+const wasteDetailLine = (handling: InjectionDocumentationInput["handling"]): string => {
   const waste = cleanText(handling?.waste);
   const witness = cleanText(handling?.wasteWitness);
-  const wasteDetail = nonEmpty([
+  return nonEmpty([
     waste ? `Amount: ${waste}` : "",
     witness ? `Witness: ${witness}` : "",
   ]).join(" · ");
-  return block("Product handling", [
-    row("Product source", handling?.source),
-    ...labeledNarrative(
-      "Preparation / reconstitution",
-      handling?.preparation,
-    ),
-    row("Medication waste", wasteDetail),
-  ]);
 };
+
+const formatHandling = (
+  input: InjectionDocumentationInput,
+): string =>
+  block("Product handling", [
+    row("Product source", input.handling?.source),
+    row("Medication waste", wasteDetailLine(input.handling)),
+  ]);
 
 const formatProductIssue = (
   input: InjectionDocumentationInput,
@@ -255,6 +253,47 @@ const formatException = (
     ...labeledNarrative("Direction / action", exception?.direction),
     ...labeledNarrative("Next step", exception?.nextStep),
   ]);
+};
+
+// RC6.1-style siblings of the three block formatters above. Same content, no
+// ALL-CAPS heading line - used only inside formatNoteFactsPlan, which
+// composes inline "Label: sentence." lines like its neighbors (Disposition,
+// Traceability, ...). The block-style originals above stay untouched for the
+// older non-noteFacts fallback path below, in formatInjectionDocumentation.
+const formatHandlingLine = (input: InjectionDocumentationInput): string =>
+  noteLines([
+    row("Product source", input.handling?.source),
+    row("Medication waste", wasteDetailLine(input.handling)),
+  ]).join("\n");
+
+const formatProductIssueLines = (input: InjectionDocumentationInput): string =>
+  noteLines([
+    ...labeledNarrative("Product / device issue", input.handling?.productIssue),
+    ...labeledNarrative(
+      "Action / disposition",
+      input.handling?.productIssueAction,
+    ),
+    row("Notification recipient", input.handling?.productIssueNotified),
+    row(
+      "Notification / decision time",
+      input.handling?.productIssueNotificationTime,
+    ),
+    ...labeledNarrative(
+      "Direction received",
+      input.handling?.productIssueDirection,
+    ),
+    ...labeledNarrative("Next step", input.handling?.productIssueNextStep),
+  ]).join("\n");
+
+const formatExceptionLines = (input: InjectionDocumentationInput): string => {
+  const exception = input.exception;
+  return noteLines([
+    ...labeledNarrative("Exception / escalation", exception?.summary),
+    row("Notification", exception?.notified),
+    row("Notification / decision time", exception?.notificationTime),
+    ...labeledNarrative("Direction / action", exception?.direction),
+    ...labeledNarrative("Next step", exception?.nextStep),
+  ]).join("\n");
 };
 
 const formatFollowUp = (
@@ -357,9 +396,9 @@ const formatNoteFactsPlan = (
       facts.observation ?? "",
     ]).join("\n"),
     facts.departureStatus ? `Disposition: ${facts.departureStatus}` : "",
-    formatHandling(input),
-    formatProductIssue(input),
-    formatException(input),
+    formatHandlingLine(input),
+    formatProductIssueLines(input),
+    formatExceptionLines(input),
     facts.traceability ? `Traceability: ${endSentence(facts.traceability)}` : "",
     facts.followUp ? `Follow-up: ${facts.followUp}` : "",
     noteLines([

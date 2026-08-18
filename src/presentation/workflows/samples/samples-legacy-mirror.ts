@@ -1,5 +1,6 @@
 import type { SamplesEncounter } from "../../../domain/samples";
 import { setLegacyFieldValue } from "../legacy-mirror";
+import { resolveProviderDisplay } from "../../../domain/provider-register";
 
 declare global {
   interface Window {
@@ -30,7 +31,9 @@ declare global {
 export function mirrorSamplesEncounterToLegacyDom(encounter: SamplesEncounter): void {
   setLegacyFieldValue("samplePtName", encounter.patient.name);
   setLegacyFieldValue("sampleDOB", encounter.patient.dob);
-  setLegacyFieldValue("samplePrescriber", encounter.prescriber);
+  // Resolve the register id to a display name before it reaches any
+  // legacy consumer of this field.
+  setLegacyFieldValue("samplePrescriber", resolveProviderDisplay(encounter.prescriber));
   setLegacyFieldValue("sampleStaff", encounter.staff);
   setLegacyFieldValue("sampleDate", encounter.dispenseDate);
   setLegacyFieldValue("sampleStart", encounter.startDate);

@@ -1,6 +1,12 @@
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
+const {
+  scheduleRegister,
+  registerMarker,
+  registerValue,
+  registerNote,
+} = require('./schedule-register');
 
 async function openInjection(page) {
   await page.goto('/');
@@ -141,18 +147,16 @@ test.describe('Injection decision support', () => {
       .locator('input[data-workstation-date="date"]');
     await fillDate(administrationDate, '2026-07-30');
 
-    const dueField = panel.locator(
-      '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
-    );
-    await expect(dueField.locator('output')).toHaveText('08/27/2026');
+    const dueField = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    await expect(registerValue(dueField, 'Next dose due')).toHaveText('08/27/26');
     await dueField.getByRole('button', { name: 'Override…' }).click();
     const override = page.getByRole('dialog', { name: 'Override calculated return target' });
     await fillDate(override.getByLabel('Override date'), '2030-01-15');
     await override.locator('.wfp-field', { hasText: 'Reason / order context' })
       .locator('textarea').fill('Active order specifies this return date');
     await override.getByRole('button', { name: 'Record override' }).click();
-    await expect(dueField.locator('output')).toHaveText('01/15/2030');
-    await expect(dueField.locator('.wfp-clinical-readout-marker')).toHaveText('OVERRIDE');
+    await expect(registerValue(dueField, 'Next dose due')).toHaveText('01/15/30');
+    await expect(registerMarker(dueField)).toHaveText('OVR');
 
     const actions = page.locator('[data-injection-record-actions]');
     await expect(actions.locator('[data-injection-save]')).toBeEnabled();
@@ -168,11 +172,13 @@ test.describe('Injection decision support', () => {
 
     const resumedPanel = page.locator('.wfp-panel');
     await openTab(resumedPanel, 'Order');
-    const resumedDue = resumedPanel.locator(
-      '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
-    );
-    await expect(resumedDue.locator('output')).toHaveText('01/15/2030');
-    await expect(resumedDue).toContainText('Active order specifies this return date');
+    const resumedDue = scheduleRegister(resumedPanel, 'SCHEDULE — NEXT DOSE');
+    await expect(registerValue(resumedDue, 'Next dose due')).toHaveText('01/15/30');
+    // The recorded reason has to survive the round trip and stay on screen:
+    // an overridden clinical date with no visible justification is exactly
+    // what the audited override dialog exists to prevent.
+    await expect(registerNote(resumedDue, 'Next dose due'))
+      .toContainText('Active order specifies this return date');
     await expect(resumedDue.getByRole('button', { name: 'Review override…' })).toBeVisible();
   });
 
@@ -200,6 +206,7 @@ test.describe('Injection decision support', () => {
     await packagePicker.selectOption(await knownPackage.getAttribute('value'));
     await panel.locator('input[placeholder="LOT123"]').fill('ROUTINE-BRIDGE-LOT');
     await panel.locator('input[type="month"]').fill('2027-12');
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openTab(panel, 'Verification');
     for (const item of [
@@ -209,7 +216,7 @@ test.describe('Injection decision support', () => {
       'Consent reaffirmed',
       'No contraindications',
       'Aseptic technique',
-      'Suspension inspected and mixed'
+      'Preparation / mixing verified'
     ]) {
       const checkbox = panel.getByRole('checkbox', { name: new RegExp(item) });
       await checkbox.check();

@@ -106,7 +106,6 @@ export interface InjectionInitiationProtocol {
 
 export interface InjectionProductHandling {
   source?: string;
-  preparation?: string;
   waste?: string;
   wasteWitness?: string;
   productIssue?: string;

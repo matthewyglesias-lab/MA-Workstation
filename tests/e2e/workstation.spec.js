@@ -1,6 +1,15 @@
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue, providerControl } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
+const {
+  scheduleRegister,
+  registerVerdict,
+  registerMarker,
+  registerValue,
+  registerNote,
+  registerFlag,
+  registerBand,
+} = require('./schedule-register');
 
 test.describe('MA Workstation browser journeys', () => {
   const workflowLabels = {
@@ -158,6 +167,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
     await panel.locator('input[placeholder="LOT123"]').fill('BROWSER-LOT-42');
     await panel.locator('input[type="month"]').first().fill('2027-12');
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openInjectionTab(page, 'Verification');
     // A medication-specific verification is only rendered where its current
@@ -208,6 +218,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Verification');
     for (const label of [
+      'Preparation / mixing verified',
       'Current opioid-risk / provider plan verified',
       'Naltrexone/hepatic review verified',
       'Supplied needle / body-habitus check'
@@ -261,12 +272,19 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await openInjectionTab(page, 'Schedule');
-    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText('On schedule.');
-    await expect(panel.locator('.wfp-timing-banner')).toHaveClass(/is-ok/);
-    await expect(panel.locator('.wfp-timing-banner')).not.toHaveClass(/is-warning/);
-    await expect(panel.locator('.wfp-timing-banner-message')).toContainText(
-      'within the displayed scheduling window (2026-08-11 to 2026-08-21; expected 2026-08-14)'
-    );
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    // State reaches the operator three ways, and all three must agree: the
+    // spine class, the verdict word, and the band sentence. Colour alone would
+    // be unreadable to a staff member with red/green deficiency.
+    await expect(register).toHaveClass(/is-ok/);
+    await expect(register).not.toHaveClass(/is-warning/);
+    await expect(registerVerdict(register)).toHaveText('ON SCHEDULE');
+    await expect(registerBand(register)).toContainText('On schedule.');
+    // The window the old banner spelled out in prose is now a labeled row, in
+    // the same MM/DD/YY the typed date fields use.
+    await expect(registerValue(register, 'Window')).toHaveText('08/11/26 – 08/21/26');
+    await expect(registerNote(register, 'Window')).toContainText('expected 08/14/26');
+    await expect(registerFlag(register, 'Days since prior')).toHaveText('IN WINDOW');
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toHaveCount(0);
@@ -314,11 +332,14 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await openInjectionTab(page, 'Schedule');
-    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText('On schedule.');
-    await expect(panel.locator('.wfp-timing-banner')).toHaveClass(/is-ok/);
-    await expect(panel.locator('.wfp-timing-banner-message')).toContainText(
-      'within the displayed scheduling window (2026-08-11 to 2026-08-21; expected 2026-08-14)'
-    );
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    await expect(register).toHaveClass(/is-ok/);
+    await expect(registerVerdict(register)).toHaveText('ON SCHEDULE');
+    await expect(registerBand(register)).toContainText('On schedule.');
+    // The last day of the window is still inside it: the flag must not read
+    // "1 DAYS LATE" on the boundary.
+    await expect(registerValue(register, 'Window')).toHaveText('08/11/26 – 08/21/26');
+    await expect(registerFlag(register, 'Days since prior')).toHaveText('IN WINDOW');
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toHaveCount(0);
@@ -339,9 +360,14 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await openInjectionTab(page, 'Schedule');
-    await expect(panel.locator('.wfp-timing-banner-status')).toHaveText(
-      'Late — needs provider review.'
-    );
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    // Overdue is amber, not red: the engine classifies a late dose as needing
+    // provider review and reserves its hard stop for a date that cannot be
+    // true. The register reports that severity rather than escalating it.
+    await expect(register).toHaveClass(/is-warning/);
+    await expect(registerVerdict(register)).toHaveText('OVERDUE');
+    await expect(registerBand(register)).toContainText('Late — needs provider review.');
+    await expect(registerFlag(register, 'Days since prior')).toHaveText('1 DAY LATE');
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toBeVisible();
@@ -1609,9 +1635,9 @@ test.describe('MA Workstation browser journeys', () => {
       'Administration documented'
     );
     const plan = page.locator('#outPL');
-    await expect(plan).toContainText('PRODUCT / DEVICE ISSUE');
+    await expect(plan).not.toContainText('PRODUCT / DEVICE ISSUE');
     await expect(plan).toContainText(
-      'Issue: Plunger resistance noted during pre-administration device inspection.'
+      'Product / device issue: Plunger resistance noted during pre-administration device inspection.'
     );
     await expect(plan).toContainText(
       'Action / disposition: Affected product quarantined; replacement package selected and independently verified.'
@@ -1864,11 +1890,12 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-11');
     await panel.locator('input[placeholder="LOT123"]').fill('PAIR-LOT-1');
     await panel.locator('input[type="month"]').first().fill('2028-05');
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openInjectionTab(page, 'Verification');
     await panel
       .locator('label.wfp-option-row')
-      .filter({ hasText: /^Suspension inspected and mixed/ })
+      .filter({ hasText: /^Preparation \/ mixing verified/ })
       .click();
     await panel
       .locator('label.wfp-option-row')
@@ -2415,8 +2442,9 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(outsideLab.locator('.wfp-register-source')).toHaveText('REF');
     await expect(panel.locator('.wfp-exception-register'))
       .not.toContainText('Medication alignment requires review');
-    await expect(panel.locator('.wfp-clinical-readout')).toContainText('INCOMPLETE');
-    await expect(panel.locator('.wfp-clinical-readout')).toContainText('STOP');
+    const udsRegister = scheduleRegister(panel, 'POINT-OF-CARE REPORT');
+    await expect(registerVerdict(udsRegister)).toHaveText('INCOMPLETE');
+    await expect(registerMarker(udsRegister)).toHaveText('STOP');
     await expect(panel.getByRole('button', { name: 'Copy draft Tebra note' })).toBeEnabled();
     await expect(page.locator('.cd2004-inspector').getByRole('button', { name: 'Copy draft note' }))
       .toBeEnabled();
@@ -2483,7 +2511,9 @@ test.describe('MA Workstation browser journeys', () => {
 
     await panel.getByRole('tab', { name: /^Review/ }).click();
     await expect(field('Medication alignment').locator('select')).toHaveValue('');
-    await expect(panel.locator('.wfp-clinical-readout')).toContainText('INCOMPLETE');
+    await expect(
+      registerVerdict(scheduleRegister(panel, 'POINT-OF-CARE REPORT'))
+    ).toHaveText('INCOMPLETE');
   });
 
   test('keeps the analyte a 13-panel cup omits out of every bulk result action', async ({ page }) => {
@@ -2511,6 +2541,83 @@ test.describe('MA Workstation browser journeys', () => {
       .locator('.wfp-result-cycle').click();
     await expect(omittedRow).toHaveCount(0);
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
+  });
+
+  /**
+   * The note preview is a document viewer over text staff paste into a chart,
+   * so what it shows and what it copies must be the same characters. The unit
+   * tests prove the tokenizer round-trips; this proves the rendered DOM does,
+   * against the real note the engine produced - a CSS or markup change that
+   * swallowed a space or dropped a blank line would pass the unit test and
+   * still mislead a reviewer here.
+   */
+  test('renders the note document as exactly the text it copies', async ({ page }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
+      origin: 'http://127.0.0.1:4173'
+    });
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('input[placeholder="Last, First"]').fill('Fidelity, Note');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
+    await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+    await panel.locator('select[name="inj-reason"]').selectOption('scheduled');
+    await fillDate(
+      panel.locator('.wfp-field', { hasText: 'Administration date' })
+        .locator('input[data-workstation-date="date"]').first(),
+      '2026-07-30'
+    );
+
+    const inspector = page.locator('.cd2004-inspector');
+    await expect(inspector.locator('.cd2004-note-body').first()).toBeVisible();
+
+    // Compare what each section shows against what its own Copy button puts on
+    // the clipboard. This is the check that matters: the clipboard is what
+    // reaches the chart, so anything the viewer adds, drops, or reorders
+    // relative to it is text a reviewer approved but did not actually file.
+    const sectionCount = await page.locator('.cd2004-note-section').count();
+    expect(sectionCount).toBeGreaterThan(0);
+
+    for (let index = 0; index < sectionCount; index += 1) {
+      const section = page.locator('.cd2004-note-section').nth(index);
+      const rendered = await section.evaluate((node) =>
+        [...node.querySelectorAll('.cd2004-note-line')]
+          .map((line) => line.textContent)
+          .join('\n')
+      );
+      await section.getByRole('button', { name: /^Copy / }).click();
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      // Guard the guard: two empty strings also compare equal.
+      expect(copied.trim().length).toBeGreaterThan(20);
+      // The Windows clipboard serializes line breaks as CRLF even when the
+      // application supplied LF. Compare the text in the DOM's canonical
+      // line-ending form; do not normalize any other character.
+      expect(rendered).toBe(copied.replace(/\r\n/g, '\n'));
+    }
+
+    // Line numbers are chrome. A hand-dragged selection across the note must
+    // not be able to pull them into the clipboard alongside the clinical text.
+    const selectable = await page.evaluate(() =>
+      [...document.querySelectorAll('.cd2004-note-lineno')].every(
+        (node) => getComputedStyle(node).userSelect === 'none'
+      )
+    );
+    expect(selectable).toBe(true);
+
+    // Numbering restarts per section and counts every line, blanks included,
+    // so a number always points at the line beside it.
+    const numbering = await page.evaluate(() =>
+      [...document.querySelectorAll('.cd2004-note-section')].map((section) =>
+        [...section.querySelectorAll('.cd2004-note-lineno')].map((n) => n.textContent)
+      )
+    );
+    for (const section of numbering) {
+      expect(section).toEqual(section.map((_, index) => String(index + 1)));
+    }
+
+    await expect(inspector.locator('.cd2004-note-eod')).toHaveText('── END OF DOCUMENT ──');
+    await expect(inspector.locator('.cd2004-note-heading .cd2004-note-mark.is-draft'))
+      .toHaveText('DRAFT');
   });
 
   test('renders the UDS clinician view as a dense preliminary laboratory report', async ({ page }) => {
@@ -2776,14 +2883,14 @@ test.describe('MA Workstation browser journeys', () => {
       .locator('input[data-workstation-date="date"]');
     await fillDate(actualDate, '2026-07-30');
 
-    const nextDue = panel.locator(
-      '.wfp-clinical-readout[aria-label="Return target — next injection due"]'
-    );
-    await expect(nextDue.locator('output')).toHaveText('08/27/2026');
-    await expect(nextDue.locator('.wfp-clinical-readout-marker')).toHaveText('CALC');
-    await expect(nextDue).toHaveClass(/is-info/);
-    await expect(nextDue.locator('input[data-workstation-date="date"]')).toHaveCount(0);
-    await expect(nextDue.getByRole('button', { name: 'Override…' })).toBeVisible();
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    // The date renders in the same MM/DD/YY the typed date fields use, so a
+    // calculated date and a keyed date are never shown two ways on one screen.
+    await expect(registerValue(register, 'Next dose due')).toHaveText('08/27/26');
+    await expect(registerMarker(register)).toHaveText('CALC');
+    await expect(registerNote(register, 'Next dose due')).toContainText('from 07/30/26');
+    await expect(register.locator('input[data-workstation-date="date"]')).toHaveCount(0);
+    await expect(register.getByRole('button', { name: 'Override…' })).toBeVisible();
   });
 
   test('targets the Sustenna Day 8 date on a Day 1 initiation and clears a stale calculated date on a provider-directed path', async ({ page }) => {
@@ -2800,24 +2907,23 @@ test.describe('MA Workstation browser journeys', () => {
       .locator('input[data-workstation-date="date"]');
     await fillDate(actualDate, '2026-07-30');
 
-    const nextDue = panel.locator('.wfp-clinical-readout').filter({
-      hasText: 'Return target — next injection due'
-    });
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    const nextDue = registerValue(register, 'Next dose due');
     // Baseline: with no initiation protocol selected, the ordered q4wk
     // interval drives the suggestion, same as the previous test.
-    await expect(nextDue.locator('output')).toHaveText('08/27/2026');
+    await expect(nextDue).toHaveText('08/27/26');
 
     // Day 1 initiation is followed by Day 8, not by the ordered maintenance
     // interval - the suggestion must switch to admin date + 7 days.
     await panel.locator('label:has-text("Day 1 initiation")').click();
-    await expect(nextDue.locator('output')).toHaveText('08/06/2026');
-    await expect(nextDue).toContainText('Day 8 target');
+    await expect(nextDue).toHaveText('08/06/26');
+    await expect(registerNote(register, 'Next dose due')).toContainText('Day 8');
 
     // A provider-directed re-initiation is explicitly a non-calculating
     // path - the stale Day 8 (or interval) suggestion must be cleared, not
     // left sitting in the field looking like a still-valid value.
     await panel.locator('label:has-text("Re-initiation / provider plan")').click();
-    await expect(nextDue.locator('output')).toHaveText('—');
-    await expect(nextDue.locator('.wfp-clinical-readout-marker')).toHaveText('PENDING');
+    await expect(nextDue).toHaveText('—');
+    await expect(registerMarker(register)).toHaveText('PENDING');
   });
 });

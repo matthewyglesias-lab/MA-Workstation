@@ -1,5 +1,6 @@
 import type { FormsEncounter } from "../../../domain/forms";
 import { setLegacyFieldValue } from "../legacy-mirror";
+import { resolveProviderDisplay } from "../../../domain/provider-register";
 
 declare global {
   interface Window {
@@ -23,7 +24,9 @@ export function mirrorFormsEncounterToLegacyDom(encounter: FormsEncounter): void
   setLegacyFieldValue("formsDOB", encounter.patient.dob);
   setLegacyFieldValue("formsDate", encounter.requestDate);
   setLegacyFieldValue("formsDue", encounter.targetDate);
-  setLegacyFieldValue("formsProvider", encounter.provider);
+  // Resolve the register id to a display name before it reaches any
+  // legacy consumer of this field.
+  setLegacyFieldValue("formsProvider", resolveProviderDisplay(encounter.provider));
   setLegacyFieldValue("formsStaff", encounter.staff);
   setLegacyFieldValue("formsFee", encounter.feeStatus);
   setLegacyFieldValue("formsDelivery", encounter.deliveryMethod);

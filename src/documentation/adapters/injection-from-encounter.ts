@@ -8,10 +8,12 @@ import {
   hasCurrentInjectionAdministrationReview,
   hasCurrentLateDoseReview,
   injectionReasonLabel,
+  medicationPreparationGuidance,
   type InjectionEncounter,
   type InjectionEvaluationOutput,
 } from "../../domain/injection";
-import type { MedicationVerificationKey } from "../../domain/injection-catalog";
+import type { InjectionMedication, MedicationVerificationKey } from "../../domain/injection-catalog";
+import { resolveProviderDisplay } from "../../domain/provider-register";
 import type { ClinicalEvaluation } from "../../domain/contracts";
 import {
   mapLegacyInitiationProtocol,
@@ -102,13 +104,6 @@ const formatMilitaryTime = (raw?: string): string => {
 const formatCompactDateTime = (date?: string, time?: string): string =>
   [formatCompactDate(date), formatMilitaryTime(time)].filter(Boolean).join(" ");
 
-// Faithful port of legacy-runtime.js's <select> option value -> display-text
-// pairs where the visible text is shorter than the stored value (documented
-// only where they actually differ; all other option values are self-labeled).
-const PREPARATION_LABELS: Record<string, string> = {
-  "Preparation/reconstitution verified per current product instructions":
-    "Verified per current product instructions",
-};
 const VOLUME_UNIT_LABELS: Record<string, string> = {
   mL: "mL (volume)",
   mg: "mg (dose amount)",
@@ -200,6 +195,7 @@ const ATTESTATION_NOTE_ORDER: ReadonlyArray<keyof InjectionEncounter["attestatio
  * folded into Clinical review rather than dropped. */
 const compactReviewFacts = (
   encounter: InjectionEncounter,
+  medication: InjectionMedication | null,
 ): { verification: string; clinicalReview: string } => {
   const verification: string[] = [];
   const clinicalReview: string[] = [];
@@ -218,7 +214,16 @@ const compactReviewFacts = (
   }
   (Object.keys(encounter.verifications) as MedicationVerificationKey[]).forEach((key) => {
     if (!encounter.verifications[key]) return;
-    const fact = VERIFICATION_ASSESSMENT_FACTS[key];
+    // The sourced, product-specific text (Sustenna's shake window, Vivitrol's
+    // room-temp wait, etc.) replaces the generic fallback whenever the
+    // medication actually has preparation-phase reference content; a
+    // medication without any (an "other" custom entry, say) still gets the
+    // generic sentence rather than a silently blank clinical review.
+    const fact =
+      key === "resuspend"
+        ? medicationPreparationGuidance(medication, encounter.dose, encounter.site) ||
+          VERIFICATION_ASSESSMENT_FACTS[key]
+        : VERIFICATION_ASSESSMENT_FACTS[key];
     if (fact) clinicalReview.push(fact);
   });
   const vitals = formatVitalsLine(encounter);
@@ -556,7 +561,7 @@ const buildInjectionNoteFacts = (
   secondComponent?: InjectionComponent,
 ): InjectionNoteFacts => {
   const details = encounter.details ?? {};
-  const { verification, clinicalReview } = compactReviewFacts(encounter);
+  const { verification, clinicalReview } = compactReviewFacts(encounter, evaluation.output.medication);
   const { headline, presentation } = headlineAndPresentation(encounter, evaluation, medicationLabel);
   const asepticSentence = encounter.attestations.hygiene
     ? "Hand hygiene performed; inj site cleansed w/ alcohol and allowed to dry prior to administration."
@@ -608,7 +613,10 @@ const buildInjectionNoteFacts = (
     departureStatus: departureStatusLine(encounter) || undefined,
     traceability: traceabilityLine(encounter, secondComponent) || undefined,
     followUp: followUpLine(encounter) || undefined,
-    orderingProvider: trimmed(encounter.orderingProvider) || undefined,
+    // The field stores the provider register's stable id, not a display
+    // name - resolve it the same way ProviderField does, or the note carries
+    // a raw key like "adeniji-john" straight into the chart.
+    orderingProvider: resolveProviderDisplay(encounter.orderingProvider) || undefined,
     administeredBy: trimmed(encounter.administeredBy) || undefined,
   };
 };
@@ -726,12 +734,6 @@ export function injectionEncounterToDocumentationInput(
 
   const details = encounter.details ?? {};
   const productSource = trimmed(details.productSource);
-  const preparation =
-    details.preparation === "Other"
-      ? trimmed(details.preparationOther)
-      : details.preparation
-        ? PREPARATION_LABELS[details.preparation] ?? details.preparation
-        : "";
   const waste = details.waste ? trimmed(details.wasteAmount) : "";
   const wasteWitness = details.waste ? trimmed(details.wasteWitness) : "";
   const hasIssue = Boolean(details.productIssue);
@@ -772,7 +774,6 @@ export function injectionEncounterToDocumentationInput(
     initiation: initiation.protocol,
     handling: {
       source: productSource || undefined,
-      preparation: preparation || undefined,
       waste: waste || undefined,
       wasteWitness: wasteWitness || undefined,
       productIssue: hasIssue ? trimmed(details.productIssueDetail) || undefined : undefined,
@@ -794,7 +795,7 @@ export function injectionEncounterToDocumentationInput(
       : undefined,
     followUp: {
       nextDoseDate: encounter.nextDoseDate ? formatIsoDate(encounter.nextDoseDate) : undefined,
-      orderingProvider: trimmed(encounter.orderingProvider) || undefined,
+      orderingProvider: resolveProviderDisplay(encounter.orderingProvider) || undefined,
     },
     noteFacts: administered
       ? buildInjectionNoteFacts(encounter, evaluation, primaryMedicationName, initiation.secondComponent)

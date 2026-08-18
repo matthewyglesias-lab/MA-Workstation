@@ -13,6 +13,7 @@ import { INJECTION_CLINICAL_REFERENCE_BUNDLE } from "../../src/domain/injection-
 import {
   InjectionEngine,
   emptyInjectionEncounter,
+  medicationPreparationGuidance,
   type InjectionEncounter,
 } from "../../src/domain/injection";
 
@@ -172,6 +173,17 @@ describe("Vivitrol needle selection", () => {
     expect(statements).toMatch(/must not be injected using any other needle/i);
     expect(statements).toMatch(/necrosis/i);
     expect(statements).toMatch(/administer immediately/i);
+  });
+
+  it("returns the room-temp and immediate-use preparation guidance plus the discoloration check", () => {
+    const text = medicationPreparationGuidance(med("vivitrol"), "380 mg", "R ventrogluteal");
+    expect(text).toMatch(/room temperature/i);
+    expect(text).toMatch(/administer immediately/i);
+    expect(text).toMatch(/particulate matter or discoloration/i);
+  });
+
+  it("returns empty guidance for a ready-to-use product with no real prep step", () => {
+    expect(medicationPreparationGuidance(med("haldol"), "100 mg", "L deltoid")).toBe("");
   });
 });
 

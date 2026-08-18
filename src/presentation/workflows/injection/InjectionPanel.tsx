@@ -20,6 +20,7 @@ import {
   injectionInitiationOptions,
   injectionInitiationSecondarySites,
   injectionTimingReviewFingerprint,
+  medicationPreparationGuidance,
   verificationLabels,
   type InjectionAdministrationDetails,
   type InjectionDisposition,
@@ -70,7 +71,13 @@ import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { StatusFlag } from "../StatusFlag";
-import { ClinicalReadout } from "../ClinicalReadout";
+import { ScheduleRegister } from "../ScheduleRegister";
+import {
+  injectionTimingDayFlag,
+  injectionTimingTone,
+  injectionTimingVerdict,
+} from "./timing-register";
+import { formatWorkstationDate } from "../WorkstationDateField";
 import { RegisterMarkers, WorkflowSummaryFact, TransactionLine, type ClinicalFieldSource } from "../ClinicalRegister";
 import { hasProviderRegister } from "../../../domain/provider-register";
 import { ProviderField } from "../ProviderField";
@@ -250,18 +257,13 @@ function legacyRequirementFallback(
     "details.volume": requirement("optional", "administration"),
     "details.device": requirement("optional", "administration"),
     "details.siteCondition": requirement("optional", "administration"),
-    "details.productSource": requirement("optional", "traceability"),
-    "details.preparation": requirement("optional", "traceability"),
+    "details.productSource": requirement("required", "traceability"),
     "details.wasteAmount": requirement(
       encounter.details?.waste ? "required" : "hidden",
       "traceability",
     ),
     "details.wasteWitness": requirement(
       encounter.details?.waste ? "required" : "hidden",
-      "traceability",
-    ),
-    "details.preparationOther": requirement(
-      encounter.details?.preparation === "Other" ? "required" : "hidden",
       "traceability",
     ),
     "details.deviceOther": requirement(
@@ -314,8 +316,6 @@ const pairedMedicationKeyFor = (
 const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
   purpose: "order",
   productSource: "product",
-  preparation: "product",
-  preparationOther: "product",
   waste: "product",
   wasteAmount: "product",
   wasteWitness: "product",
@@ -458,6 +458,16 @@ function injectionTimingStatusIcon(
 
 function formatReviewDateTime(value: string): string {
   return value.trim().replace("T", " at ");
+}
+
+/**
+ * Register display format. Deliberately the same MM/DD/YY the typed date fields
+ * render, so a date read out of a calculation and a date typed into a field are
+ * never shown two different ways on one screen. `formatClinicalDate` keeps its
+ * MM/DD/YYYY for the override dialog's prose.
+ */
+function registerDate(value: string): string {
+  return formatWorkstationDate(value, "date") || "—";
 }
 
 function formatClinicalDate(value: string): string {
@@ -1833,6 +1843,28 @@ export function InjectionPanel({
   const legacyManualNextDoseNeedsReview = nextDoseIsManual && !nextDoseOverrideComplete;
   const nextDoseCalculationInput = `${encounter.administrationDate}|${encounter.intervalKey}`;
 
+  /**
+   * Where the return target came from, as the register's trailing note.
+   *
+   * The order of these branches is the point. A Day 1 initiation is followed
+   * by Day 8, not by the ordered maintenance interval, so naming the cadence
+   * beside a Day 8 date would state a provenance the date does not have - and
+   * an overridden date follows neither, so it carries the recorded reason
+   * instead. A wrong provenance line is worse than none: it invites staff to
+   * re-derive the date from a rule that never produced it.
+   */
+  const nextDoseProvenanceNote = (): string | undefined => {
+    if (nextDoseIsManual) {
+      return `· ${nextDoseMetadata?.overrideReason || "manual date requires review"}`;
+    }
+    if (!suggestedNextDose) return "· enter the administration date and order interval";
+    if (encounter.initiation?.protocol === "sustenna-day1") {
+      return `· Day 8 target, 7 days from ${registerDate(encounter.administrationDate)}`;
+    }
+    const cadence = evaluation?.output.timing.cadenceLabel || encounter.intervalKey;
+    return `· ${cadence} from ${registerDate(encounter.administrationDate)}`;
+  };
+
   const applyCalculatedNextDose = (value: string) => {
     autoCalculatedNextDue.current = value;
     patch({ nextDoseDate: value });
@@ -2452,40 +2484,89 @@ export function InjectionPanel({
                   </div>
                 )}
               </div>
-              <ClinicalReadout
-                label="Return target — next injection due"
-                value={formatClinicalDate(encounter.nextDoseDate || suggestedNextDose)}
+              {/* One register replaces the old readout card and the tinted
+                  banner beside it. Every value is read straight off the
+                  engine's own timing evaluation - this surfaces what it
+                  already computed and adds no gating of its own. The window
+                  dates come from the evaluation's structured fields rather
+                  than its prose message, which is what keeps every date on
+                  this screen in one format. */}
+              <ScheduleRegister
+                title="SCHEDULE — NEXT DOSE"
                 marker={
                   legacyManualNextDoseNeedsReview
                     ? "REVIEW"
                     : nextDoseOverrideComplete
-                      ? "OVERRIDE"
-                      : nextDoseIsCalculated
+                      ? "OVR"
+                      : suggestedNextDose
                         ? "CALC"
-                        : suggestedNextDose
-                          ? "CALC"
-                          : "PENDING"
+                        : "PENDING"
+                }
+                verdict={
+                  nonAdministration || !evaluation
+                    ? undefined
+                    : injectionTimingVerdict(evaluation.output.timing)
                 }
                 tone={
-                  legacyManualNextDoseNeedsReview || nextDoseOverrideComplete
-                    ? "attention"
-                    : suggestedNextDose
-                      ? "info"
-                      : "neutral"
+                  nonAdministration || !evaluation
+                    ? "neutral"
+                    : injectionTimingTone(evaluation.output.timing)
                 }
-                detail={
-                  legacyManualNextDoseNeedsReview
-                    ? "Legacy manual date — review the reason or reset to the calculated target before completion."
-                    : nextDoseOverrideComplete
-                      ? `${nextDoseMetadata?.overrideKind === "provider-direction" ? `Provider direction — ${nextDoseMetadata.overrideProvider}` : "Active order"}: ${nextDoseMetadata?.overrideReason}`
-                      : encounter.initiation?.protocol === "sustenna-day1"
-                        ? "Day 8 target: documented Day 1 administration + 7 calendar days."
-                        : "System target from the documented administration date and selected order cadence."
+                rows={[
+                  {
+                    label: "Next dose due",
+                    value: registerDate(encounter.nextDoseDate || suggestedNextDose),
+                    // Built from the parts rather than the persisted
+                    // `calculatedFrom` string, which stores ISO on purpose and
+                    // must keep doing so.
+                    note: nextDoseProvenanceNote(),
+                  },
+                  ...(nonAdministration || !evaluation
+                    ? []
+                    : [
+                        {
+                          label: "Days since prior",
+                          value:
+                            evaluation.output.timing.daysSincePrior === null
+                              ? "—"
+                              : String(evaluation.output.timing.daysSincePrior),
+                          note:
+                            evaluation.output.timing.earliestDay !== null &&
+                            evaluation.output.timing.latestDay !== null
+                              ? `· window day ${evaluation.output.timing.earliestDay}–${evaluation.output.timing.latestDay}`
+                              : undefined,
+                          flag: injectionTimingDayFlag(evaluation.output.timing),
+                        },
+                      ]),
+                  ...(nonAdministration ||
+                  !evaluation?.output.timing.earliestDate ||
+                  !evaluation.output.timing.latestDate
+                    ? []
+                    : [
+                        {
+                          label: "Window",
+                          value: `${registerDate(evaluation.output.timing.earliestDate)} – ${registerDate(evaluation.output.timing.latestDate)}`,
+                          note: evaluation.output.timing.expectedDate
+                            ? `· expected ${registerDate(evaluation.output.timing.expectedDate)}`
+                            : undefined,
+                        },
+                      ]),
+                ]}
+                bandTitle={
+                  nonAdministration || !evaluation
+                    ? undefined
+                    : injectionTimingStatusLabel(evaluation.output.timing)
                 }
-                source={
-                  suggestedNextDose
-                    ? `Calculated source ${nextDoseCalculationInput.replace("|", " · ")}`
-                    : "Enter the administration date and order interval to calculate a target."
+                bandDetail={
+                  nonAdministration || !evaluation
+                    ? undefined
+                    : medication &&
+                        evaluation.output.timing.state === "warning" &&
+                        medication.missedDoseGuidance.trim()
+                      ? `${medication.label} guidance: ${medication.missedDoseGuidance}`
+                      : evaluation.output.timing.state === "ok"
+                        ? "Continue the required active-order and product-specific safety checks."
+                        : undefined
                 }
                 actions={
                   <>
@@ -2509,47 +2590,6 @@ export function InjectionPanel({
                   </>
                 }
               />
-              {/* The due line a MAR carries: how long since the last dose and
-                  what window this one falls in, stamped the way the app's
-                  own posted/error banners are (.cd2004-post-stamp /
-                  .cd2004-post-error) - a fixed-color 16-bit pictogram beside
-                  a bold sentence-case caption, not a generic colored alert
-                  box. Every value here is read straight off the engine's own
-                  timing evaluation - this surfaces what it already computed
-                  and adds no gating of its own. The engine raises the stop
-                  or warning itself. */}
-              {!nonAdministration && evaluation && (
-                <div class={`wfp-timing-banner is-${evaluation.output.timing.state}`}>
-                  <DesktopIcon name={injectionTimingStatusIcon(evaluation.output.timing)} />
-                  <div>
-                    <strong class="wfp-timing-banner-status">
-                      {injectionTimingStatusLabel(evaluation.output.timing)}
-                    </strong>
-                    <div class="wfp-timing-banner-days">
-                      {evaluation.output.timing.daysSincePrior === null
-                        ? "Days since prior dose: —"
-                        : `${evaluation.output.timing.daysSincePrior} day(s) since prior dose`}
-                      {evaluation.output.timing.earliestDay !== null &&
-                        evaluation.output.timing.latestDay !== null && (
-                          <>
-                            {" "}
-                            · scheduling window day {evaluation.output.timing.earliestDay}–
-                            {evaluation.output.timing.latestDay}
-                          </>
-                        )}
-                    </div>
-                    <p class="wfp-timing-banner-message">{evaluation.output.timing.message}</p>
-                    {medication &&
-                      evaluation.output.timing.state === "warning" &&
-                      medication.missedDoseGuidance.trim() && (
-                        <p class="wfp-timing-banner-guidance">
-                          <strong>{medication.label} guidance:</strong>{" "}
-                          {medication.missedDoseGuidance}
-                        </p>
-                      )}
-                  </div>
-                </div>
-              )}
               {!nonAdministration && evaluation?.output.lateDoseWarning && (
                 <p class="wfp-field-hint">
                   {currentLateDoseReview ? (
@@ -3185,26 +3225,6 @@ export function InjectionPanel({
                     </option>
                   </select>
                 </Field>
-                <Field label="Preparation / reconstitution" field="details.preparation">
-                  <select
-                    value={encounter.details?.preparation ?? ""}
-                    onChange={(event) => patchDetails({ preparation: event.currentTarget.value })}
-                  >
-                    <option value="">Not separately documented</option>
-                    <option value="Preparation/reconstitution verified per current product instructions">
-                      Verified per current product instructions
-                    </option>
-                    <option value="Other">Other preparation / reconstitution detail</option>
-                  </select>
-                </Field>
-                {encounter.details?.preparation === "Other" && (
-                  <Field label="Preparation detail" field="details.preparationOther">
-                    <input
-                      value={encounter.details?.preparationOther ?? ""}
-                      onInput={(event) => patchDetails({ preparationOther: event.currentTarget.value })}
-                    />
-                  </Field>
-                )}
               </div>
               <div class="wfp-checkbox-row">
                 <input
@@ -3332,6 +3352,15 @@ export function InjectionPanel({
                     items={visibleMedicationVerifications.map((key) => ({
                       key,
                       label: verificationLabels[key],
+                      ...(key === "resuspend"
+                        ? {
+                            description: medicationPreparationGuidance(
+                              medication,
+                              encounter.dose,
+                              encounter.site,
+                            ),
+                          }
+                        : {}),
                     }))}
                     checked={(key) =>
                       Boolean(encounter.verifications[key as MedicationVerificationKey])
@@ -3490,31 +3519,37 @@ export function InjectionPanel({
           aria-labelledby={workflowLedgerTabId("injection-ledger", "review")}
         >
           {!nonAdministration && (
-            <ClinicalReadout
-              label="Return target recap"
-              value={formatClinicalDate(encounter.nextDoseDate || suggestedNextDose)}
+            <ScheduleRegister
+              title="RETURN TARGET"
               marker={
                 legacyManualNextDoseNeedsReview
                   ? "REVIEW"
                   : nextDoseIsManual
-                    ? "OVERRIDE"
+                    ? "OVR"
                     : suggestedNextDose
                       ? "CALC"
                       : "PENDING"
               }
               tone={
-                legacyManualNextDoseNeedsReview || nextDoseIsManual
-                  ? "attention"
-                  : suggestedNextDose
-                    ? "info"
-                    : "neutral"
+                legacyManualNextDoseNeedsReview || nextDoseIsManual ? "warning" : "neutral"
               }
-              compact
-              detail={
-                nextDoseIsManual
-                  ? nextDoseMetadata?.overrideReason || "Legacy manual date requires review."
-                  : "Calculated from the documented administration date and selected order cadence."
+              verdict={
+                legacyManualNextDoseNeedsReview
+                  ? "NEEDS REVIEW"
+                  : nextDoseIsManual
+                    ? "MANUAL"
+                    : undefined
               }
+              rows={[
+                {
+                  label: "Next dose due",
+                  value: registerDate(encounter.nextDoseDate || suggestedNextDose),
+                  // Same provenance the Order tab shows. Two tabs describing
+                  // one date two different ways is how staff end up trusting
+                  // the wrong one.
+                  note: nextDoseProvenanceNote(),
+                },
+              ]}
               actions={
                 !locked && (
                   <button type="button" class="cd2004-link-button" onClick={() => setTab("order")}>

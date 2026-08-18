@@ -1838,66 +1838,213 @@ input[type="radio"]:disabled {
   text-shadow: 1px 1px #fff;
 }
 
+.cd2004-note-ident {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 8px;
+  padding: 3px 7px;
+  margin: 0;
+  background: var(--cd-face);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-size: 10px;
+}
+
+.cd2004-note-ident > div {
+  display: contents;
+}
+
+.cd2004-note-ident dt {
+  color: var(--cd-ink-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cd2004-note-ident dd {
+  margin: 0;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.cd2004-note-marks {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.cd2004-note-mark {
+  padding: 0 4px;
+  color: #182750;
+  background: var(--cd-face);
+  border: 1px solid #fff;
+  font: 700 9px/15px "Courier New", Courier, monospace;
+  letter-spacing: 0.03em;
+}
+
+.cd2004-note-mark.is-draft {
+  color: #fff;
+  background: var(--cd-amber);
+  border-color: #5e3c00;
+}
+
+.cd2004-note-mark.is-filed {
+  color: #fff;
+  background: var(--cd-green);
+  border-color: #0d4a27;
+}
+
 .cd2004-note-sections {
   flex: 1 1 auto;
   min-height: 160px;
   overflow: auto;
   background: var(--cd-paper);
-  font: 11px/1.48 "Courier New", Courier, monospace;
+  font: 11px/1.5 "Courier New", Courier, monospace;
 }
 
 .cd2004-note-section {
   margin: 0;
 }
 
-.cd2004-note-section + .cd2004-note-section {
-  border-top: 1px dashed #b7bec6;
-}
-
+/* The section bar matches every other head on this screen. The old pale
+   caption with an underlined web link was the single loudest tell that this
+   pane came from somewhere else. */
 .cd2004-note-section > header {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: 6px;
-  padding: 6px 8px 0;
-  color: #3a4552;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  min-height: 19px;
+  padding: 2px 7px;
+  color: #fff;
+  background: var(--cd-navy-light);
+  border-top: 1px solid var(--cd-border-dark);
+  border-bottom: 1px solid var(--cd-border-dark);
+  font: 700 9.5px/1.4 Tahoma, "Segoe UI", sans-serif;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
+.cd2004-note-section:first-child > header {
+  border-top: 0;
+}
+
+.cd2004-note-section > header .cd2004-note-section-id {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
 .cd2004-note-section > header small {
-  margin-left: 6px;
-  color: #7a8493;
+  color: #cfd8e8;
   font-size: 9px;
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
 }
 
-.cd2004-note-section > header .cd2004-link-button {
-  padding: 0;
-  color: #173a69;
-  background: transparent;
-  border: 0;
-  font-size: 9px;
-  font-weight: 700;
-  text-decoration: underline;
-  text-transform: none;
+.cd2004-note-section > header .cd2004-note-mark {
+  cursor: pointer;
 }
 
-.cd2004-note-section pre {
-  max-height: 260px;
-  padding: 4px 8px 10px;
-  margin: 0;
-  overflow: auto;
+.cd2004-note-section > header .cd2004-note-source {
+  margin-left: auto;
+}
+
+/* Line and gutter are sibling grid cells, one pair per logical line, so a
+   wrapped line keeps its number beside its first visual row instead of the
+   two columns drifting apart. */
+.cd2004-note-body {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr);
+  align-items: start;
+  padding: 4px 0 7px;
+}
+
+.cd2004-note-lineno {
+  padding-right: 6px;
+  color: #a2abb8;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  /* Never let a hand-dragged selection pull chrome into the clipboard: this
+     text is pasted into a chart. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.cd2004-note-line {
+  padding-right: 8px;
   color: #172231;
-  background: transparent;
-  font: inherit;
-  tab-size: 2;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.cd2004-note-line.is-blank {
+  min-height: 0.55em;
+}
+
+.cd2004-note-seg-heading,
+.cd2004-note-line.is-heading {
+  color: var(--cd-navy);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.cd2004-note-line.is-heading {
+  margin-top: 2px;
+  padding-bottom: 1px;
+  border-bottom: 1px solid #c9cfd8;
+}
+
+.cd2004-note-seg-label {
+  color: var(--cd-ink-muted);
+}
+
+.cd2004-note-seg-value {
+  color: var(--cd-ink);
+  font-weight: 700;
+}
+
+.cd2004-note-eod {
+  padding: 5px 8px 8px;
+  color: #8d97a4;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.cd2004-note-foot {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  color: var(--cd-ink-muted);
+  background: var(--cd-face);
+  border-top: 1px solid var(--cd-border-mid);
+  font: 9px/1.4 "Courier New", Courier, monospace;
+  letter-spacing: 0.03em;
+}
+
+.cd2004-note-foot > span:first-child {
+  white-space: nowrap;
+}
+
+.cd2004-note-foot-state {
+  margin-left: auto;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* A short pane spends its height on the document, not on chrome: the patient
+   identity is already in the chart banner above, and a line count is not
+   clinical information. Both give way before the note text does. */
+@media (max-height: 660px) {
+  .cd2004-note-ident,
+  .cd2004-note-foot {
+    display: none;
+  }
 }
 
 .cd2004-note-empty {
@@ -2544,21 +2691,28 @@ input[type="radio"]:disabled {
     grid-row: 2;
   }
 
+  /*
+   * Stacked layout: readiness on the left, the document on the right. Every
+   * child is placed explicitly - an unplaced one auto-flows into whichever
+   * cell is free and lands somewhere arbitrary, which is exactly what happened
+   * to the toolbar and, once it was added, the readiness verdict.
+   */
   :where(.cd2004-workspace.has-central-preview) .cd2004-inspector {
     display: grid;
     grid-template-columns: minmax(240px, 0.65fr) minmax(300px, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
     min-height: 0;
   }
 
-  :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-summary {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-summary,
+  :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-verdict {
     grid-column: 1;
     grid-row: 1;
   }
 
   :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-list {
     grid-column: 1;
-    grid-row: 2 / span 2;
+    grid-row: 2 / -1;
     max-height: none;
     border-right: 1px solid #798692;
     border-bottom: 0;
@@ -2569,20 +2723,32 @@ input[type="radio"]:disabled {
     grid-row: 1;
   }
 
-  :where(.cd2004-workspace.has-central-preview) .cd2004-note-sections {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-ident {
     grid-column: 2;
     grid-row: 2;
-    min-height: 0;
   }
 
-  :where(.cd2004-workspace.has-central-preview) .cd2004-post-zone {
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-toolbar {
     grid-column: 2;
     grid-row: 3;
   }
 
-  .cd2004-note-section pre {
-    max-height: 170px;
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-sections {
+    grid-column: 2;
+    grid-row: 4;
+    min-height: 0;
   }
+
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-foot {
+    grid-column: 2;
+    grid-row: 5;
+  }
+
+  :where(.cd2004-workspace.has-central-preview) .cd2004-post-zone {
+    grid-column: 2;
+    grid-row: 6;
+  }
+
 
   .cd2004-patient-banner,
   .cd2004-patient-banner.has-mismatch {
@@ -2727,9 +2893,6 @@ input[type="radio"]:disabled {
     min-height: 150px;
   }
 
-  .cd2004-note-section pre {
-    max-height: 260px;
-  }
 
   /*
    * Narrow: the live status message is the primary feedback channel, so it

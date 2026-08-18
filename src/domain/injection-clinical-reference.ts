@@ -11,7 +11,7 @@ import type {
  * provenance behind those decisions.  It also keeps the Knowledge Center from
  * becoming a second, hand-maintained medication catalog.
  */
-export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.14.1";
+export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.18.1";
 export const INJECTION_CLINICAL_REFERENCE_REVIEWED_ON = "2026-08-05";
 
 /**
@@ -1326,13 +1326,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         windowBefore: 3,
         windowAfter: 7,
         timingMode: "orderVerify",
-        verifications: ["opioidFree", "naltrexHS", "suppliedNeedle"],
+        verifications: ["resuspend", "opioidFree", "naltrexHS", "suppliedNeedle"],
         verificationRequirements: {
-          maintenance: ["opioidFree", "naltrexHS", "suppliedNeedle"],
-          initiation: ["opioidFree", "naltrexHS", "suppliedNeedle"],
-          reinitiation: ["opioidFree", "naltrexHS", "suppliedNeedle"],
-          loading: ["opioidFree", "naltrexHS", "suppliedNeedle"],
-          prn: ["opioidFree", "naltrexHS", "suppliedNeedle"],
+          maintenance: ["resuspend", "opioidFree", "naltrexHS", "suppliedNeedle"],
+          initiation: ["resuspend", "opioidFree", "naltrexHS", "suppliedNeedle"],
+          reinitiation: ["resuspend", "opioidFree", "naltrexHS", "suppliedNeedle"],
+          loading: ["resuspend", "opioidFree", "naltrexHS", "suppliedNeedle"],
+          prn: ["resuspend", "opioidFree", "naltrexHS", "suppliedNeedle"],
         },
         missedDoseGuidance:
           "Use the active provider order and current product information; reassess current opioid-risk status.",

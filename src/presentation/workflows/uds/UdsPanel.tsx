@@ -38,7 +38,17 @@ import { RecordLifecycleActions } from "../../RecordLifecycleActions";
 import { UdsRecordsWindow } from "../../UdsRecordsWindow";
 import { UdsRecordRepository, type UdsAddendum, type UdsRecord } from "../../../persistence/uds-records";
 import { browserSafeStorage } from "../../../persistence/storage";
-import { ClinicalReadout } from "../ClinicalReadout";
+import { ScheduleRegister, type ScheduleRegisterTone } from "../ScheduleRegister";
+
+/** The report status carries the old readout's tone vocabulary; map it onto the
+ *  register's four states rather than widening the register for one caller. */
+const UDS_REPORT_TONE: Record<string, ScheduleRegisterTone> = {
+  neutral: "neutral",
+  info: "neutral",
+  attention: "warning",
+  success: "ok",
+  danger: "stop",
+};
 import { RegisterMarkers, WorkflowSummaryFact, type ClinicalFieldSource } from "../ClinicalRegister";
 import { OptionList, WorkflowField } from "../WorkflowField";
 import { WorkstationDateField } from "../WorkstationDateField";
@@ -1404,13 +1414,30 @@ export function UdsPanel({
           id={workflowLedgerPanelId("uds-ledger", "review")}
           aria-labelledby={workflowLedgerTabId("uds-ledger", "review")}
         >
-          <ClinicalReadout
-            label="Point-of-care report status"
-            value={reportStatus.label}
+          {/* Same register as the injection schedule readout. The status is a
+              saturated chip and a spine rather than a phrase set at 24px on a
+              tinted panel, and the counts become labeled rows. */}
+          <ScheduleRegister
+            title="POINT-OF-CARE REPORT"
             marker={reportStatus.marker}
-            tone={reportStatus.tone}
-            detail={reportStatus.detail}
-            source={`${testedCount} tested · ${positiveCount} preliminary positive · ${invalidCount} invalid`}
+            verdict={reportStatus.label}
+            tone={UDS_REPORT_TONE[reportStatus.tone] ?? "neutral"}
+            rows={[
+              { label: "Tested", value: String(testedCount) },
+              {
+                label: "Preliminary positive",
+                value: String(positiveCount),
+                flag: positiveCount > 0 ? "POSITIVE" : undefined,
+                flagTone: positiveCount > 0 ? "warning" : "neutral",
+              },
+              {
+                label: "Invalid",
+                value: String(invalidCount),
+                flag: invalidCount > 0 ? "DO NOT INTERPRET" : undefined,
+                flagTone: invalidCount > 0 ? "stop" : "neutral",
+              },
+            ]}
+            bandDetail={reportStatus.detail}
           />
           <div class="wfp-exception-register" aria-label="Exception register">
             <div class="wfp-exception-head"><strong>EXCEPTION REGISTER</strong><span>{udsExceptions.length ? `${udsExceptions.length} ACTIVE` : "CLEAR"}</span></div>
