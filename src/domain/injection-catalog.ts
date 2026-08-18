@@ -96,6 +96,7 @@ export type MedicationVerificationKey =
   | "naltrexHS"
   | "suppliedNeedle"
   | "resuspend"
+  | "visualInspection"
   | "invegaInit"
   | "oralOverlap"
   | "stabilized"
@@ -222,7 +223,10 @@ export const INJECTION_MEDICATIONS: Record<InjectionMedicationKey, InjectionMedi
     missedDoseGuidance: "",
     administrationRule: () => ({
       routes: ["IM", "SubQ"],
-      sites: [...ALL_INJECTION_SITES],
+      // Other has no label-derived anatomical default. An empty site list
+      // uses the order-directed free-text path instead of presenting catalog
+      // locations as if they were product guidance.
+      sites: [],
     }),
   },
 };

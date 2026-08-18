@@ -194,13 +194,11 @@ describe("RC6.1 injection note format", () => {
     // keeping it - it must not be dropped by the new compact wording.
     const note = formatFor(sustennaAdministered());
     expect(note.assessment).toContain(
-      "Shake vigorously for at least 15 seconds within 5 minutes of administration. " +
-        "If more than 5 minutes pass, shake again for at least 30 seconds. " +
-        "Inspect for particulate matter or discoloration before administration.",
+      "INVEGA SUSTENNA was shaken for at least 10 seconds and visually inspected per current product instructions.",
     );
   });
 
-  it("states the Vivitrol-specific preparation/mixing text and the universal discoloration check", () => {
+  it("states the Vivitrol-specific reconstitution facts without adding a universal visual-inspection claim", () => {
     const encounter: InjectionEncounter = {
       ...sustennaAdministered(),
       medicationKey: "vivitrol",
@@ -208,21 +206,21 @@ describe("RC6.1 injection note format", () => {
       site: "R ventrogluteal",
       intervalKey: "q4wk",
       nextDoseDate: "2026-09-04",
+      habitus: "average",
       verifications: { resuspend: true, opioidFree: true, naltrexHS: true, suppliedNeedle: true },
     };
     const note = formatFor(encounter);
     expect(note.assessment).toContain(
-      "Allow the product to reach room temperature (approximately 45 minutes) before preparation. " +
-        "Administer immediately once the product has been suspended and transferred into the syringe. " +
-        "Inspect for particulate matter or discoloration before administration.",
+      "VIVITROL kit reconstitution, suspension appearance, and supplied-component check verified per current product instructions.",
     );
+    expect(note.assessment).not.toContain("particulate matter or discoloration");
   });
 
   it("never produces a second, independent preparation clause", () => {
     const note = formatFor(sustennaAdministered());
     expect(note.plan).not.toContain("Preparation / reconstitution");
     expect(note.plan).not.toContain("PRODUCT HANDLING");
-    const occurrences = (note.all.match(/Shake vigorously/g) ?? []).length;
+    const occurrences = (note.all.match(/INVEGA SUSTENNA was shaken/g) ?? []).length;
     expect(occurrences).toBe(1);
   });
 });
@@ -278,6 +276,7 @@ describe("RC6.1 injection note — needle / technique", () => {
       dose: "380 mg",
       intervalKey: "q4wk",
       nextDoseDate: "2026-09-04",
+      habitus: "average",
       verifications: { resuspend: true, opioidFree: true, naltrexHS: true, suppliedNeedle: true },
     };
     const note = formatFor(encounter);
@@ -297,9 +296,40 @@ describe("RC6.1 injection note — needle / technique", () => {
     expect(note.assessment).not.toContain("Gluteal-only route requirement");
   });
 
+  it("does not carry stale product-specific technique checks into a different medication's note", () => {
+    const encounter = sustennaAdministered();
+    // These can remain in an older draft after staff change products. They
+    // are not Sustenna checks and must not become charted facts.
+    encounter.verifications = { resuspend: true, noMassage: true, deepZtrack: true };
+
+    const note = formatFor(encounter);
+    expect(note.plan).not.toContain("was not massaged");
+    expect(note.plan).not.toContain("Ordered route, site, and product-specific technique verified");
+  });
+
   it("emits no technique label when nothing was documented", () => {
     const note = formatFor(sustennaAdministered());
 
     expect(note.plan).not.toContain("Needle / technique:");
+  });
+
+  it("does not chart a Vivitrol needle recommendation until staff documents the actual technique", () => {
+    const encounter: InjectionEncounter = {
+      ...sustennaAdministered(),
+      medicationKey: "vivitrol",
+      dose: "380 mg",
+      site: "R ventrogluteal",
+      habitus: "average",
+      verifications: { resuspend: true, opioidFree: true, naltrexHS: true, suppliedNeedle: true },
+    };
+
+    const noTechnique = formatFor(encounter);
+    expect(noTechnique.plan).not.toContain("Needle / technique:");
+
+    encounter.technique = 'Supplied 20G 1½-inch needle used for deep gluteal IM.';
+    const documentedTechnique = formatFor(encounter);
+    expect(documentedTechnique.plan).toContain(
+      "Needle / technique: Supplied 20G 1½-inch needle used for deep gluteal IM.",
+    );
   });
 });

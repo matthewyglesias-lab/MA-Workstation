@@ -216,7 +216,7 @@ test.describe('Injection decision support', () => {
       'Consent reaffirmed',
       'No contraindications',
       'Aseptic technique',
-      'Preparation / mixing verified'
+      'Suspension preparation verified'
     ]) {
       const checkbox = panel.getByRole('checkbox', { name: new RegExp(item) });
       await checkbox.check();

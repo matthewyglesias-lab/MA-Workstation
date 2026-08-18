@@ -10,7 +10,8 @@ const FLAG = {
   opioidFree:{t:"Current opioid-risk / provider plan verified", s:"Current opioid-risk screen and provider plan verified, including recent opioid, buprenorphine, methadone, or tramadol exposure and current product-label contraindications."},
   naltrexHS:{t:"Naltrexone/hepatic review verified", s:"Naltrexone/excipient hypersensitivity and hepatic-risk review verified against the active order and current product information."},
   suppliedNeedle:{t:"Supplied needle / body-habitus check", s:"Kit-supplied needle and body-habitus selection verified; deep gluteal IM route/site documented as ordered.", plan:true},
-  resuspend:{t:"Suspension inspected & mixed", s:"Medication inspected and mixed/resuspended per label; no particulates or discoloration noted."},
+  resuspend:{t:"Product-specific preparation verified", s:"Product-specific preparation verified against the current product instructions."},
+  visualInspection:{t:"Product visual inspection verified", s:"Product visual inspection verified against the current product instructions."},
   invegaInit:{t:"Initiation / re-initiation plan verified", s:"Active order and current product-specific PI/provider initiation or re-initiation plan verified before administration."},
   oralOverlap:{t:"Ordered oral initiation plan documented", s:"Ordered oral aripiprazole initiation or overlap plan verified against the active order."},
   stabilized:{t:"Stabilized on prerequisite LAI", s:"Pt adequately stabilized on the prerequisite formulation prior to transition to this interval."},
@@ -128,7 +129,7 @@ const MEDS = [
     missed:"Interval individualized (commonly q4 wk). Late-dose handling per prescriber.",
     caution:"Verify the current product information and active order. This local helper does not impose a generic anatomical site or Z-track technique.",
     tip:"Use the active order and current product information for route, site, dose, initiation, and timing decisions.",
-    flags:[]},
+    flags:["visualInspection"]},
   {key:"prolixin", label:"Prolixin Dec.", name:"Prolixin Decanoate", gen:"fluphenazine decanoate", cls:"Typical antipsychotic LAI", route:"IM or SubQ", site:"", intervalKey:"q3wk", winB:7, winA:7,
     tech:"Document the actual ordered IM or subcutaneous route, site, and technique.",
     doses:["12.5 mg","25 mg","37.5 mg","50 mg"],
@@ -137,7 +138,7 @@ const MEDS = [
     missed:"Interval individualized, commonly q2\u20134 wk. Late-dose handling per prescriber.",
     caution:"The label permits IM or subcutaneous administration. Follow the active order and document the actual route/site; this helper does not invent an anatomical default.",
     tip:"Use the active order and current product information for route, site, dose, and timing decisions.",
-    flags:[]},
+    flags:["visualInspection"]},
   {key:"other", label:"Other", name:"", gen:"", cls:"", route:"IM", site:"", intervalKey:"q4wk", winB:7, winA:7,
     tech:"", doses:[], storage:"", recon:"", missed:"", caution:"", tip:"Enter all fields manually for drugs not listed.", flags:[]}
 ];
@@ -600,7 +601,7 @@ function renderIntervals(){const b=$("intChips");b.innerHTML="";INTERVALS.forEac
 })));}
 function renderMedSpec(){
   const wrap=$("medSpecWrap"),b=$("medSpecChips");b.innerHTML="";
-  const flags=(S.med&&S.med.flags)||[];
+  const flags=Array.isArray(S.requiredVerifications)?S.requiredVerifications:((S.med&&S.med.flags)||[]);
   if(!flags.length){wrap.classList.remove("show");return;}
   wrap.classList.add("show");$("msTitle").textContent=S.med.label+" safety";
   flags.forEach(fk=>{const f=FLAG[fk];if(!f)return;b.appendChild(chipEl(f.t,!!S.flags[fk],"att sm",()=>{S.flags[fk]=!S.flags[fk];renderMedSpec();render();},tickHTML));});
@@ -875,15 +876,16 @@ function softResetUds(){
 /* ---------- return date module ---------- */
 function recalcNext(){
   const d=intDays(S.intervalKey),ad=$("adminDate").value;
-  if(!S.retCustom){ $("nextDate").value = (d>0&&ad)?addDays(ad,d):""; }
+  if(!S.retCustom){ $("nextDate").value = S.med&&S.med.key==='other'?"":((d>0&&ad)?addDays(ad,d):""); }
   renderReturn();
 }
 function renderReturn(){
   const ad=$("adminDate").value, nd=$("nextDate").value, snap=$("snapRow");
   const big=$("retBig"),dowEl=$("retDow"),win=$("retWin");snap.innerHTML="";
-  if(!nd){big.textContent="—";dowEl.textContent="";win.textContent="Pick a drug & interval to compute the window.";return;}
+  if(!nd){big.textContent="—";dowEl.textContent="";win.textContent=S.med&&S.med.key==='other'?"Enter the return date from the active order; no product-specific timing window is calculated.":"Pick a drug & interval to compute the window.";return;}
   big.textContent=fmtShort(nd);
   const wd=dow(nd);dowEl.textContent=dowName(nd);
+  if(S.med&&S.med.key==='other'){win.textContent="Return date documented from the active order; no product-specific timing window applies.";renderSMS();return;}
   // window
   const w=effectiveWindow(S.med,S.intervalKey);
   const e=addDays(nd,-(w.winB||0)), l=addDays(nd,(w.winA||0));
@@ -3748,10 +3750,10 @@ const _ipmgPrevMedSafety=medicationSafetyItems;
 medicationSafetyItems=function medicationSafetyItems(){
   const items=_ipmgPrevMedSafety();
   if(S.med&&S.site&&S.route){
-    // Haldol Decanoate and Prolixin Decanoate are documented from the active
-    // order: the local catalog does not invent an anatomical default or turn
-    // an order-directed site string into a false safety stop.
-    if(['haldol','prolixin'].includes(S.med.key))items.unshift({level:'info',text:'Route/site documented per active order'});
+    // Haldol Decanoate, Prolixin Decanoate, and Other are documented from the
+    // active order: the local catalog must not turn an order-directed site
+    // string into a false safety stop by comparing it with generic chips.
+    if(['haldol','prolixin','other'].includes(S.med.key))items.unshift({level:'info',text:'Route/site documented per active order'});
     else if(siteIsAllowed(S.site))items.unshift({level:'ok',text:'Route/site matches medication guidance'});
     else items.unshift({level:'danger',text:'Route/site outside usual guidance — verify provider direction'});
   }
@@ -5518,6 +5520,20 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       return `${p(now.getMonth()+1)}/${p(now.getDate())}/${String(now.getFullYear()).slice(2)} ${p(now.getHours())}${p(now.getMinutes())}`;
     }catch(e){return '';}
   }
+  /* "Other" deliberately has no product-derived cadence.  A legacy return
+     date can be retained for staff review, but it must not reach a patient
+     handout until a typed active-order/provider-direction record is bound to
+     that exact value. Keep the AVS safe even when it is printed before the
+     finalization gate is reached. */
+  function avsNextDoseDate(med){
+    const next=raw('nextDate','');
+    if(!next||!med||med.key!=='other')return next;
+    try{
+      const provenance=(window.__IPMG_INJECTION_DOCUMENTATION_METADATA__||{}).nextDose||{};
+      const complete=provenance.source==='manual'&&provenance.value===next&&provenance.overrideKind&&String(provenance.overrideReason||'').trim()&&provenance.recordedAt&&(provenance.overrideKind!=='provider-direction'||String(provenance.overrideProvider||'').trim());
+      return complete?next:'';
+    }catch(e){return '';}
+  }
   function avsInput(){
     const med=(typeof S!=='undefined'&&S.med)?S.med:{};
     let init={protocol:'',day1Date:''};
@@ -5553,7 +5569,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       intervalKey:(typeof S!=='undefined'&&S.intervalKey)?S.intervalKey:(med.intervalKey||''),
       administrationDate:raw('adminDate','')||today(),
       administrationTime:raw('injAdminTime',''),
-      nextDoseDate:raw('nextDate',''),
+      nextDoseDate:avsNextDoseDate(med),
       lot:raw('lot',''),
       expiration:raw('exp',''),
       responseLabel:resp,
@@ -6464,7 +6480,28 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   function injectionSiteSafe(blank){if(blank) return ''; return first(()=>{try{return window.S&&S.site||'';}catch(e){return '';}},selectedChip('siteChips'));}
   function injectionIntervalSafe(blank){if(blank) return ''; return first(()=>{try{const key=(window.S&&S.intervalKey)||''; const row=(window.INTERVALS||[]).find(i=>i.key===key); return row?row.label:humanizeToken(key);}catch(e){return '';}},selectedChip('intChips'));}
   function injectionReasonSafe(blank){if(blank) return ''; return first(()=>{try{const r=(window.S&&S.reason)||''; const found=(window.REASONS||[]).find(x=>x.key===r); return found?found.label:humanizeToken(r);}catch(e){return '';}},selectedChip('reasonChips'));}
-  function injectionNextSafe(blank){if(blank) return ''; return first(()=>val('nextDate')?fmt(val('nextDate')):'',txt('retBig'),txt('retWin'));}
+  function injectionOtherReturnNeedsReview(){
+    try{
+      if(typeof S==='undefined'||!S.med||S.med.key!=='other')return false;
+      const next=val('nextDate');if(!next)return false;
+      const provenance=(window.__IPMG_INJECTION_DOCUMENTATION_METADATA__||{}).nextDose||{};
+      return !(provenance.source==='manual'&&provenance.value===next&&provenance.overrideKind&&String(provenance.overrideReason||'').trim()&&provenance.recordedAt&&(provenance.overrideKind!=='provider-direction'||String(provenance.overrideProvider||'').trim()));
+    }catch(e){return true;}
+  }
+  function injectionNextSafe(blank){
+    if(blank)return '';
+    return first(
+      ()=>{
+        const next=val('nextDate');
+        if(!next)return '';
+        return injectionOtherReturnNeedsReview()
+          ? `${fmt(next)} · legacy return date — verify active order`
+          : fmt(next);
+      },
+      txt('retBig'),
+      txt('retWin'),
+    );
+  }
   function renderInjectionWorksheet517(blank=false){
     const sheet=get('injWorksheetSheet'); if(!sheet) return;
     const date=blank?'':first(()=>val('adminDate')?fmt(val('adminDate')):'',()=>fmt(today()));
@@ -9464,7 +9501,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const fields={};fieldIds.forEach(id=>{const el=by(id);if(el&&'value' in el)fields[id]=el.type==='checkbox'?!!el.checked:el.value;});
     const root=window.__IPMG_RC530__||{};
     const current={
-      version:4,medKey:S.med&&S.med.key||'',state:{dose:S.dose||'',site:S.site||'',route:S.route||'',intervalKey:S.intervalKey||'',reason:S.reason||'',resp:S.resp||'',attest:clone(S.attest||{}),flags:clone(S.flags||{}),guard:clone(S.guard||{}),retCustom:!!S.retCustom},
+      version:4,medKey:S.med&&S.med.key||'',state:{customMedication:S.med&&S.med.key==='other'&&S.med.name!=='Other'?S.med.name||'':'',dose:S.dose||'',site:S.site||'',route:S.route||'',intervalKey:S.intervalKey||'',reason:S.reason||'',resp:S.resp||'',attest:clone(S.attest||{}),flags:clone(S.flags||{}),guard:clone(S.guard||{}),retCustom:!!S.retCustom},
       initiation:clone(call(window.ipmgInitiationProtocolSnapshot)||{}),
       smartVitals:clone(call(window.ipmgSmartVitalsSnapshot)||{}),
       disposition:clone(call(window.ipmgClinicalDispositionSnapshot)||{}),
@@ -9850,8 +9887,15 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const snap=record&&record.snapshot||{};const state=snap.state||{};applying=true;mode='edit';applyRecordLock();
     call(window.softReset);
     window.__IPMG_INJECTION_DOCUMENTATION_METADATA__=clone(snap.documentation||{});
-    const med=MEDS.find(item=>item.key===snap.medKey);if(med)call(window.selectMed,med);
-    S.dose=state.dose||'';S.site=state.site||'';S.route=state.route||'';S.intervalKey=state.intervalKey||'';S.reason=typeof state.reason==='string'?state.reason:'';S.resp=state.resp||'well';S.attest=clone(state.attest||{});S.flags=clone(state.flags||{});S.guard=clone(state.guard||{});S.retCustom=!!state.retCustom;
+    const med=MEDS.find(item=>item.key===snap.medKey),customMedication=typeof state.customMedication==='string'?state.customMedication.trim():'';if(med)call(window.selectMed,med.key==='other'&&customMedication?{...med,name:customMedication,label:customMedication}:med);
+    S.dose=state.dose||'';S.site=state.site||'';S.route=state.route||'';S.intervalKey=state.intervalKey||'';S.reason=typeof state.reason==='string'?state.reason:'';S.resp=state.resp||'well';S.attest=clone(state.attest||{});S.flags=clone(state.flags||{});S.guard=clone(state.guard||{});
+    // Older Other drafts could carry the legacy runtime's generated return
+    // date without the newer provenance object or retCustom marker. Preserve
+    // the visible value as an unreviewed date through restore; the typed
+    // workspace labels it for active-order review rather than treating it as
+    // a valid product calculation.
+    const legacyOtherReturnDate=snap.medKey==='other'&&String((snap.fields||{}).nextDate||'').trim();
+    S.retCustom=!!state.retCustom||!!legacyOtherReturnDate;
     call(window.restoreInitiationProtocol,snap.initiation||{});
     Object.entries(snap.fields||{}).forEach(([id,value])=>{const el=by(id);if(el&&'value' in el){if(el.type==='checkbox')el.checked=!!value;else el.value=value==null?'':value;}});
     if(window.__IPMG_RC530__)window.__IPMG_RC530__.safetyNone=!!snap.safetyNone;
@@ -11233,7 +11277,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     version:1,
     injection:{
       medicationKey:S&&S.med&&S.med.key||'',
-      customMedication:S&&S.med&&S.med.key==='other'?(S.med.name||S.med.label||'Other'):'',
+      customMedication:S&&S.med&&S.med.key==='other'&&S.med.name!=='Other'?(S.med.name||S.med.label||''):'',
       dose:S&&S.dose||'',
       site:S&&S.site||'',
       route:S&&S.route||'',
@@ -11336,7 +11380,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
    duplicated. Does not affect print output. */
 (()=>{
   const ATTEST_KEYS=['id2','rights','allergy','consent','prior','screen','hygiene'];
-  const VERIFICATION_KEYS=['opioidFree','naltrexHS','suppliedNeedle','resuspend','invegaInit','oralOverlap','stabilized','paliperidoneTolerability','aripiprazoleTolerability','glutealOnly','noMassage','deepZtrack'];
+  const VERIFICATION_KEYS=['opioidFree','naltrexHS','suppliedNeedle','resuspend','visualInspection','invegaInit','oralOverlap','stabilized','paliperidoneTolerability','aripiprazoleTolerability','glutealOnly','noMassage','deepZtrack'];
   const SAFETY_KEYS=['dizzy','cardiac','nms','eps','site','opioid','liver'];
   const clone=value=>{try{return JSON.parse(JSON.stringify(value));}catch(e){return {};}};
   window.ipmgSetInjectionChipState=(patch)=>{
@@ -11345,9 +11389,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       const key=patch.medicationKey||'';
       const current=(S.med&&S.med.key)||'';
       const customName=key==='other'?String(patch.customMedication||'').trim():'';
-      if(key!==current||(key==='other'&&customName&&S.med&&S.med.name!==customName)){
+      if(key!==current||(key==='other'&&S.med&&(S.med.name||'')!==(customName||'Other'))){
         const found=key?MEDS.find(m=>m.key===key):null;
-        const entry=found&&key==='other'&&customName?{...found,name:customName,label:customName}:found;
+        const entry=found&&key==='other'?{...found,name:customName||'Other',label:customName||found.label}:found;
         if(entry){
           selectMed(entry);
         }else{
@@ -11389,6 +11433,11 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
          contract while draft/lock snapshots can restore it losslessly. */
       window.__IPMG_INJECTION_DOCUMENTATION_METADATA__=clone(patch.documentation||{});
     }
+    // The typed workspace owns return-date provenance. Selecting or renaming
+    // a custom Other medication calls selectMed(), which resets retCustom;
+    // restore it before recalcNext() so a manual active-order date is never
+    // cleared or replaced by a legacy interval calculation.
+    if(patch.nextDoseManual)S.retCustom=true;
     renderReasons();renderMeds();renderDoses();renderIntervals();renderMedSpec();renderInjSafetyChips();renderAtt();renderResp();renderSites();renderRoutes();recalcNext();render();
     if(patch.initiation&&typeof window.restoreInitiationProtocol==='function')window.restoreInitiationProtocol(patch.initiation);
     if(patch.disposition&&typeof window.restoreClinicalDisposition==='function')window.restoreClinicalDisposition(patch.disposition);

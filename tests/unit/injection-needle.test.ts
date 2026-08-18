@@ -175,15 +175,30 @@ describe("Vivitrol needle selection", () => {
     expect(statements).toMatch(/administer immediately/i);
   });
 
-  it("returns the room-temp and immediate-use preparation guidance plus the discoloration check", () => {
+  it("returns the room-temperature, reconstitution, and immediate-use preparation guidance", () => {
     const text = medicationPreparationGuidance(med("vivitrol"), "380 mg", "R ventrogluteal");
     expect(text).toMatch(/room temperature/i);
+    expect(text).toMatch(/3\.4 mL of diluent/i);
+    expect(text).toMatch(/milky-white, clump-free suspension/i);
     expect(text).toMatch(/administer immediately/i);
-    expect(text).toMatch(/particulate matter or discoloration/i);
+    // Do not append an unsupported universal particulate/discoloration
+    // instruction to a product whose label supplies a different visual check.
+    expect(text).not.toMatch(/particulate matter or discoloration/i);
   });
 
-  it("returns empty guidance for a ready-to-use product with no real prep step", () => {
-    expect(medicationPreparationGuidance(med("haldol"), "100 mg", "L deltoid")).toBe("");
+  it("returns Haldol's required ready-to-use solution inspection without inventing reconstitution", () => {
+    const text = medicationPreparationGuidance(med("haldol"), "100 mg", "L deltoid");
+    expect(text).toMatch(/inspect the solution/i);
+    expect(text).toMatch(/debris/i);
+    expect(text).not.toMatch(/reconstitut|mix|suspend/i);
+  });
+
+  it("offers either supplied Vivitrol administration needle for average habitus", () => {
+    const resolution = resolveNeedle(med("vivitrol"), "380 mg", "R ventrogluteal", {
+      habitus: "average",
+    });
+    expect(formatNeedleSpec(resolution.needle!)).toBe('20G 1½" (customized kit needle)');
+    expect(formatNeedleSpec(resolution.alternate!)).toBe('20G 2" (customized kit needle)');
   });
 });
 
@@ -288,10 +303,10 @@ describe("technique prefill string", () => {
     ).toBe('21G 2" (green pack), gluteal IM at 90°.');
   });
 
-  it("uses the subcutaneous angle range for Uzedy", () => {
+  it("does not invent a subcutaneous angle range for Uzedy", () => {
     const resolution = resolveNeedle(med("uzedy"), "100 mg", "Abdomen RUQ (SubQ)", {});
     expect(formatTechniquePrefill(med("uzedy"), resolution, "SubQ")).toBe(
-      '21G 5⁄8" (attached to prefilled syringe), SubQ at 45–90°.',
+      '21G 5⁄8" (attached to prefilled syringe), SubQ.',
     );
   });
 
@@ -333,16 +348,21 @@ describe("engine warning scope", () => {
       (warning) => warning.code,
     );
 
-  it("warns when Vivitrol habitus is undocumented, because its label requires the assessment", () => {
-    expect(warningCodes(administered("vivitrol", "380 mg", "R ventrogluteal"))).toContain(
+  const stopCodes = (encounter: InjectionEncounter): string[] =>
+    InjectionEngine.evaluate(encounter, { today: encounter.administrationDate }).stops.map(
+      (stop) => stop.code,
+    );
+
+  it("blocks Vivitrol when body habitus is undocumented, because its label requires the assessment", () => {
+    expect(stopCodes(administered("vivitrol", "380 mg", "R ventrogluteal"))).toContain(
       "needle.unresolved",
     );
   });
 
-  it("stops warning once habitus is documented", () => {
+  it("removes the Vivitrol habitus stop once the current assessment is documented", () => {
     const encounter = administered("vivitrol", "380 mg", "R ventrogluteal");
     encounter.habitus = "average";
-    expect(warningCodes(encounter)).not.toContain("needle.unresolved");
+    expect(stopCodes(encounter)).not.toContain("needle.unresolved");
   });
 
   it("does not soft-gate ordinary encounters whose needle merely needs input", () => {
@@ -358,12 +378,14 @@ describe("engine warning scope", () => {
     );
   });
 
-  it("keeps a Vivitrol encounter finalizable — the warning is never a stop", () => {
+  it("does not let a checked Vivitrol supplied-needle attestation bypass the habitus stop", () => {
+    const encounter = administered("vivitrol", "380 mg", "R ventrogluteal");
+    encounter.verifications = { suppliedNeedle: true };
     const evaluation = InjectionEngine.evaluate(
-      administered("vivitrol", "380 mg", "R ventrogluteal"),
+      encounter,
       { today: "2026-08-07" },
     );
-    expect(evaluation.stops.map((stop) => stop.code)).not.toContain("needle.unresolved");
+    expect(evaluation.stops.map((stop) => stop.code)).toContain("needle.unresolved");
   });
 
   it("projects the needle resolution and site restriction onto the evaluation output", () => {
@@ -404,7 +426,9 @@ describe("administration reference integrity", () => {
   it("gives every cataloged product an administration block with at least one rule", () => {
     entries.forEach((entry) => {
       expect(entry.administration.needleRules.length).toBeGreaterThan(0);
-      expect(entry.administration.angle.degrees).toBeTruthy();
+      if (entry.administration.angle) {
+        expect(entry.administration.angle.degrees).toBeTruthy();
+      }
     });
   });
 

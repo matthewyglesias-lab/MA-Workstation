@@ -140,7 +140,11 @@ const INJECTION_REVIEW_FACTS: Record<string, string> = {
   "naltrexone/hepatic review verified":
     "Naltrexone/excipient hypersensitivity and hepatic-risk review verified against the active order and current product information.",
   "suspension inspected & mixed":
-    "Medication inspected and mixed/resuspended per product instructions.",
+    "Product-specific preparation verified against the current product instructions.",
+  "product-specific preparation verified":
+    "Product-specific preparation verified against the current product instructions.",
+  "product visual inspection verified":
+    "Product visual inspection verified against the current product instructions.",
   "initiation / re-initiation plan verified":
     "Active order and product-specific initiation / re-initiation plan verified.",
   "ordered oral initiation plan documented":

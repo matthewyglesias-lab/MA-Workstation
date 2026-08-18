@@ -6,6 +6,7 @@ import {
   searchKnowledgeEntries,
 } from "../../src/domain/knowledge-catalog";
 import { INJECTION_MEDICATIONS } from "../../src/domain/injection-catalog";
+import { INJECTION_PREPARATION_REVIEWED_ON } from "../../src/domain/injection-clinical-reference";
 
 describe("allKnowledgeEntries", () => {
   it("generates one LAI entry per non-'other' injection medication", () => {
@@ -32,6 +33,17 @@ describe("allKnowledgeEntries", () => {
     expect((doseRow as { value: string }).value).toContain("50 mg");
     const routeRow = haldol!.rows.find((row) => row.label === "Route/site");
     expect((routeRow as { value: string }).value).toContain("IM");
+  });
+
+  it("keeps the independently reviewed preparation source visible with each LAI synopsis", () => {
+    const laiEntries = allKnowledgeEntries().filter((entry) => entry.category === "lai");
+    for (const entry of laiEntries) {
+      const preparationSource = entry.rows.find((row) => row.label === "Preparation source");
+      expect(preparationSource?.kind, entry.title).toBe("text");
+      expect((preparationSource as { value: string }).value, entry.title).toContain(
+        `reviewed ${INJECTION_PREPARATION_REVIEWED_ON}`,
+      );
+    }
   });
 });
 

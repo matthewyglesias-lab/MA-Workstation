@@ -11,6 +11,7 @@ import {
   INJECTION_SAFETY_TRIGGERS,
   InjectionEngine,
   emptyInjectionInitiation,
+  hasCompleteManualNextDoseProvenance,
   findInjectionResponseOption,
   hasCurrentInjectionAdministrationReview,
   hasCurrentLateDoseReview,
@@ -20,8 +21,9 @@ import {
   injectionInitiationOptions,
   injectionInitiationSecondarySites,
   injectionTimingReviewFingerprint,
+  isMedicationPreparationVerification,
   medicationPreparationGuidance,
-  verificationLabels,
+  medicationVerificationLabel,
   type InjectionAdministrationDetails,
   type InjectionDisposition,
   type InjectionEncounter,
@@ -42,10 +44,7 @@ import {
   type InjectionMedicationKey,
   type MedicationVerificationKey,
 } from "../../../domain/injection-catalog";
-import {
-  formatNeedleSpec,
-  formatTechniquePrefill,
-} from "../../../domain/injection-needle";
+import { formatNeedleSpec } from "../../../domain/injection-needle";
 import type { InjectionHabitusBand } from "../../../domain/injection-clinical-reference";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { firstActionableClinicalIssue } from "../../../application/readiness-projection";
@@ -585,7 +584,18 @@ function fallbackGuidance({
             "Document the exact ordered strength, route, and cadence. Defaults are reference-only and do not replace the active order.",
           classification: "order-dependent review",
         },
-        ...(medication.timingMode === "orderVerify"
+        ...(medication.key === "other"
+          ? [
+              {
+                key: "order-timing",
+                section: "order",
+                title: "Timing review",
+                message:
+                  "Other has no product-specific timing guidance. Document the return date from the active order or provider direction.",
+                classification: "order-dependent review" as const,
+              },
+            ]
+          : medication.timingMode === "orderVerify"
           ? [
               {
                 key: "order-timing",
@@ -603,7 +613,9 @@ function fallbackGuidance({
           title: "Expected next due",
           message: suggestedNextDose
             ? `${suggestedNextDose} is calculated from the documented administration date and selected cadence. Use an explicit exception only when the active order or provider direction changes that target.`
-            : "Enter the actual administration date and ordered cadence to calculate an expected next due date.",
+            : medication.key === "other"
+              ? "No product-specific calculation applies. Enter the return date from the active order or provider direction."
+              : "Enter the actual administration date and ordered cadence to calculate an expected next due date.",
           classification: "local policy",
         },
         {
@@ -704,6 +716,13 @@ function OperatorGuidance({
     ),
   ];
   const clinicalReference = medication.clinicalReference;
+  // Preparation content is reviewed independently from the broader
+  // scheduling/reference bundle. Show its own dated source beside the
+  // product handling guidance rather than implying the older bundle review
+  // date attests a newly revised preparation instruction.
+  const preparationSource = clinicalReference?.administration.notes.find(
+    (note) => note.phase === "preparation",
+  )?.source;
   const firstStop = firstActionableClinicalIssue("administer", evaluation);
   const blockerTab = firstStop ? tabForInjectionField(firstStop.field) : null;
   const primaryItem = items[0];
@@ -768,6 +787,17 @@ function OperatorGuidance({
                 <dd>{clinicalReference.knowledge.technique}</dd>
                 <dt>Preparation</dt>
                 <dd>{clinicalReference.knowledge.preparation}</dd>
+                {preparationSource && (
+                  <>
+                    <dt>Preparation source</dt>
+                    <dd>
+                      <a href={preparationSource.url} target="_blank" rel="noreferrer">
+                        {preparationSource.title}
+                      </a>{" "}
+                      — {preparationSource.labelRevision}; reviewed {preparationSource.reviewedOn}
+                    </dd>
+                  </>
+                )}
                 <dt>Storage</dt>
                 <dd>{clinicalReference.knowledge.storage}</dd>
                 <dt>Staff guardrail</dt>
@@ -829,7 +859,15 @@ function NeedleReadout({ label, value }: { label: string; value: string }) {
  * hatched bands only, so it reads as terminal graphics and survives the
  * greyscale print path the AVS renderer already holds the line on.
  */
-function NeedleDiagram({ subcutaneous }: { subcutaneous: boolean }) {
+function NeedleDiagram({
+  subcutaneous,
+  angle,
+}: {
+  subcutaneous: boolean;
+  /** Display only a product-sourced numeric angle; a generic anatomy sketch
+   * must not turn into unsupported technique guidance. */
+  angle?: string;
+}) {
   // A SubQ needle stops in the fatty layer at a shallower angle; an IM needle
   // passes through it into muscle at 90°.
   const needlePath = subcutaneous ? "M 96 14 L 150 68" : "M 120 12 L 120 104";
@@ -851,9 +889,11 @@ function NeedleDiagram({ subcutaneous }: { subcutaneous: boolean }) {
       <text class="wfp-needle-layer-label" x="14" y="57">SUBQ</text>
       <text class="wfp-needle-layer-label" x="14" y="97">MUSCLE</text>
       <path d={needlePath} class="wfp-needle-shaft" />
-      <text class="wfp-needle-depth-label" x={subcutaneous ? 158 : 128} y={subcutaneous ? 76 : 112}>
-        {subcutaneous ? "45–90°" : "90°"}
-      </text>
+      {angle && (
+        <text class="wfp-needle-depth-label" x={subcutaneous ? 158 : 128} y={subcutaneous ? 76 : 112}>
+          {`${angle}°`}
+        </text>
+      )}
     </svg>
   );
 }
@@ -979,7 +1019,7 @@ function NeedleTechniquePanel({
               <NeedleReadout label="Max vol" value={`${maxVolumePerSite} mL / site`} />
             )}
           </div>
-          <NeedleDiagram subcutaneous={subcutaneous} />
+          <NeedleDiagram subcutaneous={subcutaneous} angle={angle?.degrees} />
         </div>
 
         {resolution.unresolved && resolution.unresolvedReason && (
@@ -1591,46 +1631,6 @@ export function InjectionPanel({
 
   const needleProjection = presentationOutput?.needle;
 
-  // Prefill the editable Needle / technique field, the way the legacy app did
-  // ($('tech').value = m.tech). Gated on the field being empty so a staff edit
-  // is never overwritten — same "suggest once, never clobber" contract as the
-  // rotation-site effect above.
-  const techniquePrefill = medication
-    ? formatTechniquePrefill(
-        medication,
-        needleProjection?.resolution ?? { unresolved: false },
-        encounter.route,
-      )
-    : "";
-  const autoTechniquePrefill = useRef("");
-  useEffect(() => {
-    const current = (encounter.technique ?? "").trim();
-    const previousAuto = autoTechniquePrefill.current;
-    if (nonAdministration) {
-      if (previousAuto && current === previousAuto) {
-        patch({ technique: "" });
-      }
-      if (current === previousAuto) autoTechniquePrefill.current = "";
-      return;
-    }
-    if (locked) return;
-    if (!techniquePrefill) {
-      if (previousAuto && current === previousAuto) patch({ technique: "" });
-      if (current === previousAuto) autoTechniquePrefill.current = "";
-      return;
-    }
-    // A field matching the last suggestion is still app-owned. Update it when
-    // weight/site/route changes; once staff edits it, preserve that edit.
-    if (!current || current === previousAuto) {
-      if (current !== techniquePrefill) patch({ technique: techniquePrefill });
-      autoTechniquePrefill.current = techniquePrefill;
-      return;
-    }
-    autoTechniquePrefill.current = "";
-    // Value dependencies only; manual edits are intentionally never clobbered.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [encounter.technique, locked, nonAdministration, techniquePrefill]);
-
   // The dose-history grid — the most recognisably-MAR artifact, and the one
   // that makes LAI site rotation legible at a glance. Read-only, and read
   // through the typed repository rather than reaching into localStorage: it
@@ -1780,16 +1780,23 @@ export function InjectionPanel({
     evaluation?.calculatedDates.expectedNextDue ??
     "";
   const suggestedNextDose = calculatedNextDue;
+  const manualReturnDate = medication?.key === "other";
+  const oneTimeOtherWithoutReturn = Boolean(
+    manualReturnDate && encounter.intervalKey === "once" && !encounter.nextDoseDate,
+  );
   const nextDoseMetadata = documentationMetadata?.nextDose;
   const nextDoseIsCalculated = nextDoseMetadata?.source === "calculated";
   const nextDoseIsManual = nextDoseMetadata?.source === "manual";
-  const nextDoseOverrideComplete = Boolean(
-    nextDoseIsManual &&
-      nextDoseMetadata?.overrideKind &&
-      nextDoseMetadata.overrideReason?.trim() &&
-      nextDoseMetadata.recordedAt &&
-      (nextDoseMetadata.overrideKind !== "provider-direction" ||
-        nextDoseMetadata.overrideProvider?.trim()),
+  // Drafts created before return-date provenance was introduced can carry a
+  // visible custom-medication date with no authority/reason metadata. Keep
+  // that date rather than inventing a q4wk replacement, but make its unknown
+  // provenance impossible to mistake for a verified active-order return.
+  const legacyOtherReturnDateNeedsReview = Boolean(
+    manualReturnDate && encounter.nextDoseDate && !nextDoseMetadata?.source,
+  );
+  const nextDoseOverrideComplete = hasCompleteManualNextDoseProvenance(
+    nextDoseMetadata,
+    encounter.nextDoseDate,
   );
   const transactionStarted = evaluation?.readiness !== "idle";
   const injectionLedgerTabs = visibleTabs.map(([key, label]) => {
@@ -1840,7 +1847,8 @@ export function InjectionPanel({
               : "Transaction page pending",
     };
   });
-  const legacyManualNextDoseNeedsReview = nextDoseIsManual && !nextDoseOverrideComplete;
+  const legacyManualNextDoseNeedsReview =
+    legacyOtherReturnDateNeedsReview || (nextDoseIsManual && !nextDoseOverrideComplete);
   const nextDoseCalculationInput = `${encounter.administrationDate}|${encounter.intervalKey}`;
 
   /**
@@ -1854,10 +1862,19 @@ export function InjectionPanel({
    * re-derive the date from a rule that never produced it.
    */
   const nextDoseProvenanceNote = (): string | undefined => {
+    if (legacyOtherReturnDateNeedsReview) {
+      return "· legacy return date — verify against the active order";
+    }
     if (nextDoseIsManual) {
       return `· ${nextDoseMetadata?.overrideReason || "manual date requires review"}`;
     }
-    if (!suggestedNextDose) return "· enter the administration date and order interval";
+    if (!suggestedNextDose) {
+      return medication?.key === "other"
+        ? oneTimeOtherWithoutReturn
+          ? "· one-time order — no routine return date is required"
+          : "· enter the return date from the active order"
+        : "· enter the administration date and order interval";
+    }
     if (encounter.initiation?.protocol === "sustenna-day1") {
       return `· Day 8 target, 7 days from ${registerDate(encounter.administrationDate)}`;
     }
@@ -1924,7 +1941,7 @@ export function InjectionPanel({
 
   const openNextDoseOverride = () => {
     setNextDoseOverrideDate(
-      nextDoseIsManual && isValidIsoDate(encounter.nextDoseDate)
+      (nextDoseIsManual || legacyOtherReturnDateNeedsReview) && isValidIsoDate(encounter.nextDoseDate)
         ? encounter.nextDoseDate
         : suggestedNextDose,
     );
@@ -2431,11 +2448,11 @@ export function InjectionPanel({
               <Field
                 label="Needle / technique"
                 field="technique"
-                hint="Auto-filled from the product label — editable"
+                hint="Record the actual needle and technique used; the nearby readout is reference guidance only."
               >
                 <input
                   value={encounter.technique ?? ""}
-                  placeholder="Needle gauge, length, or technique note"
+                  placeholder="Document actual needle gauge, length, and technique"
                   onInput={(event) => patch({ technique: event.currentTarget.value })}
                 />
               </Field>
@@ -2494,7 +2511,9 @@ export function InjectionPanel({
               <ScheduleRegister
                 title="SCHEDULE — NEXT DOSE"
                 marker={
-                  legacyManualNextDoseNeedsReview
+                  oneTimeOtherWithoutReturn
+                    ? "N/A"
+                    : legacyManualNextDoseNeedsReview
                     ? "REVIEW"
                     : nextDoseOverrideComplete
                       ? "OVR"
@@ -2503,14 +2522,18 @@ export function InjectionPanel({
                         : "PENDING"
                 }
                 verdict={
-                  nonAdministration || !evaluation
-                    ? undefined
-                    : injectionTimingVerdict(evaluation.output.timing)
+                  legacyManualNextDoseNeedsReview
+                    ? "NEEDS REVIEW"
+                    : nonAdministration || !evaluation
+                      ? undefined
+                      : injectionTimingVerdict(evaluation.output.timing)
                 }
                 tone={
-                  nonAdministration || !evaluation
-                    ? "neutral"
-                    : injectionTimingTone(evaluation.output.timing)
+                  legacyManualNextDoseNeedsReview
+                    ? "warning"
+                    : nonAdministration || !evaluation
+                      ? "neutral"
+                      : injectionTimingTone(evaluation.output.timing)
                 }
                 rows={[
                   {
@@ -2574,9 +2597,12 @@ export function InjectionPanel({
                       type="button"
                       class="cd2004-command-button"
                       onClick={openNextDoseOverride}
-                      disabled={!suggestedNextDose && !encounter.nextDoseDate}
                     >
-                      {nextDoseIsManual ? "Review override…" : "Override…"}
+                      {manualReturnDate
+                        ? "Set return date…"
+                        : nextDoseIsManual
+                          ? "Review override…"
+                          : "Override…"}
                     </button>
                     {suggestedNextDose && nextDoseIsManual && (
                       <button
@@ -3090,7 +3116,10 @@ export function InjectionPanel({
 
               {medication && <h3 class="wfp-section-head">Dose delivered &amp; device</h3>}
               <div class="wfp-row">
-                <Field label="Administration amount" field="details.volume">
+                <Field
+                  label={medication?.key === "haldol" ? "mL administered" : "Administration amount"}
+                  field="details.volume"
+                >
                   <input
                     value={encounter.details?.volume ?? ""}
                     placeholder="e.g., 2"
@@ -3104,7 +3133,9 @@ export function InjectionPanel({
                   >
                     <option value="">Select unit</option>
                     <option value="mL">mL (volume)</option>
-                    <option value="mg">mg (dose amount)</option>
+                    <option value="mg" disabled={medication?.key === "haldol"}>
+                      {medication?.key === "haldol" ? "mg (not valid for Haldol volume)" : "mg (dose amount)"}
+                    </option>
                   </select>
                 </Field>
                 <Field label="Delivery device" field="details.device">
@@ -3351,8 +3382,8 @@ export function InjectionPanel({
                   <CheckList
                     items={visibleMedicationVerifications.map((key) => ({
                       key,
-                      label: verificationLabels[key],
-                      ...(key === "resuspend"
+                      label: medicationVerificationLabel(medication, key),
+                      ...(isMedicationPreparationVerification(key)
                         ? {
                             description: medicationPreparationGuidance(
                               medication,
@@ -3522,7 +3553,9 @@ export function InjectionPanel({
             <ScheduleRegister
               title="RETURN TARGET"
               marker={
-                legacyManualNextDoseNeedsReview
+                oneTimeOtherWithoutReturn
+                  ? "N/A"
+                  : legacyManualNextDoseNeedsReview
                   ? "REVIEW"
                   : nextDoseIsManual
                     ? "OVR"
@@ -4063,7 +4096,9 @@ export function InjectionPanel({
         >
           <div class="cd2004-dialog-frame">
             <div class="cd2004-dialog-titlebar">
-              <span id="next-dose-override-title">Override calculated return target</span>
+              <span id="next-dose-override-title">
+                {manualReturnDate ? "Record ordered return date" : "Override calculated return target"}
+              </span>
               <button
                 type="button"
                 aria-label="Close"
@@ -4074,12 +4109,18 @@ export function InjectionPanel({
             </div>
             <div class="cd2004-dialog-body">
               <p>
-                Calculated target: <strong>{formatClinicalDate(suggestedNextDose)}</strong>. Use an
-                override only when the active order or documented provider direction establishes a
-                different return target.
+                {manualReturnDate ? (
+                  "No product-specific calculated target applies. Record the return date from the active order or documented provider direction."
+                ) : (
+                  <>
+                    Calculated target: <strong>{formatClinicalDate(suggestedNextDose)}</strong>. Use an
+                    override only when the active order or documented provider direction establishes a
+                    different return target.
+                  </>
+                )}
               </p>
               <div class="wfp-row">
-              <Field label="Override date" state="required" hint="Required">
+              <Field label={manualReturnDate ? "Return date" : "Override date"} state="required" hint="Required">
                   <WorkstationDateField
                     value={nextDoseOverrideDate}
                     onCommit={(next) => setNextDoseOverrideDate(next)}
@@ -4136,7 +4177,7 @@ export function InjectionPanel({
                 }
                 onClick={confirmNextDoseOverride}
               >
-                Record override
+                {manualReturnDate ? "Record return date" : "Record override"}
               </button>
             </div>
           </div>

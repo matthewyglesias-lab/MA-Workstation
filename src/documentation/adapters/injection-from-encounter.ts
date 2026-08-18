@@ -3,16 +3,22 @@ import {
   INJECTION_SAFETY_TRIGGERS,
   findInjectionResponseDetail,
   findInjectionResponseOption,
+  hasCompleteManualNextDoseProvenance,
   injectionResponseHeadline,
   injectionResponseNote,
   hasCurrentInjectionAdministrationReview,
   hasCurrentLateDoseReview,
   injectionReasonLabel,
-  medicationPreparationGuidance,
+  medicationVerificationDocumentation,
   type InjectionEncounter,
   type InjectionEvaluationOutput,
 } from "../../domain/injection";
+import { isValidIsoDate } from "../../domain/dates";
 import type { InjectionMedication, MedicationVerificationKey } from "../../domain/injection-catalog";
+import {
+  injectionClinicalPhaseForReason,
+  medicationVerificationsForPhase,
+} from "../../domain/injection-clinical-reference";
 import { resolveProviderDisplay } from "../../domain/provider-register";
 import type { ClinicalEvaluation } from "../../domain/contracts";
 import {
@@ -52,6 +58,23 @@ const formatTime = (raw?: string): string => {
   if (!match) return trimmed(raw);
   const hour = Number(match[1]);
   return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
+};
+
+/**
+ * A catalog medication can carry its order-derived next date in a handoff
+ * note.  "Other" deliberately has no such cadence: only expose one when a
+ * complete manual active-order/provider-direction record is still bound to
+ * the exact visible date. This protects document previews as well as final
+ * records, so a legacy date cannot look authoritative while the evaluator is
+ * correctly blocking finalization for review.
+ */
+const documentableNextDoseDate = (encounter: InjectionEncounter): string => {
+  const nextDoseDate = trimmed(encounter.nextDoseDate);
+  if (!nextDoseDate || !isValidIsoDate(nextDoseDate)) return "";
+  if (encounter.medicationKey !== "other") return nextDoseDate;
+  return hasCompleteManualNextDoseProvenance(encounter.details?.nextDose, nextDoseDate)
+    ? nextDoseDate
+    : "";
 };
 
 const formatDateTime = (raw?: string): string => {
@@ -137,7 +160,8 @@ const VERIFICATION_ASSESSMENT_FACTS: Partial<Record<MedicationVerificationKey, s
     "Current opioid-risk screen and provider plan verified, including relevant opioid, buprenorphine, methadone, or tramadol exposure and current product contraindications.",
   naltrexHS:
     "Naltrexone/excipient hypersensitivity and hepatic-risk review verified against the active order and current product information.",
-  resuspend: "Medication inspected and mixed/resuspended per product instructions.",
+  resuspend: "Product-specific preparation verified against the current label.",
+  visualInspection: "Product visual inspection verified against the current label.",
   invegaInit: "Active order and product-specific initiation / re-initiation plan verified.",
   oralOverlap:
     "Ordered oral aripiprazole initiation or overlap plan verified against the active order.",
@@ -189,6 +213,19 @@ const ATTESTATION_NOTE_ORDER: ReadonlyArray<keyof InjectionEncounter["attestatio
   "hygiene",
 ];
 
+const applicableVerificationKeys = (
+  encounter: InjectionEncounter,
+  medication: InjectionMedication | null,
+): Set<MedicationVerificationKey> =>
+  new Set(
+    medication?.clinicalReference
+      ? medicationVerificationsForPhase(
+          medication.clinicalReference,
+          injectionClinicalPhaseForReason(encounter.reason),
+        )
+      : medication?.verifications ?? [],
+  );
+
 /** Compact verification / clinical-review sentences for the RC6.1 note
  * format. Medication-specific verification facts (opioid screen, resuspend,
  * Invega initiation plan, etc.) are preserved from the existing catalog and
@@ -212,18 +249,12 @@ const compactReviewFacts = (
     const allergies = trimmed(encounter.allergies);
     if (allergies) verification.push(`Allergies reviewed — ${allergies}.`);
   }
+  const applicableVerifications = applicableVerificationKeys(encounter, medication);
   (Object.keys(encounter.verifications) as MedicationVerificationKey[]).forEach((key) => {
-    if (!encounter.verifications[key]) return;
-    // The sourced, product-specific text (Sustenna's shake window, Vivitrol's
-    // room-temp wait, etc.) replaces the generic fallback whenever the
-    // medication actually has preparation-phase reference content; a
-    // medication without any (an "other" custom entry, say) still gets the
-    // generic sentence rather than a silently blank clinical review.
+    if (!encounter.verifications[key] || !applicableVerifications.has(key)) return;
     const fact =
-      key === "resuspend"
-        ? medicationPreparationGuidance(medication, encounter.dose, encounter.site) ||
-          VERIFICATION_ASSESSMENT_FACTS[key]
-        : VERIFICATION_ASSESSMENT_FACTS[key];
+      medicationVerificationDocumentation(medication, key, encounter.dose, encounter.site) ||
+      VERIFICATION_ASSESSMENT_FACTS[key];
     if (fact) clinicalReview.push(fact);
   });
   const vitals = formatVitalsLine(encounter);
@@ -307,7 +338,10 @@ const timingNoteText = (
  * respectively. The two PLAN tables are still consulted so a key that owns
  * plan wording can never also emit an assessment sentence.
  */
-const documentedAssessmentFacts = (encounter: InjectionEncounter): string[] => {
+const documentedAssessmentFacts = (
+  encounter: InjectionEncounter,
+  medication: InjectionMedication | null,
+): string[] => {
   const assessment: string[] = [];
   (Object.keys(encounter.attestations) as Array<keyof InjectionEncounter["attestations"]>).forEach(
     (key) => {
@@ -322,10 +356,13 @@ const documentedAssessmentFacts = (encounter: InjectionEncounter): string[] => {
     const index = generic ? assessment.indexOf(generic) : -1;
     if (index >= 0) assessment.splice(index, 1);
   }
+  const applicableVerifications = applicableVerificationKeys(encounter, medication);
   (Object.keys(encounter.verifications) as MedicationVerificationKey[]).forEach((key) => {
-    if (!encounter.verifications[key]) return;
+    if (!encounter.verifications[key] || !applicableVerifications.has(key)) return;
     if (VERIFICATION_PLAN_FACTS[key]) return;
-    const fact = VERIFICATION_ASSESSMENT_FACTS[key];
+    const fact =
+      medicationVerificationDocumentation(medication, key, encounter.dose, encounter.site) ||
+      VERIFICATION_ASSESSMENT_FACTS[key];
     if (fact) assessment.push(fact);
   });
   return unique(assessment);
@@ -444,7 +481,8 @@ const headlineAndPresentation = (
     .join(" ");
   const site = trimmed(encounter.site);
   const response = headlineResponseText(encounter);
-  const nextDose = encounter.nextDoseDate ? formatCompactDate(encounter.nextDoseDate) : "";
+  const nextDoseDate = documentableNextDoseDate(encounter);
+  const nextDose = nextDoseDate ? formatCompactDate(nextDoseDate) : "";
   const headline = `${kindWord}${productLine ? ` — ${productLine}` : ""}${site ? `, ${site}` : ""}${
     response ? `; ${response}` : ""
   }${nextDose ? `; next due ${nextDose}` : ""}.`;
@@ -490,11 +528,14 @@ const traceabilityLine = (
 
 const followUpLine = (encounter: InjectionEncounter): string => {
   const details = encounter.details ?? {};
-  const nextDose = encounter.nextDoseDate ? formatCompactDate(encounter.nextDoseDate) : "";
+  const nextDoseDate = documentableNextDoseDate(encounter);
+  const nextDose = nextDoseDate ? formatCompactDate(nextDoseDate) : "";
   const nextDueText = nextDose ? `Next dose due ${nextDose}.` : "";
   const override = details.nextDose;
   const overrideText =
-    override?.source === "manual" && trimmed(override.overrideReason)
+    (encounter.medicationKey !== "other" || Boolean(nextDoseDate)) &&
+    override?.source === "manual" &&
+    trimmed(override.overrideReason)
       ? `Return target override documented per ${
           override.overrideKind === "provider-direction"
             ? `provider direction${trimmed(override.overrideProvider) ? ` (${trimmed(override.overrideProvider)})` : ""}`
@@ -531,11 +572,15 @@ const VERIFICATION_PLAN_ORDER: ReadonlyArray<MedicationVerificationKey> = [
   "deepZtrack",
 ];
 
-const techniqueNoteText = (encounter: InjectionEncounter): string => {
+const techniqueNoteText = (
+  encounter: InjectionEncounter,
+  medication: InjectionMedication | null,
+): string => {
   const technique = trimmed(encounter.technique);
   const lines = [technique ? `Needle / technique: ${endSentence(technique)}` : ""];
+  const applicableVerifications = applicableVerificationKeys(encounter, medication);
   VERIFICATION_PLAN_ORDER.forEach((key) => {
-    if (!encounter.verifications[key]) return;
+    if (!encounter.verifications[key] || !applicableVerifications.has(key)) return;
     const fact = VERIFICATION_PLAN_FACTS[key];
     if (fact) lines.push(fact);
   });
@@ -561,7 +606,8 @@ const buildInjectionNoteFacts = (
   secondComponent?: InjectionComponent,
 ): InjectionNoteFacts => {
   const details = encounter.details ?? {};
-  const { verification, clinicalReview } = compactReviewFacts(encounter, evaluation.output.medication);
+  const medication = evaluation.output.medication;
+  const { verification, clinicalReview } = compactReviewFacts(encounter, medication);
   const { headline, presentation } = headlineAndPresentation(encounter, evaluation, medicationLabel);
   const asepticSentence = encounter.attestations.hygiene
     ? "Hand hygiene performed; inj site cleansed w/ alcohol and allowed to dry prior to administration."
@@ -605,7 +651,7 @@ const buildInjectionNoteFacts = (
     administration: administration || undefined,
     dateTime: formatCompactDateTime(encounter.administrationDate, encounter.administrationTime) || undefined,
     asepticTechnique: asepticSentence || undefined,
-    technique: techniqueNoteText(encounter) || undefined,
+    technique: techniqueNoteText(encounter, medication) || undefined,
     response: responseNoteText(encounter) || undefined,
     observation: details.postInjectionObservation
       ? "Pt observed post-inj w/o adverse reaction."
@@ -684,6 +730,7 @@ export function injectionEncounterToDocumentationInput(
       };
 
   const primary = primaryMedicationComponent(encounter, evaluation, administered);
+  const medication = evaluation.output.medication;
 
   // A legacy draft can retain an old initiation payload after staff switch
   // the visit back to routine maintenance. The evaluator has already decided
@@ -722,7 +769,7 @@ export function injectionEncounterToDocumentationInput(
     : `Injection visit — ${medicationLine || "selected medication"}; medication not administered.`;
 
   const reviewItems = unique([
-    ...documentedAssessmentFacts(encounter),
+    ...documentedAssessmentFacts(encounter, medication),
     ...(encounter.acuteSafetyScreenConfirmed ? ["No acute concerns today confirmed."] : []),
   ]);
   const activeSafetyConcerns = new Set(encounter.activeSafetyConcerns ?? []);
@@ -794,7 +841,9 @@ export function injectionEncounterToDocumentationInput(
         }
       : undefined,
     followUp: {
-      nextDoseDate: encounter.nextDoseDate ? formatIsoDate(encounter.nextDoseDate) : undefined,
+      nextDoseDate: documentableNextDoseDate(encounter)
+        ? formatIsoDate(documentableNextDoseDate(encounter))
+        : undefined,
       orderingProvider: resolveProviderDisplay(encounter.orderingProvider) || undefined,
     },
     noteFacts: administered

@@ -237,10 +237,10 @@ describe("readiness verdict", () => {
         screen: true,
         hygiene: true,
       },
-      verifications: { deepZtrack: true },
+      verifications: { visualInspection: true, deepZtrack: true },
       acuteSafetyScreenConfirmed: true,
       disposition: { kind: "administered" },
-      details: { productSource: "Clinic sample" },
+      details: { productSource: "Clinic sample", volume: "1", volumeUnit: "mL" },
     };
 
     const evaluation = InjectionEngine.evaluate(encounter, {
