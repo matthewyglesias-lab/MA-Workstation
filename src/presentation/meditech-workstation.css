@@ -2847,14 +2847,27 @@
   }
 }
 
+/*
+ * This layer wins over the same layout in clinical-desktop.css, so the row
+ * template and every placement have to be repeated here in full: leaving a
+ * child unplaced drops it into an implicit row, which is what pushed the
+ * document ident out of the header and collapsed the note body to zero height.
+ * Keep the two blocks in step.
+ */
 @media screen and (min-width: 701px) and (max-width: 1040px) {
   :where(.cd2004-workspace.has-central-preview) .cd2004-inspector {
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+  }
+
+  :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-summary,
+  :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-verdict {
+    grid-column: 1;
+    grid-row: 1;
   }
 
   :where(.cd2004-workspace.has-central-preview) .cd2004-readiness-list {
     grid-column: 1;
-    grid-row: 2 / span 3;
+    grid-row: 2 / -1;
     max-height: none;
   }
 
@@ -2863,20 +2876,37 @@
     grid-row: 1;
   }
 
+  /*
+   * Stacked, the inspector is a ~160px bottom pane whatever the viewport
+   * height, so a height media query cannot reach this case. Identity and the
+   * line count give way here for the same reason they do in a short rail: the
+   * chart banner is a few pixels up the same screen, and the note text is the
+   * only thing in this pane that cannot be read anywhere else.
+   */
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-ident,
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-foot {
+    display: none;
+  }
+
   :where(.cd2004-workspace.has-central-preview) .cd2004-note-toolbar {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 3;
   }
 
   :where(.cd2004-workspace.has-central-preview) .cd2004-note-sections {
     grid-column: 2;
-    grid-row: 3;
+    grid-row: 4;
     margin-top: 0;
+  }
+
+  :where(.cd2004-workspace.has-central-preview) .cd2004-note-foot {
+    grid-column: 2;
+    grid-row: 5;
   }
 
   :where(.cd2004-workspace.has-central-preview) .cd2004-post-zone {
     grid-column: 2;
-    grid-row: 4;
+    grid-row: 6;
   }
 }
 

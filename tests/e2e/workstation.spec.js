@@ -2540,6 +2540,80 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
   });
 
+  /**
+   * The note preview is a document viewer over text staff paste into a chart,
+   * so what it shows and what it copies must be the same characters. The unit
+   * tests prove the tokenizer round-trips; this proves the rendered DOM does,
+   * against the real note the engine produced - a CSS or markup change that
+   * swallowed a space or dropped a blank line would pass the unit test and
+   * still mislead a reviewer here.
+   */
+  test('renders the note document as exactly the text it copies', async ({ page }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
+      origin: 'http://127.0.0.1:4173'
+    });
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('input[placeholder="Last, First"]').fill('Fidelity, Note');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
+    await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+    await panel.locator('select[name="inj-reason"]').selectOption('scheduled');
+    await fillDate(
+      panel.locator('.wfp-field', { hasText: 'Administration date' })
+        .locator('input[data-workstation-date="date"]').first(),
+      '2026-07-30'
+    );
+
+    const inspector = page.locator('.cd2004-inspector');
+    await expect(inspector.locator('.cd2004-note-body').first()).toBeVisible();
+
+    // Compare what each section shows against what its own Copy button puts on
+    // the clipboard. This is the check that matters: the clipboard is what
+    // reaches the chart, so anything the viewer adds, drops, or reorders
+    // relative to it is text a reviewer approved but did not actually file.
+    const sectionCount = await page.locator('.cd2004-note-section').count();
+    expect(sectionCount).toBeGreaterThan(0);
+
+    for (let index = 0; index < sectionCount; index += 1) {
+      const section = page.locator('.cd2004-note-section').nth(index);
+      const rendered = await section.evaluate((node) =>
+        [...node.querySelectorAll('.cd2004-note-line')]
+          .map((line) => line.textContent)
+          .join('\n')
+      );
+      await section.getByRole('button', { name: /^Copy / }).click();
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      // Guard the guard: two empty strings also compare equal.
+      expect(copied.trim().length).toBeGreaterThan(20);
+      expect(rendered).toBe(copied);
+    }
+
+    // Line numbers are chrome. A hand-dragged selection across the note must
+    // not be able to pull them into the clipboard alongside the clinical text.
+    const selectable = await page.evaluate(() =>
+      [...document.querySelectorAll('.cd2004-note-lineno')].every(
+        (node) => getComputedStyle(node).userSelect === 'none'
+      )
+    );
+    expect(selectable).toBe(true);
+
+    // Numbering restarts per section and counts every line, blanks included,
+    // so a number always points at the line beside it.
+    const numbering = await page.evaluate(() =>
+      [...document.querySelectorAll('.cd2004-note-section')].map((section) =>
+        [...section.querySelectorAll('.cd2004-note-lineno')].map((n) => n.textContent)
+      )
+    );
+    for (const section of numbering) {
+      expect(section).toEqual(section.map((_, index) => String(index + 1)));
+    }
+
+    await expect(inspector.locator('.cd2004-note-eod')).toHaveText('── END OF DOCUMENT ──');
+    await expect(inspector.locator('.cd2004-note-heading .cd2004-note-mark.is-draft'))
+      .toHaveText('DRAFT');
+  });
+
   test('renders the UDS clinician view as a dense preliminary laboratory report', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'uds');
