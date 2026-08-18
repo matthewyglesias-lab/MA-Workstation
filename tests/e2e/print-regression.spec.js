@@ -83,6 +83,7 @@ async function preparePrintableInjection(page) {
   await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-01');
   await panel.locator('input[placeholder="LOT123"]').fill('PRINT-LOT-001');
   await panel.locator('input[type="month"]').first().fill('2027-12');
+  await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.locator('input[placeholder*="allergy / ADR status"]').fill('NKDA verified in active record');

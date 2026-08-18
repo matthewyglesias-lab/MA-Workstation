@@ -295,6 +295,7 @@ async function prepareReadyInjection(page) {
   await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
   await panel.locator('input[placeholder="LOT123"]').fill('READY-2407');
   await panel.locator('input[type="month"]').first().fill('2027-12');
+  await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
   await selectInjectionTab(page, 'Verification');
   const requiredAttestations = [

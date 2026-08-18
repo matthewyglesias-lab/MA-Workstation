@@ -17,9 +17,10 @@
       "note": "Intentionally diverges from the production commit. The injection After Visit Summary now uses a mature clinical-document hierarchy with a semantic patient band, dated treatment timeline, restrained due-date emphasis, and deterministic routine/complex pages. Patient wording and timeline rules remain in src/domain/injection-avs-content.ts; semantic markup remains in src/domain/injection-avs-render.ts. Every other print root in this fixture is still pinned to production output."
     },
     "injWorksheetSheet": {
-      "sha256": "b0edc70d9f4cbded0b3b3979484488aa968b81c0df8e8648d8124e0fc2fd6380",
-      "bytes": 9504,
-      "topLevelClass": "iw-page ws-modern iw-injection"
+      "sha256": "0eed90bef38a3946679e5b0cce8d53948c0c7010150e1c2c8f7ce6917091fa23",
+      "bytes": 9535,
+      "topLevelClass": "iw-page ws-modern iw-injection",
+      "note": "Intentionally diverges from the production commit. Medication source is now a required field for a documented administration (previously optional), so the worksheet's product-handling section prints a populated 'Product source' line for this fixture instead of omitting it."
     },
     "udsSheet": {
       "sha256": "f5b698b573816f6da47531d7b2ccf5a4e291cd40f2de85b2daefd6fd3fd38786",

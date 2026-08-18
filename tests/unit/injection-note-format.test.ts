@@ -43,6 +43,7 @@ const sustennaAdministered = (): InjectionEncounter => ({
   verifications: { resuspend: true },
   acuteSafetyScreenConfirmed: true,
   disposition: { kind: "administered" },
+  details: { productSource: "Clinic sample" },
 });
 
 const formatFor = (encounter: InjectionEncounter) => {
@@ -193,8 +194,36 @@ describe("RC6.1 injection note format", () => {
     // keeping it - it must not be dropped by the new compact wording.
     const note = formatFor(sustennaAdministered());
     expect(note.assessment).toContain(
-      "Medication inspected and mixed/resuspended per product instructions.",
+      "Shake vigorously for at least 15 seconds within 5 minutes of administration. " +
+        "If more than 5 minutes pass, shake again for at least 30 seconds. " +
+        "Inspect for particulate matter or discoloration before administration.",
     );
+  });
+
+  it("states the Vivitrol-specific preparation/mixing text and the universal discoloration check", () => {
+    const encounter: InjectionEncounter = {
+      ...sustennaAdministered(),
+      medicationKey: "vivitrol",
+      dose: "380 mg",
+      site: "R ventrogluteal",
+      intervalKey: "q4wk",
+      nextDoseDate: "2026-09-04",
+      verifications: { resuspend: true, opioidFree: true, naltrexHS: true, suppliedNeedle: true },
+    };
+    const note = formatFor(encounter);
+    expect(note.assessment).toContain(
+      "Allow the product to reach room temperature (approximately 45 minutes) before preparation. " +
+        "Administer immediately once the product has been suspended and transferred into the syringe. " +
+        "Inspect for particulate matter or discoloration before administration.",
+    );
+  });
+
+  it("never produces a second, independent preparation clause", () => {
+    const note = formatFor(sustennaAdministered());
+    expect(note.plan).not.toContain("Preparation / reconstitution");
+    expect(note.plan).not.toContain("PRODUCT HANDLING");
+    const occurrences = (note.all.match(/Shake vigorously/g) ?? []).length;
+    expect(occurrences).toBe(1);
   });
 });
 
@@ -249,7 +278,7 @@ describe("RC6.1 injection note — needle / technique", () => {
       dose: "380 mg",
       intervalKey: "q4wk",
       nextDoseDate: "2026-09-04",
-      verifications: { opioidFree: true, naltrexHS: true, suppliedNeedle: true },
+      verifications: { resuspend: true, opioidFree: true, naltrexHS: true, suppliedNeedle: true },
     };
     const note = formatFor(encounter);
 

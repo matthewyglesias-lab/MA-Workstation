@@ -167,6 +167,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
     await panel.locator('input[placeholder="LOT123"]').fill('BROWSER-LOT-42');
     await panel.locator('input[type="month"]').first().fill('2027-12');
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openInjectionTab(page, 'Verification');
     // A medication-specific verification is only rendered where its current
@@ -217,6 +218,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Verification');
     for (const label of [
+      'Preparation / mixing verified',
       'Current opioid-risk / provider plan verified',
       'Naltrexone/hepatic review verified',
       'Supplied needle / body-habitus check'
@@ -1633,9 +1635,9 @@ test.describe('MA Workstation browser journeys', () => {
       'Administration documented'
     );
     const plan = page.locator('#outPL');
-    await expect(plan).toContainText('PRODUCT / DEVICE ISSUE');
+    await expect(plan).not.toContainText('PRODUCT / DEVICE ISSUE');
     await expect(plan).toContainText(
-      'Issue: Plunger resistance noted during pre-administration device inspection.'
+      'Product / device issue: Plunger resistance noted during pre-administration device inspection.'
     );
     await expect(plan).toContainText(
       'Action / disposition: Affected product quarantined; replacement package selected and independently verified.'
@@ -1888,11 +1890,12 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-11');
     await panel.locator('input[placeholder="LOT123"]').fill('PAIR-LOT-1');
     await panel.locator('input[type="month"]').first().fill('2028-05');
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openInjectionTab(page, 'Verification');
     await panel
       .locator('label.wfp-option-row')
-      .filter({ hasText: /^Suspension inspected and mixed/ })
+      .filter({ hasText: /^Preparation \/ mixing verified/ })
       .click();
     await panel
       .locator('label.wfp-option-row')

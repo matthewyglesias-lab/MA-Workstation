@@ -20,6 +20,7 @@ import {
   injectionInitiationOptions,
   injectionInitiationSecondarySites,
   injectionTimingReviewFingerprint,
+  medicationPreparationGuidance,
   verificationLabels,
   type InjectionAdministrationDetails,
   type InjectionDisposition,
@@ -256,18 +257,13 @@ function legacyRequirementFallback(
     "details.volume": requirement("optional", "administration"),
     "details.device": requirement("optional", "administration"),
     "details.siteCondition": requirement("optional", "administration"),
-    "details.productSource": requirement("optional", "traceability"),
-    "details.preparation": requirement("optional", "traceability"),
+    "details.productSource": requirement("required", "traceability"),
     "details.wasteAmount": requirement(
       encounter.details?.waste ? "required" : "hidden",
       "traceability",
     ),
     "details.wasteWitness": requirement(
       encounter.details?.waste ? "required" : "hidden",
-      "traceability",
-    ),
-    "details.preparationOther": requirement(
-      encounter.details?.preparation === "Other" ? "required" : "hidden",
       "traceability",
     ),
     "details.deviceOther": requirement(
@@ -320,8 +316,6 @@ const pairedMedicationKeyFor = (
 const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
   purpose: "order",
   productSource: "product",
-  preparation: "product",
-  preparationOther: "product",
   waste: "product",
   wasteAmount: "product",
   wasteWitness: "product",
@@ -3231,26 +3225,6 @@ export function InjectionPanel({
                     </option>
                   </select>
                 </Field>
-                <Field label="Preparation / reconstitution" field="details.preparation">
-                  <select
-                    value={encounter.details?.preparation ?? ""}
-                    onChange={(event) => patchDetails({ preparation: event.currentTarget.value })}
-                  >
-                    <option value="">Not separately documented</option>
-                    <option value="Preparation/reconstitution verified per current product instructions">
-                      Verified per current product instructions
-                    </option>
-                    <option value="Other">Other preparation / reconstitution detail</option>
-                  </select>
-                </Field>
-                {encounter.details?.preparation === "Other" && (
-                  <Field label="Preparation detail" field="details.preparationOther">
-                    <input
-                      value={encounter.details?.preparationOther ?? ""}
-                      onInput={(event) => patchDetails({ preparationOther: event.currentTarget.value })}
-                    />
-                  </Field>
-                )}
               </div>
               <div class="wfp-checkbox-row">
                 <input
@@ -3378,6 +3352,15 @@ export function InjectionPanel({
                     items={visibleMedicationVerifications.map((key) => ({
                       key,
                       label: verificationLabels[key],
+                      ...(key === "resuspend"
+                        ? {
+                            description: medicationPreparationGuidance(
+                              medication,
+                              encounter.dose,
+                              encounter.site,
+                            ),
+                          }
+                        : {}),
                     }))}
                     checked={(key) =>
                       Boolean(encounter.verifications[key as MedicationVerificationKey])

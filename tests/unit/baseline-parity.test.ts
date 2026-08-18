@@ -147,7 +147,6 @@ const routineSustennaEncounter = (): InjectionEncounter => ({
   details: {
     purpose: "Day 8 initiation",
     productSource: "Clinic sample",
-    preparation: "Inspected and mixed per current product instructions",
     volume: "1",
     volumeUnit: "mL",
     device: "Prefilled syringe",
@@ -181,6 +180,7 @@ const pairedSameMuscleEncounter = (): InjectionEncounter => ({
   verifications: { resuspend: true },
   acuteSafetyScreenConfirmed: true,
   disposition: { kind: "administered" },
+  details: { productSource: "Clinic sample" },
   initiation: {
     ...emptyInjectionInitiation(),
     protocol: "maintena-1day",

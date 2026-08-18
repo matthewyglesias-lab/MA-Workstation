@@ -240,6 +240,7 @@ describe("readiness verdict", () => {
       verifications: { deepZtrack: true },
       acuteSafetyScreenConfirmed: true,
       disposition: { kind: "administered" },
+      details: { productSource: "Clinic sample" },
     };
 
     const evaluation = InjectionEngine.evaluate(encounter, {

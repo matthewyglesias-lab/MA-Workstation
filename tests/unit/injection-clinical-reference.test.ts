@@ -47,6 +47,7 @@ const administered = (medicationKey: InjectionMedicationKey): InjectionEncounter
   attestations: requiredAttestations,
   acuteSafetyScreenConfirmed: true,
   disposition: { kind: "administered" },
+  details: { productSource: "Reference source" },
 });
 
 const stopCodes = (result: ReturnType<typeof InjectionEngine.evaluate>): string[] =>
@@ -220,6 +221,28 @@ describe("phase-specific Injection guidance", () => {
     );
     expect(result.output.requirements["initiation.protocol"]?.state).toBe("hidden");
     expect(result.output.canFinalize).toBe(true);
+  });
+
+  // Vivitrol is a true two-component reconstitution kit, unlike the
+  // ready-to-use decanoates - it was the one gated-mixing product missing
+  // its own "resuspend" verification, so a mixing error had nowhere to be
+  // documented or blocked.
+  it("now requires resuspend/mixing verification for Vivitrol, closing the reconstitution-kit gap", () => {
+    const encounter = administered("vivitrol");
+    encounter.dose = "380 mg";
+    encounter.site = "R ventrogluteal";
+    encounter.verifications = { opioidFree: true, naltrexHS: true, suppliedNeedle: true };
+
+    const result = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+
+    expect(result.output.requiredVerifications).toContain("resuspend");
+    expect(stopCodes(result)).toContain("verification.resuspend");
+    expect(result.output.canFinalize).toBe(false);
+
+    encounter.verifications = { ...encounter.verifications, resuspend: true };
+    const resolved = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+    expect(stopCodes(resolved)).not.toContain("verification.resuspend");
+    expect(resolved.output.canFinalize).toBe(true);
   });
 
   it("routes ERZOFRI 351 mg through initiation/re-initiation rather than maintenance", () => {

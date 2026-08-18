@@ -48,6 +48,7 @@ const routineInjection = (): InjectionEncounter => ({
   verifications: { deepZtrack: true },
   acuteSafetyScreenConfirmed: true,
   disposition: { kind: "administered" },
+  details: { productSource: "Clinic sample" },
 });
 
 describe("injectionEncounterToDocumentationInput", () => {

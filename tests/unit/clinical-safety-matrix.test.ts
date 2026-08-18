@@ -54,6 +54,7 @@ const routineInjection = (): InjectionEncounter => ({
   verifications: { deepZtrack: true },
   acuteSafetyScreenConfirmed: true,
   disposition: { kind: "administered" },
+  details: { productSource: "Clinic sample" },
 });
 
 const issueCodes = (
@@ -88,14 +89,14 @@ describe("InjectionEngine safety matrix", () => {
       time: "09:20",
       outcome: "Hold today; provider will reassess.",
     };
-    encounter.details = { device: "Other", siteCondition: "Other", preparation: "Other" };
+    encounter.details = { device: "Other", siteCondition: "Other" };
     const result = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
     expect(result.output.canFinalize).toBe(true);
     expect(issueCodes(result, "stops")).not.toEqual(
       expect.arrayContaining([
         "administration.device-other",
         "administration.site-condition-other",
-        "trace.preparation-other",
+        "trace.product-source",
       ]),
     );
   });
@@ -159,6 +160,7 @@ describe("InjectionEngine safety matrix", () => {
     encounter.dose = "380 mg";
     encounter.site = "L ventrogluteal";
     encounter.verifications = {
+      resuspend: true,
       opioidFree: true,
       naltrexHS: true,
       suppliedNeedle: true,
@@ -225,6 +227,7 @@ describe("InjectionEngine safety matrix", () => {
     encounter.administrationDate = "2026-02-10";
     encounter.nextDoseDate = "2026-03-10";
     encounter.details = {
+      productSource: "Clinic sample",
       lateDoseReview: "provider-authorized",
       lateDoseReviewProvider: "A. Provider, PMHNP",
       lateDoseReviewTime: "2026-02-10T09:05",

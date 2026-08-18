@@ -206,6 +206,7 @@ test.describe('Injection decision support', () => {
     await packagePicker.selectOption(await knownPackage.getAttribute('value'));
     await panel.locator('input[placeholder="LOT123"]').fill('ROUTINE-BRIDGE-LOT');
     await panel.locator('input[type="month"]').fill('2027-12');
+    await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openTab(panel, 'Verification');
     for (const item of [
@@ -215,7 +216,7 @@ test.describe('Injection decision support', () => {
       'Consent reaffirmed',
       'No contraindications',
       'Aseptic technique',
-      'Suspension inspected and mixed'
+      'Preparation / mixing verified'
     ]) {
       const checkbox = panel.getByRole('checkbox', { name: new RegExp(item) });
       await checkbox.check();

@@ -49,6 +49,7 @@ describe("provider id resolution in generated documentation", () => {
       verifications: { resuspend: true },
       acuteSafetyScreenConfirmed: true,
       disposition: { kind: "administered" },
+      details: { productSource: "Clinic sample" },
     };
 
     const evaluation = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });

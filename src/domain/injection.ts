@@ -159,8 +159,6 @@ export interface InjectionInitiationState {
 export interface InjectionAdministrationDetails {
   purpose?: string;
   productSource?: string;
-  preparation?: string;
-  preparationOther?: string;
   volume?: string;
   volumeUnit?: string;
   device?: string;
@@ -1206,7 +1204,7 @@ export const verificationLabels: Record<MedicationVerificationKey, string> = {
   opioidFree: "Current opioid-risk / provider plan verified",
   naltrexHS: "Naltrexone/hepatic review verified",
   suppliedNeedle: "Supplied needle / body-habitus check",
-  resuspend: "Suspension inspected and mixed",
+  resuspend: "Preparation / mixing verified",
   invegaInit: "Initiation / re-initiation plan verified",
   oralOverlap: "Ordered oral initiation plan documented",
   stabilized: "Stabilized on prerequisite LAI",
@@ -1215,6 +1213,40 @@ export const verificationLabels: Record<MedicationVerificationKey, string> = {
   glutealOnly: "Gluteal-only administration",
   noMassage: "No massage after injection",
   deepZtrack: "Ordered route / technique verified",
+};
+
+/**
+ * Universal, product-independent close to the preparation check - every
+ * reconstituted or resuspended product warrants a visual check, and adding it
+ * here means it is never missed for a product whose own label happens not to
+ * spell it out.
+ */
+const PARTICULATE_DISCOLORATION_STATEMENT =
+  "Inspect for particulate matter or discoloration before administration.";
+
+/**
+ * The "Preparation / mixing verified" checklist item's product-specific
+ * detail - shown under the checkbox and folded into the note's clinical
+ * review sentence. Built only from the medication's own sourced
+ * administration.notes ("preparation" phase), the same content already
+ * shown in the Reference panel, so this never introduces wording beyond what
+ * the product's own label already says. Returns "" for a medication with no
+ * genuine mixing/reconstitution step (a ready-to-use oil solution, for
+ * example), which is what keeps the checklist item itself from ever being
+ * offered for that medication - see the catalog's own `verifications` list,
+ * which is the actual gate; this function only supplies wording once that
+ * gate has already decided the item applies.
+ */
+export const medicationPreparationGuidance = (
+  medication: InjectionMedication | null,
+  dose: string,
+  site: string,
+): string => {
+  const notes = techniqueNotesFor(medication, dose, site).filter(
+    (note) => note.phase === "preparation",
+  );
+  if (!notes.length) return "";
+  return [...notes.map((note) => note.statement), PARTICULATE_DISCOLORATION_STATEMENT].join(" ");
 };
 
 const parseBp = (value = ""): { systolic: number; diastolic: number } | null => {
@@ -2100,13 +2132,13 @@ const evaluateDetails = (
       ),
     );
   }
-  if (details.preparation === "Other" && !details.preparationOther?.trim()) {
+  if (!(details.productSource ?? "").trim()) {
     stops.push(
       issue(
         "stop",
-        "trace.preparation-other",
-        "Document the preparation or reconstitution detail.",
-        "details.preparationOther",
+        "trace.product-source",
+        "Document the medication source.",
+        "details.productSource",
         "traceability",
       ),
     );
@@ -2374,13 +2406,7 @@ const buildRequirementProjection = (
     administrationDocumented && encounter.details?.siteCondition === "Other" ? "required" : "hidden",
     "administration",
   );
-  set("details.productSource", administrationDocumented ? "optional" : "hidden", "traceability");
-  set("details.preparation", administrationDocumented ? "optional" : "hidden", "traceability");
-  set(
-    "details.preparationOther",
-    administrationDocumented && encounter.details?.preparation === "Other" ? "required" : "hidden",
-    "traceability",
-  );
+  set("details.productSource", administrationDocumented ? "required" : "hidden", "traceability");
   set("details.waste", administrationDocumented ? "optional" : "hidden", "traceability");
   set(
     "details.wasteAmount",
