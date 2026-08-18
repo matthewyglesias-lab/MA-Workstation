@@ -5,6 +5,7 @@ import {
   type FormsEncounter,
 } from "../../domain/forms";
 import type { FormsDocumentationInput } from "../types";
+import { resolveProviderDisplay } from "../../domain/provider-register";
 import { prettyDate } from "../forms";
 
 const trimmed = (value?: string): string => (value ?? "").trim();
@@ -20,7 +21,8 @@ export function formsEncounterToDocumentationInput(
   const requestCategory = formRequestTypeLabel(encounter.requestType);
   const documentType = letterTypeLabel(encounter.letterType);
   const status = formStatusLabel(encounter.status);
-  const assignedProvider = trimmed(encounter.provider) || trimmed(encounter.letterProviderName);
+  // `encounter.provider` holds the register id, not a display name.
+  const assignedProvider = resolveProviderDisplay(encounter.provider) || trimmed(encounter.letterProviderName);
   const assignedStaff = trimmed(encounter.staff) || trimmed(encounter.letterPreparedBy);
 
   return {

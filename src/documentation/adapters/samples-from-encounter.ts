@@ -1,4 +1,5 @@
 import { sampleReviewIsCurrent, type SamplesEncounter } from "../../domain/samples";
+import { resolveProviderDisplay } from "../../domain/provider-register";
 import type { SamplesDocumentationInput } from "../types";
 
 const trimmed = (value?: string): string => (value ?? "").trim();
@@ -103,7 +104,9 @@ export function samplesEncounterToDocumentationInput(
     patient: trimmed(encounter.patient.name) || undefined,
     dob: trimmed(encounter.patient.dob) || undefined,
     purpose: trimmed(encounter.purpose) || undefined,
-    prescriber: trimmed(encounter.prescriber) || undefined,
+    // Stored as the provider register's id when a registered prescriber is
+    // selected; resolve to a display name before it reaches the note.
+    prescriber: resolveProviderDisplay(encounter.prescriber) || undefined,
     dispensedBy: trimmed(encounter.staff) || undefined,
     packages: packages.length ? packages : undefined,
     planSteps: planSteps.length ? planSteps : undefined,

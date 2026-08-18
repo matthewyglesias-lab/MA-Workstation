@@ -9,6 +9,7 @@ import type { InjectionDocumentationMetadata } from "../../../domain/injection-n
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import type { InjectionNoteFacts } from "../../../documentation/types";
 import { setLegacyCheckboxValue, setLegacyFieldValue } from "../legacy-mirror";
+import { resolveProviderDisplay } from "../../../domain/provider-register";
 
 declare global {
   interface Window {
@@ -93,7 +94,11 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
 
   setLegacyFieldValue("ptName", encounter.patient.name);
   setLegacyFieldValue("ptDOB", encounter.patient.dob);
-  setLegacyFieldValue("orderingProvider", encounter.orderingProvider);
+  // Mirror the resolved display name, not the register id: legacy code
+  // reads this DOM value directly for the printed AVS handout and the
+  // compact note/summary lines, all of which are read by staff or the
+  // patient rather than matched against anything.
+  setLegacyFieldValue("orderingProvider", resolveProviderDisplay(encounter.orderingProvider));
   setLegacyFieldValue("injOrderPurpose", encounter.details?.purpose ?? "");
   setLegacyFieldValue("priorDose", encounter.priorDoseDate);
   setLegacyFieldValue("priorSite", encounter.priorSite ?? "");

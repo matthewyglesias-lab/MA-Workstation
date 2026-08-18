@@ -12,6 +12,7 @@ import {
   type InjectionEvaluationOutput,
 } from "../../domain/injection";
 import type { MedicationVerificationKey } from "../../domain/injection-catalog";
+import { resolveProviderDisplay } from "../../domain/provider-register";
 import type { ClinicalEvaluation } from "../../domain/contracts";
 import {
   mapLegacyInitiationProtocol,
@@ -608,7 +609,10 @@ const buildInjectionNoteFacts = (
     departureStatus: departureStatusLine(encounter) || undefined,
     traceability: traceabilityLine(encounter, secondComponent) || undefined,
     followUp: followUpLine(encounter) || undefined,
-    orderingProvider: trimmed(encounter.orderingProvider) || undefined,
+    // The field stores the provider register's stable id, not a display
+    // name - resolve it the same way ProviderField does, or the note carries
+    // a raw key like "adeniji-john" straight into the chart.
+    orderingProvider: resolveProviderDisplay(encounter.orderingProvider) || undefined,
     administeredBy: trimmed(encounter.administeredBy) || undefined,
   };
 };
@@ -794,7 +798,7 @@ export function injectionEncounterToDocumentationInput(
       : undefined,
     followUp: {
       nextDoseDate: encounter.nextDoseDate ? formatIsoDate(encounter.nextDoseDate) : undefined,
-      orderingProvider: trimmed(encounter.orderingProvider) || undefined,
+      orderingProvider: resolveProviderDisplay(encounter.orderingProvider) || undefined,
     },
     noteFacts: administered
       ? buildInjectionNoteFacts(encounter, evaluation, primaryMedicationName, initiation.secondComponent)

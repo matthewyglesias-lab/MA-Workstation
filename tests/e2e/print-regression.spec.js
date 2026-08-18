@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { setProvider, expectProviderValue } = require('./provider-entry');
+const { setProvider, expectProviderValue, selectRegisteredProvider } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
 const { createHash } = require('node:crypto');
 const printBaseline = require('../fixtures/print-baseline-v1.json');
@@ -502,6 +502,43 @@ async function prepareMinimalAvsInjection(page) {
 }
 
 test.describe('unchanged clinical print surfaces', () => {
+  // `ProviderField` stores the provider register's stable id, not a display
+  // name (adeniji-john, not "Adeniji, John, PMHNP"). The AVS handout goes
+  // home with the patient, so if any layer forgets to resolve that id back
+  // to a name, the patient's own after-visit summary names their provider
+  // by an internal database key.
+  test('resolves the registered ordering provider to a display name on the AVS handout', async ({ page }) => {
+    await bootWorkstation(page);
+    await openWorkflow(page, 'Injection', 'administer');
+    const panel = page.locator('.wfp-panel');
+    await expect(panel).toBeVisible();
+
+    await panel.locator('input[placeholder="Last, First"]').fill('Print, Registered Provider');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('05/06/1990');
+    await selectRegisteredProvider(panel, 'adeniji-john');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+    await panel.locator('input[name="inj-dose"]').fill('50 mg');
+    await panel.locator('input[name="inj-route"]').fill('IM');
+    await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+
+    await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+    await panel.getByText('R deltoid', { exact: true }).click();
+
+    await panel.getByRole('tab', { name: 'Review', exact: true }).click();
+    const printButton = panel.locator('.cd2004-command-button:has-text("Print AVS")');
+    await expect(printButton).toBeEnabled();
+
+    await setFieldsAndRender(page, {
+      bodyClass: 'print-avs',
+      renderName: 'renderAVS',
+      rootId: 'avsSheet'
+    });
+
+    await expect(page.locator('#avsSheet .avs2-id-provider .avs2-id-v'))
+      .toHaveText('Adeniji, John, PMHNP');
+  });
+
+
   test('keeps the injection record-actions bar and shell out of an early AVS printout', async ({ page }) => {
     await prepareMinimalAvsInjection(page);
     await expect(page.locator('#avsSheet .avs2-status')).toHaveText(
