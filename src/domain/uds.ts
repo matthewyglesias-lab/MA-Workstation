@@ -157,6 +157,101 @@ export function applyUdsDeviceProfileDefaults(encounter: UdsEncounter): UdsEncou
   };
 }
 
+const emptyUdsResults = (): Record<UdsPanel, UdsResultState> =>
+  Object.fromEntries(UDS_PANELS.map((panel) => [panel, "nt"])) as Record<UdsPanel, UdsResultState>;
+
+export interface UdsDeviceChangeResult {
+  patch: Partial<UdsEncounter>;
+  /** True when this overwrites a real prior device selection, not a first-ever pick. */
+  invalidated: boolean;
+}
+
+/** Selecting a device resets its whole readable profile, since panels/reference ranges differ by product. */
+export function deviceChangeResetPatch(encounter: UdsEncounter, device: string): UdsDeviceChangeResult {
+  const defaults = applyUdsDeviceProfileDefaults({
+    ...encounter,
+    device,
+    omittedPanel: "",
+    customDeviceName: "",
+    customPanels: [],
+  });
+  return {
+    invalidated: Boolean(encounter.device && encounter.device !== device),
+    patch: { ...defaults, results: emptyUdsResults(), physicalReadingsVerified: false },
+  };
+}
+
+/**
+ * Choosing which window is absent completes the already-selected device
+ * profile. Clears readings/verification, but preserves the QC facts staff
+ * already documented for that same physical cup.
+ */
+export function omittedPanelChangeResetPatch(
+  encounter: UdsEncounter,
+  omittedPanel: UdsPanel | "",
+): Partial<UdsEncounter> {
+  const defaults = applyUdsDeviceProfileDefaults({ ...encounter, omittedPanel });
+  return {
+    ...defaults,
+    results: emptyUdsResults(),
+    physicalReadingsVerified: false,
+    control: encounter.control,
+    validity: encounter.validity,
+    temperature: encounter.temperature,
+  };
+}
+
+export function nextCustomPanelsAfterReplace(
+  customPanels: UdsPanel[] | undefined,
+  index: number,
+  panel: UdsPanel,
+): UdsPanel[] {
+  const next = [...(customPanels ?? [])];
+  next[index] = panel;
+  return next;
+}
+
+/** Null when the target position is out of range - nothing to swap. */
+export function nextCustomPanelsAfterMove(
+  customPanels: UdsPanel[] | undefined,
+  index: number,
+  direction: -1 | 1,
+): UdsPanel[] | null {
+  const next = [...(customPanels ?? [])];
+  const target = index + direction;
+  if (target < 0 || target >= next.length) return null;
+  const current = next[index]!;
+  next[index] = next[target]!;
+  next[target] = current;
+  return next;
+}
+
+export function nextCustomPanelsAfterRemove(customPanels: UdsPanel[] | undefined, index: number): UdsPanel[] {
+  return (customPanels ?? []).filter((_, position) => position !== index);
+}
+
+/** Null when every panel is already in the custom set - nothing left to add. */
+export function nextCustomPanelsAfterAdd(customPanels: UdsPanel[] | undefined): UdsPanel[] | null {
+  const nextPanel = UDS_PANELS.find((panel) => !(customPanels ?? []).includes(panel));
+  return nextPanel ? [...(customPanels ?? []), nextPanel] : null;
+}
+
+/**
+ * One-line synopsis stored on the record and reused in the attestation
+ * review's "Device / panel summary" field - built from whatever encounter is
+ * passed in, not a closed-over one, so it stays correct for a just-locked
+ * snapshot rather than a stale render.
+ */
+export function udsResultsSummary(source: UdsEncounter): string {
+  const panels = displayedUdsPanels(source);
+  const tested = panels.filter((panel) => (source.results[panel] ?? "nt") !== "nt").length;
+  const positive = panels.filter((panel) => source.results[panel] === "pos").length;
+  const device = source.customDeviceName?.trim() || source.device || "No device selected";
+  return positive > 0
+    ? `${device} · ${positive} preliminary positive, ${tested}/${panels.length} tested`
+    : `${device} · ${tested}/${panels.length} tested`;
+}
+
 export interface UdsEncounter {
   patient: PatientIdentity;
   collectionDateTime: string;
