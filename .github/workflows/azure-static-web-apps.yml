@@ -32,8 +32,15 @@ jobs:
         run: npm run typecheck
       - name: Run static compatibility checks
         run: npm run check:static
-      - name: Run unit tests
-        run: npm run test:unit
+      - name: Run unit tests with coverage
+        run: npm run coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
       - name: Build production bundle
         run: npm run build
       - name: Verify deployment bundle

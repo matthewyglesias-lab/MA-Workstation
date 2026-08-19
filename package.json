@@ -13,6 +13,7 @@
     "check": "npm run typecheck && npm run check:static",
     "test": "npm run test:unit",
     "test:unit": "vitest run",
+    "coverage": "vitest run --coverage",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:artifact": "playwright test",
     "test:visual": "npm run build && playwright test tests/e2e/visual-contracts.spec.js tests/e2e/visual-snapshots.spec.js",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@playwright/test": "1.62.0",
     "@types/node": "^26.1.2",
+    "@vitest/coverage-v8": "4.1.10",
     "typescript": "^7.0.2",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
