@@ -2378,7 +2378,7 @@ document.addEventListener('click', e => {
 
 
 let _homeTimer=null;
-function scheduleHomeRender(){clearTimeout(_homeTimer);_homeTimer=setTimeout(()=>{if(typeof renderHome==='function')renderHome();},80);}
+function scheduleHomeRender(event){const target=event&&event.target;if(target&&target.nodeType===1&&target.closest&&target.closest('.wfp-panel'))return;clearTimeout(_homeTimer);_homeTimer=setTimeout(()=>{if(typeof renderHome==='function')renderHome();},80);}
 document.addEventListener('input',scheduleHomeRender,true);
 document.addEventListener('change',scheduleHomeRender,true);
 
@@ -7915,7 +7915,8 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
       btn.title=incomplete?'Complete or resolve this section before continuing.':'Continue to the next unfinished section.';
     });
   }
-  function sweep(){polishChevrons(document);refreshContinueState(document);}
+  function legacyRoot(){return document.getElementById('legacy-staging')||document;}
+  function sweep(root){root=root||legacyRoot();polishChevrons(root);refreshContinueState(root);}
 
   document.addEventListener('click',function(e){
     var btn=closest(e.target,'.guided-continue, .sample-guide-continue, .uds-guide-continue');
@@ -7960,15 +7961,17 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     }
   },true);
 
+  function isTypedWorkspaceTarget(target){return !!(target&&target.nodeType===1&&target.closest&&target.closest('.wfp-panel'));}
   var mo=null;
   function boot(){
-    sweep();
+    var root=legacyRoot();
+    sweep(root);
     try{
-      mo=new MutationObserver(function(){sweep();});
-      mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','data-guided-prepared']});
+      mo=new MutationObserver(function(){sweep(root);});
+      mo.observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['class','data-guided-prepared']});
     }catch(e){}
     ['input','change','click'].forEach(function(ev){
-      document.addEventListener(ev,function(){setTimeout(refreshContinueState,80);},true);
+      document.addEventListener(ev,function(event){if(isTypedWorkspaceTarget(event.target))return;setTimeout(function(){refreshContinueState(root);},80);},true);
     });
     try{window.IPMG_RC_VERSION='RC5.28 Collapse Polish';}catch(e){}
   }
@@ -9137,8 +9140,8 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   const say=message=>call(window.toast,message);
 
   let labelIndex=0;
-  function enhanceAccessibility(root=document){
-    const scope=root&&root.querySelectorAll?root:document;
+  function enhanceAccessibility(root){
+    const scope=root&&root.querySelectorAll?root:(by('legacy-staging')||document);
     const toast=by('toast');
     if(toast){toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');toast.setAttribute('aria-atomic','true');}
     scope.querySelectorAll('.field').forEach(field=>{
@@ -9372,10 +9375,11 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
 
   function boot(){
+    const legacyRoot=by('legacy-staging')||document.body;
     wrapUds();bindUds();const clearSamples=installSampleSafety();
-    enhanceAccessibility();syncTabs();renderUdsProfile();applyUdsDeviceProfile();clearSamples();templateStates();
-    const observer=new MutationObserver(()=>{enhanceAccessibility();syncTabs();});observer.observe(document.body,{childList:true,subtree:true});
-    ['input','change'].forEach(type=>document.addEventListener(type,()=>setTimeout(templateStates,0),true));
+    enhanceAccessibility(legacyRoot);syncTabs();renderUdsProfile();applyUdsDeviceProfile();clearSamples();templateStates();
+    const observer=new MutationObserver(()=>{enhanceAccessibility(legacyRoot);syncTabs();});observer.observe(legacyRoot,{childList:true,subtree:true});
+    ['input','change'].forEach(type=>document.addEventListener(type,event=>{const target=event.target;if(target&&target.nodeType===1&&target.closest&&target.closest('.wfp-panel'))return;setTimeout(templateStates,0);},true));
     try{window.IPMG_RC_VERSION='RC5.38 Premium Quick Complete';}catch(e){}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

@@ -2496,12 +2496,11 @@
 .wfp-invalidation-receipt strong { font: 700 9px/1 monospace; letter-spacing: .04em; }
 
 /*
- * The active field is the workstation cursor. It is deliberately a square,
- * one-row highlight rather than a modern floating focus halo; the native
- * control outline remains visible inside it for keyboard and low-vision use.
+ * The active field keeps a compact workstation marker without a persistent
+ * color wash. Native control outlines remain visible for keyboard and
+ * low-vision use.
  */
 .cd2004-shell .wfp-field:focus-within {
-  background: #fff4bc;
   box-shadow: inset 3px 0 #244f94;
   outline: 1px solid #8d8252;
   outline-offset: 1px;

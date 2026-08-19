@@ -65,7 +65,7 @@ import {
   type NdcOptionQuery,
   type NdcOptionsLookup,
 } from "../../../domain/injection-ndc";
-import { setLegacyFieldValue } from "../legacy-mirror";
+import { notifyLegacyFieldInput, setLegacyFieldValue } from "../legacy-mirror";
 import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
@@ -88,7 +88,10 @@ import {
   WorkflowLedgerTabs,
 } from "../WorkflowLedgerTabs";
 import { requestClinicalPrint } from "../clinical-print";
-import { mirrorInjectionEncounterToLegacyDom } from "./injection-legacy-mirror";
+import {
+  mirrorInjectionEncounterToLegacyDom,
+  type InjectionLegacyMirrorOptions,
+} from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
 import type { PatientContext } from "../../types";
@@ -1303,6 +1306,10 @@ export function InjectionPanel({
     () => (initialEncounter.activeSafetyConcerns?.length ?? 0) > 0,
   );
   const mirroredOnMount = useRef(false);
+  const encounterRef = useRef(encounter);
+  encounterRef.current = encounter;
+  const patientIdentityMirrorTimer = useRef<number | null>(null);
+  const patientIdentityLegacySyncPending = useRef(false);
   const autoCalculatedNextDue = useRef("");
   const ndcResolver = useMemo(() => createNdcOptionResolver(), []);
   const [primaryNdcLookup, setPrimaryNdcLookup] = useState<NdcOptionsLookup>(() =>
@@ -1339,7 +1346,7 @@ export function InjectionPanel({
   useEffect(() => {
     if (mirroredOnMount.current) return;
     mirroredOnMount.current = true;
-    mirrorInjectionEncounterToLegacyDom(encounter);
+    mirrorInjectionEncounterToLegacyDom(encounter, { forceChipState: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1350,7 +1357,10 @@ export function InjectionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePatient.name, activePatient.dob]);
 
-  const updateEncounter = (updater: (previous: InjectionEncounter) => InjectionEncounter) => {
+  const updateEncounter = (
+    updater: (previous: InjectionEncounter) => InjectionEncounter,
+    mirrorOptions?: InjectionLegacyMirrorOptions,
+  ) => {
     setEncounter((previous) => {
       const candidate = updater(previous);
       const materialFactsChanged =
@@ -1371,7 +1381,8 @@ export function InjectionPanel({
               },
             }
           : candidate;
-      mirrorInjectionEncounterToLegacyDom(next);
+      encounterRef.current = next;
+      mirrorInjectionEncounterToLegacyDom(next, mirrorOptions);
       return next;
     });
   };
@@ -1379,6 +1390,42 @@ export function InjectionPanel({
   const patch = (partial: Partial<InjectionEncounter>) => {
     updateEncounter((previous) => ({ ...previous, ...partial }));
   };
+
+  const flushPatientIdentityLegacySync = () => {
+    if (patientIdentityMirrorTimer.current !== null) {
+      window.clearTimeout(patientIdentityMirrorTimer.current);
+      patientIdentityMirrorTimer.current = null;
+    }
+    if (!patientIdentityLegacySyncPending.current) return;
+    patientIdentityLegacySyncPending.current = false;
+    mirrorInjectionEncounterToLegacyDom(encounterRef.current);
+    // Both identity controls have already been updated silently. A single
+    // legacy input event lets its print/save machinery read them together.
+    notifyLegacyFieldInput("ptName");
+  };
+
+  const schedulePatientIdentityLegacySync = () => {
+    patientIdentityLegacySyncPending.current = true;
+    if (patientIdentityMirrorTimer.current !== null) {
+      window.clearTimeout(patientIdentityMirrorTimer.current);
+    }
+    // Leave a realistic typing pause before waking the heavy compatibility
+    // runtime; blur still flushes immediately when staff move on.
+    patientIdentityMirrorTimer.current = window.setTimeout(() => {
+      patientIdentityMirrorTimer.current = null;
+      flushPatientIdentityLegacySync();
+    }, 500);
+  };
+
+  useEffect(
+    () => () => {
+      if (patientIdentityMirrorTimer.current !== null) {
+        window.clearTimeout(patientIdentityMirrorTimer.current);
+      }
+      patientIdentityLegacySyncPending.current = false;
+    },
+    [],
+  );
 
   // A workstation sign-in is a useful default, not an attestation. Only fill
   // the empty field; once staff edits the value, their documentation wins.
@@ -1391,10 +1438,14 @@ export function InjectionPanel({
   }, [staffSignInValue, locked, encounter.administeredBy]);
 
   const patchPatient = (partial: Partial<InjectionEncounter["patient"]>) => {
-    updateEncounter((previous) => ({
-      ...previous,
-      patient: { ...previous.patient, ...partial },
-    }));
+    updateEncounter(
+      (previous) => ({
+        ...previous,
+        patient: { ...previous.patient, ...partial },
+      }),
+      { silentPatientIdentity: true },
+    );
+    schedulePatientIdentityLegacySync();
   };
 
   const patchDetails = (
@@ -2312,6 +2363,7 @@ export function InjectionPanel({
                     value={encounter.patient.name}
                     placeholder="Last, First"
                     onInput={(event) => patchPatient({ name: event.currentTarget.value })}
+                    onBlur={flushPatientIdentityLegacySync}
                   />
                 </Field>
                 <Field label="DOB" field="patient.dob" width="date" source={projectCarriedFieldSource(encounter.patient.dob, activePatientDob, "CHART")}>
@@ -2322,6 +2374,7 @@ export function InjectionPanel({
                     onInput={(event) =>
                       patchPatient({ dob: formatDobAsTyped(event.currentTarget.value) })
                     }
+                    onBlur={flushPatientIdentityLegacySync}
                   />
                 </Field>
                 <Field
