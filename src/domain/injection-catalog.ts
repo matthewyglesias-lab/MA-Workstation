@@ -1,4 +1,4 @@
-import { addCalendarDays, addCalendarMonths } from "./dates";
+import { addCalendarDays } from "./dates";
 import {
   INJECTION_CLINICAL_REFERENCE_BUNDLE,
   type InjectionCadence,
@@ -250,9 +250,12 @@ export const effectiveInjectionWindow = (
 };
 
 /**
- * Product-specific cadence overrides the generic interval-key math.  Most
- * intervals are intentionally still day based, but products described as
- * every 2/3/6 months retain their calendar-month semantics.
+ * Product-specific cadence overrides the generic interval-key math (for
+ * example, mapping a secondary interval like Aristada's q8wk onto its own
+ * label). Every cadence is day based - including the every-2/3/6-month
+ * products - so a fixed number of weeks separates each calculated return
+ * date and it always falls on the same day of the week as the
+ * administration date.
  */
 export const effectiveInjectionCadence = (
   medication: InjectionMedication,
@@ -274,9 +277,6 @@ export const calculateNextInjectionDate = (
 ): string => {
   const cadence = effectiveInjectionCadence(medication, intervalKey);
   if (cadence.kind === "oneTime") return "";
-  if (cadence.kind === "calendarMonths") {
-    return addCalendarMonths(administrationDate, cadence.months);
-  }
   return addCalendarDays(administrationDate, cadence.days);
 };
 

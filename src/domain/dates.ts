@@ -55,24 +55,6 @@ export const addCalendarDays = (iso: string, days: number): string => {
   return toIsoDate(date);
 };
 
-/**
- * Add calendar months without allowing JavaScript's date overflow to move a
- * due date into the following month (for example, Jan 31 + 1 month becomes
- * Feb 28/29, not Mar 3).  Long-acting products described as "every 3 months"
- * or "every 6 months" need this semantic rather than a fixed 84/182-day
- * approximation.
- */
-export const addCalendarMonths = (iso: string, months: number): string => {
-  const date = parseIsoDate(iso);
-  if (!date || !Number.isInteger(months)) return "";
-  const originalDay = date.getUTCDate();
-  const targetMonthIndex = date.getUTCMonth() + months;
-  const targetYear = date.getUTCFullYear() + Math.floor(targetMonthIndex / 12);
-  const targetMonth = ((targetMonthIndex % 12) + 12) % 12;
-  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
-  return toIsoDate(new Date(Date.UTC(targetYear, targetMonth, Math.min(originalDay, lastDayOfTargetMonth))));
-};
-
 export const differenceInCalendarDays = (from: string, to: string): number | null => {
   const start = parseIsoDate(from);
   const end = parseIsoDate(to);
