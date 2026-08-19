@@ -11,6 +11,15 @@ import type { InjectionNoteFacts } from "../../../documentation/types";
 import { setLegacyCheckboxValue, setLegacyFieldValue } from "../legacy-mirror";
 import { resolveProviderDisplay } from "../../../domain/provider-register";
 
+export interface InjectionLegacyMirrorOptions {
+  /** Force a full compatibility-chip sync after a fresh panel mount. */
+  forceChipState?: boolean;
+  /** Keep identity values current without firing the legacy input fan-out. */
+  silentPatientIdentity?: boolean;
+}
+
+let lastInjectionChipStateFingerprint: string | undefined;
+
 declare global {
   interface Window {
     ipmgSetInjectionChipState?: (patch: {
@@ -85,7 +94,10 @@ declare global {
  * today's log" keep working unchanged, driven by this panel instead of the
  * legacy interactive markup.
  */
-export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounter): void {
+export function mirrorInjectionEncounterToLegacyDom(
+  encounter: InjectionEncounter,
+  options: InjectionLegacyMirrorOptions = {},
+): void {
   // Keep the legacy compatibility gate aligned with the typed clinical
   // evaluator.  In particular, some legacy products expose every possible
   // product flag, whereas the current reference bundle makes a subset apply
@@ -95,8 +107,12 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
   window.ipmgInjectionNoteFacts = () =>
     injectionEncounterToDocumentationInput(encounter, evaluation)?.noteFacts;
 
-  setLegacyFieldValue("ptName", encounter.patient.name);
-  setLegacyFieldValue("ptDOB", encounter.patient.dob);
+  setLegacyFieldValue("ptName", encounter.patient.name, {
+    notify: !options.silentPatientIdentity,
+  });
+  setLegacyFieldValue("ptDOB", encounter.patient.dob, {
+    notify: !options.silentPatientIdentity,
+  });
   // Mirror the resolved display name, not the register id: legacy code
   // reads this DOM value directly for the printed AVS handout and the
   // compact note/summary lines, all of which are read by staff or the
@@ -187,7 +203,7 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
       : {}),
   };
 
-  window.ipmgSetInjectionChipState?.({
+  const chipState = {
     medicationKey: encounter.medicationKey,
     customMedication: encounter.customMedication,
     dose: encounter.dose,
@@ -239,7 +255,18 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
     nextDoseManual:
       details.nextDose?.source === "manual" ||
       (encounter.medicationKey === "other" && Boolean(encounter.nextDoseDate)),
-  });
+  };
+  // Identity and free-text edits do not alter the state owned by this bridge,
+  // yet the legacy implementation rebuilds its entire hidden workspace for
+  // every call. Only rerender it when a chip/provenance fact actually changes.
+  const chipStateFingerprint = JSON.stringify(chipState);
+  if (
+    window.ipmgSetInjectionChipState &&
+    (options.forceChipState || chipStateFingerprint !== lastInjectionChipStateFingerprint)
+  ) {
+    window.ipmgSetInjectionChipState(chipState);
+    lastInjectionChipStateFingerprint = chipStateFingerprint;
+  }
   // Selecting or renaming an Other medication in the legacy bridge clears
   // #nextDate before the manual-return flag is restored.  Write the typed
   // value again after that selection path so an active-order return date

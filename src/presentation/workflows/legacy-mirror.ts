@@ -7,7 +7,20 @@
  * of a visible legacy panel. See docs on the workflow migration plan for why
  * this bridge exists instead of rewriting the print pipeline.
  */
-export function setLegacyFieldValue(id: string, value: string): void {
+interface LegacyFieldValueOptions {
+  /**
+   * Update the hidden compatibility control without making its legacy event
+   * handlers render immediately. Used for high-frequency typed fields, which
+   * are flushed once after the user pauses or leaves the field.
+   */
+  notify?: boolean;
+}
+
+export function setLegacyFieldValue(
+  id: string,
+  value: string,
+  options: LegacyFieldValueOptions = {},
+): void {
   const element = document.getElementById(id) as
     | HTMLInputElement
     | HTMLTextAreaElement
@@ -16,8 +29,25 @@ export function setLegacyFieldValue(id: string, value: string): void {
   if (!element) return;
   if (element.value === value) return;
   element.value = value;
+  if (options.notify === false) return;
   dispatchCompatibilityProjectionEvent(element, "input");
   dispatchCompatibilityProjectionEvent(element, "change");
+}
+
+/**
+ * Give the legacy runtime one normal input notification after a group of
+ * silent field projections. The runtime reads all current hidden values on
+ * that render, so one signal avoids multiplying full legacy rerenders while
+ * staff type in the typed workspace.
+ */
+export function notifyLegacyFieldInput(id: string): void {
+  const element = document.getElementById(id) as
+    | HTMLInputElement
+    | HTMLTextAreaElement
+    | HTMLSelectElement
+    | null;
+  if (!element) return;
+  dispatchCompatibilityProjectionEvent(element, "input");
 }
 
 export function setLegacyCheckboxValue(id: string, checked: boolean): void {

@@ -286,6 +286,44 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.getByRole('button', { name: 'Print current worksheet' })).toBeEnabled();
   });
 
+  test('keeps patient identity typing stable without yellow focus or legacy chip rebuilds', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+    await openInjectionTab(page, 'Order');
+
+    await page.evaluate(() => {
+      const original = window.ipmgSetInjectionChipState;
+      window.__identityChipBridgeCalls = 0;
+      window.ipmgSetInjectionChipState = (patch) => {
+        window.__identityChipBridgeCalls += 1;
+        return original?.(patch);
+      };
+    });
+
+    const name = panel.locator('input[placeholder="Last, First"]');
+    await name.click();
+    await name.pressSequentially('Smooth, Alex', { delay: 15 });
+    await expect(name).toBeFocused();
+    await expect(name).toHaveValue('Smooth, Alex');
+    await expect(page.locator('#ptName')).toHaveValue('Smooth, Alex');
+    await expect.poll(() => name.evaluate((input) =>
+      getComputedStyle(input.closest('.wfp-field')).backgroundColor,
+    )).not.toBe('rgb(255, 244, 188)');
+
+    const dob = panel.locator('input[placeholder="MM/DD/YYYY"]');
+    await dob.click();
+    await dob.pressSequentially('01021990', { delay: 15 });
+    await expect(dob).toBeFocused();
+    await expect(dob).toHaveValue('01/02/1990');
+    await expect(page.locator('#ptDOB')).toHaveValue('01/02/1990');
+
+    // The debounced compatibility flush keeps the legacy print/save fields
+    // current but must not rebuild its entire chip workspace for each letter.
+    await page.waitForTimeout(600);
+    await expect.poll(() => page.evaluate(() => window.__identityChipBridgeCalls)).toBe(0);
+  });
+
   test('requires Vivitrol habitus selection without auto-documenting the suggested technique', async ({ page }) => {
     const panel = await prepareRoutineInjection(page, {
       patient: 'QA, Vivitrol Habitus',

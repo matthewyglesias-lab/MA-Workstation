@@ -225,7 +225,7 @@ export async function loadLegacyRuntime(): Promise<LegacyRuntime> {
   staging.innerHTML = legacyMarkup;
   movePrintSurfaces();
 
-  await loadClassicScript('/legacy/legacy-runtime.js?v=6.0.3');
+  await loadClassicScript('/legacy/legacy-runtime.js?v=6.0.6');
   await waitForDocumentReady();
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 

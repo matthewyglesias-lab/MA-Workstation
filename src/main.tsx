@@ -317,6 +317,16 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
 
     const handleChange = (event: Event) => {
       if (isCompatibilityProjectionEvent(event)) return;
+      // InjectionPanel owns its typed state and immediately reports each
+      // change through onWorkflowStateChange. Do not queue a second legacy
+      // snapshot refresh for an in-panel keystroke; that duplicate work is
+      // especially disruptive while entering patient identity.
+      if (
+        event.target instanceof Node &&
+        injectionPanelRef.current?.contains(event.target)
+      ) {
+        return;
+      }
       refresh();
     };
     const handleTabChange = () => refresh();
