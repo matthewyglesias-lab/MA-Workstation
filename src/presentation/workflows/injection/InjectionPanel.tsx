@@ -45,9 +45,17 @@ import {
 } from "../../../domain/injection-catalog";
 import { formatNeedleSpec } from "../../../domain/injection-needle";
 import {
+  applyCalculatedNextDosePatch,
+  applyManualNextDosePatch,
+  applyPairedNdcPatch,
+  applyPrimaryNdcPatch,
   doseChangePatch,
   intervalChangePatch,
+  lateDoseReviewConfirmationPatch,
   medicationChangePatch,
+  nextDoseProvenanceDecision,
+  selectDispositionPatch,
+  validatedNextDoseOverride,
 } from "../../../domain/injection-panel-actions";
 import type { InjectionHabitusBand } from "../../../domain/injection-clinical-reference";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
@@ -1869,37 +1877,31 @@ export function InjectionPanel({
    * instead. A wrong provenance line is worse than none: it invites staff to
    * re-derive the date from a rule that never produced it.
    */
-  const nextDoseProvenanceNote = (): string | undefined => {
-    if (legacyOtherReturnDateNeedsReview) {
-      return "· legacy return date — verify against the active order";
+  const nextDoseProvenanceNoteText = (): string | undefined => {
+    const decision = nextDoseProvenanceDecision(encounter, evaluation);
+    switch (decision.kind) {
+      case "legacy-review":
+        return "· legacy return date — verify against the active order";
+      case "manual-override":
+        return `· ${decision.reason}`;
+      case "one-time-no-return":
+        return "· one-time order — no routine return date is required";
+      case "enter-return-date":
+        return "· enter the return date from the active order";
+      case "enter-administration-and-interval":
+        return "· enter the administration date and order interval";
+      case "sustenna-day8":
+        return `· Day 8 target, 7 days from ${registerDate(decision.administrationDate)}`;
+      case "cadence":
+        return `· ${decision.cadence} from ${registerDate(decision.administrationDate)}`;
     }
-    if (nextDoseIsManual) {
-      return `· ${nextDoseMetadata?.overrideReason || "manual date requires review"}`;
-    }
-    if (!suggestedNextDose) {
-      return medication?.key === "other"
-        ? oneTimeOtherWithoutReturn
-          ? "· one-time order — no routine return date is required"
-          : "· enter the return date from the active order"
-        : "· enter the administration date and order interval";
-    }
-    if (encounter.initiation?.protocol === "sustenna-day1") {
-      return `· Day 8 target, 7 days from ${registerDate(encounter.administrationDate)}`;
-    }
-    const cadence = evaluation?.output.timing.cadenceLabel || encounter.intervalKey;
-    return `· ${cadence} from ${registerDate(encounter.administrationDate)}`;
   };
 
   const applyCalculatedNextDose = (value: string) => {
     autoCalculatedNextDue.current = value;
-    patch({ nextDoseDate: value });
-    patchDetails({
-      nextDose: {
-        value,
-        source: "calculated",
-        calculatedFrom: nextDoseCalculationInput,
-      },
-    });
+    const result = applyCalculatedNextDosePatch(encounter, value);
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const applyManualNextDose = (
@@ -1911,40 +1913,15 @@ export function InjectionPanel({
     },
   ) => {
     autoCalculatedNextDue.current = "";
-    patch({ nextDoseDate: value });
-    patchDetails({
-      nextDose: {
-        value,
-        source: "manual",
-        calculatedFrom: nextDoseCalculationInput,
-        overrideKind: override.kind,
-        overrideReason: override.reason.trim(),
-        overrideProvider:
-          override.kind === "provider-direction" ? override.provider?.trim() : undefined,
-        recordedAt: new Date().toISOString(),
-      },
-    });
+    const result = applyManualNextDosePatch(encounter, value, override, new Date().toISOString());
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const selectDisposition = (kind: InjectionDisposition["kind"]) => {
-    if (kind === "administered") {
-      patchDisposition({
-        kind,
-        provider: "",
-        time: "",
-        outcome: "",
-        reviewedBy: staffSignInValue.trim() || encounter.administeredBy.trim(),
-        reviewedAt: new Date().toISOString(),
-        reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
-      });
-      return;
-    }
-    patchDisposition({
-      kind,
-      reviewedBy: "",
-      reviewedAt: "",
-      reviewFingerprint: "",
-    });
+    patchDisposition(
+      selectDispositionPatch(encounter, kind, staffSignInValue, new Date().toISOString()),
+    );
   };
 
   const openNextDoseOverride = () => {
@@ -1960,38 +1937,27 @@ export function InjectionPanel({
   };
 
   const confirmNextDoseOverride = () => {
-    if (!isValidIsoDate(nextDoseOverrideDate) || !nextDoseOverrideReason.trim()) return;
-    if (nextDoseOverrideKind === "provider-direction" && !nextDoseOverrideProvider.trim()) return;
-    applyManualNextDose(nextDoseOverrideDate, {
+    const validated = validatedNextDoseOverride({
+      date: nextDoseOverrideDate,
       kind: nextDoseOverrideKind,
       reason: nextDoseOverrideReason,
       provider: nextDoseOverrideProvider,
     });
+    if (!validated) return;
+    applyManualNextDose(validated.value, validated.override);
     setNextDoseOverrideOpen(false);
   };
 
   const applyPrimaryNdc = (value: string, selection?: InjectionNdcSelection) => {
-    patch({ traceability: { ...encounter.traceability, ndc: value } });
-    patchDetails({
-      clinicalReferenceVersion:
-        presentationOutput?.clinicalReferenceVersion ?? documentationMetadata?.clinicalReferenceVersion,
-      ndcSelection: {
-        ...(documentationMetadata?.ndcSelection ?? {}),
-        primary: selection,
-      },
-    });
+    const result = applyPrimaryNdcPatch(encounter, evaluation, value, selection);
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const applyPairedNdc = (value: string, selection?: InjectionNdcSelection) => {
-    patchInitiationSecond({ ndc: value });
-    patchDetails({
-      clinicalReferenceVersion:
-        presentationOutput?.clinicalReferenceVersion ?? documentationMetadata?.clinicalReferenceVersion,
-      ndcSelection: {
-        ...(documentationMetadata?.ndcSelection ?? {}),
-        pairedSecond: selection,
-      },
-    });
+    const result = applyPairedNdcPatch(encounter, evaluation, value, selection);
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   useEffect(() => {
@@ -2120,19 +2086,17 @@ export function InjectionPanel({
   ]);
 
   const confirmLateDoseReview = () => {
-    patchDetails({
-      lateDoseReview: lateDoseReviewChoice,
-      lateDoseReviewNote: lateDoseReviewNoteDraft.trim(),
-      lateDoseReviewProvider:
-        lateDoseReviewChoice === "provider-authorized"
-          ? lateDoseReviewProviderDraft.trim()
-          : "",
-      lateDoseReviewTime:
-        lateDoseReviewChoice === "provider-authorized"
-          ? lateDoseReviewTimeDraft.trim()
-          : "",
-      lateDoseReviewFingerprint,
-    });
+    patchDetails(
+      lateDoseReviewConfirmationPatch(
+        {
+          choice: lateDoseReviewChoice,
+          note: lateDoseReviewNoteDraft,
+          provider: lateDoseReviewProviderDraft,
+          time: lateDoseReviewTimeDraft,
+        },
+        lateDoseReviewFingerprint,
+      ),
+    );
     setLateDoseDialogOpen(false);
   };
 
@@ -2552,7 +2516,7 @@ export function InjectionPanel({
                     // Built from the parts rather than the persisted
                     // `calculatedFrom` string, which stores ISO on purpose and
                     // must keep doing so.
-                    note: nextDoseProvenanceNote(),
+                    note: nextDoseProvenanceNoteText(),
                   },
                   ...(nonAdministration || !evaluation
                     ? []
@@ -3590,7 +3554,7 @@ export function InjectionPanel({
                   // Same provenance the Order tab shows. Two tabs describing
                   // one date two different ways is how staff end up trusting
                   // the wrong one.
-                  note: nextDoseProvenanceNote(),
+                  note: nextDoseProvenanceNoteText(),
                 },
               ]}
               actions={

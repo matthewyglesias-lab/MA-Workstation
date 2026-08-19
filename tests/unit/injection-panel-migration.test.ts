@@ -12,10 +12,20 @@ import {
 import { injectionEncounterToDocumentationInput } from "../../src/documentation/adapters/injection-from-encounter";
 import { DocumentationEngine } from "../../src/documentation";
 import { INJECTION_MEDICATIONS, preferredIntervalForDose } from "../../src/domain/injection-catalog";
+import type { ClinicalEvaluation } from "../../src/domain/contracts";
+import type { InjectionEvaluationOutput } from "../../src/domain/injection";
 import {
+  applyCalculatedNextDosePatch,
+  applyManualNextDosePatch,
+  applyPairedNdcPatch,
+  applyPrimaryNdcPatch,
   doseChangePatch,
   intervalChangePatch,
+  lateDoseReviewConfirmationPatch,
   medicationChangePatch,
+  nextDoseProvenanceDecision,
+  selectDispositionPatch,
+  validatedNextDoseOverride,
 } from "../../src/domain/injection-panel-actions";
 
 const requiredInjectionAttestations = {
@@ -293,5 +303,244 @@ describe("doseChangePatch", () => {
 describe("intervalChangePatch", () => {
   it("returns a patch containing only the new interval", () => {
     expect(intervalChangePatch("q6wk")).toEqual({ intervalKey: "q6wk" });
+  });
+});
+
+const fakeEvaluation = (
+  overrides: Partial<{ calculatedDates: Record<string, string>; cadenceLabel: string }> = {},
+): ClinicalEvaluation<InjectionEvaluationOutput> =>
+  ({
+    workflow: "injection",
+    readiness: "ready",
+    stops: [],
+    warnings: [],
+    recommendations: [],
+    calculatedDates: overrides.calculatedDates ?? { expectedNextDoseDate: "2026-02-27" },
+    output: { timing: { cadenceLabel: overrides.cadenceLabel ?? "q4wk" } },
+  }) as unknown as ClinicalEvaluation<InjectionEvaluationOutput>;
+
+describe("nextDoseProvenanceDecision", () => {
+  it("flags a legacy Other return date with no recorded provenance for review", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      medicationKey: "other",
+      nextDoseDate: "2026-03-01",
+      details: {},
+    };
+    expect(nextDoseProvenanceDecision(encounter, fakeEvaluation())).toEqual({ kind: "legacy-review" });
+  });
+
+  it("surfaces the recorded override reason for a manual next-dose value", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      details: { nextDose: { value: "2026-03-01", source: "manual", overrideReason: "Provider directed early" } },
+    };
+    expect(nextDoseProvenanceDecision(encounter, fakeEvaluation())).toEqual({
+      kind: "manual-override",
+      reason: "Provider directed early",
+    });
+  });
+
+  it("falls back to a generic manual-review reason when none was recorded", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      details: { nextDose: { value: "2026-03-01", source: "manual" } },
+    };
+    expect(nextDoseProvenanceDecision(encounter, fakeEvaluation())).toEqual({
+      kind: "manual-override",
+      reason: "manual date requires review",
+    });
+  });
+
+  it("prompts for a one-time Other order with no return date instead of a routine cadence", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      medicationKey: "other",
+      intervalKey: "once",
+      nextDoseDate: "",
+      details: {},
+    };
+    const noSuggestion = fakeEvaluation({ calculatedDates: {} });
+    expect(nextDoseProvenanceDecision(encounter, noSuggestion)).toEqual({ kind: "one-time-no-return" });
+  });
+
+  it("prompts to enter a return date for a routine Other order with no suggestion yet", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      medicationKey: "other",
+      intervalKey: "q4wk",
+      nextDoseDate: "",
+      details: {},
+    };
+    const noSuggestion = fakeEvaluation({ calculatedDates: {} });
+    expect(nextDoseProvenanceDecision(encounter, noSuggestion)).toEqual({ kind: "enter-return-date" });
+  });
+
+  it("prompts to enter administration date and interval for a catalog medication with no suggestion", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), details: {} };
+    const noSuggestion = fakeEvaluation({ calculatedDates: {} });
+    expect(nextDoseProvenanceDecision(encounter, noSuggestion)).toEqual({
+      kind: "enter-administration-and-interval",
+    });
+  });
+
+  it("targets the Sustenna Day 8 date on a Day 1 initiation", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      medicationKey: "sustenna",
+      initiation: { ...emptyInjectionInitiation(), protocol: "sustenna-day1" },
+      details: {},
+    };
+    expect(nextDoseProvenanceDecision(encounter, fakeEvaluation())).toEqual({
+      kind: "sustenna-day8",
+      administrationDate: encounter.administrationDate,
+    });
+  });
+
+  it("shows the evaluator's cadence label for a routine calculated suggestion", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), details: {} };
+    expect(nextDoseProvenanceDecision(encounter, fakeEvaluation({ cadenceLabel: "q6wk" }))).toEqual({
+      kind: "cadence",
+      cadence: "q6wk",
+      administrationDate: encounter.administrationDate,
+    });
+  });
+});
+
+describe("applyCalculatedNextDosePatch / applyManualNextDosePatch", () => {
+  it("records a calculated next-dose value with its calculation source", () => {
+    const encounter = routineInjection();
+    const result = applyCalculatedNextDosePatch(encounter, "2026-02-27");
+    expect(result.encounter).toEqual({ nextDoseDate: "2026-02-27" });
+    expect(result.details.nextDose).toEqual({
+      value: "2026-02-27",
+      source: "calculated",
+      calculatedFrom: `${encounter.administrationDate}|${encounter.intervalKey}`,
+    });
+  });
+
+  it("records a manual override with its provider only for a provider-direction override", () => {
+    const encounter = routineInjection();
+    const activeOrder = applyManualNextDosePatch(
+      encounter,
+      "2026-03-15",
+      { kind: "active-order", reason: "Extended per active order", provider: "Dr. Ignored" },
+      "2026-01-30T09:20:00.000Z",
+    );
+    expect(activeOrder.details.nextDose).toMatchObject({
+      source: "manual",
+      overrideKind: "active-order",
+      overrideReason: "Extended per active order",
+      overrideProvider: undefined,
+      recordedAt: "2026-01-30T09:20:00.000Z",
+    });
+
+    const providerDirected = applyManualNextDosePatch(
+      encounter,
+      "2026-03-15",
+      { kind: "provider-direction", reason: "Provider approved early", provider: " Dr. Draft " },
+      "2026-01-30T09:20:00.000Z",
+    );
+    expect(providerDirected.details.nextDose).toMatchObject({
+      overrideKind: "provider-direction",
+      overrideProvider: "Dr. Draft",
+    });
+  });
+});
+
+describe("validatedNextDoseOverride", () => {
+  const baseDraft = { date: "2026-03-15", kind: "active-order" as const, reason: "Extended", provider: "" };
+
+  it("accepts a complete active-order override", () => {
+    expect(validatedNextDoseOverride(baseDraft)).toEqual({
+      value: "2026-03-15",
+      override: { kind: "active-order", reason: "Extended", provider: "" },
+    });
+  });
+
+  it("rejects an invalid date, a blank reason, or a missing provider on a provider-direction override", () => {
+    expect(validatedNextDoseOverride({ ...baseDraft, date: "not-a-date" })).toBeNull();
+    expect(validatedNextDoseOverride({ ...baseDraft, reason: "   " })).toBeNull();
+    expect(validatedNextDoseOverride({ ...baseDraft, kind: "provider-direction", provider: "  " })).toBeNull();
+    expect(
+      validatedNextDoseOverride({ ...baseDraft, kind: "provider-direction", provider: "Dr. Draft" }),
+    ).not.toBeNull();
+  });
+});
+
+describe("selectDispositionPatch", () => {
+  it("stamps a fresh administration review when disposition becomes administered", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), disposition: { kind: "" } };
+    const result = selectDispositionPatch(encounter, "administered", "Session MA", "2026-01-30T09:20:00.000Z");
+    expect(result).toMatchObject({
+      kind: "administered",
+      provider: "",
+      time: "",
+      outcome: "",
+      reviewedBy: "Session MA",
+      reviewedAt: "2026-01-30T09:20:00.000Z",
+      reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
+    });
+  });
+
+  it("falls back to the documented administeredBy when no one is signed in", () => {
+    const encounter = { ...routineInjection(), administeredBy: "Charted MA" };
+    const result = selectDispositionPatch(encounter, "administered", "  ", "2026-01-30T09:20:00.000Z");
+    expect(result.reviewedBy).toBe("Charted MA");
+  });
+
+  it("clears review metadata for a non-administered disposition", () => {
+    const result = selectDispositionPatch(routineInjection(), "held", "Session MA", "2026-01-30T09:20:00.000Z");
+    expect(result).toEqual({ kind: "held", reviewedBy: "", reviewedAt: "", reviewFingerprint: "" });
+  });
+});
+
+describe("applyPrimaryNdcPatch / applyPairedNdcPatch", () => {
+  it("applies the primary NDC to traceability and the primary selection slot", () => {
+    const encounter = routineInjection();
+    const result = applyPrimaryNdcPatch(encounter, fakeEvaluation(), "12345-6789-02", {
+      ndc: "12345-6789-02",
+      source: "bundled",
+    });
+    expect(result.encounter.traceability).toEqual({ ...encounter.traceability, ndc: "12345-6789-02" });
+    expect(result.details.ndcSelection).toMatchObject({ primary: { ndc: "12345-6789-02", source: "bundled" } });
+  });
+
+  it("applies the paired NDC to the initiation second component and the paired selection slot", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      initiation: { ...emptyInjectionInitiation(), second: { ...emptyInjectionInitiation().second, dose: "300 mg" } },
+    };
+    const result = applyPairedNdcPatch(encounter, fakeEvaluation(), "98765-4321-01", {
+      ndc: "98765-4321-01",
+      source: "custom",
+    });
+    expect(result.encounter.initiation?.second).toMatchObject({ dose: "300 mg", ndc: "98765-4321-01" });
+    expect(result.details.ndcSelection).toMatchObject({ pairedSecond: { ndc: "98765-4321-01", source: "custom" } });
+  });
+});
+
+describe("lateDoseReviewConfirmationPatch", () => {
+  it("keeps the provider and time only for a provider-authorized review", () => {
+    const authorized = lateDoseReviewConfirmationPatch(
+      { choice: "provider-authorized", note: " Reviewed ", provider: " Dr. Draft ", time: " 09:15 " },
+      "fingerprint-1",
+    );
+    expect(authorized).toEqual({
+      lateDoseReview: "provider-authorized",
+      lateDoseReviewNote: "Reviewed",
+      lateDoseReviewProvider: "Dr. Draft",
+      lateDoseReviewTime: "09:15",
+      lateDoseReviewFingerprint: "fingerprint-1",
+    });
+  });
+
+  it("blanks the provider and time for any other review choice", () => {
+    const other = lateDoseReviewConfirmationPatch(
+      { choice: "other", note: "Documented elsewhere", provider: "Dr. Draft", time: "09:15" },
+      "fingerprint-2",
+    );
+    expect(other.lateDoseReviewProvider).toBe("");
+    expect(other.lateDoseReviewTime).toBe("");
   });
 });
