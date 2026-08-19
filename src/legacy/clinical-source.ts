@@ -424,6 +424,8 @@ export function createLegacyClinicalSource(
       : "";
     const rawDisposition = raw.disposition ?? {};
     const documentation = normalizeDocumentation(raw.documentation);
+    const manualNextDose =
+      documentation.nextDose?.source === "manual" ? documentation.nextDose.value ?? "" : "";
     const dispositionKind = ["", "administered", "held", "escalated", "provider"].includes(
       asString(rawDisposition.kind),
     )
@@ -442,7 +444,11 @@ export function createLegacyClinicalSource(
       priorDoseDate: value("priorDose"),
       priorSite: value("priorSite"),
       administrationDate: value("adminDate"),
-      nextDoseDate: value("nextDate"),
+      // A legacy medication re-selection can clear its hidden next-date
+      // field while the typed manual active-order return target remains in
+      // provenance. Restore that documented manual date rather than dropping
+      // it on the next hydrate; never use this fallback for a calculated date.
+      nextDoseDate: value("nextDate") || manualNextDose,
       orderingProvider: value("orderingProvider"),
       administeredBy: value("admin"),
       administrationTime: value("injAdminTime"),
@@ -493,6 +499,7 @@ export function createLegacyClinicalSource(
           "naltrexHS",
           "suppliedNeedle",
           "resuspend",
+          "visualInspection",
           "invegaInit",
           "oralOverlap",
           "stabilized",

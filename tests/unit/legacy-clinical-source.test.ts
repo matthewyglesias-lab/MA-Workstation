@@ -81,5 +81,34 @@ describe("legacy clinical source: injection documentation metadata", () => {
       overrideProvider: "Jane Doe, MD",
       recordedAt: "2026-07-30T17:00:00.000Z",
     });
+    // The runtime's hidden #nextDate may have been cleared by a legacy
+    // medication selection while this durable manual provenance remains.
+    // The typed encounter must restore the actual active-order return date.
+    expect(encounter.nextDoseDate).toBe("2030-01-15");
+  });
+
+  it("keeps a pre-provenance Other return date for explicit active-order review", () => {
+    const values = new Map<string, string>([["nextDate", "2030-02-12"]]);
+    const source = createLegacyClinicalSource({
+      document: {
+        getElementById: (id: string) =>
+          values.has(id) ? ({ value: values.get(id) } as HTMLInputElement) : null,
+      } as unknown as Document,
+      window: {
+        ipmgLegacyClinicalStateSnapshot: () => ({
+          injection: {
+            medicationKey: "other",
+            customMedication: "Legacy custom product",
+          },
+        }),
+      } as unknown as Window & typeof globalThis,
+    });
+
+    const encounter = source.read("injection").encounter as InjectionEncounter;
+    expect(encounter.nextDoseDate).toBe("2030-02-12");
+    // It predates durable provenance, so the typed UI must retain it as a
+    // legacy value requiring review rather than calling it calculated or a
+    // verified manual active-order date.
+    expect(encounter.details?.nextDose).toBeUndefined();
   });
 });

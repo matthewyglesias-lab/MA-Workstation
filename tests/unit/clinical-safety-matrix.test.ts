@@ -159,6 +159,7 @@ describe("InjectionEngine safety matrix", () => {
     encounter.medicationKey = "vivitrol";
     encounter.dose = "380 mg";
     encounter.site = "L ventrogluteal";
+    encounter.habitus = "average";
     encounter.verifications = {
       resuspend: true,
       opioidFree: true,

@@ -45,10 +45,10 @@ const routineInjection = (): InjectionEncounter => ({
   },
   response: { kind: "well" },
   attestations: requiredInjectionAttestations,
-  verifications: { deepZtrack: true },
+  verifications: { visualInspection: true, deepZtrack: true },
   acuteSafetyScreenConfirmed: true,
   disposition: { kind: "administered" },
-  details: { productSource: "Clinic sample" },
+  details: { productSource: "Clinic sample", volume: "1", volumeUnit: "mL" },
 });
 
 describe("injectionEncounterToDocumentationInput", () => {

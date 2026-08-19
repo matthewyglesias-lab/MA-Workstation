@@ -140,7 +140,11 @@ const INJECTION_REVIEW_FACTS: Record<string, string> = {
   "naltrexone/hepatic review verified":
     "Naltrexone/excipient hypersensitivity and hepatic-risk review verified against the active order and current product information.",
   "suspension inspected & mixed":
-    "Medication inspected and mixed/resuspended per product instructions.",
+    "Product-specific preparation verified against the current product instructions.",
+  "product-specific preparation verified":
+    "Product-specific preparation verified against the current product instructions.",
+  "product visual inspection verified":
+    "Product visual inspection verified against the current product instructions.",
   "initiation / re-initiation plan verified":
     "Active order and product-specific initiation / re-initiation plan verified.",
   "ordered oral initiation plan documented":
@@ -173,6 +177,42 @@ const INJECTION_PLAN_FACTS: Record<string, string> = {
 const normalizedFactKey = (value: string): string =>
   compact(value).toLowerCase();
 
+const LEGACY_VERIFICATION_FACT_KEYS = new Set([
+  "two-identifier id",
+  "medication ‘rights’",
+  "allergies reviewed",
+  "consent reaffirmed",
+  "two-clinician check",
+]);
+
+/** Legacy controls retain their visible label rather than a typed verification
+ * key. These are the preparation/inspection families that must become the
+ * dedicated Product preparation assessment topic, never generic review text. */
+const LEGACY_PREPARATION_FACT_KEYS = new Set([
+  "suspension inspected & mixed",
+  "product-specific preparation verified",
+  "product visual inspection verified",
+  "suspension preparation verified",
+  "resuspension and visual integrity verified",
+  "room-temperature and bubble preparation verified",
+  "ordered-presentation reconstitution verified",
+  "kit reconstitution verified",
+  "solution inspection verified",
+  "dry equipment and applicable solution inspection verified",
+  "aristada syringe preparation completed",
+  "aristada initio syringe preparation completed",
+  "invega sustenna suspension shaken and visually inspected",
+  "erzofri suspension preparation completed",
+  "invega trinza suspension shaken and visually inspected",
+  "invega hafyera resuspension and visual inspection completed",
+  "uzedy room-temperature, product, and bubble checks completed",
+  "abilify maintena reconstitution and inspection completed",
+  "abilify asimtufii suspension prepared and visually inspected",
+  "vivitrol reconstitution and suspension check completed",
+  "haldol decanoate solution inspection completed",
+  "dry equipment and applicable solution inspection completed",
+]);
+
 /**
  * Carries only the response the staff member selected or entered. Historical
  * response metadata included broader negative findings (for example, no
@@ -185,32 +225,56 @@ export const legacyInjectionResponseFact = (
 
 const injectionFactLines = (
   doc: Document,
-): { assessment: string[]; plan: string[] } => {
+): {
+  verification: string[];
+  clinicalReview: string[];
+  productPreparation: string[];
+  plan: string[];
+  allergyReviewed: boolean;
+} => {
   const selected = unique([
     ...selectedControlTexts("attChips", doc),
     ...selectedControlTexts("medSpecChips", doc),
   ]);
-  const assessment: string[] = [];
+  const verification: string[] = [];
+  const clinicalReview: string[] = [];
+  const productPreparation: string[] = [];
   const plan: string[] = [];
+  const allergyReviewed = selected.some(
+    (label) => normalizedFactKey(label) === "allergies reviewed",
+  );
   selected.forEach((label) => {
     const key = normalizedFactKey(label);
     if (INJECTION_PLAN_FACTS[key]) {
       plan.push(INJECTION_PLAN_FACTS[key]);
       return;
     }
-    assessment.push(INJECTION_REVIEW_FACTS[key] ?? label);
+    const fact = INJECTION_REVIEW_FACTS[key] ?? label;
+    if (LEGACY_PREPARATION_FACT_KEYS.has(key)) {
+      productPreparation.push(fact);
+      return;
+    }
+    if (LEGACY_VERIFICATION_FACT_KEYS.has(key)) {
+      verification.push(fact);
+      return;
+    }
+    clinicalReview.push(fact);
   });
   if (value("allergies", doc)) {
     const generic = INJECTION_REVIEW_FACTS["allergies reviewed"];
-    if (generic) {
-      const index = assessment.indexOf(generic);
-      if (index >= 0) assessment.splice(index, 1);
-    }
+    const index = generic ? verification.indexOf(generic) : -1;
+    if (index >= 0) verification.splice(index, 1);
   }
   if (value("tech", doc)) {
     plan.push(`Needle / technique: ${value("tech", doc)}`);
   }
-  return { assessment: unique(assessment), plan: unique(plan) };
+  return {
+    verification: unique(verification),
+    clinicalReview: unique(clinicalReview),
+    productPreparation: unique(productPreparation),
+    plan: unique(plan),
+    allergyReviewed,
+  };
 };
 
 const element = <T extends HTMLElement>(
@@ -676,9 +740,15 @@ export const readLegacyInjectionDocumentation = (
   // affirmative chart facts while the encounter is still unfinished.
   const documentedFacts = disposition
     ? injectionFactLines(doc)
-    : { assessment: [] as string[], plan: [] as string[] };
-  const reviewItems = unique([
-    ...documentedFacts.assessment,
+    : {
+        verification: [] as string[],
+        clinicalReview: [] as string[],
+        productPreparation: [] as string[],
+        plan: [] as string[],
+        allergyReviewed: false,
+      };
+  const clinicalReview = unique([
+    ...documentedFacts.clinicalReview,
     ...(disposition && win.__IPMG_RC530__?.safetyNone
       ? ["No acute concerns today confirmed."]
       : []),
@@ -707,7 +777,12 @@ export const readLegacyInjectionDocumentation = (
     },
     disposition,
     preAdministration: {
+      verification: documentedFacts.verification.join(" ") || undefined,
+      clinicalReview: clinicalReview.join(" ") || undefined,
+      productPreparation:
+        documentedFacts.productPreparation.join(" ") || undefined,
       orderPurpose: value("injOrderPurpose", doc) || undefined,
+      allergyReviewed: documentedFacts.allergyReviewed,
       allergiesReview: disposition ? value("allergies", doc) || undefined : undefined,
       previousDoseDate: rawValue("priorDose", doc)
         ? formatIsoDate(rawValue("priorDose", doc))
@@ -722,7 +797,6 @@ export const readLegacyInjectionDocumentation = (
         heartRate: value("hr", doc) || undefined,
         temperature: value("temp", doc) || undefined,
       },
-      reviewItems: reviewItems.length ? reviewItems : undefined,
       clinicianAttention: clinicianAttention.length
         ? clinicianAttention
         : undefined,

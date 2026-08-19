@@ -53,8 +53,23 @@ export interface InjectionVitals {
 }
 
 export interface InjectionPreAdministration {
+  /**
+   * Categorized assessment facts used when an adapter can identify their
+   * clinical role. These keep preparation, routine clinical review, and
+   * verification facts from being collapsed into one unstructured block.
+   */
+  verification?: string;
+  clinicalReview?: string;
+  productPreparation?: string;
+  siteAssessment?: string;
   orderPurpose?: string;
   orderVerification?: string;
+  /**
+   * An allergy status is charted only after the corresponding review
+   * confirmation has been selected.  Do not infer this from a populated
+   * allergy field (for example, a default NKDA value).
+   */
+  allergyReviewed?: boolean;
   allergiesReview?: string;
   previousDoseDate?: string;
   previousSite?: string;
@@ -162,7 +177,13 @@ export interface InjectionNoteFacts {
   presentation?: string;
   verification?: string;
   clinicalReview?: string;
+  /** Completed, product-specific preparation or inspection facts. */
+  productPreparation?: string;
   siteAssessment?: string;
+  /** Measurement values only; the formatter supplies the Vitals label. */
+  vitals?: string;
+  /** Active concerns only; the formatter supplies the clinician-attention label. */
+  clinicianAttention?: string;
   timing?: string;
   administration?: string;
   dateTime?: string;

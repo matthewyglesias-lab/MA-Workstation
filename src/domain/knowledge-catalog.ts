@@ -132,6 +132,14 @@ const medicationKnowledgeEntries = (): KnowledgeEntry[] =>
         storage: reference.knowledge.storage,
         caution: reference.knowledge.staffGuardrail,
       };
+      // Preparation was independently re-reviewed from the broader clinical
+      // reference bundle. Keep that provenance visible here too: this panel
+      // renders the same preparation synopsis as the Injection workspace,
+      // and its older general-reference date must not look like the prep
+      // instruction's review date.
+      const preparationSource = reference.administration.notes.find(
+        (note) => note.phase === "preparation",
+      )?.source;
       return {
         id: `lai-${key}`,
         category: "lai",
@@ -149,6 +157,14 @@ const medicationKnowledgeEntries = (): KnowledgeEntry[] =>
           text("Technique", supplement.tech || "—"),
           text("Needle", needleSummary(reference)),
           text("Prep/storage", `${supplement.recon || "—"} ${supplement.storage || "—"}`.trim()),
+          ...(preparationSource
+            ? [
+                text(
+                  "Preparation source",
+                  `${preparationSource.title}; ${preparationSource.labelRevision}; reviewed ${preparationSource.reviewedOn}.`,
+                ),
+              ]
+            : []),
           text("Late/missed", med.missedDoseGuidance || "Verify against current PI and prescriber direction."),
           text(
             "MA guardrail",

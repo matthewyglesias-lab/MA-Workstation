@@ -148,18 +148,89 @@ const formatChiefComplaint = (
   return details.length ? `${summary}\n\n${details.join("\n")}` : summary;
 };
 
+const joinAssessmentFacts = (items: Array<string | undefined>): string =>
+  [...new Set(nonEmpty(items))].join(" ");
+
+/**
+ * Adapters that know the clinical role of an assessment fact populate the
+ * categorized fields below. Keep their display rhythm aligned with the
+ * compact note: one chart-ready label per topic, in clinical read order.
+ *
+ * The older generic pre-administration block remains available below for
+ * callers that only provide its historic, unclassified fields.
+ */
+const formatCategorizedAssessment = (
+  review: NonNullable<InjectionDocumentationInput["preAdministration"]>,
+  extra: string[],
+): string => {
+  const allergies = review.allergyReviewed
+    ? cleanText(review.allergiesReview)
+    : "";
+  const verification = joinAssessmentFacts([
+    review.verification,
+    review.orderVerification
+      ? `Order verification: ${cleanText(review.orderVerification)}`
+      : "",
+    allergies ? `Allergies reviewed — ${endSentence(allergies)}` : "",
+  ]);
+  const clinicalReview = joinAssessmentFacts([
+    review.clinicalReview,
+    review.orderPurpose
+      ? `Active-order purpose / encounter context: ${cleanText(review.orderPurpose)}`
+      : "",
+    review.previousDoseDate
+      ? `Previous dose date: ${cleanText(review.previousDoseDate)}`
+      : "",
+    review.previousSite
+      ? `Previous injection site: ${cleanText(review.previousSite)}`
+      : "",
+    ...(review.reviewItems ?? []),
+    ...extra,
+  ]);
+  const clinicianAttention = joinAssessmentFacts(review.clinicianAttention ?? []);
+
+  return joinBlocks([
+    verification ? `Verification: ${verification}` : "",
+    clinicalReview ? `Clinical review: ${clinicalReview}` : "",
+    review.productPreparation
+      ? `Product preparation: ${cleanText(review.productPreparation)}`
+      : "",
+    review.siteAssessment ? `Site assessment: ${cleanText(review.siteAssessment)}` : "",
+    formatVitals(review.vitals),
+    clinicianAttention ? `Clinician attention: ${clinicianAttention}` : "",
+    review.timingReview ? `Timing: ${cleanText(review.timingReview)}` : "",
+  ]);
+};
+
 const formatAssessment = (
   input: InjectionDocumentationInput,
   extra: string[],
 ): string => {
   const review = input.preAdministration;
+  const hasCategorizedFacts = Boolean(
+    review &&
+      (cleanText(review.verification) ||
+        cleanText(review.clinicalReview) ||
+        cleanText(review.productPreparation) ||
+        cleanText(review.siteAssessment) ||
+        Boolean(review.clinicianAttention?.length)),
+  );
+  if (review && hasCategorizedFacts) {
+    return formatCategorizedAssessment(review, extra);
+  }
   const reviewBlock = block("Pre-administration review", [
     row("Active-order purpose / encounter context", review?.orderPurpose),
     row("Order verification", review?.orderVerification),
     row("Previous dose date", review?.previousDoseDate),
     row("Previous injection site", review?.previousSite),
     row("Timing review", review?.timingReview),
-    row("Allergies", review?.allergiesReview),
+    // Current adapters carry this explicit confirmation state.  A default
+    // allergy value alone is not a documented review.  Preserve historic
+    // callers that do not provide the state (`undefined`) for compatibility.
+    row(
+      "Allergies",
+      review?.allergyReviewed === false ? undefined : review?.allergiesReview,
+    ),
     formatVitals(review?.vitals),
     ...bullets(review?.reviewItems),
   ]);
@@ -370,14 +441,23 @@ const formatNoteFactsCC = (facts: InjectionNoteFacts): string =>
 const formatNoteFactsAssessment = (
   facts: InjectionNoteFacts,
   clinicianAttention: string[],
-): string =>
-  joinBlocks([
+): string => {
+  const attention = joinAssessmentFacts([
+    facts.clinicianAttention,
+    ...clinicianAttention,
+  ]);
+  return joinBlocks([
     facts.verification ? `Verification: ${facts.verification}` : "",
     facts.clinicalReview ? `Clinical review: ${facts.clinicalReview}` : "",
-    alerts(clinicianAttention).join("\n"),
+    facts.productPreparation
+      ? `Product preparation: ${facts.productPreparation}`
+      : "",
     facts.siteAssessment ? `Site assessment: ${facts.siteAssessment}` : "",
+    facts.vitals ? `Vitals: ${facts.vitals}` : "",
+    attention ? `Clinician attention: ${attention}` : "",
     facts.timing ? `Timing: ${facts.timing}` : "",
   ]);
+};
 
 const formatNoteFactsPlan = (
   input: InjectionDocumentationInput,

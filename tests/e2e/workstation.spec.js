@@ -152,14 +152,30 @@ test.describe('MA Workstation browser journeys', () => {
         .locator('.wfp-field', { hasText: 'Administration date' })
         .locator('input[data-workstation-date="date"]'), '2026-07-30');
 
+    // An uncatalogued medication cannot inherit a q4wk calculation. The
+    // reusable complete-administration fixture therefore records the return
+    // date from its active order, while the dedicated Other regression below
+    // covers the intentionally blank/manual state before this step.
+    if (medication === 'Other') {
+      const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+      await register.getByRole('button', { name: 'Set return date…' }).click();
+      const returnDate = page.getByRole('dialog', { name: 'Record ordered return date' });
+      await fillDate(returnDate.getByLabel('Return date'), '2026-08-27');
+      await returnDate
+        .locator('.wfp-field', { hasText: 'Reason / order context' })
+        .locator('textarea')
+        .fill('Active order return date for browser fixture');
+      await returnDate.getByRole('button', { name: 'Record return date', exact: true }).click();
+    }
+
     await openInjectionTab(page, 'Administration');
-    if (medication === 'Haldol Dec.' || medication === 'Prolixin Dec.') {
+    if (medication === 'Other' || medication === 'Haldol Dec.' || medication === 'Prolixin Dec.') {
       await panel
         .locator('input[placeholder="Actual site / location per active order"]')
-        .fill('R ventrogluteal per active order');
+        .fill(medication === 'Other' ? 'R deltoid per active order' : 'R ventrogluteal per active order');
     } else {
       await panel
-        .getByText(medication === 'Other' ? 'R deltoid' : 'R ventrogluteal', { exact: true })
+        .getByText('R ventrogluteal', { exact: true })
         .click();
     }
 
@@ -216,9 +232,16 @@ test.describe('MA Workstation browser journeys', () => {
         .locator('.wfp-field', { hasText: 'Administration date' })
         .locator('input[data-workstation-date="date"]'), administrationDate);
 
+    // VIVITROL's supplied-needle attestation does not replace the current
+    // label-required habitus assessment. Choose a concrete assessment for
+    // the normal scheduled-administration fixtures; the dedicated regression
+    // below exercises the incomplete path.
+    await openInjectionTab(page, 'Administration');
+    await panel.locator('label.wfp-needle-band-option', { hasText: 'Average' }).click();
+
     await openInjectionTab(page, 'Verification');
     for (const label of [
-      'Preparation / mixing verified',
+      'VIVITROL reconstitution and suspension check completed',
       'Current opioid-risk / provider plan verified',
       'Naltrexone/hepatic review verified',
       'Supplied needle / body-habitus check'
@@ -261,6 +284,324 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Outcome');
     await expect(panel.getByRole('button', { name: 'Print current worksheet' })).toBeEnabled();
+  });
+
+  test('requires Vivitrol habitus selection without auto-documenting the suggested technique', async ({ page }) => {
+    const panel = await prepareRoutineInjection(page, {
+      patient: 'QA, Vivitrol Habitus',
+      medication: 'Vivitrol'
+    });
+
+    // The needle panel is reference guidance. It must not silently write a
+    // recommended gauge/length into the actual-technique documentation field.
+    await openInjectionTab(page, 'Order');
+    const technique = panel.locator('.wfp-field:has-text("Needle / technique") input');
+    await expect(technique).toHaveValue('');
+
+    await openInjectionTab(page, 'Verification');
+    for (const label of [
+      'VIVITROL reconstitution and suspension check completed',
+      'Current opioid-risk / provider plan verified',
+      'Naltrexone/hepatic review verified',
+      'Supplied needle / body-habitus check'
+    ]) {
+      await panel.locator('label.wfp-option-row', { hasText: label }).click();
+    }
+    await openInjectionTab(page, 'Outcome');
+    const administeredDisposition = panel.locator('label.wfp-option-row', {
+      hasText: 'Review complete — document administration'
+    });
+    await administeredDisposition.click();
+    await expect(administeredDisposition).toHaveClass(/is-selected/);
+
+    const finish = page.locator('[data-injection-record-actions] [data-injection-finish]');
+    await expect(finish).toBeDisabled();
+    await expect(finish).toHaveAttribute('title', /habitus/i);
+
+    await openInjectionTab(page, 'Administration');
+    await expect(panel.locator('[data-needle-unresolved]')).toContainText(
+      'body habitus to be assessed before each injection'
+    );
+    await panel.locator('label.wfp-needle-band-option', { hasText: 'Average' }).click();
+    await expect(panel.locator('input[name="inj-habitus"]:checked')).toHaveCount(1);
+    await expect(panel.locator('[data-needle-unresolved]')).toHaveCount(0);
+
+    await openInjectionTab(page, 'Order');
+    await expect(technique).toHaveValue('');
+    await openInjectionTab(page, 'Outcome');
+    // Changing a material administration fact clears a prior review choice so
+    // it must be explicitly reconfirmed against the resolved needle guidance.
+    await expect(administeredDisposition).not.toHaveClass(/is-selected/);
+    await administeredDisposition.click();
+    await expect(administeredDisposition).toHaveClass(/is-selected/);
+    await expect(finish).toBeEnabled();
+
+    // Recommendations remain separate from actual technique documentation
+    // across the typed-to-legacy draft bridge.
+    const actions = page.locator('[data-injection-record-actions]');
+    await actions.locator('[data-injection-save]').click();
+    await expect(actions).toContainText('SAVED LOCAL DRAFT');
+    await actions.locator('[data-injection-new]').click();
+    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: /Resume draft for QA, Vivitrol Habitus/ }).click();
+    await openInjectionTab(page, 'Order');
+    await expect(technique).toHaveValue('');
+  });
+
+  test('does not invent a numeric needle angle for Uzedy', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+
+    await openInjectionTab(page, 'Order');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Uzedy' });
+    await panel.locator('select[name="inj-dose"]').selectOption('100 mg');
+    await panel.locator('input[name="inj-route"]').fill('SubQ');
+    await openInjectionTab(page, 'Administration');
+
+    const needle = panel.getByRole('group', { name: 'Needle and technique' });
+    await expect(needle).toBeVisible();
+    await expect(needle.locator('.wfp-needle-readout-label', { hasText: /^Angle$/ })).toHaveCount(0);
+    await expect(needle).not.toContainText('45–90°');
+  });
+
+  test('keeps Other timing manual and preserves an explicit return date through a local draft', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+
+    await openInjectionTab(page, 'Order');
+    await panel.locator('input[placeholder="Last, First"]').fill('QA, Other Manual Return');
+    await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('04/05/1993');
+    await setProvider(panel, 'QA Ordering Provider');
+    await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
+    await panel.locator('.wfp-field:has-text("Medication name") input').fill('QA manual product');
+    await panel.locator('input[name="inj-dose"]').fill('100 mg');
+    await panel.locator('input[name="inj-route"]').fill('IM');
+    // A generic cadence may be recorded from the order, but it must never
+    // create a calculated target for an uncatalogued product.
+    await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
+    await fillDate(
+      panel
+        .locator('.wfp-field', { hasText: 'Administration date' })
+        .locator('input[data-workstation-date="date"]'),
+      '2026-08-14'
+    );
+
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    await expect(registerMarker(register)).toHaveText('PENDING');
+    await expect(registerValue(register, 'Next dose due')).toHaveText('—');
+    await expect(registerNote(register, 'Next dose due')).toContainText(
+      'enter the return date from the active order'
+    );
+    await expect(register).not.toContainText('CALC');
+    await register.getByRole('button', { name: 'Set return date…' }).click();
+
+    const returnDate = page.getByRole('dialog', { name: 'Record ordered return date' });
+    await expect(returnDate).toContainText('No product-specific calculated target applies');
+    await fillDate(returnDate.getByLabel('Return date'), '2026-09-11');
+    await returnDate
+      .locator('.wfp-field', { hasText: 'Reason / order context' })
+      .locator('textarea')
+      .fill('Active order directs this return date');
+    await returnDate.getByRole('button', { name: 'Record return date', exact: true }).click();
+
+    await expect(registerMarker(register)).toHaveText('OVR');
+    await expect(registerValue(register, 'Next dose due')).toHaveText('09/11/26');
+    await expect(registerNote(register, 'Next dose due')).toContainText(
+      'Active order directs this return date'
+    );
+    // Renaming the free-text product must not route through the legacy
+    // select-medication reset path and erase an already documented return
+    // date/provenance.
+    await panel.locator('.wfp-field:has-text("Medication name") input').fill('QA renamed manual product');
+    await expect(registerValue(register, 'Next dose due')).toHaveText('09/11/26');
+    await expect(registerNote(register, 'Next dose due')).toContainText(
+      'Active order directs this return date'
+    );
+    // A custom-name edit invokes legacy medication selection under the hood.
+    // The typed date must be written back after that bridge reset so neither
+    // the legacy worksheet nor the resumed typed draft loses the order date.
+    await expect.poll(() => page.evaluate(() =>
+      document.getElementById('nextDate')?.value ?? ''
+    )).toBe('2026-09-11');
+    await expect.poll(() => page.evaluate(() => {
+      window.renderInjectionWorksheet(false);
+      return document.querySelector('#injWorksheetSheet')?.textContent ?? '';
+    })).toMatch(/09\/11\/2026/);
+
+    const actions = page.locator('[data-injection-record-actions]');
+    await actions.locator('[data-injection-save]').click();
+    await expect(actions).toContainText('SAVED LOCAL DRAFT');
+    await actions.locator('[data-injection-new]').click();
+    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: /Resume draft for QA, Other Manual Return/ }).click();
+
+    await openInjectionTab(page, 'Order');
+    await expect(panel.locator('.wfp-field:has-text("Medication name") input')).toHaveValue(
+      'QA renamed manual product'
+    );
+    const resumedRegister = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    await expect(registerMarker(resumedRegister)).toHaveText('OVR');
+    await expect(registerValue(resumedRegister, 'Next dose due')).toHaveText('09/11/26');
+    await expect(registerNote(resumedRegister, 'Next dose due')).toContainText(
+      'Active order directs this return date'
+    );
+    await expect.poll(() => page.evaluate(() =>
+      document.getElementById('nextDate')?.value ?? ''
+    )).toBe('2026-09-11');
+    await expect.poll(() => page.evaluate(() => {
+      window.renderInjectionWorksheet(false);
+      return document.querySelector('#injWorksheetSheet')?.textContent ?? '';
+    })).toMatch(/09\/11\/2026/);
+  });
+
+  test('retains a provenance-free Other legacy return date for review instead of calculating it', async ({ page }) => {
+    const patient = 'QA, Other Legacy Return';
+    const panel = await prepareRoutineInjection(page, { patient });
+
+    await openInjectionTab(page, 'Order');
+    const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    await expect(registerMarker(register)).toHaveText('OVR');
+    await expect(registerValue(register, 'Next dose due')).toHaveText('08/27/26');
+
+    // Save a normal current-format draft, then start a genuinely blank record
+    // before changing the saved snapshot. This prevents the still-mounted
+    // typed editor from racing the historical fixture back to current
+    // provenance while we exercise the legacy restore boundary.
+    const actions = page.locator('[data-injection-record-actions]');
+    await actions.locator('[data-injection-save]').click();
+    await expect(actions).toContainText('SAVED LOCAL DRAFT');
+    await actions.locator('[data-injection-new]').click();
+    await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
+
+    // This is the actual v4 legacy shape: a visible legacy #nextDate, but no
+    // provenance and no retCustom flag. Mutate the already-saved historical
+    // snapshot (and browser storage used by the record list) directly.
+    const legacyShapePrepared = await page.evaluate((patientName) => {
+      const records = window.IPMGRecords?.list?.() ?? [];
+      const record = records.find((entry) => entry?.patient?.name === patientName);
+      if (!record?.snapshot) return null;
+      record.snapshot.documentation = { ...(record.snapshot.documentation ?? {}) };
+      delete record.snapshot.documentation.nextDose;
+      record.snapshot.state = {
+        ...(record.snapshot.state ?? {}),
+        retCustom: false,
+      };
+      record.snapshot.fields = {
+        ...(record.snapshot.fields ?? {}),
+        nextDate: '2026-08-27',
+      };
+      localStorage.setItem('ipmgMedAssistInjectionRecordsV1', JSON.stringify(records));
+      const snapshot = record.snapshot;
+      return {
+        nextDose: snapshot?.documentation?.nextDose ?? null,
+        retCustom: snapshot?.state?.retCustom ?? null,
+      };
+    }, patient);
+    expect(legacyShapePrepared).toEqual({ nextDose: null, retCustom: false });
+    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: new RegExp(`Resume draft for ${patient}`) }).click();
+
+    await openInjectionTab(page, 'Order');
+    const restoredRegister = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    await expect(registerMarker(restoredRegister)).toHaveText('REVIEW');
+    await expect(registerVerdict(restoredRegister)).toHaveText('NEEDS REVIEW');
+    await expect(registerValue(restoredRegister, 'Next dose due')).toHaveText('08/27/26');
+    await expect(registerNote(restoredRegister, 'Next dose due')).toContainText(
+      'legacy return date — verify against the active order'
+    );
+    await expect(restoredRegister).not.toContainText('CALC');
+    await expect.poll(() => page.evaluate(() =>
+      window.ipmgLegacyClinicalStateSnapshot().injection.documentation?.nextDose ?? null
+    )).toBeNull();
+    await expect.poll(() => page.evaluate(() => {
+      window.renderInjectionWorksheet(false);
+      return document.querySelector('#injWorksheetSheet')?.textContent ?? '';
+    })).toMatch(/legacy return date.*verify active order/i);
+    // A retained historical date is useful for staff review, but it cannot be
+    // presented to the patient as an approved next injection before manual
+    // active-order provenance is documented.
+    await expect.poll(() => page.evaluate(() => {
+      window.renderAVS();
+      return document.querySelector('#avsSheet')?.textContent ?? '';
+    })).toMatch(/not (?:been )?scheduled|call to schedule|unscheduled|verify active order/i);
+    await expect.poll(() => page.evaluate(() => {
+      window.renderAVS();
+      return document.querySelector('#avsSheet')?.textContent ?? '';
+    })).not.toMatch(/08\/27\/(?:20)?26/);
+
+    // The legacy date stays visible, but it is not an authorized return
+    // target. Once the disposition is otherwise ready, that missing active-
+    // order provenance is the blocker the operator must resolve.
+    await openInjectionTab(page, 'Outcome');
+    const administeredDisposition = panel.locator('label.wfp-option-row', {
+      hasText: 'Review complete — document administration'
+    });
+    const finish = page.locator('[data-injection-record-actions] [data-injection-finish]');
+    await expect(administeredDisposition).toHaveClass(/is-disabled/);
+    await expect(administeredDisposition).toHaveAttribute(
+      'title',
+      /Record the Other return date from the active order or provider direction/i
+    );
+    await expect(finish).toBeDisabled();
+
+    await openInjectionTab(page, 'Order');
+    await restoredRegister.getByRole('button', { name: 'Set return date…' }).click();
+    const returnDate = page.getByRole('dialog', { name: 'Record ordered return date' });
+    await returnDate
+      .locator('.wfp-field', { hasText: 'Reason / order context' })
+      .locator('textarea')
+      .fill('Active order return date confirmed after legacy draft review');
+    await returnDate.getByRole('button', { name: 'Record return date', exact: true }).click();
+    await expect(registerMarker(restoredRegister)).toHaveText('OVR');
+
+    await openInjectionTab(page, 'Outcome');
+    await expect(administeredDisposition).not.toHaveClass(/is-selected/);
+    await administeredDisposition.click();
+    await expect(finish).toBeEnabled();
+  });
+
+  test('mirrors and restores the Haldol visual-inspection verification through the legacy draft bridge', async ({ page }) => {
+    const patient = 'QA, Haldol Visual Inspection';
+    const panel = await prepareRoutineInjection(page, {
+      patient,
+      medication: 'Haldol Dec.'
+    });
+
+    await openInjectionTab(page, 'Verification');
+    const inspection = panel.getByRole('checkbox', {
+      name: 'HALDOL DECANOATE solution inspection completed'
+    });
+    await expect(inspection).not.toBeChecked();
+    await inspection.check();
+    await expect(inspection).toBeChecked();
+    await expect.poll(() => page.evaluate(() =>
+      window.ipmgLegacyClinicalStateSnapshot().injection
+    )).toMatchObject({
+      medicationKey: 'haldol',
+      verifications: { visualInspection: true }
+    });
+
+    const actions = page.locator('[data-injection-record-actions]');
+    await actions.locator('[data-injection-save]').click();
+    await expect(actions).toContainText('SAVED LOCAL DRAFT');
+    await actions.locator('[data-injection-new]').click();
+    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: new RegExp(`Resume draft for ${patient}`) }).click();
+
+    await openInjectionTab(page, 'Order');
+    await expect(panel.locator('.wfp-field:has-text("Needle / technique") input')).toHaveValue('');
+    await openInjectionTab(page, 'Verification');
+    await expect(
+      panel.getByRole('checkbox', {
+        name: 'HALDOL DECANOATE solution inspection completed'
+      })
+    ).toBeChecked();
+    await expect.poll(() => page.evaluate(() =>
+      window.ipmgLegacyClinicalStateSnapshot().injection.verifications.visualInspection
+    )).toBe(true);
   });
 
   test('keeps an expected-date Vivitrol administration neutral and allows attestation', async ({ page }) => {
@@ -1657,6 +1998,8 @@ test.describe('MA Workstation browser journeys', () => {
   });
 
   test('formats the administered Tebra copy and preserves new fields in a locked record snapshot', async ({ page }) => {
+    const haldolPreparationDocumentation =
+      'HALDOL DECANOATE solution was visually inspected and was clear, yellow to light amber, and free of visible debris.';
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
       origin: 'http://127.0.0.1:4173'
     });
@@ -1671,8 +2014,13 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Product');
     await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
+    await openInjectionTab(page, 'Verification');
+    await panel.getByRole('checkbox', {
+      name: 'HALDOL DECANOATE solution inspection completed'
+    }).check();
+
     await openInjectionTab(page, 'Administration');
-    await panel.locator('.wfp-field:has-text("Administration amount") input').fill('2');
+    await panel.locator('.wfp-field:has-text("mL administered") input').fill('2');
     await panel.locator('.wfp-field:has-text("Unit") select').selectOption('mL');
     await panel.locator('.wfp-field:has-text("Delivery device") select').selectOption({ label: 'Prefilled syringe' });
     await panel
@@ -1718,6 +2066,27 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#outPL')).toContainText('Traceability: NDC 00000-0000-42');
     await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
 
+    // Product helper copy is instructional at the point of care, but a
+    // checked product confirmation has to become a completed-event fact in
+    // the structured Assessment. Keep the visible legacy mirror, document
+    // viewer, and copied chart text on the same side of that boundary.
+    const assessment = page.locator('#outAS');
+    const productPreparationLine = `Product preparation: ${haldolPreparationDocumentation}`;
+    await expect(assessment).toContainText('Verification:');
+    await expect(assessment).toContainText(productPreparationLine);
+    await expect(assessment).not.toContainText('Inspect the solution before administration.');
+
+    const viewerAssessment = page
+      .locator('.cd2004-inspector-window .cd2004-note-section')
+      .filter({ hasText: 'Assessment' });
+    await expect(viewerAssessment).toHaveCount(1);
+    await expect(viewerAssessment.locator('.cd2004-note-body')).toContainText(productPreparationLine);
+    await expect(viewerAssessment.locator('.cd2004-note-body'))
+      .not.toContainText('Inspect the solution before administration.');
+    await viewerAssessment.getByRole('button', { name: 'Copy Assessment section' }).click();
+    await expect.poll(async () => page.evaluate(() => navigator.clipboard.readText()))
+      .toContain(productPreparationLine);
+
     const shellCopyAll = page
       .locator('.cd2004-inspector-window')
       .getByRole('button', { name: 'Copy note', exact: true });
@@ -1725,11 +2094,32 @@ test.describe('MA Workstation browser journeys', () => {
     await shellCopyAll.click();
     await expect.poll(async () => {
       const copied = await page.evaluate(() => navigator.clipboard.readText());
-      return ['Administration: Haldol Dec.', 'Date/time: 7/30/26 0941', 'Traceability: NDC 00000-0000-42']
+      return [
+        'Administration: Haldol Dec.',
+        'Date/time: 7/30/26 0941',
+        'Traceability: NDC 00000-0000-42',
+        productPreparationLine
+      ]
         .every(fragment => copied.includes(fragment));
     }).toBe(true);
     const copiedNote = await page.evaluate(() => navigator.clipboard.readText());
     expect(copiedNote).not.toMatch(/(?:^|\n)(?:CC|ASSESSMENT|PLAN):/);
+    expect(copiedNote).not.toContain('Inspect the solution before administration.');
+
+    // The print worksheet remains a distinct clinical worksheet, not a
+    // second chart-note renderer. It uses the same encounter values while
+    // keeping the completed preparation statement in the chart document.
+    await page.evaluate(() => {
+      window.renderInjectionWorksheet(false);
+      document.body.classList.add('print-inj-worksheet');
+    });
+    await page.emulateMedia({ media: 'print' });
+    const printedWorksheet = page.locator('#injWorksheetSheet');
+    await expect(printedWorksheet).toBeVisible();
+    await expect(printedWorksheet).toContainText('Haldol Dec.');
+    await expect(printedWorksheet).not.toContainText(productPreparationLine);
+    await page.emulateMedia({ media: 'screen' });
+    await page.evaluate(() => document.body.classList.remove('print-inj-worksheet'));
 
     // Only the worksheet lifecycle strip can begin the lock. The preview is
     // read-only, and a local attestation confirms the exact record context.
@@ -1895,7 +2285,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Verification');
     await panel
       .locator('label.wfp-option-row')
-      .filter({ hasText: /^Preparation \/ mixing verified/ })
+      .filter({ hasText: /^ABILIFY MAINTENA reconstitution and inspection completed/ })
       .click();
     await panel
       .locator('label.wfp-option-row')
@@ -2357,8 +2747,9 @@ test.describe('MA Workstation browser journeys', () => {
     await setProvider(panel, 'QA Ordering Provider');
 
     await openInjectionTab(page, 'Order');
-    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
-    await panel.locator('input[name="inj-dose"]').fill('100 mg');
+    await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
+    await panel.locator('select[name="inj-dose"]').selectOption('156 mg');
+    await panel.locator('input[name="inj-route"]').fill('IM');
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
     await openInjectionTab(page, 'Schedule');

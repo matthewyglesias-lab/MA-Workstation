@@ -271,6 +271,25 @@ export const injectionTimingReviewFingerprint = (
     encounter.initiation?.sustennaOrder ?? "",
   ]);
 
+/**
+ * A manually entered return target is actionable only when its audit context
+ * still binds to the value being displayed. This is shared by the UI marker
+ * and the custom-medication finalization gate so a legacy date cannot look
+ * unreviewed while still being lockable.
+ */
+export const hasCompleteManualNextDoseProvenance = (
+  provenance: InjectionNextDoseProvenance | undefined,
+  nextDoseDate: string,
+): boolean =>
+  Boolean(
+    provenance?.source === "manual" &&
+      provenance.value === nextDoseDate &&
+      provenance.overrideKind &&
+      provenance.overrideReason?.trim() &&
+      provenance.recordedAt &&
+      (provenance.overrideKind !== "provider-direction" || provenance.overrideProvider?.trim()),
+  );
+
 export const hasCurrentLateDoseReview = (
   encounter: InjectionEncounter,
 ): boolean => {
@@ -381,7 +400,7 @@ const buildNeedleProjection = (
   return {
     resolution,
     notes: techniqueNotesFor(medication, encounter.dose, encounter.site),
-    ...(administration ? { angle: administration.angle } : {}),
+    ...(administration?.angle ? { angle: administration.angle } : {}),
     ...(administration?.siteRestriction
       ? { siteRestriction: administration.siteRestriction }
       : {}),
@@ -1204,7 +1223,8 @@ export const verificationLabels: Record<MedicationVerificationKey, string> = {
   opioidFree: "Current opioid-risk / provider plan verified",
   naltrexHS: "Naltrexone/hepatic review verified",
   suppliedNeedle: "Supplied needle / body-habitus check",
-  resuspend: "Preparation / mixing verified",
+  resuspend: "Product-specific preparation verified",
+  visualInspection: "Product visual inspection verified",
   invegaInit: "Initiation / re-initiation plan verified",
   oralOverlap: "Ordered oral initiation plan documented",
   stabilized: "Stabilized on prerequisite LAI",
@@ -1215,27 +1235,22 @@ export const verificationLabels: Record<MedicationVerificationKey, string> = {
   deepZtrack: "Ordered route / technique verified",
 };
 
-/**
- * Universal, product-independent close to the preparation check - every
- * reconstituted or resuspended product warrants a visual check, and adding it
- * here means it is never missed for a product whose own label happens not to
- * spell it out.
- */
-const PARTICULATE_DISCOLORATION_STATEMENT =
-  "Inspect for particulate matter or discoloration before administration.";
+/** The persisted verification key is intentionally stable, while the visible
+ * meaning is sourced from the selected product's reference. */
+export const medicationVerificationLabel = (
+  medication: InjectionMedication | null,
+  key: MedicationVerificationKey,
+): string =>
+  medication?.clinicalReference?.catalog.verificationDetails?.[key]?.label ??
+  verificationLabels[key];
+
+export const isMedicationPreparationVerification = (key: MedicationVerificationKey): boolean =>
+  key === "resuspend" || key === "visualInspection";
 
 /**
- * The "Preparation / mixing verified" checklist item's product-specific
- * detail - shown under the checkbox and folded into the note's clinical
- * review sentence. Built only from the medication's own sourced
- * administration.notes ("preparation" phase), the same content already
- * shown in the Reference panel, so this never introduces wording beyond what
- * the product's own label already says. Returns "" for a medication with no
- * genuine mixing/reconstitution step (a ready-to-use oil solution, for
- * example), which is what keeps the checklist item itself from ever being
- * offered for that medication - see the catalog's own `verifications` list,
- * which is the actual gate; this function only supplies wording once that
- * gate has already decided the item applies.
+ * The selected product's sourced preparation detail, shown beneath its
+ * preparation or inspection attestation. It never appends a generic step that
+ * its label did not state.
  */
 export const medicationPreparationGuidance = (
   medication: InjectionMedication | null,
@@ -1245,9 +1260,18 @@ export const medicationPreparationGuidance = (
   const notes = techniqueNotesFor(medication, dose, site).filter(
     (note) => note.phase === "preparation",
   );
-  if (!notes.length) return "";
-  return [...notes.map((note) => note.statement), PARTICULATE_DISCOLORATION_STATEMENT].join(" ");
+  return notes.map((note) => note.statement).join(" ");
 };
+
+/** Concise, product-specific language for the signed clinical review. */
+export const medicationVerificationDocumentation = (
+  medication: InjectionMedication | null,
+  key: MedicationVerificationKey,
+  dose: string,
+  site: string,
+): string =>
+  medication?.clinicalReference?.catalog.verificationDetails?.[key]?.documentation ??
+  (key === "resuspend" ? medicationPreparationGuidance(medication, dose, site) : "");
 
 const parseBp = (value = ""): { systolic: number; diastolic: number } | null => {
   const match = value.trim().match(/(\d{2,3})\s*\/\s*(\d{2,3})/);
@@ -1505,6 +1529,76 @@ const evaluateTimingWithCadence = (
   encounter: InjectionEncounter,
   medication: InjectionMedication,
 ): InjectionTimingEvaluation => {
+  // A nonblank prior date is a documented clinical datum, even for a
+  // non-scheduled encounter.  The engine raises the corresponding hard stop
+  // below; keep timing neutral here so a malformed value does not also create
+  // a second, less-actionable cadence warning.
+  if (encounter.priorDoseDate && !isValidIsoDate(encounter.priorDoseDate)) {
+    return {
+      state: "idle",
+      daysSincePrior: null,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate: "",
+      earliestDate: "",
+      latestDate: "",
+      cadenceLabel: "",
+      late: false,
+      message: "Verify the prior-dose date; use a real calendar date.",
+    };
+  }
+  if (medication.key === "other") {
+    // "Other" intentionally has no product cadence, window, or calculated
+    // return date.  It still represents a clinical administration record,
+    // though, so never let opting out of a catalog product bypass the basic
+    // fact that a prior dose cannot occur after the documented administration.
+    const daysSincePrior = encounter.priorDoseDate
+      ? differenceInCalendarDays(encounter.priorDoseDate, encounter.administrationDate)
+      : null;
+    if (daysSincePrior === null && encounter.priorDoseDate) {
+      return {
+        state: "warning",
+        daysSincePrior: null,
+        earliestDay: null,
+        latestDay: null,
+        expectedDate: "",
+        earliestDate: "",
+        latestDate: "",
+        cadenceLabel: "",
+        late: false,
+        message: "Verify the prior-dose and administration dates.",
+      };
+    }
+    if (daysSincePrior !== null && daysSincePrior < 0) {
+      return {
+        state: "stop",
+        daysSincePrior,
+        earliestDay: null,
+        latestDay: null,
+        expectedDate: "",
+        earliestDate: "",
+        latestDate: "",
+        cadenceLabel: "",
+        late: false,
+        message: "The administration date is before the prior-dose date; verify the dates.",
+      };
+    }
+    return {
+      state: "idle",
+      daysSincePrior,
+      earliestDay: null,
+      latestDay: null,
+      expectedDate: "",
+      earliestDate: "",
+      latestDate: "",
+      cadenceLabel: "",
+      late: false,
+      message:
+        encounter.intervalKey === "once" || medication.intervalKey === "once"
+          ? "One-time Other order; no routine return date is required."
+          : "No product-specific timing guidance is available for Other. Document the active order and an explicit return date.",
+    };
+  }
   if (encounter.intervalKey === "once" || medication.intervalKey === "once") {
     return {
       state: "ok",
@@ -2082,6 +2176,21 @@ const evaluateDetails = (
       stops.push(issue("stop", code, message, "details.volume", "administration"));
     }
   });
+  if (
+    encounter.medicationKey === "haldol" &&
+    !details.volume?.trim() &&
+    !details.volumeUnit?.trim()
+  ) {
+    stops.push(
+      issue(
+        "stop",
+        "administration.volume-required",
+        "Document the mL administered at the selected site so the 3 mL per-site limit can be checked.",
+        "details.volume",
+        "administration",
+      ),
+    );
+  }
   if (details.volume?.trim() && details.volumeUnit?.trim()) {
     const volume = Number(details.volume.trim());
     if (!Number.isFinite(volume) || volume <= 0) {
@@ -2094,20 +2203,28 @@ const evaluateDetails = (
           "administration",
         ),
       );
-    } else if (
-      encounter.medicationKey === "haldol" &&
-      details.volumeUnit.trim().toLowerCase() === "ml" &&
-      volume > 3
-    ) {
-      stops.push(
-        issue(
-          "stop",
-          "administration.volume-max",
-          "Haldol volume must be no more than 3 mL per injection site; verify the order and product concentration.",
-          "details.volume",
-          "administration",
-        ),
-      );
+    } else if (encounter.medicationKey === "haldol") {
+      if (details.volumeUnit.trim().toLowerCase() !== "ml") {
+        stops.push(
+          issue(
+            "stop",
+            "administration.volume-unit",
+            "Document the Haldol volume in mL so the 3 mL per-site limit can be checked.",
+            "details.volumeUnit",
+            "administration",
+          ),
+        );
+      } else if (volume > 3) {
+        stops.push(
+          issue(
+            "stop",
+            "administration.volume-max",
+            "Haldol volume must be no more than 3 mL per injection site; verify the order and product concentration.",
+            "details.volume",
+            "administration",
+          ),
+        );
+      }
     }
   }
   if (details.device === "Other" && !details.deviceOther?.trim()) {
@@ -2317,6 +2434,13 @@ const buildRequirementProjection = (
   set("intervalKey", administrationDocumented ? "required" : "hidden", "medication");
   set("technique", administrationDocumented ? "optional" : "hidden", "administration");
   set(
+    "habitus",
+    administrationDocumented && medication?.clinicalReference?.administration.requiresHabitusAssessment
+      ? "required"
+      : "optional",
+    "administration",
+  );
+  set(
     "priorDoseDate",
     administrationDocumented
       ? encounter.reason === "scheduled"
@@ -2392,8 +2516,19 @@ const buildRequirementProjection = (
   set("initiation.second.note", paired ? "optional" : "hidden", "initiation");
   set("secondAdministrationTime", paired ? "required" : "hidden", "administration");
 
-  set("details.volume", administrationDocumented ? "optional" : "hidden", "administration");
-  set("details.volumeUnit", administrationDocumented ? "optional" : "hidden", "administration");
+  const requiresVolumeForSelectedSite = Boolean(
+    medication?.clinicalReference?.administration.maxVolumePerSite,
+  );
+  set(
+    "details.volume",
+    administrationDocumented ? (requiresVolumeForSelectedSite ? "required" : "optional") : "hidden",
+    "administration",
+  );
+  set(
+    "details.volumeUnit",
+    administrationDocumented ? (requiresVolumeForSelectedSite ? "required" : "optional") : "hidden",
+    "administration",
+  );
   set("details.device", administrationDocumented ? "optional" : "hidden", "administration");
   set(
     "details.deviceOther",
@@ -2573,7 +2708,7 @@ const buildGuidanceProjection = (
     section: "safety",
     title: requiredVerifications.length ? "Required medication checks" : "Safety review",
     message: requiredVerifications.length
-      ? requiredVerifications.map((key) => verificationLabels[key]).join("; ")
+      ? requiredVerifications.map((key) => medicationVerificationLabel(medication, key)).join("; ")
       : "Complete the applicable safety review and record an exception only when it is actually present.",
     classification: "label constraint",
   });
@@ -2733,6 +2868,51 @@ export const InjectionEngine: ClinicalEngine<
         );
       }
 
+      // An entered prior-dose date is a clinical datum whether the visit ends
+      // in administration or a documented handoff.  A malformed value must
+      // never be carried into a final handoff note simply because product
+      // administration was held or escalated.
+      if (encounter.priorDoseDate && !isValidIsoDate(encounter.priorDoseDate)) {
+        stops.push(
+          issue(
+            "stop",
+            "timing.prior-dose-invalid",
+            "Verify the prior-dose date; use a real calendar date.",
+            "priorDoseDate",
+            "timing",
+          ),
+        );
+      }
+
+      // "Other" has no safe product cadence.  A visible return date is only
+      // meaningful when its active-order/provider-direction provenance still
+      // binds to that exact date.  Apply this to non-administration handoffs
+      // as well: otherwise an old calculated date could be printed in a
+      // final held/escalated note without an order basis.
+      if (medication.key === "other" && encounter.nextDoseDate) {
+        if (!isValidIsoDate(encounter.nextDoseDate)) {
+          stops.push(
+            issue(
+              "stop",
+              "followup.next-dose-invalid",
+              "Verify the next-dose date; use a real calendar date.",
+              "nextDoseDate",
+              "follow-up",
+            ),
+          );
+        } else if (!hasCompleteManualNextDoseProvenance(encounter.details?.nextDose, encounter.nextDoseDate)) {
+          stops.push(
+            issue(
+              "stop",
+              "followup.other-return-order",
+              "Record the Other return date from the active order or provider direction before finalizing this record.",
+              "nextDoseDate",
+              "follow-up",
+            ),
+          );
+        }
+      }
+
       if (administrationPath) {
         if (medication.key === "other" && !encounter.customMedication?.trim()) {
           stops.push(
@@ -2872,7 +3052,7 @@ export const InjectionEngine: ClinicalEngine<
           // clinically required Day 8 ± 4-day window.
           expectedNextDoseDate = addCalendarDays(encounter.administrationDate, 7);
           calculatedDates.expectedNextDoseDate = expectedNextDoseDate;
-        } else if (encounter.administrationDate && encounter.intervalKey) {
+        } else if (medication.key !== "other" && encounter.administrationDate && encounter.intervalKey) {
           expectedNextDoseDate = calculateNextInjectionDate(
             medication,
             encounter.intervalKey,
@@ -2892,7 +3072,11 @@ export const InjectionEngine: ClinicalEngine<
               "follow-up",
             ),
           );
-        } else if (encounter.nextDoseDate && !isValidIsoDate(encounter.nextDoseDate)) {
+        } else if (
+          medication.key !== "other" &&
+          encounter.nextDoseDate &&
+          !isValidIsoDate(encounter.nextDoseDate)
+        ) {
           stops.push(
             issue(
               "stop",
@@ -3005,7 +3189,7 @@ export const InjectionEngine: ClinicalEngine<
               issue(
                 "stop",
                 `verification.${verification}`,
-                `Complete medication-specific verification: ${verificationLabels[verification]}.`,
+                `Complete medication-specific verification: ${medicationVerificationLabel(medication, verification)}.`,
                 `verifications.${verification}`,
                 "medication",
               ),
@@ -3139,18 +3323,17 @@ export const InjectionEngine: ClinicalEngine<
     // would just get worked around. The panel shows an unresolved
     // recommendation on its own.
     //
-    // A warning is raised only where the label itself requires habitus be
-    // assessed before administration, because a warning also moves the record
-    // from "ready" to "review". Applying it wherever a rule merely needs input
-    // would soft-gate every ordinary encounter.
+    // A stop is raised only where the label itself requires habitus be assessed
+    // before administration. Applying it wherever a rule merely needs input
+    // would hard-gate ordinary encounters without a label basis.
     if (
       needle.resolution.unresolved &&
       dispositionKind === "administered" &&
       medication?.clinicalReference?.administration.requiresHabitusAssessment
     ) {
-      warnings.push(
+      stops.push(
         issue(
-          "warning",
+          "stop",
           "needle.unresolved",
           needle.resolution.unresolvedReason ??
             "Needle selection for this product depends on documented body habitus or weight.",

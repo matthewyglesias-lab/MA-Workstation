@@ -60,6 +60,9 @@ declare global {
         reviewFingerprint?: string;
       };
       documentation?: InjectionDocumentationMetadata;
+      /** Preserve a typed manually-recorded return date across legacy
+       * medication selection/rendering, which otherwise resets retCustom. */
+      nextDoseManual?: boolean;
     }) => void;
     /**
      * Pull accessor for the typed RC6.1 note-fact set, read by
@@ -108,7 +111,6 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
   setLegacyFieldValue("nextDate", encounter.nextDoseDate);
   setLegacyFieldValue("admin", encounter.administeredBy);
   setLegacyFieldValue("allergies", encounter.allergies);
-  setLegacyFieldValue("tech", encounter.technique ?? "");
   setLegacyFieldValue("ndc", encounter.traceability.ndc);
   setLegacyFieldValue("lot", encounter.traceability.lot);
   setLegacyFieldValue("exp", encounter.traceability.expiration);
@@ -229,5 +231,23 @@ export function mirrorInjectionEncounterToLegacyDom(encounter: InjectionEncounte
       reviewFingerprint: disposition.reviewFingerprint,
     },
     documentation,
+    // Pre-provenance Other drafts can contain a legacy return date without a
+    // `documentation.nextDose` object.  There is no safe product cadence to
+    // regenerate it from, so retain the visible value through the legacy
+    // renderer as an unreviewed manual/legacy date. The typed panel marks it
+    // for active-order review before staff can rely on it.
+    nextDoseManual:
+      details.nextDose?.source === "manual" ||
+      (encounter.medicationKey === "other" && Boolean(encounter.nextDoseDate)),
   });
+  // Selecting or renaming an Other medication in the legacy bridge clears
+  // #nextDate before the manual-return flag is restored.  Write the typed
+  // value again after that selection path so an active-order return date
+  // survives the same medication/name edit that triggered the bridge.
+  setLegacyFieldValue("nextDate", encounter.nextDoseDate);
+  // Selecting a product inside the legacy compatibility bridge pre-fills its
+  // historical `m.tech` suggestion. The typed encounter is authoritative,
+  // and an empty actual-technique field must remain empty rather than being
+  // silently converted into a suggested clinical statement on save/reopen.
+  setLegacyFieldValue("tech", encounter.technique ?? "");
 }

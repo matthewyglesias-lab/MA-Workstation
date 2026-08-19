@@ -11,7 +11,7 @@ import type {
  * provenance behind those decisions.  It also keeps the Knowledge Center from
  * becoming a second, hand-maintained medication catalog.
  */
-export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.18.1";
+export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.18.3";
 export const INJECTION_CLINICAL_REFERENCE_REVIEWED_ON = "2026-08-05";
 
 /**
@@ -21,6 +21,14 @@ export const INJECTION_CLINICAL_REFERENCE_REVIEWED_ON = "2026-08-05";
  * dosing/window fact was re-verified on this date, which it was not.
  */
 export const INJECTION_ADMINISTRATION_REVIEWED_ON = "2026-08-14";
+
+/**
+ * Preparation instructions are reviewed independently from the scheduling
+ * facts and administration mechanics. This lets the application show the
+ * source date for product handling without claiming the whole reference
+ * bundle was re-reviewed on the same day.
+ */
+export const INJECTION_PREPARATION_REVIEWED_ON = "2026-08-18";
 
 export type ClinicalReferenceClassification =
   | "label constraint"
@@ -99,8 +107,24 @@ export interface InjectionMedicationReferenceCatalog {
   verificationRequirements?: Partial<
     Record<InjectionClinicalPhase, MedicationVerificationKey[]>
   >;
+  /** Product-specific wording for a persisted verification key. */
+  verificationDetails?: Partial<
+    Record<MedicationVerificationKey, InjectionMedicationVerificationDetail>
+  >;
   missedDoseGuidance: string;
   siteGuidance: InjectionSiteGuidance;
+}
+
+/**
+ * The verifier stores only a stable boolean key. Its visible and documented
+ * meaning must still be specific to the product rather than assuming every
+ * preparation is a reconstitution or every product needs the same inspection.
+ */
+export interface InjectionMedicationVerificationDetail {
+  label: string;
+  documentation: string;
+  classification: ClinicalReferenceClassification;
+  source: ClinicalReferenceSource;
 }
 
 export interface InjectionMedicationKnowledge {
@@ -121,7 +145,8 @@ export type InjectionSiteGroup = "deltoid" | "gluteal" | "subq";
  * rather than a computed BMI: the aripiprazole labels say "non-obese/obese",
  * the VIVITROL label says "very lean" and "larger amount of subcutaneous
  * tissue", and neither is a number this app is entitled to derive. `lean` and
- * `average` both satisfy a "non-obese" rule; `larger` satisfies "obese".
+ * `average` both satisfy a "non-obese" rule for aripiprazole products; VIVITROL
+ * offers either supplied administration needle for an average habitus.
  */
 export type InjectionHabitusBand = "lean" | "average" | "larger";
 
@@ -174,16 +199,16 @@ export interface InjectionAdministrationReference {
   needleUnresolved: string;
   /**
    * Set only where the label itself requires body habitus be assessed before
-   * administration, which makes an undocumented habitus a review item rather
-   * than merely an unresolved recommendation.
+   * administration, which makes an undocumented habitus a stop rather than
+   * merely an unresolved recommendation.
    *
-   * Deliberately narrow. Every product's needle guidance is advisory and
-   * shown in the panel; raising an engine warning also moves the record from
-   * "ready" to "review", so it is reserved for a stated label requirement
+   * Deliberately narrow. Every product's needle guidance is shown in the
+   * panel, but a hard requirement is reserved for a stated label requirement
    * rather than applied wherever a rule happens to need input.
    */
   requiresHabitusAssessment?: boolean;
-  angle: { degrees: string; note: string };
+  /** Omitted when the label does not prescribe a numeric angle. */
+  angle?: { degrees: string; note: string };
   maxVolumePerSite?: {
     milliliters: number;
     classification: ClinicalReferenceClassification;
@@ -240,6 +265,25 @@ const administrationSource = (
   reviewedOn: INJECTION_ADMINISTRATION_REVIEWED_ON,
 });
 
+/** Same source, restated at the preparation-content review date. */
+const preparationSource = (
+  source: ClinicalReferenceSource,
+): ClinicalReferenceSource => ({
+  ...source,
+  reviewedOn: INJECTION_PREPARATION_REVIEWED_ON,
+});
+
+const verificationDetail = (
+  label: string,
+  documentation: string,
+  source: ClinicalReferenceSource,
+): InjectionMedicationVerificationDetail => ({
+  label,
+  documentation,
+  classification: "label constraint",
+  source: preparationSource(source),
+});
+
 const techniqueNote = (
   id: string,
   phase: InjectionTechniquePhase,
@@ -254,16 +298,12 @@ const techniqueNote = (
   severity,
   classification,
   statement,
-  source: administrationSource(source),
+  source: phase === "preparation" ? preparationSource(source) : administrationSource(source),
   ...(scope?.doses ? { doses: scope.doses } : {}),
   ...(scope?.siteGroups ? { siteGroups: scope.siteGroups } : {}),
 });
 
 const IM_ANGLE = { degrees: "90", note: "Insert at 90° into the muscle." };
-const SUBQ_ANGLE = {
-  degrees: "45–90",
-  note: "Insert at 45°–90° depending on tissue depth and needle length.",
-};
 
 const sources = {
   aristada: labelSource(
@@ -384,6 +424,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           initiation: ["resuspend", "oralOverlap"],
           reinitiation: ["resuspend", "oralOverlap"],
         },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "ARISTADA syringe preparation completed",
+            "ARISTADA syringe was tapped at least 10 times and shaken vigorously for at least 30 seconds to obtain a uniform suspension.",
+            sources.aristada,
+          ),
+        },
         missedDoseGuidance:
           "Use the current product-specific re-initiation table and active provider/pharmacist plan.",
         siteGuidance: "aristada-dose",
@@ -452,7 +499,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "info",
             "label constraint",
-            "Tap the syringe at least 10 times, then shake vigorously for at least 30 seconds. Re-shake if more than a short delay passes before injection.",
+            "Tap the syringe at least 10 times, then shake vigorously for at least 30 seconds. If more than 15 minutes pass before injection, shake again for 30 seconds.",
             sources.aristada,
           ),
           techniqueNote(
@@ -511,9 +558,29 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         windowAfter: 0,
         verifications: ["resuspend"],
         verificationRequirements: { maintenance: ["resuspend"], initiation: ["resuspend"], reinitiation: ["resuspend"] },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "ARISTADA INITIO syringe preparation completed",
+            "ARISTADA INITIO syringe was tapped at least 10 times and shaken vigorously for at least 30 seconds to obtain a uniform suspension.",
+            sources.initio,
+          ),
+        },
         missedDoseGuidance: "One-time initiation component; follow the active initiation plan.",
         siteGuidance: "all-im",
       },
+      conditionalRequirements: [
+        {
+          id: "initio-phase",
+          code: "initio.phase",
+          severity: "stop",
+          field: "reason",
+          section: "initiation",
+          message:
+            "ARISTADA INITIO is a one-time initiation or re-initiation component. Select the applicable path and document the active provider plan; do not file it as scheduled maintenance.",
+          classification: "label constraint",
+          phases: ["maintenance", "loading", "prn"],
+        },
+      ],
       knowledge: {
         className: "LAI initiation component",
         technique: "Use the product kit and current label instructions.",
@@ -557,7 +624,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "info",
             "label constraint",
-            "Shake vigorously per the current label before injection.",
+            "Tap the syringe at least 10 times, then shake vigorously for at least 30 seconds. If more than 15 minutes pass before injection, shake again for 30 seconds.",
             sources.initio,
           ),
           techniqueNote(
@@ -603,6 +670,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           maintenance: ["resuspend"],
           initiation: ["resuspend", "invegaInit"],
           reinitiation: ["resuspend", "invegaInit"],
+        },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "INVEGA SUSTENNA suspension shaken and visually inspected",
+            "INVEGA SUSTENNA syringe was shaken vigorously for at least 10 seconds to obtain a homogeneous suspension; no foreign matter or discoloration was observed.",
+            sources.sustenna,
+          ),
         },
         missedDoseGuidance:
           "Use the current product-specific missed-dose table and active provider/pharmacist plan.",
@@ -656,7 +730,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "caution",
             "label constraint",
-            "Shake vigorously for at least 15 seconds within 5 minutes of administration. If more than 5 minutes pass, shake again for at least 30 seconds.",
+            "Shake vigorously for at least 10 seconds to ensure a homogeneous suspension. Inspect for foreign matter or discoloration before administration when product and container permit.",
             sources.sustenna,
           ),
           techniqueNote(
@@ -710,6 +784,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           maintenance: ["resuspend"],
           initiation: ["resuspend", "paliperidoneTolerability"],
           reinitiation: ["resuspend", "paliperidoneTolerability"],
+        },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "ERZOFRI suspension preparation completed",
+            "ERZOFRI syringe was shaken vigorously for at least 10 seconds to obtain a homogeneous suspension.",
+            sources.erzofri,
+          ),
         },
         missedDoseGuidance:
           "Use the current ERZOFRI missed-dose table and active provider/pharmacist plan.",
@@ -778,7 +859,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "info",
             "label constraint",
-            "Shake vigorously per the current product directions until the suspension is uniform, then inspect before injecting.",
+            "Shake vigorously for at least 10 seconds to ensure a homogeneous suspension. Do not mix with another product or diluent, and do not substitute kit components.",
             sources.erzofri,
           ),
           techniqueNote(
@@ -834,6 +915,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           initiation: ["resuspend", "stabilized"],
           reinitiation: ["resuspend", "stabilized"],
         },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "INVEGA TRINZA suspension shaken and visually inspected",
+            "INVEGA TRINZA syringe was shaken vigorously for at least 15 seconds within 5 minutes before administration; a uniform milky-white suspension was confirmed with no foreign matter or discoloration observed.",
+            sources.trinza,
+          ),
+        },
         missedDoseGuidance:
           "Use the current dose-specific INVEGA TRINZA missed-dose table and active provider/pharmacist plan.",
         siteGuidance: "all-im",
@@ -885,7 +973,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "caution",
             "label constraint",
-            "Shake vigorously with the syringe tip pointing up for at least 15 seconds within 5 minutes of administration.",
+            "Inspect for foreign matter or discoloration. With the syringe tip pointing up, shake vigorously for at least 15 seconds and inject within 5 minutes. Confirm a uniform milky-white suspension; small air bubbles are normal. If more than 5 minutes pass before injection, shake again with the syringe tip pointing up for at least 15 seconds to re-suspend the medication.",
             sources.trinza,
           ),
           techniqueNote(
@@ -933,6 +1021,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           initiation: ["resuspend", "stabilized"],
           reinitiation: ["resuspend", "stabilized"],
         },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "INVEGA HAFYERA resuspension and visual inspection completed",
+            "INVEGA HAFYERA syringe was shaken very fast for at least 15 seconds, rested briefly, then shaken for another 15 seconds; a uniform, thick, milky-white suspension was confirmed with no particulate matter or discoloration observed.",
+            sources.hafyera,
+          ),
+        },
         missedDoseGuidance:
           "Use the current dose-specific INVEGA HAFYERA missed-dose table and active provider/pharmacist plan.",
         siteGuidance: "gluteal-im",
@@ -973,7 +1068,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "info",
             "label constraint",
-            "Shake vigorously per the current label before injection.",
+            "Inspect for particulate matter or discoloration. With the syringe tip cap up, shake very fast for at least 15 seconds, rest briefly, then shake again for 15 seconds. Proceed immediately and confirm a uniform, thick, milky-white suspension; small air bubbles are normal. If solids, uneven mix, or thin liquid remain, repeat the shaking sequence.",
             sources.hafyera,
           ),
           techniqueNote(
@@ -1026,6 +1121,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         timingMode: "orderVerify",
         verifications: ["resuspend"],
         verificationRequirements: { maintenance: ["resuspend"], initiation: ["resuspend"], reinitiation: ["resuspend"] },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "UZEDY room-temperature, product, and bubble checks completed",
+            "UZEDY kit was allowed to reach room temperature in its package for at least 30 minutes; the suspension was opaque white-to-off-white and free of non-white particles, and the visible bubble was positioned at the syringe cap.",
+            sources.uzedy,
+          ),
+        },
         missedDoseGuidance:
           "Give the next injection as soon as possible per the active order and current product information.",
         siteGuidance: "subq",
@@ -1046,7 +1148,6 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved: "",
-        angle: SUBQ_ANGLE,
         siteRestriction: {
           headline: "Subcutaneous only — abdomen or upper arm",
           detail:
@@ -1066,7 +1167,23 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "info",
             "label constraint",
-            "Remove from the refrigerator and allow to reach room temperature for at least 30 minutes before injection.",
+            "Leave the unopened kit in its packaging and allow it to reach room temperature for at least 30 minutes. Do not warm it by another method. Confirm an opaque white-to-off-white suspension free of non-white particles and an intact kit before use.",
+            sources.uzedy,
+          ),
+          techniqueNote(
+            "uzedy-bubble-position",
+            "preparation",
+            "caution",
+            "label constraint",
+            "Forcefully flick the syringe downward three times to move the bubble to the cap, repeating the step if needed. Do not expel the visible bubble; failure to move it can cause incomplete dosing.",
+            sources.uzedy,
+          ),
+          techniqueNote(
+            "uzedy-angle-order-directed",
+            "mechanics",
+            "info",
+            "label constraint",
+            "Select the injection angle based on the amount of subcutaneous tissue, following the current product instructions.",
             sources.uzedy,
           ),
           techniqueNote(
@@ -1138,6 +1255,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           initiation: ["resuspend", "oralOverlap"],
           reinitiation: ["resuspend", "oralOverlap"],
         },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "ABILIFY MAINTENA reconstitution and inspection completed",
+            "The ordered ABILIFY MAINTENA presentation was reconstituted; the suspension was uniform, homogeneous, opaque, and milky-white with no particulate matter or discoloration observed.",
+            sources.maintena,
+          ),
+        },
         missedDoseGuidance:
           "Verify the prescribed initiation or re-initiation plan against the active order and current product information.",
         siteGuidance: "all-im",
@@ -1195,7 +1319,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "info",
             "label constraint",
-            "Prepare the ordered vial or prefilled presentation according to the current product instructions and inspect before injecting.",
+            "The dual-chamber syringe and vial have different reconstitution procedures. Confirm the ordered presentation, then follow its current product instructions and inspect the reconstituted suspension before injection.",
             sources.maintena,
           ),
         ],
@@ -1235,6 +1359,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           maintenance: ["resuspend", "glutealOnly", "noMassage"],
           initiation: ["resuspend", "aripiprazoleTolerability", "glutealOnly", "noMassage"],
           reinitiation: ["resuspend", "aripiprazoleTolerability", "glutealOnly", "noMassage"],
+        },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "ABILIFY ASIMTUFII suspension prepared and visually inspected",
+            "ABILIFY ASIMTUFII syringe was tapped at least 10 times and shaken vigorously for at least 10 seconds; a uniform, opaque, milky-white suspension was confirmed with no particulate matter or discoloration observed.",
+            sources.asimtufii,
+          ),
         },
         missedDoseGuidance:
           "Verify restart timing against the active order and current product information.",
@@ -1284,7 +1415,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "preparation",
             "info",
             "label constraint",
-            "Tap the syringe about 10 times, then shake for at least 10 seconds, and inspect before injecting.",
+            "Tap the syringe on the hand at least 10 times, then shake vigorously for at least 10 seconds until the medication is uniform. Inspect for particulate matter or discoloration before injection.",
             sources.asimtufii,
           ),
           techniqueNote(
@@ -1334,6 +1465,13 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           loading: ["resuspend", "opioidFree", "naltrexHS", "suppliedNeedle"],
           prn: ["resuspend", "opioidFree", "naltrexHS", "suppliedNeedle"],
         },
+        verificationDetails: {
+          resuspend: verificationDetail(
+            "VIVITROL reconstitution and suspension check completed",
+            "VIVITROL was allowed to reach room temperature and reconstituted with supplied diluent; a milky-white, clump-free suspension that moved freely down the vial walls was confirmed, and 4 mL was prepared for immediate administration.",
+            sources.vivitrol,
+          ),
+        },
         missedDoseGuidance:
           "Use the active provider order and current product information; reassess current opioid-risk status.",
         siteGuidance: "gluteal-im",
@@ -1341,7 +1479,8 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
       knowledge: {
         className: "Opioid antagonist LAI (monthly)",
         technique: "Use the supplied needle selected for body habitus and current deep-gluteal administration instructions.",
-        preparation: "Prepare and administer according to the supplied kit and current product instructions.",
+        preparation:
+          "Powder-and-diluent kit; reconstitute only with supplied components and verify a milky-white, clump-free suspension before immediate administration.",
         storage: "Use current carton and label storage instructions.",
         staffGuardrail: "Do not treat a generic timing calculation as clinical clearance; opioid-risk and contraindication review remain required for each administration.",
       },
@@ -1359,10 +1498,18 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
           {
             siteGroups: ["gluteal"],
-            habitus: ["lean", "average"],
+            habitus: ["lean"],
             needle: { gauge: "20G", length: '1½"', descriptor: "customized kit needle" },
             rationale:
-              "Standard supplied administration needle; in very lean patients this length helps avoid contacting the periosteum.",
+              "In very lean patients, this supplied length helps avoid contacting the periosteum.",
+          },
+          {
+            siteGroups: ["gluteal"],
+            habitus: ["average"],
+            needle: { gauge: "20G", length: '1½"', descriptor: "customized kit needle" },
+            alternate: { gauge: "20G", length: '2"', descriptor: "customized kit needle" },
+            rationale:
+              "Either supplied administration needle may be used for an average amount of subcutaneous tissue; select and document the appropriate length.",
           },
         ],
         needleUnresolved:
@@ -1416,6 +1563,22 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             sources.vivitrol,
           ),
           techniqueNote(
+            "vivitrol-reconstitution",
+            "preparation",
+            "caution",
+            "label constraint",
+            "Using only the supplied components, inject 3.4 mL of diluent into the microsphere vial and shake vigorously for about 1 minute. Confirm a milky-white, clump-free suspension that moves freely down the vial walls.",
+            sources.vivitrol,
+          ),
+          techniqueNote(
+            "vivitrol-transfer",
+            "preparation",
+            "caution",
+            "label constraint",
+            "Immediately withdraw 4.2 mL with the supplied 1-inch preparation needle. Replace it with the selected supplied administration needle and prepare 4 mL for injection; the preparation needle is not for administration.",
+            sources.vivitrol,
+          ),
+          techniqueNote(
             "vivitrol-administer-immediately",
             "preparation",
             "caution",
@@ -1462,14 +1625,22 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         windowBefore: 0,
         windowAfter: 0,
         timingMode: "orderVerify",
-        verifications: [],
+        verifications: ["visualInspection"],
+        verificationDetails: {
+          visualInspection: verificationDetail(
+            "HALDOL DECANOATE solution inspection completed",
+            "HALDOL DECANOATE solution was visually inspected and was clear, yellow to light amber, and free of visible debris.",
+            sources.haldol,
+          ),
+        },
         missedDoseGuidance: "Late-dose handling is individualized by the prescriber.",
         siteGuidance: "order-directed",
       },
       knowledge: {
         className: "Typical antipsychotic LAI",
         technique: "Deep IM; label specifies a 21-gauge needle and maximum 3 mL per injection site. Actual site/technique follows the active order and local policy.",
-        preparation: "Oil solution; inspect and prepare per current product instructions.",
+        preparation:
+          "Ready-to-use solution; inspect for debris, clarity, and the labeled yellow-to-light-amber color before use.",
         storage: "Store and protect from light according to the current carton and label.",
         staffGuardrail: "Do not imply a gluteal-only or Z-track requirement. Verify initial-dose splitting, exact dose, and technique against the active order.",
       },
@@ -1485,13 +1656,20 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved: "",
-        angle: IM_ANGLE,
         maxVolumePerSite: {
           milliliters: 3,
           classification: "label constraint",
           note: "The label specifies a maximum of 3 mL per injection site.",
         },
         notes: [
+          techniqueNote(
+            "haldol-inspection",
+            "preparation",
+            "caution",
+            "label constraint",
+            "Inspect the solution before administration. Do not use it if debris is present or if it is not clear and yellow to light amber.",
+            sources.haldol,
+          ),
           techniqueNote(
             "haldol-gauge",
             "needle",
@@ -1506,14 +1684,6 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
             "info",
             "label constraint",
             "Administer by deep intramuscular injection. Do not administer intravenously.",
-            sources.haldol,
-          ),
-          techniqueNote(
-            "haldol-oil-solution",
-            "mechanics",
-            "info",
-            "local policy",
-            "This is an oil solution and may inject more slowly than an aqueous product. Inject steadily and document any unusual resistance, pain, or site reaction.",
             sources.haldol,
           ),
           techniqueNote(
@@ -1556,14 +1726,22 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         windowBefore: 0,
         windowAfter: 0,
         timingMode: "orderVerify",
-        verifications: [],
+        verifications: ["visualInspection"],
+        verificationDetails: {
+          visualInspection: verificationDetail(
+            "Dry equipment and applicable solution inspection completed",
+            "Fluphenazine decanoate was visually inspected, when solution and container permitted, with no particulate matter or discoloration observed; dry preparation equipment was used.",
+            sources.prolixin,
+          ),
+        },
         missedDoseGuidance: "Late-dose handling is individualized by the prescriber.",
         siteGuidance: "order-directed",
       },
       knowledge: {
         className: "Typical antipsychotic LAI",
         technique: "IM or subcutaneous administration; use a dry syringe and needle of at least 21 gauge per the current label.",
-        preparation: "Oil solution; inspect and prepare per current product instructions.",
+        preparation:
+          "Ready-to-use oil solution; visually inspect when the solution and container permit, and use dry preparation equipment.",
         storage: "Use current carton and label storage instructions.",
         staffGuardrail: "Do not invent an anatomical default. Record the actual ordered route/site and follow provider/local technique direction.",
       },
@@ -1581,8 +1759,15 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved: "",
-        angle: IM_ANGLE,
         notes: [
+          techniqueNote(
+            "prolixin-inspection",
+            "preparation",
+            "caution",
+            "label constraint",
+            "Visually inspect parenteral products for particulate matter and discoloration whenever solution and container permit.",
+            sources.prolixin,
+          ),
           techniqueNote(
             "prolixin-dry-syringe",
             "preparation",

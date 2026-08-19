@@ -267,6 +267,18 @@ async function selectInjectionTab(page, name) {
   await page.locator('.wfp-panel').getByRole('tab', { name: currentLabel, exact: true }).click();
 }
 
+async function recordOtherReturnDate(page, panel, date, reason) {
+  await selectInjectionTab(page, 'Order');
+  await panel.getByRole('button', { name: 'Set return date…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Record ordered return date' });
+  await fillDate(dialog.getByLabel('Return date'), date);
+  await dialog
+    .locator('.wfp-field', { hasText: 'Reason / order context' })
+    .locator('textarea')
+    .fill(reason);
+  await dialog.getByRole('button', { name: 'Record return date', exact: true }).click();
+}
+
 async function prepareReadyInjection(page) {
   await openWorkflow(page, 'administer');
   const panel = page.locator('.wfp-panel');
@@ -285,9 +297,17 @@ async function prepareReadyInjection(page) {
     panel
       .locator('.wfp-field', { hasText: 'Administration date' })
       .locator('input[data-workstation-date="date"]'), FIXED_DATE_KEY);
+  await recordOtherReturnDate(
+    page,
+    panel,
+    '2026-08-27',
+    'Active order return date for visual fixture'
+  );
 
   await selectInjectionTab(page, 'Administration');
-  await panel.getByText('R deltoid', { exact: true }).click();
+  await panel
+    .locator('input[placeholder="Actual site / location per active order"]')
+    .fill('R deltoid');
   await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Alex Rivera, MA');
   await panel.locator('input[type="time"]').first().fill('10:30');
 

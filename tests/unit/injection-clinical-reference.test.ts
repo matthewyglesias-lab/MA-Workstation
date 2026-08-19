@@ -224,10 +224,10 @@ describe("phase-specific Injection guidance", () => {
   });
 
   // Vivitrol is a true two-component reconstitution kit, unlike the
-  // ready-to-use decanoates - it was the one gated-mixing product missing
-  // its own "resuspend" verification, so a mixing error had nowhere to be
-  // documented or blocked.
-  it("now requires resuspend/mixing verification for Vivitrol, closing the reconstitution-kit gap", () => {
+  // ready-to-use decanoates. Its kit-preparation verification and the label's
+  // per-administration habitus assessment must both be completed before the
+  // record can be finalized.
+  it("requires Vivitrol kit preparation and habitus assessment before finalizing", () => {
     const encounter = administered("vivitrol");
     encounter.dose = "380 mg";
     encounter.site = "R ventrogluteal";
@@ -240,8 +240,16 @@ describe("phase-specific Injection guidance", () => {
     expect(result.output.canFinalize).toBe(false);
 
     encounter.verifications = { ...encounter.verifications, resuspend: true };
+    const preparationResolved = InjectionEngine.evaluate(encounter, {
+      today: encounter.administrationDate,
+    });
+    expect(stopCodes(preparationResolved)).not.toContain("verification.resuspend");
+    expect(stopCodes(preparationResolved)).toContain("needle.unresolved");
+    expect(preparationResolved.output.canFinalize).toBe(false);
+
+    encounter.habitus = "average";
     const resolved = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
-    expect(stopCodes(resolved)).not.toContain("verification.resuspend");
+    expect(stopCodes(resolved)).not.toContain("needle.unresolved");
     expect(resolved.output.canFinalize).toBe(true);
   });
 

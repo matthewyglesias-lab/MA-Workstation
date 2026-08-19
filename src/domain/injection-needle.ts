@@ -209,7 +209,7 @@ export const formatTechniquePrefill = (
     (route.trim().toLowerCase() === "subq" ||
       route.trim().toLowerCase().includes("subcut") ||
       resolution.siteGroup === "subq");
-  const angle = isSubcutaneous ? undefined : administration?.angle.degrees;
+  const angle = isSubcutaneous ? undefined : administration?.angle?.degrees;
   if (placement && angle) parts.push(`${placement} at ${angle}°`);
   else if (placement) parts.push(placement);
   return `${parts.join(", ")}.`;

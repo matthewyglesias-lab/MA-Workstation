@@ -50,6 +50,18 @@ async function prepareExplicitNormalUdsPrintFixture(page) {
     .getByRole('button', { name: 'Mark displayed panels NEG' }).click();
 }
 
+async function recordOtherReturnDate(page, panel, date, reason) {
+  await panel.getByRole('tab', { name: 'Order & Timing', exact: true }).click();
+  await panel.getByRole('button', { name: 'Set return date…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Record ordered return date' });
+  await fillDate(dialog.getByLabel('Return date'), date);
+  await dialog
+    .locator('.wfp-field', { hasText: 'Reason / order context' })
+    .locator('textarea')
+    .fill(reason);
+  await dialog.getByRole('button', { name: 'Record return date', exact: true }).click();
+}
+
 async function preparePrintableInjection(page) {
   await bootWorkstation(page);
   await openWorkflow(page, 'Injection', 'administer');
@@ -75,9 +87,19 @@ async function preparePrintableInjection(page) {
     panel
       .locator('.wfp-field', { hasText: 'Administration date' })
       .locator('input[data-workstation-date="date"]'), '2026-07-30');
+  // Other has no catalog cadence. Preserve the historical print date with
+  // the active-order documentation that now authorizes it.
+  await recordOtherReturnDate(
+    page,
+    panel,
+    '2026-08-27',
+    'Active order return date for print fixture'
+  );
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
-  await panel.getByText('R deltoid', { exact: true }).click();
+  await panel
+    .locator('input[placeholder="Actual site / location per active order"]')
+    .fill('R deltoid');
 
   await panel.getByRole('tab', { name: 'Product', exact: true }).click();
   await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-01');
@@ -475,7 +497,9 @@ async function prepareMinimalAvsInjection(page) {
   await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
-  await panel.getByText('R deltoid', { exact: true }).click();
+  await panel
+    .locator('input[placeholder="Actual site / location per active order"]')
+    .fill('R deltoid');
 
   await panel.getByRole('tab', { name: 'Review', exact: true }).click();
   // Prove the real user-facing gate: the button is reachable and enabled
@@ -523,7 +547,9 @@ test.describe('unchanged clinical print surfaces', () => {
     await panel.locator('select[name="inj-interval"]').selectOption('q4wk');
 
     await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
-    await panel.getByText('R deltoid', { exact: true }).click();
+    await panel
+      .locator('input[placeholder="Actual site / location per active order"]')
+      .fill('R deltoid');
 
     await panel.getByRole('tab', { name: 'Review', exact: true }).click();
     const printButton = panel.locator('.cd2004-command-button:has-text("Print AVS")');
