@@ -14,12 +14,16 @@ import {
   type MedicationVerificationKey,
 } from "../../src/domain";
 import { injectionEncounterToDocumentationInput } from "../../src/documentation/adapters/injection-from-encounter";
+import { DocumentationEngine } from "../../src/documentation";
 
 type PreparationCase = {
   key: Exclude<InjectionMedicationKey, "other">;
   verification: MedicationVerificationKey;
   label: string;
   documentation: string;
+  /** Present only when the product's checked preparation/inspection fact
+   * explicitly supports a normal-result statement in the note. */
+  normalResult?: string;
   guidance: readonly string[];
 };
 
@@ -33,85 +37,106 @@ const preparationCases: readonly PreparationCase[] = [
   {
     key: "aristada",
     verification: "resuspend",
-    label: "Suspension preparation verified",
-    documentation: "ARISTADA suspension preparation",
+    label: "ARISTADA syringe preparation completed",
+    documentation:
+      "ARISTADA syringe was tapped at least 10 times and shaken vigorously for at least 30 seconds to obtain a uniform suspension.",
     guidance: ["Tap the syringe at least 10 times", "more than 15 minutes"],
   },
   {
     key: "initio",
     verification: "resuspend",
-    label: "Suspension preparation verified",
-    documentation: "ARISTADA INITIO suspension preparation",
+    label: "ARISTADA INITIO syringe preparation completed",
+    documentation:
+      "ARISTADA INITIO syringe was tapped at least 10 times and shaken vigorously for at least 30 seconds to obtain a uniform suspension.",
     guidance: ["Tap the syringe at least 10 times", "more than 15 minutes"],
   },
   {
     key: "sustenna",
     verification: "resuspend",
-    label: "Suspension preparation verified",
-    documentation: "INVEGA SUSTENNA was shaken for at least 10 seconds",
+    label: "INVEGA SUSTENNA suspension shaken and visually inspected",
+    documentation:
+      "INVEGA SUSTENNA syringe was shaken vigorously for at least 10 seconds to obtain a homogeneous suspension; no foreign matter or discoloration was observed.",
+    normalResult: "no foreign matter or discoloration was observed.",
     guidance: ["at least 10 seconds", "foreign matter or discoloration"],
   },
   {
     key: "erzofri",
     verification: "resuspend",
-    label: "Suspension preparation verified",
-    documentation: "ERZOFRI suspension preparation",
+    label: "ERZOFRI suspension preparation completed",
+    documentation:
+      "ERZOFRI syringe was shaken vigorously for at least 10 seconds to obtain a homogeneous suspension.",
     guidance: ["at least 10 seconds", "Do not mix with another product or diluent"],
   },
   {
     key: "trinza",
     verification: "resuspend",
-    label: "Suspension preparation verified",
-    documentation: "INVEGA TRINZA suspension preparation",
+    label: "INVEGA TRINZA suspension shaken and visually inspected",
+    documentation:
+      "INVEGA TRINZA syringe was shaken vigorously for at least 15 seconds within 5 minutes before administration; a uniform milky-white suspension was confirmed with no foreign matter or discoloration observed.",
+    normalResult: "no foreign matter or discoloration observed.",
     guidance: ["at least 15 seconds", "inject within 5 minutes"],
   },
   {
     key: "hafyera",
     verification: "resuspend",
-    label: "Resuspension and visual integrity verified",
-    documentation: "INVEGA HAFYERA resuspension",
+    label: "INVEGA HAFYERA resuspension and visual inspection completed",
+    documentation:
+      "INVEGA HAFYERA syringe was shaken very fast for at least 15 seconds, rested briefly, then shaken for another 15 seconds; a uniform, thick, milky-white suspension was confirmed with no particulate matter or discoloration observed.",
+    normalResult: "no particulate matter or discoloration observed.",
     guidance: ["shake very fast for at least 15 seconds", "shake again for 15 seconds"],
   },
   {
     key: "uzedy",
     verification: "resuspend",
-    label: "Room-temperature and bubble preparation verified",
-    documentation: "UZEDY room-temperature",
+    label: "UZEDY room-temperature, product, and bubble checks completed",
+    documentation:
+      "UZEDY kit was allowed to reach room temperature in its package for at least 30 minutes; the suspension was opaque white-to-off-white and free of non-white particles, and the visible bubble was positioned at the syringe cap.",
+    normalResult: "free of non-white particles",
     guidance: ["at least 30 minutes", "Forcefully flick the syringe downward three times"],
   },
   {
     key: "maintena",
     verification: "resuspend",
-    label: "Ordered-presentation reconstitution verified",
-    documentation: "Ordered ABILIFY MAINTENA presentation",
+    label: "ABILIFY MAINTENA reconstitution and inspection completed",
+    documentation:
+      "The ordered ABILIFY MAINTENA presentation was reconstituted; the suspension was uniform, homogeneous, opaque, and milky-white with no particulate matter or discoloration observed.",
+    normalResult: "no particulate matter or discoloration observed.",
     guidance: ["dual-chamber syringe and vial have different reconstitution procedures"],
   },
   {
     key: "asimtufii",
     verification: "resuspend",
-    label: "Suspension preparation verified",
-    documentation: "ABILIFY ASIMTUFII suspension preparation",
+    label: "ABILIFY ASIMTUFII suspension prepared and visually inspected",
+    documentation:
+      "ABILIFY ASIMTUFII syringe was tapped at least 10 times and shaken vigorously for at least 10 seconds; a uniform, opaque, milky-white suspension was confirmed with no particulate matter or discoloration observed.",
+    normalResult: "no particulate matter or discoloration observed.",
     guidance: ["at least 10 seconds until the medication is uniform", "particulate matter or discoloration"],
   },
   {
     key: "vivitrol",
     verification: "resuspend",
-    label: "Kit reconstitution verified",
-    documentation: "VIVITROL kit reconstitution",
+    label: "VIVITROL reconstitution and suspension check completed",
+    documentation:
+      "VIVITROL was allowed to reach room temperature and reconstituted with supplied diluent; a milky-white, clump-free suspension that moved freely down the vial walls was confirmed, and 4 mL was prepared for immediate administration.",
+    normalResult: "milky-white, clump-free suspension",
     guidance: ["inject 3.4 mL of diluent", "withdraw 4.2 mL", "prepare 4 mL for injection"],
   },
   {
     key: "haldol",
     verification: "visualInspection",
-    label: "Solution inspection verified",
-    documentation: "HALDOL DECANOATE solution inspected",
+    label: "HALDOL DECANOATE solution inspection completed",
+    documentation:
+      "HALDOL DECANOATE solution was visually inspected and was clear, yellow to light amber, and free of visible debris.",
+    normalResult: "clear, yellow to light amber, and free of visible debris.",
     guidance: ["debris", "yellow to light amber"],
   },
   {
     key: "prolixin",
     verification: "visualInspection",
-    label: "Dry equipment and applicable solution inspection verified",
-    documentation: "Fluphenazine decanoate visual inspection",
+    label: "Dry equipment and applicable solution inspection completed",
+    documentation:
+      "Fluphenazine decanoate was visually inspected, when solution and container permitted, with no particulate matter or discoloration observed; dry preparation equipment was used.",
+    normalResult: "no particulate matter or discoloration observed",
     guidance: ["whenever solution and container permit", "Use a dry syringe"],
   },
 ];
@@ -197,12 +222,71 @@ describe("injection preparation guidance", () => {
           medication.doses[0] ?? "",
           medication.defaultSite,
         ),
-      ).toContain(preparationCase.documentation);
+      ).toBe(preparationCase.documentation);
+      // The live workflow remains instruction-oriented; the charted fact is
+      // a product-specific completed event, never a mechanical rewrite of the
+      // imperative helper text.
+      expect(preparationCase.documentation).not.toMatch(
+        /^(Tap|Shake|Inspect|Allow|Use|Reconstitute|Prepare)\b/,
+      );
       for (const expectedInstruction of preparationCase.guidance) {
         expect(guidance, `${preparationCase.key}: ${expectedInstruction}`).toContain(
           expectedInstruction,
         );
       }
+      if (preparationCase.normalResult) {
+        expect(preparationCase.documentation, preparationCase.key).toContain(
+          preparationCase.normalResult,
+        );
+      }
+    }
+  });
+
+  it("keeps every checked preparation fact in its own chart line and omits it when unchecked", () => {
+    for (const preparationCase of preparationCases) {
+      const encounter = administered(preparationCase.key);
+      if (preparationCase.key === "initio") {
+        encounter.reason = "initiation";
+        encounter.intervalKey = "once";
+        encounter.priorDoseDate = "";
+        encounter.nextDoseDate = "";
+      }
+      if (preparationCase.key === "haldol") {
+        encounter.details = { productSource: "Clinic stock", volume: "2", volumeUnit: "mL" };
+      }
+      if (preparationCase.key === "vivitrol") {
+        encounter.habitus = "average";
+      }
+      const requirements = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+      encounter.verifications = Object.fromEntries(
+        requirements.output.requiredVerifications.map((key) => [key, true]),
+      );
+
+      const evaluation = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
+      const input = injectionEncounterToDocumentationInput(encounter, evaluation);
+      if (!input?.noteFacts) throw new Error(`expected note facts for ${preparationCase.key}`);
+      const note = DocumentationEngine.format("injection", input, evaluation);
+
+      expect(input.noteFacts.productPreparation, preparationCase.key).toBe(
+        preparationCase.documentation,
+      );
+      expect(note.assessment, preparationCase.key).toContain(
+        `Product preparation: ${preparationCase.documentation}`,
+      );
+      expect(note.plan, preparationCase.key).not.toContain(preparationCase.documentation);
+      expect(note.assessment, preparationCase.key).not.toContain(
+        `Clinical review: ${preparationCase.documentation}`,
+      );
+
+      encounter.verifications = {};
+      const uncheckedEvaluation = InjectionEngine.evaluate(encounter, {
+        today: encounter.administrationDate,
+      });
+      const uncheckedInput = injectionEncounterToDocumentationInput(encounter, uncheckedEvaluation);
+      // An unchecked required preparation verification cannot produce a
+      // finalizable compact note, which is stronger than merely hiding the
+      // product-preparation line from a chart-ready document.
+      expect(uncheckedInput?.noteFacts, preparationCase.key).toBeUndefined();
     }
   });
 

@@ -241,7 +241,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Verification');
     for (const label of [
-      'Kit reconstitution verified',
+      'VIVITROL reconstitution and suspension check completed',
       'Current opioid-risk / provider plan verified',
       'Naltrexone/hepatic review verified',
       'Supplied needle / body-habitus check'
@@ -300,7 +300,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Verification');
     for (const label of [
-      'Kit reconstitution verified',
+      'VIVITROL reconstitution and suspension check completed',
       'Current opioid-risk / provider plan verified',
       'Naltrexone/hepatic review verified',
       'Supplied needle / body-habitus check'
@@ -571,7 +571,9 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await openInjectionTab(page, 'Verification');
-    const inspection = panel.getByRole('checkbox', { name: /Solution inspection verified/ });
+    const inspection = panel.getByRole('checkbox', {
+      name: 'HALDOL DECANOATE solution inspection completed'
+    });
     await expect(inspection).not.toBeChecked();
     await inspection.check();
     await expect(inspection).toBeChecked();
@@ -592,7 +594,11 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Order');
     await expect(panel.locator('.wfp-field:has-text("Needle / technique") input')).toHaveValue('');
     await openInjectionTab(page, 'Verification');
-    await expect(panel.getByRole('checkbox', { name: /Solution inspection verified/ })).toBeChecked();
+    await expect(
+      panel.getByRole('checkbox', {
+        name: 'HALDOL DECANOATE solution inspection completed'
+      })
+    ).toBeChecked();
     await expect.poll(() => page.evaluate(() =>
       window.ipmgLegacyClinicalStateSnapshot().injection.verifications.visualInspection
     )).toBe(true);
@@ -1992,6 +1998,8 @@ test.describe('MA Workstation browser journeys', () => {
   });
 
   test('formats the administered Tebra copy and preserves new fields in a locked record snapshot', async ({ page }) => {
+    const haldolPreparationDocumentation =
+      'HALDOL DECANOATE solution was visually inspected and was clear, yellow to light amber, and free of visible debris.';
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
       origin: 'http://127.0.0.1:4173'
     });
@@ -2007,7 +2015,9 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.wfp-field:has-text("Medication source") select').selectOption({ label: 'Clinic sample' });
 
     await openInjectionTab(page, 'Verification');
-    await panel.getByRole('checkbox', { name: /Solution inspection verified/ }).check();
+    await panel.getByRole('checkbox', {
+      name: 'HALDOL DECANOATE solution inspection completed'
+    }).check();
 
     await openInjectionTab(page, 'Administration');
     await panel.locator('.wfp-field:has-text("mL administered") input').fill('2');
@@ -2056,6 +2066,27 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#outPL')).toContainText('Traceability: NDC 00000-0000-42');
     await expect(page.locator('#outPL')).toContainText('Product source: Clinic sample');
 
+    // Product helper copy is instructional at the point of care, but a
+    // checked product confirmation has to become a completed-event fact in
+    // the structured Assessment. Keep the visible legacy mirror, document
+    // viewer, and copied chart text on the same side of that boundary.
+    const assessment = page.locator('#outAS');
+    const productPreparationLine = `Product preparation: ${haldolPreparationDocumentation}`;
+    await expect(assessment).toContainText('Verification:');
+    await expect(assessment).toContainText(productPreparationLine);
+    await expect(assessment).not.toContainText('Inspect the solution before administration.');
+
+    const viewerAssessment = page
+      .locator('.cd2004-inspector-window .cd2004-note-section')
+      .filter({ hasText: 'Assessment' });
+    await expect(viewerAssessment).toHaveCount(1);
+    await expect(viewerAssessment.locator('.cd2004-note-body')).toContainText(productPreparationLine);
+    await expect(viewerAssessment.locator('.cd2004-note-body'))
+      .not.toContainText('Inspect the solution before administration.');
+    await viewerAssessment.getByRole('button', { name: 'Copy Assessment section' }).click();
+    await expect.poll(async () => page.evaluate(() => navigator.clipboard.readText()))
+      .toContain(productPreparationLine);
+
     const shellCopyAll = page
       .locator('.cd2004-inspector-window')
       .getByRole('button', { name: 'Copy note', exact: true });
@@ -2063,11 +2094,32 @@ test.describe('MA Workstation browser journeys', () => {
     await shellCopyAll.click();
     await expect.poll(async () => {
       const copied = await page.evaluate(() => navigator.clipboard.readText());
-      return ['Administration: Haldol Dec.', 'Date/time: 7/30/26 0941', 'Traceability: NDC 00000-0000-42']
+      return [
+        'Administration: Haldol Dec.',
+        'Date/time: 7/30/26 0941',
+        'Traceability: NDC 00000-0000-42',
+        productPreparationLine
+      ]
         .every(fragment => copied.includes(fragment));
     }).toBe(true);
     const copiedNote = await page.evaluate(() => navigator.clipboard.readText());
     expect(copiedNote).not.toMatch(/(?:^|\n)(?:CC|ASSESSMENT|PLAN):/);
+    expect(copiedNote).not.toContain('Inspect the solution before administration.');
+
+    // The print worksheet remains a distinct clinical worksheet, not a
+    // second chart-note renderer. It uses the same encounter values while
+    // keeping the completed preparation statement in the chart document.
+    await page.evaluate(() => {
+      window.renderInjectionWorksheet(false);
+      document.body.classList.add('print-inj-worksheet');
+    });
+    await page.emulateMedia({ media: 'print' });
+    const printedWorksheet = page.locator('#injWorksheetSheet');
+    await expect(printedWorksheet).toBeVisible();
+    await expect(printedWorksheet).toContainText('Haldol Dec.');
+    await expect(printedWorksheet).not.toContainText(productPreparationLine);
+    await page.emulateMedia({ media: 'screen' });
+    await page.evaluate(() => document.body.classList.remove('print-inj-worksheet'));
 
     // Only the worksheet lifecycle strip can begin the lock. The preview is
     // read-only, and a local attestation confirms the exact record context.
@@ -2233,7 +2285,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openInjectionTab(page, 'Verification');
     await panel
       .locator('label.wfp-option-row')
-      .filter({ hasText: /^Ordered-presentation reconstitution verified/ })
+      .filter({ hasText: /^ABILIFY MAINTENA reconstitution and inspection completed/ })
       .click();
     await panel
       .locator('label.wfp-option-row')
