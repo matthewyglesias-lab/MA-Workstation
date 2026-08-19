@@ -11,6 +11,12 @@ import {
 } from "../../src/domain/injection";
 import { injectionEncounterToDocumentationInput } from "../../src/documentation/adapters/injection-from-encounter";
 import { DocumentationEngine } from "../../src/documentation";
+import { INJECTION_MEDICATIONS, preferredIntervalForDose } from "../../src/domain/injection-catalog";
+import {
+  doseChangePatch,
+  intervalChangePatch,
+  medicationChangePatch,
+} from "../../src/domain/injection-panel-actions";
 
 const requiredInjectionAttestations = {
   id2: true,
@@ -204,5 +210,88 @@ describe("injectionInitiationOptions / injectionInitiationConfig", () => {
     const config = injectionInitiationConfig("maintena-provider", "maintena");
     expect(config!.kind).toBe("provider");
     expect(config!.title).toBe("Restart / provider plan");
+  });
+});
+
+describe("medicationChangePatch", () => {
+  it("prefills dose, route, and interval when switching to a single-dose medication", () => {
+    const encounter = routineInjection(); // starts on "haldol"
+    const result = medicationChangePatch(encounter, "vivitrol");
+    expect(result.invalidated).toBe(true);
+    expect(result.encounter).toMatchObject({
+      medicationKey: "vivitrol",
+      customMedication: "",
+      dose: "380 mg",
+      site: "",
+      route: INJECTION_MEDICATIONS.vivitrol.route,
+      intervalKey: INJECTION_MEDICATIONS.vivitrol.intervalKey,
+      nextDoseDate: "",
+      verifications: {},
+    });
+    expect(result.encounter.traceability?.ndc).toBe("");
+    expect(result.encounter.initiation).toEqual(emptyInjectionInitiation());
+  });
+
+  it("leaves dose and interval unresolved when switching to a multi-dose medication with no prior selection", () => {
+    const encounter = emptyInjectionEncounter();
+    const result = medicationChangePatch(encounter, "haldol");
+    expect(result.invalidated).toBe(false);
+    expect(result.encounter.dose).toBe("");
+    expect(result.encounter.intervalKey).toBe(INJECTION_MEDICATIONS.haldol.intervalKey);
+  });
+
+  it("clears route, dose, and interval without crashing when switching to Other", () => {
+    const encounter = routineInjection();
+    const result = medicationChangePatch(encounter, "other");
+    expect(result.invalidated).toBe(true);
+    expect(result.encounter).toMatchObject({ route: "", dose: "", intervalKey: "" });
+  });
+
+  it("clears both NDC selections and the next-dose override on a medication change", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      details: {
+        ndcSelection: { primary: { ndc: "0000-000-00" }, pairedSecond: { ndc: "1111-111-11" } },
+        nextDose: { value: "2026-03-01", source: "manual" },
+      },
+    };
+    const result = medicationChangePatch(encounter, "vivitrol");
+    expect(result.details.ndcSelection).toMatchObject({ primary: undefined, pairedSecond: undefined });
+    expect(result.details.nextDose).toBeUndefined();
+  });
+});
+
+describe("doseChangePatch", () => {
+  it("recalculates the preferred interval for the catalog medication and clears the NDC and primary selection only", () => {
+    const encounter = routineInjection(); // haldol, dose "100 mg", intervalKey "q4wk"
+    const result = doseChangePatch(encounter, "300 mg");
+    expect(result.invalidated).toBe(true);
+    expect(result.encounter.dose).toBe("300 mg");
+    expect(result.encounter.intervalKey).toBe(
+      preferredIntervalForDose(INJECTION_MEDICATIONS.haldol, "300 mg", encounter.intervalKey),
+    );
+    expect(result.encounter.traceability?.ndc).toBe("");
+    expect(result.details.ndcSelection).toMatchObject({ primary: undefined });
+    // Unlike a medication change, a dose change does not touch the paired
+    // component's NDC or the next-dose override.
+    expect(result.details).not.toHaveProperty("nextDose");
+  });
+
+  it("is not flagged as invalidating the first time a dose is entered", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), dose: "" };
+    const result = doseChangePatch(encounter, "100 mg");
+    expect(result.invalidated).toBe(false);
+  });
+
+  it("keeps the current interval unchanged when no catalog medication is selected", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), medicationKey: "other" };
+    const result = doseChangePatch(encounter, "custom 50 mg");
+    expect(result.encounter.intervalKey).toBe(encounter.intervalKey);
+  });
+});
+
+describe("intervalChangePatch", () => {
+  it("returns a patch containing only the new interval", () => {
+    expect(intervalChangePatch("q6wk")).toEqual({ intervalKey: "q6wk" });
   });
 });

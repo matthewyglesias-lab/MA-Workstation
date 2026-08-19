@@ -38,13 +38,17 @@ import {
   INJECTION_INTERVAL_OPTIONS,
   INJECTION_MEDICATIONS,
   injectionSiteGroup,
-  preferredIntervalForDose,
   type InjectionIntervalKey,
   type InjectionMedication,
   type InjectionMedicationKey,
   type MedicationVerificationKey,
 } from "../../../domain/injection-catalog";
 import { formatNeedleSpec } from "../../../domain/injection-needle";
+import {
+  doseChangePatch,
+  intervalChangePatch,
+  medicationChangePatch,
+} from "../../../domain/injection-panel-actions";
 import type { InjectionHabitusBand } from "../../../domain/injection-clinical-reference";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { firstActionableClinicalIssue } from "../../../application/readiness-projection";
@@ -1471,75 +1475,28 @@ export function InjectionPanel({
     // A different product starts a different order context. Do not carry a
     // prior package choice or follow-up suggestion into it.
     autoCalculatedNextDue.current = "";
-    if (encounter.medicationKey && encounter.medicationKey !== key) {
+    const result = medicationChangePatch(encounter, key);
+    if (result.invalidated) {
       setInvalidationReceipt("ORDER CHANGED · cleared dose-dependent package, site, verification, initiation, and calculated follow-up facts");
     }
-    // "Other" has no real per-product route/cadence in the catalog - its
-    // entry is a generic placeholder for site/route UI plumbing, not a
-    // labeled fact, so it stays staff-entered like before.
-    const catalogMedication = key && key !== "other" ? INJECTION_MEDICATIONS[key] : null;
-    const defaultDose =
-      catalogMedication?.doses.length === 1 ? (catalogMedication.doses[0] ?? "") : "";
-    const defaultIntervalKey =
-      catalogMedication && defaultDose
-        ? preferredIntervalForDose(catalogMedication, defaultDose, catalogMedication.intervalKey)
-        : (catalogMedication?.intervalKey ?? "");
-    patch({
-      medicationKey: key,
-      customMedication: "",
-      // A product with one available strength has no strength choice to make.
-      // Keep the usual cadence as a starting point, just as we do after a
-      // staff-selected dose.
-      dose: defaultDose,
-      site: "",
-      // Pre-fill the reference catalog's usual route/cadence as a starting
-      // point - staff still see and can change both before the order is
-      // documented, this just saves re-typing what the label already says.
-      route: catalogMedication?.route ?? "",
-      intervalKey: defaultIntervalKey,
-      nextDoseDate: "",
-      traceability: { ...encounter.traceability, ndc: "" },
-      verifications: {},
-      initiation: emptyInjectionInitiation(),
-    });
-    patchDetails({
-      ndcSelection: {
-        ...(encounter.details?.ndcSelection ?? {}),
-        primary: undefined,
-        pairedSecond: undefined,
-      },
-      nextDose: undefined,
-    });
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const onDoseChange = (dose: string) => {
-    if (encounter.dose && encounter.dose !== dose) {
+    const result = doseChangePatch(encounter, dose);
+    if (result.invalidated) {
       setInvalidationReceipt("DOSE CHANGED · cleared the prior package match and recalculated cadence-dependent facts");
     }
-    const catalogMedication =
-      encounter.medicationKey && encounter.medicationKey !== "other"
-        ? INJECTION_MEDICATIONS[encounter.medicationKey]
-        : null;
-    patch({
-      dose,
-      intervalKey: catalogMedication
-        ? preferredIntervalForDose(catalogMedication, dose, encounter.intervalKey)
-        : encounter.intervalKey,
-      traceability: { ...encounter.traceability, ndc: "" },
-    });
-    patchDetails({
-      ndcSelection: {
-        ...(encounter.details?.ndcSelection ?? {}),
-        primary: undefined,
-      },
-    });
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const onIntervalChange = (intervalKey: InjectionIntervalKey | "") => {
     // A different cadence can be a provider-directed active order. Preserve
     // the exact dose and package selection; the engine will flag an unusual
     // combination for review without turning it into a hard stop.
-    patch({ intervalKey });
+    patch(intervalChangePatch(intervalKey));
   };
 
   const toggleAttestation = (key: string, value: boolean) => {
