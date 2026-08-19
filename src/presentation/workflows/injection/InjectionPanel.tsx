@@ -53,6 +53,7 @@ import {
   intervalChangePatch,
   lateDoseReviewConfirmationPatch,
   medicationChangePatch,
+  nextDoseAutoFillDecision,
   nextDoseProvenanceDecision,
   selectDispositionPatch,
   validatedNextDoseOverride,
@@ -1865,7 +1866,6 @@ export function InjectionPanel({
   });
   const legacyManualNextDoseNeedsReview =
     legacyOtherReturnDateNeedsReview || (nextDoseIsManual && !nextDoseOverrideComplete);
-  const nextDoseCalculationInput = `${encounter.administrationDate}|${encounter.intervalKey}`;
 
   /**
    * Where the return target came from, as the register's trailing note.
@@ -1996,43 +1996,35 @@ export function InjectionPanel({
   // staff change is preserved: only an empty value or the last calculation is
   // replaced when the date/cadence changes.
   useEffect(() => {
-    if (locked || nonAdministration) return;
-    const current = encounter.nextDoseDate;
-    if (!suggestedNextDose) {
-      // No calculated date currently applies (e.g. switching onto a
-      // provider-directed, non-calculating initiation path). Clear a
-      // leftover auto-calculated value so staff aren't looking at a stale
-      // date computed under a different protocol/interval - but never touch
-      // a date staff actually typed in themselves.
-      const wasAutoCalculated =
-        current && (current === autoCalculatedNextDue.current || nextDoseMetadata?.source === "calculated");
-      if (wasAutoCalculated) {
+    const decision = nextDoseAutoFillDecision(encounter, evaluation, autoCalculatedNextDue.current, locked);
+    switch (decision.action) {
+      case "noop":
+        return;
+      case "clear":
+        // No calculated date currently applies (e.g. switching onto a
+        // provider-directed, non-calculating initiation path). Clear a
+        // leftover auto-calculated value so staff aren't looking at a stale
+        // date computed under a different protocol/interval - but never
+        // touch a date staff actually typed in themselves.
         autoCalculatedNextDue.current = "";
         patch({ nextDoseDate: "" });
         patchDetails({ nextDose: undefined });
-      }
-      return;
-    }
-    const canReplace =
-      !current ||
-      current === autoCalculatedNextDue.current ||
-      nextDoseMetadata?.source === "calculated";
-    if (!canReplace) return;
-    if (current === suggestedNextDose) {
-      autoCalculatedNextDue.current = suggestedNextDose;
-      if (nextDoseMetadata?.source !== "calculated") {
+        return;
+      case "sync-metadata":
+        autoCalculatedNextDue.current = decision.value;
         patchDetails({
           nextDose: {
-            value: suggestedNextDose,
+            value: decision.value,
             source: "calculated",
-            calculatedFrom: nextDoseCalculationInput,
+            calculatedFrom: decision.calculatedFrom,
           },
         });
-      }
-      return;
+        return;
+      case "apply":
+        applyCalculatedNextDose(decision.value);
+        // `patch` mirrors the same value to legacy and is intentionally omitted.
+        return;
     }
-    applyCalculatedNextDose(suggestedNextDose);
-    // `patch` mirrors the same value to legacy and is intentionally omitted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounter.nextDoseDate, locked, nextDoseMetadata?.source, nonAdministration, suggestedNextDose]);
 

@@ -86,6 +86,17 @@ export function intervalChangePatch(intervalKey: InjectionIntervalKey | ""): Par
   return { intervalKey };
 }
 
+const suggestedNextDoseFrom = (
+  evaluation: ClinicalEvaluation<InjectionEvaluationOutput> | null | undefined,
+): string =>
+  evaluation?.calculatedDates.expectedNextDoseDate ??
+  evaluation?.calculatedDates.nextDoseDate ??
+  evaluation?.calculatedDates.expectedNextDue ??
+  "";
+
+const nextDoseCalculationInputFor = (encounter: InjectionEncounter): string =>
+  `${encounter.administrationDate}|${encounter.intervalKey}`;
+
 export type NextDoseProvenanceDecision =
   | { kind: "legacy-review" }
   | { kind: "manual-override"; reason: string }
@@ -123,11 +134,7 @@ export function nextDoseProvenanceDecision(
       reason: nextDoseMetadata.overrideReason || "manual date requires review",
     };
   }
-  const suggestedNextDose =
-    evaluation?.calculatedDates.expectedNextDoseDate ??
-    evaluation?.calculatedDates.nextDoseDate ??
-    evaluation?.calculatedDates.expectedNextDue ??
-    "";
+  const suggestedNextDose = suggestedNextDoseFrom(evaluation);
   if (!suggestedNextDose) {
     if (manualReturnDate) {
       const oneTimeOtherWithoutReturn = encounter.intervalKey === "once" && !encounter.nextDoseDate;
@@ -154,7 +161,7 @@ export function applyCalculatedNextDosePatch(encounter: InjectionEncounter, valu
       nextDose: {
         value,
         source: "calculated",
-        calculatedFrom: `${encounter.administrationDate}|${encounter.intervalKey}`,
+        calculatedFrom: nextDoseCalculationInputFor(encounter),
       },
     },
   };
@@ -178,7 +185,7 @@ export function applyManualNextDosePatch(
       nextDose: {
         value,
         source: "manual",
-        calculatedFrom: `${encounter.administrationDate}|${encounter.intervalKey}`,
+        calculatedFrom: nextDoseCalculationInputFor(encounter),
         overrideKind: override.kind,
         overrideReason: override.reason.trim(),
         overrideProvider: override.kind === "provider-direction" ? override.provider?.trim() : undefined,
@@ -284,4 +291,62 @@ export function lateDoseReviewConfirmationPatch(
     lateDoseReviewTime: draft.choice === "provider-authorized" ? draft.time.trim() : "",
     lateDoseReviewFingerprint: fingerprint,
   };
+}
+
+export type NextDoseAutoFillDecision =
+  | { action: "noop" }
+  | { action: "clear" }
+  | { action: "sync-metadata"; value: string; calculatedFrom: string }
+  | { action: "apply"; value: string };
+
+/**
+ * Decides whether the next-dose field should track the evaluator's
+ * calculated suggestion, given the ref that remembers the last value *this
+ * effect itself* wrote (so a staff-typed value is never mistaken for a
+ * stale auto-fill and silently overwritten).
+ *
+ * - "clear": no suggestion currently applies and the stored value was this
+ *   effect's own prior auto-fill (or tagged "calculated") - remove it
+ *   rather than leave a stale date computed under a since-changed protocol.
+ * - "sync-metadata": the field already reads the suggested value, but its
+ *   provenance metadata does not yet say so - backfill the tag without
+ *   touching the (already-correct) displayed date.
+ * - "apply": the field should adopt the newly suggested date.
+ * - "noop": a staff-entered value that doesn't match tracked auto-fill
+ *   state is left alone.
+ */
+export function nextDoseAutoFillDecision(
+  encounter: InjectionEncounter,
+  evaluation: ClinicalEvaluation<InjectionEvaluationOutput> | null | undefined,
+  autoCalculatedNextDue: string,
+  locked: boolean | undefined,
+): NextDoseAutoFillDecision {
+  const nonAdministration = Boolean(
+    encounter.disposition.kind && encounter.disposition.kind !== "administered",
+  );
+  if (locked || nonAdministration) return { action: "noop" };
+
+  const current = encounter.nextDoseDate;
+  const documentationMetadata = encounter.details as
+    | (InjectionAdministrationDetails & InjectionDocumentationMetadata)
+    | undefined;
+  const nextDoseSource = documentationMetadata?.nextDose?.source;
+  const suggestedNextDose = suggestedNextDoseFrom(evaluation);
+
+  if (!suggestedNextDose) {
+    const wasAutoCalculated =
+      Boolean(current) && (current === autoCalculatedNextDue || nextDoseSource === "calculated");
+    return wasAutoCalculated ? { action: "clear" } : { action: "noop" };
+  }
+
+  const canReplace = !current || current === autoCalculatedNextDue || nextDoseSource === "calculated";
+  if (!canReplace) return { action: "noop" };
+
+  if (current === suggestedNextDose) {
+    return nextDoseSource === "calculated"
+      ? { action: "noop" }
+      : { action: "sync-metadata", value: suggestedNextDose, calculatedFrom: nextDoseCalculationInputFor(encounter) };
+  }
+
+  return { action: "apply", value: suggestedNextDose };
 }

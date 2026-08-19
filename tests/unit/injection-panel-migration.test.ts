@@ -23,6 +23,7 @@ import {
   intervalChangePatch,
   lateDoseReviewConfirmationPatch,
   medicationChangePatch,
+  nextDoseAutoFillDecision,
   nextDoseProvenanceDecision,
   selectDispositionPatch,
   validatedNextDoseOverride,
@@ -542,5 +543,91 @@ describe("lateDoseReviewConfirmationPatch", () => {
     );
     expect(other.lateDoseReviewProvider).toBe("");
     expect(other.lateDoseReviewTime).toBe("");
+  });
+});
+
+describe("nextDoseAutoFillDecision", () => {
+  const suggesting = fakeEvaluation({ calculatedDates: { expectedNextDoseDate: "2026-02-27" } });
+  const noSuggestion = fakeEvaluation({ calculatedDates: {} });
+
+  it("never acts on a locked record or a non-administration disposition", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), nextDoseDate: "" };
+    expect(nextDoseAutoFillDecision(encounter, suggesting, "", true)).toEqual({ action: "noop" });
+
+    const held: InjectionEncounter = {
+      ...routineInjection(),
+      nextDoseDate: "",
+      disposition: { kind: "held", provider: "Dr. Draft", time: "2026-01-30T09:20", outcome: "Held." },
+    };
+    expect(nextDoseAutoFillDecision(held, suggesting, "", false)).toEqual({ action: "noop" });
+  });
+
+  it("clears a stale auto-calculated value once no suggestion applies", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), nextDoseDate: "2026-02-20", details: {} };
+    // Matches the ref this effect itself last wrote.
+    expect(nextDoseAutoFillDecision(encounter, noSuggestion, "2026-02-20", false)).toEqual({ action: "clear" });
+    // Or is independently tagged "calculated" even if the ref doesn't match (e.g. after a remount).
+    const taggedCalculated: InjectionEncounter = {
+      ...encounter,
+      details: { nextDose: { value: "2026-02-20", source: "calculated" } },
+    };
+    expect(nextDoseAutoFillDecision(taggedCalculated, noSuggestion, "", false)).toEqual({ action: "clear" });
+  });
+
+  it("leaves a staff-typed date alone when no suggestion applies", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), nextDoseDate: "2026-02-20", details: {} };
+    expect(nextDoseAutoFillDecision(encounter, noSuggestion, "", false)).toEqual({ action: "noop" });
+  });
+
+  it("does nothing when there is no suggestion and no current value", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), nextDoseDate: "", details: {} };
+    expect(nextDoseAutoFillDecision(encounter, noSuggestion, "", false)).toEqual({ action: "noop" });
+  });
+
+  it("applies the calculated suggestion when the field is empty or tracks the auto-fill ref", () => {
+    const empty: InjectionEncounter = { ...routineInjection(), nextDoseDate: "", details: {} };
+    expect(nextDoseAutoFillDecision(empty, suggesting, "", false)).toEqual({
+      action: "apply",
+      value: "2026-02-27",
+    });
+
+    const trackingStaleRef: InjectionEncounter = {
+      ...routineInjection(),
+      nextDoseDate: "2026-02-13",
+      details: {},
+    };
+    expect(nextDoseAutoFillDecision(trackingStaleRef, suggesting, "2026-02-13", false)).toEqual({
+      action: "apply",
+      value: "2026-02-27",
+    });
+  });
+
+  it("leaves a staff-typed date alone even when a different suggestion is available", () => {
+    const encounter: InjectionEncounter = { ...routineInjection(), nextDoseDate: "2026-03-01", details: {} };
+    expect(nextDoseAutoFillDecision(encounter, suggesting, "", false)).toEqual({ action: "noop" });
+  });
+
+  it("backfills calculated provenance when the ref confirms this effect set the field but it isn't tagged", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      nextDoseDate: "2026-02-27",
+      details: {},
+    };
+    // canReplace requires the ref to match (or an existing "calculated" tag,
+    // which would instead short-circuit straight to noop below).
+    expect(nextDoseAutoFillDecision(encounter, suggesting, "2026-02-27", false)).toEqual({
+      action: "sync-metadata",
+      value: "2026-02-27",
+      calculatedFrom: `${encounter.administrationDate}|${encounter.intervalKey}`,
+    });
+  });
+
+  it("does nothing once the field matches the suggestion and is already tagged calculated", () => {
+    const encounter: InjectionEncounter = {
+      ...routineInjection(),
+      nextDoseDate: "2026-02-27",
+      details: { nextDose: { value: "2026-02-27", source: "calculated" } },
+    };
+    expect(nextDoseAutoFillDecision(encounter, suggesting, "2026-02-27", false)).toEqual({ action: "noop" });
   });
 });
