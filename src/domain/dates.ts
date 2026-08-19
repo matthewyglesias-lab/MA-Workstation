@@ -55,6 +55,24 @@ export const addCalendarDays = (iso: string, days: number): string => {
   return toIsoDate(date);
 };
 
+/**
+ * The Friday-before/Monday-after pair offered when a return date lands on a
+ * weekend; null for a weekday, or an empty/invalid date. Doubles as the "is
+ * this a weekend" check. Faithful port of the legacy worksheet's snap
+ * targets (Saturday: -1/+2 days; Sunday: -2/+1 days).
+ */
+export const weekendSnapDates = (
+  iso: string,
+): { friday: string; monday: string } | null => {
+  const date = parseIsoDate(iso);
+  if (!date) return null;
+  const day = date.getUTCDay();
+  if (day !== 0 && day !== 6) return null;
+  return day === 6
+    ? { friday: addCalendarDays(iso, -1), monday: addCalendarDays(iso, 2) }
+    : { friday: addCalendarDays(iso, -2), monday: addCalendarDays(iso, 1) };
+};
+
 export const differenceInCalendarDays = (from: string, to: string): number | null => {
   const start = parseIsoDate(from);
   const end = parseIsoDate(to);

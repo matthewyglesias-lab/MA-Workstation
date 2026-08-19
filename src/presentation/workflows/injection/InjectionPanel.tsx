@@ -54,7 +54,7 @@ import {
   projectWorkflowTransactionStatus,
   type WorkflowFieldState,
 } from "../../../application/workstation-projection";
-import { isValidIsoDate } from "../../../domain/dates";
+import { isValidIsoDate, weekendSnapDates } from "../../../domain/dates";
 import {
   createNdcOptionResolver,
   formatNdcPackageOption,
@@ -1831,6 +1831,11 @@ export function InjectionPanel({
     evaluation?.calculatedDates.expectedNextDue ??
     "";
   const suggestedNextDose = calculatedNextDue;
+  // Legacy warned staff and offered a same-week snap whenever the displayed
+  // return date - calculated or manually entered - landed on a Saturday or
+  // Sunday. `weekendSnapDates` is null for a weekday or an empty/invalid
+  // date, so this doubles as the "is it a weekend" check.
+  const nextDoseWeekendSnap = weekendSnapDates(encounter.nextDoseDate || suggestedNextDose);
   const manualReturnDate = medication?.key === "other";
   const oneTimeOtherWithoutReturn = Boolean(
     manualReturnDate && encounter.intervalKey === "once" && !encounter.nextDoseDate,
@@ -1966,6 +1971,16 @@ export function InjectionPanel({
           override.kind === "provider-direction" ? override.provider?.trim() : undefined,
         recordedAt: new Date().toISOString(),
       },
+    });
+  };
+
+  /** One-click version of the manual override, for the weekend snap
+   * suggestions - it still records real override provenance rather than
+   * quietly moving the date the way the legacy snap chips did. */
+  const applyWeekendSnap = (value: string) => {
+    applyManualNextDose(value, {
+      kind: "active-order",
+      reason: "Weekend-adjusted from the calculated return date",
     });
   };
 
@@ -2596,6 +2611,8 @@ export function InjectionPanel({
                     // `calculatedFrom` string, which stores ISO on purpose and
                     // must keep doing so.
                     note: nextDoseProvenanceNote(),
+                    flag: nextDoseWeekendSnap ? "WEEKEND" : undefined,
+                    flagTone: nextDoseWeekendSnap ? "warning" : undefined,
                   },
                   ...(nonAdministration || !evaluation
                     ? []
@@ -2669,6 +2686,33 @@ export function InjectionPanel({
                   </>
                 }
               />
+              {nextDoseWeekendSnap && (
+                <p class="wfp-field-hint">
+                  Next dose lands on a weekend.
+                  {!locked && (
+                    <>
+                      {" "}
+                      Move to{" "}
+                      <button
+                        type="button"
+                        class="cd2004-link-button"
+                        onClick={() => applyWeekendSnap(nextDoseWeekendSnap.friday)}
+                      >
+                        Fri {registerDate(nextDoseWeekendSnap.friday)}
+                      </button>{" "}
+                      or{" "}
+                      <button
+                        type="button"
+                        class="cd2004-link-button"
+                        onClick={() => applyWeekendSnap(nextDoseWeekendSnap.monday)}
+                      >
+                        Mon {registerDate(nextDoseWeekendSnap.monday)}
+                      </button>
+                      .
+                    </>
+                  )}
+                </p>
+              )}
               {!nonAdministration && evaluation?.output.lateDoseWarning && (
                 <p class="wfp-field-hint">
                   {currentLateDoseReview ? (
@@ -3634,6 +3678,8 @@ export function InjectionPanel({
                   // one date two different ways is how staff end up trusting
                   // the wrong one.
                   note: nextDoseProvenanceNote(),
+                  flag: nextDoseWeekendSnap ? "WEEKEND" : undefined,
+                  flagTone: nextDoseWeekendSnap ? "warning" : undefined,
                 },
               ]}
               actions={
