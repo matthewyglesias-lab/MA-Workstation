@@ -2,6 +2,7 @@ import type { ComponentChildren, Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
   emptyFormsEncounter,
+  patientIsEmpty,
   FORM_REQUEST_TYPE_OPTIONS,
   FORM_STATUS_OPTIONS,
   LETTER_TYPE_OPTIONS,
@@ -42,9 +43,6 @@ interface FormsPanelProps {
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
 }
-
-const patientIsEmpty = (patient: FormsEncounter["patient"]): boolean =>
-  !patient.name.trim() && !patient.dob.trim();
 
 interface OptionListProps<T extends string> {
   name: string;

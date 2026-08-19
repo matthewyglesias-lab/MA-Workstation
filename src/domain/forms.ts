@@ -56,6 +56,9 @@ export interface FormsEncounter {
   letterPreparedBy?: string;
 }
 
+export const patientIsEmpty = (patient: FormsEncounter["patient"]): boolean =>
+  !patient.name.trim() && !patient.dob.trim();
+
 export interface FormsEngineContext {
   requireProviderApprovalForRelease?: boolean;
 }

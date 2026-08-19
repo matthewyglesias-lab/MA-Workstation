@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { emptyFormsEncounter, type FormsEncounter } from "../../src/domain/forms";
+import { emptyFormsEncounter, patientIsEmpty, type FormsEncounter } from "../../src/domain/forms";
 import { formsEncounterToDocumentationInput } from "../../src/documentation/adapters/forms-from-encounter";
 import { formatProviderLetterDraft, letterSubjectText } from "../../src/documentation/forms";
 import { DocumentationEngine } from "../../src/documentation";
@@ -154,5 +154,14 @@ describe("formatProviderLetterDraft", () => {
     expect(draft.signatureBlock).toBe(
       "Electronically reviewed / approved by Provider, MD",
     );
+  });
+});
+
+describe("patientIsEmpty", () => {
+  it("is true only when both name and dob are blank", () => {
+    expect(patientIsEmpty({ name: "", dob: "" })).toBe(true);
+    expect(patientIsEmpty({ name: "  ", dob: "  " })).toBe(true);
+    expect(patientIsEmpty({ name: "Draft, Patient", dob: "" })).toBe(false);
+    expect(patientIsEmpty({ name: "", dob: "01/02/1990" })).toBe(false);
   });
 });
