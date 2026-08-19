@@ -1,12 +1,18 @@
 import { createContext, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
-  applyUdsDeviceProfileDefaults,
+  deviceChangeResetPatch,
   displayedUdsPanels,
   deriveUdsReportStatus,
   emptyUdsEncounter,
+  nextCustomPanelsAfterAdd,
+  nextCustomPanelsAfterMove,
+  nextCustomPanelsAfterRemove,
+  nextCustomPanelsAfterReplace,
   nextUdsResultState,
+  omittedPanelChangeResetPatch,
   profileFor,
+  udsResultsSummary,
   UdsEngine,
   UDS_CONTROL_OPTIONS,
   UDS_PANELS,
@@ -543,43 +549,20 @@ export function UdsPanel({
   };
 
   const onDeviceChange = (device: string) => {
-    if (encounter.device && encounter.device !== device) {
+    const result = deviceChangeResetPatch(encounter, device);
+    if (result.invalidated) {
       setInvalidationReceipt("DEVICE CHANGED · cleared panel readings and physical-reading verification");
     }
-    const defaults = applyUdsDeviceProfileDefaults({
-      ...encounter,
-      device,
-      omittedPanel: "",
-      customDeviceName: "",
-      customPanels: [],
-    });
-    patch({
-      ...defaults,
-      results: Object.fromEntries(UDS_PANELS.map((panel) => [panel, "nt"])) as UdsEncounter["results"],
-      physicalReadingsVerified: false,
-    });
+    patch(result.patch);
   };
 
   const onOmittedPanelChange = (omittedPanel: UdsPanelKey | "") => {
-    const defaults = applyUdsDeviceProfileDefaults({ ...encounter, omittedPanel });
-    // Choosing which window is absent completes the already-selected device
-    // profile. Clear readings/verification, but preserve QC facts staff just
-    // documented for that same physical cup.
-    patch({
-      ...defaults,
-      results: Object.fromEntries(UDS_PANELS.map((panel) => [panel, "nt"])) as UdsEncounter["results"],
-      physicalReadingsVerified: false,
-      control: encounter.control,
-      validity: encounter.validity,
-      temperature: encounter.temperature,
-    });
+    patch(omittedPanelChangeResetPatch(encounter, omittedPanel));
   };
 
   const replaceCustomPanel = (index: number, panel: UdsPanelKey) => {
-    const next = [...(encounter.customPanels ?? [])];
-    next[index] = panel;
     patch({
-      customPanels: next,
+      customPanels: nextCustomPanelsAfterReplace(encounter.customPanels, index, panel),
       results: emptyUdsResults(),
       physicalReadingsVerified: false,
     });
@@ -587,20 +570,15 @@ export function UdsPanel({
   };
 
   const moveCustomPanel = (index: number, direction: -1 | 1) => {
-    const next = [...(encounter.customPanels ?? [])];
-    const target = index + direction;
-    if (target < 0 || target >= next.length) return;
-    const current = next[index]!;
-    next[index] = next[target]!;
-    next[target] = current;
+    const next = nextCustomPanelsAfterMove(encounter.customPanels, index, direction);
+    if (!next) return;
     patch({ customPanels: next, results: emptyUdsResults(), physicalReadingsVerified: false });
     setInvalidationReceipt("PANEL PROFILE CHANGED · cleared panel readings and physical-reading verification");
   };
 
   const removeCustomPanel = (index: number) => {
-    const next = (encounter.customPanels ?? []).filter((_, position) => position !== index);
     patch({
-      customPanels: next,
+      customPanels: nextCustomPanelsAfterRemove(encounter.customPanels, index),
       results: emptyUdsResults(),
       physicalReadingsVerified: false,
     });
@@ -608,15 +586,14 @@ export function UdsPanel({
   };
 
   const addCustomPanel = () => {
-    const nextPanel = UDS_PANELS.find((panel) => !(encounter.customPanels ?? []).includes(panel));
-    if (nextPanel) {
-      patch({
-        customPanels: [...(encounter.customPanels ?? []), nextPanel],
-        results: emptyUdsResults(),
-        physicalReadingsVerified: false,
-      });
-      setInvalidationReceipt("PANEL PROFILE CHANGED · cleared panel readings and physical-reading verification");
-    }
+    const next = nextCustomPanelsAfterAdd(encounter.customPanels);
+    if (!next) return;
+    patch({
+      customPanels: next,
+      results: emptyUdsResults(),
+      physicalReadingsVerified: false,
+    });
+    setInvalidationReceipt("PANEL PROFILE CHANGED · cleared panel readings and physical-reading verification");
   };
 
   const onPhotoChange = (event: Event) => {
@@ -630,20 +607,6 @@ export function UdsPanel({
       mirrorUdsEncounterToLegacyDom(encounter, dataUrl);
     };
     reader.readAsDataURL(file);
-  };
-
-  // One-line synopsis stored on the record and reused in the attestation
-  // review's "Device / panel summary" field - built from whatever encounter
-  // is passed in, not the closed-over one, so it stays correct for a
-  // just-locked snapshot rather than a stale render.
-  const summaryFor = (source: UdsEncounter): string => {
-    const panels = displayedUdsPanels(source);
-    const tested = panels.filter((panel) => (source.results[panel] ?? "nt") !== "nt").length;
-    const positive = panels.filter((panel) => source.results[panel] === "pos").length;
-    const device = source.customDeviceName?.trim() || source.device || "No device selected";
-    return positive > 0
-      ? `${device} · ${positive} preliminary positive, ${tested}/${panels.length} tested`
-      : `${device} · ${tested}/${panels.length} tested`;
   };
 
   // A preliminary positive panel, an unreadable result, or an unresolved
@@ -662,7 +625,7 @@ export function UdsPanel({
     const result = repository.saveDraft({
       id: activeRecordId,
       patient: encounter.patient,
-      summary: summaryFor(encounter),
+      summary: udsResultsSummary(encounter),
       snapshot: encounter,
     });
     if (result.ok) {
@@ -716,7 +679,7 @@ export function UdsPanel({
     const result = repository.complete({
       id: activeRecordId,
       patient: encounter.patient,
-      summary: summaryFor(encounter),
+      summary: udsResultsSummary(encounter),
       snapshot: encounter,
       attestation: nextAttestation,
     });
@@ -1868,7 +1831,7 @@ export function UdsPanel({
               ? {
                   patient: encounter.patient.name.trim() || "Not entered",
                   localRecord: activeRecordId ?? "Not assigned",
-                  medication: summaryFor(encounter),
+                  medication: udsResultsSummary(encounter),
                   disposition: `Validity: ${encounter.validity}; medication alignment: ${encounter.medicationAlignment}`,
                   staff: staffSignInValue || "Not signed in",
                   timestamp: new Date().toISOString(),

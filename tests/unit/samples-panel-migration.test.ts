@@ -8,6 +8,12 @@ import {
 } from "../../src/domain/samples";
 import { samplesEncounterToDocumentationInput } from "../../src/documentation/adapters/samples-from-encounter";
 import { DocumentationEngine } from "../../src/documentation";
+import {
+  buildPlanAndPackages,
+  patientIsEmpty,
+  primaryPackage,
+  rowsFromEncounter,
+} from "../../src/domain/samples-plan";
 
 const routineSamples = (): SamplesEncounter => ({
   ...emptySamplesEncounter(),
@@ -111,5 +117,93 @@ describe("samplesEncounterToDocumentationInput", () => {
     const input = samplesEncounterToDocumentationInput(encounter, "2026-01-30");
     expect(input!.planSteps?.[0]?.dateRange).toContain("7 day(s)");
     expect(input!.planSteps?.[1]?.dateRange).toBeUndefined();
+  });
+});
+
+describe("patientIsEmpty", () => {
+  it("is true only when both name and dob are blank", () => {
+    expect(patientIsEmpty({ name: "", dob: "" })).toBe(true);
+    expect(patientIsEmpty({ name: "  ", dob: "  " })).toBe(true);
+    expect(patientIsEmpty({ name: "Draft, Patient", dob: "" })).toBe(false);
+    expect(patientIsEmpty({ name: "", dob: "01/01/1990" })).toBe(false);
+  });
+});
+
+describe("primaryPackage", () => {
+  it("returns the stored primary package when one exists", () => {
+    const encounter = routineSamples();
+    expect(primaryPackage(encounter)).toEqual(encounter.packages[0]);
+  });
+
+  it("synthesizes a blank primary package from the encounter's own medication fields when none is stored", () => {
+    const encounter: SamplesEncounter = { ...emptySamplesEncounter(), medicationLabel: "Vraylar 3 mg", quantity: "7 capsules" };
+    expect(primaryPackage(encounter)).toEqual({
+      id: "primary",
+      label: "Primary package",
+      medicationStrength: "Vraylar 3 mg",
+      quantity: "7 capsules",
+      lot: "",
+      expiration: "",
+    });
+  });
+});
+
+describe("rowsFromEncounter / buildPlanAndPackages", () => {
+  it("round-trips plan steps and their matching package traceability into editable rows", () => {
+    const encounter: SamplesEncounter = {
+      ...routineSamples(),
+      plan: [{ id: "step-2", strength: "Vraylar 4.5 mg capsule", quantity: "7 capsules", days: "7", directions: "Then daily." }],
+      packages: [
+        ...routineSamples().packages,
+        { id: "step-2", label: "Added package 2", medicationStrength: "Vraylar 4.5 mg capsule", quantity: "7 capsules", lot: "LOT-2", expiration: "2027-02" },
+      ],
+    };
+    const rows = rowsFromEncounter(encounter);
+    expect(rows).toEqual([
+      {
+        id: "step-2",
+        strength: "Vraylar 4.5 mg capsule",
+        quantity: "7 capsules",
+        days: "7",
+        directions: "Then daily.",
+        lot: "LOT-2",
+        expiration: "2027-02",
+      },
+    ]);
+  });
+
+  it("leaves package traceability blank for a plan step with no matching package yet", () => {
+    const encounter: SamplesEncounter = {
+      ...routineSamples(),
+      plan: [{ id: "step-2", strength: "Vraylar 4.5 mg capsule", quantity: "7 capsules", directions: "Then daily." }],
+    };
+    const rows = rowsFromEncounter(encounter);
+    expect(rows[0]).toMatchObject({ days: "", lot: "", expiration: "" });
+  });
+
+  it("builds a primary package plus one added package per row with a non-blank quantity", () => {
+    const rows = [
+      { id: "row-1", strength: "4.5 mg", quantity: "7 capsules", days: "7", directions: "Then daily.", lot: "LOT-2", expiration: "2027-02" },
+      { id: "row-2", strength: "", quantity: "", days: "", directions: "Skipped, no quantity yet", lot: "", expiration: "" },
+    ];
+    const { plan, packages } = buildPlanAndPackages("Vraylar 3 mg", "7 capsules", "LOT-1", "2027-01", rows);
+
+    expect(plan).toEqual([
+      { id: "row-1", strength: "4.5 mg", quantity: "7 capsules", days: "7", directions: "Then daily." },
+      { id: "row-2", strength: "", quantity: "", days: "", directions: "Skipped, no quantity yet" },
+    ]);
+    // Every row becomes a plan step (dosing timeline), but only rows with a
+    // quantity become a real package to trace (there's nothing dispensed yet
+    // for the others).
+    expect(packages).toEqual([
+      { id: "primary", label: "Primary package", medicationStrength: "Vraylar 3 mg", quantity: "7 capsules", lot: "LOT-1", expiration: "2027-01" },
+      { id: "row-1", label: "Added package 2", medicationStrength: "4.5 mg", quantity: "7 capsules", lot: "LOT-2", expiration: "2027-02" },
+    ]);
+  });
+
+  it("falls back to the primary medication label when an added row omits its own strength", () => {
+    const rows = [{ id: "row-1", strength: "", quantity: "7 capsules", days: "", directions: "Then daily.", lot: "LOT-2", expiration: "2027-02" }];
+    const { packages } = buildPlanAndPackages("Vraylar 3 mg", "7 capsules", "LOT-1", "2027-01", rows);
+    expect(packages[1]?.medicationStrength).toBe("Vraylar 3 mg");
   });
 });

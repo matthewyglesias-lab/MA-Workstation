@@ -38,13 +38,26 @@ import {
   INJECTION_INTERVAL_OPTIONS,
   INJECTION_MEDICATIONS,
   injectionSiteGroup,
-  preferredIntervalForDose,
   type InjectionIntervalKey,
   type InjectionMedication,
   type InjectionMedicationKey,
   type MedicationVerificationKey,
 } from "../../../domain/injection-catalog";
 import { formatNeedleSpec } from "../../../domain/injection-needle";
+import {
+  applyCalculatedNextDosePatch,
+  applyManualNextDosePatch,
+  applyPairedNdcPatch,
+  applyPrimaryNdcPatch,
+  doseChangePatch,
+  intervalChangePatch,
+  lateDoseReviewConfirmationPatch,
+  medicationChangePatch,
+  nextDoseAutoFillDecision,
+  nextDoseProvenanceDecision,
+  selectDispositionPatch,
+  validatedNextDoseOverride,
+} from "../../../domain/injection-panel-actions";
 import type { InjectionHabitusBand } from "../../../domain/injection-clinical-reference";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { firstActionableClinicalIssue } from "../../../application/readiness-projection";
@@ -1471,75 +1484,28 @@ export function InjectionPanel({
     // A different product starts a different order context. Do not carry a
     // prior package choice or follow-up suggestion into it.
     autoCalculatedNextDue.current = "";
-    if (encounter.medicationKey && encounter.medicationKey !== key) {
+    const result = medicationChangePatch(encounter, key);
+    if (result.invalidated) {
       setInvalidationReceipt("ORDER CHANGED · cleared dose-dependent package, site, verification, initiation, and calculated follow-up facts");
     }
-    // "Other" has no real per-product route/cadence in the catalog - its
-    // entry is a generic placeholder for site/route UI plumbing, not a
-    // labeled fact, so it stays staff-entered like before.
-    const catalogMedication = key && key !== "other" ? INJECTION_MEDICATIONS[key] : null;
-    const defaultDose =
-      catalogMedication?.doses.length === 1 ? (catalogMedication.doses[0] ?? "") : "";
-    const defaultIntervalKey =
-      catalogMedication && defaultDose
-        ? preferredIntervalForDose(catalogMedication, defaultDose, catalogMedication.intervalKey)
-        : (catalogMedication?.intervalKey ?? "");
-    patch({
-      medicationKey: key,
-      customMedication: "",
-      // A product with one available strength has no strength choice to make.
-      // Keep the usual cadence as a starting point, just as we do after a
-      // staff-selected dose.
-      dose: defaultDose,
-      site: "",
-      // Pre-fill the reference catalog's usual route/cadence as a starting
-      // point - staff still see and can change both before the order is
-      // documented, this just saves re-typing what the label already says.
-      route: catalogMedication?.route ?? "",
-      intervalKey: defaultIntervalKey,
-      nextDoseDate: "",
-      traceability: { ...encounter.traceability, ndc: "" },
-      verifications: {},
-      initiation: emptyInjectionInitiation(),
-    });
-    patchDetails({
-      ndcSelection: {
-        ...(encounter.details?.ndcSelection ?? {}),
-        primary: undefined,
-        pairedSecond: undefined,
-      },
-      nextDose: undefined,
-    });
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const onDoseChange = (dose: string) => {
-    if (encounter.dose && encounter.dose !== dose) {
+    const result = doseChangePatch(encounter, dose);
+    if (result.invalidated) {
       setInvalidationReceipt("DOSE CHANGED · cleared the prior package match and recalculated cadence-dependent facts");
     }
-    const catalogMedication =
-      encounter.medicationKey && encounter.medicationKey !== "other"
-        ? INJECTION_MEDICATIONS[encounter.medicationKey]
-        : null;
-    patch({
-      dose,
-      intervalKey: catalogMedication
-        ? preferredIntervalForDose(catalogMedication, dose, encounter.intervalKey)
-        : encounter.intervalKey,
-      traceability: { ...encounter.traceability, ndc: "" },
-    });
-    patchDetails({
-      ndcSelection: {
-        ...(encounter.details?.ndcSelection ?? {}),
-        primary: undefined,
-      },
-    });
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const onIntervalChange = (intervalKey: InjectionIntervalKey | "") => {
     // A different cadence can be a provider-directed active order. Preserve
     // the exact dose and package selection; the engine will flag an unusual
     // combination for review without turning it into a hard stop.
-    patch({ intervalKey });
+    patch(intervalChangePatch(intervalKey));
   };
 
   const toggleAttestation = (key: string, value: boolean) => {
@@ -1900,7 +1866,6 @@ export function InjectionPanel({
   });
   const legacyManualNextDoseNeedsReview =
     legacyOtherReturnDateNeedsReview || (nextDoseIsManual && !nextDoseOverrideComplete);
-  const nextDoseCalculationInput = `${encounter.administrationDate}|${encounter.intervalKey}`;
 
   /**
    * Where the return target came from, as the register's trailing note.
@@ -1912,37 +1877,31 @@ export function InjectionPanel({
    * instead. A wrong provenance line is worse than none: it invites staff to
    * re-derive the date from a rule that never produced it.
    */
-  const nextDoseProvenanceNote = (): string | undefined => {
-    if (legacyOtherReturnDateNeedsReview) {
-      return "· legacy return date — verify against the active order";
+  const nextDoseProvenanceNoteText = (): string | undefined => {
+    const decision = nextDoseProvenanceDecision(encounter, evaluation);
+    switch (decision.kind) {
+      case "legacy-review":
+        return "· legacy return date — verify against the active order";
+      case "manual-override":
+        return `· ${decision.reason}`;
+      case "one-time-no-return":
+        return "· one-time order — no routine return date is required";
+      case "enter-return-date":
+        return "· enter the return date from the active order";
+      case "enter-administration-and-interval":
+        return "· enter the administration date and order interval";
+      case "sustenna-day8":
+        return `· Day 8 target, 7 days from ${registerDate(decision.administrationDate)}`;
+      case "cadence":
+        return `· ${decision.cadence} from ${registerDate(decision.administrationDate)}`;
     }
-    if (nextDoseIsManual) {
-      return `· ${nextDoseMetadata?.overrideReason || "manual date requires review"}`;
-    }
-    if (!suggestedNextDose) {
-      return medication?.key === "other"
-        ? oneTimeOtherWithoutReturn
-          ? "· one-time order — no routine return date is required"
-          : "· enter the return date from the active order"
-        : "· enter the administration date and order interval";
-    }
-    if (encounter.initiation?.protocol === "sustenna-day1") {
-      return `· Day 8 target, 7 days from ${registerDate(encounter.administrationDate)}`;
-    }
-    const cadence = evaluation?.output.timing.cadenceLabel || encounter.intervalKey;
-    return `· ${cadence} from ${registerDate(encounter.administrationDate)}`;
   };
 
   const applyCalculatedNextDose = (value: string) => {
     autoCalculatedNextDue.current = value;
-    patch({ nextDoseDate: value });
-    patchDetails({
-      nextDose: {
-        value,
-        source: "calculated",
-        calculatedFrom: nextDoseCalculationInput,
-      },
-    });
+    const result = applyCalculatedNextDosePatch(encounter, value);
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const applyManualNextDose = (
@@ -1954,40 +1913,15 @@ export function InjectionPanel({
     },
   ) => {
     autoCalculatedNextDue.current = "";
-    patch({ nextDoseDate: value });
-    patchDetails({
-      nextDose: {
-        value,
-        source: "manual",
-        calculatedFrom: nextDoseCalculationInput,
-        overrideKind: override.kind,
-        overrideReason: override.reason.trim(),
-        overrideProvider:
-          override.kind === "provider-direction" ? override.provider?.trim() : undefined,
-        recordedAt: new Date().toISOString(),
-      },
-    });
+    const result = applyManualNextDosePatch(encounter, value, override, new Date().toISOString());
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const selectDisposition = (kind: InjectionDisposition["kind"]) => {
-    if (kind === "administered") {
-      patchDisposition({
-        kind,
-        provider: "",
-        time: "",
-        outcome: "",
-        reviewedBy: staffSignInValue.trim() || encounter.administeredBy.trim(),
-        reviewedAt: new Date().toISOString(),
-        reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
-      });
-      return;
-    }
-    patchDisposition({
-      kind,
-      reviewedBy: "",
-      reviewedAt: "",
-      reviewFingerprint: "",
-    });
+    patchDisposition(
+      selectDispositionPatch(encounter, kind, staffSignInValue, new Date().toISOString()),
+    );
   };
 
   const openNextDoseOverride = () => {
@@ -2003,38 +1937,27 @@ export function InjectionPanel({
   };
 
   const confirmNextDoseOverride = () => {
-    if (!isValidIsoDate(nextDoseOverrideDate) || !nextDoseOverrideReason.trim()) return;
-    if (nextDoseOverrideKind === "provider-direction" && !nextDoseOverrideProvider.trim()) return;
-    applyManualNextDose(nextDoseOverrideDate, {
+    const validated = validatedNextDoseOverride({
+      date: nextDoseOverrideDate,
       kind: nextDoseOverrideKind,
       reason: nextDoseOverrideReason,
       provider: nextDoseOverrideProvider,
     });
+    if (!validated) return;
+    applyManualNextDose(validated.value, validated.override);
     setNextDoseOverrideOpen(false);
   };
 
   const applyPrimaryNdc = (value: string, selection?: InjectionNdcSelection) => {
-    patch({ traceability: { ...encounter.traceability, ndc: value } });
-    patchDetails({
-      clinicalReferenceVersion:
-        presentationOutput?.clinicalReferenceVersion ?? documentationMetadata?.clinicalReferenceVersion,
-      ndcSelection: {
-        ...(documentationMetadata?.ndcSelection ?? {}),
-        primary: selection,
-      },
-    });
+    const result = applyPrimaryNdcPatch(encounter, evaluation, value, selection);
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   const applyPairedNdc = (value: string, selection?: InjectionNdcSelection) => {
-    patchInitiationSecond({ ndc: value });
-    patchDetails({
-      clinicalReferenceVersion:
-        presentationOutput?.clinicalReferenceVersion ?? documentationMetadata?.clinicalReferenceVersion,
-      ndcSelection: {
-        ...(documentationMetadata?.ndcSelection ?? {}),
-        pairedSecond: selection,
-      },
-    });
+    const result = applyPairedNdcPatch(encounter, evaluation, value, selection);
+    patch(result.encounter);
+    patchDetails(result.details);
   };
 
   useEffect(() => {
@@ -2073,43 +1996,35 @@ export function InjectionPanel({
   // staff change is preserved: only an empty value or the last calculation is
   // replaced when the date/cadence changes.
   useEffect(() => {
-    if (locked || nonAdministration) return;
-    const current = encounter.nextDoseDate;
-    if (!suggestedNextDose) {
-      // No calculated date currently applies (e.g. switching onto a
-      // provider-directed, non-calculating initiation path). Clear a
-      // leftover auto-calculated value so staff aren't looking at a stale
-      // date computed under a different protocol/interval - but never touch
-      // a date staff actually typed in themselves.
-      const wasAutoCalculated =
-        current && (current === autoCalculatedNextDue.current || nextDoseMetadata?.source === "calculated");
-      if (wasAutoCalculated) {
+    const decision = nextDoseAutoFillDecision(encounter, evaluation, autoCalculatedNextDue.current, locked);
+    switch (decision.action) {
+      case "noop":
+        return;
+      case "clear":
+        // No calculated date currently applies (e.g. switching onto a
+        // provider-directed, non-calculating initiation path). Clear a
+        // leftover auto-calculated value so staff aren't looking at a stale
+        // date computed under a different protocol/interval - but never
+        // touch a date staff actually typed in themselves.
         autoCalculatedNextDue.current = "";
         patch({ nextDoseDate: "" });
         patchDetails({ nextDose: undefined });
-      }
-      return;
-    }
-    const canReplace =
-      !current ||
-      current === autoCalculatedNextDue.current ||
-      nextDoseMetadata?.source === "calculated";
-    if (!canReplace) return;
-    if (current === suggestedNextDose) {
-      autoCalculatedNextDue.current = suggestedNextDose;
-      if (nextDoseMetadata?.source !== "calculated") {
+        return;
+      case "sync-metadata":
+        autoCalculatedNextDue.current = decision.value;
         patchDetails({
           nextDose: {
-            value: suggestedNextDose,
+            value: decision.value,
             source: "calculated",
-            calculatedFrom: nextDoseCalculationInput,
+            calculatedFrom: decision.calculatedFrom,
           },
         });
-      }
-      return;
+        return;
+      case "apply":
+        applyCalculatedNextDose(decision.value);
+        // `patch` mirrors the same value to legacy and is intentionally omitted.
+        return;
     }
-    applyCalculatedNextDose(suggestedNextDose);
-    // `patch` mirrors the same value to legacy and is intentionally omitted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounter.nextDoseDate, locked, nextDoseMetadata?.source, nonAdministration, suggestedNextDose]);
 
@@ -2163,19 +2078,17 @@ export function InjectionPanel({
   ]);
 
   const confirmLateDoseReview = () => {
-    patchDetails({
-      lateDoseReview: lateDoseReviewChoice,
-      lateDoseReviewNote: lateDoseReviewNoteDraft.trim(),
-      lateDoseReviewProvider:
-        lateDoseReviewChoice === "provider-authorized"
-          ? lateDoseReviewProviderDraft.trim()
-          : "",
-      lateDoseReviewTime:
-        lateDoseReviewChoice === "provider-authorized"
-          ? lateDoseReviewTimeDraft.trim()
-          : "",
-      lateDoseReviewFingerprint,
-    });
+    patchDetails(
+      lateDoseReviewConfirmationPatch(
+        {
+          choice: lateDoseReviewChoice,
+          note: lateDoseReviewNoteDraft,
+          provider: lateDoseReviewProviderDraft,
+          time: lateDoseReviewTimeDraft,
+        },
+        lateDoseReviewFingerprint,
+      ),
+    );
     setLateDoseDialogOpen(false);
   };
 
@@ -2595,7 +2508,7 @@ export function InjectionPanel({
                     // Built from the parts rather than the persisted
                     // `calculatedFrom` string, which stores ISO on purpose and
                     // must keep doing so.
-                    note: nextDoseProvenanceNote(),
+                    note: nextDoseProvenanceNoteText(),
                   },
                   ...(nonAdministration || !evaluation
                     ? []
@@ -3633,7 +3546,7 @@ export function InjectionPanel({
                   // Same provenance the Order tab shows. Two tabs describing
                   // one date two different ways is how staff end up trusting
                   // the wrong one.
-                  note: nextDoseProvenanceNote(),
+                  note: nextDoseProvenanceNoteText(),
                 },
               ]}
               actions={

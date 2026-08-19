@@ -9,28 +9,8 @@ import {
   UDS_RECORDS_STORAGE_KEY,
   UdsRecordRepository,
   browserSafeStorage,
-  type StorageLike,
 } from "../../src/persistence";
-
-class MemoryStorage implements StorageLike {
-  readonly values = new Map<string, string>();
-  writes = 0;
-  failWrites = false;
-
-  getItem(key: string): string | null {
-    return this.values.get(key) ?? null;
-  }
-
-  setItem(key: string, value: string): void {
-    if (this.failWrites) throw new Error("quota");
-    this.writes += 1;
-    this.values.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.values.delete(key);
-  }
-}
+import { MemoryStorage } from "./support/memory-storage";
 
 const input = (id?: string) => ({
   ...(id ? { id } : {}),
@@ -204,6 +184,83 @@ describe("InjectionRecordRepository", () => {
     expect(save.ok).toBe(false);
     expect(memory.values.get(INJECTION_RECORDS_STORAGE_KEY)).toBe("{bad json");
     expect(memory.writes).toBe(0);
+  });
+
+  it("returns not-found when opening an unknown record", () => {
+    const repository = new InjectionRecordRepository(new SafeStorage(new MemoryStorage()));
+    const opened = repository.open("missing");
+    expect(opened.ok).toBe(false);
+    if (!opened.ok) expect(opened.error.code).toBe("not-found");
+  });
+
+  it("rejects an addendum against a draft (only completed records take addenda)", () => {
+    const memory = new MemoryStorage();
+    const repository = new InjectionRecordRepository(new SafeStorage(memory), {
+      createId: () => "inj-1",
+    });
+    repository.saveDraft(input());
+    const added = repository.addAddendum({ recordId: "inj-1", author: "MA", text: "Note" });
+    expect(added.ok).toBe(false);
+    if (!added.ok) expect(added.error.code).toBe("validation");
+  });
+
+  describe("search", () => {
+    const setUp = () => {
+      const memory = new MemoryStorage();
+      const repository = new InjectionRecordRepository(new SafeStorage(memory), {
+        createId: () => "inj-1",
+        now: () => "2026-07-30T10:00:00.000Z",
+      });
+      repository.complete(input());
+      const repository2 = new InjectionRecordRepository(new SafeStorage(memory), {
+        createId: () => "inj-2",
+        now: () => "2026-07-30T11:00:00.000Z",
+      });
+      repository2.saveDraft({
+        patient: { name: "OTHER, PATIENT", dob: "02/02/1980" },
+        summary: "Vivitrol 380 mg",
+        snapshot: { medKey: "vivitrol" },
+      });
+      return { repository };
+    };
+
+    it("filters by status", () => {
+      const { repository } = setUp();
+      const drafts = repository.search("", "draft");
+      expect(drafts.ok && drafts.value.map((record) => record.id)).toEqual(["inj-2"]);
+      const completed = repository.search("", "completed");
+      expect(completed.ok && completed.value.map((record) => record.id)).toEqual(["inj-1"]);
+    });
+
+    it("filters to records with addenda", () => {
+      const { repository } = setUp();
+      repository.addAddendum({ recordId: "inj-1", author: "MA", text: "Clarification only." });
+      const withAddenda = repository.search("", "addenda");
+      expect(withAddenda.ok && withAddenda.value.map((record) => record.id)).toEqual(["inj-1"]);
+    });
+
+    it("matches by patient name", () => {
+      const { repository } = setUp();
+      const found = repository.search("OTHER, PATIENT");
+      expect(found.ok && found.value.map((record) => record.id)).toEqual(["inj-2"]);
+    });
+
+    it("returns nothing for a query that matches no record", () => {
+      const { repository } = setUp();
+      const found = repository.search("nonexistent-patient");
+      expect(found.ok && found.value).toEqual([]);
+    });
+
+    it("matches text that exists only inside an addendum", () => {
+      const { repository } = setUp();
+      repository.addAddendum({
+        recordId: "inj-1",
+        author: "MA",
+        text: "Zolgensma follow-up call.",
+      });
+      const found = repository.search("Zolgensma");
+      expect(found.ok && found.value.map((record) => record.id)).toEqual(["inj-1"]);
+    });
   });
 });
 
@@ -380,11 +437,45 @@ describe("UdsRecordRepository", () => {
     const repository = new UdsRecordRepository(new SafeStorage(memory), {
       createId: () => "uds-1",
     });
-    repository.saveDraft(udsInput());
+    repository.complete(udsInput());
     const found = repository.search("UDS4471");
     expect(found.ok && found.value).toHaveLength(1);
     const notFound = repository.search("nonexistent-lot");
     expect(notFound.ok && notFound.value).toHaveLength(0);
+
+    repository.addAddendum({
+      recordId: "uds-1",
+      author: "MA",
+      text: "Repeat screen recommended.",
+    });
+    const foundByAddendum = repository.search("Repeat screen");
+    expect(foundByAddendum.ok && foundByAddendum.value).toHaveLength(1);
+  });
+
+  it("returns invalid-data when malformed storage blocks a discard", () => {
+    const memory = new MemoryStorage();
+    memory.values.set(UDS_RECORDS_STORAGE_KEY, "{bad json");
+    const repository = new UdsRecordRepository(new SafeStorage(memory));
+    const discarded = repository.discard("uds-1");
+    expect(discarded.ok).toBe(false);
+    if (!discarded.ok) expect(discarded.error.code).toBe("invalid-data");
+  });
+
+  it("returns invalid-data when malformed storage blocks an addendum", () => {
+    const memory = new MemoryStorage();
+    memory.values.set(UDS_RECORDS_STORAGE_KEY, "{bad json");
+    const repository = new UdsRecordRepository(new SafeStorage(memory));
+    const added = repository.addAddendum({ recordId: "uds-1", author: "MA", text: "Note" });
+    expect(added.ok).toBe(false);
+    if (!added.ok) expect(added.error.code).toBe("invalid-data");
+  });
+
+  it("returns not-found when adding an addendum to an unknown record", () => {
+    const memory = new MemoryStorage();
+    const repository = new UdsRecordRepository(new SafeStorage(memory));
+    const added = repository.addAddendum({ recordId: "missing", author: "MA", text: "Note" });
+    expect(added.ok).toBe(false);
+    if (!added.ok) expect(added.error.code).toBe("not-found");
   });
 });
 
@@ -501,5 +592,158 @@ describe("other compatibility repositories", () => {
       expect(memory.values.get(SITE_HISTORY_STORAGE_KEY)).toBe(malformed);
       expect(memory.writes).toBe(0);
     }
+  });
+
+  it("rejects recording a site history entry with a missing required field", () => {
+    const memory = new MemoryStorage();
+    const repository = new SiteHistoryRepository(new SafeStorage(memory));
+    const recorded = repository.record({
+      patientName: "Patient, Test",
+      dob: "01/01/1990",
+      site: "",
+      date: "2026-07-30",
+      medKey: "sustenna",
+      route: "IM",
+    });
+    expect(recorded.ok).toBe(false);
+    if (!recorded.ok) expect(recorded.error.code).toBe("validation");
+  });
+
+  it("lists and appends activity-log entries", () => {
+    const memory = new MemoryStorage();
+    const repository = new ActivityLogRepository(new SafeStorage(memory), "2026-07-30");
+    const empty = repository.list();
+    expect(empty.ok && empty.value).toEqual([]);
+
+    const entry = {
+      type: "injection" as const,
+      status: "completed" as const,
+      time: "09:00 AM",
+      pt: "PATIENT, TEST",
+      summary: "Injection administered",
+    };
+    const appended = repository.append(entry);
+    expect(appended.ok).toBe(true);
+    if (!appended.ok) return;
+    expect(appended.value).toEqual([entry]);
+    const listed = repository.list();
+    expect(listed.ok && listed.value).toEqual([entry]);
+  });
+
+  it("replaces activity-log entries wholesale, rejecting non-array input", () => {
+    const memory = new MemoryStorage();
+    const repository = new ActivityLogRepository(new SafeStorage(memory), "2026-07-30");
+    const entries = [
+      {
+        type: "uds" as const,
+        status: "needs_review" as const,
+        time: "10:00 AM",
+        pt: "PATIENT, TEST",
+        summary: "UDS collected",
+      },
+    ];
+    const replaced = repository.replace(entries);
+    expect(replaced.ok).toBe(true);
+    if (!replaced.ok) return;
+    expect(replaced.value).toEqual(entries);
+    const listed = repository.list();
+    expect(listed.ok && listed.value).toEqual(entries);
+
+    const invalid = repository.replace({ not: "an array" } as unknown as typeof entries);
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) expect(invalid.error.code).toBe("validation");
+  });
+
+  describe("SiteHistoryRepository.last", () => {
+    const entryFor = (site: string, date: string) => ({
+      patientName: "Patient, Test",
+      dob: "01/01/1990",
+      site,
+      date,
+      medKey: "sustenna",
+      route: "IM",
+      recordId: `${site}-${date}`,
+    });
+
+    it("returns null when no entry matches the medication and route", () => {
+      const memory = new MemoryStorage();
+      const repository = new SiteHistoryRepository(new SafeStorage(memory));
+      const last = repository.last("Patient, Test", "01/01/1990", "sustenna", "IM");
+      expect(last.ok && last.value).toBeNull();
+    });
+
+    it("returns the most recently dated matching entry, not the most recently stored one", () => {
+      const memory = new MemoryStorage();
+      let storedAt = "2026-07-01T10:00:00.000Z";
+      const repository = new SiteHistoryRepository(new SafeStorage(memory), () => storedAt);
+      repository.record(entryFor("L deltoid", "2026-07-01"));
+      storedAt = "2026-07-15T10:00:00.000Z";
+      repository.record(entryFor("R deltoid", "2026-07-15"));
+      storedAt = "2026-06-01T10:00:00.000Z";
+      repository.record(entryFor("L glute", "2026-06-01"));
+
+      const last = repository.last("Patient, Test", "01/01/1990", "sustenna", "IM");
+      expect(last.ok && last.value?.site).toBe("R deltoid");
+    });
+
+    it("excludes entries for a different medication or route", () => {
+      const memory = new MemoryStorage();
+      const repository = new SiteHistoryRepository(new SafeStorage(memory));
+      repository.record({
+        patientName: "Patient, Test",
+        dob: "01/01/1990",
+        site: "R deltoid",
+        date: "2026-07-30",
+        medKey: "vivitrol",
+        route: "IM",
+        recordId: "other-med",
+      });
+      const last = repository.last("Patient, Test", "01/01/1990", "sustenna", "IM");
+      expect(last.ok && last.value).toBeNull();
+    });
+
+    it("propagates an underlying read failure", () => {
+      const repository = new SiteHistoryRepository(new SafeStorage(null));
+      const last = repository.last("Patient, Test", "01/01/1990", "sustenna", "IM");
+      expect(last.ok).toBe(false);
+      if (!last.ok) expect(last.error.code).toBe("storage-unavailable");
+    });
+  });
+
+  describe("SafeStorage failure branches", () => {
+    it("returns storage-read-failed when the underlying getItem throws", () => {
+      const memory = new MemoryStorage();
+      memory.failReads = true;
+      const storage = new SafeStorage(memory);
+      const result = storage.read("any-key");
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("storage-read-failed");
+    });
+
+    it("returns storage-unavailable from write() against null-backed storage", () => {
+      const storage = new SafeStorage(null);
+      const result = storage.write("any-key", "value");
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("storage-unavailable");
+    });
+
+    it("removes a key, and reports storage-unavailable or storage-remove-failed appropriately", () => {
+      const nullBacked = new SafeStorage(null);
+      const blocked = nullBacked.remove("any-key");
+      expect(blocked.ok).toBe(false);
+      if (!blocked.ok) expect(blocked.error.code).toBe("storage-unavailable");
+
+      const memory = new MemoryStorage();
+      memory.values.set("present", "value");
+      const storage = new SafeStorage(memory);
+      const removed = storage.remove("present");
+      expect(removed.ok).toBe(true);
+      expect(memory.values.has("present")).toBe(false);
+
+      memory.failRemoves = true;
+      const failed = storage.remove("present");
+      expect(failed.ok).toBe(false);
+      if (!failed.ok) expect(failed.error.code).toBe("storage-remove-failed");
+    });
   });
 });

@@ -3,9 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   applyUdsDeviceProfileDefaults,
   deriveUdsReportStatus,
+  deviceChangeResetPatch,
   displayedUdsPanels,
   emptyUdsEncounter,
+  nextCustomPanelsAfterAdd,
+  nextCustomPanelsAfterMove,
+  nextCustomPanelsAfterRemove,
+  nextCustomPanelsAfterReplace,
   nextUdsResultState,
+  omittedPanelChangeResetPatch,
+  udsResultsSummary,
   UDS_PANELS,
   UdsEngine,
   type UdsEncounter,
@@ -344,5 +351,118 @@ describe("intentional UDS entry states", () => {
       label: "INCOMPLETE",
       marker: "STOP",
     });
+  });
+});
+
+describe("deviceChangeResetPatch", () => {
+  it("resets the device profile and flags invalidation when replacing a real prior selection", () => {
+    const encounter: UdsEncounter = {
+      ...baseEncounter(),
+      device: "SAFE life 13-Panel Cup",
+      omittedPanel: "THC",
+      customDeviceName: "leftover",
+      customPanels: ["THC", "COC"],
+      physicalReadingsVerified: true,
+    };
+    const result = deviceChangeResetPatch(encounter, "SAFE life 14-Panel Cup");
+    expect(result.invalidated).toBe(true);
+    expect(result.patch).toMatchObject({
+      device: "SAFE life 14-Panel Cup",
+      omittedPanel: "",
+      customDeviceName: "",
+      customPanels: [],
+      physicalReadingsVerified: false,
+      control: "not documented",
+      validity: "not documented",
+    });
+    UDS_PANELS.forEach((panel) => expect(result.patch.results?.[panel]).toBe("nt"));
+  });
+
+  it("does not flag invalidation for a first-ever device selection or reselecting the same device", () => {
+    const empty = deviceChangeResetPatch(emptyUdsEncounter(), "SAFE life 14-Panel Cup");
+    expect(empty.invalidated).toBe(false);
+
+    const unchanged = deviceChangeResetPatch(baseEncounter(), baseEncounter().device);
+    expect(unchanged.invalidated).toBe(false);
+  });
+});
+
+describe("omittedPanelChangeResetPatch", () => {
+  it("resets readings but preserves the QC facts already documented for the same physical cup", () => {
+    const encounter: UdsEncounter = {
+      ...baseEncounter(),
+      device: "SAFE life 13-Panel Cup",
+      physicalReadingsVerified: true,
+      control: "valid",
+      validity: "acceptable",
+      temperature: "acceptable",
+      results: { THC: "pos" },
+    };
+    const patch = omittedPanelChangeResetPatch(encounter, "PPX");
+    expect(patch).toMatchObject({
+      omittedPanel: "PPX",
+      physicalReadingsVerified: false,
+      control: "valid",
+      validity: "acceptable",
+      temperature: "acceptable",
+    });
+    UDS_PANELS.forEach((panel) => expect(patch.results?.[panel]).toBe("nt"));
+  });
+});
+
+describe("custom panel array operations", () => {
+  it("replaces the panel at the given position, leaving the rest of the order intact", () => {
+    expect(nextCustomPanelsAfterReplace(["THC", "COC", "BZO"], 1, "OXY")).toEqual(["THC", "OXY", "BZO"]);
+  });
+
+  it("swaps adjacent panels when moving within range, and returns null out of range", () => {
+    expect(nextCustomPanelsAfterMove(["THC", "COC", "BZO"], 1, 1)).toEqual(["THC", "BZO", "COC"]);
+    expect(nextCustomPanelsAfterMove(["THC", "COC", "BZO"], 1, -1)).toEqual(["COC", "THC", "BZO"]);
+    expect(nextCustomPanelsAfterMove(["THC", "COC", "BZO"], 0, -1)).toBeNull();
+    expect(nextCustomPanelsAfterMove(["THC", "COC", "BZO"], 2, 1)).toBeNull();
+  });
+
+  it("removes the panel at the given position", () => {
+    expect(nextCustomPanelsAfterRemove(["THC", "COC", "BZO"], 1)).toEqual(["THC", "BZO"]);
+  });
+
+  it("adds the first panel (in catalog order) not already present, or null once every panel is in the set", () => {
+    // UDS_PANELS starts with "BUP", which isn't in this custom set.
+    expect(nextCustomPanelsAfterAdd(["THC", "COC"])).toEqual(["THC", "COC", "BUP"]);
+    expect(nextCustomPanelsAfterAdd([...UDS_PANELS])).toBeNull();
+  });
+
+  it("treats an undefined custom-panel list the same as an empty one", () => {
+    expect(nextCustomPanelsAfterReplace(undefined, 0, "THC")).toEqual(["THC"]);
+    expect(nextCustomPanelsAfterRemove(undefined, 0)).toEqual([]);
+    expect(nextCustomPanelsAfterAdd(undefined)).toEqual([UDS_PANELS[0]]);
+  });
+});
+
+describe("udsResultsSummary", () => {
+  it("reports the tested count with no mention of positives when there are none", () => {
+    const encounter: UdsEncounter = {
+      ...baseEncounter(),
+      results: Object.fromEntries(UDS_PANELS.map((panel) => [panel, "neg"])),
+    };
+    expect(udsResultsSummary(encounter)).toBe(
+      `SAFE life 14-Panel Cup · ${UDS_PANELS.length}/${UDS_PANELS.length} tested`,
+    );
+  });
+
+  it("leads with the preliminary-positive count when any panel is positive", () => {
+    const encounter: UdsEncounter = {
+      ...baseEncounter(),
+      results: { THC: "pos", COC: "neg" },
+    };
+    expect(udsResultsSummary(encounter)).toBe("SAFE life 14-Panel Cup · 1 preliminary positive, 2/14 tested");
+  });
+
+  it("prefers the custom device name over the catalog device, and falls back when neither is set", () => {
+    const custom: UdsEncounter = { ...baseEncounter(), device: "Other point-of-care UDS cup", customDeviceName: "Clinic cup" };
+    expect(udsResultsSummary(custom)).toContain("Clinic cup ·");
+
+    const blank: UdsEncounter = { ...emptyUdsEncounter() };
+    expect(udsResultsSummary(blank)).toContain("No device selected ·");
   });
 });

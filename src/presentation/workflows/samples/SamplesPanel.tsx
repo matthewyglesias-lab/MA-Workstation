@@ -4,8 +4,6 @@ import {
   confirmSampleReview,
   sampleReviewIsCurrent,
   SamplesEngine,
-  type SamplePackage,
-  type SamplePlanStep,
   type SamplesEncounter,
   type SamplesEvaluationOutput,
 } from "../../../domain/samples";
@@ -17,6 +15,13 @@ import {
   type SampleMedicationKey,
 } from "../../../domain/samples-catalog";
 import { localIsoDate } from "../../../domain/dates";
+import {
+  buildPlanAndPackages,
+  patientIsEmpty,
+  primaryPackage,
+  rowsFromEncounter,
+  type AdditionalSampleRow,
+} from "../../../domain/samples-plan";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { DocumentationEngine } from "../../../documentation";
 import { samplesEncounterToDocumentationInput } from "../../../documentation/adapters/samples-from-encounter";
@@ -79,80 +84,6 @@ interface SamplesPanelProps {
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
 }
-
-interface AdditionalRow {
-  id: string;
-  strength: string;
-  quantity: string;
-  days: string;
-  directions: string;
-  lot: string;
-  expiration: string;
-}
-
-const patientIsEmpty = (patient: SamplesEncounter["patient"]): boolean =>
-  !patient.name.trim() && !patient.dob.trim();
-
-const primaryPackage = (encounter: SamplesEncounter): SamplePackage =>
-  encounter.packages.find((entry) => entry.id === "primary") ?? {
-    id: "primary",
-    label: "Primary package",
-    medicationStrength: encounter.medicationLabel,
-    quantity: encounter.quantity,
-    lot: "",
-    expiration: "",
-  };
-
-const rowsFromEncounter = (encounter: SamplesEncounter): AdditionalRow[] =>
-  encounter.plan.map((step) => {
-    const pkg = encounter.packages.find((entry) => entry.id === step.id);
-    return {
-      id: step.id,
-      strength: step.strength,
-      quantity: step.quantity,
-      days: step.days ?? "",
-      directions: step.directions,
-      lot: pkg?.lot ?? "",
-      expiration: pkg?.expiration ?? "",
-    };
-  });
-
-const buildPlanAndPackages = (
-  medicationLabel: string,
-  quantity: string,
-  primaryLot: string,
-  primaryExpiration: string,
-  rows: AdditionalRow[],
-): { plan: SamplePlanStep[]; packages: SamplePackage[] } => {
-  const plan: SamplePlanStep[] = rows.map((row) => ({
-    id: row.id,
-    strength: row.strength,
-    quantity: row.quantity,
-    days: row.days,
-    directions: row.directions,
-  }));
-  const packages: SamplePackage[] = [
-    {
-      id: "primary",
-      label: "Primary package",
-      medicationStrength: medicationLabel,
-      quantity,
-      lot: primaryLot,
-      expiration: primaryExpiration,
-    },
-    ...rows
-      .filter((row) => row.quantity.trim())
-      .map((row, index) => ({
-        id: row.id,
-        label: `Added package ${index + 2}`,
-        medicationStrength: row.strength.trim() || medicationLabel,
-        quantity: row.quantity,
-        lot: row.lot,
-        expiration: row.expiration,
-      })),
-  ];
-  return { plan, packages };
-};
 
 const newRowId = (): string => `sample-row-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -256,7 +187,7 @@ export function SamplesPanel({
     patch({ ...partial, plan, packages });
   };
 
-  const patchRows = (nextRows: AdditionalRow[]) => {
+  const patchRows = (nextRows: AdditionalSampleRow[]) => {
     const primary = primaryPackage(encounter);
     const { plan, packages } = buildPlanAndPackages(
       encounter.medicationLabel,
@@ -268,7 +199,7 @@ export function SamplesPanel({
     patch({ plan, packages });
   };
 
-  const updateRow = (id: string, rowPatch: Partial<AdditionalRow>) => {
+  const updateRow = (id: string, rowPatch: Partial<AdditionalSampleRow>) => {
     patchRows(rowsFromEncounter(encounter).map((row) => (row.id === id ? { ...row, ...rowPatch } : row)));
   };
 
