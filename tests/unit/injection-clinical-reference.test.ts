@@ -74,13 +74,37 @@ describe("InjectionClinicalReferenceBundle", () => {
     }
   });
 
-  it("uses calendar-month cadence for long-interval products", () => {
+  it("uses a fixed week-based cadence for long-interval products so the return date keeps the same weekday", () => {
+    // 2026-01-31 is a Saturday; 12 exact weeks (84 days) later must land on
+    // another Saturday. A calendar-month calculation would drift to
+    // 2026-04-30, a Thursday.
     expect(
       calculateNextInjectionDate(INJECTION_MEDICATIONS.trinza, "q12wk", "2026-01-31"),
-    ).toBe("2026-04-30");
+    ).toBe("2026-04-25");
+    // 2026-08-31 is a Monday; 26 exact weeks (182 days) later must land on
+    // another Monday. A calendar-month calculation would drift to
+    // 2027-02-28, a Sunday.
     expect(
       calculateNextInjectionDate(INJECTION_MEDICATIONS.hafyera, "q26wk", "2026-08-31"),
-    ).toBe("2027-02-28");
+    ).toBe("2027-03-01");
+
+    const weekdayOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDay();
+    for (const [medicationKey, intervalKey, administrationDate] of [
+      ["aristada", "q8wk", "2026-01-30"],
+      ["uzedy", "q8wk", "2026-01-30"],
+      ["asimtufii", "q8wk", "2026-01-30"],
+      ["trinza", "q12wk", "2026-01-31"],
+      ["hafyera", "q26wk", "2026-08-31"],
+    ] as const) {
+      const nextDate = calculateNextInjectionDate(
+        INJECTION_MEDICATIONS[medicationKey],
+        intervalKey,
+        administrationDate,
+      );
+      expect(weekdayOf(nextDate), `${medicationKey} ${intervalKey}`).toBe(
+        weekdayOf(administrationDate),
+      );
+    }
   });
 
   it("maps the higher Uzedy and Aristada strengths to their labeled schedules", () => {

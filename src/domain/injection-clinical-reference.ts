@@ -59,7 +59,6 @@ export type InjectionClinicalPhase =
 
 export type InjectionCadence =
   | { kind: "days"; days: number; label: string }
-  | { kind: "calendarMonths"; months: number; label: string }
   | { kind: "oneTime"; label: string };
 
 export type InjectionSiteGuidance =
@@ -415,7 +414,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           q8wk: { windowBefore: 14, windowAfter: 14 },
         },
         cadenceByInterval: {
-          q8wk: { kind: "calendarMonths", months: 2, label: "every 2 months" },
+          q8wk: { kind: "days", days: 56, label: "every 2 months" },
         },
         timingMode: "orderVerify",
         verifications: ["resuspend", "oralOverlap"],
@@ -886,9 +885,9 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
       source: sources.trinza,
       facts: [
         fact(
-          "trinza-calendar-cadence",
+          "trinza-week-cadence",
           "label constraint",
-          "INVEGA TRINZA is described as an every-3-month product; due-date calculations use calendar months rather than a generic 84-day approximation.",
+          "INVEGA TRINZA is described as an every-3-month product; due-date calculations use a fixed 84-day (12-week) interval so the scheduled return date falls on the same day of the week each cycle.",
           sources.trinza,
         ),
         fact(
@@ -908,7 +907,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         doses: ["273 mg", "410 mg", "546 mg", "819 mg"],
         windowBefore: 14,
         windowAfter: 14,
-        cadenceByInterval: { q12wk: { kind: "calendarMonths", months: 3, label: "every 3 months" } },
+        cadenceByInterval: { q12wk: { kind: "days", days: 84, label: "every 3 months" } },
         verifications: ["resuspend", "stabilized"],
         verificationRequirements: {
           maintenance: ["resuspend"],
@@ -992,9 +991,9 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
       source: sources.hafyera,
       facts: [
         fact(
-          "hafyera-calendar-cadence",
+          "hafyera-week-cadence",
           "label constraint",
-          "INVEGA HAFYERA is an every-6-month product; due-date calculations use calendar months rather than a generic 182-day approximation.",
+          "INVEGA HAFYERA is an every-6-month product; due-date calculations use a fixed 182-day (26-week) interval so the scheduled return date falls on the same day of the week each cycle.",
           sources.hafyera,
         ),
         fact(
@@ -1014,7 +1013,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         doses: ["1092 mg", "1560 mg"],
         windowBefore: 14,
         windowAfter: 21,
-        cadenceByInterval: { q26wk: { kind: "calendarMonths", months: 6, label: "every 6 months" } },
+        cadenceByInterval: { q26wk: { kind: "days", days: 182, label: "every 6 months" } },
         verifications: ["resuspend", "stabilized"],
         verificationRequirements: {
           maintenance: ["resuspend"],
@@ -1117,7 +1116,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           q4wk: { windowBefore: 7, windowAfter: 7 },
           q8wk: { windowBefore: 14, windowAfter: 14 },
         },
-        cadenceByInterval: { q8wk: { kind: "calendarMonths", months: 2, label: "every 2 months" } },
+        cadenceByInterval: { q8wk: { kind: "days", days: 56, label: "every 2 months" } },
         timingMode: "orderVerify",
         verifications: ["resuspend"],
         verificationRequirements: { maintenance: ["resuspend"], initiation: ["resuspend"], reinitiation: ["resuspend"] },
@@ -1352,7 +1351,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         doses: ["720 mg", "960 mg"],
         windowBefore: 14,
         windowAfter: 14,
-        cadenceByInterval: { q8wk: { kind: "calendarMonths", months: 2, label: "every 2 months" } },
+        cadenceByInterval: { q8wk: { kind: "days", days: 56, label: "every 2 months" } },
         timingMode: "orderVerify",
         verifications: ["resuspend", "aripiprazoleTolerability", "glutealOnly", "noMassage"],
         verificationRequirements: {

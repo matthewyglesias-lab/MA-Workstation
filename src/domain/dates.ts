@@ -56,21 +56,21 @@ export const addCalendarDays = (iso: string, days: number): string => {
 };
 
 /**
- * Add calendar months without allowing JavaScript's date overflow to move a
- * due date into the following month (for example, Jan 31 + 1 month becomes
- * Feb 28/29, not Mar 3).  Long-acting products described as "every 3 months"
- * or "every 6 months" need this semantic rather than a fixed 84/182-day
- * approximation.
+ * The Friday-before/Monday-after pair offered when a return date lands on a
+ * weekend; null for a weekday, or an empty/invalid date. Doubles as the "is
+ * this a weekend" check. Faithful port of the legacy worksheet's snap
+ * targets (Saturday: -1/+2 days; Sunday: -2/+1 days).
  */
-export const addCalendarMonths = (iso: string, months: number): string => {
+export const weekendSnapDates = (
+  iso: string,
+): { friday: string; monday: string } | null => {
   const date = parseIsoDate(iso);
-  if (!date || !Number.isInteger(months)) return "";
-  const originalDay = date.getUTCDate();
-  const targetMonthIndex = date.getUTCMonth() + months;
-  const targetYear = date.getUTCFullYear() + Math.floor(targetMonthIndex / 12);
-  const targetMonth = ((targetMonthIndex % 12) + 12) % 12;
-  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
-  return toIsoDate(new Date(Date.UTC(targetYear, targetMonth, Math.min(originalDay, lastDayOfTargetMonth))));
+  if (!date) return null;
+  const day = date.getUTCDay();
+  if (day !== 0 && day !== 6) return null;
+  return day === 6
+    ? { friday: addCalendarDays(iso, -1), monday: addCalendarDays(iso, 2) }
+    : { friday: addCalendarDays(iso, -2), monday: addCalendarDays(iso, 1) };
 };
 
 export const differenceInCalendarDays = (from: string, to: string): number | null => {

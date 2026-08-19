@@ -6,6 +6,7 @@ const {
   registerMarker,
   registerValue,
   registerNote,
+  registerFlag,
 } = require('./schedule-register');
 
 async function openInjection(page) {
@@ -180,6 +181,37 @@ test.describe('Injection decision support', () => {
     await expect(registerNote(resumedDue, 'Next dose due'))
       .toContainText('Active order specifies this return date');
     await expect(resumedDue.getByRole('button', { name: 'Review override…' })).toBeVisible();
+  });
+
+  test('warns when the calculated return date lands on a weekend and offers a same-week snap', async ({ page }) => {
+    const panel = await openInjection(page);
+    await enterRoutineOrder(panel, 'QA, Weekend Return');
+
+    await openTab(panel, 'Order');
+    const administrationDate = panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[data-workstation-date="date"]');
+    // Saturday admin date; q4wk is exactly 4 weeks, so the calculated return
+    // date lands on a Saturday too.
+    await fillDate(administrationDate, '2026-08-01');
+
+    const dueField = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
+    await expect(registerValue(dueField, 'Next dose due')).toHaveText('08/29/26');
+    await expect(registerFlag(dueField, 'Next dose due')).toHaveText('WEEKEND');
+
+    const weekendHint = panel.locator('.wfp-field-hint', { hasText: 'lands on a weekend' });
+    await expect(weekendHint).toBeVisible();
+    await weekendHint.getByRole('button', { name: 'Fri 08/28/26' }).click();
+
+    // Snapping to Friday records a real, auditable manual override rather
+    // than quietly moving the date the way the legacy worksheet did.
+    await expect(registerValue(dueField, 'Next dose due')).toHaveText('08/28/26');
+    await expect(registerMarker(dueField)).toHaveText('OVR');
+    await expect(registerNote(dueField, 'Next dose due')).toContainText(
+      'Weekend-adjusted from the calculated return date',
+    );
+    await expect(registerFlag(dueField, 'Next dose due')).toHaveCount(0);
+    await expect(panel.locator('.wfp-field-hint', { hasText: 'lands on a weekend' })).toHaveCount(0);
   });
 
   test('keeps the legacy completion gate aligned with phase-aware routine checks', async ({ page }) => {
