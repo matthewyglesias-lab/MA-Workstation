@@ -358,7 +358,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Administration');
     await expect(panel.locator('[data-needle-unresolved]')).toContainText(
-      'body habitus to be assessed before each injection'
+      'body habitus assessed before each injection'
     );
     await panel.locator('label.wfp-needle-band-option', { hasText: 'Average' }).click();
     await expect(panel.locator('input[name="inj-habitus"]:checked')).toHaveCount(1);
