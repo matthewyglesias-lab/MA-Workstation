@@ -2037,7 +2037,7 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('formats the administered Tebra copy and preserves new fields in a locked record snapshot', async ({ page }) => {
     const haldolPreparationDocumentation =
-      'HALDOL DECANOATE solution was visually inspected and was clear, yellow to light amber, and free of visible debris.';
+      'HALDOL DECANOATE solution visually inspected: clear, yellow to light amber, free of visible debris.';
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
       origin: 'http://127.0.0.1:4173'
     });
