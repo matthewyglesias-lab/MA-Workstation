@@ -39,7 +39,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ARISTADA syringe preparation completed",
     documentation:
-      "ARISTADA syringe tapped ≥10 times and shaken vigorously ≥30 sec until uniform.",
+      "ARISTADA syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
     guidance: ["Tap the syringe at least 10 times", "more than 15 minutes"],
   },
   {
@@ -47,7 +47,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ARISTADA INITIO syringe preparation completed",
     documentation:
-      "ARISTADA INITIO syringe tapped ≥10 times and shaken vigorously ≥30 sec until uniform.",
+      "ARISTADA INITIO syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
     guidance: ["Tap the syringe at least 10 times", "more than 15 minutes"],
   },
   {
@@ -55,7 +55,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "INVEGA SUSTENNA suspension shaken and visually inspected",
     documentation:
-      "INVEGA SUSTENNA syringe shaken vigorously ≥10 sec until homogeneous; no foreign matter or discoloration observed.",
+      "INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; suspension homogeneous, no foreign matter or discoloration observed.",
     normalResult: "no foreign matter or discoloration observed.",
     guidance: ["at least 10 seconds", "foreign matter or discoloration"],
   },
@@ -64,7 +64,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ERZOFRI suspension preparation completed",
     documentation:
-      "ERZOFRI syringe shaken vigorously ≥10 sec until homogeneous.",
+      "ERZOFRI syringe shaken vigorously ≥10 sec; suspension homogeneous.",
     guidance: ["at least 10 seconds", "Do not mix with another product or diluent"],
   },
   {
@@ -72,7 +72,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "INVEGA TRINZA suspension shaken and visually inspected",
     documentation:
-      "INVEGA TRINZA syringe shaken vigorously ≥15 sec within 5 min before injection, until uniform and milky-white; no foreign matter or discoloration observed.",
+      "INVEGA TRINZA syringe shaken vigorously ≥15 sec and injected within 5 min; uniform, milky-white suspension confirmed, no foreign matter or discoloration observed.",
     normalResult: "no foreign matter or discoloration observed.",
     guidance: ["at least 15 seconds", "inject within 5 minutes"],
   },
@@ -81,7 +81,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "INVEGA HAFYERA resuspension and visual inspection completed",
     documentation:
-      "INVEGA HAFYERA syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more until uniform, thick, and milky-white; no particulate matter or discoloration observed.",
+      "INVEGA HAFYERA syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more; uniform, thick, milky-white suspension confirmed, no particulate matter or discoloration observed.",
     normalResult: "no particulate matter or discoloration observed.",
     guidance: ["shake very fast for at least 15 seconds", "shake again for 15 seconds"],
   },
@@ -90,7 +90,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "UZEDY room-temperature, product, and bubble checks completed",
     documentation:
-      "UZEDY kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white and free of non-white particles, bubble positioned at the syringe cap.",
+      "UZEDY kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white, free of non-white particles, bubble positioned at the syringe cap.",
     normalResult: "free of non-white particles",
     guidance: ["at least 30 minutes", "Forcefully flick the syringe downward three times"],
   },
@@ -99,7 +99,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ABILIFY MAINTENA reconstitution and inspection completed",
     documentation:
-      "ABILIFY MAINTENA reconstituted per ordered presentation until uniform, opaque, and milky-white; no particulate matter or discoloration observed.",
+      "ABILIFY MAINTENA reconstituted per ordered presentation; suspension uniform, opaque, and milky-white, no particulate matter or discoloration observed.",
     normalResult: "no particulate matter or discoloration observed.",
     guidance: ["dual-chamber syringe and vial have different reconstitution procedures"],
   },
@@ -108,7 +108,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ABILIFY ASIMTUFII suspension prepared and visually inspected",
     documentation:
-      "ABILIFY ASIMTUFII syringe tapped ≥10 times and shaken vigorously ≥10 sec until uniform, opaque, and milky-white; no particulate matter or discoloration observed.",
+      "ABILIFY ASIMTUFII syringe tapped ≥10 times, shaken vigorously ≥10 sec; uniform, opaque, milky-white suspension confirmed, no particulate matter or discoloration observed.",
     normalResult: "no particulate matter or discoloration observed.",
     guidance: ["at least 10 seconds until the medication is uniform", "particulate matter or discoloration"],
   },
@@ -117,8 +117,8 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "VIVITROL reconstitution and suspension check completed",
     documentation:
-      "VIVITROL reached room temperature and was reconstituted with supplied diluent until milky-white and clump-free, moving freely down the vial walls; 4 mL prepared for immediate administration.",
-    normalResult: "milky-white and clump-free",
+      "VIVITROL reached room temperature and was reconstituted with supplied diluent; milky-white, clump-free suspension confirmed moving freely down the vial walls, 4 mL prepared for immediate administration.",
+    normalResult: "milky-white, clump-free suspension confirmed",
     guidance: ["inject 3.4 mL of diluent", "withdraw 4.2 mL", "prepare 4 mL for injection"],
   },
   {
@@ -135,7 +135,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "visualInspection",
     label: "Dry equipment and applicable solution inspection completed",
     documentation:
-      "Fluphenazine decanoate visually inspected when solution and container permitted; no particulate matter or discoloration observed, dry preparation equipment used.",
+      "Fluphenazine decanoate visually inspected when solution and container permitted, with no particulate matter or discoloration observed. Dry preparation equipment used.",
     normalResult: "no particulate matter or discoloration observed",
     guidance: ["whenever solution and container permit", "Use a dry syringe"],
   },

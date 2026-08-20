@@ -11,7 +11,7 @@ import type {
  * provenance behind those decisions.  It also keeps the Knowledge Center from
  * becoming a second, hand-maintained medication catalog.
  */
-export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.19.1";
+export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.20.1";
 export const INJECTION_CLINICAL_REFERENCE_REVIEWED_ON = "2026-08-05";
 
 /**
@@ -426,7 +426,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ARISTADA syringe preparation completed",
-            "ARISTADA syringe tapped ≥10 times and shaken vigorously ≥30 sec until uniform.",
+            "ARISTADA syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
             sources.aristada,
           ),
         },
@@ -560,7 +560,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ARISTADA INITIO syringe preparation completed",
-            "ARISTADA INITIO syringe tapped ≥10 times and shaken vigorously ≥30 sec until uniform.",
+            "ARISTADA INITIO syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
             sources.initio,
           ),
         },
@@ -673,7 +673,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA SUSTENNA suspension shaken and visually inspected",
-            "INVEGA SUSTENNA syringe shaken vigorously ≥10 sec until homogeneous; no foreign matter or discoloration observed.",
+            "INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; suspension homogeneous, no foreign matter or discoloration observed.",
             sources.sustenna,
           ),
         },
@@ -787,7 +787,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ERZOFRI suspension preparation completed",
-            "ERZOFRI syringe shaken vigorously ≥10 sec until homogeneous.",
+            "ERZOFRI syringe shaken vigorously ≥10 sec; suspension homogeneous.",
             sources.erzofri,
           ),
         },
@@ -917,7 +917,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA TRINZA suspension shaken and visually inspected",
-            "INVEGA TRINZA syringe shaken vigorously ≥15 sec within 5 min before injection, until uniform and milky-white; no foreign matter or discoloration observed.",
+            "INVEGA TRINZA syringe shaken vigorously ≥15 sec and injected within 5 min; uniform, milky-white suspension confirmed, no foreign matter or discoloration observed.",
             sources.trinza,
           ),
         },
@@ -1023,7 +1023,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA HAFYERA resuspension and visual inspection completed",
-            "INVEGA HAFYERA syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more until uniform, thick, and milky-white; no particulate matter or discoloration observed.",
+            "INVEGA HAFYERA syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more; uniform, thick, milky-white suspension confirmed, no particulate matter or discoloration observed.",
             sources.hafyera,
           ),
         },
@@ -1123,7 +1123,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "UZEDY room-temperature, product, and bubble checks completed",
-            "UZEDY kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white and free of non-white particles, bubble positioned at the syringe cap.",
+            "UZEDY kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white, free of non-white particles, bubble positioned at the syringe cap.",
             sources.uzedy,
           ),
         },
@@ -1257,7 +1257,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ABILIFY MAINTENA reconstitution and inspection completed",
-            "ABILIFY MAINTENA reconstituted per ordered presentation until uniform, opaque, and milky-white; no particulate matter or discoloration observed.",
+            "ABILIFY MAINTENA reconstituted per ordered presentation; suspension uniform, opaque, and milky-white, no particulate matter or discoloration observed.",
             sources.maintena,
           ),
         },
@@ -1362,7 +1362,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ABILIFY ASIMTUFII suspension prepared and visually inspected",
-            "ABILIFY ASIMTUFII syringe tapped ≥10 times and shaken vigorously ≥10 sec until uniform, opaque, and milky-white; no particulate matter or discoloration observed.",
+            "ABILIFY ASIMTUFII syringe tapped ≥10 times, shaken vigorously ≥10 sec; uniform, opaque, milky-white suspension confirmed, no particulate matter or discoloration observed.",
             sources.asimtufii,
           ),
         },
@@ -1467,7 +1467,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "VIVITROL reconstitution and suspension check completed",
-            "VIVITROL reached room temperature and was reconstituted with supplied diluent until milky-white and clump-free, moving freely down the vial walls; 4 mL prepared for immediate administration.",
+            "VIVITROL reached room temperature and was reconstituted with supplied diluent; milky-white, clump-free suspension confirmed moving freely down the vial walls, 4 mL prepared for immediate administration.",
             sources.vivitrol,
           ),
         },
@@ -1729,7 +1729,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           visualInspection: verificationDetail(
             "Dry equipment and applicable solution inspection completed",
-            "Fluphenazine decanoate visually inspected when solution and container permitted; no particulate matter or discoloration observed, dry preparation equipment used.",
+            "Fluphenazine decanoate visually inspected when solution and container permitted, with no particulate matter or discoloration observed. Dry preparation equipment used.",
             sources.prolixin,
           ),
         },
