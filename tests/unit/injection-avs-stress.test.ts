@@ -142,7 +142,7 @@ describe("AVS stress: every medication x every protocol", () => {
   it("always renders an escaped, non-empty sheet", () => {
     for (const { label, input } of combinations) {
       const html = buildInjectionAvsHtml(input, { runStamp: "08/05/26 1024" });
-      expect(html, label).toContain("AFTER VISIT SUMMARY");
+      expect(html, label).toContain("After Visit Summary");
       expect(html, label).toContain('class="avs2-page avs2-page-primary"');
       // The identity band is what the print-parity canonicaliser anchors on.
       expect(html, label).toContain('<dt class="avs2-id-k">RECORD NO</dt>');
@@ -164,7 +164,7 @@ describe("AVS stress: nothing was given", () => {
       const first = model.timeline[0];
       expect(first?.state, label).toBe("action");
       expect(first?.title, label).toBe("This injection was not given today");
-      expect(model.documentSubtitle, label).toBe("INJECTION NOT GIVEN TODAY");
+      expect(model.documentSubtitle, label).toBe("Injection not given today");
     }
   });
 
@@ -179,9 +179,9 @@ describe("AVS stress: nothing was given", () => {
 
   it("drops aftercare and what-to-expect, which presume an injection", () => {
     for (const { label, input } of notGivenCombos) {
-      const headings = buildInjectionAvsModel(input).blocks.map((b) => b.heading);
-      expect(headings, label).not.toContain("CARING FOR THE INJECTION SITE");
-      expect(headings, label).not.toContain("WHAT TO EXPECT");
+      const kinds = buildInjectionAvsModel(input).blocks.map((b) => b.kind);
+      expect(kinds, label).not.toContain("site-care");
+      expect(kinds, label).not.toContain("expected-effects");
     }
   });
 
@@ -197,9 +197,9 @@ describe("AVS stress: nothing was given", () => {
       }),
     );
     const headings = vivitrol.leadAlerts.map((block) => block.heading);
-    expect(headings.join(" ")).not.toContain("OPIOID TOLERANCE");
+    expect(headings.join(" ")).not.toContain("opioid tolerance");
     // The cold-chain call-ahead is about the *next* visit, so it survives.
-    expect(headings.join(" ")).toContain("CALL BEFORE YOU COME IN");
+    expect(headings.join(" ")).toContain("Call before you come in");
   });
 
   it("drops the oral-overlap countdown, which counts from an injection", () => {
@@ -213,7 +213,7 @@ describe("AVS stress: nothing was given", () => {
       }),
     );
     expect(model.timeline.some((step) => step.whenNote === "Through")).toBe(false);
-    expect(JSON.stringify(model)).not.toContain("KEEP TAKING YOUR ORAL");
+    expect(JSON.stringify(model)).not.toContain("Keep taking your oral");
   });
 
   it("still tells the patient when to return and when to get help", () => {
@@ -335,9 +335,7 @@ describe("AVS stress: paired injections", () => {
   });
 
   it("covers aftercare for both sites, without duplicating shared lines", () => {
-    const care = paired().blocks.find(
-      (block) => block.heading === "CARING FOR THE INJECTION SITE",
-    );
+    const care = paired().blocks.find((block) => block.kind === "site-care");
     const lines = care?.paragraphs ?? [];
     expect(lines.join(" ")).toContain("arm");
     expect(lines.join(" ")).toContain("hip");
@@ -411,7 +409,7 @@ describe("AVS stress: overflow and hostile input", () => {
         orderingProvider: long,
       }),
     );
-    expect(html).toContain("AFTER VISIT SUMMARY");
+    expect(html).toContain("After Visit Summary");
     expect(html).toContain('class="avs2-page avs2-page-primary"');
     expect(html).toContain('<dt class="avs2-id-k">RECORD NO</dt>');
   });
@@ -441,7 +439,7 @@ describe("AVS stress: overflow and hostile input", () => {
       day1Date: "",
       clinicPhone: "(909) 887-6222",
     });
-    expect(html).toContain("AFTER VISIT SUMMARY");
+    expect(html).toContain("After Visit Summary");
     expect(html).toContain("Injection given");
     expect(html).toContain('class="avs2-page avs2-page-primary"');
   });

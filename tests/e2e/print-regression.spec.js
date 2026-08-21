@@ -262,6 +262,144 @@ async function expectAvsPagesToFit(page) {
   }
 }
 
+async function expectTwoPageAvsToBeBalanced(page) {
+  const occupancy = await page.locator('#avsSheet .avs2-page').evaluateAll(pages =>
+    pages.map(pageNode => {
+      const body = pageNode.querySelector(':scope > .avs2-page-body');
+      const footer = pageNode.querySelector(':scope > .avs2-foot');
+      const last = body?.lastElementChild;
+      if (!body || !footer || !last) return 0;
+      const available = footer.getBoundingClientRect().top - body.getBoundingClientRect().top;
+      const used = last.getBoundingClientRect().bottom - body.getBoundingClientRect().top;
+      return available > 0 ? used / available : 0;
+    })
+  );
+  expect(occupancy).toHaveLength(2);
+  for (const [index, ratio] of occupancy.entries()) {
+    expect(ratio, `AVS page ${index + 1} is near-empty`).toBeGreaterThan(0.28);
+    expect(ratio, `AVS page ${index + 1} crowds the footer`).toBeLessThan(0.94);
+  }
+  expect(Math.abs(occupancy[0] - occupancy[1]), 'AVS pages are visually unbalanced')
+    .toBeLessThan(0.46);
+}
+
+async function expectTimelineToConnect(page) {
+  const geometry = await page.locator('#avsSheet .avs2-spine').evaluateAll(spines =>
+    spines.map(spine => {
+      const rails = [...spine.querySelectorAll('.avs2-rail')];
+      const nodes = [...spine.querySelectorAll('.avs2-node')];
+      const railRects = rails.map(rail => rail.getBoundingClientRect());
+      const centers = nodes.map(node => {
+        const rect = node.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      });
+      const segments = rails.map((rail, index) => {
+        const railRect = railRects[index];
+        const style = getComputedStyle(rail, '::before');
+        const top = railRect.top + (parseFloat(style.top) || 0);
+        const height = parseFloat(style.height);
+        const bottom = Number.isFinite(height)
+          ? top + height
+          : railRect.bottom - (parseFloat(style.bottom) || 0);
+        return { top, bottom };
+      });
+      const gaps = segments.slice(0, -1).map((segment, index) =>
+        segments[index + 1].top - segment.bottom
+      );
+      return {
+        count: rails.length,
+        horizontalDrift: Math.max(...centers.map(center => center.x)) -
+          Math.min(...centers.map(center => center.x)),
+        maxGap: gaps.length ? Math.max(...gaps) : 0,
+        firstEndpointError: Math.abs(segments[0].top - centers[0].y),
+        lastEndpointError: Math.abs(
+          segments[segments.length - 1].bottom - centers[centers.length - 1].y
+        )
+      };
+    })
+  );
+
+  for (const result of geometry) {
+    expect(result.count).toBeGreaterThanOrEqual(2);
+    expect(result.horizontalDrift, 'timeline nodes drift off the shared rail').toBeLessThanOrEqual(0.5);
+    expect(result.maxGap, 'timeline rail contains a visible vertical gap').toBeLessThanOrEqual(1);
+    expect(result.firstEndpointError, 'timeline rail does not start at the first node').toBeLessThanOrEqual(1);
+    expect(result.lastEndpointError, 'timeline rail does not end at the last node').toBeLessThanOrEqual(1);
+  }
+}
+
+async function expectRefinedAvsVisualSystem(page) {
+  const visual = await page.locator('#avsSheet').evaluate(root => {
+    const style = selector => getComputedStyle(root.querySelector(selector));
+    const rgb = value => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+    const luminance = value => {
+      const [red = 0, green = 0, blue = 0] = rgb(value);
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const article = style('.avs2');
+    const patient = style('.avs2-id');
+    const due = style('.avs2-step-due .avs2-step-body');
+    const emergency = style('.avs2-alert-emergency');
+    const emergencyHeading = style('.avs2-alert-emergency .avs2-alert-bar');
+    const bodyCopy = [...root.querySelectorAll('.avs2-p, .avs2-ul li')]
+      .map(node => ({
+        className: node.className,
+        size: parseFloat(getComputedStyle(node).fontSize),
+        text: node.textContent.trim().slice(0, 50)
+      }));
+    return {
+      articleFont: article.fontFamily,
+      bodyFontSize: parseFloat(article.fontSize),
+      undersizedBodyCopy: bodyCopy.filter(item => item.size < 14),
+      patientRadius: parseFloat(patient.borderTopLeftRadius),
+      dueRadius: parseFloat(due.borderTopLeftRadius),
+      emergencyRadius: parseFloat(emergency.borderTopLeftRadius),
+      emergencyEdge: parseFloat(emergency.borderLeftWidth),
+      emergencyHeadingTransform: emergencyHeading.textTransform,
+      inkLuminance: luminance(article.color),
+      surfaceLuminance: luminance(patient.backgroundColor),
+      accentLuminance: luminance(due.borderLeftColor),
+      emergencyLuminance: luminance(emergency.borderLeftColor)
+    };
+  });
+
+  expect(visual.articleFont).toMatch(/Aptos|Segoe UI|Arial/);
+  expect(visual.bodyFontSize).toBeGreaterThanOrEqual(14);
+  expect(visual.undersizedBodyCopy, 'patient guidance dropped below 10.5pt').toEqual([]);
+  expect(visual.patientRadius).toBe(4);
+  expect(visual.dueRadius).toBe(4);
+  expect(visual.emergencyRadius).toBe(4);
+  expect(visual.emergencyEdge).toBe(3);
+  expect(visual.emergencyHeadingTransform).toBe('none');
+  // These luminance gaps are the forced-grayscale contract: hierarchy must
+  // remain visible even when hue is unavailable.
+  expect(visual.surfaceLuminance - visual.inkLuminance).toBeGreaterThan(150);
+  expect(visual.surfaceLuminance - visual.accentLuminance).toBeGreaterThan(120);
+  expect(visual.surfaceLuminance - visual.emergencyLuminance).toBeGreaterThan(120);
+}
+
+async function expectAvsSemanticStructure(page) {
+  const structure = await page.locator('#avsSheet article.avs2').evaluate(article => {
+    const headings = [...article.querySelectorAll('h1, h2, h3, h4, h5, h6')];
+    const labelledSections = [...article.querySelectorAll('section[aria-labelledby]')];
+    return {
+      levels: headings.map(heading => Number(heading.tagName.slice(1))),
+      brokenLabels: labelledSections
+        .map(section => section.getAttribute('aria-labelledby'))
+        .filter(id => !id || !article.querySelector(`#${CSS.escape(id)}`)),
+      emptyLists: [...article.querySelectorAll('ul, ol')]
+        .filter(list => !list.querySelector(':scope > li')).length,
+      pageFooters: [...article.querySelectorAll('.avs2-page')]
+        .filter(pageNode => pageNode.querySelector(':scope > footer.avs2-foot')).length
+    };
+  });
+  expect(structure.levels[0]).toBe(1);
+  expect(structure.levels.slice(1).every(level => level === 2)).toBe(true);
+  expect(structure.brokenLabels).toEqual([]);
+  expect(structure.emptyLists).toBe(0);
+  expect(structure.pageFooters).toBeGreaterThanOrEqual(1);
+}
+
 async function setFieldsAndRender(page, {
   bodyClass,
   renderName,
@@ -595,9 +733,15 @@ test.describe('unchanged clinical print surfaces', () => {
 
   test('keeps the injection record-actions bar and shell out of an early AVS printout', async ({ page }) => {
     await prepareMinimalAvsInjection(page);
-    await expect(page.locator('#avsSheet .avs2-status')).toHaveText(
+    const avs = page.locator('#avsSheet');
+    await expect(avs.locator('.avs2-status')).toHaveText(
       'STAFF PREVIEW - NOT FINAL'
     );
+    await expect(avs.locator('article.avs2')).toHaveClass(/avs2-draft/);
+    const watermarks = await avs.locator('.avs2-page').evaluateAll(pages =>
+      pages.map(pageNode => getComputedStyle(pageNode, '::after').content)
+    );
+    expect(watermarks).toEqual(['"STAFF DRAFT"']);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
@@ -622,13 +766,21 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('header.avs2-run')).toHaveCount(1);
     await expect(avs.locator('h1.avs2-title')).toHaveCount(1);
     await expect(avs.locator('section.avs2-id')).toHaveCount(1);
-    await expect(avs.locator('.avs2-status')).toHaveText('PATIENT COPY');
+    await expect(avs.locator('.avs2-status')).toHaveText('Patient copy');
     await expect(avs.locator('ol.avs2-spine > li.avs2-step')).toHaveCount(2);
     await expect(avs.locator('.avs2-step-given')).toContainText('Other, 100 mg');
+    await expect(avs.getByRole('img', { name: /Injection site: Right deltoid/i })).toHaveCount(1);
     await expect(avs.getByText('Print QA, MA', { exact: true })).toHaveCount(1);
     await expect(avs.locator('dl.avs2-pairs')).toContainText('AFTER HOURS');
     await expect(avs.locator('.avs2-page')).toHaveCount(1);
     await expectAvsPagesToFit(page);
+    await expectTimelineToConnect(page);
+    await expectRefinedAvsVisualSystem(page);
+    await expectAvsSemanticStructure(page);
+    await expect(avs.locator('article.avs2')).not.toHaveClass(/avs2-draft/);
+    expect(await avs.locator('.avs2-page').evaluate(
+      pageNode => getComputedStyle(pageNode, '::after').content
+    )).toBe('none');
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
@@ -649,6 +801,48 @@ test.describe('unchanged clinical print surfaces', () => {
     });
   });
 
+  test('keeps maximum-length identity, product, site, and trace facts inside one routine page', async ({ page }) => {
+    await preparePrintableInjection(page);
+    const panel = page.locator('.wfp-panel');
+    await panel.getByRole('tab', { name: 'Order & Timing', exact: true }).click();
+    await panel.locator('input[placeholder="Last, First"]').fill(
+      'Montgomery-Washington-Rivera, Alexandria Josephine'
+    );
+    await setProvider(panel, 'Maximilian Provider-Washington, Psychiatric Nurse Practitioner');
+    await panel.locator('.wfp-field:has-text("Medication name") input').fill(
+      'Extended-release clinic-administered investigational medication'
+    );
+    await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+    await panel.locator('input[placeholder="Actual site / location per active order"]').fill(
+      'Right ventrogluteal region, upper outer hip, per active provider order'
+    );
+    await panel.locator('input[placeholder="J. Doe, LVN"]').fill(
+      'Alexandria Montgomery-Washington, Licensed Vocational Nurse'
+    );
+    await panel.getByRole('tab', { name: 'Product', exact: true }).click();
+    await panel.locator('input[placeholder="LOT123"]').fill(
+      'MANUFACTURER-TRACE-LOT-2026-08-EXTRA-LONG'
+    );
+    await setFieldsAndRender(page, {
+      bodyClass: 'print-avs',
+      renderName: 'renderAVS',
+      rootId: 'avsSheet'
+    });
+    const avs = page.locator('#avsSheet');
+    await expect(avs.locator('.avs2-page')).toHaveCount(1);
+    await expect(avs).toContainText('Montgomery-Washington-Rivera');
+    await expect(avs).toContainText('Extended-release clinic-administered');
+    await expect(avs).toContainText('MANUFACTURER-TRACE-LOT');
+    await expectAvsPagesToFit(page);
+    await expectTimelineToConnect(page);
+    await expectPrintContract(page, {
+      rootId: 'avsSheet',
+      content: [/Montgomery-Washington-Rivera/i, /MANUFACTURER-TRACE-LOT/i],
+      maxPages: 1,
+      checkParity: false
+    });
+  });
+
   test('paginates Vivitrol safety guidance without clipping or printable scrollbars', async ({ page }) => {
     await prepareVivitrolInjection(page);
     await setFieldsAndRender(page, {
@@ -662,12 +856,15 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('footer.avs2-foot').first()).toContainText('Page 1 of 2');
     await expect(avs.locator('footer.avs2-foot').last()).toContainText('Page 2 of 2');
     await expect(avs.locator('.avs2-page-primary')).toContainText(
-      'IMPORTANT - OPIOID TOLERANCE AND OVERDOSE RISK'
+      'Important: opioid tolerance and overdose risk'
     );
     await expect(avs.locator('.avs2-page-continuation')).toContainText(
-      'EMERGENCY - CALL 911 OR GO TO THE NEAREST ER NOW IF'
+      'Call 911 now or go to the nearest emergency room if'
     );
     await expectAvsPagesToFit(page);
+    await expectTwoPageAvsToBeBalanced(page);
+    await expectTimelineToConnect(page);
+    await expectAvsSemanticStructure(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
@@ -695,9 +892,16 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('footer.avs2-foot').first()).toContainText('Page 1 of 2');
     await expect(avs.locator('footer.avs2-foot').last()).toContainText('Page 2 of 2');
     await expect(avs.locator('.avs2-page-continuation')).toContainText(
-      'EMERGENCY - CALL 911 OR GO TO THE NEAREST ER NOW IF'
+      'Call 911 now or go to the nearest emergency room if'
     );
+    await expect(avs.locator('.avs2-page-primary')).toContainText('Why timing matters');
+    await expect(avs.locator('.avs2-page-primary')).toContainText('Caring for your injection site');
+    await expect(avs.locator('.avs2-page-continuation')).not.toContainText('Why timing matters');
+    await expect(avs.locator('.avs2-continuation-id')).toContainText('Print, Asimtufii');
+    await expect(avs.locator('.avs2-continuation-id')).toContainText('Record no.');
     await expectAvsPagesToFit(page);
+    await expectTwoPageAvsToBeBalanced(page);
+    await expectTimelineToConnect(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
@@ -723,10 +927,11 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('footer.avs2-foot')).toHaveCount(2);
     await expect(avs.locator('footer.avs2-foot').first()).toContainText('Page 1 of 2');
     await expect(avs.locator('footer.avs2-foot').last()).toContainText('Page 2 of 2');
-    await expect(avs.locator('.avs2-continuation')).toContainText(
-      /Print, Initiation - DOB 09\/22\/1991/i
-    );
+    await expect(avs.locator('.avs2-continuation-id')).toContainText('Print, Initiation');
+    await expect(avs.locator('.avs2-continuation-id')).toContainText('09/22/1991');
     await expectAvsPagesToFit(page);
+    await expectTwoPageAvsToBeBalanced(page);
+    await expectTimelineToConnect(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
@@ -739,6 +944,27 @@ test.describe('unchanged clinical print surfaces', () => {
       maxPages: 2,
       checkParity: false
     });
+  });
+
+  test('keeps a four-step treatment rail continuous through maximum row depth', async ({ page }) => {
+    await prepareInitiationInjection(page);
+    await setFieldsAndRender(page, {
+      bodyClass: 'print-avs',
+      renderName: 'renderAVS',
+      rootId: 'avsSheet'
+    });
+    await page.locator('#avsSheet .avs2-spine').evaluate(spine => {
+      const source = spine.querySelector('.avs2-step:not(:last-child)');
+      const due = spine.querySelector('.avs2-step:last-child');
+      if (!source || !due) throw new Error('Expected treatment rows are missing');
+      const extra = source.cloneNode(true);
+      extra.className = 'avs2-step avs2-step-action';
+      extra.querySelector('.avs2-step-title').textContent =
+        'Clinician-reviewed continuation step with deliberately extended explanatory copy';
+      spine.insertBefore(extra, due);
+    });
+    await expect(page.locator('#avsSheet .avs2-spine > .avs2-step')).toHaveCount(4);
+    await expectTimelineToConnect(page);
   });
 
   test('isolates the UDS clinician report without print clipping', async ({ page }) => {

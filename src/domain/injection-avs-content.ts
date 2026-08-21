@@ -103,7 +103,19 @@ export interface AvsDataRow {
   value: string;
 }
 
+export type AvsSectionKind =
+  | "timing"
+  | "site-care"
+  | "expected-effects"
+  | "medication-reminder"
+  | "call-clinic"
+  | "emergency"
+  | "contact"
+  | "critical-alert";
+
 export interface AvsBlock {
+  /** Stable presentation and pagination key; never infer this from copy. */
+  kind: AvsSectionKind;
   heading: string;
   /** Renders as an inverse-video banner rather than a plain ruled heading. */
   emphasis?: boolean;
@@ -504,7 +516,8 @@ const MED_PROFILES: Record<string, MedProfile> = {
       "Swelling of the face, lips, tongue, or throat.",
     ],
     leadAlert: {
-      heading: "IMPORTANT - OPIOID TOLERANCE AND OVERDOSE RISK",
+      kind: "critical-alert",
+      heading: "Important: opioid tolerance and overdose risk",
       emphasis: true,
       paragraphs: [
         "Vivitrol blocks the effect of opioids. Your body's tolerance to opioids is now much LOWER than it was before you started.",
@@ -659,10 +672,10 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
   if (protocol === "sustenna-day1") {
     const day8 = shiftDays(input.administrationDate, 7);
     return {
-      subtitle: "STARTING SERIES - DOSE 1 OF 2",
+      subtitle: "Starting series - dose 1 of 2",
       firm: true,
       nextDoseDateOverride: day8,
-      nextHeading: "YOU MUST COME BACK FOR A SECOND STARTING INJECTION",
+      nextHeading: "Come back for your second starting injection",
       schedule: [
         {
           label: "DOSE 1 (TODAY)",
@@ -683,7 +696,8 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
       scheduleNote:
         "Your regular monthly schedule is set from the day you come in for dose 2, so coming in on time also gives you a clean date going forward.",
       block: {
-        heading: "WHY THE SECOND STARTING INJECTION MATTERS SO MUCH",
+        kind: "medication-reminder",
+        heading: "Why the second starting injection matters",
         paragraphs: [
           "These first two injections work together to build the medication up to a steady level. Today's injection on its own does not get you there.",
           `If the second dose is missed or given very late, the starting series may have to begin again from dose 1 - meaning today's injection would not count. Coming in on ${formatShortDate(day8)} is the single most important thing you can do for this medication right now.`,
@@ -695,10 +709,11 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
 
   if (protocol === "sustenna-day8") {
     return {
-      subtitle: "STARTING SERIES - DOSE 2 OF 2",
+      subtitle: "Starting series - dose 2 of 2",
       firm: false,
       block: {
-        heading: "YOU HAVE FINISHED THE STARTING SERIES",
+        kind: "medication-reminder",
+        heading: "You have finished the starting series",
         paragraphs: [
           "That was the second of your two starting injections. From here you move onto a regular monthly schedule.",
           "Your next injection is the first of those monthly doses. It can be given in the arm or the hip - the starting doses had to be in the arm, but the monthly ones do not.",
@@ -709,10 +724,11 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
 
   if (protocol === "aristada-initio-sameday") {
     return {
-      subtitle: "STARTING DAY - INITIO PLUS FIRST REGULAR DOSE",
+      subtitle: "Starting day - Initio plus first regular dose",
       firm: false,
       block: {
-        heading: "WHAT HAPPENED TODAY, AND WHAT COMES NEXT",
+        kind: "medication-reminder",
+        heading: "What happened today and what comes next",
         paragraphs: [
           "Today you received a one-time starting injection (Aristada Initio) together with your first regular Aristada injection, plus a single dose of oral aripiprazole by mouth.",
           "The starting injection is not repeated. You do not need to keep taking oral aripiprazole after today's single dose unless your provider specifically told you to.",
@@ -727,12 +743,13 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
     const lastDay = shiftDays(input.administrationDate, days - 1);
     const lastDayLong = formatLongDate(lastDay);
     return {
-      subtitle: "STARTING DOSE - ORAL MEDICATION CONTINUES",
+      subtitle: "Starting dose - oral medication continues",
       firm: false,
       oralDays: days,
       oralLastDay: lastDay,
       alert: {
-        heading: `KEEP TAKING YOUR ORAL MEDICATION FOR ${days} DAYS`,
+        kind: "critical-alert",
+        heading: `Keep taking your oral medication for ${days} days`,
         emphasis: true,
         paragraphs: [
           `Take your oral medication every day through ${lastDayLong || `${days} days from today`}. That is ${days} days in a row counting today.`,
@@ -748,10 +765,11 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
     protocol === "asimtufii-1day"
   ) {
     return {
-      subtitle: "STARTING DAY - TWO INJECTIONS GIVEN",
+      subtitle: "Starting day - two injections given",
       firm: false,
       block: {
-        heading: "WHAT HAPPENED TODAY, AND WHAT COMES NEXT",
+        kind: "medication-reminder",
+        heading: "What happened today and what comes next",
         paragraphs: [
           "Today you received two injections in different muscles, plus a single dose of medication by mouth. This is the one-day way of starting, and it is done in a single visit.",
           "You do not need to keep taking oral medication after today's single dose unless your provider specifically told you to.",
@@ -763,10 +781,11 @@ const initiationPlan = (input: InjectionAvsInput): InitiationPlan | null => {
 
   if (protocol.endsWith("-provider")) {
     return {
-      subtitle: "STARTING DOSE - PROVIDER-DIRECTED PLAN",
+      subtitle: "Starting dose - provider-directed plan",
       firm: false,
       block: {
-        heading: "YOUR PROVIDER SET A PLAN JUST FOR YOU",
+        kind: "medication-reminder",
+        heading: "Your provider made a plan just for you",
         paragraphs: [
           "Your starting plan was written specifically for you rather than following one of the standard schedules.",
           `Follow exactly what your provider told you about oral medication and timing. If you are unsure about any part of it, call ${phone} before changing anything.`,
@@ -988,8 +1007,8 @@ const buildTimeline = (
 /* ------------------------------------------------------------------ */
 
 const REASON_SUBTITLE: Record<string, string> = {
-  reinit: "RESTARTING AFTER A GAP",
-  loading: "LOADING DOSE",
+  reinit: "Restarting after a gap",
+  loading: "Loading dose",
 };
 
 /**
@@ -1059,7 +1078,8 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   if (plan?.alert && !notGiven) leadAlerts.push(plan.alert);
   if (coldChain) {
     leadAlerts.push({
-      heading: `CALL BEFORE YOU COME IN - ${phone}`,
+      kind: "critical-alert",
+      heading: `Call before you come in - ${phone}`,
       emphasis: true,
       paragraphs: [
         `${input.medicationName || "This medication"} is kept refrigerated and has to be taken out and brought to room temperature before it can be given. Please call ahead so your dose is ready when you arrive. If you walk in without calling, expect a wait.`,
@@ -1108,7 +1128,8 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   if (plan?.block && !notGiven) blocks.push(plan.block);
 
   blocks.push({
-    heading: "WHY YOUR TIMING MATTERS FOR THIS MEDICATION",
+    kind: "timing",
+    heading: "Why timing matters",
     paragraphs: profile.timingReason,
   });
 
@@ -1132,11 +1153,19 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   // No site was used and nothing was absorbed, so neither aftercare nor
   // what-to-expect applies to a visit where the injection was not given.
   if (siteCare.length && !notGiven) {
-    blocks.push({ heading: "CARING FOR THE INJECTION SITE", paragraphs: siteCare });
+    blocks.push({
+      kind: "site-care",
+      heading: "Caring for your injection site",
+      paragraphs: siteCare,
+    });
   }
 
   if (profile.expect?.length && !notGiven) {
-    blocks.push({ heading: "WHAT TO EXPECT", items: profile.expect });
+    blocks.push({
+      kind: "expected-effects",
+      heading: "What you may notice",
+      items: profile.expect,
+    });
   }
 
   // Products whose profile already spells out its own site-reaction warning
@@ -1158,28 +1187,32 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
       : "You still do not have your next injection scheduled.",
     "Anything feels unusual or worries you.",
   ];
-  blocks.push({ heading: `CALL THE CLINIC AT ${phone} IF`, items: callItems });
+  blocks.push({
+    kind: "call-clinic",
+    heading: `Call the clinic at ${phone} if`,
+    items: callItems,
+  });
 
   /* ---- subtitle ---- */
   // Overrides any initiation subtitle: "STARTING SERIES - DOSE 1 OF 2" on a
   // sheet where dose 1 was never given would be actively misleading.
   const documentSubtitle = notGiven
-    ? "INJECTION NOT GIVEN TODAY"
+    ? "Injection not given today"
     : plan?.subtitle ?? REASON_SUBTITLE[String(input.reason ?? "").trim()] ?? "";
 
   const nextDose = {
     dateLong,
-    heading: plan?.nextHeading ?? "YOUR NEXT INJECTION",
+    heading: plan?.nextHeading ?? "Your next injection",
     instruction: dateLong
-      ? "DUE DATE - CALL US TO SCHEDULE OR RESCHEDULE"
-      : "CALL TO SCHEDULE YOUR NEXT INJECTION",
+      ? "Due date - call us to schedule or reschedule"
+      : "Call to schedule your next injection",
     firmness,
     notes,
     contactLines,
   };
 
   return {
-    documentTitle: "AFTER VISIT SUMMARY - LONG-ACTING INJECTION",
+    documentTitle: "After Visit Summary - Long-acting injection",
     documentSubtitle,
     documentStatus:
       String(input.dispositionKind ?? "").trim() === "administered"
@@ -1213,7 +1246,8 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
       : doseNote(input.medicationKey, input.dose, input.intervalKey),
     blocks,
     emergency: {
-      heading: "EMERGENCY - CALL 911 OR GO TO THE NEAREST ER NOW IF",
+      kind: "emergency",
+      heading: "Call 911 now or go to the nearest emergency room if",
       emphasis: true,
       items: profile.emergency ?? ANTIPSYCHOTIC_ER,
     },

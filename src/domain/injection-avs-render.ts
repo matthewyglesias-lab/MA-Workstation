@@ -68,57 +68,54 @@ const renderBlockBody = (block: AvsBlock): string => {
   return parts.join("");
 };
 
-const sectionVariant = (heading: string): string => {
-  const normalized = heading.toLowerCase();
-  if (normalized === "contact") return "contact";
-  if (normalized.startsWith("call the clinic")) return "call";
-  if (normalized.includes("timing matters")) return "timing";
-  if (normalized.includes("injection site")) return "site";
-  if (normalized.includes("what to expect")) return "expect";
-  return "general";
+const sectionClass: Record<AvsBlock["kind"], string> = {
+  timing: "timing",
+  "site-care": "site",
+  "expected-effects": "expect",
+  "medication-reminder": "reminder",
+  "call-clinic": "call",
+  emergency: "emergency",
+  contact: "contact",
+  "critical-alert": "critical",
 };
 
-const sectionId = (heading: string): string =>
-  `avs-${sectionVariant(heading)}-${heading
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")}`;
+const sectionId = (block: AvsBlock, suffix = ""): string =>
+  `avs-${sectionClass[block.kind]}${suffix ? `-${suffix}` : ""}`;
 
 /** A patient instruction section with a full-width, scan-friendly heading. */
-const renderSection = (heading: string, body: string): string => {
-  const variant = sectionVariant(heading);
-  const id = sectionId(heading);
+const renderSection = (
+  block: AvsBlock,
+  extraClass = "",
+  idSuffix = "",
+): string => {
+  const variant = sectionClass[block.kind];
+  const id = sectionId(block, idSuffix);
   return (
-    `<section class="avs2-sec avs2-sec-${variant}" aria-labelledby="${id}">` +
-    `<h2 class="avs2-lab" id="${id}">${escapeHtml(heading)}</h2>` +
-    `<div class="avs2-b">${body}</div>` +
+    `<section class="avs2-sec avs2-sec-${variant}${extraClass ? ` ${extraClass}` : ""}" aria-labelledby="${id}">` +
+    `<h2 class="avs2-lab" id="${id}">${escapeHtml(block.heading)}</h2>` +
+    `<div class="avs2-b">${renderBlockBody(block)}</div>` +
     `</section>`
   );
 };
 
 /**
- * Alerts break the grid on purpose. Spanning the full measure over a heavy rule
- * is what separates them from ordinary sections once the inverse-video bars are
- * gone, and it keeps long safety headings ("EMERGENCY - CALL 911 OR GO TO THE
- * NEAREST ER NOW IF") out of a narrow gutter that would wrap them to four lines.
+ * Alerts break the grid on purpose. Spanning the full measure keeps long safety
+ * headings readable and gives the reviewed emergency copy its own scan path.
  */
-const renderAlert = (block: AvsBlock): string => {
-  const id = `avs-alert-${block.heading
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")}`;
+const renderAlert = (block: AvsBlock, idSuffix = ""): string => {
+  const id = sectionId(block, idSuffix);
   return (
-    `<section class="avs2-alert" aria-labelledby="${id}">` +
+    `<section class="avs2-alert avs2-alert-${sectionClass[block.kind]}" aria-labelledby="${id}">` +
     `<h2 class="avs2-alert-bar" id="${id}">${escapeHtml(block.heading)}</h2>` +
     `<div class="avs2-alert-body">${renderBlockBody(block)}</div>` +
     `</section>`
   );
 };
 
-const renderBlock = (block: AvsBlock): string =>
+const renderBlock = (block: AvsBlock, idSuffix = ""): string =>
   block.emphasis
-    ? renderAlert(block)
-    : renderSection(block.heading, renderBlockBody(block));
+    ? renderAlert(block, idSuffix)
+    : renderSection(block, "", idSuffix);
 
 /**
  * Estimate rendered instruction height from the reviewed source copy, rather
@@ -143,16 +140,72 @@ const estimatedBlockLines = (block: AvsBlock): number =>
  * body. Keeping this deterministic avoids a browser creating an orphaned
  * overflow page while the document itself still claims "Page 1 of 1".
  */
-export const requiresInjectionAvsContinuation = (
+export type InjectionAvsLayoutVariant =
+  | "routine-one-page"
+  | "routine-two-page"
+  | "complex-two-page";
+
+export const selectInjectionAvsLayout = (
   model: InjectionAvsModel,
-): boolean =>
-  model.timeline.length > 2 ||
-  Boolean(model.documentSubtitle) ||
-  model.leadAlerts.length > 1 ||
-  [...model.blocks, model.emergency].reduce(
+): InjectionAvsLayoutVariant => {
+  if (
+    model.timeline.length > 2 ||
+    Boolean(model.documentSubtitle) ||
+    model.leadAlerts.length > 1
+  ) {
+    return "complex-two-page";
+  }
+  const guidanceLines = [...model.blocks, model.emergency].reduce(
     (total, block) => total + estimatedBlockLines(block),
     0,
-  ) > 24;
+  );
+  return guidanceLines > 24 ? "routine-two-page" : "routine-one-page";
+};
+
+export interface InjectionAvsPagePartition {
+  primary: AvsBlock[];
+  continuation: AvsBlock[];
+}
+
+export const partitionInjectionAvsBlocks = (
+  model: InjectionAvsModel,
+  layout: InjectionAvsLayoutVariant,
+): InjectionAvsPagePartition => {
+  const all = [...model.blocks, model.emergency];
+  if (layout === "routine-one-page") {
+    return { primary: all, continuation: [] };
+  }
+  if (layout === "routine-two-page") {
+    const primaryKinds = new Set<AvsBlock["kind"]>(["timing", "site-care"]);
+    return {
+      primary: all.filter((block) => primaryKinds.has(block.kind)),
+      continuation: all.filter((block) => !primaryKinds.has(block.kind)),
+    };
+  }
+  return { primary: [], continuation: all };
+};
+
+export const requiresInjectionAvsContinuation = (
+  model: InjectionAvsModel,
+): boolean => selectInjectionAvsLayout(model) !== "routine-one-page";
+
+const renderInjectionSiteMarker = (siteLabel: string): string => {
+  const normalized = siteLabel.toLowerCase();
+  const isLeft = /(^|\b)(left|l\b)/.test(normalized);
+  const isHip = /(glute|hip)/.test(normalized);
+  const isThigh = /thigh|vastus/.test(normalized);
+  const markerX = isLeft ? 18 : 6;
+  const markerY = isThigh ? 27 : isHip ? 21.5 : 12.5;
+  return (
+    `<svg class="avs2-site-marker" viewBox="0 0 24 32" role="img" ` +
+    `aria-label="Injection site: ${escapeHtml(siteLabel)}">` +
+    `<circle cx="12" cy="4.2" r="2.6" fill="none" stroke="currentColor" stroke-width="1.2"/>` +
+    `<path d="M8.2 9.2c1.1-1 2.3-1.5 3.8-1.5s2.7.5 3.8 1.5l2.1 8.1-2.7 4.1-.9 8.1M8.2 9.2l-2.1 8.1 2.7 4.1.9 8.1M9 10.2h6M8.8 21.4h6.4" ` +
+    `fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<circle class="avs2-site-dot" cx="${markerX}" cy="${markerY}" r="2"/>` +
+    `</svg>`
+  );
+};
 
 /**
  * One node on the spine: date in the gutter, marker on the rail, step body.
@@ -160,7 +213,11 @@ export const requiresInjectionAvsContinuation = (
  * `instruction` is the model's imperative for the due step. It rides above
  * the step's caveats so the call to action is read before the exceptions to it.
  */
-const renderStep = (step: AvsTimelineStep, instruction = ""): string => {
+const renderStep = (
+  step: AvsTimelineStep,
+  instruction = "",
+  siteLabel = "",
+): string => {
   // The due step keeps the avs2-next / avs2-date hooks: it is still "the next
   // dose and its date", the roles those classes have always named, so the
   // print stylesheet and the structural test both stay pointed at the right
@@ -181,6 +238,9 @@ const renderStep = (step: AvsTimelineStep, instruction = ""): string => {
     `<div class="${whenClass}">${when}${whenNote}</div>` +
     `<div class="avs2-rail"><i class="avs2-node"></i></div>` +
     `<div class="${bodyClass}">` +
+    (step.state === "given" && siteLabel
+      ? renderInjectionSiteMarker(siteLabel)
+      : "") +
     `<div class="avs2-step-title">${escapeHtml(step.title)}</div>` +
     (step.dateLong
       ? `<div class="avs2-step-date">${escapeHtml(step.dateLong)}</div>`
@@ -197,6 +257,7 @@ const renderSpine = (
   timeline: readonly AvsTimelineStep[],
   administrationNote: string,
   instruction: string,
+  siteLabel: string,
 ): string => {
   if (!timeline.length) return "";
   // The dose-specific note is folded into the step it describes rather than
@@ -212,6 +273,7 @@ const renderSpine = (
       return renderStep(
         { ...step, detail },
         step.state === "due" ? instruction : "",
+        step.state === "given" ? siteLabel : "",
       );
     })
     .join("");
@@ -254,6 +316,8 @@ const renderRecord = (identity: readonly AvsDataRow[]): string => {
 const renderTitle = (title: string, status: string): string => {
   const [primary, ...rest] = title.split(" - ");
   const descriptor = rest.join(" - ");
+  const statusVariant = status === "PATIENT COPY" ? "patient" : status === "CARE HANDOFF" ? "handoff" : "draft";
+  const statusLabel = status === "PATIENT COPY" ? "Patient copy" : status === "CARE HANDOFF" ? "Care handoff" : status;
   return (
     `<div class="avs2-heading">` +
     `<h1 class="avs2-title" id="avs-document-title">${escapeHtml(primary)}` +
@@ -261,7 +325,7 @@ const renderTitle = (title: string, status: string): string => {
       ? `<span class="avs2-title-detail">${escapeHtml(descriptor)}</span>`
       : "") +
     `</h1>` +
-    `<span class="avs2-status">${escapeHtml(status)}</span>` +
+    `<span class="avs2-status avs2-status-${statusVariant}">${escapeHtml(statusLabel)}</span>` +
     `</div>`
   );
 };
@@ -282,7 +346,7 @@ export const DEFAULT_AVS_CHROME: InjectionAvsChrome = {
   clinicPhone: "(909) 887-6222",
   runStamp: "",
   reportId: "AVS-INJ-01",
-  formId: "IPMG-AVS-INJ (REV 08/26)",
+  formId: "IPMG-AVS-INJ (REV 08/26B)",
 };
 
 /** Renders the model to the print sheet's inner HTML. */
@@ -294,22 +358,41 @@ export const renderInjectionAvsHtml = (
     ? `<div class="avs2-subtitle">${escapeHtml(model.documentSubtitle)}</div>`
     : "";
 
-  const contact = model.nextDose.contactLines.length
-    ? renderSection("Contact", pairList(model.nextDose.contactLines))
-    : "";
+  const contactBlock: AvsBlock = {
+    kind: "contact",
+    heading: "Plan your next visit",
+    rows: model.nextDose.contactLines,
+  };
+  const renderContact = (compact = false): string =>
+    model.nextDose.contactLines.length
+      ? renderSection(
+          contactBlock,
+          compact ? "avs2-sec-contact-compact" : "",
+          compact ? "continued" : "primary",
+        )
+      : "";
 
   const patientName =
     model.identity.find((row) => row.label === "PATIENT")?.value ?? "";
   const patientDob = model.identity.find((row) => row.label === "DOB")?.value ?? "";
+  const recordNumber = model.identity.find((row) => row.label === "RECORD NO")?.value ?? "";
+  const visitDate = model.identity.find((row) => row.label === "VISIT DATE")?.value ?? "";
   // A routine sheet normally fits on one page, but product-specific guidance
   // can be longer than the fixed printable body. Select the fully identified
   // continuation before layout so no content can be pushed beneath the footer
   // or stranded on an unlabeled browser-created page.
-  const complex = requiresInjectionAvsContinuation(model);
-  const continuation = complex
+  const layout = selectInjectionAvsLayout(model);
+  const pages = partitionInjectionAvsBlocks(model, layout);
+  const twoPage = layout !== "routine-one-page";
+  const continuation = twoPage
     ? `<header class="avs2-continuation">` +
       `<h2>After Visit Summary - Continued</h2>` +
-      `<span>${escapeHtml(patientName)} - DOB ${escapeHtml(patientDob)}</span>` +
+      `<dl class="avs2-continuation-id">` +
+      `<div><dt>Patient</dt><dd>${escapeHtml(patientName)}</dd></div>` +
+      `<div><dt>DOB</dt><dd>${escapeHtml(patientDob)}</dd></div>` +
+      `<div><dt>Record no.</dt><dd>${escapeHtml(recordNumber)}</dd></div>` +
+      `<div><dt>Visit date</dt><dd>${escapeHtml(visitDate)}</dd></div>` +
+      `</dl>` +
       `</header>`
     : "";
   const renderFooter = (pageNumber: number, pageTotal: number): string =>
@@ -321,15 +404,27 @@ export const renderInjectionAvsHtml = (
     `</span>` +
     `</footer>`;
 
-  const guidance =
-    `<div class="avs2-guidance">${model.blocks.map(renderBlock).join("")}</div>` +
-    renderAlert(model.emergency);
+  const renderGuidance = (blocks: readonly AvsBlock[]): string => {
+    if (!blocks.length) return "";
+    const ordinary = blocks.filter((block) => block.kind !== "emergency");
+    const urgent = blocks.filter((block) => block.kind === "emergency");
+    return (
+      (ordinary.length
+        ? `<div class="avs2-guidance">${ordinary
+            .map((block, index) => renderBlock(block, `guidance-${index + 1}`))
+            .join("")}</div>`
+        : "") +
+      urgent
+        .map((block, index) => renderAlert(block, `emergency-${index + 1}`))
+        .join("")
+    );
+  };
 
   // The spine is the record of what was given and when, so model.administration
   // is not drawn a second time here; its dose-specific note rides with the step
   // it belongs to.
   return (
-    `<article class="avs2${complex ? " avs2-complex" : ""}" aria-labelledby="avs-document-title">` +
+    `<article class="avs2 avs2-layout-${layout}${twoPage ? " avs2-complex" : ""}${model.documentStatus === "STAFF PREVIEW - NOT FINAL" ? " avs2-draft" : ""}" aria-labelledby="avs-document-title">` +
     `<div class="avs2-page avs2-page-primary">` +
     `<div class="avs2-page-body">` +
     `<header class="avs2-run">` +
@@ -345,25 +440,29 @@ export const renderInjectionAvsHtml = (
     renderTitle(model.documentTitle, model.documentStatus) +
     subtitle +
     renderRecord(model.identity) +
-    model.leadAlerts.map(renderAlert).join("") +
+    model.leadAlerts
+      .map((block, index) => renderAlert(block, `lead-${index + 1}`))
+      .join("") +
     `<section class="avs2-overview" aria-labelledby="avs-treatment-summary">` +
-    `<h2 class="avs2-overview-title" id="avs-treatment-summary">Treatment summary</h2>` +
+    `<h2 class="avs2-overview-title" id="avs-treatment-summary">Your treatment today</h2>` +
     renderSpine(
       model.timeline,
       model.administrationNote,
       model.nextDose.instruction,
+      model.administration.find((row) => row.label === "ROUTE / SITE")?.value ?? "",
     ) +
     `</section>` +
-    contact +
-    (complex ? "" : guidance) +
+    renderContact() +
+    renderGuidance(pages.primary) +
     `</div>` +
-    renderFooter(1, complex ? 2 : 1) +
+    renderFooter(1, twoPage ? 2 : 1) +
     `</div>` +
-    (complex
+    (twoPage
       ? `<div class="avs2-page avs2-page-continuation">` +
         `<div class="avs2-page-body">` +
         continuation +
-        guidance +
+        renderGuidance(pages.continuation) +
+        renderContact(true) +
         `</div>` +
         renderFooter(2, 2) +
         `</div>`

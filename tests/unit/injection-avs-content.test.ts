@@ -13,7 +13,11 @@ import {
 } from "../../src/domain/injection-avs-content";
 import {
   buildInjectionAvsHtml,
+  DEFAULT_AVS_CHROME,
+  partitionInjectionAvsBlocks,
+  renderInjectionAvsHtml,
   requiresInjectionAvsContinuation,
+  selectInjectionAvsLayout,
 } from "../../src/domain/injection-avs-render";
 
 const base = (overrides: Partial<InjectionAvsInput> = {}): InjectionAvsInput => ({
@@ -158,7 +162,7 @@ describe("cold chain", () => {
   it("adds a call-ahead banner and shifts the date wording", () => {
     const model = buildInjectionAvsModel(base({ medicationKey: "uzedy", route: "SubQ" }));
     expect(model.nextDose.firmness).toBe("call-first");
-    expect(model.leadAlerts.some((a) => a.heading.includes("CALL BEFORE YOU COME IN"))).toBe(true);
+    expect(model.leadAlerts.some((a) => a.heading.includes("Call before you come in"))).toBe(true);
   });
 });
 
@@ -167,7 +171,7 @@ describe("due-date framing", () => {
     const model = buildInjectionAvsModel(base());
     expect(model.nextDose.dateLong).toBe("Wednesday, September 2, 2026");
     expect(model.nextDose.instruction).toBe(
-      "DUE DATE - CALL US TO SCHEDULE OR RESCHEDULE",
+      "Due date - call us to schedule or reschedule",
     );
     const text = allText(base());
     expect(text).not.toMatch(/any day from/i);
@@ -184,7 +188,7 @@ describe("due-date framing", () => {
   it("degrades to a scheduling prompt when no next date exists", () => {
     const model = buildInjectionAvsModel(base({ nextDoseDate: "" }));
     expect(model.nextDose.dateLong).toBe("");
-    expect(model.nextDose.instruction).toBe("CALL TO SCHEDULE YOUR NEXT INJECTION");
+    expect(model.nextDose.instruction).toBe("Call to schedule your next injection");
     expect(model.nextDose.notes.join(" ")).toContain("has not been scheduled");
   });
 });
@@ -194,7 +198,7 @@ describe("initiation protocols", () => {
     const model = buildInjectionAvsModel(
       base({ dose: "234 mg", reason: "initiation", initiationProtocol: "sustenna-day1" }),
     );
-    expect(model.documentSubtitle).toBe("STARTING SERIES - DOSE 1 OF 2");
+    expect(model.documentSubtitle).toBe("Starting series - dose 1 of 2");
     expect(model.nextDose.firmness).toBe("firm");
     expect(model.schedule).toHaveLength(2);
     // Day 8 is exactly one week after the documented administration date.
@@ -237,7 +241,7 @@ describe("initiation protocols", () => {
     );
     // 14 consecutive days counting the administration date: Aug 5 -> Aug 18.
     expect(text).toContain("Tuesday, August 18, 2026");
-    expect(text).toContain("KEEP TAKING YOUR ORAL MEDICATION FOR 14 DAYS");
+    expect(text).toContain("Keep taking your oral medication for 14 days");
   });
 
   it("uses 21 days for the Aristada oral pathway", () => {
@@ -249,7 +253,7 @@ describe("initiation protocols", () => {
         initiationProtocol: "aristada-21day",
       }),
     );
-    expect(text).toContain("FOR 21 DAYS");
+    expect(text).toContain("for 21 days");
     // Aug 5 + 20 days = Aug 25.
     expect(text).toContain("Tuesday, August 25, 2026");
   });
@@ -258,7 +262,7 @@ describe("initiation protocols", () => {
     const text = allText(
       base({ reason: "initiation", initiationProtocol: "sustenna-day8", dose: "156 mg" }),
     );
-    expect(text).toContain("FINISHED THE STARTING SERIES");
+    expect(text).toContain("finished the starting series");
     expect(text).toContain("second of your two starting injections");
   });
 
@@ -281,7 +285,7 @@ describe("medication-specific safety", () => {
       }),
     );
     const first = model.leadAlerts[0];
-    expect(first?.heading).toContain("OPIOID TOLERANCE");
+    expect(first?.heading).toContain("opioid tolerance");
     const text = allText(
       base({ medicationKey: "vivitrol", medicationName: "Vivitrol", site: "R ventrogluteal" }),
     );
@@ -297,7 +301,7 @@ describe("medication-specific safety", () => {
     const vivitrol = buildInjectionAvsModel(
       base({ medicationKey: "vivitrol", medicationName: "Vivitrol", site: "R ventrogluteal" }),
     );
-    const callBlock = vivitrol.blocks.find((b) => b.heading.startsWith("CALL THE CLINIC"));
+    const callBlock = vivitrol.blocks.find((b) => b.kind === "call-clinic");
     const items = callBlock?.items ?? [];
     // Vivitrol keeps its own two specific site lines and drops the generic one.
     expect(items.some((i) => /rash at the injection site gets worse/i.test(i))).toBe(false);
@@ -306,7 +310,7 @@ describe("medication-specific safety", () => {
 
     // A medication without its own site wording still gets the generic line.
     const sustenna = buildInjectionAvsModel(base());
-    const sustennaCall = sustenna.blocks.find((b) => b.heading.startsWith("CALL THE CLINIC"));
+    const sustennaCall = sustenna.blocks.find((b) => b.kind === "call-clinic");
     expect(
       (sustennaCall?.items ?? []).some((i) => /rash at the injection site gets worse/i.test(i)),
     ).toBe(true);
@@ -331,7 +335,7 @@ describe("medication-specific safety", () => {
       base({ medicationKey: "other", medicationName: "Compounded LAI", genericName: "" }),
     );
     expect(text).toContain("long-acting injection");
-    expect(text).toContain("EMERGENCY");
+    expect(text).toContain("Call 911 now");
   });
 });
 
@@ -389,8 +393,8 @@ describe("rendered sheet", () => {
     );
 
     expect(vivitrol.match(/class="avs2-page /g)).toHaveLength(2);
-    expect(vivitrol).toContain("IMPORTANT - OPIOID TOLERANCE AND OVERDOSE RISK");
-    expect(vivitrol).toContain("CALL BEFORE YOU COME IN");
+    expect(vivitrol).toContain("Important: opioid tolerance and overdose risk");
+    expect(vivitrol).toContain("Call before you come in");
     expect(vivitrol).toContain("After Visit Summary - Continued");
     expect(vivitrol).toContain("Page 1 of 2");
     expect(vivitrol).toContain("Page 2 of 2");
@@ -417,6 +421,52 @@ describe("rendered sheet", () => {
     expect(html).not.toContain("Page 1 of 1");
   });
 
+  it("selects and partitions all three layout variants without dropping guidance", () => {
+    const shortRoutine = buildInjectionAvsModel(
+      base({ medicationKey: "other", medicationName: "Other", genericName: "" }),
+    );
+    const longRoutine = buildInjectionAvsModel(
+      base({ medicationKey: "asimtufii", medicationName: "Abilify Asimtufii" }),
+    );
+    const initiation = buildInjectionAvsModel(
+      base({ initiationProtocol: "sustenna-day1", reason: "initiation" }),
+    );
+
+    expect(selectInjectionAvsLayout(shortRoutine)).toBe("routine-one-page");
+    expect(selectInjectionAvsLayout(longRoutine)).toBe("routine-two-page");
+    expect(selectInjectionAvsLayout(initiation)).toBe("complex-two-page");
+
+    for (const model of [shortRoutine, longRoutine, initiation]) {
+      const layout = selectInjectionAvsLayout(model);
+      const pages = partitionInjectionAvsBlocks(model, layout);
+      const original = [...model.blocks, model.emergency];
+      expect([...pages.primary, ...pages.continuation]).toHaveLength(original.length);
+      expect(new Set([...pages.primary, ...pages.continuation])).toEqual(new Set(original));
+    }
+  });
+
+  it("uses stable section kinds rather than patient-facing copy for rendering", () => {
+    const model = buildInjectionAvsModel(base());
+    expect(model.blocks.map((block) => block.kind)).toEqual([
+      "timing",
+      "site-care",
+      "expected-effects",
+      "call-clinic",
+    ]);
+    expect(model.emergency.kind).toBe("emergency");
+
+    const renamed = {
+      ...model,
+      blocks: model.blocks.map((block, index) =>
+        index === 0 ? { ...block, heading: "A completely revised timing label" } : block,
+      ),
+    };
+    const html = renderInjectionAvsHtml(renamed, DEFAULT_AVS_CHROME);
+    expect(html).toContain('class="avs2-sec avs2-sec-timing"');
+    expect(html).toContain('id="avs-timing-guidance-1"');
+    expect(html).not.toContain('id="avs-timing-a-completely-revised-timing-label"');
+  });
+
   it("labels previews and released copies without changing clinical content", () => {
     const preview = buildInjectionAvsModel(base({ dispositionKind: "" }));
     const patient = buildInjectionAvsModel(base({ dispositionKind: "administered" }));
@@ -428,6 +478,16 @@ describe("rendered sheet", () => {
     const html = buildInjectionAvsHtml(base({ responseLabel: "Tolerated well" }));
     expect(html).not.toContain("Tolerated well");
     expect(html.match(/Chen, M\. LVN/g)).toHaveLength(1);
+  });
+
+  it("labels the injection-site graphic accessibly and omits it when no injection was given", () => {
+    const administered = buildInjectionAvsHtml(base({ dispositionKind: "administered" }));
+    const held = buildInjectionAvsHtml(base({ dispositionKind: "held" }));
+    expect(administered).toContain('class="avs2-site-marker"');
+    expect(administered).toContain(
+      'aria-label="Injection site: Right deltoid (upper arm), intramuscular"',
+    );
+    expect(held).not.toContain('class="avs2-site-marker"');
   });
 
   it("escapes documented values instead of trusting them as markup", () => {
@@ -451,8 +511,8 @@ describe("rendered sheet", () => {
         responseLabel: "",
       }),
     );
-    expect(html).toContain("AFTER VISIT SUMMARY");
-    expect(html).toContain("CALL TO SCHEDULE YOUR NEXT INJECTION");
+    expect(html).toContain("After Visit Summary");
+    expect(html).toContain("Call to schedule your next injection");
   });
 });
 
