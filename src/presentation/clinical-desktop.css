@@ -5145,10 +5145,17 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-page {
-    position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
     width: 100%;
     height: 10in;
-    padding-bottom: 0.28in;
+    padding-bottom: 0;
+  }
+
+  /* The footer stays in normal layout flow. It therefore has dedicated space
+     on every deterministic page instead of being painted over patient copy. */
+  body.print-avs #avsSheet .avs2-page-body {
+    min-height: 0;
   }
 
   body.print-avs #avsSheet .avs2-page-continuation {
@@ -5605,10 +5612,7 @@ input[type="radio"]:disabled {
     display: flex;
     justify-content: space-between;
     gap: 16px;
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    grid-row: 2;
     margin-top: 13px;
     padding-top: 7px;
     border-top: 1px solid var(--avs-rule);

@@ -11,10 +11,10 @@
   },
   "outputs": {
     "avsSheet": {
-      "sha256": "daec291da30ed9c9199938d95dff35ff41de9e4d9c10a332f44f805ca367cb88",
-      "bytes": 5705,
+      "sha256": "b6356dddd81ac98bc5e27c369a184bc2a25e461f7542d095181f68d1ac0f5a1e",
+      "bytes": 5739,
       "topLevelClass": "avs2",
-      "note": "Intentionally diverges from the production commit. The injection After Visit Summary now uses a mature clinical-document hierarchy with a semantic patient band, dated treatment timeline, restrained due-date emphasis, and deterministic routine/complex pages. Patient wording and timeline rules remain in src/domain/injection-avs-content.ts; semantic markup remains in src/domain/injection-avs-render.ts. Every other print root in this fixture is still pinned to production output."
+      "note": "Intentionally diverges from the production commit. The injection After Visit Summary now uses a mature clinical-document hierarchy with a semantic patient band, dated treatment timeline, restrained due-date emphasis, and deterministic routine/complex pages. The footer participates in page layout rather than overlaying patient copy, and content-rich guidance is moved to a fully identified continuation before browser pagination. Patient wording and timeline rules remain in src/domain/injection-avs-content.ts; semantic markup remains in src/domain/injection-avs-render.ts. Every other print root in this fixture is still pinned to production output."
     },
     "injWorksheetSheet": {
       "sha256": "0eed90bef38a3946679e5b0cce8d53948c0c7010150e1c2c8f7ce6917091fa23",

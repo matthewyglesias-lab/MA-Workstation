@@ -180,6 +180,32 @@ async function prepareVivitrolInjection(page) {
 
 }
 
+async function prepareAsimtufiiAvs(page) {
+  await bootWorkstation(page);
+  await openWorkflow(page, 'Injection', 'administer');
+  const panel = page.locator('.wfp-panel');
+  await panel.locator('input[placeholder="Last, First"]').fill('Print, Asimtufii');
+  await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/12/1977');
+  await setProvider(panel, 'Print Ordering Provider');
+  await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Abilify Asimtufii' });
+  await panel.locator('select[name="inj-dose"]').selectOption('720 mg');
+  await panel.locator('select[name="inj-interval"]').selectOption('q8wk');
+  await fillDate(
+    panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[data-workstation-date="date"]'), '2026-08-13');
+
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.getByText('L ventrogluteal', { exact: true }).click();
+  await panel.locator('input[type="time"]').first().fill('14:59');
+  await panel.locator('input[placeholder="J. Doe, LVN"]').fill('Print QA, MA');
+
+  await panel.getByRole('tab', { name: 'Product', exact: true }).click();
+  await panel.locator('input[placeholder="LOT123"]').fill('ASI-PRINT-001');
+  await panel.locator('input[type="month"]').first().fill('2028-07');
+}
+
 async function expectAvsPagesToFit(page) {
   const integrity = await page.locator('#avsSheet').evaluate(root => {
     const overflowState = node => {
@@ -192,7 +218,8 @@ async function expectAvsPagesToFit(page) {
     };
     const pages = [...root.querySelectorAll('.avs2-page')].map((avsPage, index) => {
       const footer = avsPage.querySelector(':scope > .avs2-foot');
-      const content = [...avsPage.children].filter(child => child !== footer);
+      const content = [avsPage.querySelector(':scope > .avs2-page-body')]
+        .filter(Boolean);
       const contentBottom = content.length
         ? Math.max(...content.map(child => child.getBoundingClientRect().bottom))
         : avsPage.getBoundingClientRect().top;
@@ -648,6 +675,35 @@ test.describe('unchanged clinical print surfaces', () => {
         /CALL BEFORE YOU COME IN/i,
         /After Visit Summary - Continued/i,
         /VIV-PRINT-001/i
+      ],
+      minPages: 2,
+      maxPages: 2,
+      checkParity: false
+    });
+  });
+
+  test('paginates content-rich routine guidance as two complete identified pages', async ({ page }) => {
+    await prepareAsimtufiiAvs(page);
+    await setFieldsAndRender(page, {
+      bodyClass: 'print-avs',
+      renderName: 'renderAVS',
+      rootId: 'avsSheet'
+    });
+    const avs = page.locator('#avsSheet');
+    await expect(avs.locator('.avs2-page')).toHaveCount(2);
+    await expect(avs.locator('footer.avs2-foot')).toHaveCount(2);
+    await expect(avs.locator('footer.avs2-foot').first()).toContainText('Page 1 of 2');
+    await expect(avs.locator('footer.avs2-foot').last()).toContainText('Page 2 of 2');
+    await expect(avs.locator('.avs2-page-continuation')).toContainText(
+      'EMERGENCY - CALL 911 OR GO TO THE NEAREST ER NOW IF'
+    );
+    await expectAvsPagesToFit(page);
+    await expectPrintContract(page, {
+      rootId: 'avsSheet',
+      content: [
+        /Abilify Asimtufii, 720 mg/i,
+        /After Visit Summary - Continued/i,
+        /ASI-PRINT-001/i
       ],
       minPages: 2,
       maxPages: 2,

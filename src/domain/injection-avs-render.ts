@@ -121,6 +121,40 @@ const renderBlock = (block: AvsBlock): string =>
     : renderSection(block.heading, renderBlockBody(block));
 
 /**
+ * Estimate rendered instruction height from the reviewed source copy, rather
+ * than letting browser pagination decide whether a page needs a continuation.
+ * The estimate intentionally counts headings and list items as separate lines:
+ * those are the parts that carry vertical rhythm in the printed sheet.
+ */
+const estimatedTextLines = (value: string): number =>
+  Math.max(1, Math.ceil(String(value ?? "").trim().length / 78));
+
+const estimatedBlockLines = (block: AvsBlock): number =>
+  estimatedTextLines(block.heading) +
+  (block.paragraphs ?? []).reduce((total, value) => total + estimatedTextLines(value), 0) +
+  (block.items ?? []).reduce((total, value) => total + estimatedTextLines(value), 0) +
+  (block.rows ?? []).reduce(
+    (total, row) => total + estimatedTextLines(`${row.label} ${row.value}`),
+    0,
+  );
+
+/**
+ * A routine AVS is one page only when its guidance fits the fixed printable
+ * body. Keeping this deterministic avoids a browser creating an orphaned
+ * overflow page while the document itself still claims "Page 1 of 1".
+ */
+export const requiresInjectionAvsContinuation = (
+  model: InjectionAvsModel,
+): boolean =>
+  model.timeline.length > 2 ||
+  Boolean(model.documentSubtitle) ||
+  model.leadAlerts.length > 1 ||
+  [...model.blocks, model.emergency].reduce(
+    (total, block) => total + estimatedBlockLines(block),
+    0,
+  ) > 24;
+
+/**
  * One node on the spine: date in the gutter, marker on the rail, step body.
  *
  * `instruction` is the model's imperative for the due step. It rides above
@@ -267,15 +301,11 @@ export const renderInjectionAvsHtml = (
   const patientName =
     model.identity.find((row) => row.label === "PATIENT")?.value ?? "";
   const patientDob = model.identity.find((row) => row.label === "DOB")?.value ?? "";
-  // A routine sheet normally fits on one page, but Vivitrol carries both its
-  // opioid-tolerance warning and the refrigerated-product call-ahead. Keeping
-  // both on the fixed-height routine page clips the guidance under the footer.
-  // Use the existing fully identified continuation page whenever the lead
-  // material is similarly content-rich instead of silently truncating it.
-  const complex =
-    model.timeline.length > 2 ||
-    Boolean(model.documentSubtitle) ||
-    model.leadAlerts.length > 1;
+  // A routine sheet normally fits on one page, but product-specific guidance
+  // can be longer than the fixed printable body. Select the fully identified
+  // continuation before layout so no content can be pushed beneath the footer
+  // or stranded on an unlabeled browser-created page.
+  const complex = requiresInjectionAvsContinuation(model);
   const continuation = complex
     ? `<header class="avs2-continuation">` +
       `<h2>After Visit Summary - Continued</h2>` +
@@ -301,6 +331,7 @@ export const renderInjectionAvsHtml = (
   return (
     `<article class="avs2${complex ? " avs2-complex" : ""}" aria-labelledby="avs-document-title">` +
     `<div class="avs2-page avs2-page-primary">` +
+    `<div class="avs2-page-body">` +
     `<header class="avs2-run">` +
     `<div class="avs2-brand">` +
     `<span class="avs2-run-name">${escapeHtml(chrome.facilityName)}</span>` +
@@ -325,12 +356,15 @@ export const renderInjectionAvsHtml = (
     `</section>` +
     contact +
     (complex ? "" : guidance) +
+    `</div>` +
     renderFooter(1, complex ? 2 : 1) +
     `</div>` +
     (complex
       ? `<div class="avs2-page avs2-page-continuation">` +
+        `<div class="avs2-page-body">` +
         continuation +
         guidance +
+        `</div>` +
         renderFooter(2, 2) +
         `</div>`
       : "") +

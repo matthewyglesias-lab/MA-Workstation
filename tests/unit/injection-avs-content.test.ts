@@ -11,7 +11,10 @@ import {
   type AvsTimelineStep,
   type InjectionAvsInput,
 } from "../../src/domain/injection-avs-content";
-import { buildInjectionAvsHtml } from "../../src/domain/injection-avs-render";
+import {
+  buildInjectionAvsHtml,
+  requiresInjectionAvsContinuation,
+} from "../../src/domain/injection-avs-render";
 
 const base = (overrides: Partial<InjectionAvsInput> = {}): InjectionAvsInput => ({
   patientName: "Rivera, Ana M",
@@ -348,7 +351,7 @@ describe("rendered sheet", () => {
     ]) {
       expect(html).toContain(hook);
     }
-    expect(html).toContain('<article class="avs2" aria-labelledby="avs-document-title">');
+    expect(html).toContain('<article class="avs2');
     expect(html).toContain('<header class="avs2-run">');
     expect(html).toContain('<h1 class="avs2-title" id="avs-document-title">');
     expect(html).toContain('<section class="avs2-overview"');
@@ -362,7 +365,9 @@ describe("rendered sheet", () => {
   });
 
   it("uses one deterministic page for routine care and two for initiation", () => {
-    const routine = buildInjectionAvsHtml(base());
+    const routine = buildInjectionAvsHtml(
+      base({ medicationKey: "other", medicationName: "Other", genericName: "" }),
+    );
     const initiation = buildInjectionAvsHtml(
       base({ initiationProtocol: "sustenna-day1", reason: "Initiation" }),
     );
@@ -389,6 +394,27 @@ describe("rendered sheet", () => {
     expect(vivitrol).toContain("After Visit Summary - Continued");
     expect(vivitrol).toContain("Page 1 of 2");
     expect(vivitrol).toContain("Page 2 of 2");
+  });
+
+  it("moves content-rich routine guidance to an identified continuation before print layout", () => {
+    const input = base({
+      medicationKey: "asimtufii",
+      medicationName: "Abilify Asimtufii",
+      genericName: "aripiprazole",
+      dose: "720 mg",
+      intervalKey: "q8wk",
+      site: "L ventrogluteal",
+      nextDoseDate: "2026-10-13",
+    });
+    const model = buildInjectionAvsModel(input);
+    const html = buildInjectionAvsHtml(input);
+
+    expect(requiresInjectionAvsContinuation(model)).toBe(true);
+    expect(html.match(/class="avs2-page /g)).toHaveLength(2);
+    expect(html).toContain("After Visit Summary - Continued");
+    expect(html).toContain("Page 1 of 2");
+    expect(html).toContain("Page 2 of 2");
+    expect(html).not.toContain("Page 1 of 1");
   });
 
   it("labels previews and released copies without changing clinical content", () => {
