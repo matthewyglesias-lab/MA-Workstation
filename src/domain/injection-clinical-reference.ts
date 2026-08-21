@@ -11,7 +11,7 @@ import type {
  * provenance behind those decisions.  It also keeps the Knowledge Center from
  * becoming a second, hand-maintained medication catalog.
  */
-export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.18.3";
+export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.20.1";
 export const INJECTION_CLINICAL_REFERENCE_REVIEWED_ON = "2026-08-05";
 
 /**
@@ -59,7 +59,6 @@ export type InjectionClinicalPhase =
 
 export type InjectionCadence =
   | { kind: "days"; days: number; label: string }
-  | { kind: "calendarMonths"; months: number; label: string }
   | { kind: "oneTime"; label: string };
 
 export type InjectionSiteGuidance =
@@ -415,7 +414,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           q8wk: { windowBefore: 14, windowAfter: 14 },
         },
         cadenceByInterval: {
-          q8wk: { kind: "calendarMonths", months: 2, label: "every 2 months" },
+          q8wk: { kind: "days", days: 56, label: "every 2 months" },
         },
         timingMode: "orderVerify",
         verifications: ["resuspend", "oralOverlap"],
@@ -427,7 +426,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ARISTADA syringe preparation completed",
-            "ARISTADA syringe was tapped at least 10 times and shaken vigorously for at least 30 seconds to obtain a uniform suspension.",
+            "ARISTADA syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
             sources.aristada,
           ),
         },
@@ -561,7 +560,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ARISTADA INITIO syringe preparation completed",
-            "ARISTADA INITIO syringe was tapped at least 10 times and shaken vigorously for at least 30 seconds to obtain a uniform suspension.",
+            "ARISTADA INITIO syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
             sources.initio,
           ),
         },
@@ -674,7 +673,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA SUSTENNA suspension shaken and visually inspected",
-            "INVEGA SUSTENNA syringe was shaken vigorously for at least 10 seconds to obtain a homogeneous suspension; no foreign matter or discoloration was observed.",
+            "INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; suspension homogeneous, no foreign matter or discoloration observed.",
             sources.sustenna,
           ),
         },
@@ -788,7 +787,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ERZOFRI suspension preparation completed",
-            "ERZOFRI syringe was shaken vigorously for at least 10 seconds to obtain a homogeneous suspension.",
+            "ERZOFRI syringe shaken vigorously ≥10 sec; suspension homogeneous.",
             sources.erzofri,
           ),
         },
@@ -886,9 +885,9 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
       source: sources.trinza,
       facts: [
         fact(
-          "trinza-calendar-cadence",
+          "trinza-week-cadence",
           "label constraint",
-          "INVEGA TRINZA is described as an every-3-month product; due-date calculations use calendar months rather than a generic 84-day approximation.",
+          "INVEGA TRINZA is described as an every-3-month product; due-date calculations use a fixed 84-day (12-week) interval so the scheduled return date falls on the same day of the week each cycle.",
           sources.trinza,
         ),
         fact(
@@ -908,7 +907,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         doses: ["273 mg", "410 mg", "546 mg", "819 mg"],
         windowBefore: 14,
         windowAfter: 14,
-        cadenceByInterval: { q12wk: { kind: "calendarMonths", months: 3, label: "every 3 months" } },
+        cadenceByInterval: { q12wk: { kind: "days", days: 84, label: "every 3 months" } },
         verifications: ["resuspend", "stabilized"],
         verificationRequirements: {
           maintenance: ["resuspend"],
@@ -918,7 +917,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA TRINZA suspension shaken and visually inspected",
-            "INVEGA TRINZA syringe was shaken vigorously for at least 15 seconds within 5 minutes before administration; a uniform milky-white suspension was confirmed with no foreign matter or discoloration observed.",
+            "INVEGA TRINZA syringe shaken vigorously ≥15 sec and injected within 5 min; uniform, milky-white suspension confirmed, no foreign matter or discoloration observed.",
             sources.trinza,
           ),
         },
@@ -992,9 +991,9 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
       source: sources.hafyera,
       facts: [
         fact(
-          "hafyera-calendar-cadence",
+          "hafyera-week-cadence",
           "label constraint",
-          "INVEGA HAFYERA is an every-6-month product; due-date calculations use calendar months rather than a generic 182-day approximation.",
+          "INVEGA HAFYERA is an every-6-month product; due-date calculations use a fixed 182-day (26-week) interval so the scheduled return date falls on the same day of the week each cycle.",
           sources.hafyera,
         ),
         fact(
@@ -1014,7 +1013,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         doses: ["1092 mg", "1560 mg"],
         windowBefore: 14,
         windowAfter: 21,
-        cadenceByInterval: { q26wk: { kind: "calendarMonths", months: 6, label: "every 6 months" } },
+        cadenceByInterval: { q26wk: { kind: "days", days: 182, label: "every 6 months" } },
         verifications: ["resuspend", "stabilized"],
         verificationRequirements: {
           maintenance: ["resuspend"],
@@ -1024,7 +1023,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA HAFYERA resuspension and visual inspection completed",
-            "INVEGA HAFYERA syringe was shaken very fast for at least 15 seconds, rested briefly, then shaken for another 15 seconds; a uniform, thick, milky-white suspension was confirmed with no particulate matter or discoloration observed.",
+            "INVEGA HAFYERA syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more; uniform, thick, milky-white suspension confirmed, no particulate matter or discoloration observed.",
             sources.hafyera,
           ),
         },
@@ -1117,14 +1116,14 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           q4wk: { windowBefore: 7, windowAfter: 7 },
           q8wk: { windowBefore: 14, windowAfter: 14 },
         },
-        cadenceByInterval: { q8wk: { kind: "calendarMonths", months: 2, label: "every 2 months" } },
+        cadenceByInterval: { q8wk: { kind: "days", days: 56, label: "every 2 months" } },
         timingMode: "orderVerify",
         verifications: ["resuspend"],
         verificationRequirements: { maintenance: ["resuspend"], initiation: ["resuspend"], reinitiation: ["resuspend"] },
         verificationDetails: {
           resuspend: verificationDetail(
             "UZEDY room-temperature, product, and bubble checks completed",
-            "UZEDY kit was allowed to reach room temperature in its package for at least 30 minutes; the suspension was opaque white-to-off-white and free of non-white particles, and the visible bubble was positioned at the syringe cap.",
+            "UZEDY kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white, free of non-white particles, bubble positioned at the syringe cap.",
             sources.uzedy,
           ),
         },
@@ -1258,7 +1257,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ABILIFY MAINTENA reconstitution and inspection completed",
-            "The ordered ABILIFY MAINTENA presentation was reconstituted; the suspension was uniform, homogeneous, opaque, and milky-white with no particulate matter or discoloration observed.",
+            "ABILIFY MAINTENA reconstituted per ordered presentation; suspension uniform, opaque, and milky-white, no particulate matter or discoloration observed.",
             sources.maintena,
           ),
         },
@@ -1352,7 +1351,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         doses: ["720 mg", "960 mg"],
         windowBefore: 14,
         windowAfter: 14,
-        cadenceByInterval: { q8wk: { kind: "calendarMonths", months: 2, label: "every 2 months" } },
+        cadenceByInterval: { q8wk: { kind: "days", days: 56, label: "every 2 months" } },
         timingMode: "orderVerify",
         verifications: ["resuspend", "aripiprazoleTolerability", "glutealOnly", "noMassage"],
         verificationRequirements: {
@@ -1363,7 +1362,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ABILIFY ASIMTUFII suspension prepared and visually inspected",
-            "ABILIFY ASIMTUFII syringe was tapped at least 10 times and shaken vigorously for at least 10 seconds; a uniform, opaque, milky-white suspension was confirmed with no particulate matter or discoloration observed.",
+            "ABILIFY ASIMTUFII syringe tapped ≥10 times, shaken vigorously ≥10 sec; uniform, opaque, milky-white suspension confirmed, no particulate matter or discoloration observed.",
             sources.asimtufii,
           ),
         },
@@ -1468,7 +1467,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "VIVITROL reconstitution and suspension check completed",
-            "VIVITROL was allowed to reach room temperature and reconstituted with supplied diluent; a milky-white, clump-free suspension that moved freely down the vial walls was confirmed, and 4 mL was prepared for immediate administration.",
+            "VIVITROL reached room temperature and was reconstituted with supplied diluent; milky-white, clump-free suspension confirmed moving freely down the vial walls, 4 mL prepared for immediate administration.",
             sources.vivitrol,
           ),
         },
@@ -1629,7 +1628,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           visualInspection: verificationDetail(
             "HALDOL DECANOATE solution inspection completed",
-            "HALDOL DECANOATE solution was visually inspected and was clear, yellow to light amber, and free of visible debris.",
+            "HALDOL DECANOATE solution visually inspected: clear, yellow to light amber, free of visible debris.",
             sources.haldol,
           ),
         },
@@ -1730,7 +1729,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           visualInspection: verificationDetail(
             "Dry equipment and applicable solution inspection completed",
-            "Fluphenazine decanoate was visually inspected, when solution and container permitted, with no particulate matter or discoloration observed; dry preparation equipment was used.",
+            "Fluphenazine decanoate visually inspected when solution and container permitted, with no particulate matter or discoloration observed. Dry preparation equipment used.",
             sources.prolixin,
           ),
         },

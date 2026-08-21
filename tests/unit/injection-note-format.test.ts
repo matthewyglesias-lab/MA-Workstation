@@ -71,8 +71,8 @@ describe("RC6.1 injection note format", () => {
         "No acute s/e or contraindications to administration noted on pre-inj screening.",
     );
     expect(note.assessment).toContain(
-      "Product preparation: INVEGA SUSTENNA syringe was shaken vigorously for at least 10 seconds " +
-        "to obtain a homogeneous suspension; no foreign matter or discoloration was observed.",
+      "Product preparation: INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; " +
+        "suspension homogeneous, no foreign matter or discoloration observed.",
     );
     expect(note.assessment).toContain(
       "Timing: 28 days since prior inj (7/10/26–8/7/26); within expected maintenance interval.",
@@ -288,8 +288,8 @@ describe("RC6.1 injection note format", () => {
         "Clinical review: Prior dose tolerated well per pt report; no new or unresolved s/e. " +
         "No acute s/e or contraindications to administration noted on pre-inj screening. " +
         "Active order and product-specific initiation / re-initiation plan verified.\n\n" +
-        "Product preparation: INVEGA SUSTENNA syringe was shaken vigorously for at least 10 seconds " +
-        "to obtain a homogeneous suspension; no foreign matter or discoloration was observed.\n\n" +
+        "Product preparation: INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; " +
+        "suspension homogeneous, no foreign matter or discoloration observed.\n\n" +
         "Timing: 46 days since prior inj; outside routine maintenance interval. " +
         "Med-specific missed-dose guidance reviewed. Provider approval documented: Samuel Amoako; " +
         "decision Aug 18, 2026 at 1:15 PM; direction: MAY GIVE 234 MG TODAY PER PROVIDER AND NATALIE L. ON TEAMS.",
@@ -324,8 +324,8 @@ describe("RC6.1 injection note format", () => {
   it("places completed medication-specific preparation facts after clinical review", () => {
     const note = formatFor(sustennaAdministered());
     expect(note.assessment).toContain(
-      "Product preparation: INVEGA SUSTENNA syringe was shaken vigorously for at least 10 seconds " +
-        "to obtain a homogeneous suspension; no foreign matter or discoloration was observed.",
+      "Product preparation: INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; " +
+        "suspension homogeneous, no foreign matter or discoloration observed.",
     );
     expect(note.assessment.indexOf("Clinical review:")).toBeLessThan(
       note.assessment.indexOf("Product preparation:"),
@@ -333,7 +333,7 @@ describe("RC6.1 injection note format", () => {
     expect(note.assessment.indexOf("Product preparation:")).toBeLessThan(
       note.assessment.indexOf("Timing:"),
     );
-    expect(note.plan).not.toContain("INVEGA SUSTENNA syringe was shaken");
+    expect(note.plan).not.toContain("INVEGA SUSTENNA syringe shaken");
   });
 
   it("states Vivitrol's completed reconstitution and normal suspension result in Product preparation", () => {
@@ -349,18 +349,18 @@ describe("RC6.1 injection note format", () => {
     };
     const note = formatFor(encounter);
     expect(note.assessment).toContain(
-      "Product preparation: VIVITROL was allowed to reach room temperature and reconstituted with supplied diluent; " +
-        "a milky-white, clump-free suspension that moved freely down the vial walls was confirmed, and 4 mL was prepared for immediate administration.",
+      "Product preparation: VIVITROL reached room temperature and was reconstituted with supplied diluent; " +
+        "milky-white, clump-free suspension confirmed moving freely down the vial walls, 4 mL prepared for immediate administration.",
     );
     expect(note.assessment).not.toContain("foreign matter or discoloration");
-    expect(note.plan).not.toContain("VIVITROL was allowed to reach room temperature");
+    expect(note.plan).not.toContain("VIVITROL reached room temperature");
   });
 
   it("never produces a second, independent preparation clause", () => {
     const note = formatFor(sustennaAdministered());
     expect(note.plan).not.toContain("Preparation / reconstitution");
     expect(note.plan).not.toContain("PRODUCT HANDLING");
-    const occurrences = (note.all.match(/INVEGA SUSTENNA syringe was shaken/g) ?? []).length;
+    const occurrences = (note.all.match(/INVEGA SUSTENNA syringe shaken/g) ?? []).length;
     expect(occurrences).toBe(1);
   });
 });
