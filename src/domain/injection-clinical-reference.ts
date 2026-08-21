@@ -11,7 +11,7 @@ import type {
  * provenance behind those decisions.  It also keeps the Knowledge Center from
  * becoming a second, hand-maintained medication catalog.
  */
-export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.20.1";
+export const INJECTION_CLINICAL_REFERENCE_VERSION = "2026.08.20.2";
 export const INJECTION_CLINICAL_REFERENCE_REVIEWED_ON = "2026-08-05";
 
 /**
@@ -121,9 +121,47 @@ export interface InjectionMedicationReferenceCatalog {
  */
 export interface InjectionMedicationVerificationDetail {
   label: string;
-  documentation: string;
+  /**
+   * The charted "Product preparation" / "Product visual inspection" fact.
+   *
+   * Two templates only:
+   *   1. "<PRODUCT> <action clause>; <result clause>." for a real prep
+   *      action (tap/shake/reconstitute). The result clause says "confirmed"
+   *      or "observed" only where the label documents an affirmative visual
+   *      check (e.g. TRINZA, HAFYERA, ASIMTUFII, VIVITROL, MAINTENA); a
+   *      product whose label states no such check (ARISTADA, INITIO,
+   *      ERZOFRI, UZEDY) states the achieved state flatly, with no
+   *      confirm/observe verb invented for it.
+   *   2. "<PRODUCT> solution visually inspected: <findings>." for a
+   *      ready-to-use solution with no mixing step (HALDOL, PROLIXIN).
+   *
+   * Every numeric minimum reads "≥N", never "at least N". Verbs the label
+   * itself uses ("shaken vigorously", "tapped") are kept verbatim rather
+   * than swapped for fancier synonyms - fidelity to the source, not
+   * vocabulary, is what makes this read as mature clinical documentation.
+   *
+   * When a function is supplied instead of a plain string, it may use the
+   * selected dose/resolved NDC presentation to state the actual prepared
+   * volume - but only a volume this file has itself sourced from the
+   * label, never one read out of the NDC package-listing data (that data
+   * is package/billing metadata and is documented elsewhere as never
+   * driving a clinical fact). A prefilled, non-drawn-up product states its
+   * labeled dose/volume up front ("<PRODUCT> <dose> (<volume> mL) ..."); a
+   * product actually reconstituted or drawn up states the volume as a
+   * trailing prepared-for-injection fact instead.
+   */
+  documentation: string | ((context: InjectionPreparationDocumentationContext) => string);
   classification: ClinicalReferenceClassification;
   source: ClinicalReferenceSource;
+}
+
+export interface InjectionPreparationDocumentationContext {
+  dose: string;
+  /** The resolved NDC catalog presentation (e.g. "single-dose vial kit" vs
+   * "prefilled dual-chamber syringe"), when the documented NDC matches a
+   * known package. Undefined whenever it does not - never guessed from an
+   * unrelated field such as the generic delivery-device selector. */
+  presentation?: string;
 }
 
 export interface InjectionMedicationKnowledge {
@@ -274,7 +312,7 @@ const preparationSource = (
 
 const verificationDetail = (
   label: string,
-  documentation: string,
+  documentation: InjectionMedicationVerificationDetail["documentation"],
   source: ClinicalReferenceSource,
 ): InjectionMedicationVerificationDetail => ({
   label,
@@ -282,6 +320,58 @@ const verificationDetail = (
   classification: "label constraint",
   source: preparationSource(source),
 });
+
+/**
+ * Per-strength delivered volume, sourced from each label's own "Dosage Forms
+ * and Strengths" table (DailyMed, revision matching the product's own
+ * `sources.*` citation) - never from the NDC package-listing data, which is
+ * package/billing metadata only. A dose absent from a table means the label
+ * did not state one for this app to surface; the caller must degrade
+ * gracefully rather than guess.
+ */
+const PREFILLED_VOLUME_ML_BY_DOSE: Partial<Record<InjectionMedicationKey, Record<string, string>>> = {
+  aristada: { "441 mg": "1.6", "662 mg": "2.4", "882 mg": "3.2", "1064 mg": "3.9" },
+  sustenna: { "39 mg": "0.25", "78 mg": "0.5", "117 mg": "0.75", "156 mg": "1", "234 mg": "1.5" },
+  erzofri: {
+    "39 mg": "0.25",
+    "78 mg": "0.5",
+    "117 mg": "0.75",
+    "156 mg": "1",
+    "234 mg": "1.5",
+    "351 mg": "2.25",
+  },
+  trinza: { "273 mg": "0.88", "410 mg": "1.32", "546 mg": "1.75", "819 mg": "2.63" },
+  hafyera: { "1092 mg": "3.5", "1560 mg": "5" },
+  uzedy: {
+    "50 mg": "0.14",
+    "75 mg": "0.21",
+    "100 mg": "0.28",
+    "125 mg": "0.35",
+    "150 mg": "0.42",
+    "200 mg": "0.56",
+    "250 mg": "0.7",
+  },
+  asimtufii: { "720 mg": "2.4", "960 mg": "3.2" },
+};
+
+/** "<PRODUCT> <dose> (<volume> mL)" for a prefilled, non-drawn-up product;
+ * falls back to the bare dose when this file has no sourced volume for it. */
+const prefilledDoseVolume = (
+  medicationKey: InjectionMedicationKey,
+  productLabel: string,
+  dose: string,
+): string => {
+  const volume = PREFILLED_VOLUME_ML_BY_DOSE[medicationKey]?.[dose.trim()];
+  return volume ? `${productLabel} ${dose} (${volume} mL)` : `${productLabel} ${dose}`;
+};
+
+/** ABILIFY MAINTENA's vial-for-reconstitution withdrawal volume (DailyMed
+ * Table 4). The prefilled dual-chamber syringe states no separate mL figure
+ * of its own - the label directs injecting its full contents. */
+const MAINTENA_VIAL_VOLUME_ML_BY_DOSE: Record<string, string> = {
+  "300 mg": "1.5",
+  "400 mg": "2",
+};
 
 const techniqueNote = (
   id: string,
@@ -426,7 +516,8 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ARISTADA syringe preparation completed",
-            "ARISTADA syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
+            ({ dose }) =>
+              `${prefilledDoseVolume("aristada", "ARISTADA", dose)} syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.`,
             sources.aristada,
           ),
         },
@@ -477,7 +568,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved:
-          "Both supplied needle options are labeled for this site. Document body habitus to identify which the label directs.",
+          "Both supplied needle options are labeled for this site; document body habitus to resolve the correct one.",
         angle: IM_ANGLE,
         siteRestriction: {
           headline: "Gluteal IM only at this strength",
@@ -560,7 +651,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ARISTADA INITIO syringe preparation completed",
-            "ARISTADA INITIO syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
+            "ARISTADA INITIO 675 mg (2.4 mL) syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
             sources.initio,
           ),
         },
@@ -615,7 +706,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved:
-          "Both supplied needle options are labeled for this site. Document body habitus to identify which the label directs.",
+          "Both supplied needle options are labeled for this site; document body habitus to resolve the correct one.",
         angle: IM_ANGLE,
         notes: [
           techniqueNote(
@@ -673,7 +764,8 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA SUSTENNA suspension shaken and visually inspected",
-            "INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; suspension homogeneous, no foreign matter or discoloration observed.",
+            ({ dose }) =>
+              `${prefilledDoseVolume("sustenna", "INVEGA SUSTENNA", dose)} syringe shaken vigorously ≥10 sec; suspension homogeneous, no foreign matter or discoloration observed.`,
             sources.sustenna,
           ),
         },
@@ -713,7 +805,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved:
-          "Deltoid needle length is weight-dependent for this product. Document weight to resolve the labeled needle.",
+          "Deltoid needle length is weight-dependent; document weight to resolve the labeled needle.",
         angle: IM_ANGLE,
         notes: [
           techniqueNote(
@@ -787,7 +879,8 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ERZOFRI suspension preparation completed",
-            "ERZOFRI syringe shaken vigorously ≥10 sec; suspension homogeneous.",
+            ({ dose }) =>
+              `${prefilledDoseVolume("erzofri", "ERZOFRI", dose)} syringe shaken vigorously ≥10 sec; suspension homogeneous.`,
             sources.erzofri,
           ),
         },
@@ -837,7 +930,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved:
-          "Deltoid needle length is weight-dependent for this product. Document weight to resolve the labeled needle.",
+          "Deltoid needle length is weight-dependent; document weight to resolve the labeled needle.",
         angle: IM_ANGLE,
         siteRestriction: {
           headline: "Deltoid only for the 351 mg Day 1 dose",
@@ -917,7 +1010,8 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA TRINZA suspension shaken and visually inspected",
-            "INVEGA TRINZA syringe shaken vigorously ≥15 sec and injected within 5 min; uniform, milky-white suspension confirmed, no foreign matter or discoloration observed.",
+            ({ dose }) =>
+              `${prefilledDoseVolume("trinza", "INVEGA TRINZA", dose)} syringe shaken vigorously ≥15 sec and injected within 5 min; uniform, milky-white suspension confirmed, no foreign matter or discoloration observed.`,
             sources.trinza,
           ),
         },
@@ -956,7 +1050,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved:
-          "Deltoid needle length is weight-dependent for this product. Document weight to resolve the labeled needle.",
+          "Deltoid needle length is weight-dependent; document weight to resolve the labeled needle.",
         angle: IM_ANGLE,
         notes: [
           techniqueNote(
@@ -1023,7 +1117,8 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "INVEGA HAFYERA resuspension and visual inspection completed",
-            "INVEGA HAFYERA syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more; uniform, thick, milky-white suspension confirmed, no particulate matter or discoloration observed.",
+            ({ dose }) =>
+              `${prefilledDoseVolume("hafyera", "INVEGA HAFYERA", dose)} syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more; uniform, thick, milky-white suspension confirmed, no particulate matter or discoloration observed.`,
             sources.hafyera,
           ),
         },
@@ -1123,7 +1218,8 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "UZEDY room-temperature, product, and bubble checks completed",
-            "UZEDY kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white, free of non-white particles, bubble positioned at the syringe cap.",
+            ({ dose }) =>
+              `${prefilledDoseVolume("uzedy", "UZEDY", dose)} kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white, free of non-white particles, bubble at the syringe cap.`,
             sources.uzedy,
           ),
         },
@@ -1257,7 +1353,18 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ABILIFY MAINTENA reconstitution and inspection completed",
-            "ABILIFY MAINTENA reconstituted per ordered presentation; suspension uniform, opaque, and milky-white, no particulate matter or discoloration observed.",
+            ({ dose, presentation }) => {
+              const findings = "suspension uniform, opaque, and milky-white, no particulate matter or discoloration observed";
+              if (presentation === "single-dose vial kit") {
+                const volume = MAINTENA_VIAL_VOLUME_ML_BY_DOSE[dose.trim()];
+                const volumeText = volume ? `, ${volume} mL prepared for injection` : "";
+                return `ABILIFY MAINTENA ${dose} vial reconstituted; ${findings}${volumeText}.`;
+              }
+              if (presentation === "prefilled dual-chamber syringe") {
+                return `ABILIFY MAINTENA ${dose} prefilled dual-chamber syringe reconstituted; ${findings}.`;
+              }
+              return `ABILIFY MAINTENA reconstituted per the ordered presentation; ${findings}.`;
+            },
             sources.maintena,
           ),
         },
@@ -1302,7 +1409,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved:
-          "Needle selection for this product depends on body habitus. Document the habitus band to resolve the labeled needle.",
+          "Needle selection depends on body habitus; document the habitus band to resolve the labeled needle.",
         angle: IM_ANGLE,
         notes: [
           techniqueNote(
@@ -1362,7 +1469,8 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
         verificationDetails: {
           resuspend: verificationDetail(
             "ABILIFY ASIMTUFII suspension prepared and visually inspected",
-            "ABILIFY ASIMTUFII syringe tapped ≥10 times, shaken vigorously ≥10 sec; uniform, opaque, milky-white suspension confirmed, no particulate matter or discoloration observed.",
+            ({ dose }) =>
+              `${prefilledDoseVolume("asimtufii", "ABILIFY ASIMTUFII", dose)} syringe tapped ≥10 times, shaken vigorously ≥10 sec; uniform, opaque, milky-white suspension confirmed, no particulate matter or discoloration observed.`,
             sources.asimtufii,
           ),
         },
@@ -1393,7 +1501,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved:
-          "Needle selection for this product depends on body habitus. Document the habitus band to resolve the labeled needle.",
+          "Needle selection depends on body habitus; document the habitus band to resolve the labeled needle.",
         angle: IM_ANGLE,
         siteRestriction: {
           headline: "Gluteal IM only",
@@ -1512,7 +1620,7 @@ export const INJECTION_CLINICAL_REFERENCE_BUNDLE: InjectionClinicalReferenceBund
           },
         ],
         needleUnresolved:
-          "This label requires body habitus to be assessed before each injection to confirm needle length is adequate. Document the habitus band.",
+          "This label requires body habitus assessed before each injection to confirm needle length; document the habitus band.",
         requiresHabitusAssessment: true,
         angle: IM_ANGLE,
         siteRestriction: {

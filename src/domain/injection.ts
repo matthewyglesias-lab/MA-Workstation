@@ -47,9 +47,10 @@ import {
   techniqueNotesFor,
   type NeedleResolution,
 } from "./injection-needle";
-import type {
-  InjectionNdcSelectionMetadata,
-  InjectionNextDoseProvenance,
+import {
+  resolveNdcEntry,
+  type InjectionNdcSelectionMetadata,
+  type InjectionNextDoseProvenance,
 } from "./injection-ndc";
 
 export type InjectionReason = "" | "scheduled" | "initiation" | "reinit" | "loading" | "prn";
@@ -1263,15 +1264,29 @@ export const medicationPreparationGuidance = (
   return notes.map((note) => note.statement).join(" ");
 };
 
-/** Concise, product-specific language for the signed clinical review. */
+/**
+ * Concise, product-specific language for the signed clinical review.
+ *
+ * `ndc` is the encounter's own traceability NDC, used only to resolve which
+ * catalog *presentation* (e.g. a vial kit vs. a prefilled dual-chamber
+ * syringe) was documented - never to look up a clinical volume/dose fact.
+ * The NDC catalog is package/billing reference data and is documented there
+ * as never driving a clinical rule or fact.
+ */
 export const medicationVerificationDocumentation = (
   medication: InjectionMedication | null,
   key: MedicationVerificationKey,
   dose: string,
   site: string,
-): string =>
-  medication?.clinicalReference?.catalog.verificationDetails?.[key]?.documentation ??
-  (key === "resuspend" ? medicationPreparationGuidance(medication, dose, site) : "");
+  ndc?: string,
+): string => {
+  const documentation = medication?.clinicalReference?.catalog.verificationDetails?.[key]?.documentation;
+  if (typeof documentation === "function") {
+    const presentation = ndc ? resolveNdcEntry(ndc).option?.presentation : undefined;
+    return documentation({ dose: dose.trim(), presentation });
+  }
+  return documentation ?? (key === "resuspend" ? medicationPreparationGuidance(medication, dose, site) : "");
+};
 
 const parseBp = (value = ""): { systolic: number; diastolic: number } | null => {
   const match = value.trim().match(/(\d{2,3})\s*\/\s*(\d{2,3})/);

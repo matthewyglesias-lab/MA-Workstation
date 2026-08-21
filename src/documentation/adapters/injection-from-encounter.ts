@@ -264,7 +264,13 @@ const compactAssessmentFacts = (
   (Object.keys(encounter.verifications) as MedicationVerificationKey[]).forEach((key) => {
     if (!encounter.verifications[key] || !applicableVerifications.has(key)) return;
     const fact =
-      medicationVerificationDocumentation(medication, key, encounter.dose, encounter.site) ||
+      medicationVerificationDocumentation(
+        medication,
+        key,
+        encounter.dose,
+        encounter.site,
+        encounter.traceability.ndc,
+      ) ||
       VERIFICATION_ASSESSMENT_FACTS[key];
     if (!fact) return;
     if (isMedicationPreparationVerification(key)) {
@@ -396,7 +402,13 @@ const categorizedAssessmentFacts = (
     if (!encounter.verifications[key] || !applicableVerifications.has(key)) return;
     if (VERIFICATION_PLAN_FACTS[key]) return;
     const fact =
-      medicationVerificationDocumentation(medication, key, encounter.dose, encounter.site) ||
+      medicationVerificationDocumentation(
+        medication,
+        key,
+        encounter.dose,
+        encounter.site,
+        encounter.traceability.ndc,
+      ) ||
       VERIFICATION_ASSESSMENT_FACTS[key];
     if (!fact) return;
     if (isMedicationPreparationVerification(key)) {
