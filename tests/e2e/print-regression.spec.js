@@ -206,6 +206,36 @@ async function prepareAsimtufiiAvs(page) {
   await panel.locator('input[type="month"]').first().fill('2028-07');
 }
 
+async function prepareUzedyColdChainAvs(page) {
+  await bootWorkstation(page);
+  await openWorkflow(page, 'Injection', 'administer');
+  const panel = page.locator('.wfp-panel');
+  await panel.locator('input[placeholder="Last, First"]').fill(
+    'Montgomery-Washington, Alexandria Josephine'
+  );
+  await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('07/29/2003');
+  await setProvider(panel, 'Khadija Hamisi, Psychiatric Nurse Practitioner');
+  await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
+  await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Uzedy' });
+  await panel.locator('select[name="inj-dose"]').selectOption('250 mg');
+  await panel.locator('select[name="inj-interval"]').selectOption('q8wk');
+  await fillDate(
+    panel
+      .locator('.wfp-field', { hasText: 'Administration date' })
+      .locator('input[data-workstation-date="date"]'), '2026-08-21');
+
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  await panel.getByText('L upper arm (SubQ)', { exact: true }).click();
+  await panel.locator('input[type="time"]').first().fill('16:53');
+  await panel.locator('input[placeholder="J. Doe, LVN"]').fill(
+    'Alexandria Montgomery-Washington, Medical Assistant'
+  );
+
+  await panel.getByRole('tab', { name: 'Product', exact: true }).click();
+  await panel.locator('input[placeholder="LOT123"]').fill('UZEDY-PRINT-LONG-185574');
+  await panel.locator('input[type="month"]').first().fill('2028-12');
+}
+
 async function expectAvsPagesToFit(page) {
   const integrity = await page.locator('#avsSheet').evaluate(root => {
     const overflowState = node => {
@@ -218,8 +248,12 @@ async function expectAvsPagesToFit(page) {
     };
     const pages = [...root.querySelectorAll('.avs2-page')].map((avsPage, index) => {
       const footer = avsPage.querySelector(':scope > .avs2-foot');
-      const content = [avsPage.querySelector(':scope > .avs2-page-body')]
-        .filter(Boolean);
+      const body = avsPage.querySelector(':scope > .avs2-page-body');
+      const content = body
+        ? [body, ...body.querySelectorAll('*')].filter(node =>
+            getComputedStyle(node).display !== 'none' && node.getClientRects().length
+          )
+        : [];
       const contentBottom = content.length
         ? Math.max(...content.map(child => child.getBoundingClientRect().bottom))
         : avsPage.getBoundingClientRect().top;
@@ -231,11 +265,35 @@ async function expectAvsPagesToFit(page) {
           return style.overflowY !== 'visible' && node.scrollHeight - node.clientHeight > 1;
         })
         .map(node => node.className || node.tagName.toLowerCase());
+      const siblingCollisions = [body, ...avsPage.querySelectorAll('.avs2-guidance, .avs2-guidance-row')]
+        .filter(Boolean)
+        .flatMap(parent => {
+          const children = [...parent.children].filter(node =>
+            getComputedStyle(node).display !== 'none' && node.getClientRects().length
+          );
+          const collisions = [];
+          for (let leftIndex = 0; leftIndex < children.length; leftIndex += 1) {
+            for (let rightIndex = leftIndex + 1; rightIndex < children.length; rightIndex += 1) {
+              const left = children[leftIndex].getBoundingClientRect();
+              const right = children[rightIndex].getBoundingClientRect();
+              const horizontal = Math.min(left.right, right.right) - Math.max(left.left, right.left);
+              const vertical = Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top);
+              if (horizontal > 1 && vertical > 1) {
+                collisions.push([
+                  children[leftIndex].className || children[leftIndex].tagName.toLowerCase(),
+                  children[rightIndex].className || children[rightIndex].tagName.toLowerCase()
+                ]);
+              }
+            }
+          }
+          return collisions;
+        });
       return {
         page: index + 1,
         ownVerticalOverflow: avsPage.scrollHeight - avsPage.clientHeight,
         footerOverlap: Math.ceil(contentBottom - footerTop),
-        clippingNodes
+        clippingNodes,
+        siblingCollisions
       };
     });
     return {
@@ -259,6 +317,7 @@ async function expectAvsPagesToFit(page) {
     expect(result.ownVerticalOverflow, `AVS page ${result.page} overflows vertically`).toBeLessThanOrEqual(1);
     expect(result.footerOverlap, `AVS page ${result.page} content overlaps its footer`).toBeLessThanOrEqual(0);
     expect(result.clippingNodes, `AVS page ${result.page} contains a vertical clip`).toEqual([]);
+    expect(result.siblingCollisions, `AVS page ${result.page} contains overlapping sections`).toEqual([]);
   }
 }
 
@@ -337,6 +396,7 @@ async function expectRefinedAvsVisualSystem(page) {
       return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
     };
     const article = style('.avs2');
+    const title = style('.avs2-title');
     const patient = style('.avs2-id');
     const due = style('.avs2-step-due .avs2-step-body');
     const emergency = style('.avs2-alert-emergency');
@@ -349,6 +409,7 @@ async function expectRefinedAvsVisualSystem(page) {
       }));
     return {
       articleFont: article.fontFamily,
+      titleFont: title.fontFamily,
       bodyFontSize: parseFloat(article.fontSize),
       undersizedBodyCopy: bodyCopy.filter(item => item.size < 14),
       patientRadius: parseFloat(patient.borderTopLeftRadius),
@@ -364,12 +425,13 @@ async function expectRefinedAvsVisualSystem(page) {
   });
 
   expect(visual.articleFont).toMatch(/Aptos|Segoe UI|Arial/);
+  expect(visual.titleFont).toContain('Plus Jakarta Sans Variable');
   expect(visual.bodyFontSize).toBeGreaterThanOrEqual(14);
   expect(visual.undersizedBodyCopy, 'patient guidance dropped below 10.5pt').toEqual([]);
-  expect(visual.patientRadius).toBe(4);
-  expect(visual.dueRadius).toBe(4);
-  expect(visual.emergencyRadius).toBe(4);
-  expect(visual.emergencyEdge).toBe(3);
+  expect(visual.patientRadius).toBe(6);
+  expect(visual.dueRadius).toBe(6);
+  expect(visual.emergencyRadius).toBe(6);
+  expect(visual.emergencyEdge).toBe(2);
   expect(visual.emergencyHeadingTransform).toBe('none');
   // These luminance gaps are the forced-grayscale contract: hierarchy must
   // remain visible even when hue is unavailable.
@@ -801,7 +863,7 @@ test.describe('unchanged clinical print surfaces', () => {
     });
   });
 
-  test('keeps maximum-length identity, product, site, and trace facts inside one routine page', async ({ page }) => {
+  test('paginates maximum-length identity, product, site, and trace facts without overflow', async ({ page }) => {
     await preparePrintableInjection(page);
     const panel = page.locator('.wfp-panel');
     await panel.getByRole('tab', { name: 'Order & Timing', exact: true }).click();
@@ -829,16 +891,18 @@ test.describe('unchanged clinical print surfaces', () => {
       rootId: 'avsSheet'
     });
     const avs = page.locator('#avsSheet');
-    await expect(avs.locator('.avs2-page')).toHaveCount(1);
+    await expect(avs.locator('.avs2-page')).toHaveCount(2);
     await expect(avs).toContainText('Montgomery-Washington-Rivera');
     await expect(avs).toContainText('Extended-release clinic-administered');
     await expect(avs).toContainText('MANUFACTURER-TRACE-LOT');
     await expectAvsPagesToFit(page);
+    await expectTwoPageAvsToBeBalanced(page);
     await expectTimelineToConnect(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [/Montgomery-Washington-Rivera/i, /MANUFACTURER-TRACE-LOT/i],
-      maxPages: 1,
+      minPages: 2,
+      maxPages: 2,
       checkParity: false
     });
   });
@@ -908,6 +972,46 @@ test.describe('unchanged clinical print surfaces', () => {
         /Abilify Asimtufii, 720 mg/i,
         /After Visit Summary - Continued/i,
         /ASI-PRINT-001/i
+      ],
+      minPages: 2,
+      maxPages: 2,
+      checkParity: false
+    });
+  });
+  test('keeps Uzedy cold-chain guidance on an explicit collision-free continuation', async ({ page }) => {
+    await prepareUzedyColdChainAvs(page);
+    await setFieldsAndRender(page, {
+      bodyClass: 'print-avs',
+      renderName: 'renderAVS',
+      rootId: 'avsSheet'
+    });
+    const avs = page.locator('#avsSheet');
+    await expect(avs.locator('.avs2-page')).toHaveCount(2);
+    await expect(avs.locator('article.avs2')).toHaveClass(/avs2-layout-complex-two-page/);
+    await expect(avs.locator('.avs2-page-primary')).toContainText('Call before you come in');
+    await expect(avs.locator('.avs2-page-primary')).not.toContainText('Why timing matters');
+    await expect(avs.locator('.avs2-page-continuation')).toContainText('Why timing matters');
+    await expect(avs.locator('.avs2-page-continuation')).toContainText(
+      'Caring for your injection site'
+    );
+    await expect(avs.getByText('Why timing matters', { exact: true })).toHaveCount(1);
+    await expect(avs.getByText('Caring for your injection site', { exact: true })).toHaveCount(1);
+    await expect(avs.locator('footer.avs2-foot').first()).toContainText('Page 1 of 2');
+    await expect(avs.locator('footer.avs2-foot').last()).toContainText('Page 2 of 2');
+    await expect(avs).toContainText('IPMG-AVS-INJ (REV 08/26C)');
+    await expectAvsPagesToFit(page);
+    await expectTwoPageAvsToBeBalanced(page);
+    await expectTimelineToConnect(page);
+    await expectRefinedAvsVisualSystem(page);
+    await expectAvsSemanticStructure(page);
+    await expectPrintContract(page, {
+      rootId: 'avsSheet',
+      content: [
+        /Uzedy, 250 mg/i,
+        /Call before you come in/i,
+        /After Visit Summary - Continued/i,
+        /UZEDY-PRINT-LONG-185574/i,
+        /Page 2 of 2/i
       ],
       minPages: 2,
       maxPages: 2,

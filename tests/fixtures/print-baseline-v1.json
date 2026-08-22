@@ -11,10 +11,10 @@
   },
   "outputs": {
     "avsSheet": {
-      "sha256": "05d3a5d3226d7a01b21c12ebbfb8e99db03aa3ec6285ed5a82c7598ce23c32b7",
-      "bytes": 6111,
+      "sha256": "cc1eebbc2e60824020e6c1a1c2bbdc30e7f5929f641776fec8b69837c6f491cf",
+      "bytes": 6212,
       "topLevelClass": "avs2 avs2-layout-routine-one-page",
-      "note": "Intentionally diverges from the production commit. The injection After Visit Summary now uses stable typed section kinds, deterministic routine-one-page/routine-two-page/complex-two-page composition, a fully connected treatment timeline, friendly sentence-case headings, 10.5pt minimum patient guidance, repeated identity on continuations, a quiet patient-copy status, and a repeated staff-draft watermark. The mostly grayscale visual system uses restrained slate and muted emergency red while retaining print-safe hierarchy. Every other print root in this fixture is still pinned to production output."
+      "note": "Intentionally diverges from the production commit. The injection After Visit Summary now uses capacity-aware deterministic pagination, explicit collision-free guidance rows, resilient repeated identity and footers, and Plus Jakarta Sans display hierarchy over an Aptos/Segoe UI body. Warm near-white surfaces and a lighter slate distinguish routine content, logistical alerts use muted oatmeal, and muted red is reserved for emergencies. Every other print root in this fixture is still pinned to production output."
     },
     "injWorksheetSheet": {
       "sha256": "0eed90bef38a3946679e5b0cce8d53948c0c7010150e1c2c8f7ce6917091fa23",

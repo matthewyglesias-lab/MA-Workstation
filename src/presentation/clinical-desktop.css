@@ -4678,435 +4678,13 @@ input[type="radio"]:disabled {
   }
 }
 
-/* ===================== INJECTION AVS (marginalia + dose spine) =====================
- * The After Visit Summary prints as a marginalia sheet built around a dated
- * dose spine. The markup comes from src/domain/injection-avs-render.ts; this
- * stylesheet owns page geometry and the hierarchy.
- *
- * ONE GRID runs the length of the page:
- *     [ label gutter ][ rail ][ content ]
- * Ordinary sections put their heading in the gutter and leave the rail empty.
- * Timeline steps put their date in the gutter and draw a node on the rail.
- * Alerts deliberately span the full measure, breaking the grid - that break is
- * what makes them read as urgent now that the inverse-video bars are gone.
- *
- * GREYSCALE FIRST. The handout prints black and white; only the archived PDF
- * keeps colour. So the tiers are separated by size, weight, and position, and
- * never by hue:
- *   1. the given medication and the due date - largest type, bold, on the spine
- *   2. instructions - normal-weight body
- *   3. the record run - small and muted
- *   0. masthead - quietest, orientation only
- * The oxblood accent is an enrichment layered on tier 1 and the alert rules. It
- * is deliberately dark enough to fall to a near-black grey, and carries no
- * print-color-adjust, so a mono printer degrades it instead of forcing it.
- *
- * These live here rather than in public/legacy/legacy.css because that file is
- * pinned byte-identical to the pre-migration production stylesheet (see
- * tests/unit/print-baseline.test.ts) and must stay a faithful extract.
- * The overrides carry !important so they win over legacy.css's older
- * Inter-based #avsSheet shell regardless of stylesheet order.
- */
-@media print {
-  /* Letter minus the 0.5in page margins. The print contract in
-     tests/e2e/print-regression.spec.js requires the rendered content to fit a
-     Letter page, so this stays a hard cap rather than `none`. Content that runs
-     long - a rich initiation spine - paginates across pages; nothing here caps
-     height or hides overflow. */
-  body.print-avs #avsSheet {
-    max-width: 7.5in !important;
-    margin: 0 auto !important;
-    padding: 0 !important;
-  }
-
-  body.print-avs #avsSheet .avs2 {
-    --avs-gutter: 108px;
-    --avs-rail: 20px;
-    --avs-gap: 14px;
-    --avs-ink: #1b1b18;
-    --avs-muted: #6b6355;
-    --avs-rule: #b8b2a4;
-    --avs-accent: #7a2e27;
-
-    color: var(--avs-ink) !important;
-    background: #fff !important;
-    /* Palatino sets lighter and more open than the alternatives, so the body
-       size is raised to hold weight on a mono laser rather than left at the
-       fixed-pitch size the old lab-report treatment used. */
-    font-family: "Palatino Linotype", Palatino, "Book Antiqua",
-      "URW Palladio L", Georgia, serif !important;
-    font-size: 13.5px !important;
-    line-height: 1.55 !important;
-  }
-
-  body.print-avs #avsSheet .avs2 * {
-    box-sizing: border-box;
-  }
-
-  /* --- masthead: tier 0, deliberately the quietest thing here --- */
-  body.print-avs #avsSheet .avs2-run {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    color: var(--avs-muted);
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-      "Helvetica Neue", Arial, sans-serif;
-    font-size: 8.6px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  body.print-avs #avsSheet .avs2-run > div {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  body.print-avs #avsSheet .avs2-run > div:last-child {
-    text-align: right;
-    white-space: pre;
-  }
-
-  body.print-avs #avsSheet .avs2-run-name {
-    color: var(--avs-ink);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-  }
-
-  /* --- document title --- */
-  body.print-avs #avsSheet .avs2-title {
-    margin-top: 14px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--avs-rule);
-    font-size: 17px;
-    font-weight: 400;
-    letter-spacing: 0.01em;
-    text-align: center;
-    text-wrap: balance;
-  }
-
-  /* The sheet runs to two pages at reading size, so keep the masthead and its
-     title from stranding at the foot of page one, away from the content they
-     introduce. */
-  body.print-avs #avsSheet .avs2-run,
-  body.print-avs #avsSheet .avs2-title,
-  body.print-avs #avsSheet .avs2-subtitle {
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-
-  body.print-avs #avsSheet .avs2-subtitle {
-    margin-top: 6px;
-    color: var(--avs-accent);
-    font-size: 12.5px;
-    font-style: italic;
-    text-align: center;
-  }
-
-  /* --- the shared page grid --- */
-  body.print-avs #avsSheet .avs2-step,
-  body.print-avs #avsSheet .avs2-sec {
-    display: grid;
-    grid-template-columns: var(--avs-gutter) var(--avs-rail) minmax(0, 1fr);
-    column-gap: var(--avs-gap);
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  /* Gutter labels are uppercased here rather than relying on small caps: the
-     content model shouts most section headings already, and normalising the
-     case keeps a hand-written label ("Contact") from sitting differently to a
-     model-supplied one. Wrapping to two or three lines is the marginalia
-     device working, not an overflow. */
-  body.print-avs #avsSheet .avs2-lab {
-    padding-top: 3px;
-    color: var(--avs-muted);
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-      "Helvetica Neue", Arial, sans-serif;
-    font-size: 9px;
-    line-height: 1.35;
-    letter-spacing: 0.09em;
-    text-align: right;
-    text-transform: uppercase;
-  }
-
-  body.print-avs #avsSheet .avs2-sec {
-    margin-top: 18px;
-  }
-
-  /* Hold the measure near a book column. Palatino is broad, and letting the
-     content column run the full width of the sheet at this size opens rivers. */
-  body.print-avs #avsSheet .avs2-b,
-  body.print-avs #avsSheet .avs2-step-body {
-    max-width: 34em;
-  }
-
-  /* --- the spine --- */
-  body.print-avs #avsSheet .avs2-spine {
-    margin-top: 20px;
-  }
-
-  body.print-avs #avsSheet .avs2-step {
-    padding-bottom: 16px;
-  }
-
-  body.print-avs #avsSheet .avs2-when {
-    padding-top: 1px;
-    text-align: right;
-  }
-
-  body.print-avs #avsSheet .avs2-when b {
-    display: block;
-    font-size: 14.5px;
-    font-weight: 700;
-    font-variant-numeric: lining-nums tabular-nums;
-    line-height: 1.2;
-  }
-
-  body.print-avs #avsSheet .avs2-when-none {
-    color: var(--avs-muted);
-  }
-
-  body.print-avs #avsSheet .avs2-when span {
-    display: block;
-    margin-top: 1px;
-    color: var(--avs-muted);
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-      "Helvetica Neue", Arial, sans-serif;
-    font-size: 8.4px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  /* The rail carries a continuous hairline through the spine, terminating at
-     the first and last nodes so it reads as one object rather than a rule that
-     runs off into the page. */
-  body.print-avs #avsSheet .avs2-rail {
-    position: relative;
-  }
-
-  body.print-avs #avsSheet .avs2-step .avs2-rail::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: var(--avs-rule);
-    transform: translateX(-50%);
-  }
-
-  body.print-avs #avsSheet .avs2-step:first-child .avs2-rail::before {
-    top: 8px;
-  }
-
-  body.print-avs #avsSheet .avs2-step:last-child .avs2-rail::before {
-    bottom: auto;
-    height: 8px;
-  }
-
-  body.print-avs #avsSheet .avs2-node {
-    position: absolute;
-    left: 50%;
-    top: 4px;
-    width: 8px;
-    height: 8px;
-    border: 1px solid var(--avs-muted);
-    border-radius: 50%;
-    background: #fff;
-    transform: translateX(-50%);
-  }
-
-  body.print-avs #avsSheet .avs2-step-given .avs2-node {
-    background: var(--avs-muted);
-  }
-
-  /* The due node is the one enlargement on the page. Size is what marks it, so
-     it still dominates when the accent falls away in greyscale. */
-  body.print-avs #avsSheet .avs2-step-due .avs2-node {
-    top: 2px;
-    width: 12px;
-    height: 12px;
-    border-color: var(--avs-accent);
-    background: var(--avs-accent);
-  }
-
-  body.print-avs #avsSheet .avs2-step-title {
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 1.3;
-    text-wrap: balance;
-  }
-
-  /* Tier 1: the medication given and the dose due. Bold and largest, so the
-     hierarchy survives a mono printer; the accent is layered on top. */
-  body.print-avs #avsSheet .avs2-step-given .avs2-step-title,
-  body.print-avs #avsSheet .avs2-step-due .avs2-step-title {
-    color: var(--avs-accent);
-    font-size: 17px;
-  }
-
-  body.print-avs #avsSheet .avs2-step-due .avs2-when b {
-    color: var(--avs-accent);
-    font-size: 17px;
-  }
-
-  /* The authoritative statement of the due date, carrying the weekday and year
-     the compact gutter omits. Sized between the step title and body so it reads
-     as part of the headline rather than as prose. */
-  body.print-avs #avsSheet .avs2-step-date {
-    margin-top: 2px;
-    font-size: 14.5px;
-    font-weight: 700;
-    font-variant-numeric: lining-nums tabular-nums;
-  }
-
-  body.print-avs #avsSheet .avs2-step-instr {
-    margin-top: 2px;
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-      "Helvetica Neue", Arial, sans-serif;
-    font-size: 9.4px;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-  }
-
-  body.print-avs #avsSheet .avs2-step-body .avs2-p {
-    margin: 4px 0 0;
-  }
-
-  /* --- prose, pairs, and lists --- */
-  body.print-avs #avsSheet .avs2-p {
-    margin: 0 0 6px;
-  }
-
-  body.print-avs #avsSheet .avs2-p:last-child {
-    margin-bottom: 0;
-  }
-
-  body.print-avs #avsSheet .avs2-ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  body.print-avs #avsSheet .avs2-ul li {
-    position: relative;
-    margin-bottom: 5px;
-    padding-left: 15px;
-  }
-
-  body.print-avs #avsSheet .avs2-ul li::before {
-    content: "\2013";
-    position: absolute;
-    left: 0;
-    color: var(--avs-muted);
-  }
-
-  body.print-avs #avsSheet .avs2-ul li:last-child {
-    margin-bottom: 0;
-  }
-
-  body.print-avs #avsSheet .avs2-pairs {
-    margin: 0;
-  }
-
-  body.print-avs #avsSheet .avs2-pairs > div {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 3px;
-  }
-
-  body.print-avs #avsSheet .avs2-pairs dt {
-    flex: none;
-    min-width: 8.5em;
-    color: var(--avs-muted);
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-      "Helvetica Neue", Arial, sans-serif;
-    font-size: 8.8px;
-    letter-spacing: 0.08em;
-    line-height: 1.9;
-    text-transform: uppercase;
-  }
-
-  body.print-avs #avsSheet .avs2-pairs dd {
-    margin: 0;
-    font-variant-numeric: lining-nums tabular-nums;
-  }
-
-  /* --- alerts: break the grid, span the measure --- */
-  body.print-avs #avsSheet .avs2-alert {
-    margin-top: 20px;
-    padding-top: 8px;
-    border-top: 2.5px solid var(--avs-accent);
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  body.print-avs #avsSheet .avs2-alert-bar {
-    color: var(--avs-accent);
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-      "Helvetica Neue", Arial, sans-serif;
-    font-size: 10.4px;
-    font-weight: 700;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-  }
-
-  body.print-avs #avsSheet .avs2-alert-body {
-    max-width: 40em;
-    margin-top: 6px;
-  }
-
-  /* --- tier 3: the record run --- */
-  body.print-avs #avsSheet .avs2-id {
-    margin-top: 22px;
-    padding-top: 8px;
-    border-top: 1px solid var(--avs-rule);
-    color: var(--avs-muted);
-    font-size: 9.6px;
-    line-height: 1.7;
-  }
-
-  body.print-avs #avsSheet .avs2-id-pair:not(:last-child)::after {
-    content: " \00b7 ";
-    color: var(--avs-rule);
-  }
-
-  body.print-avs #avsSheet .avs2-id-k {
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-      "Helvetica Neue", Arial, sans-serif;
-    font-size: 8.2px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  body.print-avs #avsSheet .avs2-id-v {
-    color: var(--avs-ink);
-    font-variant-numeric: lining-nums tabular-nums;
-  }
-
-  /* --- footer --- */
-  body.print-avs #avsSheet .avs2-foot {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 10px;
-    color: var(--avs-muted);
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-      "Helvetica Neue", Arial, sans-serif;
-    font-size: 8.2px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-}
-
 /* ===================== INJECTION AVS (mature clinical refinement) =====================
  * This is deliberately an evolution of the existing AVS, not a second visual
  * language imported from another product. It keeps the dose timeline and the
  * reviewed patient copy, while replacing the editorial/marginalia experiment
- * with a restrained outpatient-document system: one sans family, a visible
- * patient banner, a single due-date emphasis, quiet rules, and compact guidance.
+ * with a restrained outpatient-document system: a locally bundled display
+ * face over a clinical body sans, a visible patient banner, a single due-date
+ * emphasis, quiet rules, and compact guidance.
  */
 @media print {
   /* legacy.css globally sets overflow-x:hidden. Per the overflow shorthand
@@ -5129,21 +4707,29 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2 {
-    --avs-ink: #20272c;
-    --avs-muted: #626b70;
-    --avs-rule: #c6cbcd;
-    --avs-rule-light: #e2e4e3;
-    --avs-accent: #344b59;
-    --avs-accent-soft: #f1f2f0;
-    --avs-surface: #f7f7f4;
-    --avs-surface-strong: #efefeb;
-    --avs-alert: #743b3b;
-    --avs-alert-soft: #f7f3f1;
+    --avs-ink: #263238;
+    --avs-muted: #68767c;
+    --avs-rule: #d5dad9;
+    --avs-rule-light: #e9ebea;
+    --avs-accent: #586e7a;
+    --avs-accent-soft: #f7f9f8;
+    --avs-surface: #fbfbf8;
+    --avs-surface-strong: #f7f6f2;
+    --avs-warm: #8a6645;
+    --avs-warm-rule: #e5d7c7;
+    --avs-warm-soft: #fcf9f4;
+    --avs-alert: #8a4d4d;
+    --avs-alert-rule: #e2cdca;
+    --avs-alert-soft: #fcf8f7;
 
     color: var(--avs-ink) !important;
     font-family: Aptos, "Segoe UI", Arial, sans-serif !important;
-    font-size: 14px !important;
-    line-height: 1.45 !important;
+    font-size: 14.25px !important;
+    line-height: 1.48 !important;
+  }
+
+  body.print-avs #avsSheet .avs2 * {
+    box-sizing: border-box;
   }
 
   body.print-avs #avsSheet .avs2-page {
@@ -5151,7 +4737,7 @@ input[type="radio"]:disabled {
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
     width: 100%;
-    height: 10.24in;
+    height: 10.27in;
     padding-bottom: 0;
   }
 
@@ -5199,6 +4785,8 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-run > div {
+    display: flex;
+    flex-direction: column;
     gap: 2px;
   }
 
@@ -5230,10 +4818,12 @@ input[type="radio"]:disabled {
     padding: 0;
     border: 0;
     color: var(--avs-ink);
-    font-size: 26px;
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
+    font-size: 28px;
     font-weight: 700;
-    letter-spacing: -0.025em;
-    line-height: 1.08;
+    letter-spacing: -0.035em;
+    line-height: 1.06;
     text-align: left;
   }
 
@@ -5241,8 +4831,8 @@ input[type="radio"]:disabled {
     display: block;
     margin-top: 4px;
     color: var(--avs-muted);
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 11.5px;
+    font-weight: 600;
     letter-spacing: 0.025em;
     line-height: 1.25;
     text-transform: none;
@@ -5265,7 +4855,7 @@ input[type="radio"]:disabled {
     margin-top: 2px;
     padding: 3px 0 2px;
     border: 0;
-    border-radius: 2px;
+    border-radius: 3px;
     color: var(--avs-muted);
     font-size: 7.5px;
     font-weight: 700;
@@ -5287,8 +4877,8 @@ input[type="radio"]:disabled {
     margin: 14px 0 0;
     padding: 11px 13px 12px;
     border: 1px solid var(--avs-rule);
-    border-left: 3px solid var(--avs-accent);
-    border-radius: 4px;
+    border-left: 2px solid var(--avs-accent);
+    border-radius: 6px;
     background: var(--avs-surface);
     color: var(--avs-ink);
     font-size: 10px;
@@ -5341,7 +4931,9 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-id-patient .avs2-id-v {
-    font-size: 12.5px;
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
+    font-size: 12.75px;
     font-weight: 700;
   }
 
@@ -5397,8 +4989,8 @@ input[type="radio"]:disabled {
     margin-top: -3px;
     padding: 11px 13px 12px 15px;
     border: 1px solid var(--avs-rule);
-    border-left: 3px solid var(--avs-accent);
-    border-radius: 4px;
+    border-left: 2px solid var(--avs-accent);
+    border-radius: 6px;
     background: var(--avs-accent-soft);
   }
 
@@ -5409,26 +5001,39 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-when b {
+    display: block;
     color: inherit;
     font-family: inherit;
     font-size: 13px;
     font-weight: 700;
     line-height: 1.15;
+    font-variant-numeric: lining-nums tabular-nums;
   }
 
   body.print-avs #avsSheet .avs2-when span {
+    display: block;
     margin-top: 3px;
     color: var(--avs-muted);
     font-family: inherit;
     font-size: 7.6px;
     font-weight: 700;
     letter-spacing: 0.055em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-rail {
+    position: relative;
   }
 
   body.print-avs #avsSheet .avs2-step .avs2-rail::before {
+    content: "";
+    position: absolute;
+    left: 50%;
     top: -8px;
     bottom: -12px;
-    background: var(--avs-rule);
+    width: 1px;
+    background: #cbd2d2;
+    transform: translateX(-50%);
   }
 
   body.print-avs #avsSheet .avs2-step:first-child .avs2-rail::before {
@@ -5441,10 +5046,15 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-node {
+    position: absolute;
+    left: 50%;
     top: 4px;
     width: 8px;
     height: 8px;
-    border-color: var(--avs-muted);
+    border: 1px solid var(--avs-muted);
+    border-radius: 50%;
+    background: #fff;
+    transform: translateX(-50%);
   }
 
   body.print-avs #avsSheet .avs2-step-given .avs2-node {
@@ -5488,27 +5098,33 @@ input[type="radio"]:disabled {
   body.print-avs #avsSheet .avs2-p,
   body.print-avs #avsSheet .avs2-ul li,
   body.print-avs #avsSheet .avs2-step-body .avs2-p {
-    font-size: 14px !important;
-    line-height: 1.45 !important;
+    font-size: 14.25px !important;
+    line-height: 1.48 !important;
   }
 
   body.print-avs #avsSheet .avs2-step-title {
     color: var(--avs-ink);
     font-family: inherit;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 650;
     letter-spacing: -0.01em;
     line-height: 1.25;
   }
 
   body.print-avs #avsSheet .avs2-step-given .avs2-step-title {
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
     color: var(--avs-ink);
     font-size: 16px;
+    font-weight: 700;
   }
 
   body.print-avs #avsSheet .avs2-step-due .avs2-step-title {
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
     color: var(--avs-accent);
-    font-size: 19px;
+    font-size: 18.5px;
+    font-weight: 700;
   }
 
   body.print-avs #avsSheet .avs2-step-due .avs2-when b {
@@ -5519,6 +5135,8 @@ input[type="radio"]:disabled {
   body.print-avs #avsSheet .avs2-step-date {
     margin-top: 3px;
     color: var(--avs-ink);
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
     font-size: 16px;
     font-weight: 700;
     line-height: 1.25;
@@ -5540,6 +5158,10 @@ input[type="radio"]:disabled {
 
   body.print-avs #avsSheet .avs2-p {
     margin: 0 0 5px !important;
+  }
+
+  body.print-avs #avsSheet .avs2-p:last-child {
+    margin-bottom: 0 !important;
   }
 
   body.print-avs #avsSheet .avs2-ul {
@@ -5573,7 +5195,7 @@ input[type="radio"]:disabled {
     margin-top: 10px;
     padding: 10px 12px 11px;
     border: 1px solid var(--avs-rule);
-    border-radius: 4px;
+    border-radius: 6px;
     background: var(--avs-surface);
   }
 
@@ -5593,7 +5215,7 @@ input[type="radio"]:disabled {
     min-width: 0;
     margin: 0;
     padding-left: 10px;
-    border-left: 1px solid var(--avs-rule);
+    border-left: 1px solid var(--avs-rule-light);
   }
 
   body.print-avs #avsSheet .avs2-pairs dt {
@@ -5609,7 +5231,7 @@ input[type="radio"]:disabled {
   body.print-avs #avsSheet .avs2-pairs dd {
     min-width: 0;
     overflow-wrap: anywhere;
-    margin-top: 2px;
+    margin: 2px 0 0;
     font-size: 10.5px;
     font-weight: 600;
     line-height: 1.28;
@@ -5622,10 +5244,23 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-guidance {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  body.print-avs #avsSheet .avs2-guidance-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px 24px;
-    margin-top: 14px;
+    gap: 24px;
+    align-items: start;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-guidance-row-single {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   body.print-avs #avsSheet .avs2-continuation {
@@ -5633,12 +5268,9 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-complex .avs2-continuation {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
-    padding: 0 0 9px;
-    border-bottom: 1.5px solid var(--avs-accent);
+    display: block;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--avs-rule);
     color: var(--avs-ink);
     font-size: 10px;
     font-weight: 700;
@@ -5654,6 +5286,11 @@ input[type="radio"]:disabled {
     text-transform: inherit;
   }
 
+  body.print-avs #avsSheet .avs2-continuation-title {
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--avs-accent);
+  }
+
   body.print-avs #avsSheet .avs2-complex .avs2-continuation > span:last-child {
     color: var(--avs-muted);
     font-size: 8px;
@@ -5662,9 +5299,9 @@ input[type="radio"]:disabled {
 
   body.print-avs #avsSheet .avs2-continuation-id {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, auto));
-    gap: 5px 13px;
-    margin: 0;
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+    gap: 10px 18px;
+    margin: 8px 0 0;
   }
 
   body.print-avs #avsSheet .avs2-continuation-id > div {
@@ -5681,7 +5318,7 @@ input[type="radio"]:disabled {
 
   body.print-avs #avsSheet .avs2-continuation-id dd {
     margin: 1px 0 0;
-    font-size: 8.5px;
+    font-size: 9px;
     font-weight: 600;
     overflow-wrap: anywhere;
   }
@@ -5701,17 +5338,17 @@ input[type="radio"]:disabled {
     gap: 16px;
     margin-top: 10px;
     padding: 12px 14px;
-    border: 1px solid #d7c0bd;
-    border-left: 3px solid var(--avs-alert);
-    border-radius: 4px;
-    background: var(--avs-alert-soft);
+    border: 1px solid var(--avs-warm-rule);
+    border-left: 2px solid var(--avs-warm);
+    border-radius: 6px;
+    background: var(--avs-warm-soft);
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   body.print-avs #avsSheet .avs2-alert-bar {
     margin: 0;
-    color: var(--avs-alert);
+    color: var(--avs-warm);
     font-family: inherit;
     font-size: 11px;
     font-weight: 700;
@@ -5723,6 +5360,16 @@ input[type="radio"]:disabled {
   body.print-avs #avsSheet .avs2-alert-body {
     max-width: none;
     margin: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-alert-emergency {
+    border-color: var(--avs-alert-rule);
+    border-left-color: var(--avs-alert);
+    background: var(--avs-alert-soft);
+  }
+
+  body.print-avs #avsSheet .avs2-alert-emergency .avs2-alert-bar {
+    color: var(--avs-alert);
   }
 
   body.print-avs #avsSheet .avs2-sec-contact-compact {
@@ -5783,14 +5430,15 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-alert {
-    margin-top: 7px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    margin-top: 4px;
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
 
   body.print-avs #avsSheet .avs2-foot {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    align-items: end;
     gap: 16px;
     grid-row: 2;
     margin-top: 13px;
@@ -5806,6 +5454,34 @@ input[type="radio"]:disabled {
   }
 
   body.print-avs #avsSheet .avs2-foot > span:last-child {
+    min-width: 0;
     text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-heading {
+    margin-top: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-id {
+    margin-top: 10px;
+    padding-top: 9px;
+    padding-bottom: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-overview {
+    margin-top: 12px;
+  }
+
+  body.print-avs #avsSheet .avs2-page-primary .avs2-alert {
+    margin-top: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-page-primary .avs2-sec-contact {
+    margin-top: 7px;
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
 }

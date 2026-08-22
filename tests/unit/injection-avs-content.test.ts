@@ -431,17 +431,55 @@ describe("rendered sheet", () => {
     const initiation = buildInjectionAvsModel(
       base({ initiationProtocol: "sustenna-day1", reason: "initiation" }),
     );
+    const coldChainRoutine = buildInjectionAvsModel(
+      base({
+        medicationKey: "uzedy",
+        medicationName: "Uzedy",
+        genericName: "risperidone ER",
+        dose: "250 mg",
+        intervalKey: "q8wk",
+        route: "SubQ",
+        site: "L upper arm (SubQ)",
+      }),
+    );
 
     expect(selectInjectionAvsLayout(shortRoutine)).toBe("routine-one-page");
     expect(selectInjectionAvsLayout(longRoutine)).toBe("routine-two-page");
     expect(selectInjectionAvsLayout(initiation)).toBe("complex-two-page");
+    expect(selectInjectionAvsLayout(coldChainRoutine)).toBe("complex-two-page");
+    expect(
+      partitionInjectionAvsBlocks(
+        coldChainRoutine,
+        selectInjectionAvsLayout(coldChainRoutine),
+      ).primary,
+    ).toEqual([]);
 
-    for (const model of [shortRoutine, longRoutine, initiation]) {
+    for (const model of [shortRoutine, longRoutine, initiation, coldChainRoutine]) {
       const layout = selectInjectionAvsLayout(model);
       const pages = partitionInjectionAvsBlocks(model, layout);
       const original = [...model.blocks, model.emergency];
       expect([...pages.primary, ...pages.continuation]).toHaveLength(original.length);
       expect(new Set([...pages.primary, ...pages.continuation])).toEqual(new Set(original));
+    }
+  });
+
+  it("renders guidance in explicit semantic rows without duplicating a block", () => {
+    const model = buildInjectionAvsModel(
+      base({
+        medicationKey: "uzedy",
+        medicationName: "Uzedy",
+        genericName: "risperidone ER",
+        dose: "250 mg",
+        intervalKey: "q8wk",
+        route: "SubQ",
+        site: "L upper arm (SubQ)",
+      }),
+    );
+    const html = renderInjectionAvsHtml(model, DEFAULT_AVS_CHROME);
+
+    expect(html).toContain('class="avs2-guidance-row"');
+    for (const block of [...model.blocks, model.emergency]) {
+      expect(html.split(block.heading)).toHaveLength(2);
     }
   });
 

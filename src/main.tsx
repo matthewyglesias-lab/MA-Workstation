@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import '@fontsource-variable/plus-jakarta-sans/wght.css';
 import { RecordsWindow } from './presentation/RecordsWindow';
 import { useIdleLock, WorkstationLock } from './presentation/WorkstationLock';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';

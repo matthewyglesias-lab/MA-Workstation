@@ -135,6 +135,46 @@ const estimatedBlockLines = (block: AvsBlock): number =>
     0,
   );
 
+const estimatedTimelineLines = (timeline: readonly AvsTimelineStep[]): number =>
+  timeline.reduce(
+    (total, step) =>
+      total +
+      Math.max(1, Math.ceil(step.title.length / 52)) +
+      (step.dateLong ? 1 : 0) +
+      step.detail.reduce(
+        (detailTotal, value) => detailTotal + estimatedTextLines(value),
+        0,
+      ),
+    0,
+  );
+
+/**
+ * Approximate the printable lines consumed before patient guidance begins.
+ * This intentionally includes the document chrome, identity band, preparation
+ * alerts, treatment timeline, and contact strip. The previous selector counted
+ * only guidance, so a long cold-chain alert could make timing/site-care spill
+ * out of page one and paint underneath the explicit continuation page.
+ */
+const estimatedPrimaryLines = (model: InjectionAvsModel): number =>
+  17 +
+  model.leadAlerts.reduce(
+    (total, block) => total + estimatedBlockLines(block),
+    0,
+  ) +
+  estimatedTimelineLines(model.timeline) +
+  (model.nextDose.contactLines.length ? 4 : 0);
+
+const ROUTINE_PRIMARY_LINE_CAPACITY = 44;
+
+const hasDensePrimaryFacts = (model: InjectionAvsModel): boolean =>
+  model.identity.some((row) => String(row.value ?? "").length > 48) ||
+  model.timeline.some(
+    (step) =>
+      step.title.length > 48 ||
+      (step.state === "given" &&
+        step.detail.some((value) => String(value ?? "").length > 92)),
+  );
+
 /**
  * A routine AVS is one page only when its guidance fits the fixed printable
  * body. Keeping this deterministic avoids a browser creating an orphaned
@@ -159,7 +199,24 @@ export const selectInjectionAvsLayout = (
     (total, block) => total + estimatedBlockLines(block),
     0,
   );
-  return guidanceLines > 24 ? "routine-two-page" : "routine-one-page";
+  if (guidanceLines <= 24) {
+    return hasDensePrimaryFacts(model)
+      ? "routine-two-page"
+      : "routine-one-page";
+  }
+
+  const primaryGuidanceKinds = new Set<AvsBlock["kind"]>([
+    "timing",
+    "site-care",
+  ]);
+  const primaryGuidanceLines = model.blocks
+    .filter((block) => primaryGuidanceKinds.has(block.kind))
+    .reduce((total, block) => total + estimatedBlockLines(block), 0);
+
+  return estimatedPrimaryLines(model) + primaryGuidanceLines >
+    ROUTINE_PRIMARY_LINE_CAPACITY
+    ? "complex-two-page"
+    : "routine-two-page";
 };
 
 export interface InjectionAvsPagePartition {
@@ -346,7 +403,7 @@ export const DEFAULT_AVS_CHROME: InjectionAvsChrome = {
   clinicPhone: "(909) 887-6222",
   runStamp: "",
   reportId: "AVS-INJ-01",
-  formId: "IPMG-AVS-INJ (REV 08/26B)",
+  formId: "IPMG-AVS-INJ (REV 08/26C)",
 };
 
 /** Renders the model to the print sheet's inner HTML. */
@@ -386,7 +443,7 @@ export const renderInjectionAvsHtml = (
   const twoPage = layout !== "routine-one-page";
   const continuation = twoPage
     ? `<header class="avs2-continuation">` +
-      `<h2>After Visit Summary - Continued</h2>` +
+      `<div class="avs2-continuation-title"><h2>After Visit Summary - Continued</h2></div>` +
       `<dl class="avs2-continuation-id">` +
       `<div><dt>Patient</dt><dd>${escapeHtml(patientName)}</dd></div>` +
       `<div><dt>DOB</dt><dd>${escapeHtml(patientDob)}</dd></div>` +
@@ -398,7 +455,7 @@ export const renderInjectionAvsHtml = (
   const renderFooter = (pageNumber: number, pageTotal: number): string =>
     `<footer class="avs2-foot">` +
     `<span class="avs2-foot-patient">${escapeHtml(patientName)} - DOB ${escapeHtml(patientDob)}</span>` +
-    `<span>${escapeHtml(chrome.formId)} - ${escapeHtml(chrome.reportId)}` +
+    `<span class="avs2-foot-document">${escapeHtml(chrome.formId)} - ${escapeHtml(chrome.reportId)}` +
     ` - Page ${pageNumber} of ${pageTotal}` +
     (chrome.runStamp ? ` - Printed ${escapeHtml(chrome.runStamp)}` : "") +
     `</span>` +
@@ -408,10 +465,26 @@ export const renderInjectionAvsHtml = (
     if (!blocks.length) return "";
     const ordinary = blocks.filter((block) => block.kind !== "emergency");
     const urgent = blocks.filter((block) => block.kind === "emergency");
+    const rows: AvsBlock[][] = [];
+    for (let index = 0; index < ordinary.length; index += 2) {
+      rows.push(ordinary.slice(index, index + 2));
+    }
     return (
       (ordinary.length
-        ? `<div class="avs2-guidance">${ordinary
-            .map((block, index) => renderBlock(block, `guidance-${index + 1}`))
+        ? `<div class="avs2-guidance">${rows
+            .map(
+              (row, rowIndex) =>
+                `<div class="avs2-guidance-row${row.length === 1 ? " avs2-guidance-row-single" : ""}">` +
+                row
+                  .map((block, columnIndex) =>
+                    renderBlock(
+                      block,
+                      `guidance-${rowIndex * 2 + columnIndex + 1}`,
+                    ),
+                  )
+                  .join("") +
+                `</div>`,
+            )
             .join("")}</div>`
         : "") +
       urgent
