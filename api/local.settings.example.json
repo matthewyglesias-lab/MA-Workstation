@@ -1,0 +1,22 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "CLINIC_FACILITY_NAME": "IPMG - SAN BERNARDINO",
+    "CLINIC_FACILITY_UNIT": "MEDICATION ADMINISTRATION CLINIC",
+    "CLINIC_PHONE": "(909) 887-6222",
+    "CLINIC_TIME_ZONE": "America/Los_Angeles",
+    "CLINIC_PROVIDER_REGISTER": "san-bernardino-v1",
+    "ENTRA_REQUIRED_ROLE": "Injection.ReadWrite",
+    "DATAVERSE_URL": "https://YOUR_ORG.crm.dynamics.com",
+    "DATAVERSE_ACTION_ENTITY_SET": "ipmg_clinicalactions",
+    "DATAVERSE_DRAFT_JSON_COLUMN": "ipmg_draftjson",
+    "DATAVERSE_FINAL_JSON_COLUMN": "ipmg_finaljson",
+    "DATAVERSE_STATUS_COLUMN": "ipmg_workflowstatus",
+    "DATAVERSE_IDEMPOTENCY_COLUMN": "ipmg_idempotencykey",
+    "DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN": "ipmg_tebraacknowledged",
+    "DATAVERSE_DRAFT_STATUS_VALUE": "100000000",
+    "DATAVERSE_FINAL_STATUS_VALUE": "100000001"
+  }
+}

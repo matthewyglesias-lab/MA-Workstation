@@ -1,6 +1,6 @@
 # IPMG MAGIC Ambulatory Workstation
 
-The IPMG MAGIC Ambulatory Workstation is a frontend-only, MEDITECH-inspired clinical workstation for Injection, UDS, Samples, and Forms workflows. Its dense client-server chrome, persistent Record List/function rail, chart context, and fixed function-key command deck are built with TypeScript, Vite, and Preact. Records remain in the current browser.
+The IPMG MAGIC Ambulatory Workstation is a browser-first, MEDITECH-inspired clinical workstation for Injection, UDS, Samples, and Forms workflows. Its dense client-server chrome, persistent Record List/function rail, chart context, and fixed function-key command deck are built with TypeScript, Vite, and Preact. Records in the workstation itself remain in the current browser. An optional standalone Power Apps injection API is maintained separately under `api/`; it does not change the browser app's storage boundary.
 
 ## Local development
 
@@ -58,6 +58,8 @@ node scripts/generate-print-baseline-fixture.mjs --write
 - `src/persistence/` contains local-storage repositories and compatibility codecs.
 - `src/presentation/` contains the MEDITECH-style EHR shell, Record List/function rail, workflow windows, note preview, and print integration.
 - `public/legacy/` contains compatibility assets extracted from the previous standalone application.
+- `api/` contains the separately deployed, Entra-protected Azure Functions bridge for Power Apps injection finalization.
+- `power-platform/` contains the custom connector contract and Canvas/Dataverse wiring guide.
 
 During the parity cutover, a production clinical coordinator observes the live
 compatibility controls through a read-only adapter, normalizes Injection, UDS,
@@ -75,15 +77,15 @@ advisory and cannot change the legacy save or completion decision. This
 boundary preserves proven browser-only behavior and rollback compatibility
 while the typed engines are exercised against real production encounter state.
 
-The app has no server, database, authentication layer, or synchronization service. Patient context shared between windows is session-only. Clinical records, drafts, preferences, and audit activity remain local to the current browser.
+The static workstation has no server, database, authentication layer, or synchronization service. Patient context shared between windows is session-only. Clinical records, drafts, preferences, and audit activity remain local to the current browser. The optional Power Apps API is a separate deployment with its own Entra and Dataverse boundary; the Static Web Apps workflow does not deploy it.
 
 ## CI and Azure deployment
 
 The GitHub Actions workflow gates every deployment on:
 
 1. Type and static compatibility checks.
-2. Unit tests.
-3. A Vite production build and deployment-bundle verification.
+2. Unit tests, plus injection API boundary tests.
+3. A Vite production build, standalone injection API build, and deployment-bundle verification.
 4. Playwright browser, visual, storage, and print end-to-end tests against that
    exact uploaded bundle.
 5. HTTP and Chromium smoke tests of the Azure preview or production deployment,
