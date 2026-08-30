@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   app,
   type HttpRequest,
@@ -26,6 +28,7 @@ import {
   type CheckInAcknowledgement,
   type EvaluateInjectionRequest,
   type InjectionDocumentBundle,
+  type InjectionSourceReference,
 } from "../../../src/integrations/power-apps";
 import { facilityDate, readApiConfiguration } from "../config";
 import {
@@ -42,13 +45,17 @@ import {
 } from "../http/responses";
 import {
   asSourceReference,
+  avsPreviewHttpBodySchema,
+  documentPreviewHttpBodySchema,
   evaluateHttpBodySchema,
   finalizeHttpBodySchema,
   generateFinalAvsHttpBodySchema,
+  orderContextSchema,
   parseEncounterJson,
-  previewHttpBodySchema,
   recordLookupHttpBodySchema,
   storedDraftEnvelopeSchema,
+  storedFinalEnvelopeSchema,
+  type StoredFinalEnvelope,
 } from "../http/schema";
 
 const effectiveCorrelationId = (request: HttpRequest): string =>
@@ -90,6 +97,15 @@ const auth = (
         ),
       };
     }
+    // Authorization boundary: any principal holding the single configured
+    // ENTRA_REQUIRED_ROLE is treated as an authorized injection staff member
+    // for every clinical action this deployment serves. This build is
+    // deliberately scoped to one facility (CLINIC_PROVIDER_REGISTER is
+    // pinned to "san-bernardino-v1") behind a tightly controlled Entra app
+    // role, rather than adding unproven per-record/per-facility
+    // authorization. Expanding to multiple facilities or a broader staff
+    // population is an explicit blocker requiring real record/facility
+    // authorization first — see api/README.md "Authorization scope".
     return { ok: true, config, principal };
   } catch (error) {
     return {
@@ -105,18 +121,120 @@ const auth = (
 };
 
 const internalEvaluationRequest = (
-  body: {
-    schemaVersion: typeof POWER_APPS_INJECTION_SCHEMA_VERSION;
-    source: ReturnType<typeof asSourceReference>;
-  },
+  source: InjectionSourceReference,
   encounter: InjectionEncounter,
   timeZone: string,
 ): EvaluateInjectionRequest => ({
   schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
-  source: asSourceReference(body.source),
+  source,
   encounter,
   facilityDate: facilityDate(timeZone),
 });
+
+/**
+ * Binds Draft JSON's claimed check-in/patient/order identity to the
+ * board/integration-owned protected Dataverse columns. Draft JSON is still
+ * client-originated even after a reload — reloading it does not make it
+ * authoritative — so the protected row columns, not the draft, are the
+ * source of truth, and any disagreement fails closed.
+ */
+const resolveProtectedSource = (
+  draftSource: {
+    actionId: string;
+    checkInId: string;
+    patientId: string;
+    orderId: string;
+    patientRecordNumber?: string;
+  },
+  record: DataverseClinicalAction,
+  injectionId: string,
+  correlationId: string,
+):
+  | { ok: true; source: InjectionSourceReference }
+  | { ok: false; response: HttpResponseInit } => {
+  if (
+    draftSource.checkInId !== record.checkInId ||
+    draftSource.patientId !== record.patientId ||
+    draftSource.orderId !== record.orderId
+  ) {
+    return {
+      ok: false,
+      response: apiError(
+        422,
+        "source-identity-mismatch",
+        "The saved check-in, patient, or order identifier does not match the protected clinical-action record.",
+        correlationId,
+      ),
+    };
+  }
+  return {
+    ok: true,
+    source: {
+      ...draftSource,
+      checkInId: record.checkInId,
+      patientId: record.patientId,
+      orderId: record.orderId,
+      actionId: injectionId,
+      sourceRecordVersion: record.etag,
+    },
+  };
+};
+
+/**
+ * Checks the encounter against an optional order-context snapshot. Absent
+ * when the tenant has not configured DATAVERSE_ORDER_CONTEXT_COLUMN — a
+ * documented acceptance-gate limitation, not a silently-invented pass.
+ */
+const orderContextConflict = (
+  record: DataverseClinicalAction,
+  encounter: InjectionEncounter,
+  correlationId: string,
+): HttpResponseInit | null => {
+  if (!record.orderContextJson) return null;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(record.orderContextJson);
+  } catch {
+    return apiError(
+      422,
+      "order-context-invalid",
+      "The linked order context could not be read.",
+      correlationId,
+    );
+  }
+  const parsed = orderContextSchema.safeParse(raw);
+  if (!parsed.success) {
+    return apiError(
+      422,
+      "order-context-invalid",
+      "The linked order context does not match the expected schema.",
+      correlationId,
+      zodDetails(parsed.error),
+    );
+  }
+  const mismatches: string[] = [];
+  if (parsed.data.medicationKey && parsed.data.medicationKey !== encounter.medicationKey) {
+    mismatches.push("medication");
+  }
+  if (parsed.data.dose?.trim() && parsed.data.dose.trim() !== encounter.dose.trim()) {
+    mismatches.push("dose");
+  }
+  if (
+    parsed.data.orderingProvider?.trim() &&
+    parsed.data.orderingProvider.trim() !== encounter.orderingProvider.trim()
+  ) {
+    mismatches.push("orderingProvider");
+  }
+  if (mismatches.length) {
+    return apiError(
+      422,
+      "order-context-mismatch",
+      `The encounter does not match the linked order (${mismatches.join(", ")}).`,
+      correlationId,
+    );
+  }
+  return null;
+};
 
 const publicEvaluation = (
   request: EvaluateInjectionRequest,
@@ -197,7 +315,7 @@ const avsArtifact = (
   generatedAt: string,
 ) => ({
   documentStatus: bundle.patientDocument.model.documentStatus,
-  contentType: "text/html",
+  contentType: "text/html" as const,
   fileName: `injection-avs-${bundle.source.actionId}.html`,
   html: bundle.patientDocument.html,
   generatedAt,
@@ -205,13 +323,122 @@ const avsArtifact = (
   locale: bundle.patientDocument.locale,
 });
 
+/**
+ * Binds a finalize attempt to its complete request content: schema version,
+ * injection ID, the evaluated ETag, the evaluation fingerprint, the
+ * normalized confirmation/acknowledgement data, and the authenticated Entra
+ * subject. Two attempts sharing an Idempotency-Key must produce the same
+ * fingerprint to replay; any difference — a different ETag, a different
+ * evaluation fingerprint, different acknowledgement data, or a different
+ * authenticated principal reusing the key — is a conflict, not a replay.
+ */
+const computeRequestFingerprint = (input: {
+  schemaVersion: string;
+  injectionId: string;
+  sourceRecordVersion: string;
+  evaluationFingerprint: string;
+  acknowledgementKind: string;
+  manualReason: string;
+  manualSource: string;
+  finalizedByUserId: string;
+}): string =>
+  createHash("sha256")
+    .update(
+      JSON.stringify([
+        input.schemaVersion,
+        input.injectionId.toLowerCase(),
+        input.sourceRecordVersion,
+        input.evaluationFingerprint,
+        input.acknowledgementKind,
+        input.manualReason,
+        input.manualSource,
+        input.finalizedByUserId,
+      ]),
+    )
+    .digest("hex");
+
+const publicFinalizeFields = (
+  envelope: StoredFinalEnvelope,
+  correlationId: string,
+): Record<string, unknown> => ({
+  schemaVersion: envelope.schemaVersion,
+  source: envelope.source,
+  injectionId: envelope.injectionId,
+  status: envelope.status,
+  disposition: envelope.disposition,
+  evaluation: envelope.evaluation,
+  evaluationFingerprint: envelope.evaluationFingerprint,
+  finalizedAt: envelope.finalizedAt,
+  attestation: envelope.attestation,
+  documents: envelope.documents,
+  avs: envelope.avs,
+  clinicalReferenceVersion: envelope.clinicalReferenceVersion,
+  correlationId,
+});
+
+type StoredFinalParseResult =
+  | { ok: true; envelope: StoredFinalEnvelope }
+  | { ok: false; response: (correlationId: string) => HttpResponseInit };
+
+/**
+ * Validates persisted Final JSON against the strict stored-final envelope
+ * schema before anything reads it. A malformed or schema-incomplete record
+ * is rejected outright — its raw HTML/note content is never echoed to a
+ * caller unvalidated.
+ */
+const parseStoredFinalEnvelope = (finalJson: string): StoredFinalParseResult => {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(finalJson);
+  } catch {
+    return {
+      ok: false,
+      response: (correlationId) =>
+        apiError(503, "stored-result-invalid", "The stored finalization result could not be read.", correlationId),
+    };
+  }
+  const parsed = storedFinalEnvelopeSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      response: (correlationId) =>
+        apiError(
+          503,
+          "stored-result-invalid",
+          "The stored finalization result does not match the expected schema.",
+          correlationId,
+        ),
+    };
+  }
+  return { ok: true, envelope: parsed.data };
+};
+
+const identityMismatchResponse = (correlationId: string): HttpResponseInit =>
+  apiError(
+    503,
+    "stored-result-invalid",
+    "The stored finalization result does not match the requested clinical action.",
+    correlationId,
+  );
+
 const replayFinal = (
   record: DataverseClinicalAction,
+  injectionId: string,
   idempotencyKey: string,
+  requestFingerprint: string,
   correlationId: string,
 ): HttpResponseInit | null => {
   if (!record.finalJson) return null;
-  if (record.idempotencyKey !== idempotencyKey) {
+  const parsed = parseStoredFinalEnvelope(record.finalJson);
+  if (!parsed.ok) return parsed.response(correlationId);
+  const { envelope } = parsed;
+  if (
+    envelope.injectionId.toLowerCase() !== injectionId.toLowerCase() ||
+    envelope.source.actionId.toLowerCase() !== injectionId.toLowerCase()
+  ) {
+    return identityMismatchResponse(correlationId);
+  }
+  if (envelope.idempotencyKey !== idempotencyKey) {
     return apiError(
       409,
       "idempotency-conflict",
@@ -219,20 +446,18 @@ const replayFinal = (
       correlationId,
     );
   }
-  try {
-    const stored = JSON.parse(record.finalJson) as Record<string, unknown>;
-    return json(200, { ...stored, correlationId }, correlationId, {
-      "Idempotency-Key": idempotencyKey,
-      "Idempotency-Replayed": "true",
-    });
-  } catch {
+  if (envelope.requestFingerprint !== requestFingerprint) {
     return apiError(
-      503,
-      "stored-result-invalid",
-      "The stored finalization result could not be read.",
+      409,
+      "idempotency-conflict",
+      "This idempotency key was already used to finalize a different request for this clinical action.",
       correlationId,
     );
   }
+  return json(200, publicFinalizeFields(envelope, correlationId), correlationId, {
+    "Idempotency-Key": idempotencyKey,
+    "Idempotency-Replayed": "true",
+  });
 };
 
 export const evaluateHandler = async (
@@ -298,6 +523,13 @@ export const evaluateHandler = async (
         correlationId,
       );
     }
+    const resolvedSource = resolveProtectedSource(
+      draft.data.source,
+      record,
+      parsed.data.injectionId,
+      correlationId,
+    );
+    if (!resolvedSource.ok) return resolvedSource.response;
     const encounter = parseEncounterJson(draft.data.encounterJson);
     if (!encounter.success) {
       return apiError(
@@ -308,13 +540,10 @@ export const evaluateHandler = async (
         zodDetails(encounter.error),
       );
     }
-    const source = {
-      ...draft.data.source,
-      actionId: parsed.data.injectionId,
-      sourceRecordVersion: record.etag,
-    };
+    const orderConflict = orderContextConflict(record, encounter.data, correlationId);
+    if (orderConflict) return orderConflict;
     const internal = internalEvaluationRequest(
-      { schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION, source },
+      resolvedSource.source,
       encounter.data,
       access.config.clinic.timeZone,
     );
@@ -373,13 +602,25 @@ export const finalizeHandler = async (
       correlationId,
     );
   }
+  const normalizedManualReason = parsed.data.confirmation.manualReason?.trim() ?? "";
+  const normalizedManualSource = parsed.data.confirmation.manualSource?.trim() ?? "";
+  const requestFingerprint = computeRequestFingerprint({
+    schemaVersion: parsed.data.schemaVersion,
+    injectionId: parsed.data.injectionId,
+    sourceRecordVersion: parsed.data.sourceRecordVersion,
+    evaluationFingerprint: parsed.data.evaluationFingerprint,
+    acknowledgementKind: parsed.data.confirmation.acknowledgementKind,
+    manualReason: normalizedManualReason,
+    manualSource: normalizedManualSource,
+    finalizedByUserId: access.principal.userId,
+  });
 
   const store = new DataverseClinicalActionStore(access.config.dataverse);
   try {
     let record = await store.load(parsed.data.injectionId);
     if (store.isFinal(record)) {
       return (
-        replayFinal(record, idempotencyKey, correlationId) ??
+        replayFinal(record, parsed.data.injectionId, idempotencyKey, requestFingerprint, correlationId) ??
         apiError(503, "stored-result-invalid", "Finalized data is missing.", correlationId)
       );
     }
@@ -443,6 +684,13 @@ export const finalizeHandler = async (
         correlationId,
       );
     }
+    const resolvedSource = resolveProtectedSource(
+      draft.data.source,
+      record,
+      parsed.data.injectionId,
+      correlationId,
+    );
+    if (!resolvedSource.ok) return resolvedSource.response;
     const encounterResult = parseEncounterJson(draft.data.encounterJson);
     if (!encounterResult.success) {
       return apiError(
@@ -453,13 +701,11 @@ export const finalizeHandler = async (
         zodDetails(encounterResult.error),
       );
     }
+    const orderConflict = orderContextConflict(record, encounterResult.data, correlationId);
+    if (orderConflict) return orderConflict;
     const encounter = structuredClone(encounterResult.data);
     const finalizedAt = new Date().toISOString();
-    const source = {
-      ...draft.data.source,
-      actionId: parsed.data.injectionId,
-      sourceRecordVersion: record.etag,
-    };
+    const source = resolvedSource.source;
     const facilityDateAtFinalization = facilityDate(
       access.config.clinic.timeZone,
     );
@@ -511,14 +757,26 @@ export const finalizeHandler = async (
             acknowledgedAtUtc: finalizedAt,
             acknowledgedByUserId: access.principal.userId,
             acknowledgedByDisplayName: access.principal.displayName,
-            reason: parsed.data.confirmation.manualReason?.trim() ?? "",
-            source: parsed.data.confirmation.manualSource?.trim() ?? "",
+            reason: normalizedManualReason,
+            source: normalizedManualSource,
           }
         : {
             kind: "tebra",
             acknowledgedAtUtc: finalizedAt,
             acknowledgedByUserId: access.principal.userId,
             acknowledgedByDisplayName: access.principal.displayName,
+            // Real board-sourced provenance when the tenant has configured
+            // the protected acknowledgement columns; otherwise this stays
+            // absent rather than inventing a source/time/identity the check-in
+            // board never actually supplied.
+            ...(record.boardAcknowledgment
+              ? {
+                  boardSource: record.boardAcknowledgment.source,
+                  boardAcknowledgedAtUtc: record.boardAcknowledgment.acknowledgedAtUtc,
+                  boardAcknowledgedBy: record.boardAcknowledgment.acknowledgedBy,
+                  boardCheckInId: record.boardAcknowledgment.checkInId,
+                }
+              : {}),
           };
     const internal: EvaluateInjectionRequest = {
       schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
@@ -548,12 +806,18 @@ export const finalizeHandler = async (
         prepared.error.stops,
       );
     }
-    const responseBody = {
+    const envelope: StoredFinalEnvelope = storedFinalEnvelopeSchema.parse({
       schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
       source,
       injectionId: parsed.data.injectionId,
       status: "finalized",
       disposition: prepared.value.disposition,
+      idempotencyKey,
+      requestFingerprint,
+      // The complete server-stamped final encounter (including the
+      // administration review attribution above), persisted for audit
+      // reconstruction. Never part of the public response contract.
+      finalEncounter: encounter,
       evaluation: evaluation.evaluation,
       evaluationFingerprint: prepared.value.provenance.evaluationFingerprint,
       finalizedAt,
@@ -563,20 +827,16 @@ export const finalizeHandler = async (
         timestamp: finalizedAt,
         statementVersion: POWER_APPS_ATTESTATION_STATEMENT_VERSION,
         acknowledgementKind: parsed.data.confirmation.acknowledgementKind,
-        ...(parsed.data.confirmation.manualReason
-          ? { manualReason: parsed.data.confirmation.manualReason }
-          : {}),
-        ...(parsed.data.confirmation.manualSource
-          ? { manualSource: parsed.data.confirmation.manualSource }
-          : {}),
+        ...(normalizedManualReason ? { manualReason: normalizedManualReason } : {}),
+        ...(normalizedManualSource ? { manualSource: normalizedManualSource } : {}),
       },
+      acknowledgement,
       documents: documentsFromBundle(prepared.value),
       avs: avsArtifact(prepared.value, finalizedAt),
       clinicalReferenceVersion: prepared.value.provenance.clinicalReferenceVersion,
-      correlationId,
-    };
-    await store.finalize(record, idempotencyKey, JSON.stringify(responseBody));
-    return json(200, responseBody, correlationId, {
+    });
+    await store.finalize(record, idempotencyKey, JSON.stringify(envelope));
+    return json(200, publicFinalizeFields(envelope, correlationId), correlationId, {
       "Idempotency-Key": idempotencyKey,
       "Idempotency-Replayed": "false",
     });
@@ -586,8 +846,13 @@ export const finalizeHandler = async (
         const replay = await store.load(parsed.data.injectionId);
         if (store.isFinal(replay)) {
           return (
-            replayFinal(replay, idempotencyKey, correlationId) ??
-            apiError(409, error.code, error.message, correlationId)
+            replayFinal(
+              replay,
+              parsed.data.injectionId,
+              idempotencyKey,
+              requestFingerprint,
+              correlationId,
+            ) ?? apiError(409, error.code, error.message, correlationId)
           );
         }
       } catch {
@@ -606,12 +871,12 @@ export const finalizeHandler = async (
   }
 };
 
-const storedFinalResponse = async (
+const loadValidatedFinalRecord = async (
   request: HttpRequest,
   injectionId: string,
   correlationId: string,
 ): Promise<
-  | { ok: true; value: Record<string, unknown> }
+  | { ok: true; envelope: StoredFinalEnvelope }
   | { ok: false; response: HttpResponseInit }
 > => {
   const access = auth(request, correlationId, { requireDataverse: true });
@@ -623,10 +888,13 @@ const storedFinalResponse = async (
     };
   }
   try {
-    const record = await new DataverseClinicalActionStore(access.config.dataverse).load(
-      injectionId,
-    );
-    if (!record.finalJson) {
+    const store = new DataverseClinicalActionStore(access.config.dataverse);
+    const record = await store.load(injectionId);
+    // A row that is not exactly in the configured final status is treated
+    // as not-finalized even if stale Final JSON remains on it (e.g. a
+    // record reopened back to draft) — status is authoritative, not the
+    // mere presence of Final JSON.
+    if (!store.isFinal(record)) {
       return {
         ok: false,
         response: apiError(
@@ -637,7 +905,15 @@ const storedFinalResponse = async (
         ),
       };
     }
-    return { ok: true, value: JSON.parse(record.finalJson) as Record<string, unknown> };
+    const parsed = parseStoredFinalEnvelope(record.finalJson);
+    if (!parsed.ok) return { ok: false, response: parsed.response(correlationId) };
+    if (
+      parsed.envelope.injectionId.toLowerCase() !== injectionId.toLowerCase() ||
+      parsed.envelope.source.actionId.toLowerCase() !== injectionId.toLowerCase()
+    ) {
+      return { ok: false, response: identityMismatchResponse(correlationId) };
+    }
+    return { ok: true, envelope: parsed.envelope };
   } catch (error) {
     if (error instanceof DataverseError) {
       return { ok: false, response: apiError(error.status, error.code, error.message, correlationId) };
@@ -657,11 +933,7 @@ export const documentsHandler = async (
   const raw = await bodyJson(request);
   const lookup = recordLookupHttpBodySchema.safeParse(raw);
   if (lookup.success) {
-    const stored = await storedFinalResponse(
-      request,
-      lookup.data.injectionId,
-      correlationId,
-    );
+    const stored = await loadValidatedFinalRecord(request, lookup.data.injectionId, correlationId);
     if (!stored.ok) return stored.response;
     return json(
       200,
@@ -669,11 +941,11 @@ export const documentsHandler = async (
         schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
         injectionId: lookup.data.injectionId,
         mode: "final",
-        documents: stored.value.documents,
-        source: stored.value.source,
-        evaluation: stored.value.evaluation,
-        generatedAt: stored.value.finalizedAt,
-        clinicalReferenceVersion: stored.value.clinicalReferenceVersion,
+        documents: stored.envelope.documents,
+        source: stored.envelope.source,
+        evaluation: stored.envelope.evaluation,
+        generatedAt: stored.envelope.finalizedAt,
+        clinicalReferenceVersion: stored.envelope.clinicalReferenceVersion,
         correlationId,
       },
       correlationId,
@@ -682,7 +954,7 @@ export const documentsHandler = async (
 
   const access = auth(request, correlationId);
   if (!access.ok) return access.response;
-  const preview = previewHttpBodySchema.safeParse(raw);
+  const preview = documentPreviewHttpBodySchema.safeParse(raw);
   if (!preview.success) {
     return apiError(
       400,
@@ -697,7 +969,7 @@ export const documentsHandler = async (
     return apiError(400, "invalid-encounter", "The encounter JSON is invalid.", correlationId, zodDetails(encounter.error));
   }
   const internal = internalEvaluationRequest(
-    preview.data,
+    asSourceReference(preview.data.source),
     encounter.data,
     access.config.clinic.timeZone,
   );
@@ -741,11 +1013,7 @@ export const avsHandler = async (
   const raw = await bodyJson(request);
   const lookup = generateFinalAvsHttpBodySchema.safeParse(raw);
   if (lookup.success) {
-    const stored = await storedFinalResponse(
-      request,
-      lookup.data.injectionId,
-      correlationId,
-    );
+    const stored = await loadValidatedFinalRecord(request, lookup.data.injectionId, correlationId);
     if (!stored.ok) return stored.response;
     return json(
       200,
@@ -753,10 +1021,10 @@ export const avsHandler = async (
         schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
         injectionId: lookup.data.injectionId,
         mode: "final",
-        source: stored.value.source,
-        evaluation: stored.value.evaluation,
-        avs: stored.value.avs,
-        clinicalReferenceVersion: stored.value.clinicalReferenceVersion,
+        source: stored.envelope.source,
+        evaluation: stored.envelope.evaluation,
+        avs: stored.envelope.avs,
+        clinicalReferenceVersion: stored.envelope.clinicalReferenceVersion,
         correlationId,
       },
       correlationId,
@@ -765,7 +1033,7 @@ export const avsHandler = async (
 
   const access = auth(request, correlationId);
   if (!access.ok) return access.response;
-  const preview = previewHttpBodySchema.safeParse(raw);
+  const preview = avsPreviewHttpBodySchema.safeParse(raw);
   if (!preview.success) {
     return apiError(
       400,
@@ -780,7 +1048,7 @@ export const avsHandler = async (
     return apiError(400, "invalid-encounter", "The encounter JSON is invalid.", correlationId, zodDetails(encounter.error));
   }
   const internal = internalEvaluationRequest(
-    preview.data,
+    asSourceReference(preview.data.source),
     encounter.data,
     access.config.clinic.timeZone,
   );
@@ -793,9 +1061,11 @@ export const avsHandler = async (
     internal.source,
     access.config.clinic,
   );
-  if (internal.encounter.disposition.kind === "administered") {
-    input.dispositionKind = "";
-  }
+  // Every preview — administered, held, escalated, or provider-review alike
+  // — must be visibly distinguishable from a finalized document. This is
+  // independent of dispositionKind, which stays the real clinical
+  // disposition so the sheet's body wording remains accurate.
+  input.previewMode = true;
   const model = buildInjectionAvsModel(input);
   const generatedAt = new Date().toISOString();
   const evaluation = publicEvaluation(internal);

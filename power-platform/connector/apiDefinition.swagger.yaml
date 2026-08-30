@@ -2,6 +2,19 @@
 # The API must validate and parse encounterJson; client-supplied identity, time,
 # clinical-reference metadata, clinic configuration, and rendered content are
 # intentionally outside this public contract.
+#
+# Canvas/board must NOT be permitted to write these Dataverse columns
+# directly on the clinical-action row (field security required):
+#   - the Status, Final JSON, and Idempotency Key columns (server-owned; the
+#     API is the only writer);
+#   - the protected check-in/patient/order identity columns and the optional
+#     order-context column (board/integration-owned; the API treats them as
+#     authoritative over anything the same row's Draft JSON claims);
+#   - the Tebra Acknowledged column and, where configured, the optional
+#     board acknowledgement source/timestamp/identity/check-in columns
+#     (board/integration-owned; a Canvas-writable acknowledgement flag would
+#     let the clinical modal manufacture its own check-in confirmation).
+# See power-platform/README.md and api/README.md for the full column list.
 swagger: "2.0"
 info:
   title: MA Workstation Injection Workflow
@@ -484,12 +497,18 @@ definitions:
         type: string
         maxLength: 1000
         x-ms-summary: Manual reason
-        description: Required by the API only for acknowledgement kinds that need a rationale.
+        description: >-
+          Required and must be non-blank when acknowledgementKind = "manual".
+          Rejected (must be omitted) when acknowledgementKind = "tebra".
       manualSource:
         type: string
         maxLength: 500
         x-ms-summary: Manual source
-        description: Optional order or provider-direction source recorded by staff.
+        description: >-
+          Required and must be non-blank when acknowledgementKind = "manual"
+          (e.g. the order or provider direction used for the manual
+          check-in). Rejected (must be omitted) when acknowledgementKind =
+          "tebra".
 
   FinalizeInjectionResponse:
     type: object

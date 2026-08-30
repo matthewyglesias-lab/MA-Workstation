@@ -40,6 +40,10 @@ jobs:
         run: npm run test:unit
       - name: Run injection API boundary tests
         run: npm test --prefix api
+      - name: Validate the Power Apps connector Swagger contract
+        run: npx --yes @apidevtools/swagger-cli@4 validate power-platform/connector/apiDefinition.swagger.yaml
+      - name: Audit injection API production dependencies
+        run: npm audit --prefix api --omit=dev
       - name: Build production bundle
         run: npm run build
       - name: Build injection API

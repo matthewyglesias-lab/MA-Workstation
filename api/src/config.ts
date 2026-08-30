@@ -8,6 +8,26 @@ export interface DataverseConfiguration {
   statusColumn: string;
   idempotencyColumn: string;
   tebraAcknowledgedColumn: string;
+  /**
+   * Board/integration-owned, Canvas-read-only identity columns. The API
+   * treats these as the authoritative check-in/patient/order binding for a
+   * clinical action and rejects any Draft JSON that disagrees with them.
+   */
+  checkInIdColumn: string;
+  patientIdColumn: string;
+  orderIdColumn: string;
+  /** Optional order snapshot (medicationKey/dose/orderingProvider) checked against the encounter when configured. */
+  orderContextColumn?: string;
+  /**
+   * Optional board-owned Tebra acknowledgement provenance columns. When all
+   * four are configured and populated on a row, finalization records the
+   * real acknowledgement source/time/identity/check-in instead of only the
+   * finalizer's own attestation.
+   */
+  acknowledgmentSourceColumn?: string;
+  acknowledgedAtColumn?: string;
+  acknowledgedByColumn?: string;
+  acknowledgedCheckInIdColumn?: string;
   draftStatusValue: string | number;
   finalStatusValue: string | number;
 }
@@ -31,6 +51,17 @@ const safeLogicalName = (name: string, value: string): string => {
     throw new Error(`${name} must be a Dataverse logical/entity-set name.`);
   }
   return value;
+};
+
+/**
+ * Optional Dataverse column configuration (order context, board
+ * acknowledgement provenance). Absent when the tenant has not wired the
+ * column yet; this is a documented acceptance-gate limitation, not a
+ * fallback the API invents data for.
+ */
+const optionalLogicalName = (name: string): string | undefined => {
+  const value = env(name);
+  return value ? safeLogicalName(name, value) : undefined;
 };
 
 const dataverseStatusValue = (name: string): string | number => {
@@ -110,6 +141,23 @@ export const readApiConfiguration = (
       "DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN",
       required("DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN"),
     ),
+    checkInIdColumn: safeLogicalName(
+      "DATAVERSE_CHECKIN_ID_COLUMN",
+      required("DATAVERSE_CHECKIN_ID_COLUMN"),
+    ),
+    patientIdColumn: safeLogicalName(
+      "DATAVERSE_PATIENT_ID_COLUMN",
+      required("DATAVERSE_PATIENT_ID_COLUMN"),
+    ),
+    orderIdColumn: safeLogicalName(
+      "DATAVERSE_ORDER_ID_COLUMN",
+      required("DATAVERSE_ORDER_ID_COLUMN"),
+    ),
+    orderContextColumn: optionalLogicalName("DATAVERSE_ORDER_CONTEXT_COLUMN"),
+    acknowledgmentSourceColumn: optionalLogicalName("DATAVERSE_ACK_SOURCE_COLUMN"),
+    acknowledgedAtColumn: optionalLogicalName("DATAVERSE_ACK_AT_COLUMN"),
+    acknowledgedByColumn: optionalLogicalName("DATAVERSE_ACK_BY_COLUMN"),
+    acknowledgedCheckInIdColumn: optionalLogicalName("DATAVERSE_ACK_CHECKIN_ID_COLUMN"),
     draftStatusValue: dataverseStatusValue("DATAVERSE_DRAFT_STATUS_VALUE"),
     finalStatusValue: dataverseStatusValue("DATAVERSE_FINAL_STATUS_VALUE"),
   };

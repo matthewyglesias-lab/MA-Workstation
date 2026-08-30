@@ -53,6 +53,19 @@ the Entra bearer token before the handler runs.
 An API key is not a substitute for Entra identity because finalization must be
 attributed to an individual staff principal.
 
+### Authorization scope
+
+Every principal holding `ENTRA_REQUIRED_ROLE` can evaluate, finalize, and
+retrieve every clinical action this deployment serves — the API does not
+enforce per-record or per-facility authorization beyond that single role and
+`CLINIC_PROVIDER_REGISTER` being pinned to `san-bernardino-v1`. This build is
+therefore deliberately scoped to one facility behind a tightly controlled
+Entra app role held only by that facility's injection staff. Expanding to
+multiple facilities or a broader staff population without adding real
+record/facility-level authorization first would let any role holder act on
+any other facility's records; treat that as an explicit blocker to expansion,
+not a configuration detail to skip.
+
 ## Dataverse table contract
 
 Use one row per selected Injection clinical action. The sample logical names
@@ -61,11 +74,16 @@ in `local.settings.example.json` are placeholders.
 | Column | Recommended type | Requirement |
 | --- | --- | --- |
 | Clinical Action ID | Unique identifier | Row primary key; sent as `injectionId` |
-| Draft JSON | Multiline text | At least 262,144 UTF-8 bytes; full evaluation envelope |
-| Final JSON | Multiline text | At least 900,000 UTF-8 bytes; server-owned |
-| Workflow Status | Choice or text | Draft and finalized values configured below |
-| Idempotency Key | Text (200) | Server-owned; retained with final result |
-| Tebra Acknowledged | Two Options | Copied/maintained by the trusted check-in board path |
+| Draft JSON | Multiline text | At least 262,144 UTF-8 bytes; full evaluation envelope; Canvas-writable only while `Draft` |
+| Final JSON | Multiline text | At least 900,000 UTF-8 bytes; server-owned; strict schema-validated on every read |
+| Workflow Status | Choice or text | Draft and finalized values configured below; server-owned |
+| Idempotency Key | Text (200) | Server-owned; bound to the complete finalize request, not just the key string |
+| Tebra Acknowledged | Two Options | Board/integration-owned; Canvas-read-only |
+| Check-in ID | Unique identifier or text | Board/integration-owned; Canvas-read-only; authoritative over Draft JSON's claimed check-in ID |
+| Patient ID | Unique identifier or text | Board/integration-owned; Canvas-read-only; authoritative over Draft JSON's claimed patient ID |
+| Order ID | Unique identifier or text | Board/integration-owned; Canvas-read-only; authoritative over Draft JSON's claimed order ID |
+| Order Context JSON *(optional)* | Multiline text | Board/integration-owned; Canvas-read-only; `{medicationKey, dose, orderingProvider}` snapshot checked against the encounter when configured |
+| Ack Source, Ack At, Ack By, Ack Check-in ID *(optional, all four together)* | Text / DateTime / Unique identifier / Unique identifier | Board/integration-owned; Canvas-read-only; real Tebra acknowledgement provenance recorded on finalization when all four are configured and populated |
 | Row ETag | Dataverse-managed | Read by the API; never constructed or compared by Canvas |
 
 For a Choice status column, put its integer option values in
@@ -74,12 +92,17 @@ parses integer settings and writes a number. Text values are also supported.
 Do not configure a Choice logical column with labels such as `draft` or
 `finalized`—the Web API requires its numeric option values.
 
-Use column security so the clinical modal cannot write Final JSON,
-Idempotency Key, or Tebra Acknowledged. The existing check-in board/integration
-owns the acknowledgement flag. The API rejects a Tebra acknowledgement when
-that saved flag is false; staff must use the explicit manual path with reason
-and source when appropriate. It also rejects a row that is neither the
-configured draft status nor a valid replay of an already-finalized record.
+Use column security so the clinical modal cannot write Final JSON, Workflow
+Status, Idempotency Key, Tebra Acknowledged, Check-in ID, Patient ID, Order
+ID, Order Context JSON, or any of the four Ack columns. The existing check-in
+board/integration owns all of those columns. The API rejects a Tebra
+acknowledgement when the saved flag is false; staff must use the explicit
+manual path with reason and source when appropriate. It also rejects a row
+that is neither the configured draft status nor a valid replay of an
+already-finalized record, and rejects Draft JSON whose claimed check-in,
+patient, or order identifier disagrees with the protected columns above — a
+reload from Dataverse does not make client-originated Draft JSON
+authoritative on its own.
 
 ## Application settings
 
@@ -103,6 +126,8 @@ npm ci --prefix api
 npm run typecheck --prefix api
 npm test --prefix api
 npm run build --prefix api
+npm audit --prefix api --omit=dev
+npx --yes @apidevtools/swagger-cli@4 validate power-platform/connector/apiDefinition.swagger.yaml
 ```
 
 Deploy the `api` directory only after the build creates
@@ -124,14 +149,31 @@ the target environment:
   and finalizes with that same token.
 - A changed row, stale fingerprint, non-draft status, clinical stop, or missing
   manual acknowledgement fails closed.
+- A Draft JSON check-in/patient/order identifier that disagrees with the
+  protected Dataverse columns fails closed with `source-identity-mismatch`,
+  and — where `DATAVERSE_ORDER_CONTEXT_COLUMN` is configured — an encounter
+  that disagrees with the linked order fails closed too.
 - A Tebra acknowledgement fails unless the authoritative clinical-action row
   is marked acknowledged by the check-in board path.
-- Repeating the same finalization key replays the stored result; a different
-  key conflicts.
+- Repeating the same finalization key **and** request content replays the
+  stored result; reusing the key with a different ETag, evaluation
+  fingerprint, acknowledgement data, or authenticated principal returns
+  `409 idempotency-conflict`.
+- A stored final record is validated against the strict stored-final schema
+  before every retrieval or replay; a malformed, incomplete, non-final
+  (including reopened/voided), or identity-mismatched record is rejected
+  rather than echoed.
 - Final note and AVS are reviewed against the MA Workstation output and share
   the stored final fingerprint/reference version.
+- Every AVS preview — any disposition — reads `"STAFF PREVIEW - NOT FINAL"`;
+  only a successful finalize response reads `"PATIENT COPY"` or
+  `"CARE HANDOFF"`.
 - UDS/TMS remain visibly unavailable, Spanish AVS remains blocked, and the
   HTML AVS print surface is accepted for the clinic's workflow.
+- The deployment is confirmed single-facility with a tightly controlled
+  injection-staff Entra role before go-live; broader record/facility
+  authorization is added first if the deployment ever needs to expand beyond
+  that scope (see "Authorization scope" above).
 
 This connector does not write into Tebra. `tebra` acknowledgement means the
 existing check-in board supplied a verified check-in state; a manual path

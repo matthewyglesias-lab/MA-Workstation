@@ -16,6 +16,14 @@
     "DATAVERSE_STATUS_COLUMN": "ipmg_workflowstatus",
     "DATAVERSE_IDEMPOTENCY_COLUMN": "ipmg_idempotencykey",
     "DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN": "ipmg_tebraacknowledged",
+    "DATAVERSE_CHECKIN_ID_COLUMN": "ipmg_checkinid",
+    "DATAVERSE_PATIENT_ID_COLUMN": "ipmg_patientid",
+    "DATAVERSE_ORDER_ID_COLUMN": "ipmg_orderid",
+    "DATAVERSE_ORDER_CONTEXT_COLUMN": "ipmg_ordercontextjson",
+    "DATAVERSE_ACK_SOURCE_COLUMN": "ipmg_acksource",
+    "DATAVERSE_ACK_AT_COLUMN": "ipmg_ackatutc",
+    "DATAVERSE_ACK_BY_COLUMN": "ipmg_ackby",
+    "DATAVERSE_ACK_CHECKIN_ID_COLUMN": "ipmg_ackcheckinid",
     "DATAVERSE_DRAFT_STATUS_VALUE": "100000000",
     "DATAVERSE_FINAL_STATUS_VALUE": "100000001"
   }

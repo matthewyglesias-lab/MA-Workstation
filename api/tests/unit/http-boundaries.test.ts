@@ -5,11 +5,14 @@ import { authenticatedPrincipal } from "../../src/http/auth";
 import { facilityDate, readApiConfiguration } from "../../src/config";
 import {
   asSourceReference,
+  avsPreviewHttpBodySchema,
+  documentPreviewHttpBodySchema,
   evaluateHttpBodySchema,
   finalizeHttpBodySchema,
+  orderContextSchema,
   parseEncounterJson,
-  previewHttpBodySchema,
   storedDraftEnvelopeSchema,
+  storedFinalEnvelopeSchema,
 } from "../../src/http/schema";
 import { POWER_APPS_INJECTION_SCHEMA_VERSION } from "../../../src/integrations/power-apps";
 
@@ -80,7 +83,7 @@ describe("Power Apps HTTP request schemas", () => {
     });
     expect(stored.success).toBe(true);
 
-    const result = previewHttpBodySchema.safeParse({
+    const result = documentPreviewHttpBodySchema.safeParse({
       schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
       source: validSource,
       encounterJson: JSON.stringify(validEncounter),
@@ -95,7 +98,7 @@ describe("Power Apps HTTP request schemas", () => {
     const { orderId: _omitted, ...sourceWithoutOrder } = validSource;
 
     expect(
-      previewHttpBodySchema.safeParse({
+      documentPreviewHttpBodySchema.safeParse({
         schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
         source: sourceWithoutOrder,
         encounterJson: JSON.stringify(validEncounter),
@@ -108,19 +111,38 @@ describe("Power Apps HTTP request schemas", () => {
       }).success,
     ).toBe(false);
     expect(
-      previewHttpBodySchema.safeParse({
+      documentPreviewHttpBodySchema.safeParse({
         schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
         source: { ...validSource, unexpected: "must not be silently accepted" },
         encounterJson: JSON.stringify(validEncounter),
       }).success,
     ).toBe(false);
     expect(
-      previewHttpBodySchema.safeParse({
+      documentPreviewHttpBodySchema.safeParse({
         schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
         source: { ...validSource, sourceRecordVersion: "42" },
         encounterJson: JSON.stringify(validEncounter),
       }).success,
     ).toBe(false);
+  });
+
+  it("splits document vs. AVS preview schemas so locale requiredness matches Swagger exactly", () => {
+    const base = {
+      schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
+      source: validSource,
+      encounterJson: JSON.stringify(validEncounter),
+    };
+    // GetInjectionDocuments never declares locale, so the field is not part
+    // of the schema at all — sending one is rejected, matching Swagger.
+    expect(documentPreviewHttpBodySchema.safeParse(base).success).toBe(true);
+    expect(
+      documentPreviewHttpBodySchema.safeParse({ ...base, locale: "en-US" }).success,
+    ).toBe(false);
+    // GenerateInjectionAvs requires locale, matching Swagger's required list.
+    expect(avsPreviewHttpBodySchema.safeParse(base).success).toBe(false);
+    expect(
+      avsPreviewHttpBodySchema.safeParse({ ...base, locale: "en-US" }).success,
+    ).toBe(true);
   });
 
   it("strictly validates the encounter JSON and real calendar dates", () => {
@@ -168,6 +190,77 @@ describe("Power Apps HTTP request schemas", () => {
           acknowledgementKind: "tebra",
           manualReason: "must not be accepted",
         },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("checks an optional order-context snapshot but never invents fields not present", () => {
+    expect(orderContextSchema.safeParse({}).success).toBe(true);
+    expect(
+      orderContextSchema.safeParse({ medicationKey: "sustenna", dose: "156 mg" }).success,
+    ).toBe(true);
+    expect(
+      orderContextSchema.safeParse({ unexpected: "must not be silently accepted" }).success,
+    ).toBe(false);
+  });
+
+  it("validates a complete stored-final envelope and rejects an incomplete one", () => {
+    const complete = {
+      schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
+      source: validSource,
+      injectionId: "9d7f434e-7f47-4c45-bd8e-c88d9a8cfbdd",
+      status: "finalized",
+      disposition: "administered",
+      idempotencyKey: "f4d3700d-ec30-4f1f-87e1-9dd6b1bbce31",
+      requestFingerprint: "a".repeat(64),
+      finalEncounter: validEncounter,
+      evaluation: { workflow: "injection" },
+      evaluationFingerprint: "0123456789abcdef",
+      finalizedAt: "2026-08-30T20:00:00.000Z",
+      attestation: {
+        staff: "MA User",
+        subject: "entra-object-id",
+        timestamp: "2026-08-30T20:00:00.000Z",
+        statementVersion: "clinical-action-v1",
+        acknowledgementKind: "tebra",
+      },
+      acknowledgement: {
+        kind: "tebra",
+        acknowledgedAtUtc: "2026-08-30T20:00:00.000Z",
+        acknowledgedByUserId: "entra-object-id",
+        acknowledgedByDisplayName: "MA User",
+      },
+      documents: {
+        note: {
+          workflow: "injection",
+          sections: [],
+          text: "note",
+          cc: "",
+          assessment: "",
+          plan: "",
+          all: "note",
+        },
+      },
+      avs: {
+        documentStatus: "PATIENT COPY",
+        contentType: "text/html",
+        fileName: "injection-avs-action-100.html",
+        html: "<article></article>",
+        generatedAt: "2026-08-30T20:00:00.000Z",
+      },
+      clinicalReferenceVersion: "injection-clinical-reference-v1",
+    };
+    expect(storedFinalEnvelopeSchema.safeParse(complete).success).toBe(true);
+
+    const { requestFingerprint: _omitted, ...missingFingerprint } = complete;
+    expect(storedFinalEnvelopeSchema.safeParse(missingFingerprint).success).toBe(false);
+    expect(
+      storedFinalEnvelopeSchema.safeParse({ ...complete, status: "draft" }).success,
+    ).toBe(false);
+    expect(
+      storedFinalEnvelopeSchema.safeParse({
+        ...complete,
+        avs: { ...complete.avs, documentStatus: "not-a-real-status" },
       }).success,
     ).toBe(false);
   });
@@ -239,6 +332,59 @@ describe("Easy Auth principal enforcement", () => {
     expect(principal?.roles).toContain("ClinicalActions.Finalize");
   });
 
+  it("prefers the documented App Service name_typ/role_typ indirection", () => {
+    // The documented App Service Easy Auth principal shape carries name_typ
+    // and role_typ pointing at the exact claim type the identity uses,
+    // mirroring .NET ClaimsIdentity's NameClaimType/RoleClaimType.
+    const principal = authenticatedPrincipal(
+      requestWithPrincipal({
+        name_typ: "http://contoso.example/claims/displayname",
+        role_typ: "http://contoso.example/claims/approle",
+        claims: [
+          { typ: "http://contoso.example/claims/displayname", val: "Nurse Practitioner" },
+          { typ: "sub", val: "aad-subject-1" },
+          { typ: "http://contoso.example/claims/approle", val: "ClinicalActions.Finalize" },
+        ],
+      }),
+      "ClinicalActions.Finalize",
+    );
+
+    expect(principal).toEqual({
+      userId: "aad-subject-1",
+      displayName: "Nurse Practitioner",
+      roles: ["ClinicalActions.Finalize"],
+      scopes: [],
+    });
+  });
+
+  it("matches exact short claim types (name, preferred_username, email, role, roles)", () => {
+    const byExactName = authenticatedPrincipal(
+      requestWithPrincipal({
+        claims: [
+          { typ: "sub", val: "oid-3" },
+          { typ: "preferred_username", val: "ma.user@example.com" },
+          { typ: "roles", val: "ClinicalActions.Finalize" },
+        ],
+      }),
+      "ClinicalActions.Finalize",
+    );
+    expect(byExactName?.displayName).toBe("ma.user@example.com");
+    expect(byExactName?.roles).toContain("ClinicalActions.Finalize");
+
+    const byExactRole = authenticatedPrincipal(
+      requestWithPrincipal({
+        claims: [
+          { typ: "sub", val: "oid-4" },
+          { typ: "email", val: "nurse@example.com" },
+          { typ: "role", val: "ClinicalActions.Finalize" },
+        ],
+      }),
+      "ClinicalActions.Finalize",
+    );
+    expect(byExactRole?.displayName).toBe("nurse@example.com");
+    expect(byExactRole?.roles).toContain("ClinicalActions.Finalize");
+  });
+
   it("rejects missing, malformed, unidentified, and unauthorized principals", () => {
     expect(authenticatedPrincipal({ headers: new Headers() } as HttpRequest, "role")).toBeNull();
     expect(
@@ -260,6 +406,35 @@ describe("Easy Auth principal enforcement", () => {
       ),
     ).toBeNull();
   });
+
+  it("(authorization scope) grants any holder of the single required role access without record/facility scoping", () => {
+    // Documents the deployment's actual authorization boundary (see
+    // api/README.md "Authorization scope"): two different authenticated
+    // principals holding the same required role are indistinguishable to
+    // the API's own authorization check. This build's safety therefore
+    // depends on ENTRA_REQUIRED_ROLE being held only by this single
+    // facility's tightly controlled injection staff, not on any per-record
+    // or per-facility check performed here.
+    const first = authenticatedPrincipal(
+      requestWithPrincipal({
+        userId: "staff-1",
+        userDetails: "Staff One",
+        userRoles: ["Injection.ReadWrite"],
+      }),
+      "Injection.ReadWrite",
+    );
+    const second = authenticatedPrincipal(
+      requestWithPrincipal({
+        userId: "staff-2",
+        userDetails: "Staff Two",
+        userRoles: ["Injection.ReadWrite"],
+      }),
+      "Injection.ReadWrite",
+    );
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first?.roles).toEqual(second?.roles);
+  });
 });
 
 describe.sequential("API configuration", () => {
@@ -277,6 +452,14 @@ describe.sequential("API configuration", () => {
     "DATAVERSE_STATUS_COLUMN",
     "DATAVERSE_IDEMPOTENCY_COLUMN",
     "DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN",
+    "DATAVERSE_CHECKIN_ID_COLUMN",
+    "DATAVERSE_PATIENT_ID_COLUMN",
+    "DATAVERSE_ORDER_ID_COLUMN",
+    "DATAVERSE_ORDER_CONTEXT_COLUMN",
+    "DATAVERSE_ACK_SOURCE_COLUMN",
+    "DATAVERSE_ACK_AT_COLUMN",
+    "DATAVERSE_ACK_BY_COLUMN",
+    "DATAVERSE_ACK_CHECKIN_ID_COLUMN",
     "DATAVERSE_DRAFT_STATUS_VALUE",
     "DATAVERSE_FINAL_STATUS_VALUE",
   ] as const;
@@ -318,7 +501,7 @@ describe.sequential("API configuration", () => {
     });
   });
 
-  it("preserves text statuses and parses Dataverse Choice values as integers", () => {
+  it("preserves text statuses, parses Dataverse Choice values as integers, and leaves optional columns undefined when unset", () => {
     Object.assign(process.env, {
       DATAVERSE_URL: "https://example.crm.dynamics.com",
       DATAVERSE_ACTION_ENTITY_SET: "ipmg_clinicalactions",
@@ -327,6 +510,9 @@ describe.sequential("API configuration", () => {
       DATAVERSE_STATUS_COLUMN: "ipmg_workflowstatus",
       DATAVERSE_IDEMPOTENCY_COLUMN: "ipmg_idempotencykey",
       DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN: "ipmg_tebraacknowledged",
+      DATAVERSE_CHECKIN_ID_COLUMN: "ipmg_checkinid",
+      DATAVERSE_PATIENT_ID_COLUMN: "ipmg_patientid",
+      DATAVERSE_ORDER_ID_COLUMN: "ipmg_orderid",
       DATAVERSE_DRAFT_STATUS_VALUE: "100000000",
       DATAVERSE_FINAL_STATUS_VALUE: "finalized",
     });
@@ -334,6 +520,41 @@ describe.sequential("API configuration", () => {
     expect(readApiConfiguration({ requireDataverse: true }).dataverse).toMatchObject({
       draftStatusValue: 100000000,
       finalStatusValue: "finalized",
+      checkInIdColumn: "ipmg_checkinid",
+      patientIdColumn: "ipmg_patientid",
+      orderIdColumn: "ipmg_orderid",
+      orderContextColumn: undefined,
+      acknowledgmentSourceColumn: undefined,
+    });
+  });
+
+  it("loads the optional order-context and acknowledgement provenance columns when configured", () => {
+    Object.assign(process.env, {
+      DATAVERSE_URL: "https://example.crm.dynamics.com",
+      DATAVERSE_ACTION_ENTITY_SET: "ipmg_clinicalactions",
+      DATAVERSE_DRAFT_JSON_COLUMN: "ipmg_draftjson",
+      DATAVERSE_FINAL_JSON_COLUMN: "ipmg_finaljson",
+      DATAVERSE_STATUS_COLUMN: "ipmg_workflowstatus",
+      DATAVERSE_IDEMPOTENCY_COLUMN: "ipmg_idempotencykey",
+      DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN: "ipmg_tebraacknowledged",
+      DATAVERSE_CHECKIN_ID_COLUMN: "ipmg_checkinid",
+      DATAVERSE_PATIENT_ID_COLUMN: "ipmg_patientid",
+      DATAVERSE_ORDER_ID_COLUMN: "ipmg_orderid",
+      DATAVERSE_ORDER_CONTEXT_COLUMN: "ipmg_ordercontextjson",
+      DATAVERSE_ACK_SOURCE_COLUMN: "ipmg_acksource",
+      DATAVERSE_ACK_AT_COLUMN: "ipmg_ackatutc",
+      DATAVERSE_ACK_BY_COLUMN: "ipmg_ackby",
+      DATAVERSE_ACK_CHECKIN_ID_COLUMN: "ipmg_ackcheckinid",
+      DATAVERSE_DRAFT_STATUS_VALUE: "100000000",
+      DATAVERSE_FINAL_STATUS_VALUE: "100000001",
+    });
+
+    expect(readApiConfiguration({ requireDataverse: true }).dataverse).toMatchObject({
+      orderContextColumn: "ipmg_ordercontextjson",
+      acknowledgmentSourceColumn: "ipmg_acksource",
+      acknowledgedAtColumn: "ipmg_ackatutc",
+      acknowledgedByColumn: "ipmg_ackby",
+      acknowledgedCheckInIdColumn: "ipmg_ackcheckinid",
     });
   });
 
@@ -348,6 +569,25 @@ describe.sequential("API configuration", () => {
     process.env.CLINIC_PROVIDER_REGISTER = "san-bernardino-v1";
     expect(() => readApiConfiguration({ requireDataverse: true })).toThrow(
       /DATAVERSE_URL is required/,
+    );
+  });
+
+  it("rejects a Dataverse configuration missing the protected check-in/patient/order columns", () => {
+    Object.assign(process.env, {
+      DATAVERSE_URL: "https://example.crm.dynamics.com",
+      DATAVERSE_ACTION_ENTITY_SET: "ipmg_clinicalactions",
+      DATAVERSE_DRAFT_JSON_COLUMN: "ipmg_draftjson",
+      DATAVERSE_FINAL_JSON_COLUMN: "ipmg_finaljson",
+      DATAVERSE_STATUS_COLUMN: "ipmg_workflowstatus",
+      DATAVERSE_IDEMPOTENCY_COLUMN: "ipmg_idempotencykey",
+      DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN: "ipmg_tebraacknowledged",
+      DATAVERSE_DRAFT_STATUS_VALUE: "100000000",
+      DATAVERSE_FINAL_STATUS_VALUE: "100000001",
+      // DATAVERSE_CHECKIN_ID_COLUMN intentionally omitted
+    });
+
+    expect(() => readApiConfiguration({ requireDataverse: true })).toThrow(
+      /DATAVERSE_CHECKIN_ID_COLUMN/,
     );
   });
 });

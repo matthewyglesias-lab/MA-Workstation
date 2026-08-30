@@ -328,6 +328,19 @@ export const storedDraftEnvelopeSchema = z
   })
   .strict();
 
+/**
+ * Optional order snapshot, checked against the encounter when the tenant
+ * configures DATAVERSE_ORDER_CONTEXT_COLUMN. Absence of a match check is a
+ * documented acceptance-gate limitation, not an invented pass.
+ */
+export const orderContextSchema = z
+  .object({
+    medicationKey: medicationKey.optional(),
+    dose: optionalText(80),
+    orderingProvider: optionalText(200),
+  })
+  .strict();
+
 export const recordLookupHttpBodySchema = z
   .object({
     schemaVersion: z.literal(POWER_APPS_INJECTION_SCHEMA_VERSION),
@@ -337,12 +350,31 @@ export const recordLookupHttpBodySchema = z
 
 export const evaluateHttpBodySchema = recordLookupHttpBodySchema;
 
-export const previewHttpBodySchema = z
+/**
+ * GetInjectionDocuments preview: no locale field, matching the Swagger
+ * GetInjectionDocumentsRequest contract exactly (locale is not part of note
+ * generation).
+ */
+export const documentPreviewHttpBodySchema = z
   .object({
     schemaVersion: z.literal(POWER_APPS_INJECTION_SCHEMA_VERSION),
     source: sourceSchema,
     encounterJson: z.string().min(2).max(MAX_ENCOUNTER_JSON_BYTES),
-    locale: z.literal("en-US").optional(),
+  })
+  .strict();
+
+/**
+ * GenerateInjectionAvs preview: locale is required here, matching the
+ * Swagger GenerateInjectionAvsRequest contract exactly (both declare it
+ * required, unlike the previous single shared preview schema which left it
+ * optional and diverged from the documented contract).
+ */
+export const avsPreviewHttpBodySchema = z
+  .object({
+    schemaVersion: z.literal(POWER_APPS_INJECTION_SCHEMA_VERSION),
+    source: sourceSchema,
+    encounterJson: z.string().min(2).max(MAX_ENCOUNTER_JSON_BYTES),
+    locale: z.literal("en-US"),
   })
   .strict();
 
@@ -386,6 +418,89 @@ export const finalizeHttpBodySchema = z
 export const generateFinalAvsHttpBodySchema = recordLookupHttpBodySchema.extend({
   locale: z.literal("en-US"),
 });
+
+/** Deterministic sha256 hex digest binding a finalize attempt to its complete request content. */
+export const requestFingerprintSchema = z.string().regex(/^[0-9a-f]{64}$/);
+
+const finalAttestationSchema = z
+  .object({
+    staff: z.string().min(1),
+    subject: z.string().min(1),
+    timestamp: z.string().min(1),
+    statementVersion: z.string().min(1),
+    acknowledgementKind: z.enum(["tebra", "manual"]),
+    manualReason: z.string().optional(),
+    manualSource: z.string().optional(),
+  })
+  .strict();
+
+const finalAcknowledgementSchema = z
+  .object({
+    kind: z.enum(["tebra", "manual"]),
+    acknowledgedAtUtc: z.string().min(1),
+    acknowledgedByUserId: z.string().min(1),
+    acknowledgedByDisplayName: z.string().min(1),
+    reason: z.string().optional(),
+    source: z.string().optional(),
+    boardSource: z.string().optional(),
+    boardAcknowledgedAtUtc: z.string().optional(),
+    boardAcknowledgedBy: z.string().optional(),
+    boardCheckInId: z.string().optional(),
+  })
+  .strict();
+
+const finalNoteSchema = z
+  .object({
+    workflow: z.literal("injection"),
+    sections: z.array(z.unknown()),
+    text: z.string(),
+    cc: z.string(),
+    assessment: z.string(),
+    plan: z.string(),
+    all: z.string(),
+  })
+  .passthrough();
+
+const finalAvsSchema = z
+  .object({
+    documentStatus: z.enum(["PATIENT COPY", "STAFF PREVIEW - NOT FINAL", "CARE HANDOFF"]),
+    contentType: z.literal("text/html"),
+    fileName: z.string().min(1),
+    html: z.string().min(1),
+    generatedAt: z.string().min(1),
+    kind: z.enum(["patient-avs", "care-handoff"]).optional(),
+    locale: z.literal("en-US").optional(),
+  })
+  .strict();
+
+/**
+ * Strict schema for the JSON persisted into the Dataverse final-JSON column.
+ * Retrieval and replay both validate against this before trusting or
+ * returning any stored content — a malformed, incomplete, or
+ * identity-mismatched record is rejected rather than echoed.
+ */
+export const storedFinalEnvelopeSchema = z
+  .object({
+    schemaVersion: z.literal(POWER_APPS_INJECTION_SCHEMA_VERSION),
+    source: sourceSchema,
+    injectionId: z.string().uuid(),
+    status: z.literal("finalized"),
+    disposition: z.enum(["administered", "held", "escalated", "provider"]),
+    idempotencyKey: z.string().min(16).max(200),
+    requestFingerprint: requestFingerprintSchema,
+    finalEncounter: injectionEncounterSchema,
+    evaluation: z.record(z.string(), z.unknown()),
+    evaluationFingerprint: z.string().regex(/^[0-9a-f]{16}$/),
+    finalizedAt: z.string().min(1),
+    attestation: finalAttestationSchema,
+    acknowledgement: finalAcknowledgementSchema,
+    documents: z.object({ note: finalNoteSchema }).strict(),
+    avs: finalAvsSchema,
+    clinicalReferenceVersion: z.string().min(1),
+  })
+  .strict();
+
+export type StoredFinalEnvelope = z.infer<typeof storedFinalEnvelopeSchema>;
 
 type EncounterParseResult =
   | { success: true; data: InjectionEncounter }

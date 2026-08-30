@@ -3,6 +3,13 @@ import { DefaultAzureCredential } from "@azure/identity";
 import type { DataverseConfiguration } from "./config";
 import { normalizeSourceRecordVersion } from "./source-version";
 
+export interface DataverseBoardAcknowledgment {
+  source: string;
+  acknowledgedAtUtc: string;
+  acknowledgedBy: string;
+  checkInId: string;
+}
+
 export interface DataverseClinicalAction {
   id: string;
   etag: string;
@@ -11,6 +18,14 @@ export interface DataverseClinicalAction {
   status: string | number;
   idempotencyKey: string;
   tebraAcknowledged: boolean;
+  /** Board/integration-owned, Canvas-read-only identity. Authoritative over Draft JSON. */
+  checkInId: string;
+  patientId: string;
+  orderId: string;
+  /** Raw JSON snapshot of the linked order, when the tenant configures it. "" when not configured. */
+  orderContextJson: string;
+  /** Real Tebra acknowledgement provenance from the board, when the tenant configures all four columns. */
+  boardAcknowledgment: DataverseBoardAcknowledgment | null;
 }
 
 export class DataverseError extends Error {
@@ -72,12 +87,23 @@ export class DataverseClinicalActionStore {
   constructor(private readonly config: DataverseConfiguration) {}
 
   async load(id: string): Promise<DataverseClinicalAction> {
+    const optionalColumns = [
+      this.config.orderContextColumn,
+      this.config.acknowledgmentSourceColumn,
+      this.config.acknowledgedAtColumn,
+      this.config.acknowledgedByColumn,
+      this.config.acknowledgedCheckInIdColumn,
+    ].filter((column): column is string => Boolean(column));
     const select = [
       this.config.draftJsonColumn,
       this.config.finalJsonColumn,
       this.config.statusColumn,
       this.config.idempotencyColumn,
       this.config.tebraAcknowledgedColumn,
+      this.config.checkInIdColumn,
+      this.config.patientIdColumn,
+      this.config.orderIdColumn,
+      ...optionalColumns,
     ].join(",");
     const response = await fetch(
       `${recordUrl(this.config, id)}?$select=${encodeURIComponent(select)}`,
@@ -101,13 +127,44 @@ export class DataverseClinicalActionStore {
     const tebraAcknowledged = readBoolean(
       row[this.config.tebraAcknowledgedColumn],
     );
-    if (!etag || !draftJson || tebraAcknowledged === null) {
+    const checkInId = readText(row[this.config.checkInIdColumn]);
+    const patientId = readText(row[this.config.patientIdColumn]);
+    const orderId = readText(row[this.config.orderIdColumn]);
+    if (
+      !etag ||
+      !draftJson ||
+      tebraAcknowledged === null ||
+      !checkInId ||
+      !patientId ||
+      !orderId
+    ) {
       throw new DataverseError(
         "invalid-record",
-        "The clinical action is missing its row version, draft JSON, or check-in acknowledgement state.",
+        "The clinical action is missing its row version, draft JSON, check-in acknowledgement state, or protected check-in/patient/order identity.",
         422,
       );
     }
+    const boardSource = this.config.acknowledgmentSourceColumn
+      ? readText(row[this.config.acknowledgmentSourceColumn])
+      : "";
+    const boardAcknowledgedAtUtc = this.config.acknowledgedAtColumn
+      ? readText(row[this.config.acknowledgedAtColumn])
+      : "";
+    const boardAcknowledgedBy = this.config.acknowledgedByColumn
+      ? readText(row[this.config.acknowledgedByColumn])
+      : "";
+    const boardCheckInId = this.config.acknowledgedCheckInIdColumn
+      ? readText(row[this.config.acknowledgedCheckInIdColumn])
+      : "";
+    const boardAcknowledgment: DataverseBoardAcknowledgment | null =
+      boardSource && boardAcknowledgedAtUtc && boardAcknowledgedBy && boardCheckInId
+        ? {
+            source: boardSource,
+            acknowledgedAtUtc: boardAcknowledgedAtUtc,
+            acknowledgedBy: boardAcknowledgedBy,
+            checkInId: boardCheckInId,
+          }
+        : null;
     return {
       id,
       etag,
@@ -116,6 +173,13 @@ export class DataverseClinicalActionStore {
       status: readStatus(row[this.config.statusColumn]),
       idempotencyKey: readText(row[this.config.idempotencyColumn]),
       tebraAcknowledged,
+      checkInId,
+      patientId,
+      orderId,
+      orderContextJson: this.config.orderContextColumn
+        ? readText(row[this.config.orderContextColumn])
+        : "",
+      boardAcknowledgment,
     };
   }
 

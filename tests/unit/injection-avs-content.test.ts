@@ -512,6 +512,17 @@ describe("rendered sheet", () => {
     expect(patient.documentStatus).toBe("PATIENT COPY");
   });
 
+  it("forces STAFF PREVIEW - NOT FINAL for every disposition when previewMode is set, never PATIENT COPY or CARE HANDOFF", () => {
+    for (const dispositionKind of ["administered", "held", "escalated", "provider"]) {
+      const model = buildInjectionAvsModel(base({ dispositionKind, previewMode: true }));
+      expect(model.documentStatus).toBe("STAFF PREVIEW - NOT FINAL");
+    }
+    // previewMode is independent of the subtitle/body wording, which still
+    // reflects the real disposition.
+    const heldPreview = buildInjectionAvsModel(base({ dispositionKind: "held", previewMode: true }));
+    expect(heldPreview.documentSubtitle).toBe("Injection not given today");
+  });
+
   it("keeps response off the patient AVS and names administering staff only once", () => {
     const html = buildInjectionAvsHtml(base({ responseLabel: "Tolerated well" }));
     expect(html).not.toContain("Tolerated well");

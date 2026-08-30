@@ -37,6 +37,17 @@ export type CheckInAcknowledgement =
       acknowledgedAtUtc: string;
       acknowledgedByUserId: string;
       acknowledgedByDisplayName: string;
+      /**
+       * Real board-sourced acknowledgement provenance, present only when the
+       * tenant configures all four protected Dataverse acknowledgement
+       * columns. Absent (not `acknowledgedAtUtc`/`acknowledgedByUserId`
+       * above, which remain the finalizer's own attestation) is a documented
+       * tenant acceptance-gate limitation, never invented.
+       */
+      boardSource?: string;
+      boardAcknowledgedAtUtc?: string;
+      boardAcknowledgedBy?: string;
+      boardCheckInId?: string;
     }
   | {
       kind: "manual";

@@ -4,6 +4,8 @@ This guide wires a Canvas clinical-action modal to the **MA Workstation Injectio
 
 Import `connector/apiDefinition.swagger.yaml` after replacing its host and Entra placeholders. Keep formula-level error management enabled. The examples use classic Check box/Text input properties (`Value`/`Text`) and en-US separators; use `Checked`/`Value` for modern controls and let Studio localize separators.
 
+**This repository does not contain the existing staff check-in board's Canvas app.** No `.msapp` or Canvas app source is checked in here — this guide only describes the connector and the formulas to add to that board. The board's current data source (Dataverse, SharePoint, or otherwise) is not established by anything in this repository and must not be assumed; confirm it by opening the actual Canvas app's Data panel in the target Power Apps environment before wiring anything against it. Nothing in this repository establishes that the board is currently wired to this connector.
+
 ## Tebra/kiosk visual shell
 
 Build the staff board with responsive auto-layout containers so it feels like
@@ -111,28 +113,29 @@ For a manually confirmed check-in, show all three controls and reset them whenev
 - a required reason;
 - a required source, such as the order or provider direction used for the manual check-in.
 
-If the selected schedule row has a verified Tebra check-in, use acknowledgement kind `tebra`. The linked Clinical Action row must also carry the board-owned `Tebra Acknowledged` Two Options value; the API reloads it and rejects an unsupported Tebra claim. The clinical modal must not be allowed to write that protected column. Otherwise use `manual` and require the explicit controls. The Continue/Finalize gate is:
+If the selected schedule row has a verified Tebra check-in, use acknowledgement kind `tebra`. The linked Clinical Action row must also carry the board-owned `Tebra Acknowledged` Two Options value; the API reloads it and rejects an unsupported Tebra claim. The clinical modal must not be allowed to write that protected column. Otherwise use `manual` and require the explicit controls. `varCheckInKind` must always be explicitly set to exactly `"tebra"` or `"manual"` before this gate is evaluated — never derive it from a default. The gate accepts only those two values; a blank, unset, unexpected, or misspelled `varCheckInKind` must never be treated as ready:
 
 ```powerfx
 With(
     {
         hasInjection: CountIf(colClinicalActions, Selected && Key = "Injection") = 1,
-        manualReady: varCheckInKind <> "manual" ||
+        checkInReady: varCheckInKind = "tebra" ||
             (
+                varCheckInKind = "manual" &&
                 chkManualCheckIn.Value &&
                 !IsBlank(Trim(txtManualReason.Text)) &&
                 !IsBlank(Trim(txtManualSource.Text))
             )
     },
     If(
-        hasInjection && manualReady && !varInjectionBusy,
+        hasInjection && checkInReady && !varInjectionBusy,
         DisplayMode.Edit,
         DisplayMode.Disabled
     )
 )
 ```
 
-The checkbox is an intent, not audit provenance. Send only the acknowledgement kind and, for `manual`, its reason and source. The API must stamp the Entra subject, staff display name, and UTC time. Never send a client-created actor or timestamp.
+The checkbox is an intent, not audit provenance. Send only the acknowledgement kind and, for `manual`, its reason and source. The API must stamp the Entra subject, staff display name, and UTC time. Never send a client-created actor or timestamp. When the check-in board supplies real Tebra acknowledgement provenance (source, timestamp, acknowledging identity, and the linked check-in ID) through its own protected columns, the API's finalization response and stored record carry that real provenance instead of only the finalizer's own attestation; where the board cannot supply it, only the finalizer's attestation is recorded — this is a documented tenant acceptance-gate limitation, not something Canvas should attempt to fill in.
 
 ## Injection state model
 
@@ -162,6 +165,8 @@ Set(varInjectionState, "editing")
 Serialize the pure encounter once, save a complete envelope to the authoritative draft, and then ask the API to evaluate that row by ID. The API—not Canvas—reloads the row and captures its exact Dataverse ETag. The response remains strongly typed, so do not `ParseJSON` it.
 
 The formula below uses a schematic Dataverse table named `'Clinical Actions'` with `Clinical Action ID`, `Draft JSON`, `Status`, and the protected `Tebra Acknowledged` flag maintained by the check-in board. Replace those display names with the target environment's columns. `varClinicalActionRecord` must be an existing `Draft` row originally selected from that table; check-in, patient, and order IDs must come from authoritative records, not labels. Disable editing for every other status and use ID-only document retrieval for finalized rows.
+
+**Protected identity columns (required field security).** The row that `varClinicalActionRecord` points to must also carry board/integration-owned, Canvas-read-only columns for the immutable check-in ID, patient ID, and order ID (`DATAVERSE_CHECKIN_ID_COLUMN`, `DATAVERSE_PATIENT_ID_COLUMN`, `DATAVERSE_ORDER_ID_COLUMN` on the Function App). Saving Draft JSON that claims a check-in, patient, or order ID different from those protected columns fails closed with `source-identity-mismatch` — a reloaded Draft JSON is still client-originated data, and the API treats the protected row columns, not the draft, as authoritative. An optional order-context snapshot column (`DATAVERSE_ORDER_CONTEXT_COLUMN`, holding `medicationKey`/`dose`/`orderingProvider`) is checked against the encounter when the tenant configures it; leaving it unconfigured is a documented acceptance-gate limitation, not a defect. Configure Dataverse column security so the clinical modal — and any other Canvas control — cannot write any of these columns, the `Tebra Acknowledged` column, or the optional board acknowledgement provenance columns described under Finalize below. Only `Draft JSON` (while the row is `Draft`) is Canvas-writable.
 
 ```powerfx
 Set(varInjectionBusy, true);
@@ -243,15 +248,16 @@ Render stops and warnings directly from `varEvaluationEnvelope.evaluation.stops`
 
 ### Finalize
 
-Require the ready state, the current evaluation fingerprint, an explicit final-review checkbox, and the check-in gate. The API reloads the saved draft by ID and rejects a changed row version. Generate one key per logical attempt and retain it across retries of the identical request.
+Require the ready state, the current evaluation fingerprint, an explicit final-review checkbox, and the check-in gate. The API reloads the saved draft by ID and rejects a changed row version. Generate one key per logical attempt and retain it across retries of the identical request — the API now binds that key to the complete request content (schema version, injection ID, evaluated ETag, evaluation fingerprint, normalized confirmation/acknowledgement data, and the authenticated Entra subject), so reusing the same key for the identical request replays the stored result, while reusing it after anything material changed (a new evaluation, different acknowledgement data, or a different signed-in user) returns a `409 idempotency-conflict` instead of silently returning stale data.
 
-Set the Finalize button's `DisplayMode` from the ready state, final-review checkbox, manual check-in gate, and `varInjectionBusy`; do not rely on validation inside the connector call alone.
+Set the Finalize button's `DisplayMode` from the ready state, final-review checkbox, check-in gate, and `varInjectionBusy`; do not rely on validation inside the connector call alone.
 
 ```powerfx
 With(
     {
-        manualReady: varCheckInKind <> "manual" ||
+        checkInReady: varCheckInKind = "tebra" ||
             (
+                varCheckInKind = "manual" &&
                 chkManualCheckIn.Value &&
                 !IsBlank(Trim(txtManualReason.Text)) &&
                 !IsBlank(Trim(txtManualSource.Text))
@@ -260,7 +266,7 @@ With(
     If(
         varInjectionState = "ready-to-finalize" &&
         chkFinalReview.Value &&
-        manualReady &&
+        checkInReady &&
         !varInjectionBusy,
         DisplayMode.Edit,
         DisplayMode.Disabled
@@ -286,7 +292,10 @@ IfError(
                     evaluationFingerprint: varEvaluationEnvelope.evaluationFingerprint,
                     confirmation: {
                         confirmed: chkFinalReview.Value &&
-                            (varCheckInKind <> "manual" || chkManualCheckIn.Value),
+                            (
+                                varCheckInKind = "tebra" ||
+                                (varCheckInKind = "manual" && chkManualCheckIn.Value)
+                            ),
                         acknowledgementKind: varCheckInKind,
                         manualReason: If(
                             varCheckInKind = "manual",
@@ -330,7 +339,7 @@ Only the success branch above may make Injection complete. Do not patch Datavers
 
 ### Documents and AVS
 
-The finalization response already contains the atomic final `documents` and `avs`; bind those values read-only. For a non-authoritative preview, omit `injectionId` and call the two operations with the same source and encounter snapshot:
+The finalization response already contains the atomic final `documents` and `avs`; bind those values read-only. Every AVS preview — for an administered, held, escalated, or provider-review disposition alike — always renders `avs.documentStatus` as `"STAFF PREVIEW - NOT FINAL"` and visibly shows that text; only a successful `FinalizeInjection` response returns `"PATIENT COPY"` or `"CARE HANDOFF"`. Never infer a document's final/preview state from disposition alone. For a non-authoritative preview, omit `injectionId` and call the two operations with the same source and encounter snapshot:
 
 ```powerfx
 Set(
@@ -402,7 +411,11 @@ The Swagger file is a connector contract, not a deployed API. Call the workflow 
 - an incomplete saved draft evaluates with typed stops, while a complete one reaches `ready-to-finalize`;
 - manual check-in cannot finalize without reason and source, and the response contains server-stamped `attestation.subject` and `attestation.timestamp`;
 - Tebra acknowledgement cannot finalize unless the board-owned Dataverse acknowledgement flag is true;
-- replaying the same finalization key returns the same result, while reusing it for changed content returns a conflict;
+- a Draft JSON check-in/patient/order identifier that disagrees with the protected Dataverse columns fails closed instead of being silently trusted;
+- replaying the same finalization key **and** the same request content returns the same result, while reusing the key with a different ETag, evaluation fingerprint, acknowledgement data, or authenticated user returns a conflict;
+- a finalized/reopened/voided row is validated against the strict stored-final schema before any retrieval or replay, and a malformed or identity-mismatched stored record is rejected rather than echoed;
+- every AVS preview (any disposition) visibly reads `"STAFF PREVIEW - NOT FINAL"`, never `"PATIENT COPY"` or `"CARE HANDOFF"`;
 - final note and AVS match the final evaluation fingerprint and clinical-reference version;
-- a failed/denied call never changes Injection to complete; and
-- UDS and TMS remain visibly unavailable and cannot become complete.
+- a failed/denied call never changes Injection to complete;
+- UDS and TMS remain visibly unavailable and cannot become complete; and
+- the deployment's authorization scope (single facility, single tightly controlled injection-staff Entra role) matches what governance actually approved — broader record/facility-level authorization is a blocker to expanding beyond that scope, not something this build enforces per record.
