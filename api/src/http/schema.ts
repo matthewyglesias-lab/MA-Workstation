@@ -11,6 +11,16 @@ export const MAX_ENCOUNTER_JSON_BYTES = 262_144;
 
 const text = (max = 500) => z.string().max(max);
 const optionalText = (max = 500) => text(max).optional();
+/** Trims before enforcing a minimum length, so a whitespace-only value fails exactly like an empty one. */
+const nonBlankText = (max = 500) => z.string().trim().min(1).max(max);
+const isUtcInstant = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(value)) return false;
+  return !Number.isNaN(new Date(value).getTime());
+};
+/** A real UTC ISO-8601 instant (e.g. 2026-08-31T12:00:00.000Z) — required for every persisted acknowledgement/attestation/finalization timestamp so audit reconstruction never depends on an ambiguous local time or a malformed string that happens to parse. */
+export const utcInstant = z
+  .string()
+  .refine(isUtcInstant, "Use a UTC ISO-8601 instant, e.g. 2026-08-31T12:00:00.000Z.");
 const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use yyyy-mm-dd format.")
@@ -306,12 +316,18 @@ const sourceRecordVersionSchema = z
   )
   .transform((value) => normalizeSourceRecordVersion(value) as string);
 
+/**
+ * Protected identifiers are trimmed before the minimum-length check, so a
+ * whitespace-only value (" ") fails exactly like an empty one rather than
+ * comparing as a "matching" non-empty string against the protected
+ * Dataverse record.
+ */
 const sourceIdentitySchema = z
   .object({
-    actionId: z.string().min(1).max(128),
-    checkInId: z.string().min(1).max(128),
-    patientId: z.string().min(1).max(128),
-    orderId: z.string().min(1).max(128),
+    actionId: nonBlankText(128),
+    checkInId: nonBlankText(128),
+    patientId: nonBlankText(128),
+    orderId: nonBlankText(128),
     patientRecordNumber: z.string().max(128).optional(),
   })
   .strict();
@@ -329,15 +345,40 @@ export const storedDraftEnvelopeSchema = z
   .strict();
 
 /**
- * Optional order snapshot, checked against the encounter when the tenant
- * configures DATAVERSE_ORDER_CONTEXT_COLUMN. Absence of a match check is a
- * documented acceptance-gate limitation, not an invented pass.
+ * Order snapshot checked against the encounter when the tenant configures
+ * DATAVERSE_ORDER_CONTEXT_COLUMN. Whether the check runs at all is a
+ * documented acceptance-gate limitation (the column is optional); once
+ * configured, every row must carry a complete, strictly valid snapshot —
+ * a blank string, `{}`, or a partially populated order is rejected rather
+ * than treated as "no order context to check."
  */
 export const orderContextSchema = z
   .object({
-    medicationKey: medicationKey.optional(),
-    dose: optionalText(80),
-    orderingProvider: optionalText(200),
+    medicationKey: medicationKey.refine(
+      (value) => value !== "",
+      "medicationKey is required.",
+    ),
+    dose: nonBlankText(80),
+    orderingProvider: nonBlankText(200),
+    route: nonBlankText(50),
+    intervalKey: intervalKey.refine(
+      (value) => value !== "",
+      "intervalKey is required.",
+    ),
+  })
+  .strict();
+
+/**
+ * Protected patient-identity snapshot (name/DOB/MRN), read from the
+ * board/integration-owned Dataverse patient-context column. This is
+ * authoritative for the final clinical note and AVS — Canvas-supplied Draft
+ * JSON never determines final-document patient demographics.
+ */
+export const patientContextSchema = z
+  .object({
+    name: nonBlankText(200),
+    dob: isoDate,
+    mrn: nonBlankText(128),
   })
   .strict();
 
@@ -426,7 +467,7 @@ const finalAttestationSchema = z
   .object({
     staff: z.string().min(1),
     subject: z.string().min(1),
-    timestamp: z.string().min(1),
+    timestamp: utcInstant,
     statementVersion: z.string().min(1),
     acknowledgementKind: z.enum(["tebra", "manual"]),
     manualReason: z.string().optional(),
@@ -437,29 +478,40 @@ const finalAttestationSchema = z
 const finalAcknowledgementSchema = z
   .object({
     kind: z.enum(["tebra", "manual"]),
-    acknowledgedAtUtc: z.string().min(1),
+    acknowledgedAtUtc: utcInstant,
     acknowledgedByUserId: z.string().min(1),
     acknowledgedByDisplayName: z.string().min(1),
     reason: z.string().optional(),
     source: z.string().optional(),
     boardSource: z.string().optional(),
-    boardAcknowledgedAtUtc: z.string().optional(),
+    boardAcknowledgedAtUtc: utcInstant.optional(),
     boardAcknowledgedBy: z.string().optional(),
     boardCheckInId: z.string().optional(),
   })
   .strict();
 
+/** Mirrors DocumentationSection from src/documentation/types.ts exactly. */
+const documentationSectionSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    destination: z.enum(["CC", "Assessment", "Plan", "Note"]),
+    content: z.string(),
+  })
+  .strict();
+
+/** Mirrors InjectionDocumentationResult from src/documentation/types.ts exactly. */
 const finalNoteSchema = z
   .object({
     workflow: z.literal("injection"),
-    sections: z.array(z.unknown()),
+    sections: z.array(documentationSectionSchema),
     text: z.string(),
     cc: z.string(),
     assessment: z.string(),
     plan: z.string(),
     all: z.string(),
   })
-  .passthrough();
+  .strict();
 
 const finalAvsSchema = z
   .object({
@@ -467,17 +519,225 @@ const finalAvsSchema = z
     contentType: z.literal("text/html"),
     fileName: z.string().min(1),
     html: z.string().min(1),
-    generatedAt: z.string().min(1),
-    kind: z.enum(["patient-avs", "care-handoff"]).optional(),
-    locale: z.literal("en-US").optional(),
+    generatedAt: utcInstant,
+    kind: z.enum(["patient-avs", "care-handoff"]),
+    locale: z.literal("en-US"),
+  })
+  .strict();
+
+const clinicalIssueSchema = z
+  .object({
+    code: z.string(),
+    message: z.string(),
+    severity: z.enum(["stop", "warning", "info"]),
+    field: z.string().optional(),
+    section: z.string().optional(),
+  })
+  .strict();
+
+const clinicalRecommendationSchema = z
+  .object({
+    code: z.string(),
+    message: z.string(),
+    action: z.string().optional(),
+  })
+  .strict();
+
+/** Curated medication summary publicEvaluation() echoes — not the full catalog InjectionMedication. */
+const finalMedicationSummarySchema = z
+  .object({
+    key: z.string().min(1),
+    name: z.string(),
+    genericName: z.string(),
+  })
+  .strict();
+
+/** Mirrors InjectionTimingEvaluation from src/domain/injection.ts exactly. */
+const finalTimingEvaluationSchema = z
+  .object({
+    state: z.enum(["idle", "ok", "warning", "stop"]),
+    daysSincePrior: z.number().nullable(),
+    earliestDay: z.number().nullable(),
+    latestDay: z.number().nullable(),
+    expectedDate: z.string().optional(),
+    earliestDate: z.string().optional(),
+    latestDate: z.string().optional(),
+    cadenceLabel: z.string().optional(),
+    late: z.boolean(),
+    relativeToExpected: z.enum(["before", "on", "after"]).optional(),
+    message: z.string(),
+  })
+  .strict();
+
+/** publicEvaluation() flattens InjectionEvaluationOutput's requirements Record into {field, ...requirement} entries. */
+const finalRequirementEntrySchema = z
+  .object({
+    field: z.string(),
+    state: z.enum(["pending", "required", "optional", "hidden"]),
+    section: z.string(),
+    reason: z.string().optional(),
+  })
+  .strict();
+
+const clinicalReferenceClassificationSchema = z.enum([
+  "label constraint",
+  "order-dependent review",
+  "local policy",
+]);
+
+/** Mirrors InjectionGuidanceCard from src/domain/injection.ts exactly. */
+const finalGuidanceCardSchema = z
+  .object({
+    key: z.string(),
+    section: z.string(),
+    title: z.string(),
+    message: z.string(),
+    classification: clinicalReferenceClassificationSchema,
+    action: z.string().optional(),
+  })
+  .strict();
+
+const clinicalReferenceSourceSchema = z
+  .object({
+    title: z.string(),
+    url: z.string(),
+    labelRevision: z.string(),
+    reviewedOn: z.string(),
+  })
+  .strict();
+
+/** Mirrors InjectionTechniqueNote (extends InjectionClinicalReferenceFact) from src/domain/injection-clinical-reference.ts exactly. */
+const finalTechniqueNoteSchema = z
+  .object({
+    id: z.string(),
+    classification: clinicalReferenceClassificationSchema,
+    statement: z.string(),
+    source: clinicalReferenceSourceSchema,
+    phase: z.enum(["preparation", "needle", "mechanics", "aftercare"]),
+    severity: z.enum(["info", "caution"]),
+    doses: z.array(z.string()).optional(),
+    siteGroups: z.array(z.enum(["deltoid", "gluteal", "subq"])).optional(),
+  })
+  .strict();
+
+const needleSpecSchema = z
+  .object({
+    gauge: z.string().optional(),
+    length: z.string().optional(),
+    descriptor: z.string().optional(),
+  })
+  .strict();
+
+/** Mirrors NeedleResolution from src/domain/injection-needle.ts exactly. */
+const finalNeedleResolutionSchema = z
+  .object({
+    needle: needleSpecSchema.optional(),
+    alternate: needleSpecSchema.optional(),
+    rationale: z.string().optional(),
+    siteGroup: z.enum(["deltoid", "gluteal", "subq"]).optional(),
+    unresolved: z.boolean(),
+    unresolvedReason: z.string().optional(),
+    needs: z.array(z.enum(["habitus", "weight"])).optional(),
+  })
+  .strict();
+
+/** Mirrors InjectionNeedleProjection from src/domain/injection.ts exactly. */
+const finalNeedleProjectionSchema = z
+  .object({
+    resolution: finalNeedleResolutionSchema,
+    notes: z.array(finalTechniqueNoteSchema),
+    angle: z.object({ degrees: z.string(), note: z.string() }).strict().optional(),
+    siteRestriction: z
+      .object({ headline: z.string(), detail: z.string() })
+      .strict()
+      .optional(),
+    maxVolumePerSite: z.number().optional(),
+    weightKg: z.number().nullable(),
+  })
+  .strict();
+
+const medicationVerificationKeySchema = z.enum([
+  "opioidFree",
+  "naltrexHS",
+  "suppliedNeedle",
+  "resuspend",
+  "visualInspection",
+  "invegaInit",
+  "oralOverlap",
+  "stabilized",
+  "paliperidoneTolerability",
+  "aripiprazoleTolerability",
+  "glutealOnly",
+  "noMassage",
+  "deepZtrack",
+]);
+
+/**
+ * Mirrors the exact shape publicEvaluation() (api/src/functions/injections.ts)
+ * builds from InjectionEvaluationOutput — a curated projection, not the raw
+ * domain type, so this schema intentionally tracks that projection's field
+ * list rather than every field on InjectionEvaluationOutput itself.
+ */
+const finalEvaluationOutputSchema = z
+  .object({
+    medication: finalMedicationSummarySchema.optional(),
+    timing: finalTimingEvaluationSchema,
+    lateDoseWarning: z.boolean(),
+    allowedRoutes: z.array(z.string()),
+    allowedSites: z.array(z.string()),
+    recommendedSite: z.string(),
+    repeatsPreviousSite: z.boolean(),
+    administrationDocumented: z.boolean(),
+    canFinalize: z.boolean(),
+    recordStatus: z.enum(["draft", "ready-to-lock", "handoff-ready"]),
+    initiationProtocol: z.enum([
+      "",
+      "maintena-1day",
+      "maintena-14day",
+      "maintena-provider",
+      "asimtufii-1day",
+      "asimtufii-14day",
+      "asimtufii-provider",
+      "aristada-initio-sameday",
+      "aristada-21day",
+      "aristada-provider",
+      "sustenna-day1",
+      "sustenna-day8",
+      "sustenna-provider",
+    ]),
+    phase: z.enum(["maintenance", "initiation", "reinitiation", "loading", "prn"]),
+    requiredVerifications: z.array(medicationVerificationKeySchema),
+    requirements: z.array(finalRequirementEntrySchema),
+    guidance: z.array(finalGuidanceCardSchema),
+    needle: finalNeedleProjectionSchema,
+    expectedNextDoseDate: z.string(),
+  })
+  .strict();
+
+/**
+ * Exact schema for the persisted evaluation snapshot — mirrors
+ * ClinicalEvaluation<InjectionEvaluationOutput> (src/domain/contracts.ts) as
+ * projected by publicEvaluation(). Replaces a prior z.record(unknown) that
+ * would have accepted any shape at all for a clinical decision record.
+ */
+const finalEvaluationSchema = z
+  .object({
+    workflow: z.literal("injection"),
+    readiness: z.enum(["idle", "blocked", "review", "ready"]),
+    stops: z.array(clinicalIssueSchema),
+    warnings: z.array(clinicalIssueSchema),
+    recommendations: z.array(clinicalRecommendationSchema),
+    calculatedDates: z.record(z.string(), z.string()),
+    output: finalEvaluationOutputSchema,
   })
   .strict();
 
 /**
  * Strict schema for the JSON persisted into the Dataverse final-JSON column.
  * Retrieval and replay both validate against this before trusting or
- * returning any stored content — a malformed, incomplete, or
- * identity-mismatched record is rejected rather than echoed.
+ * returning any stored content — a malformed, incomplete, identity-
+ * mismatched, or internally-inconsistent record is rejected rather than
+ * echoed.
  */
 export const storedFinalEnvelopeSchema = z
   .object({
@@ -489,16 +749,121 @@ export const storedFinalEnvelopeSchema = z
     idempotencyKey: z.string().min(16).max(200),
     requestFingerprint: requestFingerprintSchema,
     finalEncounter: injectionEncounterSchema,
-    evaluation: z.record(z.string(), z.unknown()),
+    evaluation: finalEvaluationSchema,
     evaluationFingerprint: z.string().regex(/^[0-9a-f]{16}$/),
-    finalizedAt: z.string().min(1),
+    finalizedAt: utcInstant,
     attestation: finalAttestationSchema,
     acknowledgement: finalAcknowledgementSchema,
     documents: z.object({ note: finalNoteSchema }).strict(),
     avs: finalAvsSchema,
     clinicalReferenceVersion: z.string().min(1),
+    /** Documentation-formatting template version, persisted for audit reconstruction. */
+    noteTemplateVersion: z.string().min(1),
+    /** AVS-rendering template version, persisted for audit reconstruction. */
+    avsTemplateVersion: z.string().min(1),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const isBlank = (candidate?: string): boolean => !candidate || !candidate.trim();
+
+    if (value.injectionId.toLowerCase() !== value.source.actionId.toLowerCase()) {
+      context.addIssue({
+        code: "custom",
+        path: ["source", "actionId"],
+        message: "injectionId and source.actionId must match.",
+      });
+    }
+
+    if (value.disposition !== value.finalEncounter.disposition.kind) {
+      context.addIssue({
+        code: "custom",
+        path: ["finalEncounter", "disposition", "kind"],
+        message: "The envelope disposition must match finalEncounter.disposition.kind.",
+      });
+    }
+
+    if (value.avs.documentStatus === "STAFF PREVIEW - NOT FINAL") {
+      context.addIssue({
+        code: "custom",
+        path: ["avs", "documentStatus"],
+        message: "A finalized envelope can never carry a staff-preview AVS.",
+      });
+    }
+    if (value.disposition === "administered") {
+      if (value.avs.documentStatus !== "PATIENT COPY") {
+        context.addIssue({
+          code: "custom",
+          path: ["avs", "documentStatus"],
+          message: "An administered disposition requires a PATIENT COPY AVS.",
+        });
+      }
+      if (value.avs.kind !== "patient-avs") {
+        context.addIssue({
+          code: "custom",
+          path: ["avs", "kind"],
+          message: "An administered disposition requires a patient-avs AVS kind.",
+        });
+      }
+    } else {
+      if (value.avs.documentStatus !== "CARE HANDOFF") {
+        context.addIssue({
+          code: "custom",
+          path: ["avs", "documentStatus"],
+          message: "A held, escalated, or provider disposition requires a CARE HANDOFF AVS.",
+        });
+      }
+      if (value.avs.kind !== "care-handoff") {
+        context.addIssue({
+          code: "custom",
+          path: ["avs", "kind"],
+          message: "A held, escalated, or provider disposition requires a care-handoff AVS kind.",
+        });
+      }
+    }
+
+    if (value.attestation.acknowledgementKind !== value.acknowledgement.kind) {
+      context.addIssue({
+        code: "custom",
+        path: ["acknowledgement", "kind"],
+        message: "attestation.acknowledgementKind and acknowledgement.kind must agree.",
+      });
+    }
+
+    if (value.acknowledgement.kind === "manual") {
+      if (isBlank(value.acknowledgement.reason) || isBlank(value.acknowledgement.source)) {
+        context.addIssue({
+          code: "custom",
+          path: ["acknowledgement", "reason"],
+          message: "A manual acknowledgement requires a nonblank reason and source.",
+        });
+      }
+    } else if (!isBlank(value.acknowledgement.reason) || !isBlank(value.acknowledgement.source)) {
+      context.addIssue({
+        code: "custom",
+        path: ["acknowledgement", "reason"],
+        message: "A Tebra acknowledgement cannot carry manual reason/source values.",
+      });
+    }
+
+    if (value.attestation.acknowledgementKind === "manual") {
+      if (isBlank(value.attestation.manualReason) || isBlank(value.attestation.manualSource)) {
+        context.addIssue({
+          code: "custom",
+          path: ["attestation", "manualReason"],
+          message: "A manual attestation requires a nonblank manualReason and manualSource.",
+        });
+      }
+    } else if (
+      !isBlank(value.attestation.manualReason) ||
+      !isBlank(value.attestation.manualSource)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["attestation", "manualReason"],
+        message: "A Tebra attestation cannot carry manualReason/manualSource values.",
+      });
+    }
+  });
 
 export type StoredFinalEnvelope = z.infer<typeof storedFinalEnvelopeSchema>;
 

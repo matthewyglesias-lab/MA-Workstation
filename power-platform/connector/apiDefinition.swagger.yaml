@@ -498,17 +498,20 @@ definitions:
         maxLength: 1000
         x-ms-summary: Manual reason
         description: >-
-          Required and must be non-blank when acknowledgementKind = "manual".
-          Rejected (must be omitted) when acknowledgementKind = "tebra".
+          Required and must be non-blank (after trimming) when
+          acknowledgementKind = "manual". When acknowledgementKind = "tebra",
+          this field may be omitted or sent as an empty string, but any
+          non-blank value is rejected.
       manualSource:
         type: string
         maxLength: 500
         x-ms-summary: Manual source
         description: >-
-          Required and must be non-blank when acknowledgementKind = "manual"
-          (e.g. the order or provider direction used for the manual
-          check-in). Rejected (must be omitted) when acknowledgementKind =
-          "tebra".
+          Required and must be non-blank (after trimming) when
+          acknowledgementKind = "manual" (e.g. the order or provider
+          direction used for the manual check-in). When acknowledgementKind
+          = "tebra", this field may be omitted or sent as an empty string,
+          but any non-blank value is rejected.
 
   FinalizeInjectionResponse:
     type: object

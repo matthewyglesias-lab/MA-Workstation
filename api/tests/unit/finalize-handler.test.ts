@@ -29,6 +29,14 @@ const source = {
 };
 const { sourceRecordVersion: _sourceVersion, ...storedSource } = source;
 
+// The protected patient-context snapshot is authoritative over Draft
+// JSON's patient identity (resolveProtectedPatientContext). Values here
+// intentionally match encounter()'s patient and source.patientRecordNumber
+// so existing assertions observe the override as a no-op; tests that
+// specifically exercise the override use a distinct value instead.
+const patientContext = { name: "Test, Patient", dob: "1980-05-12", mrn: "MRN-500" };
+const patientContextJson = JSON.stringify(patientContext);
+
 const encounter = (): InjectionEncounter => ({
   ...emptyInjectionEncounter(),
   patient: { name: "Test, Patient", dob: "1980-05-12" },
@@ -92,6 +100,7 @@ const environment = {
   DATAVERSE_CHECKIN_ID_COLUMN: "ipmg_checkinid",
   DATAVERSE_PATIENT_ID_COLUMN: "ipmg_patientid",
   DATAVERSE_ORDER_ID_COLUMN: "ipmg_orderid",
+  DATAVERSE_PATIENT_CONTEXT_COLUMN: "ipmg_patientcontextjson",
   DATAVERSE_DRAFT_STATUS_VALUE: "100000000",
   DATAVERSE_FINAL_STATUS_VALUE: "100000001",
 } as const;
@@ -145,6 +154,7 @@ const draftRow = (
   ipmg_checkinid: source.checkInId,
   ipmg_patientid: source.patientId,
   ipmg_orderid: source.orderId,
+  ipmg_patientcontextjson: patientContextJson,
   ...rowOverrides,
 });
 
@@ -156,6 +166,28 @@ const responseOf = (row: Record<string, unknown>, etagHeader?: string): Response
       ...(etagHeader ? { ETag: etagHeader } : {}),
     },
   });
+
+/**
+ * Builds a realistic "now finalized" row from a captured PATCH init,
+ * copying Final JSON, workflow status, AND the idempotency-key column —
+ * all three are written atomically by store.finalize(). Item 5's shared
+ * validateStoredFinal binds the envelope's idempotencyKey back to this
+ * protected column, so a fixture that only copies Final JSON/status (and
+ * leaves the idempotency column at its draft-time blank) no longer
+ * simulates a real finalized row.
+ */
+const finalizedRowFromPatch = (
+  row: Record<string, unknown>,
+  patchInit: RequestInit,
+): Record<string, unknown> => {
+  const patch = JSON.parse(String(patchInit.body)) as Record<string, unknown>;
+  return {
+    ...row,
+    ipmg_finaljson: patch.ipmg_finaljson,
+    ipmg_workflowstatus: patch.ipmg_workflowstatus,
+    ipmg_idempotencykey: patch.ipmg_idempotencykey,
+  };
+};
 
 const evaluationFingerprintFor = (draftEncounter: InjectionEncounter): string => {
   const evaluation = evaluateInjectionForPowerApps({
@@ -212,6 +244,7 @@ describe("FinalizeInjection HTTP transaction", () => {
           ipmg_checkinid: source.checkInId,
           ipmg_patientid: source.patientId,
           ipmg_orderid: source.orderId,
+          ipmg_patientcontextjson: patientContextJson,
         }),
         {
           status: 200,
@@ -400,11 +433,19 @@ describe("Authoritative check-in/patient/order binding", () => {
     });
   });
 
+  const completeOrderContext = {
+    medicationKey: "sustenna",
+    dose: "156 mg",
+    orderingProvider: "Jane Doe, MD",
+    route: "IM",
+    intervalKey: "q4wk",
+  };
+
   it("finalize fails closed when the encounter disagrees with a configured order context", async () => {
     process.env.DATAVERSE_ORDER_CONTEXT_COLUMN = "ipmg_ordercontextjson";
     const draftEncounter = encounter();
     const row = draftRow(draftEncounter, {
-      ipmg_ordercontextjson: JSON.stringify({ medicationKey: "vivitrol" }),
+      ipmg_ordercontextjson: JSON.stringify({ ...completeOrderContext, medicationKey: "vivitrol" }),
     });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
     const request = httpRequest(
@@ -417,15 +458,83 @@ describe("Authoritative check-in/patient/order binding", () => {
     expect(response.jsonBody).toMatchObject({ error: { code: "order-context-mismatch" } });
   });
 
-  it("finalize succeeds when the encounter matches a configured order context", async () => {
+  it.each([
+    ["route", { ...completeOrderContext, route: "SubQ" }],
+    ["intervalKey", { ...completeOrderContext, intervalKey: "q8wk" }],
+  ])("finalize fails closed when the encounter's %s disagrees with a configured order context", async (_field, orderContext) => {
     process.env.DATAVERSE_ORDER_CONTEXT_COLUMN = "ipmg_ordercontextjson";
     const draftEncounter = encounter();
     const row = draftRow(draftEncounter, {
+      ipmg_ordercontextjson: JSON.stringify(orderContext),
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "order-context-mismatch" } });
+  });
+
+  it("finalize fails closed when a configured order context is blank rather than treating it as unconfigured", async () => {
+    process.env.DATAVERSE_ORDER_CONTEXT_COLUMN = "ipmg_ordercontextjson";
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, { ipmg_ordercontextjson: "" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "order-context-invalid" } });
+  });
+
+  it("finalize fails closed when a configured order context is malformed JSON", async () => {
+    process.env.DATAVERSE_ORDER_CONTEXT_COLUMN = "ipmg_ordercontextjson";
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, { ipmg_ordercontextjson: "{not valid json" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "order-context-invalid" } });
+  });
+
+  it("finalize fails closed when a configured order context is missing required attributes", async () => {
+    process.env.DATAVERSE_ORDER_CONTEXT_COLUMN = "ipmg_ordercontextjson";
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      // route and intervalKey omitted — a partially populated order.
       ipmg_ordercontextjson: JSON.stringify({
         medicationKey: "sustenna",
         dose: "156 mg",
         orderingProvider: "Jane Doe, MD",
       }),
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "order-context-invalid" } });
+  });
+
+  it("finalize succeeds when the encounter matches a configured order context", async () => {
+    process.env.DATAVERSE_ORDER_CONTEXT_COLUMN = "ipmg_ordercontextjson";
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_ordercontextjson: JSON.stringify(completeOrderContext),
     });
     const fetchMock = vi
       .fn()
@@ -439,6 +548,182 @@ describe("Authoritative check-in/patient/order binding", () => {
     const response = await finalizeHandler(request, {} as InvocationContext);
 
     expect(response.status).toBe(200);
+  });
+
+  it("evaluate applies the same order-context checks as finalize", async () => {
+    process.env.DATAVERSE_ORDER_CONTEXT_COLUMN = "ipmg_ordercontextjson";
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_ordercontextjson: JSON.stringify({ ...completeOrderContext, medicationKey: "vivitrol" }),
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = {
+      headers: new Headers({ "x-ms-client-principal": principalHeader }),
+      json: vi.fn().mockResolvedValue({ schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION, injectionId }),
+    } as unknown as HttpRequest;
+
+    const response = await evaluateHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "order-context-mismatch" } });
+  });
+
+  it.each([
+    ["dose", { ...completeOrderContext, dose: "234 mg" }],
+    ["orderingProvider", { ...completeOrderContext, orderingProvider: "Someone Else, MD" }],
+  ])("finalize fails closed when the encounter's %s disagrees with a configured order context", async (_field, orderContext) => {
+    process.env.DATAVERSE_ORDER_CONTEXT_COLUMN = "ipmg_ordercontextjson";
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, { ipmg_ordercontextjson: JSON.stringify(orderContext) });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "order-context-mismatch" } });
+  });
+
+  it("finalize fails closed when the Draft envelope's actionId is missing", async () => {
+    const draftEncounter = encounter();
+    const badDraftJson = JSON.stringify({
+      schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
+      source: { ...storedSource, actionId: undefined },
+      encounterJson: JSON.stringify(draftEncounter),
+    });
+    const row = draftRow(draftEncounter, { ipmg_draftjson: badDraftJson });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "stored-draft-invalid" } });
+  });
+
+  it("finalize fails closed when the Draft envelope's actionId disagrees with the requested injectionId", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_draftjson: draftEnvelopeJson(draftEncounter, { actionId: "11111111-1111-4111-8111-111111111111" }),
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "stored-draft-invalid" } });
+  });
+});
+
+describe("Protected patient-context", () => {
+  it("finalize fails closed when the protected patient-context snapshot is malformed JSON", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, { ipmg_patientcontextjson: "{not valid json" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "patient-context-invalid" } });
+  });
+
+  it.each([
+    ["missing mrn", { name: "Test, Patient", dob: "1980-05-12" }],
+    ["blank name", { name: "   ", dob: "1980-05-12", mrn: "MRN-500" }],
+    ["invalid dob", { name: "Test, Patient", dob: "not-a-date", mrn: "MRN-500" }],
+    ["empty object", {}],
+  ])("finalize fails closed when the protected patient-context snapshot has %s", async (_label, badContext) => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, { ipmg_patientcontextjson: JSON.stringify(badContext) });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = httpRequest(
+      finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) }),
+    );
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "patient-context-invalid" } });
+  });
+
+  it("evaluate applies the same protected patient-context validation as finalize", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, { ipmg_patientcontextjson: "" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));
+    const request = {
+      headers: new Headers({ "x-ms-client-principal": principalHeader }),
+      json: vi.fn().mockResolvedValue({ schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION, injectionId }),
+    } as unknown as HttpRequest;
+
+    const response = await evaluateHandler(request, {} as InvocationContext);
+
+    // An empty patientContextJson never reaches the API layer in practice
+    // (dataverse.ts's load() already rejects a blank required column as
+    // invalid-record), so this surfaces as a Dataverse-layer failure —
+    // still a fail-closed rejection, never a silent fallback to Draft
+    // JSON's own patient identity.
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "invalid-record" } });
+  });
+
+  it("final documents carry the protected patient-context identity, never Draft JSON's own patient fields", async () => {
+    const draftEncounter = encounter();
+    const overriddenPatientContext = { name: "Protected, Patient", dob: "1975-11-03", mrn: "MRN-PROTECTED" };
+    const row = draftRow(draftEncounter, {
+      ipmg_patientcontextjson: JSON.stringify(overriddenPatientContext),
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    // The evaluation fingerprint binds to the protected patient identity
+    // too, so a caller's fingerprint must be computed against the same
+    // overridden source/encounter finalize will authoritatively re-evaluate
+    // — exactly as a real Evaluate call (which applies the same protected
+    // patient-context override) would have produced.
+    const protectedFingerprint = (() => {
+      const evaluation = evaluateInjectionForPowerApps({
+        schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
+        source: { ...source, patientRecordNumber: overriddenPatientContext.mrn },
+        encounter: {
+          ...draftEncounter,
+          patient: { name: overriddenPatientContext.name, dob: overriddenPatientContext.dob },
+        },
+        facilityDate: "2026-08-30",
+      });
+      if (!evaluation.ok) throw new Error(evaluation.error.message);
+      return evaluation.value.evaluationFingerprint;
+    })();
+    const request = httpRequest(finalizeRequestBody({ evaluationFingerprint: protectedFingerprint }));
+
+    const response = await finalizeHandler(request, {} as InvocationContext);
+
+    expect(response.status).toBe(200);
+    const body = response.jsonBody as Record<string, any>;
+    // The public source echoes the protected MRN, not Draft JSON's "MRN-500".
+    expect(body.source.patientRecordNumber).toBe("MRN-PROTECTED");
+    expect(body.avs.html).toContain("MRN-PROTECTED");
+    expect(body.avs.html).not.toContain("MRN-500");
+    expect(body.avs.html).toContain("Protected, Patient");
+    expect(body.avs.html).not.toContain("Test, Patient");
+
+    const [, patchInit] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+    const stored = JSON.parse(JSON.parse(String(patchInit.body)).ipmg_finaljson);
+    expect(stored.finalEncounter.patient).toEqual({
+      name: "Protected, Patient",
+      dob: "1975-11-03",
+    });
   });
 });
 
@@ -458,8 +743,7 @@ describe("Request-bound idempotency", () => {
     expect(first.headers?.["Idempotency-Replayed"]).toBe("false");
 
     const [, patchInit] = fetchMock1.mock.calls[1] as unknown as [string, RequestInit];
-    const storedFinalJson = JSON.parse(String(patchInit.body)).ipmg_finaljson as string;
-    const finalRow = { ...row, ipmg_finaljson: storedFinalJson, ipmg_workflowstatus: 100000001 };
+    const finalRow = finalizedRowFromPatch(row, patchInit);
 
     const fetchMock2 = vi.fn().mockResolvedValueOnce(responseOf(finalRow));
     vi.stubGlobal("fetch", fetchMock2);
@@ -496,8 +780,7 @@ describe("Request-bound idempotency", () => {
     vi.stubGlobal("fetch", winnerFetch);
     await finalizeHandler(httpRequest(body), {} as InvocationContext);
     const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
-    const storedFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
-    const finalRow = { ...row, ipmg_finaljson: storedFinalJson, ipmg_workflowstatus: 100000001 };
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
 
     const raceFetch = vi
       .fn()
@@ -524,8 +807,7 @@ describe("Request-bound idempotency", () => {
     const originalBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
     await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
     const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
-    const storedFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
-    const finalRow = { ...row, ipmg_finaljson: storedFinalJson, ipmg_workflowstatus: 100000001 };
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
 
     // Same key, but a different (still well-formed) sourceRecordVersion.
@@ -547,8 +829,7 @@ describe("Request-bound idempotency", () => {
     const originalBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
     await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
     const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
-    const storedFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
-    const finalRow = { ...row, ipmg_finaljson: storedFinalJson, ipmg_workflowstatus: 100000001 };
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
 
     const differentFingerprintBody = { ...originalBody, evaluationFingerprint: "0000000000000000" };
@@ -569,8 +850,7 @@ describe("Request-bound idempotency", () => {
     const originalBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
     await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
     const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
-    const storedFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
-    const finalRow = { ...row, ipmg_finaljson: storedFinalJson, ipmg_workflowstatus: 100000001 };
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
 
     const differentAckBody = {
@@ -581,6 +861,106 @@ describe("Request-bound idempotency", () => {
 
     expect(response.status).toBe(409);
     expect(response.jsonBody).toMatchObject({ error: { code: "idempotency-conflict" } });
+  });
+
+  it("returns a conflict when the same key is reused with only manualReason changed (manualSource unchanged)", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const originalBody = finalizeRequestBody({
+      evaluationFingerprint: evaluationFingerprintFor(draftEncounter),
+      confirmation: {
+        confirmed: true,
+        acknowledgementKind: "manual",
+        manualReason: "Original reason",
+        manualSource: "Original source",
+      },
+    });
+    await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
+
+    const reasonOnlyBody = {
+      ...originalBody,
+      confirmation: { ...originalBody.confirmation, manualReason: "A different reason only" },
+    };
+    const response = await finalizeHandler(httpRequest(reasonOnlyBody), {} as InvocationContext);
+
+    expect(response.status).toBe(409);
+    expect(response.jsonBody).toMatchObject({ error: { code: "idempotency-conflict" } });
+  });
+
+  it("returns a conflict when the same key is reused with only manualSource changed (manualReason unchanged)", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const originalBody = finalizeRequestBody({
+      evaluationFingerprint: evaluationFingerprintFor(draftEncounter),
+      confirmation: {
+        confirmed: true,
+        acknowledgementKind: "manual",
+        manualReason: "Original reason",
+        manualSource: "Original source",
+      },
+    });
+    await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
+
+    const sourceOnlyBody = {
+      ...originalBody,
+      confirmation: { ...originalBody.confirmation, manualSource: "A different source only" },
+    };
+    const response = await finalizeHandler(httpRequest(sourceOnlyBody), {} as InvocationContext);
+
+    expect(response.status).toBe(409);
+    expect(response.jsonBody).toMatchObject({ error: { code: "idempotency-conflict" } });
+  });
+
+  it("replays successfully when only manualReason/manualSource whitespace differs (fingerprint normalizes via trim)", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const originalBody = finalizeRequestBody({
+      evaluationFingerprint: evaluationFingerprintFor(draftEncounter),
+      confirmation: {
+        confirmed: true,
+        acknowledgementKind: "manual",
+        manualReason: "Original reason",
+        manualSource: "Original source",
+      },
+    });
+    await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
+
+    const whitespacePaddedBody = {
+      ...originalBody,
+      confirmation: {
+        ...originalBody.confirmation,
+        manualReason: "  Original reason  ",
+        manualSource: "  Original source  ",
+      },
+    };
+    const response = await finalizeHandler(httpRequest(whitespacePaddedBody), {} as InvocationContext);
+
+    expect(response.status).toBe(200);
+    expect(response.headers?.["Idempotency-Replayed"]).toBe("true");
   });
 
   it("returns a conflict when the same key is reused by a different authenticated principal", async () => {
@@ -594,12 +974,65 @@ describe("Request-bound idempotency", () => {
     const originalBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
     await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
     const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
-    const storedFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
-    const finalRow = { ...row, ipmg_finaljson: storedFinalJson, ipmg_workflowstatus: 100000001 };
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
 
     const response = await finalizeHandler(
       httpRequest(originalBody, { "x-ms-client-principal": otherPrincipalHeader }),
+      {} as InvocationContext,
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.jsonBody).toMatchObject({ error: { code: "idempotency-conflict" } });
+  });
+
+  it("replays successfully when the same subject ID reuses the key under a different display name", async () => {
+    // The request fingerprint binds on finalizedByUserId (the immutable
+    // Entra subject), not on displayName, so a later Entra profile-name
+    // change must not itself break a legitimate replay.
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const originalBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+    await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
+
+    const renamedPrincipalHeader = principalHeaderFor("entra-object-id", "Renamed MA User");
+    const response = await finalizeHandler(
+      httpRequest(originalBody, { "x-ms-client-principal": renamedPrincipalHeader }),
+      {} as InvocationContext,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers?.["Idempotency-Replayed"]).toBe("true");
+  });
+
+  it("returns a conflict when a different subject ID reuses the key under the same display name", async () => {
+    // Two distinct Entra identities can share a display name; the
+    // fingerprint must still bind on the immutable subject ID, not the
+    // human-readable name, so this must conflict rather than replay.
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const originalBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+    await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
+
+    const sameNameDifferentSubjectHeader = principalHeaderFor("entra-object-id-imposter", "MA User");
+    const response = await finalizeHandler(
+      httpRequest(originalBody, { "x-ms-client-principal": sameNameDifferentSubjectHeader }),
       {} as InvocationContext,
     );
 
@@ -618,8 +1051,7 @@ describe("Request-bound idempotency", () => {
     const originalBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
     await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
     const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
-    const storedFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
-    const finalRow = { ...row, ipmg_finaljson: storedFinalJson, ipmg_workflowstatus: 100000001 };
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
 
     const response = await finalizeHandler(
@@ -663,7 +1095,7 @@ describe("Stored-final envelope validation on retrieval and replay", () => {
     expect(response.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
   });
 
-  it("does not treat a reopened row (status back to draft with stale Final JSON) as finalized", async () => {
+  it("does not treat a reopened row (status back to draft with stale Final JSON) as finalized, and does not overwrite it", async () => {
     const draftEncounter = encounter();
     const winnerFetch = vi
       .fn()
@@ -675,25 +1107,73 @@ describe("Stored-final envelope validation on retrieval and replay", () => {
     const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
     const staleFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
 
-    // Row was reopened back to draft status, but the stale Final JSON was
-    // never cleared. Status, not the mere presence of Final JSON, decides.
+    // Row was reopened back to draft status directly (e.g. a status-column
+    // edit), not through an explicit, audited reset/new-action process, and
+    // the stale Final JSON was never cleared. A finalized action must only
+    // be reset through that separate process — never by finalizing over a
+    // record that still carries residual final artifacts.
     const reopenedRow = draftRow(draftEncounter, {
       ipmg_finaljson: staleFinalJson,
       ipmg_workflowstatus: 100000000,
     });
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(responseOf(reopenedRow, 'W/"42"'))
-        .mockResolvedValueOnce(new Response(null, { status: 204 })),
-    );
+    const reopenedFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(reopenedRow, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", reopenedFetch);
 
     const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
 
-    // Treated as a fresh draft finalize, not a replay of the stale content.
-    expect(response.status).toBe(200);
-    expect(response.headers?.["Idempotency-Replayed"]).toBe("false");
+    expect(response.status).toBe(409);
+    expect(response.jsonBody).toMatchObject({ error: { code: "stale-final-artifact" } });
+    // No write occurs after rejection — only the load happened, never a PATCH.
+    expect(reopenedFetch).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when a draft-status row carries only a stale idempotency key (no Final JSON)", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_workflowstatus: 100000000,
+      ipmg_finaljson: "",
+      ipmg_idempotencykey: otherIdempotencyKey,
+    });
+    const fetchMock = vi.fn().mockResolvedValue(responseOf(row, 'W/"42"'));
+    vi.stubGlobal("fetch", fetchMock);
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(409);
+    expect(response.jsonBody).toMatchObject({ error: { code: "stale-final-artifact" } });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when a non-draft, non-final (voided) row retains final data", async () => {
+    const draftEncounter = encounter();
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(draftRow(draftEncounter), 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+    await finalizeHandler(httpRequest(body), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const staleFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
+
+    // Neither the configured draft value (100000000) nor the configured
+    // final value (100000001) — a distinct "voided" status.
+    const voidedRow = draftRow(draftEncounter, {
+      ipmg_finaljson: staleFinalJson,
+      ipmg_workflowstatus: 100000002,
+    });
+    const voidedFetch = vi.fn().mockResolvedValue(responseOf(voidedRow, 'W/"42"'));
+    vi.stubGlobal("fetch", voidedFetch);
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(409);
+    expect(response.jsonBody).toMatchObject({ error: { code: "invalid-status" } });
+    expect(voidedFetch).toHaveBeenCalledOnce();
   });
 
   it("rejects retrieval of a stored final record whose identity does not match the requested injection", async () => {
@@ -715,6 +1195,160 @@ describe("Stored-final envelope validation on retrieval and replay", () => {
 
     expect(response.status).toBe(503);
     expect(response.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
+  });
+
+  it.each([
+    ["patientId", "checkInId"],
+    ["orderId", "checkInId"],
+  ])(
+    "rejects a finalize replay whose stored source.%s disagrees with the protected record",
+    async (field) => {
+      const draftEncounter = encounter();
+      const winnerFetch = vi
+        .fn()
+        .mockResolvedValueOnce(responseOf(draftRow(draftEncounter), 'W/"42"'))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      vi.stubGlobal("fetch", winnerFetch);
+      const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+      await finalizeHandler(httpRequest(body), {} as InvocationContext);
+      const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+      const stored = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
+      const envelope = JSON.parse(stored);
+      const tampered = JSON.stringify({
+        ...envelope,
+        source: { ...envelope.source, [field]: "tampered-value" },
+      });
+      const finalRow = draftRow(draftEncounter, {
+        ipmg_finaljson: tampered,
+        ipmg_workflowstatus: 100000001,
+        ipmg_idempotencykey: envelope.idempotencyKey,
+      });
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
+
+      const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+      expect(response.status).toBe(503);
+      expect(response.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
+    },
+  );
+
+  it("rejects a finalize replay whose stored idempotencyKey disagrees with the protected Dataverse idempotency-key column", async () => {
+    const draftEncounter = encounter();
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(draftRow(draftEncounter), 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+    await finalizeHandler(httpRequest(body), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const stored = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
+    // The envelope itself is untouched/valid; only the protected Dataverse
+    // idempotency-key column has drifted from what the envelope carries —
+    // e.g. a corrupted or independently edited column.
+    const finalRow = draftRow(draftEncounter, {
+      ipmg_finaljson: stored,
+      ipmg_workflowstatus: 100000001,
+      ipmg_idempotencykey: "a-completely-different-persisted-key",
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(503);
+    expect(response.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
+  });
+
+  it("replay tolerates an advanced row ETag — replay never depends on the current ETag matching", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+    await finalizeHandler(httpRequest(body), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
+    // Dataverse bumps the row ETag on every PATCH; a replay read sees a
+    // different (advanced) ETag than what was used to finalize, and that
+    // must not affect replay at all.
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow, 'W/"43"')));
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(200);
+    expect(response.headers?.["Idempotency-Replayed"]).toBe("true");
+  });
+});
+
+describe("Post-412 race where the winner used different content", () => {
+  it("returns a conflict, not a silent success, when the 412 race winner used a different idempotency key", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    // A different caller wins the race using a different Idempotency-Key.
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    await finalizeHandler(httpRequest(body, { "idempotency-key": otherIdempotencyKey }), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
+
+    const raceFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"')) // initial load: still looks like draft
+      .mockResolvedValueOnce(new Response(null, { status: 412 })) // patch loses the race
+      .mockResolvedValueOnce(responseOf(finalRow)); // retry load: final, but under the OTHER caller's key
+    vi.stubGlobal("fetch", raceFetch);
+
+    // This caller used its own (different) idempotency key throughout.
+    const retry = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(retry.status).toBe(409);
+    expect(retry.jsonBody).toMatchObject({ error: { code: "idempotency-conflict" } });
+  });
+
+  it("returns a conflict, not a silent success, when the 412 race winner used a different evaluation fingerprint under the same key", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
+    const originalBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    // The winner reused this exact idempotency key but for a different
+    // fingerprint (e.g. a materially different confirmation).
+    const winnerBody = {
+      ...originalBody,
+      confirmation: {
+        confirmed: true,
+        acknowledgementKind: "manual",
+        manualReason: "Different manual reason entirely",
+        manualSource: "Different manual source entirely",
+      },
+    };
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    await finalizeHandler(httpRequest(winnerBody), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const finalRow = finalizedRowFromPatch(row, winnerPatchInit);
+
+    const raceFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 412 }))
+      .mockResolvedValueOnce(responseOf(finalRow));
+    vi.stubGlobal("fetch", raceFetch);
+
+    const retry = await finalizeHandler(httpRequest(originalBody), {} as InvocationContext);
+
+    expect(retry.status).toBe(409);
+    expect(retry.jsonBody).toMatchObject({ error: { code: "idempotency-conflict" } });
   });
 });
 
@@ -772,5 +1406,115 @@ describe("Tebra acknowledgement provenance", () => {
       boardAcknowledgedBy: "checkin-board-integration",
       boardCheckInId: source.checkInId,
     });
+  });
+
+  const withAckColumnsConfigured = () => {
+    process.env.DATAVERSE_ACK_SOURCE_COLUMN = "ipmg_acksource";
+    process.env.DATAVERSE_ACK_AT_COLUMN = "ipmg_ackatutc";
+    process.env.DATAVERSE_ACK_BY_COLUMN = "ipmg_ackby";
+    process.env.DATAVERSE_ACK_CHECKIN_ID_COLUMN = "ipmg_ackcheckinid";
+  };
+
+  it("fails closed when the board acknowledgement provenance is only partially populated on the row", async () => {
+    withAckColumnsConfigured();
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_acksource: "tebra-sync",
+      // ipmg_ackatutc intentionally omitted — a partial/corrupt row.
+      ipmg_ackby: "checkin-board-integration",
+      ipmg_ackcheckinid: source.checkInId,
+    });
+    const fetchMock = vi.fn().mockResolvedValue(responseOf(row, 'W/"42"'));
+    vi.stubGlobal("fetch", fetchMock);
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "acknowledgement-provenance-invalid" } });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when the board acknowledgement timestamp is not a valid UTC instant", async () => {
+    withAckColumnsConfigured();
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_acksource: "tebra-sync",
+      ipmg_ackatutc: "2026-08-30T12:00:00-07:00",
+      ipmg_ackby: "checkin-board-integration",
+      ipmg_ackcheckinid: source.checkInId,
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row, 'W/"42"')));
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "acknowledgement-provenance-invalid" } });
+  });
+
+  it("fails closed when the board acknowledgement timestamp is in the future", async () => {
+    withAckColumnsConfigured();
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_acksource: "tebra-sync",
+      ipmg_ackatutc: "2026-08-30T20:05:00.000Z",
+      ipmg_ackby: "checkin-board-integration",
+      ipmg_ackcheckinid: source.checkInId,
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row, 'W/"42"')));
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "acknowledgement-provenance-invalid" } });
+  });
+
+  it("fails closed when the board acknowledgement check-in does not match the protected record", async () => {
+    withAckColumnsConfigured();
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_acksource: "tebra-sync",
+      ipmg_ackatutc: "2026-08-30T19:55:00.000Z",
+      ipmg_ackby: "checkin-board-integration",
+      ipmg_ackcheckinid: "a-different-check-in-entirely",
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row, 'W/"42"')));
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "acknowledgement-provenance-invalid" } });
+  });
+
+  it("does not validate board provenance at all for a manual acknowledgement, even if the row's provenance is broken", async () => {
+    withAckColumnsConfigured();
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_acksource: "tebra-sync",
+      // Broken/partial provenance that would fail closed on the tebra path.
+      ipmg_ackby: "checkin-board-integration",
+      ipmg_ackcheckinid: source.checkInId,
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(row, 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const body = finalizeRequestBody({
+      evaluationFingerprint: evaluationFingerprintFor(draftEncounter),
+      confirmation: {
+        confirmed: true,
+        acknowledgementKind: "manual",
+        manualReason: "Tebra was already acknowledged before migration",
+        manualSource: "Verified against signed encounter note",
+      },
+    });
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(200);
   });
 });

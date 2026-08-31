@@ -18,14 +18,22 @@ export interface DataverseClinicalAction {
   status: string | number;
   idempotencyKey: string;
   tebraAcknowledged: boolean;
-  /** Board/integration-owned, Canvas-read-only identity. Authoritative over Draft JSON. */
+  /** Board/integration-owned, Canvas-read-only identity. Authoritative over Draft JSON. Trimmed; whitespace-only is treated as missing. */
   checkInId: string;
   patientId: string;
   orderId: string;
   /** Raw JSON snapshot of the linked order, when the tenant configures it. "" when not configured. */
   orderContextJson: string;
-  /** Real Tebra acknowledgement provenance from the board, when the tenant configures all four columns. */
+  /** Raw JSON snapshot of the protected patient identity (name/DOB/MRN). The column is required, so this is always populated on a valid row. */
+  patientContextJson: string;
+  /** Real Tebra acknowledgement provenance from the board, when the tenant configures all four columns and the row carries all four values. */
   boardAcknowledgment: DataverseBoardAcknowledgment | null;
+  /**
+   * True when the four ack-provenance columns are configured but the row
+   * carries only some (1-3) of the four values — a partial/corrupt board
+   * acknowledgement that must never be silently treated as "not provided".
+   */
+  boardAcknowledgmentPartial: boolean;
 }
 
 export class DataverseError extends Error {
@@ -103,6 +111,7 @@ export class DataverseClinicalActionStore {
       this.config.checkInIdColumn,
       this.config.patientIdColumn,
       this.config.orderIdColumn,
+      this.config.patientContextColumn,
       ...optionalColumns,
     ].join(",");
     const response = await fetch(
@@ -127,37 +136,60 @@ export class DataverseClinicalActionStore {
     const tebraAcknowledged = readBoolean(
       row[this.config.tebraAcknowledgedColumn],
     );
-    const checkInId = readText(row[this.config.checkInIdColumn]);
-    const patientId = readText(row[this.config.patientIdColumn]);
-    const orderId = readText(row[this.config.orderIdColumn]);
+    // Protected identifiers are trimmed before any comparison or presence
+    // check — a whitespace-only value in Dataverse must fail closed exactly
+    // like an empty one, never compare as a "matching" non-empty string.
+    const checkInId = readText(row[this.config.checkInIdColumn]).trim();
+    const patientId = readText(row[this.config.patientIdColumn]).trim();
+    const orderId = readText(row[this.config.orderIdColumn]).trim();
+    const patientContextJson = readText(row[this.config.patientContextColumn]);
     if (
       !etag ||
       !draftJson ||
       tebraAcknowledged === null ||
       !checkInId ||
       !patientId ||
-      !orderId
+      !orderId ||
+      !patientContextJson.trim()
     ) {
       throw new DataverseError(
         "invalid-record",
-        "The clinical action is missing its row version, draft JSON, check-in acknowledgement state, or protected check-in/patient/order identity.",
+        "The clinical action is missing its row version, draft JSON, check-in acknowledgement state, protected check-in/patient/order identity, or protected patient-context snapshot.",
         422,
       );
     }
+    const ackColumnsConfigured = Boolean(
+      this.config.acknowledgmentSourceColumn &&
+        this.config.acknowledgedAtColumn &&
+        this.config.acknowledgedByColumn &&
+        this.config.acknowledgedCheckInIdColumn,
+    );
     const boardSource = this.config.acknowledgmentSourceColumn
-      ? readText(row[this.config.acknowledgmentSourceColumn])
+      ? readText(row[this.config.acknowledgmentSourceColumn]).trim()
       : "";
     const boardAcknowledgedAtUtc = this.config.acknowledgedAtColumn
-      ? readText(row[this.config.acknowledgedAtColumn])
+      ? readText(row[this.config.acknowledgedAtColumn]).trim()
       : "";
     const boardAcknowledgedBy = this.config.acknowledgedByColumn
-      ? readText(row[this.config.acknowledgedByColumn])
+      ? readText(row[this.config.acknowledgedByColumn]).trim()
       : "";
     const boardCheckInId = this.config.acknowledgedCheckInIdColumn
-      ? readText(row[this.config.acknowledgedCheckInIdColumn])
+      ? readText(row[this.config.acknowledgedCheckInIdColumn]).trim()
       : "";
+    const boardValuesPresentCount = [
+      boardSource,
+      boardAcknowledgedAtUtc,
+      boardAcknowledgedBy,
+      boardCheckInId,
+    ].filter(Boolean).length;
+    // A partial set (1-3 of 4) is a corrupt/incomplete board acknowledgement
+    // — distinct from "columns not configured" (0 of 4, a documented
+    // acceptance-gate limitation) and must never be silently treated the
+    // same as "not provided" by the caller.
+    const boardAcknowledgmentPartial =
+      ackColumnsConfigured && boardValuesPresentCount > 0 && boardValuesPresentCount < 4;
     const boardAcknowledgment: DataverseBoardAcknowledgment | null =
-      boardSource && boardAcknowledgedAtUtc && boardAcknowledgedBy && boardCheckInId
+      ackColumnsConfigured && boardValuesPresentCount === 4
         ? {
             source: boardSource,
             acknowledgedAtUtc: boardAcknowledgedAtUtc,
@@ -179,7 +211,9 @@ export class DataverseClinicalActionStore {
       orderContextJson: this.config.orderContextColumn
         ? readText(row[this.config.orderContextColumn])
         : "",
+      patientContextJson,
       boardAcknowledgment,
+      boardAcknowledgmentPartial,
     };
   }
 
@@ -232,5 +266,19 @@ export class DataverseClinicalActionStore {
 
   isDraft(record: DataverseClinicalAction): boolean {
     return String(record.status) === String(this.config.draftStatusValue);
+  }
+
+  /**
+   * True when a record that is not currently final (draft, voided, or any
+   * other non-final status) still carries a residual Final JSON payload or a
+   * persisted idempotency key from a previous finalization. This is the
+   * signature of a record that was finalized and then reset back to draft
+   * status directly (e.g. by a status-column edit) rather than through an
+   * explicit, audited reset/new-action process. Finalizing over it would
+   * silently overwrite the prior finalized artifact, so callers must reject
+   * such a record instead of finalizing it.
+   */
+  hasResidualFinalArtifacts(record: DataverseClinicalAction): boolean {
+    return Boolean(record.finalJson.trim()) || Boolean(record.idempotencyKey.trim());
   }
 }

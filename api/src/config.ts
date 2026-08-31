@@ -16,13 +16,25 @@ export interface DataverseConfiguration {
   checkInIdColumn: string;
   patientIdColumn: string;
   orderIdColumn: string;
-  /** Optional order snapshot (medicationKey/dose/orderingProvider) checked against the encounter when configured. */
+  /**
+   * Board/integration-owned protected patient-identity snapshot column
+   * (name/DOB/MRN as JSON). Required: the clinical note and AVS must never
+   * let Canvas-supplied Draft JSON determine final-document patient
+   * demographics, so a tenant that has not wired this column cannot
+   * evaluate or finalize at all — see api/README.md "Authoritative patient
+   * context" for the mandatory pre-tenant-integration blocker this
+   * documents.
+   */
+  patientContextColumn: string;
+  /** Optional order snapshot (medicationKey/dose/orderingProvider/route/intervalKey) checked against the encounter when configured. */
   orderContextColumn?: string;
   /**
    * Optional board-owned Tebra acknowledgement provenance columns. When all
    * four are configured and populated on a row, finalization records the
    * real acknowledgement source/time/identity/check-in instead of only the
-   * finalizer's own attestation.
+   * finalizer's own attestation. readApiConfiguration requires these to be
+   * either all configured or all absent — a partially configured set is a
+   * deployment error, not a documented limitation.
    */
   acknowledgmentSourceColumn?: string;
   acknowledgedAtColumn?: string;
@@ -62,6 +74,41 @@ const safeLogicalName = (name: string, value: string): string => {
 const optionalLogicalName = (name: string): string | undefined => {
   const value = env(name);
   return value ? safeLogicalName(name, value) : undefined;
+};
+
+const ACK_PROVENANCE_ENV_NAMES = [
+  "DATAVERSE_ACK_SOURCE_COLUMN",
+  "DATAVERSE_ACK_AT_COLUMN",
+  "DATAVERSE_ACK_BY_COLUMN",
+  "DATAVERSE_ACK_CHECKIN_ID_COLUMN",
+] as const;
+
+/**
+ * The four Tebra acknowledgement-provenance columns are meaningful only as
+ * a set: finalization either has a complete board-sourced acknowledgement
+ * (source, timestamp, identity, check-in) or none at all. A tenant that has
+ * wired only some of the four would silently produce a partial/misleading
+ * provenance record, so a partial configuration is rejected at startup
+ * rather than tolerated as a documented limitation.
+ */
+const ackProvenanceColumns = (): {
+  acknowledgmentSourceColumn?: string;
+  acknowledgedAtColumn?: string;
+  acknowledgedByColumn?: string;
+  acknowledgedCheckInIdColumn?: string;
+} => {
+  const configuredCount = ACK_PROVENANCE_ENV_NAMES.filter((name) => env(name)).length;
+  if (configuredCount !== 0 && configuredCount !== ACK_PROVENANCE_ENV_NAMES.length) {
+    throw new Error(
+      `${ACK_PROVENANCE_ENV_NAMES.join(", ")} must be either all configured or all absent.`,
+    );
+  }
+  return {
+    acknowledgmentSourceColumn: optionalLogicalName("DATAVERSE_ACK_SOURCE_COLUMN"),
+    acknowledgedAtColumn: optionalLogicalName("DATAVERSE_ACK_AT_COLUMN"),
+    acknowledgedByColumn: optionalLogicalName("DATAVERSE_ACK_BY_COLUMN"),
+    acknowledgedCheckInIdColumn: optionalLogicalName("DATAVERSE_ACK_CHECKIN_ID_COLUMN"),
+  };
 };
 
 const dataverseStatusValue = (name: string): string | number => {
@@ -153,11 +200,12 @@ export const readApiConfiguration = (
       "DATAVERSE_ORDER_ID_COLUMN",
       required("DATAVERSE_ORDER_ID_COLUMN"),
     ),
+    patientContextColumn: safeLogicalName(
+      "DATAVERSE_PATIENT_CONTEXT_COLUMN",
+      required("DATAVERSE_PATIENT_CONTEXT_COLUMN"),
+    ),
     orderContextColumn: optionalLogicalName("DATAVERSE_ORDER_CONTEXT_COLUMN"),
-    acknowledgmentSourceColumn: optionalLogicalName("DATAVERSE_ACK_SOURCE_COLUMN"),
-    acknowledgedAtColumn: optionalLogicalName("DATAVERSE_ACK_AT_COLUMN"),
-    acknowledgedByColumn: optionalLogicalName("DATAVERSE_ACK_BY_COLUMN"),
-    acknowledgedCheckInIdColumn: optionalLogicalName("DATAVERSE_ACK_CHECKIN_ID_COLUMN"),
+    ...ackProvenanceColumns(),
     draftStatusValue: dataverseStatusValue("DATAVERSE_DRAFT_STATUS_VALUE"),
     finalStatusValue: dataverseStatusValue("DATAVERSE_FINAL_STATUS_VALUE"),
   };

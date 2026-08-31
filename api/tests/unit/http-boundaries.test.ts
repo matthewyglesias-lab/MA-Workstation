@@ -126,6 +126,32 @@ describe("Power Apps HTTP request schemas", () => {
     ).toBe(false);
   });
 
+  it.each([["actionId"], ["checkInId"], ["patientId"], ["orderId"]])(
+    "trims %s and rejects a whitespace-only value",
+    (field) => {
+      const whitespaceSource = { ...validSource, [field]: "   " };
+      const result = documentPreviewHttpBodySchema.safeParse({
+        schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
+        source: whitespaceSource,
+        encounterJson: JSON.stringify(validEncounter),
+      });
+      expect(result.success).toBe(false);
+
+      const paddedSource = { ...validSource, [field]: `  ${(validSource as Record<string, string>)[field]}  ` };
+      const trimmed = documentPreviewHttpBodySchema.safeParse({
+        schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
+        source: paddedSource,
+        encounterJson: JSON.stringify(validEncounter),
+      });
+      expect(trimmed.success).toBe(true);
+      if (trimmed.success) {
+        expect((trimmed.data.source as Record<string, string>)[field]).toBe(
+          (validSource as Record<string, string>)[field],
+        );
+      }
+    },
+  );
+
   it("splits document vs. AVS preview schemas so locale requiredness matches Swagger exactly", () => {
     const base = {
       schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
@@ -194,27 +220,95 @@ describe("Power Apps HTTP request schemas", () => {
     ).toBe(false);
   });
 
-  it("checks an optional order-context snapshot but never invents fields not present", () => {
-    expect(orderContextSchema.safeParse({}).success).toBe(true);
+  const validOrderContext = {
+    medicationKey: "sustenna",
+    dose: "156 mg",
+    orderingProvider: "Dr. Adeniji",
+    route: "IM",
+    intervalKey: "q4wk",
+  };
+
+  it("requires a complete, non-blank order-context snapshot and never invents fields not present", () => {
+    expect(orderContextSchema.safeParse({}).success).toBe(false);
+    expect(orderContextSchema.safeParse(validOrderContext).success).toBe(true);
     expect(
       orderContextSchema.safeParse({ medicationKey: "sustenna", dose: "156 mg" }).success,
-    ).toBe(true);
-    expect(
-      orderContextSchema.safeParse({ unexpected: "must not be silently accepted" }).success,
     ).toBe(false);
+    expect(
+      orderContextSchema.safeParse({
+        ...validOrderContext,
+        unexpected: "must not be silently accepted",
+      }).success,
+    ).toBe(false);
+    expect(orderContextSchema.safeParse({ ...validOrderContext, dose: "   " }).success).toBe(
+      false,
+    );
+    expect(
+      orderContextSchema.safeParse({ ...validOrderContext, medicationKey: "" }).success,
+    ).toBe(false);
+    expect(
+      orderContextSchema.safeParse({ ...validOrderContext, intervalKey: "" }).success,
+    ).toBe(false);
+    expect(orderContextSchema.safeParse({ ...validOrderContext, route: "" }).success).toBe(
+      false,
+    );
   });
 
+  const validEvaluation = {
+    workflow: "injection",
+    readiness: "ready",
+    stops: [],
+    warnings: [],
+    recommendations: [],
+    calculatedDates: {},
+    output: {
+      timing: {
+        state: "idle",
+        daysSincePrior: null,
+        earliestDay: null,
+        latestDay: null,
+        late: false,
+        message: "",
+      },
+      lateDoseWarning: false,
+      allowedRoutes: [],
+      allowedSites: [],
+      recommendedSite: "",
+      repeatsPreviousSite: false,
+      administrationDocumented: true,
+      canFinalize: true,
+      recordStatus: "handoff-ready",
+      initiationProtocol: "",
+      phase: "maintenance",
+      requiredVerifications: [],
+      requirements: [],
+      guidance: [],
+      needle: {
+        resolution: { unresolved: false },
+        notes: [],
+        weightKg: null,
+      },
+      expectedNextDoseDate: "",
+    },
+  };
+
   it("validates a complete stored-final envelope and rejects an incomplete one", () => {
+    // source.actionId must equal injectionId in real production data
+    // (resolveProtectedSource always sets actionId: injectionId), so the
+    // fixture uses a self-consistent pair rather than the file's generic
+    // validSource, which intentionally uses a distinct actionId for
+    // source-shape-only tests elsewhere in this file.
+    const finalSource = { ...validSource, actionId: "9d7f434e-7f47-4c45-bd8e-c88d9a8cfbdd" };
     const complete = {
       schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
-      source: validSource,
+      source: finalSource,
       injectionId: "9d7f434e-7f47-4c45-bd8e-c88d9a8cfbdd",
       status: "finalized",
       disposition: "administered",
       idempotencyKey: "f4d3700d-ec30-4f1f-87e1-9dd6b1bbce31",
       requestFingerprint: "a".repeat(64),
-      finalEncounter: validEncounter,
-      evaluation: { workflow: "injection" },
+      finalEncounter: { ...validEncounter, disposition: { kind: "administered" } },
+      evaluation: validEvaluation,
       evaluationFingerprint: "0123456789abcdef",
       finalizedAt: "2026-08-30T20:00:00.000Z",
       attestation: {
@@ -247,8 +341,12 @@ describe("Power Apps HTTP request schemas", () => {
         fileName: "injection-avs-action-100.html",
         html: "<article></article>",
         generatedAt: "2026-08-30T20:00:00.000Z",
+        kind: "patient-avs",
+        locale: "en-US",
       },
       clinicalReferenceVersion: "injection-clinical-reference-v1",
+      noteTemplateVersion: "injection-note-rc6.1",
+      avsTemplateVersion: "injection-avs-2026.08",
     };
     expect(storedFinalEnvelopeSchema.safeParse(complete).success).toBe(true);
 
@@ -263,6 +361,225 @@ describe("Power Apps HTTP request schemas", () => {
         avs: { ...complete.avs, documentStatus: "not-a-real-status" },
       }).success,
     ).toBe(false);
+    expect(
+      storedFinalEnvelopeSchema.safeParse({ ...complete, noteTemplateVersion: undefined })
+        .success,
+    ).toBe(false);
+    expect(
+      storedFinalEnvelopeSchema.safeParse({ ...complete, avsTemplateVersion: undefined })
+        .success,
+    ).toBe(false);
+    // documents.note.sections must be exact DocumentationSection shapes, not
+    // arbitrary unknown values (replaces a prior z.array(z.unknown())).
+    expect(
+      storedFinalEnvelopeSchema.safeParse({
+        ...complete,
+        documents: {
+          note: {
+            ...complete.documents.note,
+            sections: [{ id: "cc", label: "CC", destination: "CC", content: "text" }],
+          },
+        },
+      }).success,
+    ).toBe(true);
+    expect(
+      storedFinalEnvelopeSchema.safeParse({
+        ...complete,
+        documents: {
+          note: { ...complete.documents.note, sections: [{ notASection: true }] },
+        },
+      }).success,
+    ).toBe(false);
+    // evaluation must be the exact curated shape, not an arbitrary record.
+    expect(
+      storedFinalEnvelopeSchema.safeParse({ ...complete, evaluation: { workflow: "injection" } })
+        .success,
+    ).toBe(false);
+  });
+
+  describe("stored-final envelope cross-field invariants", () => {
+    const finalSource = { ...validSource, actionId: "9d7f434e-7f47-4c45-bd8e-c88d9a8cfbdd" };
+    const complete = {
+      schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION,
+      source: finalSource,
+      injectionId: "9d7f434e-7f47-4c45-bd8e-c88d9a8cfbdd",
+      status: "finalized" as const,
+      disposition: "administered" as const,
+      idempotencyKey: "f4d3700d-ec30-4f1f-87e1-9dd6b1bbce31",
+      requestFingerprint: "a".repeat(64),
+      finalEncounter: { ...validEncounter, disposition: { kind: "administered" } },
+      evaluation: validEvaluation,
+      evaluationFingerprint: "0123456789abcdef",
+      finalizedAt: "2026-08-30T20:00:00.000Z",
+      attestation: {
+        staff: "MA User",
+        subject: "entra-object-id",
+        timestamp: "2026-08-30T20:00:00.000Z",
+        statementVersion: "clinical-action-v1",
+        acknowledgementKind: "tebra" as const,
+      },
+      acknowledgement: {
+        kind: "tebra" as const,
+        acknowledgedAtUtc: "2026-08-30T20:00:00.000Z",
+        acknowledgedByUserId: "entra-object-id",
+        acknowledgedByDisplayName: "MA User",
+      },
+      documents: {
+        note: {
+          workflow: "injection" as const,
+          sections: [],
+          text: "note",
+          cc: "",
+          assessment: "",
+          plan: "",
+          all: "note",
+        },
+      },
+      avs: {
+        documentStatus: "PATIENT COPY" as const,
+        contentType: "text/html" as const,
+        fileName: "injection-avs-action-100.html",
+        html: "<article></article>",
+        generatedAt: "2026-08-30T20:00:00.000Z",
+        kind: "patient-avs" as const,
+        locale: "en-US" as const,
+      },
+      clinicalReferenceVersion: "injection-clinical-reference-v1",
+      noteTemplateVersion: "injection-note-rc6.1",
+      avsTemplateVersion: "injection-avs-2026.08",
+    };
+
+    it("is internally consistent as constructed", () => {
+      expect(storedFinalEnvelopeSchema.safeParse(complete).success).toBe(true);
+    });
+
+    it("rejects injectionId disagreeing with source.actionId", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          injectionId: "11111111-1111-4111-8111-111111111111",
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a disposition that disagrees with finalEncounter.disposition.kind", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          finalEncounter: { ...complete.finalEncounter, disposition: { kind: "held" } },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a held disposition carrying a PATIENT COPY / patient-avs AVS", () => {
+      const held = {
+        ...complete,
+        disposition: "held" as const,
+        finalEncounter: { ...complete.finalEncounter, disposition: { kind: "held" } },
+      };
+      expect(storedFinalEnvelopeSchema.safeParse(held).success).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...held,
+          avs: { ...held.avs, documentStatus: "CARE HANDOFF", kind: "care-handoff" },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("rejects an administered disposition carrying a CARE HANDOFF / care-handoff AVS", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          avs: { ...complete.avs, documentStatus: "CARE HANDOFF", kind: "care-handoff" },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a finalized envelope carrying a STAFF PREVIEW - NOT FINAL AVS", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          avs: { ...complete.avs, documentStatus: "STAFF PREVIEW - NOT FINAL" },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects attestation and acknowledgement disagreeing on acknowledgement kind", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          attestation: { ...complete.attestation, acknowledgementKind: "manual" },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a manual acknowledgement without a nonblank reason and source", () => {
+      const manual = {
+        ...complete,
+        attestation: { ...complete.attestation, acknowledgementKind: "manual" as const },
+        acknowledgement: { ...complete.acknowledgement, kind: "manual" as const },
+      };
+      expect(storedFinalEnvelopeSchema.safeParse(manual).success).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...manual,
+          acknowledgement: { ...manual.acknowledgement, reason: "  ", source: "Order" },
+        }).success,
+      ).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...manual,
+          acknowledgement: { ...manual.acknowledgement, reason: "Verified", source: "Order" },
+          attestation: {
+            ...manual.attestation,
+            manualReason: "Verified",
+            manualSource: "Order",
+          },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a Tebra acknowledgement carrying manual reason/source values", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: { ...complete.acknowledgement, reason: "should not be here" },
+        }).success,
+      ).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          attestation: { ...complete.attestation, manualSource: "should not be here" },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a non-UTC-instant timestamp on finalizedAt, attestation, or acknowledgement", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({ ...complete, finalizedAt: "2026-08-30" }).success,
+      ).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          attestation: { ...complete.attestation, timestamp: "not-a-timestamp" },
+        }).success,
+      ).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: {
+            ...complete.acknowledgement,
+            acknowledgedAtUtc: "2026-08-30T20:00:00-07:00",
+          },
+        }).success,
+      ).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          avs: { ...complete.avs, generatedAt: "not-a-timestamp" },
+        }).success,
+      ).toBe(false);
+    });
   });
 });
 
@@ -455,6 +772,7 @@ describe.sequential("API configuration", () => {
     "DATAVERSE_CHECKIN_ID_COLUMN",
     "DATAVERSE_PATIENT_ID_COLUMN",
     "DATAVERSE_ORDER_ID_COLUMN",
+    "DATAVERSE_PATIENT_CONTEXT_COLUMN",
     "DATAVERSE_ORDER_CONTEXT_COLUMN",
     "DATAVERSE_ACK_SOURCE_COLUMN",
     "DATAVERSE_ACK_AT_COLUMN",
@@ -513,6 +831,7 @@ describe.sequential("API configuration", () => {
       DATAVERSE_CHECKIN_ID_COLUMN: "ipmg_checkinid",
       DATAVERSE_PATIENT_ID_COLUMN: "ipmg_patientid",
       DATAVERSE_ORDER_ID_COLUMN: "ipmg_orderid",
+      DATAVERSE_PATIENT_CONTEXT_COLUMN: "ipmg_patientcontextjson",
       DATAVERSE_DRAFT_STATUS_VALUE: "100000000",
       DATAVERSE_FINAL_STATUS_VALUE: "finalized",
     });
@@ -523,6 +842,7 @@ describe.sequential("API configuration", () => {
       checkInIdColumn: "ipmg_checkinid",
       patientIdColumn: "ipmg_patientid",
       orderIdColumn: "ipmg_orderid",
+      patientContextColumn: "ipmg_patientcontextjson",
       orderContextColumn: undefined,
       acknowledgmentSourceColumn: undefined,
     });
@@ -540,6 +860,7 @@ describe.sequential("API configuration", () => {
       DATAVERSE_CHECKIN_ID_COLUMN: "ipmg_checkinid",
       DATAVERSE_PATIENT_ID_COLUMN: "ipmg_patientid",
       DATAVERSE_ORDER_ID_COLUMN: "ipmg_orderid",
+      DATAVERSE_PATIENT_CONTEXT_COLUMN: "ipmg_patientcontextjson",
       DATAVERSE_ORDER_CONTEXT_COLUMN: "ipmg_ordercontextjson",
       DATAVERSE_ACK_SOURCE_COLUMN: "ipmg_acksource",
       DATAVERSE_ACK_AT_COLUMN: "ipmg_ackatutc",
@@ -556,6 +877,63 @@ describe.sequential("API configuration", () => {
       acknowledgedByColumn: "ipmg_ackby",
       acknowledgedCheckInIdColumn: "ipmg_ackcheckinid",
     });
+  });
+
+  it("rejects a Dataverse configuration missing the required patient-context column", () => {
+    Object.assign(process.env, {
+      DATAVERSE_URL: "https://example.crm.dynamics.com",
+      DATAVERSE_ACTION_ENTITY_SET: "ipmg_clinicalactions",
+      DATAVERSE_DRAFT_JSON_COLUMN: "ipmg_draftjson",
+      DATAVERSE_FINAL_JSON_COLUMN: "ipmg_finaljson",
+      DATAVERSE_STATUS_COLUMN: "ipmg_workflowstatus",
+      DATAVERSE_IDEMPOTENCY_COLUMN: "ipmg_idempotencykey",
+      DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN: "ipmg_tebraacknowledged",
+      DATAVERSE_CHECKIN_ID_COLUMN: "ipmg_checkinid",
+      DATAVERSE_PATIENT_ID_COLUMN: "ipmg_patientid",
+      DATAVERSE_ORDER_ID_COLUMN: "ipmg_orderid",
+      DATAVERSE_DRAFT_STATUS_VALUE: "100000000",
+      DATAVERSE_FINAL_STATUS_VALUE: "100000001",
+      // DATAVERSE_PATIENT_CONTEXT_COLUMN intentionally omitted
+    });
+
+    expect(() => readApiConfiguration({ requireDataverse: true })).toThrow(
+      /DATAVERSE_PATIENT_CONTEXT_COLUMN/,
+    );
+  });
+
+  it.each([
+    ["DATAVERSE_ACK_SOURCE_COLUMN"],
+    ["DATAVERSE_ACK_AT_COLUMN"],
+    ["DATAVERSE_ACK_BY_COLUMN"],
+    ["DATAVERSE_ACK_CHECKIN_ID_COLUMN"],
+  ])("rejects a partially configured ack-provenance set missing only %s", (missingName) => {
+    const allFour = {
+      DATAVERSE_ACK_SOURCE_COLUMN: "ipmg_acksource",
+      DATAVERSE_ACK_AT_COLUMN: "ipmg_ackatutc",
+      DATAVERSE_ACK_BY_COLUMN: "ipmg_ackby",
+      DATAVERSE_ACK_CHECKIN_ID_COLUMN: "ipmg_ackcheckinid",
+    };
+    const { [missingName]: _omitted, ...partial } = allFour;
+    Object.assign(process.env, {
+      DATAVERSE_URL: "https://example.crm.dynamics.com",
+      DATAVERSE_ACTION_ENTITY_SET: "ipmg_clinicalactions",
+      DATAVERSE_DRAFT_JSON_COLUMN: "ipmg_draftjson",
+      DATAVERSE_FINAL_JSON_COLUMN: "ipmg_finaljson",
+      DATAVERSE_STATUS_COLUMN: "ipmg_workflowstatus",
+      DATAVERSE_IDEMPOTENCY_COLUMN: "ipmg_idempotencykey",
+      DATAVERSE_TEBRA_ACKNOWLEDGED_COLUMN: "ipmg_tebraacknowledged",
+      DATAVERSE_CHECKIN_ID_COLUMN: "ipmg_checkinid",
+      DATAVERSE_PATIENT_ID_COLUMN: "ipmg_patientid",
+      DATAVERSE_ORDER_ID_COLUMN: "ipmg_orderid",
+      DATAVERSE_PATIENT_CONTEXT_COLUMN: "ipmg_patientcontextjson",
+      DATAVERSE_DRAFT_STATUS_VALUE: "100000000",
+      DATAVERSE_FINAL_STATUS_VALUE: "100000001",
+      ...partial,
+    });
+
+    expect(() => readApiConfiguration({ requireDataverse: true })).toThrow(
+      /must be either all configured or all absent/,
+    );
   });
 
   it("rejects invalid zones, unreviewed provider registers, and missing Dataverse", () => {

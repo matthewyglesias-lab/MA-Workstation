@@ -23,6 +23,7 @@ const config: DataverseConfiguration = {
   checkInIdColumn: "ipmg_checkinid",
   patientIdColumn: "ipmg_patientid",
   orderIdColumn: "ipmg_orderid",
+  patientContextColumn: "ipmg_patientcontextjson",
   draftStatusValue: 100000000,
   finalStatusValue: 100000001,
 };
@@ -36,6 +37,8 @@ const configWithOptionalColumns: DataverseConfiguration = {
   acknowledgedCheckInIdColumn: "ipmg_ackcheckinid",
 };
 
+const patientContextJson = '{"name":"Jordan Rivera","dob":"1988-04-12","mrn":"MRN-77821"}';
+
 const draftRecord = {
   id: "9d7f434e-7f47-4c45-bd8e-c88d9a8cfbdd",
   etag: 'W/"42"',
@@ -48,7 +51,9 @@ const draftRecord = {
   patientId: "patient-300",
   orderId: "order-400",
   orderContextJson: "",
+  patientContextJson,
   boardAcknowledgment: null,
+  boardAcknowledgmentPartial: false,
 };
 
 afterEach(() => {
@@ -70,6 +75,7 @@ describe("Dataverse clinical-action transaction", () => {
           [config.checkInIdColumn]: draftRecord.checkInId,
           [config.patientIdColumn]: draftRecord.patientId,
           [config.orderIdColumn]: draftRecord.orderId,
+          [config.patientContextColumn]: draftRecord.patientContextJson,
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -94,6 +100,7 @@ describe("Dataverse clinical-action transaction", () => {
     ["check-in ID", config.checkInIdColumn],
     ["patient ID", config.patientIdColumn],
     ["order ID", config.orderIdColumn],
+    ["patient-context", config.patientContextColumn],
   ])("fails closed when the protected %s column is missing", async (_label, column) => {
     const row: Record<string, unknown> = {
       "@odata.etag": draftRecord.etag,
@@ -105,6 +112,7 @@ describe("Dataverse clinical-action transaction", () => {
       [config.checkInIdColumn]: draftRecord.checkInId,
       [config.patientIdColumn]: draftRecord.patientId,
       [config.orderIdColumn]: draftRecord.orderId,
+      [config.patientContextColumn]: draftRecord.patientContextJson,
     };
     delete row[column];
     vi.stubGlobal(
@@ -122,6 +130,69 @@ describe("Dataverse clinical-action transaction", () => {
       code: "invalid-record",
       status: 422,
     });
+  });
+
+  it.each([
+    ["check-in ID", config.checkInIdColumn],
+    ["patient ID", config.patientIdColumn],
+    ["order ID", config.orderIdColumn],
+  ])("fails closed when the protected %s column is whitespace-only", async (_label, column) => {
+    const row: Record<string, unknown> = {
+      "@odata.etag": draftRecord.etag,
+      [config.draftJsonColumn]: draftRecord.draftJson,
+      [config.finalJsonColumn]: "",
+      [config.statusColumn]: config.draftStatusValue,
+      [config.idempotencyColumn]: "",
+      [config.tebraAcknowledgedColumn]: true,
+      [config.checkInIdColumn]: draftRecord.checkInId,
+      [config.patientIdColumn]: draftRecord.patientId,
+      [config.orderIdColumn]: draftRecord.orderId,
+      [config.patientContextColumn]: draftRecord.patientContextJson,
+    };
+    row[column] = "   ";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(row), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    const store = new DataverseClinicalActionStore(config);
+
+    await expect(store.load(draftRecord.id)).rejects.toMatchObject<Partial<DataverseError>>({
+      code: "invalid-record",
+      status: 422,
+    });
+  });
+
+  it("trims a protected identity column that has leading/trailing whitespace", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            "@odata.etag": draftRecord.etag,
+            [config.draftJsonColumn]: draftRecord.draftJson,
+            [config.finalJsonColumn]: "",
+            [config.statusColumn]: config.draftStatusValue,
+            [config.idempotencyColumn]: "",
+            [config.tebraAcknowledgedColumn]: true,
+            [config.checkInIdColumn]: `  ${draftRecord.checkInId}  `,
+            [config.patientIdColumn]: draftRecord.patientId,
+            [config.orderIdColumn]: draftRecord.orderId,
+            [config.patientContextColumn]: draftRecord.patientContextJson,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const store = new DataverseClinicalActionStore(config);
+
+    const loaded = await store.load(draftRecord.id);
+
+    expect(loaded.checkInId).toBe(draftRecord.checkInId);
   });
 
   it("loads the optional order context and complete board acknowledgement provenance when configured", async () => {
@@ -145,6 +216,7 @@ describe("Dataverse clinical-action transaction", () => {
             [config.checkInIdColumn]: draftRecord.checkInId,
             [config.patientIdColumn]: draftRecord.patientId,
             [config.orderIdColumn]: draftRecord.orderId,
+            [config.patientContextColumn]: draftRecord.patientContextJson,
             ipmg_ordercontextjson: '{"medicationKey":"sustenna"}',
             ipmg_acksource: boardAck.source,
             ipmg_ackatutc: boardAck.acknowledgedAtUtc,
@@ -163,7 +235,7 @@ describe("Dataverse clinical-action transaction", () => {
     expect(loaded.boardAcknowledgment).toEqual(boardAck);
   });
 
-  it("treats board acknowledgement provenance as absent unless all four columns are populated", async () => {
+  it("treats board acknowledgement provenance as absent-but-partial unless all four columns are populated", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -178,6 +250,7 @@ describe("Dataverse clinical-action transaction", () => {
             [config.checkInIdColumn]: draftRecord.checkInId,
             [config.patientIdColumn]: draftRecord.patientId,
             [config.orderIdColumn]: draftRecord.orderId,
+            [config.patientContextColumn]: draftRecord.patientContextJson,
             ipmg_acksource: "tebra-sync",
             // ipmg_ackatutc intentionally omitted
             ipmg_ackby: "checkin-board-integration",
@@ -191,7 +264,41 @@ describe("Dataverse clinical-action transaction", () => {
 
     const loaded = await store.load(draftRecord.id);
 
+    // Distinct from "columns not configured at all" (which the previous test
+    // covers via the base `config`): here the columns ARE configured, but
+    // this row's data is incomplete, which the caller must fail closed on
+    // rather than silently treat the same as "no board provenance."
     expect(loaded.boardAcknowledgment).toBeNull();
+    expect(loaded.boardAcknowledgmentPartial).toBe(true);
+  });
+
+  it("does not mark board acknowledgement provenance partial when the columns are not configured at all", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            "@odata.etag": draftRecord.etag,
+            [config.draftJsonColumn]: draftRecord.draftJson,
+            [config.finalJsonColumn]: "",
+            [config.statusColumn]: config.draftStatusValue,
+            [config.idempotencyColumn]: "",
+            [config.tebraAcknowledgedColumn]: true,
+            [config.checkInIdColumn]: draftRecord.checkInId,
+            [config.patientIdColumn]: draftRecord.patientId,
+            [config.orderIdColumn]: draftRecord.orderId,
+            [config.patientContextColumn]: draftRecord.patientContextJson,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const store = new DataverseClinicalActionStore(config);
+
+    const loaded = await store.load(draftRecord.id);
+
+    expect(loaded.boardAcknowledgment).toBeNull();
+    expect(loaded.boardAcknowledgmentPartial).toBe(false);
   });
 
   it("atomically writes the final bundle, Choice status, and idempotency key, and never writes protected identity/acknowledgement columns", async () => {
@@ -223,6 +330,38 @@ describe("Dataverse clinical-action transaction", () => {
     ).rejects.toMatchObject<Partial<DataverseError>>({
       code: "concurrency-conflict",
       status: 409,
+    });
+  });
+
+  describe("hasResidualFinalArtifacts", () => {
+    const store = new DataverseClinicalActionStore(config);
+
+    it("is false for a genuinely fresh draft with no prior finalization", () => {
+      expect(store.hasResidualFinalArtifacts(draftRecord)).toBe(false);
+    });
+
+    it("is true when a non-final record still carries Final JSON", () => {
+      expect(
+        store.hasResidualFinalArtifacts({
+          ...draftRecord,
+          finalJson: '{"status":"finalized"}',
+        }),
+      ).toBe(true);
+    });
+
+    it("is true when a non-final record still carries a persisted idempotency key", () => {
+      expect(
+        store.hasResidualFinalArtifacts({
+          ...draftRecord,
+          idempotencyKey: "f4d3700d-ec30-4f1f-87e1-9dd6b1bbce31",
+        }),
+      ).toBe(true);
+    });
+
+    it("treats a whitespace-only Final JSON value the same as truly blank", () => {
+      expect(
+        store.hasResidualFinalArtifacts({ ...draftRecord, finalJson: "   " }),
+      ).toBe(false);
     });
   });
 });

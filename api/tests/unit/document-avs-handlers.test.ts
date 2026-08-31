@@ -110,6 +110,7 @@ const environment = {
   DATAVERSE_CHECKIN_ID_COLUMN: "ipmg_checkinid",
   DATAVERSE_PATIENT_ID_COLUMN: "ipmg_patientid",
   DATAVERSE_ORDER_ID_COLUMN: "ipmg_orderid",
+  DATAVERSE_PATIENT_CONTEXT_COLUMN: "ipmg_patientcontextjson",
   DATAVERSE_DRAFT_STATUS_VALUE: "100000000",
   DATAVERSE_FINAL_STATUS_VALUE: "100000001",
 } as const;
@@ -137,6 +138,13 @@ afterEach(() => {
   originalEnvironment.clear();
 });
 
+// The protected patient-context snapshot is authoritative over Draft
+// JSON's patient identity; matches baseEncounter()'s patient and
+// source.patientRecordNumber so existing assertions see the override as a
+// no-op.
+const patientContext = { name: "Test, Patient", dob: "1980-05-12", mrn: "MRN-500" };
+const patientContextJson = JSON.stringify(patientContext);
+
 const draftRow = (draftEncounter: InjectionEncounter, rowOverrides: Record<string, unknown> = {}) => ({
   "@odata.etag": 'W/"42"',
   ipmg_draftjson: JSON.stringify({
@@ -151,6 +159,7 @@ const draftRow = (draftEncounter: InjectionEncounter, rowOverrides: Record<strin
   ipmg_checkinid: source.checkInId,
   ipmg_patientid: source.patientId,
   ipmg_orderid: source.orderId,
+  ipmg_patientcontextjson: patientContextJson,
   ...rowOverrides,
 });
 
@@ -192,9 +201,16 @@ const finalizedRow = async (draftEncounter: InjectionEncounter): Promise<Record<
   const response = await finalizeHandler(request, {} as InvocationContext);
   if (response.status !== 200) throw new Error(`Setup finalize failed: ${JSON.stringify(response.jsonBody)}`);
   const [, patchInit] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
-  const finalJson = JSON.parse(String(patchInit.body)).ipmg_finaljson as string;
+  const patch = JSON.parse(String(patchInit.body)) as Record<string, unknown>;
   vi.unstubAllGlobals();
-  return draftRow(draftEncounter, { ipmg_finaljson: finalJson, ipmg_workflowstatus: 100000001 });
+  // Item 5's shared validateStoredFinal binds the envelope's idempotencyKey
+  // back to the protected Dataverse idempotency-key column, so a realistic
+  // finalized-row fixture must carry it too, not just Final JSON/status.
+  return draftRow(draftEncounter, {
+    ipmg_finaljson: patch.ipmg_finaljson,
+    ipmg_workflowstatus: patch.ipmg_workflowstatus,
+    ipmg_idempotencykey: patch.ipmg_idempotencykey,
+  });
 };
 
 const lookupRequest = (body: unknown = { schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION, injectionId }): HttpRequest =>
@@ -243,6 +259,42 @@ describe("GetInjectionDocuments / GenerateInjectionAvs retrieval validation", ()
 
     expect(documents.status).toBe(503);
     expect(documents.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
+  });
+
+  it.each([
+    ["patientId"],
+    ["orderId"],
+  ])("rejects retrieval whose stored source.%s disagrees with the protected record", async (field) => {
+    const row = await finalizedRow(baseEncounter());
+    const envelope = JSON.parse(String(row.ipmg_finaljson));
+    const tampered = JSON.stringify({
+      ...envelope,
+      source: { ...envelope.source, [field]: "tampered-value" },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf({ ...row, ipmg_finaljson: tampered })));
+
+    const documents = await documentsHandler(lookupRequest(), {} as InvocationContext);
+
+    expect(documents.status).toBe(503);
+    expect(documents.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
+  });
+
+  it("rejects retrieval whose stored idempotencyKey disagrees with the protected Dataverse idempotency-key column", async () => {
+    const row = await finalizedRow(baseEncounter());
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        responseOf({ ...row, ipmg_idempotencykey: "a-completely-different-persisted-key" }),
+      ),
+    );
+
+    const avs = await avsHandler(
+      lookupRequest({ schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION, injectionId, locale: "en-US" }),
+      {} as InvocationContext,
+    );
+
+    expect(avs.status).toBe(503);
+    expect(avs.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
   });
 
   it("returns the validated final documents and AVS for a genuinely finalized row", async () => {

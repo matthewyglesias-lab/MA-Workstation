@@ -34,6 +34,7 @@ import { facilityDate, readApiConfiguration } from "../config";
 import {
   DataverseClinicalActionStore,
   DataverseError,
+  type DataverseBoardAcknowledgment,
   type DataverseClinicalAction,
 } from "../dataverse";
 import { authenticatedPrincipal, type AuthenticatedPrincipal } from "../http/auth";
@@ -52,9 +53,11 @@ import {
   generateFinalAvsHttpBodySchema,
   orderContextSchema,
   parseEncounterJson,
+  patientContextSchema,
   recordLookupHttpBodySchema,
   storedDraftEnvelopeSchema,
   storedFinalEnvelopeSchema,
+  utcInstant,
   type StoredFinalEnvelope,
 } from "../http/schema";
 
@@ -148,6 +151,7 @@ const resolveProtectedSource = (
   },
   record: DataverseClinicalAction,
   injectionId: string,
+  protectedPatientRecordNumber: string,
   correlationId: string,
 ):
   | { ok: true; source: InjectionSourceReference }
@@ -175,22 +179,79 @@ const resolveProtectedSource = (
       patientId: record.patientId,
       orderId: record.orderId,
       actionId: injectionId,
+      // The protected patient-context snapshot's MRN, never the Draft
+      // JSON-supplied value — see resolveProtectedPatientContext.
+      patientRecordNumber: protectedPatientRecordNumber,
       sourceRecordVersion: record.etag,
     },
   };
 };
 
 /**
- * Checks the encounter against an optional order-context snapshot. Absent
- * when the tenant has not configured DATAVERSE_ORDER_CONTEXT_COLUMN — a
- * documented acceptance-gate limitation, not a silently-invented pass.
+ * Resolves the protected patient-identity snapshot (name/DOB/MRN) that must
+ * back every final clinical note and AVS. DATAVERSE_PATIENT_CONTEXT_COLUMN
+ * is a required configuration field (see api/src/config.ts), so this always
+ * runs; it fails closed on a missing, malformed, or incomplete snapshot
+ * rather than falling back to Canvas-supplied Draft JSON demographics.
+ */
+const resolveProtectedPatientContext = (
+  record: DataverseClinicalAction,
+  correlationId: string,
+):
+  | { ok: true; value: { name: string; dob: string; mrn: string } }
+  | { ok: false; response: HttpResponseInit } => {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(record.patientContextJson);
+  } catch {
+    return {
+      ok: false,
+      response: apiError(
+        422,
+        "patient-context-invalid",
+        "The protected patient-context snapshot could not be read.",
+        correlationId,
+      ),
+    };
+  }
+  const parsed = patientContextSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      response: apiError(
+        422,
+        "patient-context-invalid",
+        "The protected patient-context snapshot does not match the expected schema.",
+        correlationId,
+        zodDetails(parsed.error),
+      ),
+    };
+  }
+  return { ok: true, value: parsed.data };
+};
+
+/**
+ * Checks the encounter against the order-context snapshot when the tenant
+ * configures DATAVERSE_ORDER_CONTEXT_COLUMN. Whether the check runs at all
+ * is a documented acceptance-gate limitation (`orderContextColumnConfigured`
+ * false skips it entirely); once configured, a row's blank or malformed
+ * order context is a failure, never treated the same as "not configured."
  */
 const orderContextConflict = (
   record: DataverseClinicalAction,
+  orderContextColumnConfigured: boolean,
   encounter: InjectionEncounter,
   correlationId: string,
 ): HttpResponseInit | null => {
-  if (!record.orderContextJson) return null;
+  if (!orderContextColumnConfigured) return null;
+  if (!record.orderContextJson.trim()) {
+    return apiError(
+      422,
+      "order-context-invalid",
+      "The linked order context is required but was not found on the clinical action.",
+      correlationId,
+    );
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(record.orderContextJson);
@@ -213,18 +274,13 @@ const orderContextConflict = (
     );
   }
   const mismatches: string[] = [];
-  if (parsed.data.medicationKey && parsed.data.medicationKey !== encounter.medicationKey) {
-    mismatches.push("medication");
-  }
-  if (parsed.data.dose?.trim() && parsed.data.dose.trim() !== encounter.dose.trim()) {
-    mismatches.push("dose");
-  }
-  if (
-    parsed.data.orderingProvider?.trim() &&
-    parsed.data.orderingProvider.trim() !== encounter.orderingProvider.trim()
-  ) {
+  if (parsed.data.medicationKey !== encounter.medicationKey) mismatches.push("medication");
+  if (parsed.data.dose.trim() !== encounter.dose.trim()) mismatches.push("dose");
+  if (parsed.data.orderingProvider.trim() !== encounter.orderingProvider.trim()) {
     mismatches.push("orderingProvider");
   }
+  if (parsed.data.route.trim() !== encounter.route.trim()) mismatches.push("route");
+  if (parsed.data.intervalKey !== encounter.intervalKey) mismatches.push("interval");
   if (mismatches.length) {
     return apiError(
       422,
@@ -234,6 +290,70 @@ const orderContextConflict = (
     );
   }
   return null;
+};
+
+/**
+ * Validates real Tebra board-acknowledgement provenance against the
+ * protected record before it can be attached to a finalized envelope.
+ * Partial (dataverse.ts's boardAcknowledgmentPartial), malformed, future-
+ * dated, or check-in-mismatched provenance is rejected outright rather than
+ * silently downgraded to "no board provenance" — a tenant that has wired
+ * these columns is asserting they are meaningful, so broken data on a row
+ * is a fail-closed condition.
+ */
+const validateBoardAcknowledgment = (
+  record: DataverseClinicalAction,
+  correlationId: string,
+):
+  | { ok: true; value: DataverseBoardAcknowledgment | null }
+  | { ok: false; response: HttpResponseInit } => {
+  if (record.boardAcknowledgmentPartial) {
+    return {
+      ok: false,
+      response: apiError(
+        422,
+        "acknowledgement-provenance-invalid",
+        "The board acknowledgement provenance on this clinical action is incomplete.",
+        correlationId,
+      ),
+    };
+  }
+  const board = record.boardAcknowledgment;
+  if (!board) return { ok: true, value: null };
+  if (!utcInstant.safeParse(board.acknowledgedAtUtc).success) {
+    return {
+      ok: false,
+      response: apiError(
+        422,
+        "acknowledgement-provenance-invalid",
+        "The board acknowledgement timestamp is not a valid UTC instant.",
+        correlationId,
+      ),
+    };
+  }
+  if (new Date(board.acknowledgedAtUtc).getTime() > Date.now()) {
+    return {
+      ok: false,
+      response: apiError(
+        422,
+        "acknowledgement-provenance-invalid",
+        "The board acknowledgement timestamp is in the future.",
+        correlationId,
+      ),
+    };
+  }
+  if (board.checkInId !== record.checkInId) {
+    return {
+      ok: false,
+      response: apiError(
+        422,
+        "acknowledgement-provenance-invalid",
+        "The board acknowledgement check-in does not match the protected clinical-action record.",
+        correlationId,
+      ),
+    };
+  }
+  return { ok: true, value: board };
 };
 
 const publicEvaluation = (
@@ -421,6 +541,39 @@ const identityMismatchResponse = (correlationId: string): HttpResponseInit =>
     correlationId,
   );
 
+/**
+ * The single stored-final validation routine shared by idempotent finalize
+ * replay, final clinical-note retrieval, and final AVS retrieval alike.
+ * Parses and schema-validates the persisted envelope, then binds every
+ * identity/linkage field it carries back to the protected Dataverse
+ * record — not just the requested action ID and the envelope's own
+ * injectionId/source.actionId, but source.checkInId/patientId/orderId
+ * against the protected record's checkInId/patientId/orderId, and the
+ * envelope's idempotencyKey against the protected Dataverse
+ * idempotency-key column. Any mismatch, malformed envelope, or
+ * stale/corrupted linkage fails closed and returns no stored artifact.
+ */
+const validateStoredFinal = (
+  record: DataverseClinicalAction,
+  injectionId: string,
+  correlationId: string,
+): { ok: true; envelope: StoredFinalEnvelope } | { ok: false; response: HttpResponseInit } => {
+  const parsed = parseStoredFinalEnvelope(record.finalJson);
+  if (!parsed.ok) return { ok: false, response: parsed.response(correlationId) };
+  const { envelope } = parsed;
+  if (
+    envelope.injectionId.toLowerCase() !== injectionId.toLowerCase() ||
+    envelope.source.actionId.toLowerCase() !== injectionId.toLowerCase() ||
+    envelope.source.checkInId !== record.checkInId ||
+    envelope.source.patientId !== record.patientId ||
+    envelope.source.orderId !== record.orderId ||
+    envelope.idempotencyKey !== record.idempotencyKey
+  ) {
+    return { ok: false, response: identityMismatchResponse(correlationId) };
+  }
+  return { ok: true, envelope };
+};
+
 const replayFinal = (
   record: DataverseClinicalAction,
   injectionId: string,
@@ -429,15 +582,9 @@ const replayFinal = (
   correlationId: string,
 ): HttpResponseInit | null => {
   if (!record.finalJson) return null;
-  const parsed = parseStoredFinalEnvelope(record.finalJson);
-  if (!parsed.ok) return parsed.response(correlationId);
-  const { envelope } = parsed;
-  if (
-    envelope.injectionId.toLowerCase() !== injectionId.toLowerCase() ||
-    envelope.source.actionId.toLowerCase() !== injectionId.toLowerCase()
-  ) {
-    return identityMismatchResponse(correlationId);
-  }
+  const validated = validateStoredFinal(record, injectionId, correlationId);
+  if (!validated.ok) return validated.response;
+  const { envelope } = validated;
   if (envelope.idempotencyKey !== idempotencyKey) {
     return apiError(
       409,
@@ -523,10 +670,13 @@ export const evaluateHandler = async (
         correlationId,
       );
     }
+    const patientContext = resolveProtectedPatientContext(record, correlationId);
+    if (!patientContext.ok) return patientContext.response;
     const resolvedSource = resolveProtectedSource(
       draft.data.source,
       record,
       parsed.data.injectionId,
+      patientContext.value.mrn,
       correlationId,
     );
     if (!resolvedSource.ok) return resolvedSource.response;
@@ -540,7 +690,16 @@ export const evaluateHandler = async (
         zodDetails(encounter.error),
       );
     }
-    const orderConflict = orderContextConflict(record, encounter.data, correlationId);
+    // The protected patient-identity snapshot is authoritative over
+    // Canvas-supplied Draft JSON demographics for every downstream
+    // evaluation, note, and AVS surface.
+    encounter.data.patient = { name: patientContext.value.name, dob: patientContext.value.dob };
+    const orderConflict = orderContextConflict(
+      record,
+      Boolean(access.config.dataverse.orderContextColumn),
+      encounter.data,
+      correlationId,
+    );
     if (orderConflict) return orderConflict;
     const internal = internalEvaluationRequest(
       resolvedSource.source,
@@ -632,6 +791,20 @@ export const finalizeHandler = async (
         correlationId,
       );
     }
+    // A record whose status reads Draft but still carries a residual Final
+    // JSON payload or persisted idempotency key was finalized and then reset
+    // back to draft directly (e.g. a status-column edit), not through an
+    // explicit, audited reset/new-action process. Finalizing over it would
+    // silently overwrite the prior finalized artifact, so reject it before
+    // any further processing or PATCH.
+    if (store.hasResidualFinalArtifacts(record)) {
+      return apiError(
+        409,
+        "stale-final-artifact",
+        "This clinical action still carries a prior finalization artifact and cannot be finalized directly from draft status. Use the documented reset/new-action process first.",
+        correlationId,
+      );
+    }
     if (
       parsed.data.confirmation.acknowledgementKind === "tebra" &&
       !record.tebraAcknowledged
@@ -684,10 +857,13 @@ export const finalizeHandler = async (
         correlationId,
       );
     }
+    const patientContext = resolveProtectedPatientContext(record, correlationId);
+    if (!patientContext.ok) return patientContext.response;
     const resolvedSource = resolveProtectedSource(
       draft.data.source,
       record,
       parsed.data.injectionId,
+      patientContext.value.mrn,
       correlationId,
     );
     if (!resolvedSource.ok) return resolvedSource.response;
@@ -701,7 +877,20 @@ export const finalizeHandler = async (
         zodDetails(encounterResult.error),
       );
     }
-    const orderConflict = orderContextConflict(record, encounterResult.data, correlationId);
+    // The protected patient-identity snapshot is authoritative over
+    // Canvas-supplied Draft JSON demographics for the final clinical note
+    // and AVS. Applied before structuredClone so the server-stamped final
+    // encounter carries it too.
+    encounterResult.data.patient = {
+      name: patientContext.value.name,
+      dob: patientContext.value.dob,
+    };
+    const orderConflict = orderContextConflict(
+      record,
+      Boolean(access.config.dataverse.orderContextColumn),
+      encounterResult.data,
+      correlationId,
+    );
     if (orderConflict) return orderConflict;
     const encounter = structuredClone(encounterResult.data);
     const finalizedAt = new Date().toISOString();
@@ -750,6 +939,12 @@ export const finalizeHandler = async (
         reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
       };
     }
+    let validatedBoardAcknowledgment: DataverseBoardAcknowledgment | null = null;
+    if (parsed.data.confirmation.acknowledgementKind === "tebra") {
+      const boardCheck = validateBoardAcknowledgment(record, correlationId);
+      if (!boardCheck.ok) return boardCheck.response;
+      validatedBoardAcknowledgment = boardCheck.value;
+    }
     const acknowledgement: CheckInAcknowledgement =
       parsed.data.confirmation.acknowledgementKind === "manual"
         ? {
@@ -766,15 +961,18 @@ export const finalizeHandler = async (
             acknowledgedByUserId: access.principal.userId,
             acknowledgedByDisplayName: access.principal.displayName,
             // Real board-sourced provenance when the tenant has configured
-            // the protected acknowledgement columns; otherwise this stays
-            // absent rather than inventing a source/time/identity the check-in
-            // board never actually supplied.
-            ...(record.boardAcknowledgment
+            // the protected acknowledgement columns and the row's provenance
+            // validated cleanly; otherwise this stays absent rather than
+            // inventing a source/time/identity the check-in board never
+            // actually supplied. validateBoardAcknowledgment already
+            // rejected partial, malformed, future-dated, or check-in-
+            // mismatched provenance above.
+            ...(validatedBoardAcknowledgment
               ? {
-                  boardSource: record.boardAcknowledgment.source,
-                  boardAcknowledgedAtUtc: record.boardAcknowledgment.acknowledgedAtUtc,
-                  boardAcknowledgedBy: record.boardAcknowledgment.acknowledgedBy,
-                  boardCheckInId: record.boardAcknowledgment.checkInId,
+                  boardSource: validatedBoardAcknowledgment.source,
+                  boardAcknowledgedAtUtc: validatedBoardAcknowledgment.acknowledgedAtUtc,
+                  boardAcknowledgedBy: validatedBoardAcknowledgment.acknowledgedBy,
+                  boardCheckInId: validatedBoardAcknowledgment.checkInId,
                 }
               : {}),
           };
@@ -834,6 +1032,8 @@ export const finalizeHandler = async (
       documents: documentsFromBundle(prepared.value),
       avs: avsArtifact(prepared.value, finalizedAt),
       clinicalReferenceVersion: prepared.value.provenance.clinicalReferenceVersion,
+      noteTemplateVersion: prepared.value.provenance.noteTemplateVersion,
+      avsTemplateVersion: prepared.value.provenance.avsTemplateVersion,
     });
     await store.finalize(record, idempotencyKey, JSON.stringify(envelope));
     return json(200, publicFinalizeFields(envelope, correlationId), correlationId, {
@@ -905,15 +1105,9 @@ const loadValidatedFinalRecord = async (
         ),
       };
     }
-    const parsed = parseStoredFinalEnvelope(record.finalJson);
-    if (!parsed.ok) return { ok: false, response: parsed.response(correlationId) };
-    if (
-      parsed.envelope.injectionId.toLowerCase() !== injectionId.toLowerCase() ||
-      parsed.envelope.source.actionId.toLowerCase() !== injectionId.toLowerCase()
-    ) {
-      return { ok: false, response: identityMismatchResponse(correlationId) };
-    }
-    return { ok: true, envelope: parsed.envelope };
+    const validated = validateStoredFinal(record, injectionId, correlationId);
+    if (!validated.ok) return { ok: false, response: validated.response };
+    return { ok: true, envelope: validated.envelope };
   } catch (error) {
     if (error instanceof DataverseError) {
       return { ok: false, response: apiError(error.status, error.code, error.message, correlationId) };
