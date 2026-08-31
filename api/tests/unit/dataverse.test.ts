@@ -301,6 +301,45 @@ describe("Dataverse clinical-action transaction", () => {
     expect(loaded.boardAcknowledgmentPartial).toBe(false);
   });
 
+  it("marks board acknowledgement provenance partial when all four columns are configured but zero values are populated on the row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            "@odata.etag": draftRecord.etag,
+            [config.draftJsonColumn]: draftRecord.draftJson,
+            [config.finalJsonColumn]: "",
+            [config.statusColumn]: config.draftStatusValue,
+            [config.idempotencyColumn]: "",
+            [config.tebraAcknowledgedColumn]: true,
+            [config.checkInIdColumn]: draftRecord.checkInId,
+            [config.patientIdColumn]: draftRecord.patientId,
+            [config.orderIdColumn]: draftRecord.orderId,
+            [config.patientContextColumn]: draftRecord.patientContextJson,
+            // All four ack-provenance columns configured (configWithOptionalColumns
+            // below), but none populated on this row at all.
+            ipmg_acksource: "",
+            ipmg_ackatutc: "",
+            ipmg_ackby: "",
+            ipmg_ackcheckinid: "",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const store = new DataverseClinicalActionStore(configWithOptionalColumns);
+
+    const loaded = await store.load(draftRecord.id);
+
+    // Distinct from "columns not configured" above: here the tenant wired
+    // all four columns, asserting they will be populated, and this row has
+    // none of them — that is a broken/missing board acknowledgement, not an
+    // opt-out, so it must fail closed exactly like the 1-3-populated case.
+    expect(loaded.boardAcknowledgment).toBeNull();
+    expect(loaded.boardAcknowledgmentPartial).toBe(true);
+  });
+
   it("atomically writes the final bundle, Choice status, and idempotency key, and never writes protected identity/acknowledgement columns", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);

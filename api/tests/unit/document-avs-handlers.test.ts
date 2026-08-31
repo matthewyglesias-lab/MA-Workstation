@@ -297,6 +297,67 @@ describe("GetInjectionDocuments / GenerateInjectionAvs retrieval validation", ()
     expect(avs.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
   });
 
+  it.each([
+    [
+      "a partial board-provenance set",
+      (envelope: Record<string, any>) => ({
+        ...envelope,
+        acknowledgement: { ...envelope.acknowledgement, boardSource: "tampered-source" },
+      }),
+    ],
+    [
+      "acknowledgedByDisplayName disagreeing with attestation.staff",
+      (envelope: Record<string, any>) => ({
+        ...envelope,
+        acknowledgement: { ...envelope.acknowledgement, acknowledgedByDisplayName: "Tampered Name" },
+      }),
+    ],
+  ])("rejects final clinical-note retrieval whose stored envelope has %s", async (_label, tamper) => {
+    const row = await finalizedRow(baseEncounter());
+    const tampered = JSON.stringify(tamper(JSON.parse(String(row.ipmg_finaljson))));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf({ ...row, ipmg_finaljson: tampered })));
+
+    const documents = await documentsHandler(lookupRequest(), {} as InvocationContext);
+
+    expect(documents.status).toBe(503);
+    expect(documents.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
+  });
+
+  it.each([
+    [
+      "boardCheckInId disagreeing with source.checkInId",
+      (envelope: Record<string, any>) => ({
+        ...envelope,
+        acknowledgement: {
+          ...envelope.acknowledgement,
+          boardSource: "tebra-sync",
+          boardAcknowledgedAtUtc: "2026-08-30T19:55:00.000Z",
+          boardAcknowledgedBy: "checkin-board-integration",
+          boardCheckInId: "a-different-check-in-entirely",
+        },
+      }),
+    ],
+    [
+      "acknowledgedAtUtc disagreeing with attestation.timestamp",
+      (envelope: Record<string, any>) => ({
+        ...envelope,
+        acknowledgement: { ...envelope.acknowledgement, acknowledgedAtUtc: "2026-08-30T21:00:00.000Z" },
+      }),
+    ],
+  ])("rejects final AVS retrieval whose stored envelope has %s", async (_label, tamper) => {
+    const row = await finalizedRow(baseEncounter());
+    const tampered = JSON.stringify(tamper(JSON.parse(String(row.ipmg_finaljson))));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf({ ...row, ipmg_finaljson: tampered })));
+
+    const avs = await avsHandler(
+      lookupRequest({ schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION, injectionId, locale: "en-US" }),
+      {} as InvocationContext,
+    );
+
+    expect(avs.status).toBe(503);
+    expect(avs.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
+  });
+
   it("returns the validated final documents and AVS for a genuinely finalized row", async () => {
     const row = await finalizedRow(baseEncounter());
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseOf(row)));

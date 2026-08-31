@@ -30,8 +30,11 @@ export interface DataverseClinicalAction {
   boardAcknowledgment: DataverseBoardAcknowledgment | null;
   /**
    * True when the four ack-provenance columns are configured but the row
-   * carries only some (1-3) of the four values — a partial/corrupt board
-   * acknowledgement that must never be silently treated as "not provided".
+   * does not carry all four values — zero, one, two, or three populated is
+   * a broken or missing board acknowledgement that must never be silently
+   * treated the same as "columns not configured at all" (a documented
+   * acceptance-gate limitation). Only "columns configured and all four
+   * populated" is a genuine board acknowledgement.
    */
   boardAcknowledgmentPartial: boolean;
 }
@@ -182,12 +185,16 @@ export class DataverseClinicalActionStore {
       boardAcknowledgedBy,
       boardCheckInId,
     ].filter(Boolean).length;
-    // A partial set (1-3 of 4) is a corrupt/incomplete board acknowledgement
-    // — distinct from "columns not configured" (0 of 4, a documented
-    // acceptance-gate limitation) and must never be silently treated the
-    // same as "not provided" by the caller.
+    // Any incomplete set (0, 1, 2, or 3 of 4) on a row where the columns
+    // ARE configured is a broken or missing board acknowledgement — distinct
+    // from "columns not configured at all" (ackColumnsConfigured false, a
+    // documented acceptance-gate limitation) and must never be silently
+    // treated the same as "not provided" by the caller. A tenant that wired
+    // these columns is asserting the board will populate all four on every
+    // acknowledged check-in; a row with zero populated values means the
+    // board integration did not do so, not that the tenant opted out.
     const boardAcknowledgmentPartial =
-      ackColumnsConfigured && boardValuesPresentCount > 0 && boardValuesPresentCount < 4;
+      ackColumnsConfigured && boardValuesPresentCount < 4;
     const boardAcknowledgment: DataverseBoardAcknowledgment | null =
       ackColumnsConfigured && boardValuesPresentCount === 4
         ? {

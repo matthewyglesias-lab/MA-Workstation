@@ -84,7 +84,7 @@ in `local.settings.example.json` are placeholders.
 | Order ID | Unique identifier or text | Board/integration-owned; Canvas-read-only; authoritative over Draft JSON's claimed order ID; trimmed, whitespace-only rejected |
 | Patient Context JSON | Multiline text | **Required.** Board/integration-owned; Canvas-read-only; `{name, dob, mrn}` protected patient-identity snapshot. Authoritative for every final clinical note and AVS — Canvas-supplied Draft JSON never determines final-document patient demographics. A tenant that has not populated this column on a row cannot evaluate or finalize that row at all (fails closed with `patient-context-invalid`); see "Authoritative patient context" below. |
 | Order Context JSON *(optional column; required fields once configured)* | Multiline text | Board/integration-owned; Canvas-read-only; `{medicationKey, dose, orderingProvider, route, intervalKey}` snapshot checked against the encounter on both Evaluate and Finalize when `DATAVERSE_ORDER_CONTEXT_COLUMN` is configured. Once configured, every row must carry a complete, non-blank snapshot — a blank value, `{}`, or a partially populated order fails closed with `order-context-invalid` rather than being treated as "no context to check." |
-| Ack Source, Ack At, Ack By, Ack Check-in ID *(optional, all four together)* | Text / DateTime / Unique identifier / Unique identifier | Board/integration-owned; Canvas-read-only; real Tebra acknowledgement provenance recorded on finalization when all four are configured and populated. The API refuses to start if only some of the four are configured (`ackProvenanceColumns` in `api/src/config.ts`). If a row carries only some of the four values, finalization with `acknowledgementKind: "tebra"` fails closed with `acknowledgement-provenance-invalid` rather than silently omitting board provenance. A configured-and-complete acknowledgement is further rejected if its timestamp is not a real UTC instant, is in the future, or its check-in ID does not match the protected Check-in ID column. This provenance is persisted in the stored Final JSON for audit but is intentionally **not** included in the `FinalizeInjectionResponse` public contract (only the authenticated finalizer's own `attestation` is) — a PHI-minimizing choice, not an oversight. |
+| Ack Source, Ack At, Ack By, Ack Check-in ID *(optional, all four together)* | Text / DateTime / Unique identifier / Unique identifier | Board/integration-owned; Canvas-read-only; real Tebra acknowledgement provenance recorded on finalization when all four are configured and populated. The API refuses to start if only some of the four are configured (`ackProvenanceColumns` in `api/src/config.ts`). Once configured, a row must carry all four values — zero, one, two, or three populated all fail closed identically: finalization with `acknowledgementKind: "tebra"` returns `422 acknowledgement-provenance-invalid` and no PATCH occurs, rather than silently omitting board provenance for an unpopulated row. A configured-and-complete acknowledgement is further rejected if its timestamp is not a real UTC instant, is in the future, or its check-in ID does not match the protected Check-in ID column. A `manual` finalization never consults these columns at all. This provenance is persisted in the stored Final JSON for audit but is intentionally **not** included in the `FinalizeInjectionResponse` public contract (only the authenticated finalizer's own `attestation` is) — a PHI-minimizing choice, not an oversight. |
 | Row ETag | Dataverse-managed | Read by the API; never constructed or compared by Canvas |
 
 ### Authoritative patient context
@@ -106,12 +106,14 @@ go-live checklist can accept around.
 The API never overwrites a prior finalization. If a row's Workflow Status is
 reset back to the configured draft value while Final JSON or the
 Idempotency Key column still holds a value from a previous finalization,
-`FinalizeInjection` fails closed with `stale-final-artifact` and performs no
-write. A finalized action can only be re-finalized through a separate,
-explicit, audited reset/new-action process that this connector does not
-implement — for example, creating a new clinical-action row rather than
-reusing the old one — never by flipping the status column back to draft on
-the same row.
+both `EvaluateInjection` and `FinalizeInjection` fail closed with
+`stale-final-artifact`. Evaluate rejects before any clinical evaluation
+runs — the row must not appear ready to staff only to fail later at
+Finalize — and Finalize performs no write. A finalized action can only be
+re-finalized through a separate, explicit, audited reset/new-action process
+that this connector does not implement — for example, creating a new
+clinical-action row rather than reusing the old one — never by flipping the
+status column back to draft on the same row.
 
 For a Choice status column, put its integer option values in
 `DATAVERSE_DRAFT_STATUS_VALUE` and `DATAVERSE_FINAL_STATUS_VALUE`; the host
@@ -200,11 +202,15 @@ the target environment:
   `409 idempotency-conflict`.
 - A record whose status reads Draft but still carries a residual Final JSON
   payload or Idempotency Key from a previous finalization fails closed with
-  `stale-final-artifact` instead of being finalized over — see "Reopening a
-  finalized action" above.
+  `stale-final-artifact` on both Evaluate and Finalize, instead of appearing
+  ready to staff only to fail later, or being finalized over — see
+  "Reopening a finalized action" above.
 - A stored final record is validated against the strict stored-final schema
   before every retrieval or replay; a malformed, incomplete, non-final
-  (including reopened/voided), or identity-mismatched record is rejected
+  (including reopened/voided), identity-mismatched, or internally
+  inconsistent record — including a partial or check-in-mismatched board
+  acknowledgement, or an acknowledgement/attestation actor, timestamp, or
+  manual reason/source that disagree with each other — is rejected
   rather than echoed. Identity binding covers the requested action ID, the
   envelope's own injectionId/source.actionId, source.checkInId/patientId/
   orderId against the protected Dataverse columns, and the envelope's

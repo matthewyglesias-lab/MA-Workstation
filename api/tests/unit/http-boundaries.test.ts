@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { HttpRequest } from "@azure/functions";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { authenticatedPrincipal } from "../../src/http/auth";
 import { facilityDate, readApiConfiguration } from "../../src/config";
@@ -580,6 +582,154 @@ describe("Power Apps HTTP request schemas", () => {
         }).success,
       ).toBe(false);
     });
+
+    it("rejects a partial set of board acknowledgement provenance fields", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: { ...complete.acknowledgement, boardSource: "tebra-sync" },
+        }).success,
+      ).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: {
+            ...complete.acknowledgement,
+            boardSource: "tebra-sync",
+            boardAcknowledgedAtUtc: "2026-08-30T19:55:00.000Z",
+            boardAcknowledgedBy: "checkin-board-integration",
+          },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("accepts a complete set of board acknowledgement provenance fields matching source.checkInId", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: {
+            ...complete.acknowledgement,
+            boardSource: "tebra-sync",
+            boardAcknowledgedAtUtc: "2026-08-30T19:55:00.000Z",
+            boardAcknowledgedBy: "checkin-board-integration",
+            boardCheckInId: complete.source.checkInId,
+          },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a boardCheckInId that disagrees with source.checkInId", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: {
+            ...complete.acknowledgement,
+            boardSource: "tebra-sync",
+            boardAcknowledgedAtUtc: "2026-08-30T19:55:00.000Z",
+            boardAcknowledgedBy: "checkin-board-integration",
+            boardCheckInId: "a-different-check-in-entirely",
+          },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects board acknowledgement provenance under a manual acknowledgement", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          attestation: {
+            ...complete.attestation,
+            acknowledgementKind: "manual",
+            manualReason: "Verified against signed encounter note",
+            manualSource: "Order",
+          },
+          acknowledgement: {
+            kind: "manual",
+            acknowledgedAtUtc: complete.acknowledgement.acknowledgedAtUtc,
+            acknowledgedByUserId: complete.acknowledgement.acknowledgedByUserId,
+            acknowledgedByDisplayName: complete.acknowledgement.acknowledgedByDisplayName,
+            reason: "Verified against signed encounter note",
+            source: "Order",
+            boardSource: "tebra-sync",
+            boardAcknowledgedAtUtc: "2026-08-30T19:55:00.000Z",
+            boardAcknowledgedBy: "checkin-board-integration",
+            boardCheckInId: complete.source.checkInId,
+          },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects acknowledgement.acknowledgedByUserId disagreeing with attestation.subject", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: { ...complete.acknowledgement, acknowledgedByUserId: "someone-else" },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects acknowledgement.acknowledgedByDisplayName disagreeing with attestation.staff", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: {
+            ...complete.acknowledgement,
+            acknowledgedByDisplayName: "Someone Else",
+          },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects acknowledgement.acknowledgedAtUtc disagreeing with attestation.timestamp", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          acknowledgement: {
+            ...complete.acknowledgement,
+            acknowledgedAtUtc: "2026-08-30T21:00:00.000Z",
+          },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects attestation.timestamp disagreeing with finalizedAt", () => {
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...complete,
+          attestation: { ...complete.attestation, timestamp: "2026-08-30T21:00:00.000Z" },
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a manual acknowledgement reason/source disagreeing with attestation manualReason/manualSource, but accepts a whitespace-only difference", () => {
+      const manual = {
+        ...complete,
+        attestation: {
+          ...complete.attestation,
+          acknowledgementKind: "manual" as const,
+          manualReason: "Verified against signed encounter note",
+          manualSource: "Order",
+        },
+        acknowledgement: {
+          kind: "manual" as const,
+          acknowledgedAtUtc: complete.acknowledgement.acknowledgedAtUtc,
+          acknowledgedByUserId: complete.acknowledgement.acknowledgedByUserId,
+          acknowledgedByDisplayName: complete.acknowledgement.acknowledgedByDisplayName,
+          reason: "A completely different reason",
+          source: "Order",
+        },
+      };
+      expect(storedFinalEnvelopeSchema.safeParse(manual).success).toBe(false);
+      expect(
+        storedFinalEnvelopeSchema.safeParse({
+          ...manual,
+          acknowledgement: {
+            ...manual.acknowledgement,
+            reason: "  Verified against signed encounter note  ",
+          },
+        }).success,
+      ).toBe(true);
+    });
   });
 });
 
@@ -877,6 +1027,31 @@ describe.sequential("API configuration", () => {
       acknowledgedByColumn: "ipmg_ackby",
       acknowledgedCheckInIdColumn: "ipmg_ackcheckinid",
     });
+  });
+
+  it("loads without throwing from an environment equivalent to local.settings.example.json — a future required setting missing from the example must fail this test, not surface later as a silently unusable sample", () => {
+    const examplePath = fileURLToPath(
+      new URL("../../local.settings.example.json", import.meta.url),
+    );
+    const example = JSON.parse(readFileSync(examplePath, "utf8")) as {
+      Values: Record<string, string>;
+    };
+    // Deliberately not filtered through managedNames: this test must exercise
+    // every key the example file actually declares, so a required setting
+    // added to readApiConfiguration but never added here still fails loudly.
+    const applied = new Map<string, string | undefined>();
+    for (const [name, value] of Object.entries(example.Values)) {
+      applied.set(name, process.env[name]);
+      process.env[name] = value;
+    }
+    try {
+      expect(() => readApiConfiguration({ requireDataverse: true })).not.toThrow();
+    } finally {
+      for (const [name, previous] of applied) {
+        if (previous === undefined) delete process.env[name];
+        else process.env[name] = previous;
+      }
+    }
   });
 
   it("rejects a Dataverse configuration missing the required patient-context column", () => {

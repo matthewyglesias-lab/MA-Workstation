@@ -638,6 +638,20 @@ export const evaluateHandler = async (
         correlationId,
       );
     }
+    // A record whose status reads Draft but still carries a residual Final
+    // JSON payload or persisted idempotency key was finalized and then reset
+    // back to draft directly, not through an explicit, audited reset/
+    // new-action process. It must not appear ready to staff — reject before
+    // any clinical evaluation runs, exactly as finalizeHandler does before
+    // any PATCH.
+    if (store.hasResidualFinalArtifacts(record)) {
+      return apiError(
+        409,
+        "stale-final-artifact",
+        "This clinical action still carries a prior finalization artifact and cannot be evaluated directly from draft status. Use the documented reset/new-action process first.",
+        correlationId,
+      );
+    }
     let storedDraft: unknown;
     try {
       storedDraft = JSON.parse(record.draftJson);

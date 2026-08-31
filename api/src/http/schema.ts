@@ -863,6 +863,95 @@ export const storedFinalEnvelopeSchema = z
         message: "A Tebra attestation cannot carry manualReason/manualSource values.",
       });
     }
+
+    // Board acknowledgement provenance (boardSource/boardAcknowledgedAtUtc/
+    // boardAcknowledgedBy/boardCheckInId) is meaningful only as a complete
+    // set, only under a Tebra acknowledgement, and only when it actually
+    // identifies the same check-in as the protected source. A stored
+    // envelope violating any of these is corrupted or tampered and must
+    // fail retrieval/replay with stored-result-invalid, not be echoed.
+    const boardFields = [
+      value.acknowledgement.boardSource,
+      value.acknowledgement.boardAcknowledgedAtUtc,
+      value.acknowledgement.boardAcknowledgedBy,
+      value.acknowledgement.boardCheckInId,
+    ];
+    const boardFieldsPresentCount = boardFields.filter((field) => !isBlank(field)).length;
+    if (boardFieldsPresentCount > 0 && boardFieldsPresentCount < 4) {
+      context.addIssue({
+        code: "custom",
+        path: ["acknowledgement", "boardSource"],
+        message:
+          "Board acknowledgement provenance fields must be either all present and nonblank or all absent.",
+      });
+    }
+    if (boardFieldsPresentCount > 0 && value.acknowledgement.kind !== "tebra") {
+      context.addIssue({
+        code: "custom",
+        path: ["acknowledgement", "boardSource"],
+        message: "Board acknowledgement provenance is only allowed for a Tebra acknowledgement.",
+      });
+    }
+    if (
+      boardFieldsPresentCount === 4 &&
+      value.acknowledgement.boardCheckInId !== value.source.checkInId
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["acknowledgement", "boardCheckInId"],
+        message: "acknowledgement.boardCheckInId must match source.checkInId.",
+      });
+    }
+
+    // The finalizer relationships the handler always produces: the board
+    // acknowledgement's actor/time fields are the same server-stamped
+    // identity and instant as the finalizer's own attestation (they are
+    // never independently supplied), and the attestation's timestamp is the
+    // same instant the envelope was finalized at.
+    if (value.acknowledgement.acknowledgedByUserId !== value.attestation.subject) {
+      context.addIssue({
+        code: "custom",
+        path: ["acknowledgement", "acknowledgedByUserId"],
+        message: "acknowledgement.acknowledgedByUserId must match attestation.subject.",
+      });
+    }
+    if (value.acknowledgement.acknowledgedByDisplayName !== value.attestation.staff) {
+      context.addIssue({
+        code: "custom",
+        path: ["acknowledgement", "acknowledgedByDisplayName"],
+        message: "acknowledgement.acknowledgedByDisplayName must match attestation.staff.",
+      });
+    }
+    if (value.acknowledgement.acknowledgedAtUtc !== value.attestation.timestamp) {
+      context.addIssue({
+        code: "custom",
+        path: ["acknowledgement", "acknowledgedAtUtc"],
+        message: "acknowledgement.acknowledgedAtUtc must match attestation.timestamp.",
+      });
+    }
+    if (value.attestation.timestamp !== value.finalizedAt) {
+      context.addIssue({
+        code: "custom",
+        path: ["attestation", "timestamp"],
+        message: "attestation.timestamp must match finalizedAt.",
+      });
+    }
+    if (value.acknowledgement.kind === "manual") {
+      const reasonMatches =
+        (value.acknowledgement.reason ?? "").trim() ===
+        (value.attestation.manualReason ?? "").trim();
+      const sourceMatches =
+        (value.acknowledgement.source ?? "").trim() ===
+        (value.attestation.manualSource ?? "").trim();
+      if (!reasonMatches || !sourceMatches) {
+        context.addIssue({
+          code: "custom",
+          path: ["acknowledgement", "reason"],
+          message:
+            "A manual acknowledgement's reason/source must match attestation.manualReason/manualSource.",
+        });
+      }
+    }
   });
 
 export type StoredFinalEnvelope = z.infer<typeof storedFinalEnvelopeSchema>;

@@ -1176,6 +1176,61 @@ describe("Stored-final envelope validation on retrieval and replay", () => {
     expect(voidedFetch).toHaveBeenCalledOnce();
   });
 
+  const evaluateRequest = (): HttpRequest =>
+    ({
+      headers: new Headers({ "x-ms-client-principal": principalHeader }),
+      json: vi.fn().mockResolvedValue({ schemaVersion: POWER_APPS_INJECTION_SCHEMA_VERSION, injectionId }),
+    }) as unknown as HttpRequest;
+
+  it("evaluate fails closed on a draft-status row carrying residual Final JSON, before any clinical evaluation", async () => {
+    const draftEncounter = encounter();
+    const winnerFetch = vi
+      .fn()
+      .mockResolvedValueOnce(responseOf(draftRow(draftEncounter), 'W/"42"'))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", winnerFetch);
+    const finalizeBody = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+    await finalizeHandler(httpRequest(finalizeBody), {} as InvocationContext);
+    const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+    const staleFinalJson = JSON.parse(String(winnerPatchInit.body)).ipmg_finaljson as string;
+
+    // Row reset back to draft status directly; the stale Final JSON was
+    // never cleared.
+    const reopenedRow = draftRow(draftEncounter, {
+      ipmg_finaljson: staleFinalJson,
+      ipmg_workflowstatus: 100000000,
+    });
+    const reopenedFetch = vi.fn().mockResolvedValue(responseOf(reopenedRow, 'W/"42"'));
+    vi.stubGlobal("fetch", reopenedFetch);
+
+    const response = await evaluateHandler(evaluateRequest(), {} as InvocationContext);
+
+    expect(response.status).toBe(409);
+    expect(response.jsonBody).toMatchObject({ error: { code: "stale-final-artifact" } });
+    expect(response.jsonBody).not.toHaveProperty("evaluation");
+    // Nothing beyond the initial load happened — no downstream clinical
+    // evaluation, no further Dataverse interaction.
+    expect(reopenedFetch).toHaveBeenCalledOnce();
+  });
+
+  it("evaluate fails closed on a draft-status row carrying only a residual idempotency key (no Final JSON), before any clinical evaluation", async () => {
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_workflowstatus: 100000000,
+      ipmg_finaljson: "",
+      ipmg_idempotencykey: otherIdempotencyKey,
+    });
+    const fetchMock = vi.fn().mockResolvedValue(responseOf(row, 'W/"42"'));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await evaluateHandler(evaluateRequest(), {} as InvocationContext);
+
+    expect(response.status).toBe(409);
+    expect(response.jsonBody).toMatchObject({ error: { code: "stale-final-artifact" } });
+    expect(response.jsonBody).not.toHaveProperty("evaluation");
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("rejects retrieval of a stored final record whose identity does not match the requested injection", async () => {
     const draftEncounter = encounter();
     const winnerFetch = vi
@@ -1258,6 +1313,57 @@ describe("Stored-final envelope validation on retrieval and replay", () => {
     expect(response.status).toBe(503);
     expect(response.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
   });
+
+  it.each([
+    [
+      "a partial board-provenance set",
+      (envelope: Record<string, any>) => ({
+        ...envelope,
+        acknowledgement: { ...envelope.acknowledgement, boardSource: "tampered-source" },
+      }),
+    ],
+    [
+      "acknowledgedByUserId disagreeing with attestation.subject",
+      (envelope: Record<string, any>) => ({
+        ...envelope,
+        acknowledgement: { ...envelope.acknowledgement, acknowledgedByUserId: "tampered-user" },
+      }),
+    ],
+    [
+      "attestation.timestamp disagreeing with finalizedAt",
+      (envelope: Record<string, any>) => ({
+        ...envelope,
+        attestation: { ...envelope.attestation, timestamp: "2026-08-30T21:00:00.000Z" },
+      }),
+    ],
+  ])(
+    "rejects a finalize replay whose stored envelope has %s",
+    async (_label, tamper) => {
+      const draftEncounter = encounter();
+      const winnerFetch = vi
+        .fn()
+        .mockResolvedValueOnce(responseOf(draftRow(draftEncounter), 'W/"42"'))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      vi.stubGlobal("fetch", winnerFetch);
+      const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+      await finalizeHandler(httpRequest(body), {} as InvocationContext);
+      const [, winnerPatchInit] = winnerFetch.mock.calls[1] as unknown as [string, RequestInit];
+      const patch = JSON.parse(String(winnerPatchInit.body)) as Record<string, unknown>;
+      const envelope = JSON.parse(String(patch.ipmg_finaljson));
+      const tampered = JSON.stringify(tamper(envelope));
+      const finalRow = draftRow(draftEncounter, {
+        ipmg_finaljson: tampered,
+        ipmg_workflowstatus: 100000001,
+        ipmg_idempotencykey: patch.ipmg_idempotencykey,
+      });
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(responseOf(finalRow)));
+
+      const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+      expect(response.status).toBe(503);
+      expect(response.jsonBody).toMatchObject({ error: { code: "stored-result-invalid" } });
+    },
+  );
 
   it("replay tolerates an advanced row ETag — replay never depends on the current ETag matching", async () => {
     const draftEncounter = encounter();
@@ -1424,6 +1530,42 @@ describe("Tebra acknowledgement provenance", () => {
       ipmg_ackby: "checkin-board-integration",
       ipmg_ackcheckinid: source.checkInId,
     });
+    const fetchMock = vi.fn().mockResolvedValue(responseOf(row, 'W/"42"'));
+    vi.stubGlobal("fetch", fetchMock);
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "acknowledgement-provenance-invalid" } });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when all four board acknowledgement columns are configured but all four row values are blank", async () => {
+    withAckColumnsConfigured();
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter, {
+      ipmg_acksource: "",
+      ipmg_ackatutc: "",
+      ipmg_ackby: "",
+      ipmg_ackcheckinid: "",
+    });
+    const fetchMock = vi.fn().mockResolvedValue(responseOf(row, 'W/"42"'));
+    vi.stubGlobal("fetch", fetchMock);
+    const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });
+
+    const response = await finalizeHandler(httpRequest(body), {} as InvocationContext);
+
+    expect(response.status).toBe(422);
+    expect(response.jsonBody).toMatchObject({ error: { code: "acknowledgement-provenance-invalid" } });
+    // No PATCH occurs — only the load happened.
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when all four board acknowledgement columns are configured but entirely absent from the row (not just blank strings)", async () => {
+    withAckColumnsConfigured();
+    const draftEncounter = encounter();
+    const row = draftRow(draftEncounter);
     const fetchMock = vi.fn().mockResolvedValue(responseOf(row, 'W/"42"'));
     vi.stubGlobal("fetch", fetchMock);
     const body = finalizeRequestBody({ evaluationFingerprint: evaluationFingerprintFor(draftEncounter) });

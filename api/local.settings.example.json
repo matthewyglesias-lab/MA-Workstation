@@ -19,6 +19,7 @@
     "DATAVERSE_CHECKIN_ID_COLUMN": "ipmg_checkinid",
     "DATAVERSE_PATIENT_ID_COLUMN": "ipmg_patientid",
     "DATAVERSE_ORDER_ID_COLUMN": "ipmg_orderid",
+    "DATAVERSE_PATIENT_CONTEXT_COLUMN": "ipmg_patientcontextjson",
     "DATAVERSE_ORDER_CONTEXT_COLUMN": "ipmg_ordercontextjson",
     "DATAVERSE_ACK_SOURCE_COLUMN": "ipmg_acksource",
     "DATAVERSE_ACK_AT_COLUMN": "ipmg_ackatutc",
