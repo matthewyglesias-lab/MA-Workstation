@@ -71,7 +71,7 @@ describe("RC6.1 injection note format", () => {
         "No acute s/e or contraindications to administration noted on pre-inj screening.",
     );
     expect(note.assessment).toContain(
-      "Product preparation: INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; " +
+      "Product preparation: INVEGA SUSTENNA 156 mg (1 mL) syringe shaken vigorously ≥10 sec; " +
         "suspension homogeneous, no foreign matter or discoloration observed.",
     );
     expect(note.assessment).toContain(
@@ -288,7 +288,7 @@ describe("RC6.1 injection note format", () => {
         "Clinical review: Prior dose tolerated well per pt report; no new or unresolved s/e. " +
         "No acute s/e or contraindications to administration noted on pre-inj screening. " +
         "Active order and product-specific initiation / re-initiation plan verified.\n\n" +
-        "Product preparation: INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; " +
+        "Product preparation: INVEGA SUSTENNA 234 mg (1.5 mL) syringe shaken vigorously ≥10 sec; " +
         "suspension homogeneous, no foreign matter or discoloration observed.\n\n" +
         "Timing: 46 days since prior inj; outside routine maintenance interval. " +
         "Med-specific missed-dose guidance reviewed. Provider approval documented: Samuel Amoako; " +
@@ -324,7 +324,7 @@ describe("RC6.1 injection note format", () => {
   it("places completed medication-specific preparation facts after clinical review", () => {
     const note = formatFor(sustennaAdministered());
     expect(note.assessment).toContain(
-      "Product preparation: INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; " +
+      "Product preparation: INVEGA SUSTENNA 156 mg (1 mL) syringe shaken vigorously ≥10 sec; " +
         "suspension homogeneous, no foreign matter or discoloration observed.",
     );
     expect(note.assessment.indexOf("Clinical review:")).toBeLessThan(
@@ -360,7 +360,7 @@ describe("RC6.1 injection note format", () => {
     const note = formatFor(sustennaAdministered());
     expect(note.plan).not.toContain("Preparation / reconstitution");
     expect(note.plan).not.toContain("PRODUCT HANDLING");
-    const occurrences = (note.all.match(/INVEGA SUSTENNA syringe shaken/g) ?? []).length;
+    const occurrences = (note.all.match(/INVEGA SUSTENNA 156 mg \(1 mL\) syringe shaken/g) ?? []).length;
     expect(occurrences).toBe(1);
   });
 });

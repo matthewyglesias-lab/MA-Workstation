@@ -39,7 +39,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ARISTADA syringe preparation completed",
     documentation:
-      "ARISTADA syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
+      "ARISTADA 441 mg (1.6 mL) syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
     guidance: ["Tap the syringe at least 10 times", "more than 15 minutes"],
   },
   {
@@ -47,7 +47,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ARISTADA INITIO syringe preparation completed",
     documentation:
-      "ARISTADA INITIO syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
+      "ARISTADA INITIO 675 mg (2.4 mL) syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.",
     guidance: ["Tap the syringe at least 10 times", "more than 15 minutes"],
   },
   {
@@ -55,7 +55,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "INVEGA SUSTENNA suspension shaken and visually inspected",
     documentation:
-      "INVEGA SUSTENNA syringe shaken vigorously ≥10 sec; suspension homogeneous, no foreign matter or discoloration observed.",
+      "INVEGA SUSTENNA 39 mg (0.25 mL) syringe shaken vigorously ≥10 sec; suspension homogeneous, no foreign matter or discoloration observed.",
     normalResult: "no foreign matter or discoloration observed.",
     guidance: ["at least 10 seconds", "foreign matter or discoloration"],
   },
@@ -64,7 +64,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ERZOFRI suspension preparation completed",
     documentation:
-      "ERZOFRI syringe shaken vigorously ≥10 sec; suspension homogeneous.",
+      "ERZOFRI 39 mg (0.25 mL) syringe shaken vigorously ≥10 sec; suspension homogeneous.",
     guidance: ["at least 10 seconds", "Do not mix with another product or diluent"],
   },
   {
@@ -72,7 +72,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "INVEGA TRINZA suspension shaken and visually inspected",
     documentation:
-      "INVEGA TRINZA syringe shaken vigorously ≥15 sec and injected within 5 min; uniform, milky-white suspension confirmed, no foreign matter or discoloration observed.",
+      "INVEGA TRINZA 273 mg (0.88 mL) syringe shaken vigorously ≥15 sec and injected within 5 min; uniform, milky-white suspension confirmed, no foreign matter or discoloration observed.",
     normalResult: "no foreign matter or discoloration observed.",
     guidance: ["at least 15 seconds", "inject within 5 minutes"],
   },
@@ -81,7 +81,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "INVEGA HAFYERA resuspension and visual inspection completed",
     documentation:
-      "INVEGA HAFYERA syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more; uniform, thick, milky-white suspension confirmed, no particulate matter or discoloration observed.",
+      "INVEGA HAFYERA 1092 mg (3.5 mL) syringe shaken rapidly ≥15 sec, rested briefly, then shaken ≥15 sec more; uniform, thick, milky-white suspension confirmed, no particulate matter or discoloration observed.",
     normalResult: "no particulate matter or discoloration observed.",
     guidance: ["shake very fast for at least 15 seconds", "shake again for 15 seconds"],
   },
@@ -90,7 +90,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "UZEDY room-temperature, product, and bubble checks completed",
     documentation:
-      "UZEDY kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white, free of non-white particles, bubble positioned at the syringe cap.",
+      "UZEDY 50 mg (0.14 mL) kit reached room temperature in-package ≥30 min; suspension opaque white-to-off-white, free of non-white particles, bubble at the syringe cap.",
     normalResult: "free of non-white particles",
     guidance: ["at least 30 minutes", "Forcefully flick the syringe downward three times"],
   },
@@ -99,7 +99,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ABILIFY MAINTENA reconstitution and inspection completed",
     documentation:
-      "ABILIFY MAINTENA reconstituted per ordered presentation; suspension uniform, opaque, and milky-white, no particulate matter or discoloration observed.",
+      "ABILIFY MAINTENA reconstituted per the ordered presentation; suspension uniform, opaque, and milky-white, no particulate matter or discoloration observed.",
     normalResult: "no particulate matter or discoloration observed.",
     guidance: ["dual-chamber syringe and vial have different reconstitution procedures"],
   },
@@ -108,7 +108,7 @@ const preparationCases: readonly PreparationCase[] = [
     verification: "resuspend",
     label: "ABILIFY ASIMTUFII suspension prepared and visually inspected",
     documentation:
-      "ABILIFY ASIMTUFII syringe tapped ≥10 times, shaken vigorously ≥10 sec; uniform, opaque, milky-white suspension confirmed, no particulate matter or discoloration observed.",
+      "ABILIFY ASIMTUFII 720 mg (2.4 mL) syringe tapped ≥10 times, shaken vigorously ≥10 sec; uniform, opaque, milky-white suspension confirmed, no particulate matter or discoloration observed.",
     normalResult: "no particulate matter or discoloration observed.",
     guidance: ["at least 10 seconds until the medication is uniform", "particulate matter or discoloration"],
   },
@@ -240,6 +240,85 @@ describe("injection preparation guidance", () => {
         );
       }
     }
+  });
+
+  it("states ARISTADA's labeled injection volume for every strength, not just the first", () => {
+    const aristada = INJECTION_MEDICATIONS.aristada;
+    const volumeByDose: Record<string, string> = {
+      "441 mg": "1.6",
+      "662 mg": "2.4",
+      "882 mg": "3.2",
+      "1064 mg": "3.9",
+    };
+    for (const dose of aristada.doses) {
+      const documentation = medicationVerificationDocumentation(
+        aristada,
+        "resuspend",
+        dose,
+        aristada.defaultSite,
+      );
+      expect(documentation, dose).toBe(
+        `ARISTADA ${dose} (${volumeByDose[dose]} mL) syringe tapped ≥10 times, shaken vigorously ≥30 sec; suspension uniform.`,
+      );
+    }
+  });
+
+  it("names ABILIFY MAINTENA's actual reconstituted presentation from the documented NDC, and its withdrawal volume for the vial", () => {
+    const maintena = INJECTION_MEDICATIONS.maintena;
+    const cases: Array<{ ndc: string; dose: string; expected: string }> = [
+      {
+        ndc: "59148-232-12",
+        dose: "300 mg",
+        expected:
+          "ABILIFY MAINTENA 300 mg vial reconstituted; suspension uniform, opaque, and milky-white, " +
+          "no particulate matter or discoloration observed, 1.5 mL prepared for injection.",
+      },
+      {
+        ndc: "59148-245-12",
+        dose: "400 mg",
+        expected:
+          "ABILIFY MAINTENA 400 mg vial reconstituted; suspension uniform, opaque, and milky-white, " +
+          "no particulate matter or discoloration observed, 2 mL prepared for injection.",
+      },
+      {
+        ndc: "59148-045-80",
+        dose: "300 mg",
+        expected:
+          "ABILIFY MAINTENA 300 mg prefilled dual-chamber syringe reconstituted; suspension uniform, " +
+          "opaque, and milky-white, no particulate matter or discoloration observed.",
+      },
+      {
+        ndc: "59148-072-80",
+        dose: "400 mg",
+        expected:
+          "ABILIFY MAINTENA 400 mg prefilled dual-chamber syringe reconstituted; suspension uniform, " +
+          "opaque, and milky-white, no particulate matter or discoloration observed.",
+      },
+    ];
+    for (const { ndc, dose, expected } of cases) {
+      const documentation = medicationVerificationDocumentation(
+        maintena,
+        "resuspend",
+        dose,
+        maintena.defaultSite,
+        ndc,
+      );
+      expect(documentation, `${ndc} ${dose}`).toBe(expected);
+    }
+
+    // An undocumented or unrecognized NDC never guesses a presentation - it
+    // falls back to the generic, still-accurate hedge rather than fabricate
+    // which kit was actually used.
+    const unresolved = medicationVerificationDocumentation(
+      maintena,
+      "resuspend",
+      "300 mg",
+      maintena.defaultSite,
+      "00000-0000-00",
+    );
+    expect(unresolved).toBe(
+      "ABILIFY MAINTENA reconstituted per the ordered presentation; suspension uniform, opaque, and milky-white, no particulate matter or discoloration observed.",
+    );
   });
 
   it("keeps every checked preparation fact in its own chart line and omits it when unchecked", () => {
