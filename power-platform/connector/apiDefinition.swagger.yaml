@@ -1,0 +1,1432 @@
+# Replace the host and Entra placeholders before importing this definition.
+# The API must validate and parse encounterJson; client-supplied identity, time,
+# clinical-reference metadata, clinic configuration, and rendered content are
+# intentionally outside this public contract.
+#
+# Canvas/board must NOT be permitted to write these Dataverse columns
+# directly on the clinical-action row (field security required):
+#   - the Status, Final JSON, and Idempotency Key columns (server-owned; the
+#     API is the only writer);
+#   - the protected check-in/patient/order identity columns and the optional
+#     order-context column (board/integration-owned; the API treats them as
+#     authoritative over anything the same row's Draft JSON claims);
+#   - the Tebra Acknowledged column and, where configured, the optional
+#     board acknowledgement source/timestamp/identity/check-in columns
+#     (board/integration-owned; a Canvas-writable acknowledgement flag would
+#     let the clinical modal manufacture its own check-in confirmation).
+# See power-platform/README.md and api/README.md for the full column list.
+swagger: "2.0"
+info:
+  title: MA Workstation Injection Workflow
+  version: 1.0.0
+  description: >-
+    Power Apps custom connector for server-evaluated injection workflow
+    decisions, finalization, chart documentation, and patient AVS rendering.
+host: api.your-domain.example
+basePath: /api/v1
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+tags:
+  - name: Injection
+    description: Injection workflow actions.
+securityDefinitions:
+  entraOAuth:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: https://login.microsoftonline.com/YOUR_ENTRA_TENANT_ID/oauth2/v2.0/authorize
+    tokenUrl: https://login.microsoftonline.com/YOUR_ENTRA_TENANT_ID/oauth2/v2.0/token
+    scopes:
+      "api://YOUR_API_APPLICATION_ID/Injection.ReadWrite": Read and write injection workflow data.
+security:
+  - entraOAuth:
+      - "api://YOUR_API_APPLICATION_ID/Injection.ReadWrite"
+
+parameters:
+  CorrelationId:
+    name: X-Correlation-Id
+    x-ms-client-name: correlationId
+    in: header
+    required: false
+    type: string
+    maxLength: 128
+    x-ms-summary: Correlation ID
+    x-ms-visibility: advanced
+    description: Optional caller trace ID. The API returns the effective value.
+  IdempotencyKey:
+    name: Idempotency-Key
+    x-ms-client-name: idempotencyKey
+    in: header
+    required: true
+    type: string
+    minLength: 16
+    maxLength: 200
+    x-ms-summary: Idempotency key
+    x-ms-visibility: important
+    description: >-
+      Caller-generated key for a finalize attempt. Reuse the same key only
+      when retrying the same injection ID, source record version,
+      evaluation fingerprint, and confirmation.
+
+paths:
+  /injections/evaluate:
+    post:
+      tags:
+        - Injection
+      summary: Evaluate injection
+      description: >-
+        Reloads the authoritative Dataverse draft by injection ID, validates
+        its encounter, applies the current server-side clinical reference and
+        facility date, and returns a safety evaluation bound to the row's
+        opaque ETag. This operation does not finalize the record.
+      operationId: EvaluateInjection
+      x-ms-summary: Evaluate injection
+      x-ms-visibility: important
+      parameters:
+        - $ref: "#/parameters/CorrelationId"
+        - name: body
+          in: body
+          required: true
+          x-ms-summary: Evaluation request
+          schema:
+            $ref: "#/definitions/EvaluateInjectionRequest"
+      responses:
+        "200":
+          description: Evaluation completed, including blocked or review states.
+          headers:
+            X-Correlation-Id:
+              type: string
+              description: Effective server correlation ID.
+          schema:
+            $ref: "#/definitions/EvaluateInjectionResponse"
+        "400":
+          description: Malformed JSON or an invalid encounter schema.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "401":
+          description: Authentication is required.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "403":
+          description: The caller lacks the delegated injection scope.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "404":
+          description: The authoritative injection draft was not found.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "409":
+          description: The clinical action is not in the configured draft state.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "422":
+          description: The stored draft or encounter does not match the approved schema.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "500":
+          description: The evaluation failed unexpectedly.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "503":
+          description: Required server configuration is unavailable.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /injections/finalize:
+    post:
+      tags:
+        - Injection
+      summary: Finalize injection
+      description: >-
+        Reloads the authoritative draft, re-evaluates it, verifies the supplied
+        evaluation fingerprint and expected source version, stamps the
+        authenticated actor and server time, and returns the atomic finalized artifacts.
+        The backing API must persist Idempotency-Key results before claiming
+        replay-safe finalization across instances.
+      operationId: FinalizeInjection
+      x-ms-summary: Finalize injection
+      x-ms-visibility: important
+      parameters:
+        - $ref: "#/parameters/CorrelationId"
+        - $ref: "#/parameters/IdempotencyKey"
+        - name: body
+          in: body
+          required: true
+          x-ms-summary: Finalization request
+          schema:
+            $ref: "#/definitions/FinalizeInjectionRequest"
+      responses:
+        "200":
+          description: Finalization completed or an identical request was replayed.
+          headers:
+            X-Correlation-Id:
+              type: string
+              description: Effective server correlation ID.
+            Idempotency-Key:
+              type: string
+              description: Idempotency key associated with this result.
+            Idempotency-Replayed:
+              type: boolean
+              description: True when a stored result was returned for a retry.
+          schema:
+            $ref: "#/definitions/FinalizeInjectionResponse"
+        "400":
+          description: Malformed JSON, invalid schema, or missing acknowledgement data.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "401":
+          description: Authentication is required.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "403":
+          description: The caller is not allowed to finalize injection records.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "409":
+          description: >-
+            The source version or evaluation fingerprint is stale, or the
+            idempotency key was reused with a different request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "404":
+          description: The authoritative injection draft was not found.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "422":
+          description: Current clinical or documentation gates prevent finalization.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "500":
+          description: Finalization failed unexpectedly.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "503":
+          description: Dataverse or required server configuration is unavailable.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /injections/documents:
+    post:
+      tags:
+        - Injection
+      summary: Get injection documents
+      description: >-
+        Returns stored finalized note sections by injection ID, or re-evaluates
+        a supplied draft encounter to produce a non-authoritative preview.
+      operationId: GetInjectionDocuments
+      x-ms-summary: Get injection documents
+      x-ms-visibility: important
+      parameters:
+        - $ref: "#/parameters/CorrelationId"
+        - name: body
+          in: body
+          required: true
+          x-ms-summary: Document request
+          schema:
+            $ref: "#/definitions/GetInjectionDocumentsRequest"
+      responses:
+        "200":
+          description: Finalized documentation or a draft documentation preview.
+          headers:
+            X-Correlation-Id:
+              type: string
+              description: Effective server correlation ID.
+          schema:
+            $ref: "#/definitions/GetInjectionDocumentsResponse"
+        "400":
+          description: Malformed JSON or an invalid encounter schema.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "401":
+          description: Authentication is required.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "403":
+          description: The caller lacks the delegated injection scope.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "404":
+          description: The finalized injection record was not found.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "422":
+          description: The draft cannot produce safe documentation yet.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "409":
+          description: The requested record has not been finalized.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "500":
+          description: Document generation failed unexpectedly.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "503":
+          description: Dataverse or required server configuration is unavailable.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /injections/avs:
+    post:
+      tags:
+        - Injection
+      summary: Generate injection AVS
+      description: >-
+        Returns a stored finalized AVS by injection ID, or re-evaluates a draft
+        encounter and renders a visibly non-final preview. Medication labels,
+        clinic configuration, reference version, and run time are server-owned.
+      operationId: GenerateInjectionAvs
+      x-ms-summary: Generate injection AVS
+      x-ms-visibility: important
+      parameters:
+        - $ref: "#/parameters/CorrelationId"
+        - name: body
+          in: body
+          required: true
+          x-ms-summary: AVS request
+          schema:
+            $ref: "#/definitions/GenerateInjectionAvsRequest"
+      responses:
+        "200":
+          description: Finalized AVS or a watermarked draft preview.
+          headers:
+            X-Correlation-Id:
+              type: string
+              description: Effective server correlation ID.
+          schema:
+            $ref: "#/definitions/GenerateInjectionAvsResponse"
+        "400":
+          description: Malformed JSON or an invalid encounter schema.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "401":
+          description: Authentication is required.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "403":
+          description: The caller lacks the delegated injection scope.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "404":
+          description: The finalized injection record was not found.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "422":
+          description: The draft cannot produce a safe AVS preview yet.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "409":
+          description: The requested record has not been finalized.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "500":
+          description: AVS generation failed unexpectedly.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        "503":
+          description: Dataverse or required server configuration is unavailable.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+definitions:
+  EvaluateInjectionRequest:
+    type: object
+    required:
+      - schemaVersion
+      - injectionId
+    properties:
+      schemaVersion:
+        type: string
+        enum:
+          - 2026-08-30.1
+        default: 2026-08-30.1
+        maxLength: 32
+        x-ms-summary: Schema version
+        description: Public connector DTO version; mismatches fail closed.
+      injectionId:
+        type: string
+        format: uuid
+        x-ms-summary: Injection ID
+        description: >-
+          Dataverse clinical-action row to reload. The encounter and source
+          identifiers come from that saved draft, not from this call.
+  InjectionSourceReference:
+    type: object
+    required:
+      - actionId
+      - checkInId
+      - patientId
+      - orderId
+      - sourceRecordVersion
+    properties:
+      actionId:
+        type: string
+        minLength: 1
+        maxLength: 128
+        x-ms-summary: Action ID
+      checkInId:
+        type: string
+        minLength: 1
+        maxLength: 128
+        x-ms-summary: Check-in ID
+      patientId:
+        type: string
+        minLength: 1
+        maxLength: 128
+        x-ms-summary: Patient ID
+      orderId:
+        type: string
+        minLength: 1
+        maxLength: 128
+        x-ms-summary: Order ID
+      sourceRecordVersion:
+        type: string
+        minLength: 1
+        maxLength: 128
+        x-ms-summary: Source record version
+        description: Opaque Dataverse weak ETag returned by EvaluateInjection.
+      patientRecordNumber:
+        type: string
+        maxLength: 128
+        x-ms-summary: Patient record number
+        description: Optional display identifier; never used as the patient identity key.
+
+  EvaluateInjectionResponse:
+    type: object
+    required:
+      - schemaVersion
+      - source
+      - evaluation
+      - evaluatedAt
+      - evaluationFingerprint
+      - clinicalReferenceVersion
+      - sourceRecordVersion
+      - correlationId
+    properties:
+      schemaVersion:
+        type: string
+        enum:
+          - 2026-08-30.1
+        x-ms-summary: Schema version
+      source:
+        $ref: "#/definitions/InjectionSourceReference"
+      evaluation:
+        $ref: "#/definitions/InjectionEvaluation"
+      evaluatedAt:
+        type: string
+        format: date-time
+        x-ms-summary: Evaluated at
+      evaluationFingerprint:
+        type: string
+        pattern: "^[0-9a-f]{16}$"
+        x-ms-summary: Evaluation fingerprint
+        description: >-
+          Opaque server fingerprint binding the normalized encounter, source
+          record version, server date, and clinical reference version.
+      clinicalReferenceVersion:
+        type: string
+        x-ms-summary: Clinical reference version
+      sourceRecordVersion:
+        type: string
+        x-ms-summary: Source record version
+      correlationId:
+        type: string
+        x-ms-summary: Correlation ID
+
+  FinalizeInjectionRequest:
+    type: object
+    required:
+      - schemaVersion
+      - injectionId
+      - sourceRecordVersion
+      - evaluationFingerprint
+      - confirmation
+    properties:
+      schemaVersion:
+        type: string
+        enum:
+          - 2026-08-30.1
+        default: 2026-08-30.1
+        maxLength: 32
+        x-ms-summary: Schema version
+        description: Public connector DTO version; mismatches fail closed.
+      injectionId:
+        type: string
+        format: uuid
+        x-ms-summary: Injection ID
+        description: >-
+          Authoritative draft identifier. The API reloads this record instead
+          of finalizing a client-supplied encounter snapshot.
+      sourceRecordVersion:
+        type: string
+        minLength: 1
+        maxLength: 128
+        x-ms-summary: Source record version
+        description: Exact opaque ETag returned by EvaluateInjection.
+      evaluationFingerprint:
+        type: string
+        pattern: "^[0-9a-f]{16}$"
+        x-ms-summary: Evaluation fingerprint
+      confirmation:
+        $ref: "#/definitions/FinalizeConfirmation"
+
+  FinalizeConfirmation:
+    type: object
+    required:
+      - confirmed
+      - acknowledgementKind
+    properties:
+      confirmed:
+        type: boolean
+        enum:
+          - true
+        x-ms-summary: Confirm finalization
+        description: Must be true. Actor identity and time come from the API host.
+      acknowledgementKind:
+        type: string
+        enum:
+          - tebra
+          - manual
+        maxLength: 64
+        x-ms-summary: Acknowledgement kind
+        description: Check-in acknowledgement path selected by staff.
+      manualReason:
+        type: string
+        maxLength: 1000
+        x-ms-summary: Manual reason
+        description: >-
+          Required and must be non-blank (after trimming) when
+          acknowledgementKind = "manual". When acknowledgementKind = "tebra",
+          this field may be omitted or sent as an empty string, but any
+          non-blank value is rejected.
+      manualSource:
+        type: string
+        maxLength: 500
+        x-ms-summary: Manual source
+        description: >-
+          Required and must be non-blank (after trimming) when
+          acknowledgementKind = "manual" (e.g. the order or provider
+          direction used for the manual check-in). When acknowledgementKind
+          = "tebra", this field may be omitted or sent as an empty string,
+          but any non-blank value is rejected.
+
+  FinalizeInjectionResponse:
+    type: object
+    required:
+      - schemaVersion
+      - source
+      - injectionId
+      - status
+      - disposition
+      - evaluation
+      - evaluationFingerprint
+      - finalizedAt
+      - attestation
+      - documents
+      - avs
+      - clinicalReferenceVersion
+      - correlationId
+    properties:
+      schemaVersion:
+        type: string
+        enum:
+          - 2026-08-30.1
+        x-ms-summary: Schema version
+      injectionId:
+        type: string
+        format: uuid
+        x-ms-summary: Injection ID
+      status:
+        type: string
+        enum:
+          - finalized
+        x-ms-summary: Record status
+      disposition:
+        type: string
+        enum:
+          - administered
+          - held
+          - escalated
+          - provider
+        x-ms-summary: Disposition
+      source:
+        $ref: "#/definitions/InjectionSourceReference"
+      evaluation:
+        $ref: "#/definitions/InjectionEvaluation"
+      evaluationFingerprint:
+        type: string
+        pattern: "^[0-9a-f]{16}$"
+        x-ms-summary: Evaluation fingerprint
+      finalizedAt:
+        type: string
+        format: date-time
+        x-ms-summary: Finalized at
+      attestation:
+        $ref: "#/definitions/ServerAttestation"
+      documents:
+        $ref: "#/definitions/InjectionDocuments"
+      avs:
+        $ref: "#/definitions/InjectionAvsArtifact"
+      clinicalReferenceVersion:
+        type: string
+        x-ms-summary: Clinical reference version
+      correlationId:
+        type: string
+        x-ms-summary: Correlation ID
+
+  ServerAttestation:
+    type: object
+    required:
+      - staff
+      - subject
+      - timestamp
+      - statementVersion
+    properties:
+      staff:
+        type: string
+        x-ms-summary: Staff display name
+        description: Resolved from validated token claims or an approved staff directory.
+      subject:
+        type: string
+        x-ms-summary: Staff subject ID
+        description: Immutable Entra object or subject identifier.
+      timestamp:
+        type: string
+        format: date-time
+        x-ms-summary: Attestation time
+      statementVersion:
+        type: string
+        x-ms-summary: Statement version
+      acknowledgementKind:
+        type: string
+        x-ms-summary: Acknowledgement kind
+      manualReason:
+        type: string
+        x-ms-summary: Manual reason
+      manualSource:
+        type: string
+        x-ms-summary: Manual source
+
+  GetInjectionDocumentsRequest:
+    type: object
+    description: >-
+      Provide injectionId for finalized retrieval, or provide both source and
+      encounterJson for a draft preview. The API rejects mixed or incomplete modes.
+    required:
+      - schemaVersion
+    properties:
+      schemaVersion:
+        type: string
+        enum:
+          - 2026-08-30.1
+        default: 2026-08-30.1
+        maxLength: 32
+        x-ms-summary: Schema version
+        description: Public connector DTO version; mismatches fail closed.
+      injectionId:
+        type: string
+        format: uuid
+        x-ms-summary: Injection ID
+        description: Finalized Dataverse draft identifier for retrieval or reprint.
+      source:
+        $ref: "#/definitions/InjectionSourceReference"
+      encounterJson:
+        type: string
+        minLength: 2
+        maxLength: 262144
+        x-ms-summary: Encounter JSON
+        description: >-
+          Public encounter DTO only; the server supplies date, identity,
+          reference metadata, clinic configuration, and generated content.
+
+  GetInjectionDocumentsResponse:
+    type: object
+    required:
+      - schemaVersion
+      - source
+      - mode
+      - evaluation
+      - documents
+      - generatedAt
+      - clinicalReferenceVersion
+      - correlationId
+    properties:
+      schemaVersion:
+        type: string
+        enum:
+          - 2026-08-30.1
+        x-ms-summary: Schema version
+      injectionId:
+        type: string
+        format: uuid
+        x-ms-summary: Injection ID
+      source:
+        $ref: "#/definitions/InjectionSourceReference"
+      mode:
+        type: string
+        enum:
+          - preview
+          - final
+        x-ms-summary: Document mode
+      evaluation:
+        $ref: "#/definitions/InjectionEvaluation"
+      documents:
+        $ref: "#/definitions/InjectionDocuments"
+      generatedAt:
+        type: string
+        format: date-time
+        x-ms-summary: Generated at
+      clinicalReferenceVersion:
+        type: string
+        x-ms-summary: Clinical reference version
+      correlationId:
+        type: string
+        x-ms-summary: Correlation ID
+
+  GenerateInjectionAvsRequest:
+    type: object
+    description: >-
+      Provide injectionId for finalized AVS retrieval, or provide both source
+      and encounterJson for a watermarked draft preview. The API rejects mixed
+      or incomplete modes.
+    required:
+      - schemaVersion
+      - locale
+    properties:
+      schemaVersion:
+        type: string
+        enum:
+          - 2026-08-30.1
+        default: 2026-08-30.1
+        maxLength: 32
+        x-ms-summary: Schema version
+        description: Public connector DTO version; mismatches fail closed.
+      injectionId:
+        type: string
+        format: uuid
+        x-ms-summary: Injection ID
+        description: Finalized Dataverse draft identifier for retrieval or reprint.
+      source:
+        $ref: "#/definitions/InjectionSourceReference"
+      encounterJson:
+        type: string
+        minLength: 2
+        maxLength: 262144
+        x-ms-summary: Encounter JSON
+        description: >-
+          Public encounter DTO only; the server derives all patient-facing
+          labels and configured clinic contact details.
+      locale:
+        type: string
+        enum:
+          - en-US
+        default: en-US
+        x-ms-summary: AVS locale
+        description: Only the clinician-approved English AVS is currently available.
+
+  GenerateInjectionAvsResponse:
+    type: object
+    required:
+      - schemaVersion
+      - source
+      - mode
+      - evaluation
+      - avs
+      - clinicalReferenceVersion
+      - correlationId
+    properties:
+      schemaVersion:
+        type: string
+        enum:
+          - 2026-08-30.1
+        x-ms-summary: Schema version
+      injectionId:
+        type: string
+        format: uuid
+        x-ms-summary: Injection ID
+      source:
+        $ref: "#/definitions/InjectionSourceReference"
+      mode:
+        type: string
+        enum:
+          - preview
+          - final
+        x-ms-summary: AVS mode
+      evaluation:
+        $ref: "#/definitions/InjectionEvaluation"
+      avs:
+        $ref: "#/definitions/InjectionAvsArtifact"
+      clinicalReferenceVersion:
+        type: string
+        x-ms-summary: Clinical reference version
+      correlationId:
+        type: string
+        x-ms-summary: Correlation ID
+
+  InjectionEvaluation:
+    type: object
+    required:
+      - workflow
+      - readiness
+      - stops
+      - warnings
+      - recommendations
+      - calculatedDates
+      - output
+    properties:
+      workflow:
+        type: string
+        enum:
+          - injection
+        x-ms-summary: Workflow
+      readiness:
+        type: string
+        enum:
+          - idle
+          - blocked
+          - review
+          - ready
+        x-ms-summary: Readiness
+      stops:
+        type: array
+        x-ms-summary: Stops
+        items:
+          $ref: "#/definitions/ClinicalIssue"
+      warnings:
+        type: array
+        x-ms-summary: Warnings
+        items:
+          $ref: "#/definitions/ClinicalIssue"
+      recommendations:
+        type: array
+        x-ms-summary: Recommendations
+        items:
+          $ref: "#/definitions/ClinicalRecommendation"
+      calculatedDates:
+        $ref: "#/definitions/CalculatedDates"
+      output:
+        $ref: "#/definitions/InjectionEvaluationOutput"
+
+  ClinicalIssue:
+    type: object
+    required:
+      - code
+      - message
+      - severity
+    properties:
+      code:
+        type: string
+        x-ms-summary: Issue code
+      message:
+        type: string
+        x-ms-summary: Message
+      severity:
+        type: string
+        enum:
+          - stop
+          - warning
+          - info
+        x-ms-summary: Severity
+      field:
+        type: string
+        x-ms-summary: Field
+      section:
+        type: string
+        x-ms-summary: Section
+
+  ClinicalRecommendation:
+    type: object
+    required:
+      - code
+      - message
+    properties:
+      code:
+        type: string
+        x-ms-summary: Recommendation code
+      message:
+        type: string
+        x-ms-summary: Message
+      action:
+        type: string
+        x-ms-summary: Action
+
+  CalculatedDates:
+    type: object
+    properties:
+      expectedNextDoseDate:
+        type: string
+        format: date
+        x-ms-summary: Expected next dose date
+      sustennaDay8Target:
+        type: string
+        format: date
+        x-ms-summary: Sustenna Day 8 target
+      sustennaDay8Early:
+        type: string
+        format: date
+        x-ms-summary: Sustenna Day 8 window start
+      sustennaDay8Late:
+        type: string
+        format: date
+        x-ms-summary: Sustenna Day 8 window end
+      sustennaMonthlyTarget:
+        type: string
+        format: date
+        x-ms-summary: Sustenna monthly target
+
+  InjectionEvaluationOutput:
+    type: object
+    required:
+      - timing
+      - lateDoseWarning
+      - allowedRoutes
+      - allowedSites
+      - recommendedSite
+      - repeatsPreviousSite
+      - administrationDocumented
+      - canFinalize
+      - recordStatus
+      - initiationProtocol
+      - phase
+      - requiredVerifications
+      - requirements
+      - guidance
+      - needle
+      - expectedNextDoseDate
+    properties:
+      medication:
+        $ref: "#/definitions/MedicationSummary"
+      timing:
+        $ref: "#/definitions/InjectionTiming"
+      lateDoseWarning:
+        type: boolean
+        x-ms-summary: Late dose warning
+      allowedRoutes:
+        type: array
+        x-ms-summary: Allowed routes
+        items:
+          type: string
+      allowedSites:
+        type: array
+        x-ms-summary: Allowed sites
+        items:
+          type: string
+      recommendedSite:
+        type: string
+        x-ms-summary: Recommended site
+      repeatsPreviousSite:
+        type: boolean
+        x-ms-summary: Repeats previous site
+      administrationDocumented:
+        type: boolean
+        x-ms-summary: Administration documented
+      canFinalize:
+        type: boolean
+        x-ms-summary: Can finalize
+      recordStatus:
+        type: string
+        enum:
+          - draft
+          - ready-to-lock
+          - handoff-ready
+        x-ms-summary: Record status
+      initiationProtocol:
+        type: string
+        enum:
+          - ""
+          - maintena-1day
+          - maintena-14day
+          - maintena-provider
+          - asimtufii-1day
+          - asimtufii-14day
+          - asimtufii-provider
+          - aristada-initio-sameday
+          - aristada-21day
+          - aristada-provider
+          - sustenna-day1
+          - sustenna-day8
+          - sustenna-provider
+        x-ms-summary: Initiation protocol
+      phase:
+        type: string
+        enum:
+          - maintenance
+          - initiation
+          - reinitiation
+          - loading
+          - prn
+        x-ms-summary: Clinical phase
+      requiredVerifications:
+        type: array
+        x-ms-summary: Required verifications
+        items:
+          type: string
+      requirements:
+        type: array
+        x-ms-summary: Field requirements
+        items:
+          $ref: "#/definitions/InjectionRequirement"
+      guidance:
+        type: array
+        x-ms-summary: Clinical guidance
+        items:
+          $ref: "#/definitions/InjectionGuidanceCard"
+      needle:
+        $ref: "#/definitions/InjectionNeedleProjection"
+      expectedNextDoseDate:
+        type: string
+        x-ms-summary: Expected next dose date
+
+  InjectionRequirement:
+    type: object
+    required:
+      - field
+      - state
+      - section
+    properties:
+      field:
+        type: string
+        x-ms-summary: Encounter field
+      state:
+        type: string
+        enum:
+          - pending
+          - required
+          - optional
+          - hidden
+        x-ms-summary: Requirement state
+      section:
+        type: string
+        x-ms-summary: UI section
+      reason:
+        type: string
+        x-ms-summary: Requirement reason
+
+  InjectionGuidanceCard:
+    type: object
+    required:
+      - key
+      - section
+      - title
+      - message
+      - classification
+    properties:
+      key:
+        type: string
+        x-ms-summary: Guidance key
+      section:
+        type: string
+        x-ms-summary: Guidance section
+      title:
+        type: string
+        x-ms-summary: Guidance title
+      message:
+        type: string
+        x-ms-summary: Guidance message
+      classification:
+        type: string
+        enum:
+          - label constraint
+          - order-dependent review
+          - local policy
+        x-ms-summary: Guidance classification
+      action:
+        type: string
+        x-ms-summary: Suggested action
+
+  InjectionNeedleProjection:
+    type: object
+    required:
+      - resolution
+      - notes
+      - weightKg
+    properties:
+      resolution:
+        $ref: "#/definitions/NeedleResolution"
+      notes:
+        type: array
+        x-ms-summary: Technique notes
+        items:
+          $ref: "#/definitions/InjectionTechniqueNote"
+      angle:
+        $ref: "#/definitions/InjectionAngle"
+      siteRestriction:
+        $ref: "#/definitions/InjectionSiteRestriction"
+      maxVolumePerSite:
+        type: number
+        format: double
+        x-ms-summary: Maximum volume per site
+      weightKg:
+        type: number
+        format: double
+        x-nullable: true
+        x-ms-summary: Normalized weight in kilograms
+
+  NeedleResolution:
+    type: object
+    required:
+      - unresolved
+    properties:
+      needle:
+        $ref: "#/definitions/NeedleSpec"
+      alternate:
+        $ref: "#/definitions/NeedleSpec"
+      rationale:
+        type: string
+        x-ms-summary: Needle rationale
+      siteGroup:
+        type: string
+        enum:
+          - deltoid
+          - gluteal
+          - subq
+        x-ms-summary: Anatomical site group
+      unresolved:
+        type: boolean
+        x-ms-summary: Needs more information
+      unresolvedReason:
+        type: string
+        x-ms-summary: Missing-information explanation
+      needs:
+        type: array
+        x-ms-summary: Missing inputs
+        items:
+          type: string
+          enum:
+            - habitus
+            - weight
+
+  NeedleSpec:
+    type: object
+    properties:
+      gauge:
+        type: string
+        x-ms-summary: Needle gauge
+      length:
+        type: string
+        x-ms-summary: Needle length
+      descriptor:
+        type: string
+        x-ms-summary: Needle descriptor
+
+  InjectionAngle:
+    type: object
+    required:
+      - degrees
+      - note
+    properties:
+      degrees:
+        type: string
+        x-ms-summary: Administration angle
+      note:
+        type: string
+        x-ms-summary: Angle guidance
+
+  InjectionSiteRestriction:
+    type: object
+    required:
+      - headline
+      - detail
+    properties:
+      headline:
+        type: string
+        x-ms-summary: Restriction headline
+      detail:
+        type: string
+        x-ms-summary: Restriction detail
+
+  InjectionTechniqueNote:
+    type: object
+    required:
+      - id
+      - classification
+      - statement
+      - source
+      - phase
+      - severity
+    properties:
+      id:
+        type: string
+        x-ms-summary: Reference fact ID
+      classification:
+        type: string
+        enum:
+          - label constraint
+          - order-dependent review
+          - local policy
+        x-ms-summary: Reference classification
+      statement:
+        type: string
+        x-ms-summary: Technique statement
+      source:
+        $ref: "#/definitions/ClinicalReferenceSource"
+      phase:
+        type: string
+        enum:
+          - preparation
+          - needle
+          - mechanics
+          - aftercare
+        x-ms-summary: Technique phase
+      severity:
+        type: string
+        enum:
+          - info
+          - caution
+        x-ms-summary: Technique severity
+      doses:
+        type: array
+        items:
+          type: string
+      siteGroups:
+        type: array
+        items:
+          type: string
+          enum:
+            - deltoid
+            - gluteal
+            - subq
+
+  ClinicalReferenceSource:
+    type: object
+    required:
+      - title
+      - url
+      - labelRevision
+      - reviewedOn
+    properties:
+      title:
+        type: string
+        x-ms-summary: Source title
+      url:
+        type: string
+        format: uri
+        x-ms-summary: Source URL
+      labelRevision:
+        type: string
+        x-ms-summary: Label revision
+      reviewedOn:
+        type: string
+        format: date
+        x-ms-summary: Reviewed on
+
+  MedicationSummary:
+    type: object
+    required:
+      - key
+      - name
+      - genericName
+    properties:
+      key:
+        type: string
+        x-ms-summary: Medication key
+      name:
+        type: string
+        x-ms-summary: Medication name
+      genericName:
+        type: string
+        x-ms-summary: Generic name
+
+  InjectionTiming:
+    type: object
+    required:
+      - state
+      - late
+      - message
+    properties:
+      state:
+        type: string
+        enum:
+          - idle
+          - ok
+          - warning
+          - stop
+        x-ms-summary: Timing state
+      late:
+        type: boolean
+        x-ms-summary: Is late
+      message:
+        type: string
+        x-ms-summary: Timing message
+      daysSincePrior:
+        type: integer
+        format: int32
+        x-nullable: true
+        x-ms-summary: Days since prior dose
+      earliestDay:
+        type: integer
+        format: int32
+        x-nullable: true
+        x-ms-summary: Earliest allowed day offset
+      latestDay:
+        type: integer
+        format: int32
+        x-nullable: true
+        x-ms-summary: Latest allowed day offset
+      expectedDate:
+        type: string
+        format: date
+        x-ms-summary: Expected date
+      earliestDate:
+        type: string
+        format: date
+        x-ms-summary: Earliest date
+      latestDate:
+        type: string
+        format: date
+        x-ms-summary: Latest date
+      cadenceLabel:
+        type: string
+        x-ms-summary: Cadence label
+      relativeToExpected:
+        type: string
+        enum:
+          - before
+          - "on"
+          - after
+        x-ms-summary: Position relative to expected date
+
+  InjectionDocuments:
+    type: object
+    required:
+      - note
+    properties:
+      note:
+        $ref: "#/definitions/InjectionDocumentation"
+
+  InjectionDocumentation:
+    type: object
+    required:
+      - workflow
+      - sections
+      - text
+      - cc
+      - assessment
+      - plan
+      - all
+    properties:
+      workflow:
+        type: string
+        enum:
+          - injection
+        x-ms-summary: Workflow
+      sections:
+        type: array
+        x-ms-summary: Note sections
+        items:
+          $ref: "#/definitions/DocumentationSection"
+      text:
+        type: string
+        x-ms-summary: Combined note text
+      cc:
+        type: string
+        x-ms-summary: Chief complaint
+      assessment:
+        type: string
+        x-ms-summary: Assessment
+      plan:
+        type: string
+        x-ms-summary: Plan
+      all:
+        type: string
+        x-ms-summary: Complete note
+
+  DocumentationSection:
+    type: object
+    required:
+      - id
+      - label
+      - destination
+      - content
+    properties:
+      id:
+        type: string
+        x-ms-summary: Section ID
+      label:
+        type: string
+        x-ms-summary: Section label
+      destination:
+        type: string
+        enum:
+          - CC
+          - Assessment
+          - Plan
+          - Note
+        x-ms-summary: Tebra destination
+      content:
+        type: string
+        x-ms-summary: Section content
+
+  InjectionAvsArtifact:
+    type: object
+    required:
+      - documentStatus
+      - contentType
+      - fileName
+      - html
+      - generatedAt
+    properties:
+      documentStatus:
+        type: string
+        enum:
+          - PATIENT COPY
+          - STAFF PREVIEW - NOT FINAL
+          - CARE HANDOFF
+        x-ms-summary: Document status
+      contentType:
+        type: string
+        enum:
+          - text/html
+        x-ms-summary: Content type
+      fileName:
+        type: string
+        x-ms-summary: File name
+      html:
+        type: string
+        x-ms-summary: AVS HTML
+        description: Server-rendered, self-contained AVS fragment for the approved print surface.
+      generatedAt:
+        type: string
+        format: date-time
+        x-ms-summary: Generated at
+      kind:
+        type: string
+        enum:
+          - patient-avs
+          - care-handoff
+        x-ms-summary: Patient document kind
+      locale:
+        type: string
+        enum:
+          - en-US
+        x-ms-summary: AVS locale
+
+  ErrorResponse:
+    type: object
+    required:
+      - error
+    properties:
+      error:
+        $ref: "#/definitions/ApiError"
+
+  ApiError:
+    type: object
+    required:
+      - code
+      - message
+      - correlationId
+    properties:
+      code:
+        type: string
+        x-ms-summary: Error code
+      message:
+        type: string
+        x-ms-summary: Message
+      correlationId:
+        type: string
+        x-ms-summary: Correlation ID
+      details:
+        description: Sanitized validation or clinical-gate details, when safe to return.

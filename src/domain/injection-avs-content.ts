@@ -82,6 +82,15 @@ export interface InjectionAvsInput {
    */
   dispositionKind?: string;
   /**
+   * Explicit preview/final rendering mode, independent of dispositionKind.
+   * When true, documentStatus is always "STAFF PREVIEW - NOT FINAL" —
+   * administered, held, escalated, and provider previews alike — so a
+   * not-yet-finalized preview can never visually read as a finalized
+   * "PATIENT COPY" or "CARE HANDOFF" document. Leave unset/false for the
+   * one true finalization render.
+   */
+  previewMode?: boolean;
+  /**
    * The paired second injection, for the one-day dual protocols that give two
    * injections in different muscles at the same visit. Component 2 is the same
    * product as the primary on every protocol that populates it, so it needs no
@@ -1214,8 +1223,9 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   return {
     documentTitle: "After Visit Summary - Long-acting injection",
     documentSubtitle,
-    documentStatus:
-      String(input.dispositionKind ?? "").trim() === "administered"
+    documentStatus: input.previewMode
+      ? "STAFF PREVIEW - NOT FINAL"
+      : String(input.dispositionKind ?? "").trim() === "administered"
         ? "PATIENT COPY"
         : notGiven
           ? "CARE HANDOFF"

@@ -25,7 +25,7 @@ import type { ClinicalEvaluation } from "../../domain/contracts";
 import {
   mapLegacyInitiationProtocol,
   type LegacyInitiationSnapshot,
-} from "../../legacy/documentation-adapter";
+} from "./injection-initiation";
 import type { InjectionComponent, InjectionDocumentationInput, InjectionNoteFacts } from "../types";
 
 const trimmed = (value?: string): string => (value ?? "").trim();

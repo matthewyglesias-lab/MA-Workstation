@@ -1,0 +1,28 @@
+{
+  "name": "ipmg-power-apps-injection-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Entra-protected Azure Functions host for the MA Workstation injection engine.",
+  "main": "dist/api/src/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run tests",
+    "test:unit": "vitest run tests",
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.7.2",
+    "@azure/identity": "^4.12.0",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
