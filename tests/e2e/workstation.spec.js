@@ -2302,7 +2302,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel
       .locator('.wfp-checkbox-row label', { hasText: 'Active provider initiation/re-initiation order' })
       .click();
-    await panel.locator('.wfp-field:has-text("Component 2 — dose") input').fill('300 mg');
+    await panel.locator('.wfp-field:has-text("Component 2 — dose") select').selectOption('300 mg');
     await panel.locator('.wfp-field:has-text("Component 2 — site") select').selectOption('L deltoid');
     await panel.locator('.wfp-field:has-text("Component 2 — NDC") input').fill('00000-0000-22');
     await panel.locator('.wfp-field:has-text("Component 2 — Lot") input').fill('PAIR-LOT-2');
@@ -2352,8 +2352,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administered).toBeDisabled();
 
     await openInjectionTab(page, 'Schedule');
-    await panel.locator('.wfp-field:has-text("Component 2 — dose") input').fill('400 mg');
-    await panel.locator('.wfp-field:has-text("Component 2 — dose") input').press('Tab');
+    await panel.locator('.wfp-field:has-text("Component 2 — dose") select').selectOption('400 mg');
     await expect(page.locator('#clinicalDisposition')).not.toContainText(
       'The Abilify Maintena 1-day pathway requires matching paired doses'
     );
