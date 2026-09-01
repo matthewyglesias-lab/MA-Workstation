@@ -1635,6 +1635,12 @@ export function InjectionPanel({
   const pairedMedicationKey =
     encounter.initiation?.second.productKey ??
     pairedMedicationKeyFor(encounter.initiation?.protocol, encounter.medicationKey);
+  const pairedMedication = pairedMedicationKey ? INJECTION_MEDICATIONS[pairedMedicationKey] : null;
+  // Component 2's dose must match the paired product's labeled strength
+  // exactly (see injection.ts's secondDoseRecognized check), so it is offered
+  // as a picker rather than free text - typed variants like "675 MG" pass a
+  // human reading the label but fail that catalog-membership test.
+  const pairedDoseOptions = pairedMedication?.doses ?? [];
   const pairedNdcQuery: NdcOptionQuery = {
     medicationKey: pairedMedicationKey,
     dose: encounter.initiation?.second.dose ?? "",
@@ -2858,11 +2864,25 @@ export function InjectionPanel({
                           )}
                           <div class="wfp-row">
                             <Field label="Component 2 — dose" field="initiation.second.dose">
-                              <input
-                                value={encounter.initiation?.second.dose ?? ""}
-                                placeholder="Per active order"
-                                onInput={(event) => onPairedDoseChange(event.currentTarget.value)}
-                              />
+                              {pairedDoseOptions.length ? (
+                                <select
+                                  value={encounter.initiation?.second.dose ?? ""}
+                                  onChange={(event) => onPairedDoseChange(event.currentTarget.value)}
+                                >
+                                  <option value="">Select dose</option>
+                                  {pairedDoseOptions.map((dose) => (
+                                    <option key={dose} value={dose}>
+                                      {dose}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  value={encounter.initiation?.second.dose ?? ""}
+                                  placeholder="Per active order"
+                                  onInput={(event) => onPairedDoseChange(event.currentTarget.value)}
+                                />
+                              )}
                             </Field>
                             <Field label="Component 2 — site" field="initiation.second.site">
                               <select
