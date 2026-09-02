@@ -1,14 +1,15 @@
 # Redesign Manifest
 
-Companion to `PLAN.md`. This is the authoritative list of **what may change**,
-**what is frozen**, and **the exact design tokens** to implement.
+Companion to `PLAN.md`. The authoritative list of **what may change**, **what is
+frozen**, **the exact design tokens**, and **the conventions that make this read
+as first-party**.
 
 ---
 
 ## 1. Frozen — do not edit
 
 A change under any of these paths means the change is wrong. `git diff --stat`
-against these must be empty at PR time.
+against them must be empty at PR time.
 
 ```
 public/legacy/legacy-runtime.js      11,605 lines — clinical runtime, authoritative
@@ -27,10 +28,9 @@ tests/fixtures/clinical-parity-v1.json
 scripts/generate-print-baseline-fixture.mjs
 ```
 
-**Also frozen in behavior, editable in style only:**
-`src/presentation/WorkstationLock.tsx` (idle-lock timing and semantics),
-`src/presentation/FunctionKeyProfile.ts` (command vocabulary — restyle its
-surface, do not remove commands).
+**Frozen in behavior, editable in style only:**
+`WorkstationLock.tsx` (idle-lock timing and semantics),
+`FunctionKeyProfile.ts` (command vocabulary — restyle its surface, keep the commands).
 
 ---
 
@@ -40,61 +40,71 @@ surface, do not remove commands).
 
 | Path | Purpose | Phase |
 | --- | --- | --- |
-| `src/presentation/tebra-tokens.css` | Single source of truth for brand + workstation tokens. `@media screen` scoped. Imported first. | 0 |
+| `src/presentation/tebra-tokens.css` | Single source of truth for tokens. `@media screen`. Imported first. | 0 |
 | `src/presentation/tebra-screen-contract.css` | Final screen contract; replaces `meditech-screen-contract.css`. Loaded last. | 2 |
-| `src/presentation/kiosk/KioskShell.tsx` | Kiosk chrome: facesheet banner, single work column, sign-and-next. | 3 |
-| `src/presentation/kiosk/FacesheetBanner.tsx` | Persistent patient banner. | 3 |
-| `src/presentation/kiosk/CareChecklistRail.tsx` | Tebra presentation of `projectClinicalReadiness`. | 3 |
-| `src/presentation/kiosk/InjectionStepper.tsx` | 7-step progress rail over existing `InjectionPanel` tabs. | 3 |
-| `src/presentation/kiosk/SignAndNextCard.tsx` | Post-sign confirmation → print handout / next patient. | 3 |
-| `src/presentation/kiosk/kiosk.css` | Kiosk-only layout. `@media screen`. | 3 |
-| `src/presentation/use-kiosk-mode.ts` | `?kiosk=1` + persisted preference + Fullscreen API. | 3 |
+| `src/presentation/shell/AppHeader.tsx` | Logo slot, patient search, action bar. | 2 |
+| `src/presentation/shell/SectionRail.tsx` | Left rail — only sections we truthfully have. | 2 |
+| `src/presentation/shell/ActionBar.tsx` | `+ New Note` · `Print` · `More` · `Customize View`. | 3 |
+| `src/presentation/shell/PatientSearch.tsx` | "first 2–3 letters of the patient's name or date of birth (mm/dd/yyyy)". | 3 |
+| `src/presentation/facesheet/FacesheetBanner.tsx` | Patient hub header. | 3 |
+| `src/presentation/facesheet/PatientCardPopup.tsx` | Hover card on patient name. | 3 |
+| `src/presentation/facesheet/SummaryCard.tsx` | Card grammar for Last injection / Site rotation / Allergies / Recent notes. | 3 |
+| `src/presentation/notes/NotesTable.tsx` | Open Notes table: sort, lock, status chips. | 3 |
+| `src/presentation/notes/StatusChip.tsx` | `Incomplete` · `Ready to sign` · `Signed`. | 3 |
+| `src/presentation/notes/LockIndicator.tsx` | Lock glyph + hover "Signed by … at …". | 3 |
+| `src/presentation/kiosk/KioskShell.tsx` | Kiosk chrome and sign-and-next loop. | 4 |
+| `src/presentation/kiosk/InjectionStepper.tsx` | 7-step rail over existing `InjectionPanel` tabs. | 4 |
+| `src/presentation/kiosk/CareChecklistRail.tsx` | Tebra presentation of `projectClinicalReadiness`. | 4 |
+| `src/presentation/kiosk/SignAndNextCard.tsx` | Post-sign → print handout / next patient. | 4 |
+| `src/presentation/kiosk/kiosk.css` | Kiosk-only layout. `@media screen`. | 4 |
+| `src/presentation/use-kiosk-mode.ts` | `?kiosk=1` + persisted preference + Fullscreen API. | 4 |
 | `tests/e2e/tebra-screen-contract.spec.js` | Replaces `meditech-screen-contract.spec.js`. | 2 |
-| `tests/e2e/kiosk-flow.spec.js` | Identify → sign → next-patient loop. | 3 |
+| `tests/e2e/conventions.spec.js` | Asserts §4 grammar: sort, chips, lock hover, row click. | 3 |
+| `tests/e2e/kiosk-flow.spec.js` | Identify → sign → next-patient loop. | 4 |
 
 ### 2.2 Modified files
 
 | Path | Change | Phase |
 | --- | --- | --- |
-| `index.html` | Boot splash → Tebra teal/sand, title/meta copy. **Keep `media="print"` on the legacy stylesheet link.** | 0 |
-| `favicon.svg` | IPMG mark in Tebra palette. Not a Tebra logo. | 0 |
+| `index.html` | Boot splash → Tebra teal/sand; title and meta copy. **Keep `media="print"` on the legacy stylesheet link.** | 0 |
+| `favicon.svg` | IPMG module mark in Tebra palette. Not a Tebra logo. | 0 |
 | `package.json` | Swap `@fontsource-variable/plus-jakarta-sans` → `@fontsource-variable/inter` + `@fontsource-variable/jetbrains-mono`. | 0 |
-| `src/main.tsx` | Font imports; kiosk-mode wiring (Phase 3). No coordinator/store changes. | 0, 3 |
+| `src/main.tsx` | Font imports; kiosk wiring (Phase 4). No coordinator or store changes. | 0, 4 |
 | `src/presentation/clinical-desktop.css` | Retarget to tokens. **Keep the filename** (`check-app.js` asserts it). | 0, 2 |
-| `src/presentation/meditech-workstation.css` | Rewrite as Tebra composition, or delete after `tebra-screen-contract.css` lands. | 2, 4 |
-| `src/presentation/meditech-screen-contract.css` | Delete once replaced. | 2 |
 | `src/presentation/workflows/workflow-panels.css` | Retarget to tokens. **Keep the filename** (`check-app.js` asserts it). | 0, 2 |
-| `src/presentation/ClinicalDesktopShell.tsx` | Titlebar → app bar, nav → module rail, status bar → footer. Structure/ARIA preserved. | 2 |
-| `src/presentation/types.ts` | `WORKFLOW_LABELS` string values only. **Do not touch `WorkflowId` union values.** | 1 |
-| `src/presentation/MeditechChrome.tsx` | Rename to `TebraChrome.tsx`, restyle. | 2 |
-| `src/presentation/StartCenter.tsx` | Label → "Dashboard"; Tebra cards. | 1, 2 |
-| `src/presentation/RecordsWindow.tsx`, `UdsRecordsWindow.tsx` | Label → "Open Notes"; Tebra table. | 1, 2 |
-| `src/presentation/RecordActionDialog.tsx`, `RecordLifecycleActions.tsx` | "Attest and lock" → "Sign". Copy only; no lifecycle change. | 1 |
+| `src/presentation/meditech-workstation.css` | Rewrite as Tebra composition, or delete once the contract lands. | 2, 5 |
+| `src/presentation/meditech-screen-contract.css` | Delete once replaced. | 2 |
+| `src/presentation/ClinicalDesktopShell.tsx` | Titlebar → `AppHeader`; nav → `SectionRail`; status bar → footer. ARIA preserved. | 2 |
+| `src/presentation/MeditechChrome.tsx` | Rename `TebraChrome.tsx`, restyle. | 2 |
+| `src/presentation/types.ts` | `WORKFLOW_LABELS` string values only. **Never touch `WorkflowId` union values.** | 1 |
+| `src/presentation/StartCenter.tsx` | → "Dashboard"; facesheet card grammar. | 1, 3 |
+| `src/presentation/RecordsWindow.tsx`, `UdsRecordsWindow.tsx` | → "Open Notes"; adopt `NotesTable`. | 1, 3 |
+| `src/presentation/RecordActionDialog.tsx`, `RecordLifecycleActions.tsx` | "Attest and lock" → "Sign". Copy only; lifecycle unchanged. | 1 |
+| `src/presentation/NoteInspector.tsx` | Tebra note panel grammar. | 3 |
 | `src/presentation/WorkstationLock.tsx` | Restyle only. | 2 |
-| `src/presentation/workflows/StatusFlag.tsx` | New status triad; **verify icon + text, never color alone.** | 2 |
+| `src/presentation/workflows/StatusFlag.tsx` | New triad; **verify icon + word, never color alone.** | 2 |
 | `src/presentation/workflows/OutstandingRequirements.tsx` | → "Care Checklist". | 1 |
-| `src/presentation/workflows/injection/InjectionPanel.tsx` | Stepper integration. Field logic untouched. | 3 |
-| `scripts/check-app.js` | Only if a CSS path in §2.2 is renamed — update the path assertion, **relax nothing else**. | 2 |
-| `README.md` | Architecture + design-language section. | 4 |
+| `src/presentation/workflows/injection/InjectionPanel.tsx` | Stepper integration. Field logic untouched. | 4 |
+| `scripts/check-app.js` | Only if a CSS path above is renamed — update that assertion, **relax nothing else**. | 2 |
+| `README.md` | Architecture + design-language section. | 5 |
 
-### 2.3 Test artifacts that will change
+### 2.3 Test artifacts
 
 | Path | Action |
 | --- | --- |
-| `tests/e2e/meditech-screen-contract.spec.js` | Delete; superseded by `tebra-screen-contract.spec.js`. |
-| `tests/e2e/visual-snapshots.spec.js-snapshots/linux/**` (8 PNGs) | Regenerate once per phase, review each image. |
+| `tests/e2e/meditech-screen-contract.spec.js` | Delete; superseded. |
+| `tests/e2e/visual-snapshots.spec.js-snapshots/linux/**` (8 PNGs) | Regenerate once per phase; review each image. |
 | `tests/e2e/visual-snapshots.spec.js-snapshots/win32/**` (8 PNGs) | **Cannot be regenerated in CI.** Flag as stale in the PR body. |
-| `tests/e2e/visual-contracts.spec.js` | Update selector/style expectations. |
+| `tests/e2e/visual-contracts.spec.js` | Update selector and style expectations. |
 | `tests/unit/ehr-refinement-contracts.test.ts` | Update if it asserts label strings. |
 
-Regenerate baselines with:
 `npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
 
 ---
 
 ## 3. Design token manifest
 
-All values below were extracted from Tebra's own production stylesheets
+Extracted from Tebra's production stylesheets
 (`www.tebra.com/tebranew/_next/static/css/*.css`, September 2026).
 
 ### 3.1 Typography
@@ -102,36 +112,37 @@ All values below were extracted from Tebra's own production stylesheets
 Tebra ships **Akkurat LL**, **Akkurat Mono LL**, and **Lora**. Akkurat is a
 commercial Lineto family — **not licensed here.**
 
-| Role | Tebra ships | We ship | Rationale |
-| --- | --- | --- | --- |
-| UI sans | Akkurat LL | **Inter Variable** (`@fontsource-variable/inter`) | Closest open neo-grotesque; excellent at 11–13px; true tabular figures |
-| Mono | Akkurat Mono LL | **JetBrains Mono Variable** | Record IDs, NDC, lot numbers |
-| Serif | Lora | *not shipped* | Editorial only; no workstation role |
+| Role | Tebra ships | We ship |
+| --- | --- | --- |
+| UI sans | Akkurat LL | **Inter Variable** — closest open neo-grotesque; excellent at 11–13px; true tabular figures |
+| Mono | Akkurat Mono LL | **JetBrains Mono Variable** — record IDs, NDC, lot numbers |
+| Serif | Lora | *not shipped* — editorial only, no workstation role |
 
 ```css
 --tw-font-sans: "Inter Variable", Inter, "Helvetica Neue", Arial, sans-serif;
---tw-font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+--tw-font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, monospace;
 ```
 
 **Safety requirement:** every dose, date, time, interval, and lot number renders
 with `font-variant-numeric: tabular-nums`. Proportional figures make `1064 mg`
-and `1004 mg` scan alike at speed. This is a clinical property, not a stylistic one.
+and `1004 mg` scan alike at speed. Clinical property, not stylistic.
 
-**Tebra's observed marketing scale** (for the brand tier): 68 / 60 / 48 / 40 /
-36 / 32 / 28 / 24 / 22 / 20 / 18 / 16 / 14 / 12 px.
-Letter-spacing tightens negatively as size grows: `-0.02em` at display sizes,
-`-1.92px`/`-1.6px` at the largest, `0` at body, `+0.48px` on small caps/labels.
+**Tebra's observed marketing scale:** 68 / 60 / 48 / 40 / 36 / 32 / 28 / 24 /
+22 / 20 / 18 / 16 / 14 / 12 px. Letter-spacing tightens negatively as size
+grows: `-1.92px` and `-1.6px` at the largest, `-0.02em` at display, `0` at
+body, `+0.48px` on small uppercase labels.
 
-**Two-tier scale to implement:**
+**Two tiers to implement** (see `PLAN.md` §2.5 — calibrate to their *product*,
+not their marketing site):
 
 ```css
-/* Brand tier — kiosk-primary surfaces: facesheet, primary action, sign card */
+/* Brand tier — facesheet banner, primary action, site picker, sign card */
 --tw-fs-display: 36px;  --tw-lh-display: 1.15;  --tw-ls-display: -0.02em;
 --tw-fs-title:   24px;  --tw-lh-title:   1.25;  --tw-ls-title:   -0.01em;
---tw-fs-lead:    18px;  --tw-lh-lead:    27px;  /* Tebra body */
+--tw-fs-lead:    18px;  --tw-lh-lead:    27px;
 --tw-fs-body:    16px;  --tw-lh-body:    24px;
 
-/* Workstation tier — dense worksheets, tables, field labels */
+/* Workstation tier — tables, worksheets, field labels */
 --tw-fs-ws-base:  14px; --tw-lh-ws-base:  20px;
 --tw-fs-ws-dense: 13px; --tw-lh-ws-dense: 18px;
 --tw-fs-ws-meta:  12px; --tw-lh-ws-meta:  16px;
@@ -140,12 +151,12 @@ Letter-spacing tightens negatively as size grows: `-0.02em` at display sizes,
 
 ### 3.2 Color
 
-**Verbatim Tebra values** (hex, with observed usage frequency in their CSS):
+Verbatim Tebra values, with occurrence counts in their CSS:
 
 ```css
 /* Teal — brand core */
 --tw-teal-900: #003a43;  /* 95 uses — deepest; headings, dark surfaces */
---tw-teal-800: #004952;  /* 162 uses in markup — the logo teal, brand primary */
+--tw-teal-800: #004952;  /* 162 in markup — the logo teal, brand primary */
 --tw-teal-700: #054a53;
 --tw-teal-600: #1f5f67;
 --tw-teal-500: #3a6d71;
@@ -172,7 +183,7 @@ Letter-spacing tightens negatively as size grows: `-0.02em` at display sizes,
 --tw-sand-300: #e0d3c8;
 --tw-sand-250: #d8d5cf;
 --tw-sand-200: #f2eee9;
---tw-sand-150: #f8f3eb;  /* 64 uses — the on-dark surface + dark-mode button fill */
+--tw-sand-150: #f8f3eb;  /* 64 uses — on-dark surface + dark-mode button fill */
 --tw-sand-100: #faf6f1;
 --tw-sand-75:  #fcf9f5;
 --tw-sand-50:  #f9f7f6;
@@ -189,35 +200,25 @@ Letter-spacing tightens negatively as size grows: `-0.02em` at display sizes,
 --tw-red-500: #da5960;
 ```
 
-**Tebra also names four brand pillars** (found as gradient/theme class names):
-`core`, `growth`, `backbone`, `care`. Use these as the semantic grouping for
-module accents if module color-coding is wanted — it is Tebra's own taxonomy.
+**Tebra's four brand pillars**, found as gradient and theme class names in their
+CSS: `core`, `growth`, `backbone`, `care`. If module accents are wanted, use
+these — it is their own taxonomy, and inventing a different one is a seam.
 
 #### 3.2.1 Clinical status triad — ours, not Tebra's
 
 Derived to stay in the Tebra family while remaining unambiguous next to coral.
-**The implementer must verify every pair against WCAG before shipping.**
+**Verify every pair against WCAG before shipping.**
 
 ```css
---tw-stop-fg:     #8f2b32;  /* on --tw-stop-bg */
---tw-stop-bg:     #fdecec;
---tw-stop-border: #d99aa0;
-
---tw-review-fg:     #7a4f06;
---tw-review-bg:     #fdf3e2;
---tw-review-border: #dcc08a;
-
---tw-ready-fg:     #1f6f5c;  /* pulled toward teal to stay in-family */
---tw-ready-bg:     #e6f2ee;
---tw-ready-border: #9cc6b8;
+--tw-stop-fg: #8f2b32;  --tw-stop-bg: #fdecec;  --tw-stop-border: #d99aa0;
+--tw-review-fg: #7a4f06; --tw-review-bg: #fdf3e2; --tw-review-border: #dcc08a;
+--tw-ready-fg: #1f6f5c;  --tw-ready-bg: #e6f2ee;  --tw-ready-border: #9cc6b8;
 ```
 
-Rules:
-- Coral (`--tw-coral-*`) is **only** the primary action. Never a status.
-- Red `--tw-red-500` is Tebra's marketing error red; use `--tw-stop-fg` for
-  clinical stops so it does not collide with form-validation red.
-- Every status renders icon + text label. Color is reinforcement, never the
-  sole carrier.
+- Coral is **only** the primary action. Never a status.
+- Use `--tw-stop-fg` for clinical stops so they do not collide with Tebra's
+  form-validation red `--tw-red-500`.
+- Every status renders icon + word. Color is reinforcement, never the carrier.
 
 #### 3.2.2 Semantic surface aliases
 
@@ -244,38 +245,36 @@ Rules:
 /* secondary */            background:transparent; border:1px solid #004952; color:#004952;
 /* secondary:hover */      background:rgb(0 73 82 / .08);
 /* secondary:active */     background:rgb(0 73 82 / .24); box-shadow:0 0 0 3px rgb(0 73 82 / .08);
-/* underline (tertiary) */ color:#004952; border-radius:4px; background:rgb(0 73 82 / .04) on hover;
+/* underline (tertiary) */ color:#004952; border-radius:4px; hover background:rgb(0 73 82 / .04);
 /* on dark, primary */     background:#f8f3eb; border-color:#f8f3eb;
 /* on dark, secondary */   background:transparent; border:1px solid #f8f3eb; color:#f8f3eb;
 /* transition */           background-color .3s ease-in-out, filter .3s, color .3s, box-shadow .3s
 ```
 
 **Tebra sizes:** cta 57px (radius 32px, padding 14px 24px) · large 57px ·
-medium 49px · small 45px · x-small 32px (12px/18px type).
-Responsive: cta and large drop to 46/49px on narrow.
+medium 49px · small 45px · x-small 32px (12px/18px type). cta and large drop to
+46/49px on narrow.
 
 **Workstation tier adds** a `ws` size — **32px tall, radius 6px** — for dense
-worksheet toolbars. Kiosk-primary actions keep Tebra's 57px/32px-radius pill.
+toolbars. Kiosk-primary actions keep Tebra's 57px/32px-radius pill.
 **Kiosk minimum touch target: 44×44 CSS px.**
 
 ### 3.4 Radii, spacing, motion
 
 ```css
-/* Tebra observed radii, by frequency: 8(24) 16(21) 4(14) 24(14) 32(6) */
---tw-radius-pill:   999px;   /* CTA pills */
---tw-radius-cta:    32px;
---tw-radius-panel:  24px;    /* their product-hubs panel radius */
---tw-radius-card:   16px;
---tw-radius-ctl:    8px;     /* most common */
---tw-radius-ws:     6px;     /* workstation-tier controls */
---tw-radius-tight:  4px;     /* square/underline buttons */
+/* Tebra observed radii by frequency: 8(24) 16(21) 4(14) 24(14) 32(6) */
+--tw-radius-pill:  999px;
+--tw-radius-cta:   32px;
+--tw-radius-panel: 24px;   /* their product-hubs panel radius */
+--tw-radius-card:  16px;
+--tw-radius-ctl:   8px;    /* most common */
+--tw-radius-ws:    6px;    /* workstation tier */
+--tw-radius-tight: 4px;
 
-/* Tebra container system */
 --tw-container-base: 1280px;
 --tw-container-pad:  20px;   /* 30px @ md, 80px @ lg */
 --tw-gutter-sm: 8px; --tw-gutter-md: 14px; --tw-gutter-lg: 16px;
 
-/* Motion — cap under prefers-reduced-motion */
 --tw-ease: cubic-bezier(0.4, 0, 0.2, 1);
 --tw-dur-fast: 120ms;   /* workstation feedback */
 --tw-dur-base: 300ms;   /* Tebra's own .3s ease-in-out */
@@ -289,30 +288,117 @@ worksheet toolbars. Kiosk-primary actions keep Tebra's 57px/32px-radius pill.
 
 ---
 
-## 4. CSS load order (must be exact)
+## 4. Convention spec
 
-```
-1. tebra-tokens.css          @media screen — tokens only, no selectors beyond :root
-2. clinical-desktop.css      @media screen — structural base (filename pinned by check-app.js)
-3. workflows/workflow-panels.css  @media screen — (filename pinned by check-app.js)
-4. kiosk/kiosk.css           @media screen — kiosk layout
-5. tebra-screen-contract.css @media screen — final contract, loaded last
---- print, entirely separate ---
-   public/legacy/legacy.css  media="print" — FROZEN, never joins the screen cascade
-```
+The tokens make it look right. This section makes it *feel* first-party. Every
+item below is a Tebra behavior read off their product documentation.
 
-> **Why order matters:** `legacy.css` was moved to `media="print"` precisely so
-> the screen cascade would be clean; the previous redesign needed ~900
-> `!important` declarations because it was fighting a print stylesheet that was
-> loading on screen. Do not reintroduce that. **Zero new `!important` is the
-> target**; each one that survives review needs a comment explaining what it
-> is beating.
+### 4.1 Tables (Open Notes and every list)
+
+| Behavior | Spec |
+| --- | --- |
+| Columns | `Patient · Lock · Type · Status · Visit Date` |
+| Sorting | Click a header to sort; click again to reverse. Sortable on Patient, Type, Visit Date. |
+| Sort affordance | Header shows direction; unsorted headers show an affordance on hover only. |
+| Row target | The **whole row** opens the note. No trailing "open" link. |
+| Lock column | Glyph when the record is signed; hover reveals `Signed by A. Rivera, MA · 2:14 PM`. |
+| Visit Date | The appointment date, or the note's creation date/time when there is no appointment. |
+| Status | `StatusChip` — see 4.2. |
+| Empty state | One line in voice, plus the primary action. Never a bare "No records." |
+
+### 4.2 Status chips
+
+`Incomplete` · `Ready to sign` · `Signed`
+
+Tebra ships `Incomplete` and `Needs Cosign`. We keep `Incomplete` verbatim,
+extend with `Ready to sign` and `Signed`, and drop `Needs Cosign` — there is no
+cosign flow here and inventing one is worse than omitting it. Same chip
+component, same placement, same size.
+
+### 4.3 Action bar
+
+`+ New Note` (dropdown: Injection · UDS · Samples · Forms) · `Print` · `More` ·
+`Customize View` — top right, in that order. This is Tebra's exact pattern.
+`More` holds the low-frequency actions; `Customize View` persists per browser.
+
+### 4.4 Patient search
+
+Placeholder and matching behavior follow Tebra: **first 2–3 letters of the
+patient's name, or date of birth as `mm/dd/yyyy`**. Same affordance, same
+copy, matched against local records only.
+
+### 4.5 Facesheet cards
+
+Summary cards, each with a heading, an ordering rule stated the way Tebra
+states theirs, and a link into the full section:
+
+| Card | Ordering rule |
+| --- | --- |
+| Last injection | Most recent administration, with site and date |
+| Site rotation | Last five sites by administration date |
+| Allergies | Active allergies, or `No known allergies` |
+| Care Checklist | Open items first, then satisfied |
+| Recent notes | Up to the last five notes by visit date |
+
+### 4.6 Hover patient card
+
+Hovering a patient name raises a card with what we truthfully hold:
+name, DOB, local record id, allergies, last visit. Not demographics we do not
+have. Tebra's card carries insurance and contact detail; ours carries less, and
+that is correct — an empty field is a worse seam than an absent one.
+
+### 4.7 Microcopy
+
+Full rewrite table in `PLAN.md` §2.4. The rules:
+
+- Imperative, second person, plain. Name things by what the person recognizes.
+- A control says exactly what happens: `Sign` → toast `Signed`.
+- Errors say what went wrong and how to fix it. No apologies, no system nouns.
+- Never surface internal vocabulary: *compatibility runtime*, *typed engine*,
+  *legacy*, *projection*, *workflow key*, *coordinator*.
+- Sentence case for buttons and headings; Title Case only for proper nouns.
 
 ---
 
-## 5. Verification gate
+## 5. Convention review — run before each phase ships
 
-Run before every commit:
+Screen by screen, answer yes to all of these. A no is a seam.
+
+1. Would a Tebra PM recognize every component on this screen as one of theirs?
+2. Does every table sort, lock, and open the way Tebra's Open Notes does?
+3. Is every string in Tebra's product voice — imperative, plain, named after the
+   user's action rather than the system's internals?
+4. Does any control link to something that doesn't exist here?
+5. Is the density calibrated to Tebra's *product*, not their marketing site?
+6. Does coral appear exactly once, on the primary action, carrying no clinical
+   meaning?
+7. Does every clinical status carry an icon and a word?
+8. Is the local-only storage disclosure visible and in voice?
+9. Does the screen still say truthfully which system this is?
+
+---
+
+## 6. CSS load order (must be exact)
+
+```
+1. tebra-tokens.css               @media screen — tokens only, no selectors past :root
+2. clinical-desktop.css           @media screen — structural base (filename pinned)
+3. workflows/workflow-panels.css  @media screen — (filename pinned)
+4. kiosk/kiosk.css                @media screen — kiosk layout
+5. tebra-screen-contract.css      @media screen — final contract, loaded last
+--- print, entirely separate ---
+   public/legacy/legacy.css       media="print" — FROZEN, never joins the screen cascade
+```
+
+> `legacy.css` was moved to `media="print"` precisely so the screen cascade
+> would be clean; the previous redesign needed ~900 `!important` declarations
+> because it was fighting a print stylesheet loading on screen. Do not
+> reintroduce that. **Zero new `!important` is the target**; each survivor needs
+> a comment naming what it beats.
+
+---
+
+## 7. Verification gate
 
 ```bash
 npm run check        # typecheck + check-app.js (all ~50 clinical assertions)
