@@ -93,9 +93,10 @@ One commit each, CI green before moving on. Full detail in `PLAN.md` §4.
   `MANIFEST.md` §3. **Add** `@fontsource-variable/inter` and
   `@fontsource-variable/jetbrains-mono`; **keep `plus-jakarta-sans`**, which the
   AVS print sheet depends on. No structural change. *(Done.)*
-- **1 — Voice.** Microcopy per `PLAN.md` §2.4. **Labels only** — never touch
-  `WorkflowId` union values, store keys, or persistence keys. Renaming a
-  `WorkflowKey` breaks every saved record in a clinician's browser.
+- **1 — Voice.** Microcopy per `PLAN.md` §2.4, routed through one
+  `src/presentation/vocabulary.ts`. **Never touch** `WorkflowId` union values,
+  store keys, persistence keys, or `statementVersion` — those are addressed by
+  legacy panel selectors and persisted inside saved records. *(Done.)*
 - **2 — Chrome.** `AppHeader`, `SectionRail`, footer, dialogs, buttons, fields.
   Retire `meditech-screen-contract.css/.spec.js` for
   `tebra-screen-contract.css/.spec.js`.
@@ -187,6 +188,39 @@ git diff --stat -- public/legacy src/legacy src/domain src/application \
 
 Regenerate baselines only when you intend to:
 `npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
+
+## Current state — read this before starting
+
+Phases 0 and 1 are landed on the branch. What that means for you:
+
+- **`src/presentation/vocabulary.ts` is the single source of user-facing copy.**
+  New strings go there, not inline. `tests/unit/vocabulary.test.ts` guards it,
+  including a case-insensitive check that the readiness verdict is never worded
+  as clearance to administer, and a check that internal vocabulary (attest,
+  posting, local record, projection) stays off the screen.
+- **`src/presentation/tebra-tokens.css` holds the token vocabulary** and is
+  imported first in `ClinicalDesktopShell`. It declares `:root` properties only —
+  no selector in it changes any element yet. Phase 2 retargets the existing
+  stylesheets onto these names.
+- **Display copy no longer lives in `src/application/`.** Three label maps were
+  extracted (readiness verdict, record lifecycle, transaction phase); the
+  projections return `tone` / `state` / `phase`. See `MANIFEST.md` §1 amendment.
+  The rest of `src/application/**` is still frozen.
+- **The shell still looks MEDITECH.** Phase 1 changed words, not pixels beyond
+  the reflow they cause. Phase 2 is where the visual language changes.
+
+Three things that cost time in Phase 1, so you do not repeat them:
+
+1. **Grep for HTML entities too.** `Attest &amp; lock local record` in JSX did
+   not match a plain-text grep and survived a full pass.
+2. **Some strings are data, not copy.** `statementVersion:
+   "local-attestation-v1"` is persisted in saved records. Patient names like
+   `"QA, Start Center Open"` are test fixtures typed into inputs. Neither is UI
+   copy; renaming either breaks something real.
+3. **Check baseline drift, do not assume it.** Before regenerating pixel
+   baselines on a mismatched Chromium, run the suite unchanged against the
+   committed ones. On Phase 1 all 7 CI-made (151) baselines passed on local 141,
+   so regeneration was safe. See `MANIFEST.md` §2.3.
 
 ## Deliverable
 

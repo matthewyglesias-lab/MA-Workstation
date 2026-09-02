@@ -2,8 +2,8 @@ const { test, expect } = require('@playwright/test');
 
 const WORKFLOWS = {
   home: {
-    label: 'Start Center',
-    headingText: 'Local records only',
+    label: 'Dashboard',
+    headingText: 'Records stay in this browser',
     panel: '.cd2004-start-center',
     layout: '.cd2004-start-center',
     heading: '#currentWorklistTitle',
@@ -122,7 +122,7 @@ async function collectVisualContract(page, workflow) {
         rect: rectOf(element)
       }));
     const visiblePanes = panes.filter(pane => pane.visible);
-    // Clinical worksheets have a document inspector. Start Center remains a
+    // Clinical worksheets have a document inspector. The Dashboard remains a
     // single-purpose worklist instead of manufacturing empty note context.
     const desktopTiling =
       visiblePanes.length === 2 &&
@@ -286,7 +286,7 @@ function expectedContract(workflow) {
   return {
     workflow,
     activeWorkflow: workflow,
-    workTitle: isHome ? 'Current Worklist' : `${module.label} Worksheet`,
+    workTitle: isHome ? 'Open Notes' : `${module.label} note`,
     heading: {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',

@@ -28,6 +28,17 @@ tests/fixtures/clinical-parity-v1.json
 scripts/generate-print-baseline-fixture.mjs
 ```
 
+**Amendment (Phase 1): display copy is presentation, wherever it lives.**
+The freeze protects clinical decisions, not the words attached to them. Three
+label maps sat in `src/application/` — the readiness verdict headline/detail,
+`WORKSTATION_RECORD_LIFECYCLE_LABEL`, and the transaction-phase labels — which
+made a copy change look like it required editing clinical code. They moved to
+`src/presentation/vocabulary.ts`; the projections now return `tone` / `state` /
+`phase` and the presentation layer chooses the words. **No conditional,
+threshold, ordering rule, or clinical decision changed** (verify with
+`git diff -- src/application`: it is deletions and comments only). Everything
+else under `src/application/**` remains frozen.
+
 **Frozen in behavior, editable in style only:**
 `WorkstationLock.tsx` (idle-lock timing and semantics),
 `FunctionKeyProfile.ts` (command vocabulary — restyle its surface, keep the commands).
@@ -100,13 +111,16 @@ scripts/generate-print-baseline-fixture.mjs
 
 `npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
 
-> **Baselines must be generated on CI's browser.** `@playwright/test` 1.62 pins
-> chromium-1234 (Chromium 151). A sandbox with a different pinned build — the
-> Claude Code remote environment ships chromium-1194 (Chromium 141) — rasterizes
-> text differently, so baselines produced there are wrong for CI even when they
-> look correct locally. Behavioural and computed-style specs run fine on the
-> older build; **pixel snapshots do not.** Regenerate them on a machine matching
-> the pinned version, or let a maintainer do it.
+> **Baseline browser drift — measured, not assumed.** `@playwright/test` 1.62
+> pins chromium-1234 (Chromium 151); the Claude Code remote environment ships
+> chromium-1194 (Chromium 141). Before regenerating anything on a mismatched
+> build, check it: run the suite unchanged against the committed baselines. In
+> Phase 1 all 7 CI-made (151) baselines passed on 141, because the capture CSS
+> forces `Arial, "Liberation Sans"` with `font-synthesis: none` and disables
+> animations, which removes almost all rasterization variance. Regeneration on
+> 141 was therefore safe. **Re-run that check whenever the version gap widens
+> or the capture settings change** — and never regenerate on a hunch either way.
+> `win32/` is a genuinely different platform and still cannot be refreshed here.
 
 ---
 
@@ -392,6 +406,54 @@ Screen by screen, answer yes to all of these. A no is a seam.
 9. Does the screen still say truthfully which system this is?
 
 ---
+
+## 5b. Restructure posture — replace, never overlay
+
+The previous redesign failed by layering: it added a stylesheet that fought the
+one underneath, and needed ~900 `!important` declarations to win. These rules
+exist so this one does not repeat that.
+
+1. **Change rules at their source.** A MEDITECH value gets edited where it is
+   declared. Adding a later rule that overrides it is forbidden, even when it
+   is faster.
+2. **Net CSS must go down.** `meditech-screen-contract.css` exists only to force
+   one visual language over another; once tokens own that, it shrinks and is
+   deleted, not superseded. Report the line-count delta in every phase's PR.
+3. **Zero new `!important`.** Each one that survives review carries a comment
+   naming exactly what it beats.
+4. **No dead conditionals.** Collapsing a distinction is fine; leaving a
+   three-branch ternary whose branches are identical is not. (Phase 1 hit this
+   with `chartContextLabel` and collapsed it.)
+5. **Never derive a class from copy.** `is-${label.toLowerCase()}` couples the
+   stylesheet to the words, so renaming silently drops styling. Modifier
+   classes come from state keys. (Phase 1 hit this with `.is-filed`.)
+6. **Copy lives in `vocabulary.ts`**, not inline. New user-facing strings go
+   there so a rename stays one edit.
+7. **The class vocabulary rename (`cd2004-*`, `meditech-*`, `wfp-*`) gets its
+   own phase.** It is mechanical, touches ~1000 usages and every e2e selector,
+   and mixing it with design work makes both unreviewable.
+
+## 5c. Boot experience — skeleton, not splash
+
+The Phase 0 boot splash is **interim**. A full-screen brand splash is a native
+desktop idiom — the same idiom the MEDITECH shell was built on. A Tebra-quality
+web product shows the chrome immediately with placeholder content, so the first
+frame communicates *what is loading* rather than *who made it*.
+
+Phase 2 replaces it with a loading skeleton:
+
+- The app header, section rail and an empty Open Notes table render as neutral
+  placeholder blocks in `--tw-mint-50`, with the real layout geometry.
+- No shimmer animation by default; a slow, low-contrast pulse at most, disabled
+  under `prefers-reduced-motion`.
+- It stays inline HTML+CSS in `index.html` with literal token values, because
+  it has to paint before the module graph loads — the same constraint the splash
+  has today.
+- **Coupling to declare:** the skeleton mirrors the shell's structure, so it must
+  be updated in the same commit as any shell layout change or it flashes the
+  wrong shape. That is why it lands in Phase 2 (when the structure is settled)
+  rather than now, against a layout being thrown away.
+- The local-only disclosure keeps its place in the first frame.
 
 ## 6. CSS load order (must be exact)
 

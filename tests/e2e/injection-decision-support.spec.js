@@ -162,7 +162,7 @@ test.describe('Injection decision support', () => {
     const actions = page.locator('[data-injection-record-actions]');
     await expect(actions.locator('[data-injection-save]')).toBeEnabled();
     await actions.locator('[data-injection-save]').click();
-    await expect(actions).toContainText('SAVED LOCAL DRAFT');
+    await expect(actions).toContainText('Draft saved');
 
     // Move away from the active draft, then reload it through the only record
     // list. This exercises persisted next-dose provenance rather than merely

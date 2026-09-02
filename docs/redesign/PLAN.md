@@ -198,8 +198,8 @@ One commit per phase, CI green before the next. Visual snapshots regenerated
 | Phase | Scope | Risk |
 | --- | --- | --- |
 | **0 — Tokens** | `tebra-tokens.css` (screen-scoped). Add Inter Variable + JetBrains Mono (Plus Jakarta stays — print). Boot splash and favicon. No structural change. | Low |
-| **1 — Voice** | Microcopy per §2.4. Label-only; no logic, no keys. | Low |
-| **2 — Chrome** | App header, section rail, action bar, footer, dialogs, buttons, fields. Retire `meditech-screen-contract.*`. | Medium |
+| **1 — Voice** | Microcopy per §2.4, routed through one `vocabulary.ts`. Display copy extracted out of `src/application` (see MANIFEST §1 amendment). No keys, no clinical logic. *(Done.)* | Low |
+| **2 — Chrome** | App header, section rail, action bar, footer, dialogs, buttons, fields. Boot splash → loading skeleton (MANIFEST §5c). Retire `meditech-screen-contract.*` by deletion, not supersession (MANIFEST §5b). | Medium |
 | **3 — Conventions** | Facesheet cards, Open Notes table with sort/lock/status chips, hover patient card, `+ New Note` menu, `More`, `Customize View`. | Medium |
 | **4 — Kiosk** | Kiosk shell, stepper, site picker, sign-and-next. | Medium-high |
 | **5 — Cleanup** | Delete dead MEDITECH CSS, refresh README. | Low |

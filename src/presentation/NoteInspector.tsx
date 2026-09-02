@@ -1,5 +1,6 @@
 import { DesktopIcon } from "./DesktopIcon";
 import { summarizeReadinessVerdict } from "../application/readiness-projection";
+import { CHECKLIST, RECORD, SHELL, readinessVerdictCopy } from "./vocabulary";
 import { noteDocumentLines, noteDocumentStats } from "./note-document";
 import type { NoteSection, PatientContext, ReadinessItem } from "./types";
 
@@ -69,27 +70,34 @@ export function NoteInspector({
   const verdict = summarizeReadinessVerdict(readiness);
   const documentIsDraft = verdict?.tone === "blocked";
   const stats = noteDocumentStats(sections.map((section) => section.content));
-  // The record is filed once the local record is locked. Until then it is a
-  // draft, whatever the readiness verdict says - a complete draft is still a
-  // draft, and labelling it otherwise would overstate the record's state.
-  const documentState = postState === "posted" ? "FILED" : "DRAFT";
+  // The note is signed once the record is locked. Until then it is a draft,
+  // whatever the readiness verdict says - a complete draft is still a draft,
+  // and labelling it otherwise would overstate the record's state.
+  // State drives the modifier class; vocabulary drives the words. Deriving the
+  // class from the label (`is-${label.toLowerCase()}`) coupled the stylesheet
+  // to the copy, so renaming a word silently dropped its styling.
+  const documentSigned = postState === "posted";
+  const documentStateKey = documentSigned ? "signed" : "draft";
+  const documentState = documentSigned ? RECORD.signed : RECORD.draft;
+  const verdictCopy = verdict ? readinessVerdictCopy(verdict) : null;
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
       {/* The aggregate verdict, colour-coded, because a per-row scan is slower
-          than staff need when they are deciding whether a record can be filed.
-          Wording and scope are decided in `summarizeReadinessVerdict`. */}
-      {verdict && (
+          than staff need when they are deciding whether a note can be signed.
+          Scope is decided in `summarizeReadinessVerdict`; wording in
+          `readinessVerdictCopy`. */}
+      {verdict && verdictCopy && (
         <div class={`cd2004-readiness-verdict is-${verdict.tone}`} role="status">
-          <strong>{verdict.headline}</strong>
-          <span>{verdict.detail}</span>
+          <strong>{verdictCopy.headline}</strong>
+          <span>{verdictCopy.detail}</span>
         </div>
       )}
       {!verdict && (
         <div class="cd2004-readiness-summary">
           <div class="cd2004-readiness-score">
-            <span>Requirements</span>
-            <strong>0 OF 0</strong>
+            <span>{CHECKLIST.title}</span>
+            <strong>0 of 0</strong>
           </div>
         </div>
       )}
@@ -134,8 +142,8 @@ export function NoteInspector({
         <DesktopIcon name="note" />
         <strong>{title}</strong>
         <span class="cd2004-note-marks">
-          <span class="cd2004-note-mark">LOCAL</span>
-          <span class={`cd2004-note-mark is-${documentState.toLowerCase()}`}>
+          <span class="cd2004-note-mark">{SHELL.localBadge}</span>
+          <span class={`cd2004-note-mark is-${documentStateKey}`}>
             {documentState}
           </span>
         </span>

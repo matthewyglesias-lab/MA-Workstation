@@ -1,3 +1,4 @@
+import { NOTES, SHELL } from "./vocabulary";
 import { useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
 import {
@@ -66,10 +67,10 @@ interface WorklistRow {
 }
 
 const FILTERS: Array<{ id: WorklistFilter; label: string }> = [
-  { id: "all", label: "All Work" },
-  { id: "review", label: "Needs Review" },
+  { id: "all", label: "All work" },
+  { id: "review", label: "Needs review" },
   { id: "today", label: "Today" },
-  { id: "drafts", label: "Saved Drafts" },
+  { id: "drafts", label: "Drafts" },
 ];
 
 function uniqueQueueRows(rows: WorkQueueItem[]) {
@@ -227,8 +228,8 @@ export function StartCenter({
 
       <header class="cd2004-worklist-header">
         <div>
-          <h1 id="currentWorklistTitle" aria-label="Current Worklist">
-            Local records only
+          <h1 id="currentWorklistTitle" aria-label={NOTES.openNotes}>
+            {SHELL.localOnlyDetail}
           </h1>
         </div>
         <button
@@ -330,7 +331,7 @@ export function StartCenter({
 
       <footer class="cd2004-worklist-footer">
         <span>{visibleRows.length} local item{visibleRows.length === 1 ? "" : "s"} shown</span>
-        <span>Locked local history: Record List</span>
+        <span>Signed history: {NOTES.openNotes}</span>
       </footer>
     </section>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { NOTES, RECORD } from "./vocabulary";
 import {
   InjectionRecordRepository,
   type InjectionRecord,
@@ -44,7 +45,7 @@ const bridge = (): LegacyRecordsBridge | undefined =>
 const FILTERS: Array<[RecordFilter, string]> = [
   ["all", "All"],
   ["draft", "Drafts"],
-  ["locked", "Locked"],
+  ["locked", NOTES.statusSigned],
   ["addenda", "Addenda"],
 ];
 
@@ -59,7 +60,7 @@ const activityText = (record: InjectionRecord): string => {
   const extra = addendaCount(record);
   const suffix = extra ? ` / ${extra} addendum${extra === 1 ? "" : "s"}` : "";
   return record.status === "completed"
-    ? `${record.attestation ? "Attested local lock" : "Legacy local lock"} ${stamp(record.completedAt || record.updatedAt)}${suffix}`
+    ? `${record.attestation ? NOTES.statusSigned : RECORD.signedLegacy} ${stamp(record.completedAt || record.updatedAt)}${suffix}`
     : `Draft updated ${stamp(record.updatedAt)}${suffix}`;
 };
 
@@ -209,7 +210,7 @@ export function RecordsWindow({
       <section class="records-drawer" role="dialog" aria-labelledby="recordsDrawerTitle">
         <div class="records-drawer-head">
           <div>
-            <h2 id="recordsDrawerTitle">Local EMR / Record List</h2>
+            <h2 id="recordsDrawerTitle">{NOTES.openNotes}</h2>
           </div>
           <button
             type="button"
@@ -304,7 +305,11 @@ export function RecordsWindow({
                   <span class="records-drawer-row-top">
                     <span class="records-drawer-row-title">{patientOf(record)}</span>
                     <span class={`records-drawer-row-badge ${locked ? "locked" : "draft"}`}>
-                      {locked ? (attested ? "Locked" : "Legacy lock") : "Draft"}
+                      {locked
+                        ? attested
+                          ? NOTES.statusSigned
+                          : RECORD.signedLegacy
+                        : RECORD.draft}
                     </span>
                   </span>
                   <span class="records-drawer-row-summary">{medicationOf(record)}</span>
@@ -317,7 +322,7 @@ export function RecordsWindow({
             })
           ) : (
             <div class="records-drawer-empty">
-              <b>No matching local injection records.</b>
+              <b>No matching notes.</b>
               <span>Try another patient, medication, traceability field, or filter.</span>
             </div>
           )}

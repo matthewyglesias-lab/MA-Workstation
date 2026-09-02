@@ -81,14 +81,14 @@ export const FUNCTION_KEY_PROFILE: readonly FunctionKeyCommand[] = [
   {
     id: "local-emr",
     keyLabel: "F11",
-    label: "Local EMR",
+    label: "Open Notes",
     description: "Open the local record list.",
     showInDeck: true,
   },
   {
     id: "file",
     keyLabel: "F12",
-    label: "File / save",
+    label: "Save",
     description: "File the editable local draft.",
     showInDeck: true,
   },

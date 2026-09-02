@@ -110,10 +110,6 @@ export type ReadinessVerdictTone = "clear" | "review" | "blocked";
 
 export interface ReadinessVerdict {
   tone: ReadinessVerdictTone;
-  /** The verdict word staff read first. */
-  headline: string;
-  /** The count line beneath it. */
-  detail: string;
   completed: number;
   total: number;
   blockers: number;
@@ -133,8 +129,12 @@ export interface ReadinessVerdict {
  * pre-administration gate would need its own subset of stages; this is not it.
  *
  * Pending counts as blocking rather than as its own third state: an untouched
- * requirement and a failed one are equally "not yet filed", and splitting them
+ * requirement and a failed one are equally not yet signable, and splitting them
  * would put a second amber verdict beside the review one it already has.
+ *
+ * This returns the verdict, not the words for it. Wording is a display concern
+ * and lives in src/presentation/vocabulary.ts - having it here meant a copy
+ * change looked like it required editing clinical code, which it does not.
  */
 export function summarizeReadinessVerdict(
   items: readonly ReadinessItem[],
@@ -149,15 +149,8 @@ export function summarizeReadinessVerdict(
 
   const tone: ReadinessVerdictTone =
     blockers || pending ? "blocked" : warnings ? "review" : "clear";
-  const headline =
-    tone === "blocked"
-      ? "REQUIREMENTS OUTSTANDING"
-      : tone === "review"
-        ? "READY TO FILE — REVIEW FLAGGED"
-        : "READY TO FILE";
-  const detail = `${completed} OF ${total} COMPLETE${warnings > 0 ? ` · ${warnings} REVIEW` : ""}`;
 
-  return { tone, headline, detail, completed, total, blockers, warnings, pending };
+  return { tone, completed, total, blockers, warnings, pending };
 }
 
 /**

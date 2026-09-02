@@ -1,3 +1,4 @@
+import { MODULE, NOTES, PATIENT } from "./vocabulary";
 import { DesktopIcon } from "./DesktopIcon";
 import {
   FUNCTION_KEY_DECK_PROFILE,
@@ -31,7 +32,9 @@ const RAIL_GROUPS: Array<{
     workflows: ["home", "administer", "uds", "samples", "forms"],
   },
   {
-    label: "Reference",
+    // The module inside this group is itself called Reference now, so the
+    // group takes the broader category name rather than echoing its one child.
+    label: "Resources",
     id: "reference",
     workflows: ["reference"],
   },
@@ -45,7 +48,7 @@ const RAIL_GROUPS: Array<{
 
 /**
  * MEDITECH workstations keep chart functions and record access in a persistent
- * rail. The central Start Center owns the actionable work queue, avoiding a
+ * rail. The central Dashboard owns the actionable work queue, avoiding a
  * second copy of those same follow-up items beside every workflow.
  */
 export function MeditechRecordRail({
@@ -62,7 +65,7 @@ export function MeditechRecordRail({
       patient.medicalRecordNumber?.trim(),
   );
   const localChartDetail = hasLocalChart
-    ? [patient.name?.trim() || "Local chart", patient.localRecordId?.trim()]
+    ? [patient.name?.trim() || PATIENT.facesheet, patient.localRecordId?.trim()]
         .filter(Boolean)
         .join(" · ")
     : "Use F11 to select a record";
@@ -70,7 +73,7 @@ export function MeditechRecordRail({
   return (
     <nav
       class="cd2004-navigator meditech-record-list cd2004-print-exclude"
-      aria-label="Record List and clinical functions"
+      aria-label="Open Notes and clinical functions"
     >
       <button
         type="button"
@@ -80,7 +83,7 @@ export function MeditechRecordRail({
         aria-label={`Open saved local records (${localEmrCommand.keyLabel})`}
         title={`${localEmrCommand.label}: open saved local records (${localEmrCommand.keyLabel})`}
       >
-        <span>Record List</span>
+        <span>{NOTES.openNotes}</span>
         <span class="meditech-rail-records-command">
           <kbd>{localEmrCommand.keyLabel}</kbd>
           <DesktopIcon name="records" />
@@ -88,7 +91,7 @@ export function MeditechRecordRail({
       </button>
 
       <div class="meditech-rail-context" aria-label="Local chart context">
-        <strong>{hasLocalChart ? "LOCAL CHART" : "NO LOCAL CHART"}</strong>
+        <strong>{hasLocalChart ? PATIENT.facesheet : PATIENT.noPatient}</strong>
         <span>{localChartDetail}</span>
       </div>
 
