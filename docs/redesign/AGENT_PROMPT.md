@@ -189,6 +189,11 @@ git diff --stat -- public/legacy src/legacy src/domain src/application \
 Regenerate baselines only when you intend to:
 `npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
 
+> **Continuing rather than starting?** `docs/redesign/HANDOFF.md` carries the
+> live state, the paste-able continuation prompt, the sandbox Playwright config,
+> and the phase-by-phase numbers. Read that first; this file is the standing
+> brief it refers to.
+
 ## Current state — read this before starting
 
 Phases 0 and 1 are landed on the branch. What that means for you:
