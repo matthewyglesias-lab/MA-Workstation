@@ -68,7 +68,7 @@ scripts/generate-print-baseline-fixture.mjs
 | --- | --- | --- |
 | `index.html` | Boot splash → Tebra teal/sand; title and meta copy. **Keep `media="print"` on the legacy stylesheet link.** | 0 |
 | `favicon.svg` | IPMG module mark in Tebra palette. Not a Tebra logo. | 0 |
-| `package.json` | Swap `@fontsource-variable/plus-jakarta-sans` → `@fontsource-variable/inter` + `@fontsource-variable/jetbrains-mono`. | 0 |
+| `package.json` | **Add** `@fontsource-variable/inter` + `@fontsource-variable/jetbrains-mono`. **Keep `plus-jakarta-sans`** — it is print-load-bearing (see §3.1). | 0 |
 | `src/main.tsx` | Font imports; kiosk wiring (Phase 4). No coordinator or store changes. | 0, 4 |
 | `src/presentation/clinical-desktop.css` | Retarget to tokens. **Keep the filename** (`check-app.js` asserts it). | 0, 2 |
 | `src/presentation/workflows/workflow-panels.css` | Retarget to tokens. **Keep the filename** (`check-app.js` asserts it). | 0, 2 |
@@ -100,6 +100,14 @@ scripts/generate-print-baseline-fixture.mjs
 
 `npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
 
+> **Baselines must be generated on CI's browser.** `@playwright/test` 1.62 pins
+> chromium-1234 (Chromium 151). A sandbox with a different pinned build — the
+> Claude Code remote environment ships chromium-1194 (Chromium 141) — rasterizes
+> text differently, so baselines produced there are wrong for CI even when they
+> look correct locally. Behavioural and computed-style specs run fine on the
+> older build; **pixel snapshots do not.** Regenerate them on a machine matching
+> the pinned version, or let a maintainer do it.
+
 ---
 
 ## 3. Design token manifest
@@ -117,6 +125,13 @@ commercial Lineto family — **not licensed here.**
 | UI sans | Akkurat LL | **Inter Variable** — closest open neo-grotesque; excellent at 11–13px; true tabular figures |
 | Mono | Akkurat Mono LL | **JetBrains Mono Variable** — record IDs, NDC, lot numbers |
 | Serif | Lora | *not shipped* — editorial only, no workstation role |
+
+> **`plus-jakarta-sans` must stay installed.** It is not a leftover: the AVS
+> patient handout sets its titles in `"Plus Jakarta Sans Variable"` inside the
+> `@media print` block of `clinical-desktop.css`, and
+> `tests/e2e/print-regression.spec.js:428` asserts that stack. Removing it
+> silently changes a printed patient document and fails `npm run test:print`.
+> Inter and JetBrains Mono are **added alongside** it, for screen only.
 
 ```css
 --tw-font-sans: "Inter Variable", Inter, "Helvetica Neue", Arial, sans-serif;

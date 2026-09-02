@@ -90,8 +90,9 @@ wrong change — restructure the presentation instead.
 One commit each, CI green before moving on. Full detail in `PLAN.md` §4.
 
 - **0 — Tokens.** `src/presentation/tebra-tokens.css` with the exact values from
-  `MANIFEST.md` §3. Swap `@fontsource-variable/plus-jakarta-sans` for
-  `@fontsource-variable/inter` plus JetBrains Mono. No structural change.
+  `MANIFEST.md` §3. **Add** `@fontsource-variable/inter` and
+  `@fontsource-variable/jetbrains-mono`; **keep `plus-jakarta-sans`**, which the
+  AVS print sheet depends on. No structural change. *(Done.)*
 - **1 — Voice.** Microcopy per `PLAN.md` §2.4. **Labels only** — never touch
   `WorkflowId` union values, store keys, or persistence keys. Renaming a
   `WorkflowKey` breaks every saved record in a clinician's browser.

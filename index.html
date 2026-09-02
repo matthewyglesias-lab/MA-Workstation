@@ -31,6 +31,14 @@
       thing staff would see is a blank white flash. boot() in main.tsx removes
       #boot-splash once the real shell has rendered, or on a boot failure.
     -->
+    <!--
+      Values are literal, not var(--tw-*): this block paints before the module
+      graph (and therefore before tebra-tokens.css) has loaded. They are the
+      same teal-900 / sand-150 the token layer defines. The typeface is a
+      system stack for the same reason - @fontsource is imported by main.tsx
+      and is not available this early, so asking for Inter here would only
+      produce an invisible fallback.
+    -->
     <style>
       #boot-splash {
         position: fixed;
@@ -40,10 +48,11 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        background: #0a246a;
-        color: #fff;
-        font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+        gap: 4px;
+        background: #003a43;
+        color: #f8f3eb;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
         transition: opacity 160ms linear;
       }
       #boot-splash.is-done {
@@ -51,58 +60,57 @@
         pointer-events: none;
       }
       #boot-splash .boot-mark {
-        font-size: 28px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #82a4a7;
       }
       #boot-splash .boot-sub {
-        font-size: 12px;
-        color: #b9c6e6;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        font-size: 27px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
       }
       #boot-splash .boot-status {
-        margin-top: 18px;
-        font-size: 12px;
-        color: #d9e2f5;
+        margin-top: 22px;
+        font-size: 13px;
+        color: #82a4a7;
       }
+      /* A calm determinate-looking track rather than a hatched Win95 gauge:
+         one sand indicator easing across a recessed teal rail. */
       #boot-splash .boot-bar {
-        width: 220px;
-        height: 12px;
-        margin-top: 10px;
+        width: 168px;
+        height: 3px;
+        margin-top: 12px;
         overflow: hidden;
-        background: #061a50;
-        border: 1px solid #000;
-        border-top-color: #041038;
-        border-left-color: #041038;
-        box-shadow: inset 1px 1px #041038, inset -1px -1px #3768a8;
+        border-radius: 999px;
+        background: #054a53;
       }
       #boot-splash .boot-bar::after {
         content: "";
         display: block;
         width: 40%;
         height: 100%;
-        background: repeating-linear-gradient(
-          -45deg,
-          #6fa8ff 0 6px,
-          #4a86e8 6px 12px
-        );
-        animation: boot-bar-sweep 1.1s linear infinite;
+        border-radius: inherit;
+        background: #f8f3eb;
+        animation: boot-bar-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
       }
       @keyframes boot-bar-sweep {
         0% {
           transform: translateX(-100%);
         }
         100% {
-          transform: translateX(350%);
+          transform: translateX(250%);
         }
       }
+      /* teal-300 on teal-900 clears 4.5:1; the darker teal-500 measured 2.2:1,
+         which is not good enough for the line that tells staff where their
+         documentation actually goes. */
       #boot-splash .boot-footer {
         position: absolute;
-        bottom: 16px;
-        font-size: 10px;
-        color: #7f96c9;
-        letter-spacing: 0.06em;
+        bottom: 20px;
+        font-size: 12px;
+        color: #82a4a7;
       }
       @media (prefers-reduced-motion: reduce) {
         #boot-splash .boot-bar::after {
@@ -114,11 +122,13 @@
   </head>
   <body>
     <div id="boot-splash" role="status" aria-label="Starting the workstation">
-      <div class="boot-mark">IPMG&nbsp;MA</div>
-      <div class="boot-sub">Client/Server Workstation</div>
-      <div class="boot-status">Connecting to local workstation&hellip;</div>
+      <div class="boot-mark">IPMG</div>
+      <div class="boot-sub">MA Workstation</div>
+      <div class="boot-status">Starting&hellip;</div>
       <div class="boot-bar"></div>
-      <div class="boot-footer">LOCAL / TRAINING</div>
+      <!-- The local-only disclosure starts here, in plain language, on the
+           very first surface staff see. It is not a warning banner. -->
+      <div class="boot-footer">Records stay in this browser</div>
     </div>
     <div id="app"></div>
     <div id="legacy-staging" aria-hidden="true"></div>

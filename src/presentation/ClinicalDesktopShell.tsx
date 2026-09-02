@@ -8,6 +8,8 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+// Tokens first: every later stylesheet resolves var(--tw-*) against this one.
+import "./tebra-tokens.css";
 import "./clinical-desktop.css";
 import "./workflows/workflow-panels.css";
 import "./meditech-workstation.css";

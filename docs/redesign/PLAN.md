@@ -197,7 +197,7 @@ One commit per phase, CI green before the next. Visual snapshots regenerated
 
 | Phase | Scope | Risk |
 | --- | --- | --- |
-| **0 — Tokens** | `tebra-tokens.css` (screen-scoped). Font swap Plus Jakarta → Inter Variable + JetBrains Mono. No structural change. | Low |
+| **0 — Tokens** | `tebra-tokens.css` (screen-scoped). Add Inter Variable + JetBrains Mono (Plus Jakarta stays — print). Boot splash and favicon. No structural change. | Low |
 | **1 — Voice** | Microcopy per §2.4. Label-only; no logic, no keys. | Low |
 | **2 — Chrome** | App header, section rail, action bar, footer, dialogs, buttons, fields. Retire `meditech-screen-contract.*`. | Medium |
 | **3 — Conventions** | Facesheet cards, Open Notes table with sort/lock/status chips, hover patient card, `+ New Note` menu, `More`, `Customize View`. | Medium |

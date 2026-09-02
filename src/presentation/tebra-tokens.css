@@ -1,0 +1,211 @@
+/*
+ * Tebra design tokens - the single source of truth for the redesign's colour,
+ * typography, geometry and motion vocabulary.  See docs/redesign/MANIFEST.md.
+ *
+ * Every value here was read out of Tebra's own production stylesheets
+ * (www.tebra.com/tebranew/_next/static/css/*.css) rather than estimated, so
+ * that the workstation reads as a module their team built rather than as an
+ * approximation of one.
+ *
+ * PHASE 0: this file declares the vocabulary and nothing more.  No selector
+ * below targets an existing element, so importing it changes not one rendered
+ * pixel.  Later phases retarget the existing stylesheets onto these names.
+ *
+ * WHY @media screen: patient-facing print output is owned exclusively by
+ * public/legacy/legacy.css (loaded media="print" from index.html) and by the
+ * @media print block in clinical-desktop.css, and is asserted byte-identical
+ * against tests/fixtures/print-baseline-v1.json.  Scoping the tokens to screen
+ * means they simply do not exist during print: a later phase that reaches for
+ * var(--tw-*) inside a print rule gets a visible fallback during review rather
+ * than silently restyling a patient handout.  Do not lift this media query.
+ */
+
+@media screen {
+  :root {
+    /* ---------------------------------------------------------------- type */
+
+    /*
+     * Tebra ships Akkurat LL / Akkurat Mono LL - commercial Lineto families
+     * that are not licensed for this project.  Inter is the closest open
+     * neo-grotesque and holds up at the 11-13px sizes the worksheets use;
+     * JetBrains Mono covers Akkurat Mono's role on record ids, NDC and lot
+     * numbers.  Both are self-hosted via @fontsource-variable (see main.tsx).
+     */
+    --tw-font-sans: "Inter Variable", Inter, "Helvetica Neue", Arial, sans-serif;
+    --tw-font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+      monospace;
+
+    /*
+     * Brand tier - Tebra's real marketing sizes.  Reserved for the surfaces a
+     * touchscreen genuinely wants big: the facesheet banner, the primary
+     * action, the site picker, the sign confirmation.
+     */
+    --tw-fs-display: 36px;
+    --tw-lh-display: 1.15;
+    --tw-ls-display: -0.02em;
+    --tw-fs-title: 24px;
+    --tw-lh-title: 1.25;
+    --tw-ls-title: -0.01em;
+    --tw-fs-lead: 18px;
+    --tw-lh-lead: 27px;
+    --tw-fs-body: 16px;
+    --tw-lh-body: 24px;
+
+    /*
+     * Workstation tier - compressed, same colours and typeface.  Calibrated to
+     * Tebra's *product* (tables, cards, a section rail, real clinical data on
+     * one screen), not to their airier marketing pages.  Everything dense
+     * lives here.
+     */
+    --tw-fs-ws-base: 14px;
+    --tw-lh-ws-base: 20px;
+    --tw-fs-ws-dense: 13px;
+    --tw-lh-ws-dense: 18px;
+    --tw-fs-ws-meta: 12px;
+    --tw-lh-ws-meta: 16px;
+    --tw-fs-ws-label: 11px;
+    --tw-lh-ws-label: 14px;
+    --tw-ls-ws-label: 0.48px;
+
+    /*
+     * Doses, dates, intervals and lot numbers line up in columns, and at speed
+     * proportional figures make 1064 mg and 1004 mg scan alike.  This is a
+     * clinical property, not a stylistic one.
+     */
+    --tw-numeric-tabular: tabular-nums;
+
+    /* --------------------------------------------------------------- teal */
+    /* Structure, text, borders, inverse surfaces. Counts are occurrences in
+       Tebra's CSS - 004952 is the logo teal, 003a43 does the text work. */
+    --tw-teal-900: #003a43; /* 95 uses */
+    --tw-teal-800: #004952; /* 162 uses */
+    --tw-teal-700: #054a53;
+    --tw-teal-600: #1f5f67;
+    --tw-teal-500: #3a6d71;
+    --tw-teal-300: #82a4a7;
+    --tw-teal-200: #c5d6d7;
+
+    /* --------------------------------------------------------------- mint */
+    /* Cool tinted neutrals - sunken panels, table headers, hairline rules. */
+    --tw-mint-200: #d2dcda;
+    --tw-mint-150: #ebf0ef; /* 22 uses */
+    --tw-mint-125: #edf1f0;
+    --tw-mint-100: #e9efee;
+    --tw-mint-75: #ebf0f1;
+    --tw-mint-50: #f6f8f8; /* 10 uses */
+    --tw-mint-25: #f5f8f8;
+
+    /* -------------------------------------------------------------- coral */
+    /*
+     * Primary action ONLY.  Coral sits close to a clinical warning hue, so it
+     * never carries clinical meaning - one primary action per screen, and
+     * status comes from the triad below.  See docs/redesign/PLAN.md 2.7.
+     */
+    --tw-coral-600: #f37e5e; /* active */
+    --tw-coral-500: #ff8d6e; /* default - 48 uses */
+    --tw-coral-300: #fec3b8; /* hover */
+    --tw-coral-100: #fee3df;
+    --tw-coral-50: #fff6f3;
+
+    /* --------------------------------------------------------------- sand */
+    /* Warm grounding earth tones; 150 is also Tebra's on-dark surface. */
+    --tw-sand-300: #e0d3c8;
+    --tw-sand-250: #d8d5cf;
+    --tw-sand-200: #f2eee9;
+    --tw-sand-150: #f8f3eb; /* 64 uses */
+    --tw-sand-100: #faf6f1;
+    --tw-sand-75: #fcf9f5;
+    --tw-sand-50: #f9f7f6;
+    --tw-sand-25: #fdfbfb;
+
+    /* ------------------------------------------------------------ neutral */
+    --tw-ink-900: #232323; /* Tebra button text */
+    --tw-ink-800: #2b2b2b;
+    --tw-ink-400: #a4a4a4;
+    --tw-ink-200: #dcdcdc;
+    --tw-white: #ffffff;
+
+    /* Tebra's own form-validation red.  Deliberately NOT the clinical stop
+       colour - see --tw-stop-fg, which must stay distinguishable from it. */
+    --tw-red-500: #da5960;
+
+    /* ------------------------------------------------- clinical status */
+    /*
+     * Ours, not Tebra's: they ship one error red and no clinical semantics.
+     * Derived to stay in the teal-and-warm family while remaining unmistakable
+     * next to coral.  Status is never colour-only - every state renders an
+     * icon and a word, so these reinforce meaning rather than carry it.
+     */
+    --tw-stop-fg: #8f2b32;
+    --tw-stop-bg: #fdecec;
+    --tw-stop-border: #d99aa0;
+
+    --tw-review-fg: #7a4f06;
+    --tw-review-bg: #fdf3e2;
+    --tw-review-border: #dcc08a;
+
+    --tw-ready-fg: #1f6f5c; /* pulled toward teal to stay in-family */
+    --tw-ready-bg: #e6f2ee;
+    --tw-ready-border: #9cc6b8;
+
+    /* ----------------------------------------------- semantic surfaces */
+    --tw-surface-page: var(--tw-sand-50);
+    --tw-surface-panel: var(--tw-white);
+    --tw-surface-sunken: var(--tw-mint-50);
+    --tw-surface-inverse: var(--tw-teal-900);
+    --tw-on-inverse: var(--tw-sand-150);
+    --tw-border-subtle: var(--tw-mint-200);
+    --tw-border-strong: var(--tw-teal-300);
+    --tw-text-primary: var(--tw-teal-900);
+    --tw-text-secondary: var(--tw-teal-600);
+    --tw-text-muted: var(--tw-ink-400);
+    --tw-focus-ring: 0 0 0 3px rgb(0 73 82 / 24%);
+
+    /* ------------------------------------------------------------ buttons */
+    /* Tebra's observed spec, verbatim.  Heights: cta/large 57, medium 49,
+       small 45, x-small 32 - dropping to 46/49 on narrow.  The `ws` size is
+       ours, for dense worksheet toolbars. */
+    --tw-btn-h-cta: 57px;
+    --tw-btn-h-large: 57px;
+    --tw-btn-h-medium: 49px;
+    --tw-btn-h-small: 45px;
+    --tw-btn-h-xsmall: 32px;
+    --tw-btn-h-ws: 32px;
+    --tw-btn-pad-cta: 14px 24px;
+
+    /* Kiosk touch targets never go below this, whatever the button size. */
+    --tw-touch-min: 44px;
+
+    /* ----------------------------------------------------------- geometry */
+    /* Tebra's radii, ordered by frequency in their CSS: 8(24) 16(21) 4(14)
+       24(14) 32(6).  --tw-radius-ws is ours, for the workstation tier. */
+    --tw-radius-pill: 999px;
+    --tw-radius-cta: 32px;
+    --tw-radius-panel: 24px;
+    --tw-radius-card: 16px;
+    --tw-radius-ctl: 8px;
+    --tw-radius-ws: 6px;
+    --tw-radius-tight: 4px;
+
+    --tw-container-base: 1280px;
+    --tw-container-pad: 20px; /* 30px at md, 80px at lg */
+    --tw-gutter-sm: 8px;
+    --tw-gutter-md: 14px;
+    --tw-gutter-lg: 16px;
+
+    /* ------------------------------------------------------------- motion */
+    /* Tebra transitions background-color, filter, color and box-shadow at
+       .3s ease-in-out.  Workstation feedback (validation, row selection) runs
+       faster so dense interaction does not feel laggy. */
+    --tw-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --tw-dur-fast: 120ms;
+    --tw-dur-base: 300ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --tw-dur-fast: 0ms;
+      --tw-dur-base: 0ms;
+    }
+  }
+}

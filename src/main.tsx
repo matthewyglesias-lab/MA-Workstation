@@ -1,5 +1,17 @@
 import { render } from 'preact';
+/*
+ * Plus Jakarta Sans is load-bearing for PRINT: the AVS patient handout sets its
+ * titles in it (the @media print block in clinical-desktop.css), and
+ * tests/e2e/print-regression.spec.js asserts that stack. It stays.
+ *
+ * Inter and JetBrains Mono are the redesign's screen faces - the open stand-ins
+ * for Tebra's commercial Akkurat LL / Akkurat Mono LL. Loading them only
+ * registers @font-face rules; nothing renders in them until a later phase
+ * points a font-family at var(--tw-font-sans). See docs/redesign/MANIFEST.md.
+ */
 import '@fontsource-variable/plus-jakarta-sans/wght.css';
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource-variable/jetbrains-mono/wght.css';
 import { RecordsWindow } from './presentation/RecordsWindow';
 import { useIdleLock, WorkstationLock } from './presentation/WorkstationLock';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
