@@ -43,10 +43,17 @@ const SNAPSHOT_OPTIONS = {
 };
 
 const CAPTURE_STYLES = `
+  /* Every element, not just the shell subtree. Any surface that declares its
+     own font-family - the unsupported-viewport gate does - keeps that face
+     otherwise, because inheriting Arial from body loses to its own rule. A
+     webfont left in place rasterizes differently between the sandbox's
+     Chromium and the runner's, which is exactly the difference these captures
+     must not encode. */
   html[data-visual-regression="true"],
   html[data-visual-regression="true"] body,
-  html[data-visual-regression="true"] .cd2004-shell,
-  html[data-visual-regression="true"] .cd2004-shell * {
+  html[data-visual-regression="true"] body *,
+  html[data-visual-regression="true"] body *::before,
+  html[data-visual-regression="true"] body *::after {
     font-family: Arial, "Liberation Sans", sans-serif !important;
     font-synthesis: none !important;
   }
