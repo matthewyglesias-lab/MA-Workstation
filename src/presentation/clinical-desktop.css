@@ -354,6 +354,12 @@ input[type="radio"]:disabled {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Tebra focuses with a soft teal ring around the control rather than a hard
+   outline sitting on top of it. Both !important declarations beat the
+   per-control border and bezel rules that come later in this file: focus has
+   to win on every control, and losing it on one is an accessibility defect
+   rather than a cosmetic one. Neither is new - the previous rule needed the
+   same two to force `box-shadow: none` over the bezels. */
 .cd2004-shell button:focus-visible,
 .cd2004-shell summary:focus-visible,
 .cd2004-shell a:focus-visible,
@@ -364,7 +370,7 @@ input[type="radio"]:disabled {
   outline: 2px solid var(--cd-focus);
   outline-offset: 1px;
   border-color: var(--cd-focus) !important;
-  box-shadow: none !important;
+  box-shadow: var(--tw-focus-ring) !important;
 }
 
 .cd2004-skip-link {
@@ -397,73 +403,152 @@ input[type="radio"]:disabled {
 
 /* Application chrome */
 
+/*
+ * An app bar, not a window caption. The client/server grammar here was a
+ * raised bezel around the whole header - an inset highlight along the top and
+ * an inset shadow under it - carrying a 27px OS title strip: the shell
+ * announcing that it is a window on a desktop. A web product has one flat band
+ * and a hairline under it, so both bezels go and the band carries the product
+ * mark instead of a caption.
+ *
+ * These rules were also being redeclared wholesale from meditech-workstation.
+ * css, which is why editing them here previously changed nothing on screen.
+ * That duplicate is deleted; this is now the only declaration of the header.
+ */
 .cd2004-application-header {
   position: relative;
   z-index: 10;
   min-width: 0;
-  border-bottom: 1px solid var(--cd-border-dark);
-  background: var(--cd-face);
-  box-shadow:
-    inset 0 1px var(--cd-border-light),
-    inset 0 -1px #9ca6b0;
+  background: var(--tw-surface-panel);
+  border-bottom: 1px solid var(--cd-border-mid);
 }
 
 .cd2004-app-titlebar {
   display: flex;
   align-items: center;
+  gap: 10px;
   min-width: 0;
-  height: 27px;
-  padding: 3px 6px;
-  color: #fff;
-  background: var(--cd-navy);
-  border-bottom: 1px solid var(--cd-navy-dark);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  height: 38px;
+  padding: 0 12px;
+  color: var(--tw-white);
+  background: var(--tw-teal-900);
+  font-size: var(--tw-fs-ws-base);
+  line-height: var(--tw-lh-ws-base);
+  font-weight: 600;
 }
 
+/* The mark is a mark, not a beveled icon well: no border, no inset highlight,
+   and the workstation radius the rest of the control grammar uses.
+   The glyph carries the shell's icon palette, which is tuned for light
+   surfaces, so this is the one place that restates it for a dark ground -
+   otherwise the mark renders teal-on-teal and reads as an empty tile. */
 .cd2004-app-logo {
+  --mt-icon-ink: var(--tw-white);
+  --mt-icon-blue: var(--tw-teal-200);
+  --mt-icon-blue-light: var(--tw-teal-600);
+  --mt-icon-yellow: var(--tw-sand-150);
+  --mt-icon-paper: var(--tw-teal-800);
+  --mt-icon-metal: var(--tw-teal-300);
   display: grid;
+  flex: 0 0 auto;
   place-items: center;
-  width: 20px;
-  height: 19px;
-  margin-right: 6px;
-  color: var(--cd-navy);
-  background: #f7f7f0;
-  border: 1px solid var(--tw-teal-900);
-  box-shadow: inset 1px 1px #fff;
+  width: 24px;
+  height: 24px;
+  color: var(--tw-white);
+  background: rgb(255 255 255 / 14%);
+  border-radius: var(--tw-radius-ws);
 }
 
 .cd2004-app-logo svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 .cd2004-app-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cd2004-app-environment {
+.cd2004-app-title > b {
   flex: 0 0 auto;
-  margin-left: auto;
-  padding-left: 12px;
   color: var(--tw-white);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: var(--tw-fs-ws-base);
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
+.cd2004-app-title > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tw-teal-200);
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+/* The transaction code is an internal address. It stays available for support
+   calls but reads as metadata, not as part of the product name. */
+.cd2004-app-title > small {
+  flex: 0 0 auto;
+  color: var(--tw-teal-300);
+  font-family: var(--tw-font-mono);
+  font-size: var(--tw-fs-ws-label);
+  letter-spacing: var(--tw-ls-ws-label);
+}
+
+.cd2004-app-environment {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-left: auto;
+  padding-left: 12px;
+}
+
+/* The local-only disclosure. It is the one thing on this bar that has to stay
+   legible at a glance, so it is a chip rather than tracked-out small caps. */
+.cd2004-app-environment b {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  color: var(--tw-teal-900);
+  background: var(--tw-sand-150);
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
+  font-weight: 700;
+  line-height: var(--tw-lh-ws-label);
+  letter-spacing: var(--tw-ls-ws-label);
+  white-space: nowrap;
+}
+
+.cd2004-app-environment small {
+  min-width: 0;
+  max-width: 340px;
+  overflow: hidden;
+  color: var(--tw-teal-200);
+  font-size: var(--tw-fs-ws-meta);
+  line-height: var(--tw-lh-ws-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A utility nav on the header surface, not an OS menu bar: no face colour of
+   its own, a hairline beneath, and a hover that tints rather than inverting to
+   a navy selection block. */
 .cd2004-menu-bar {
   display: flex;
   align-items: stretch;
+  gap: 2px;
   min-width: 0;
-  min-height: 25px;
-  padding: 1px 4px 0;
+  min-height: 32px;
+  padding: 3px 8px 0;
   overflow: visible;
-  background: var(--cd-face);
-  border-bottom: 1px solid #a6afb8;
+  background: var(--tw-surface-panel);
+  border-bottom: 1px solid var(--cd-border-mid);
 }
 
 .cd2004-menu {
@@ -473,25 +558,40 @@ input[type="radio"]:disabled {
 
 .cd2004-menu-title {
   min-width: 42px;
-  padding: 4px 8px 5px;
-  color: inherit;
+  padding: 0 10px;
+  color: var(--tw-text-secondary);
   background: transparent;
   border: 0;
+  border-radius: var(--tw-radius-ws) var(--tw-radius-ws) 0 0;
   font: inherit;
-  cursor: default;
+  font-size: var(--tw-fs-ws-dense);
+  font-weight: 500;
+  line-height: var(--tw-lh-ws-dense);
+  cursor: pointer;
   user-select: none;
+  transition: background-color var(--tw-dur-fast) var(--tw-ease);
 }
 
-/* Access-key underline, as a native menu bar shows. */
+/* The access key stays underlined - the mnemonics are real and Alt still
+   drives them - but it is the only underline in the bar, so it reads as a
+   keyboard hint rather than as chrome. */
 .cd2004-menu-title u {
   text-decoration: underline;
-  text-underline-offset: 1px;
+  text-underline-offset: 2px;
 }
 
-.cd2004-menu-title[aria-expanded="true"],
 .cd2004-menu-title:hover {
-  color: #fff;
-  background: var(--cd-navy);
+  color: var(--tw-text-primary);
+  background: var(--tw-mint-50);
+}
+
+/* Open, not selected: an underline in the brand teal, the way a product tab
+   marks its current item. Inverting to a solid navy block was the menu
+   telling you it was an operating-system menu. */
+.cd2004-menu-title[aria-expanded="true"] {
+  color: var(--tw-text-primary);
+  background: var(--tw-mint-100);
+  box-shadow: inset 0 -2px var(--tw-teal-800);
 }
 
 .cd2004-menu-popup {
@@ -2191,19 +2291,21 @@ input[type="radio"]:disabled {
  * segments sit to its right.
  */
 
+/* One flat footer band with a hairline over it. The sunken segment wells -
+   each status readout boxed in its own two-tone bevel - were the loudest
+   remaining client/server tell below the fold. */
 .cd2004-statusbar {
   position: relative;
   z-index: 20;
   flex: 0 0 auto;
   display: flex;
   align-items: stretch;
-  gap: 2px;
+  gap: 16px;
   min-width: 0;
-  height: 22px;
-  padding: 2px 3px;
-  background: var(--cd-face);
-  border-top: 1px solid #f8fafc;
-  box-shadow: inset 0 1px #fff;
+  height: 26px;
+  padding: 0 12px;
+  background: var(--tw-surface-panel);
+  border-top: 1px solid var(--cd-border-mid);
 }
 
 .cd2004-status-message,
@@ -2211,13 +2313,12 @@ input[type="radio"]:disabled {
   display: flex;
   align-items: center;
   min-width: 0;
-  padding: 0 6px;
   overflow: hidden;
-  color: var(--tw-teal-600);
-  background: var(--cd-face);
-  border: 1px solid;
-  border-color: #7c8791 #f5f7f9 #f5f7f9 #7c8791;
-  font-size: 9px;
+  color: var(--tw-text-secondary);
+  background: transparent;
+  border: 0;
+  font-size: var(--tw-fs-ws-meta);
+  line-height: var(--tw-lh-ws-meta);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2229,8 +2330,7 @@ input[type="radio"]:disabled {
 .cd2004-status-segment {
   flex: 0 1 auto;
   max-width: 190px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 .cd2004-status-segment.is-online {
@@ -2238,8 +2338,10 @@ input[type="radio"]:disabled {
 }
 
 .cd2004-status-segment.is-error {
+  padding: 0 8px;
   color: var(--cd-red);
   background: var(--cd-red-soft);
+  border-radius: var(--tw-radius-ws);
 }
 
 /* Modal and shortcut reference */

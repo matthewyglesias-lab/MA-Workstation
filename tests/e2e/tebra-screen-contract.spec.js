@@ -82,6 +82,39 @@ test.describe('Tebra screen contract', () => {
     }
   });
 
+  test('keeps the persistent chrome flat, with no bezel and no gradient', async ({ page }) => {
+    await page.goto('/');
+
+    // The header, menu bar and status bar frame every screen, so a bezel or a
+    // gradient surviving on any of them reintroduces the client/server
+    // grammar everywhere at once. Asserting it here means the regression
+    // fails by name rather than as an unattributed pixel diff.
+    const chrome = await page.evaluate(() => {
+      const read = selector => {
+        const node = document.querySelector(selector);
+        if (!node) return null;
+        const computed = getComputedStyle(node);
+        return {
+          backgroundImage: computed.backgroundImage,
+          boxShadow: computed.boxShadow
+        };
+      };
+      return {
+        header: read('.cd2004-application-header'),
+        appBar: read('.cd2004-app-titlebar'),
+        menuBar: read('.cd2004-menu-bar'),
+        statusBar: read('.cd2004-statusbar'),
+        statusSegment: read('.cd2004-status-segment')
+      };
+    });
+
+    for (const [surface, style] of Object.entries(chrome)) {
+      expect(style, `${surface} is present`).not.toBeNull();
+      expect(style.backgroundImage, `${surface} has no gradient`).toBe('none');
+      expect(style.boxShadow, `${surface} has no bezel`).toBe('none');
+    }
+  });
+
   test('reserves coral for the primary action and never for clinical status', async ({ page }) => {
     await page.goto('/');
     // Coral is Tebra's accent and sits close to a clinical warning hue, so the

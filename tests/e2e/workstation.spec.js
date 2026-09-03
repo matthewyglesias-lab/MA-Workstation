@@ -1448,7 +1448,10 @@ test.describe('MA Workstation browser journeys', () => {
     // persistence remains a separate status in the rail and action bar.
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    // --tw-ready-bg. The tint was #c8efbf, a saturated Windows-era green that
+    // sits outside the palette; the meaning (an identified patient context) is
+    // unchanged and still carries its own word in the banner beside it.
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(230, 242, 238)');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -1469,7 +1472,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 241, 188)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    // --tw-ready-bg. The tint was #c8efbf, a saturated Windows-era green that
+    // sits outside the palette; the meaning (an identified patient context) is
+    // unchanged and still carries its own word in the banner beside it.
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(230, 242, 238)');
     await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');

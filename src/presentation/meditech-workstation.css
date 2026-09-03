@@ -165,131 +165,38 @@
 }
 
 @media screen {
+  /*
+   * The `--mt-*` layer is gone. It aliased eleven names onto the tokens and
+   * then redeclared `--cd-navy`, `--cd-navy-dark`, `--cd-navy-light` and
+   * `--cd-focus` on top of clinical-desktop.css's own values from a later
+   * file - the same override-the-base pattern Phase 2a removed from
+   * meditech-screen-contract.css. Only five of the aliases were ever read;
+   * those five reference the tokens directly now, and the indirection is
+   * deleted rather than retargeted.
+   *
+   * `--mt-selected` was Windows highlight yellow (#fff0a5). Nothing in the
+   * Tebra palette is that colour and selection there is a tint of the brand,
+   * so its two readers take the mint selection instead.
+   *
+   * The icon palette below is a new declaration, not an alias: DesktopIcon and
+   * SiteIcon already read `--mt-icon-*` with hard-coded blue, navy and yellow
+   * fallbacks, so the glyphs stayed MEDITECH-coloured through Phase 2a. Naming
+   * the variables here retints every icon without touching the components.
+   */
   .cd2004-shell {
-    --mt-teal: var(--tw-teal-600);
-    --mt-teal-deep: var(--tw-teal-800);
-    --mt-teal-mid: var(--tw-teal-300);
-    --mt-lavender: var(--tw-teal-200);
-    --mt-lavender-light: var(--tw-teal-200);
-    --mt-mint: #c8efbf;
-    --mt-mint-dark: #9ed499;
-    --mt-panel: var(--tw-mint-150);
-    --mt-paper: #ffffff;
-    --mt-line: var(--tw-teal-500);
-    --mt-blue-gray: var(--tw-teal-300);
-    --mt-selected: #fff0a5;
-    --mt-command: var(--tw-teal-600);
-    --cd-navy: var(--mt-teal);
-    --cd-navy-dark: var(--mt-teal-deep);
-    --cd-navy-light: var(--mt-teal-mid);
-    --cd-focus: #f5b300;
-    color: #101010;
-    background: var(--mt-lavender);
+    --mt-icon-ink: var(--tw-teal-900);
+    --mt-icon-blue: var(--tw-teal-600);
+    --mt-icon-blue-light: var(--tw-teal-200);
+    --mt-icon-yellow: var(--tw-sand-300);
+    --mt-icon-paper: var(--tw-sand-150);
+    --mt-icon-red: var(--tw-stop-fg);
+    --mt-icon-green: var(--tw-ready-fg);
+    --mt-icon-metal: var(--tw-mint-200);
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-page);
     font-family: var(--tw-font-sans);
-    font-size: 11px;
-    line-height: 1.25;
-  }
-
-  .cd2004-shell :where(
-      button,
-      input,
-      select,
-      textarea,
-      [role="tab"],
-      [role="menuitem"]
-    ):focus-visible {
-    outline: 1px dotted #101010 !important;
-    outline-offset: -3px !important;
-    box-shadow: 0 0 0 1px #f3be28 !important;
-  }
-
-  .cd2004-application-header {
-    border-bottom: 2px solid var(--tw-teal-500);
-    background: var(--tw-mint-150);
-    box-shadow: inset 0 -1px var(--cd-border-light);
-  }
-
-  .cd2004-app-titlebar {
-    height: 30px;
-    padding: 3px 5px;
-    background: linear-gradient(90deg, var(--tw-teal-800) 0%, var(--tw-teal-600) 58%, var(--tw-teal-300) 100%);
-    border-bottom: 1px solid var(--tw-teal-900);
-    font-size: 11px;
-    letter-spacing: 0;
-  }
-
-  .cd2004-app-logo {
-    width: 21px;
-    height: 20px;
-    margin-right: 5px;
-    color: var(--tw-teal-800);
-    background: var(--tw-mint-50);
-    border-color: var(--tw-teal-900);
-  }
-
-  .cd2004-app-title {
-    display: flex;
-    align-items: baseline;
-    gap: 7px;
-  }
-
-  .cd2004-app-title > b {
-    color: #fff3a5;
-    font: 700 12px/1 "Arial Narrow", var(--tw-font-sans);
-    letter-spacing: 0.08em;
-  }
-
-  .cd2004-app-title > span {
-    font-weight: 700;
-  }
-
-  .cd2004-app-title > small {
-    color: var(--tw-mint-50);
-    font-size: 9px;
-    font-weight: 400;
-  }
-
-  .cd2004-app-environment {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-left: 8px;
-    letter-spacing: 0;
-  }
-
-  .cd2004-app-environment b {
-    padding: 1px 4px;
-    color: var(--tw-teal-900);
-    background: var(--tw-mint-50);
-    border: 1px solid var(--tw-teal-900);
-    font-size: 8px;
-  }
-
-  .cd2004-app-environment small {
-    overflow: hidden;
-    max-width: 310px;
-    color: var(--tw-mint-50);
-    font-size: 8px;
-    letter-spacing: 0.08em;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .cd2004-menu-bar {
-    min-height: 22px;
-    padding: 0 3px;
-    background: var(--tw-teal-200);
-    border-bottom-color: var(--tw-teal-300);
-  }
-
-  .cd2004-menu-title {
-    min-width: 40px;
-    padding: 3px 7px 4px;
-  }
-
-  .cd2004-menu-title[aria-expanded="true"],
-  .cd2004-menu-title:hover {
-    background: var(--mt-teal);
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
   }
 
   .cd2004-patient-banner {
@@ -343,7 +250,7 @@
   /* Green is reserved for an identified patient context: either a local
      record identifier or the two displayed patient identifiers. */
   .cd2004-patient-banner.has-active-chart {
-    background: var(--mt-mint);
+    background: var(--tw-ready-bg);
     border-bottom-color: #4c8551;
   }
 
@@ -443,7 +350,7 @@
     grid-template-rows: minmax(0, 1fr);
     gap: 3px;
     padding: 3px;
-    background: var(--mt-lavender);
+    background: var(--tw-surface-page);
   }
 
   .cd2004-window {
@@ -944,7 +851,7 @@
 
   .meditech-record-list .cd2004-nav-item.is-selected {
     color: #172334;
-    background: var(--mt-selected);
+    background: var(--tw-mint-150);
     border-color: #857121 #fff #fff #857121;
     box-shadow: inset 2px 0 var(--tw-teal-600);
     font-weight: 700;
@@ -1068,7 +975,7 @@
   .meditech-command-deck button:hover:not(:disabled),
   .meditech-command-deck button.is-active {
     color: #111;
-    background: var(--mt-selected);
+    background: var(--tw-mint-150);
   }
 
   .meditech-command-deck button:active:not(:disabled) {
@@ -1094,25 +1001,6 @@
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .cd2004-statusbar {
-    height: 19px;
-    min-height: 19px;
-    color: var(--tw-teal-800);
-    background: #d3d9d7;
-    border-top-color: #f4f8f5;
-    font-size: 8px;
-  }
-
-  .cd2004-status-message,
-  .cd2004-status-segment {
-    border-right-color: #81908e;
-  }
-
-  .cd2004-status-segment.is-online {
-    color: #07552f;
-    background: #d9eee2;
   }
 
   /* On-screen clinician result sheet; the protected print renderer is separate. */
@@ -1635,29 +1523,16 @@
 }
 
 @media screen and (min-width: 701px) {
-  .cd2004-app-titlebar {
-    height: 23px;
-    padding: 2px 5px;
-  }
-
-  .cd2004-app-logo {
-    width: 17px;
-    height: 17px;
-  }
-
-  .cd2004-app-title > b {
-    font-size: 11px;
-  }
-
-  .cd2004-menu-bar {
-    min-height: 20px;
-  }
-
-  .cd2004-menu-title {
-    min-width: 36px;
-    padding: 2px 6px 3px;
-  }
-
+  /*
+   * The header used to be compressed here to 23px with a 20px menu bar and a
+   * 17px mark. That is client/server density, not Tebra's: their product is
+   * dense in the data it shows, not in the chrome that frames it, and a 23px
+   * app bar is a title strip rather than a header. These five rules are
+   * deleted outright rather than retuned - the base declarations in
+   * clinical-desktop.css are already the right size at every supported width,
+   * and the workstation gate means nothing below 800px renders the shell at
+   * all.
+   */
   .cd2004-patient-banner,
   .cd2004-patient-banner.has-mismatch {
     grid-template-columns: minmax(265px, 1.5fr) auto auto minmax(130px, 0.62fr) minmax(150px, 0.7fr);
