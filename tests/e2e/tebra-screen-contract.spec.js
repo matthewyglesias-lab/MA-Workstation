@@ -138,6 +138,79 @@ test.describe('Tebra screen contract', () => {
       return offenders;
     });
     expect(coralOnStatus).toEqual([]);
+
+    // The other half of the same rule, and the one that was unenforced: coral
+    // reserved for the primary action means it has to actually be on one.
+    // Through Phase 2a the palette was applied and the accent never used, so
+    // MANIFEST 5 question 6 ("does coral appear exactly once, on the primary
+    // action") had no answer on any screen.
+    const primary = await page.evaluate(() => {
+      const node = document.querySelector('.cd2004-worklist-new');
+      if (!node) return null;
+      const computed = getComputedStyle(node);
+      return { backgroundColor: computed.backgroundColor, label: node.textContent.trim() };
+    });
+    expect(primary).not.toBeNull();
+    expect(primary.backgroundColor).toBe('rgb(255, 141, 110)');
+
+    // Exactly once. A second coral fill on the same screen makes neither one
+    // the primary action.
+    const coralFills = await page.evaluate(() => {
+      const coral = ['rgb(255, 141, 110)', 'rgb(243, 126, 94)'];
+      return [...document.querySelectorAll('.cd2004-shell *')]
+        .filter(node => coral.includes(getComputedStyle(node).backgroundColor))
+        .map(node => node.className);
+    });
+    expect(coralFills).toHaveLength(1);
+  });
+
+  test('boots into a skeleton of the shell, carrying the local-only disclosure', async ({ page }) => {
+    // The first frame paints before the module graph loads, so it is inline
+    // HTML/CSS in index.html and nothing else on the page can be relied on.
+    // Blocking the bundle is the only way to see it.
+    await page.route('**/assets/*.js', route => route.abort());
+    await page.goto('/', { waitUntil: 'domcontentloaded' }).catch(() => {});
+
+    const splash = page.locator('#boot-splash');
+    await expect(splash).toBeVisible();
+
+    // PLAN 7: this app has no server, and the more faithful the design gets
+    // the likelier staff are to assume their documentation reached the
+    // patient's chart. The disclosure is on the first surface they see.
+    await expect(splash.locator('.boot-disclosure')).toHaveText('Local only');
+    await expect(splash.locator('.boot-product')).toContainText('MA Workstation');
+
+    // MANIFEST 5c: a skeleton of the shell, not a brand splash. The app bar,
+    // menu strip, banner, work surface, rail, deck and status bar are all
+    // present at the geometry the real chrome uses.
+    const skeleton = await page.evaluate(() => {
+      const height = selector => {
+        const node = document.querySelector(`#boot-splash ${selector}`);
+        return node ? Math.round(node.getBoundingClientRect().height) : null;
+      };
+      return {
+        appbar: height('.boot-appbar'),
+        menubar: height('.boot-menubar'),
+        banner: height('.boot-banner'),
+        deck: height('.boot-deck'),
+        statusbar: height('.boot-statusbar'),
+        rail: document.querySelector('#boot-splash .boot-rail') !== null,
+        work: document.querySelector('#boot-splash .boot-work') !== null
+      };
+    });
+    // These mirror .cd2004-shell. If a chrome height changes without this
+    // changing with it, boot flashes the wrong shape - which is exactly the
+    // coupling MANIFEST 5c says to declare, so it is asserted rather than
+    // written down and forgotten.
+    expect(skeleton).toEqual({
+      appbar: 38,
+      menubar: 32,
+      banner: 63,
+      deck: 36,
+      statusbar: 26,
+      rail: true,
+      work: true
+    });
   });
 
   test('preserves fixed transaction chrome without overflow at 800 by 600', async ({ page }) => {

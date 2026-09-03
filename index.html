@@ -30,11 +30,24 @@
       presentation layer's own CSS) has loaded and run, or the very first
       thing staff would see is a blank white flash. boot() in main.tsx removes
       #boot-splash once the real shell has rendered, or on a boot failure.
-    -->
-    <!--
+
+      MANIFEST 5c: this is a loading skeleton, not a brand splash. A
+      full-screen mark on a dark ground is a native-desktop idiom - the same
+      idiom the MEDITECH shell was built on - and it tells staff who made the
+      software rather than what is loading. What paints here is the shell's
+      own geometry as neutral blocks: the app bar, the menu strip, the
+      facesheet banner, the work surface, the section rail and the command
+      deck, at the sizes the real chrome uses, so the first frame is the
+      layout that is about to appear rather than a screen that is replaced by
+      a different one.
+
+      COUPLING TO DECLARE: these measurements mirror .cd2004-shell. Change the
+      shell's chrome geometry and change this in the same commit, or boot
+      flashes the wrong shape.
+
       Values are literal, not var(--tw-*): this block paints before the module
       graph (and therefore before tebra-tokens.css) has loaded. They are the
-      same teal-900 / sand-150 the token layer defines. The typeface is a
+      same teal-900 / mint / sand the token layer defines. The typeface is a
       system stack for the same reason - @fontsource is imported by main.tsx
       and is not available this early, so asking for Inter here would only
       produce an invisible fallback.
@@ -46,11 +59,9 @@
         z-index: 9999;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        background: #003a43;
-        color: #f8f3eb;
+        overflow: hidden;
+        background: #f9f7f6;
+        color: #003a43;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
           Arial, sans-serif;
         transition: opacity 160ms linear;
@@ -59,76 +70,183 @@
         opacity: 0;
         pointer-events: none;
       }
+
+      /* The app bar is the one part drawn for real rather than blocked out.
+         It carries the product name and the local-only disclosure, and both
+         have to be legible in the first frame - PLAN 7 - not stand-ins. */
+      #boot-splash .boot-appbar {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 10px;
+        height: 38px;
+        padding: 0 12px;
+        background: #003a43;
+        color: #ffffff;
+        font-size: 14px;
+      }
       #boot-splash .boot-mark {
-        font-size: 13px;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.14);
+      }
+      #boot-splash .boot-product {
         font-weight: 600;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: #82a4a7;
       }
-      #boot-splash .boot-sub {
-        font-size: 27px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-      }
-      #boot-splash .boot-status {
-        margin-top: 22px;
-        font-size: 13px;
-        color: #82a4a7;
-      }
-      /* A calm determinate-looking track rather than a hatched Win95 gauge:
-         one sand indicator easing across a recessed teal rail. */
-      #boot-splash .boot-bar {
-        width: 168px;
-        height: 3px;
-        margin-top: 12px;
-        overflow: hidden;
+      #boot-splash .boot-disclosure {
+        margin-left: auto;
+        padding: 2px 8px;
         border-radius: 999px;
-        background: #054a53;
-      }
-      #boot-splash .boot-bar::after {
-        content: "";
-        display: block;
-        width: 40%;
-        height: 100%;
-        border-radius: inherit;
         background: #f8f3eb;
-        animation: boot-bar-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        color: #003a43;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.48px;
+        white-space: nowrap;
       }
-      @keyframes boot-bar-sweep {
-        0% {
-          transform: translateX(-100%);
-        }
-        100% {
-          transform: translateX(250%);
-        }
+
+      #boot-splash .boot-menubar {
+        flex: 0 0 auto;
+        height: 32px;
+        border-bottom: 1px solid #d2dcda;
+        background: #ffffff;
       }
-      /* teal-300 on teal-900 clears 4.5:1; the darker teal-500 measured 2.2:1,
-         which is not good enough for the line that tells staff where their
-         documentation actually goes. */
-      #boot-splash .boot-footer {
-        position: absolute;
-        bottom: 20px;
+      #boot-splash .boot-banner {
+        flex: 0 0 auto;
+        height: 63px;
+        border-bottom: 1px solid #d2dcda;
+        background: #ffffff;
+      }
+
+      #boot-splash .boot-body {
+        display: flex;
+        flex: 1 1 auto;
+        gap: 3px;
+        min-height: 0;
+        padding: 3px;
+      }
+      #boot-splash .boot-work,
+      #boot-splash .boot-rail {
+        border: 1px solid #d2dcda;
+        border-radius: 6px;
+        background: #ffffff;
+      }
+      #boot-splash .boot-work {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      #boot-splash .boot-rail {
+        flex: 0 0 clamp(168px, 14vw, 188px);
+      }
+
+      #boot-splash .boot-deck {
+        flex: 0 0 auto;
+        height: 36px;
+        border-top: 1px solid #d2dcda;
+        border-bottom: 1px solid #d2dcda;
+        background: #ffffff;
+      }
+      #boot-splash .boot-statusbar {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        height: 26px;
+        padding: 0 12px;
+        border-top: 1px solid #d2dcda;
+        background: #ffffff;
+        color: #1f5f67;
         font-size: 12px;
-        color: #82a4a7;
+      }
+
+      /* Placeholder blocks. MANIFEST 5c allows a slow, low-contrast pulse and
+         no shimmer: a bright sweep travelling across a clinical screen reads
+         as activity that is not happening. */
+      #boot-splash .boot-block {
+        border-radius: 4px;
+        background: #f6f8f8;
+        animation: boot-pulse 2.4s ease-in-out infinite;
+      }
+      @keyframes boot-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.55;
+        }
       }
       @media (prefers-reduced-motion: reduce) {
-        #boot-splash .boot-bar::after {
+        #boot-splash .boot-block {
           animation: none;
-          width: 100%;
         }
+      }
+
+      #boot-splash .boot-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+      }
+      #boot-splash .boot-row + .boot-row {
+        border-top: 1px solid #ebf0ef;
+      }
+      #boot-splash .boot-block-sm {
+        height: 10px;
+        flex: 0 0 84px;
+      }
+      #boot-splash .boot-block-md {
+        height: 10px;
+        flex: 0 0 132px;
+      }
+      #boot-splash .boot-block-lg {
+        height: 10px;
+        flex: 1 1 auto;
+        max-width: 320px;
       }
     </style>
   </head>
   <body>
-    <div id="boot-splash" role="status" aria-label="Starting the workstation">
-      <div class="boot-mark">IPMG</div>
-      <div class="boot-sub">MA Workstation</div>
-      <div class="boot-status">Starting&hellip;</div>
-      <div class="boot-bar"></div>
-      <!-- The local-only disclosure starts here, in plain language, on the
-           very first surface staff see. It is not a warning banner. -->
-      <div class="boot-footer">Records stay in this browser</div>
+    <div id="boot-splash" role="status" aria-label="Loading the workstation">
+      <div class="boot-appbar">
+        <div class="boot-mark" aria-hidden="true"></div>
+        <span class="boot-product">IPMG MA Workstation</span>
+        <!-- The local-only disclosure starts here, in the same chip it wears
+             on the real app bar, on the very first surface staff see. It is
+             not a warning banner. -->
+        <span class="boot-disclosure">Local only</span>
+      </div>
+      <div class="boot-menubar" aria-hidden="true"></div>
+      <div class="boot-banner" aria-hidden="true">
+        <div class="boot-row">
+          <span class="boot-block boot-block-md"></span>
+          <span class="boot-block boot-block-sm"></span>
+          <span class="boot-block boot-block-sm"></span>
+        </div>
+      </div>
+      <div class="boot-body" aria-hidden="true">
+        <div class="boot-work">
+          <div class="boot-row">
+            <span class="boot-block boot-block-sm"></span>
+            <span class="boot-block boot-block-lg"></span>
+          </div>
+          <div class="boot-row">
+            <span class="boot-block boot-block-sm"></span>
+            <span class="boot-block boot-block-lg"></span>
+          </div>
+          <div class="boot-row">
+            <span class="boot-block boot-block-sm"></span>
+            <span class="boot-block boot-block-lg"></span>
+          </div>
+        </div>
+        <div class="boot-rail">
+          <div class="boot-row"><span class="boot-block boot-block-md"></span></div>
+          <div class="boot-row"><span class="boot-block boot-block-md"></span></div>
+          <div class="boot-row"><span class="boot-block boot-block-md"></span></div>
+        </div>
+      </div>
+      <div class="boot-deck" aria-hidden="true"></div>
+      <div class="boot-statusbar">Loading the workstation&hellip;</div>
     </div>
     <div id="app"></div>
     <div id="legacy-staging" aria-hidden="true"></div>

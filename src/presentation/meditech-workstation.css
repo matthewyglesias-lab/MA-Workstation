@@ -15,152 +15,182 @@
     display: none;
   }
 
-  /* Literal colours throughout this gate, not var(--cd-*): those tokens are
-     declared on .cd2004-shell, and this gate replaces the shell entirely
-     when the window is too small to render it (see .is-unsupported above). */
+  /*
+   * The unsupported-viewport gate. It is the first - often the only - screen
+   * a phone ever sees, and it was a Windows 95 dialog: a gradient caption
+   * strip with a beveled icon well, a sunken body panel, a hard offset
+   * shadow, and a warning triangle in highlight yellow. Rebuilt as a card.
+   *
+   * Token colours throughout, not `var(--cd-*)`: those are declared on
+   * .cd2004-shell, and this gate replaces the shell entirely when the window
+   * is too small to render it (see .is-unsupported above). The tokens are on
+   * :root, so they resolve here.
+   */
   .meditech-workstation-gate {
-  box-sizing: border-box;
-  display: grid;
-  min-width: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
-  place-items: center;
-  padding: 14px;
-  color: #101010;
-  background: var(--tw-teal-200);
-  font-family: var(--tw-font-sans);
+    box-sizing: border-box;
+    display: grid;
+    min-width: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    place-items: center;
+    padding: 20px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-page);
+    font-family: var(--tw-font-sans);
+    font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
   }
 
   .meditech-workstation-gate *,
   .meditech-workstation-gate *::before,
   .meditech-workstation-gate *::after {
-  box-sizing: border-box;
+    box-sizing: border-box;
   }
 
   .meditech-workstation-gate-window {
-  width: min(100%, 520px);
-  background: var(--tw-mint-150);
-  border: 1px solid var(--tw-teal-800);
-  box-shadow: 2px 2px 0 var(--tw-teal-500);
+    width: min(100%, 460px);
+    overflow: hidden;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card);
   }
 
+  /* The product bar, matching the app bar the workstation itself wears, so
+     the small-screen path is recognisably the same module. */
   .meditech-workstation-gate-window > header {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  align-items: center;
-  min-height: 25px;
-  gap: 5px;
-  padding: 2px 5px;
-  color: #fff;
-  background: linear-gradient(90deg, var(--tw-teal-800), var(--tw-teal-500) 72%, var(--tw-teal-300));
-  border-bottom: 1px solid var(--tw-teal-900);
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 38px;
+    gap: 10px;
+    padding: 0 12px;
+    color: var(--tw-white);
+    background: var(--tw-teal-900);
   }
 
   .meditech-workstation-gate-window > header > span {
-  display: grid;
-  width: 16px;
-  height: 16px;
-  place-items: center;
-  background: var(--tw-mint-50);
-  border: 1px solid var(--tw-teal-900);
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    color: var(--tw-white);
+    background: rgb(255 255 255 / 14%);
+    border-radius: var(--tw-radius-ws);
   }
 
   .meditech-workstation-gate-window > header svg {
-  width: 13px;
-  height: 13px;
+    width: 16px;
+    height: 16px;
   }
 
   .meditech-workstation-gate-window > header strong {
-  font-size: 10px;
+    font-size: var(--tw-fs-ws-base);
+    font-weight: 600;
   }
 
+  /* The local-only disclosure, as the chip it is on the app bar. This is the
+     first screen staff see on a phone and PLAN 7 requires it to be legible
+     there, not a yellow caption note. */
   .meditech-workstation-gate-window > header small {
-  color: #fff4a8;
-  font-size: 8px;
-  font-weight: 700;
+    padding: 2px 8px;
+    color: var(--tw-teal-900);
+    background: var(--tw-sand-150);
+    border-radius: var(--tw-radius-pill);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 700;
+    letter-spacing: var(--tw-ls-ws-label);
+    white-space: nowrap;
   }
 
   .meditech-workstation-gate-body {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 10px;
-  margin: 8px;
-  padding: 12px;
-  background: #fffef8;
-  border: 1px solid;
-  border-color: var(--tw-teal-500) #fff #fff var(--tw-teal-500);
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 14px;
+    margin: 0;
+    padding: 20px;
+    background: var(--tw-surface-panel);
+    border: 0;
   }
 
+  /* Review, not alarm: the window being too small is a thing to fix, not a
+     clinical stop, so it takes the review tone rather than a warning fill. */
   .meditech-workstation-gate-alert {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  background: #fff0a5;
-  border: 1px solid #9a6b16;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border: 1px solid var(--tw-review-border);
+    border-radius: var(--tw-radius-ws);
   }
 
   .meditech-workstation-gate-alert svg {
-  width: 22px;
-  height: 22px;
+    width: 22px;
+    height: 22px;
   }
 
   .meditech-workstation-gate h1 {
-  margin: 0 0 6px;
-  color: var(--tw-teal-800);
-  font-size: 15px;
-  line-height: 1.15;
+    margin: 0 0 8px;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-lead);
+    line-height: var(--tw-lh-ws-base);
   }
 
   .meditech-workstation-gate p {
-  margin: 0 0 10px;
-  font-size: 11px;
-  line-height: 1.4;
+    margin: 0 0 14px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
   }
 
   .meditech-workstation-gate dl {
-  margin: 0;
-  background: #fff;
-  border: 1px solid var(--tw-teal-300);
+    margin: 0;
+    overflow: hidden;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-ws);
   }
 
   .meditech-workstation-gate dl > div {
-  display: grid;
-  grid-template-columns: minmax(100px, 0.45fr) minmax(0, 1fr);
-  min-height: 22px;
-  border-bottom: 1px solid var(--tw-mint-200);
+    display: grid;
+    grid-template-columns: minmax(100px, 0.45fr) minmax(0, 1fr);
+    min-height: 28px;
+    border-bottom: 1px solid var(--tw-border-subtle);
   }
 
   .meditech-workstation-gate dl > div:last-child {
-  border-bottom: 0;
+    border-bottom: 0;
   }
 
   .meditech-workstation-gate dt,
   .meditech-workstation-gate dd {
-  margin: 0;
-  padding: 4px 6px;
-  font-size: 9px;
+    margin: 0;
+    padding: 5px 10px;
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
   }
 
   .meditech-workstation-gate dt {
-  color: var(--tw-teal-800);
-  background: var(--tw-mint-150);
-  border-right: 1px solid var(--tw-teal-300);
-  font-weight: 700;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-sunken);
+    border-right: 1px solid var(--tw-border-subtle);
+    font-weight: 600;
   }
 
   .meditech-workstation-gate dd {
-  font-weight: 700;
+    color: var(--tw-text-primary);
+    font-weight: 600;
   }
 
   .meditech-workstation-gate-window > footer {
-  min-height: 24px;
-  padding: 5px 8px;
-  color: var(--tw-teal-800);
-  background: var(--tw-teal-200);
-  border-top: 1px solid #fff;
-  font-size: 9px;
-  text-align: right;
+    min-height: 32px;
+    padding: 8px 20px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-sunken);
+    border-top: 1px solid var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
   }
 }
 
@@ -183,7 +213,11 @@
    * fallbacks, so the glyphs stayed MEDITECH-coloured through Phase 2a. Naming
    * the variables here retints every icon without touching the components.
    */
-  .cd2004-shell {
+  /* On :root, not on .cd2004-shell. DesktopIcon also renders in the
+     unsupported-viewport gate, which replaces the shell rather than sitting
+     inside it, so a shell-scoped palette left that screen's glyphs on their
+     MEDITECH fallbacks. */
+  :root {
     --mt-icon-ink: var(--tw-teal-900);
     --mt-icon-blue: var(--tw-teal-600);
     --mt-icon-blue-light: var(--tw-teal-200);
@@ -192,6 +226,9 @@
     --mt-icon-red: var(--tw-stop-fg);
     --mt-icon-green: var(--tw-ready-fg);
     --mt-icon-metal: var(--tw-mint-200);
+  }
+
+  .cd2004-shell {
     color: var(--tw-text-primary);
     background: var(--tw-surface-page);
     font-family: var(--tw-font-sans);
@@ -334,46 +371,12 @@
     background: var(--tw-surface-page);
   }
 
-  .cd2004-window {
-    border-width: 1px;
-    border-color: #fbfbff var(--tw-teal-600) var(--tw-teal-600) #fbfbff;
-    background: var(--tw-mint-150);
-    box-shadow:
-      inset 1px 1px #f8f8ff,
-      inset -1px -1px var(--tw-teal-300),
-      1px 1px 0 rgb(0 0 0 / 24%);
-  }
-
-  .cd2004-window-titlebar {
-    min-height: 22px;
-    padding: 2px 4px;
-    color: #fff;
-    background: linear-gradient(90deg, var(--tw-teal-500), var(--tw-teal-300));
-    border-bottom-color: var(--tw-teal-600);
-    font-size: 10px;
-  }
-
-  .cd2004-window.is-active > .cd2004-window-titlebar,
-  .cd2004-help-dialog > .cd2004-window-titlebar {
-    background: linear-gradient(90deg, var(--tw-teal-600), var(--tw-teal-500));
-  }
-
-  .cd2004-window-mark {
-    width: 9px;
-    height: 9px;
-    background: #dff0e7;
-    border-color: #002e36;
-  }
-
-  .cd2004-window-title small {
-    color: #cfe7e5;
-    font-size: 8px;
-  }
-
+  /* The window was redeclared here as a bevelled frame with a gradient
+     caption. Deleted; the panel is declared once, in clinical-desktop.css. */
   .cd2004-window-toolbar {
-    background: var(--tw-mint-150);
-    border-bottom-color: var(--tw-teal-300);
-    font-size: 10px;
+    background: var(--tw-surface-panel);
+    border-bottom-color: var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-work-window {
@@ -1548,7 +1551,7 @@
   }
 
   .cd2004-window-titlebar {
-    min-height: 25px;
+    min-height: 32px;
   }
 }
 
@@ -1838,13 +1841,8 @@
     font-size: 8px;
   }
 
-  .cd2004-worklist-new,
-  .cd2004-worklist-action {
-    min-height: 19px;
-    padding: 2px 6px;
-    border-radius: 0;
-    font-size: 8px;
-  }
+  /* A 19px square-cornered control at 8px is not a primary action at any
+     width this shell renders. The base declaration stands. */
 
   .cd2004-worklist-tabs {
     align-items: center;
@@ -2026,9 +2024,9 @@
   }
 
   .cd2004-inspector-window .cd2004-window-titlebar {
-    min-height: 19px;
-    padding: 2px 4px;
-    font-size: 9px;
+    min-height: 28px;
+    padding: 3px 8px;
+    font-size: var(--tw-fs-ws-dense);
   }
 
   .cd2004-inspector-window .cd2004-window-mark {
@@ -2886,12 +2884,12 @@
   .cd2004-window-mark.has-icon {
     display: grid;
     place-items: center;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     overflow: hidden;
-    background: var(--tw-mint-50);
-    border-color: var(--tw-teal-900);
-    box-shadow: inset 1px 1px #fff;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
   }
 
   .cd2004-window-mark.has-icon svg {

@@ -889,50 +889,58 @@ input[type="radio"]:disabled {
     var(--cd-workspace);
 }
 
+/*
+ * A panel, not a window. `.cd2004-window` was a 2px four-way bevel with two
+ * inset edges and a hard offset shadow, and its `.cd2004-window-titlebar` was
+ * an OS caption - inverted, bold, with an inactive shade and a beveled mark
+ * beside the title. Nothing in a web product looks like that, and it is the
+ * last piece of the desktop-window grammar in the shell.
+ *
+ * The structure is unchanged: these still tile the workspace and still carry
+ * an active state, because which pane owns the keyboard is real information.
+ * Active now reads as a teal rule under the header rather than as a caption
+ * changing colour.
+ */
 .cd2004-window {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--cd-face);
-  border: 2px solid;
-  border-color: var(--cd-border-light) var(--cd-border-dark)
-    var(--cd-border-dark) var(--cd-border-light);
-  box-shadow:
-    inset 1px 1px var(--tw-mint-150),
-    inset -1px -1px #737d88,
-    1px 1px 1px rgb(0 0 0 / 24%);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--cd-border-mid);
+  border-radius: var(--tw-radius-ws);
 }
-
 
 .cd2004-window-titlebar {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   min-width: 0;
-  min-height: 24px;
-  padding: 2px 2px 2px 4px;
-  color: var(--tw-mint-50);
-  background: var(--tw-teal-500);
-  border-bottom: 1px solid #424e5a;
+  min-height: 32px;
+  padding: 4px 10px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-sunken);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-size: var(--tw-fs-ws-base);
   font-weight: 700;
   user-select: none;
 }
 
 .cd2004-window.is-active > .cd2004-window-titlebar,
 .cd2004-help-dialog > .cd2004-window-titlebar {
-  color: #fff;
-  background: var(--cd-navy);
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-sunken);
+  border-bottom: 2px solid var(--tw-teal-800);
 }
 
 .cd2004-window-mark {
   flex: 0 0 auto;
   width: 11px;
   height: 11px;
-  background: #f6f5e9;
-  border: 1px solid var(--tw-teal-900);
-  box-shadow: inset 2px 2px var(--tw-teal-300);
+  background: var(--tw-border-strong);
+  border: 0;
+  border-radius: var(--tw-radius-tight);
 }
 
 .cd2004-window-title {
@@ -943,36 +951,38 @@ input[type="radio"]:disabled {
 }
 
 .cd2004-window-title small {
-  margin-left: 7px;
-  color: var(--tw-mint-150);
-  font-size: 9px;
+  margin-left: 8px;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 400;
 }
 
+/* A close control, not a caption box: the beveled square with a bold Arial
+   glyph and a one-pixel travel on press was a title-bar button. */
 .cd2004-caption-button {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 20px;
-  height: 19px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  color: #111;
-  background: var(--cd-face);
-  border: 1px solid;
-  border-color: #f6f8fa #303841 #303841 #f6f8fa;
-  box-shadow:
-    inset 1px 1px var(--tw-mint-150),
-    inset -1px -1px #79828c;
-  font-family: Arial, sans-serif;
+  color: var(--tw-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--tw-radius-ws);
+  font-family: inherit;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
 }
 
+.cd2004-caption-button:hover {
+  color: var(--tw-text-primary);
+  background: var(--tw-mint-150);
+}
+
 .cd2004-caption-button:active {
-  border-color: #303841 #f6f8fa #f6f8fa #303841;
-  box-shadow: inset 1px 1px #79828c;
-  transform: translate(1px, 1px);
+  background: var(--tw-mint-200);
 }
 
 .cd2004-caption-close {
@@ -1253,30 +1263,54 @@ input[type="radio"]:disabled {
   line-height: 1.25;
 }
 
+/*
+ * `.cd2004-worklist-action` is the per-row secondary - Review, Resume, View -
+ * and stays quiet: a hairline outline on the panel surface.
+ */
 .cd2004-worklist-new,
 .cd2004-worklist-action {
-  min-height: 23px;
+  min-height: var(--tw-btn-h-ws);
   color: var(--tw-teal-900);
-  background: linear-gradient(#fff, var(--tw-mint-150));
-  border: 1px solid var(--tw-teal-500);
-  border-radius: 2px;
-  box-shadow: inset 1px 1px #fff, inset -1px -1px var(--tw-teal-300);
-  font: 700 10px var(--tw-font-sans);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
+  box-shadow: none;
+  font: 600 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
   white-space: nowrap;
 }
 
+/*
+ * `.cd2004-worklist-new` is the one thing the Dashboard is for: start a note.
+ * It takes the coral primary - the first and only coral on this screen, and
+ * the answer to MANIFEST 5 question 6, which had no answer at all while the
+ * palette was applied but the accent was not.
+ *
+ * Coral carries no clinical meaning anywhere: PLAN 2.7. It sits close to a
+ * warning hue, so it marks the primary action and nothing else, and the
+ * clinical triad stays entirely separate. Ink is --tw-ink-900, Tebra's own
+ * button text, which measures 8.6:1 on coral-500 - white would be 2.3:1.
+ */
 .cd2004-worklist-new {
-  padding: 3px 9px;
+  padding: 3px 12px;
+  color: var(--tw-ink-900);
+  background: var(--tw-coral-500);
+  border-color: var(--tw-coral-600);
+  font-weight: 700;
 }
 
-.cd2004-worklist-new:hover:not(:disabled),
+.cd2004-worklist-new:hover:not(:disabled) {
+  background: var(--tw-coral-300);
+}
+
 .cd2004-worklist-action:hover:not(:disabled) {
-  color: #fff;
-  background: var(--tw-teal-600);
-  border-color: var(--tw-teal-800);
+  background: var(--tw-mint-50);
+  border-color: var(--tw-teal-600);
 }
 
-.cd2004-worklist-new:active:not(:disabled),
+.cd2004-worklist-new:active:not(:disabled) {
+  background: var(--tw-coral-600);
+}
+
 .cd2004-worklist-action:active:not(:disabled) {
   box-shadow: inset 1px 1px var(--tw-teal-500);
   transform: translate(1px, 1px);

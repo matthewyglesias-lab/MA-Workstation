@@ -284,7 +284,7 @@ function expectedContract(workflow) {
   // compressed desktop override that produced that height is deleted, so this
   // is the base declaration measured at every supported width.
   const titlebarHeight = '38px';
-  const windowTitlebarMinHeight = '22px';
+  const windowTitlebarMinHeight = '32px';
 
   return {
     workflow,
@@ -322,13 +322,18 @@ function expectedContract(workflow) {
         backgroundImage: 'none',
         usesGradient: false
       },
+      // Phase 2b: the work and inspector panes are panels, not windows. They
+      // keep their active state - which pane owns the keyboard is real
+      // information - but it reads as a teal rule under a section header
+      // rather than as an OS caption inverting to a gradient. Square corners
+      // and white-on-teal caption text are the regression to catch here.
       activeWindow: {
-        borderRadius: '0px',
+        borderRadius: '6px',
         borderTopWidth: '1px',
         borderRightWidth: '1px',
-        titlebarColor: 'rgb(255, 255, 255)',
+        titlebarColor: 'rgb(0, 58, 67)',
         titlebarMinHeight: windowTitlebarMinHeight,
-        titlebarUsesGradient: true,
+        titlebarUsesGradient: false,
         titlebarUsesNavy: false
       }
     },
