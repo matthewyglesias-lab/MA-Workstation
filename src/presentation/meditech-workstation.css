@@ -27,8 +27,8 @@
   place-items: center;
   padding: 14px;
   color: #101010;
-  background: #b8bce5;
-  font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+  background: var(--tw-teal-200);
+  font-family: var(--tw-font-sans);
   }
 
   .meditech-workstation-gate *,
@@ -39,9 +39,9 @@
 
   .meditech-workstation-gate-window {
   width: min(100%, 520px);
-  background: #d9dbef;
-  border: 1px solid #243a79;
-  box-shadow: 2px 2px 0 #626a98;
+  background: var(--tw-mint-150);
+  border: 1px solid var(--tw-teal-800);
+  box-shadow: 2px 2px 0 var(--tw-teal-500);
   }
 
   .meditech-workstation-gate-window > header {
@@ -52,8 +52,8 @@
   gap: 5px;
   padding: 2px 5px;
   color: #fff;
-  background: linear-gradient(90deg, #243a79, #5369aa 72%, #7e8ac3);
-  border-bottom: 1px solid #172759;
+  background: linear-gradient(90deg, var(--tw-teal-800), var(--tw-teal-500) 72%, var(--tw-teal-300));
+  border-bottom: 1px solid var(--tw-teal-900);
   }
 
   .meditech-workstation-gate-window > header > span {
@@ -61,8 +61,8 @@
   width: 16px;
   height: 16px;
   place-items: center;
-  background: #eef0fa;
-  border: 1px solid #17295e;
+  background: var(--tw-mint-50);
+  border: 1px solid var(--tw-teal-900);
   }
 
   .meditech-workstation-gate-window > header svg {
@@ -88,7 +88,7 @@
   padding: 12px;
   background: #fffef8;
   border: 1px solid;
-  border-color: #6a739a #fff #fff #6a739a;
+  border-color: var(--tw-teal-500) #fff #fff var(--tw-teal-500);
   }
 
   .meditech-workstation-gate-alert {
@@ -107,7 +107,7 @@
 
   .meditech-workstation-gate h1 {
   margin: 0 0 6px;
-  color: #243a79;
+  color: var(--tw-teal-800);
   font-size: 15px;
   line-height: 1.15;
   }
@@ -121,14 +121,14 @@
   .meditech-workstation-gate dl {
   margin: 0;
   background: #fff;
-  border: 1px solid #8790ad;
+  border: 1px solid var(--tw-teal-300);
   }
 
   .meditech-workstation-gate dl > div {
   display: grid;
   grid-template-columns: minmax(100px, 0.45fr) minmax(0, 1fr);
   min-height: 22px;
-  border-bottom: 1px solid #c3c7d7;
+  border-bottom: 1px solid var(--tw-mint-200);
   }
 
   .meditech-workstation-gate dl > div:last-child {
@@ -143,9 +143,9 @@
   }
 
   .meditech-workstation-gate dt {
-  color: #27386f;
-  background: #dce5f2;
-  border-right: 1px solid #a2a9bf;
+  color: var(--tw-teal-800);
+  background: var(--tw-mint-150);
+  border-right: 1px solid var(--tw-teal-300);
   font-weight: 700;
   }
 
@@ -156,8 +156,8 @@
   .meditech-workstation-gate-window > footer {
   min-height: 24px;
   padding: 5px 8px;
-  color: #27345f;
-  background: #cbd0e7;
+  color: var(--tw-teal-800);
+  background: var(--tw-teal-200);
   border-top: 1px solid #fff;
   font-size: 9px;
   text-align: right;
@@ -166,26 +166,26 @@
 
 @media screen {
   .cd2004-shell {
-    --mt-teal: #315495;
-    --mt-teal-deep: #243a79;
-    --mt-teal-mid: #7183bd;
-    --mt-lavender: #b8bce5;
-    --mt-lavender-light: #d9dbf4;
+    --mt-teal: var(--tw-teal-600);
+    --mt-teal-deep: var(--tw-teal-800);
+    --mt-teal-mid: var(--tw-teal-300);
+    --mt-lavender: var(--tw-teal-200);
+    --mt-lavender-light: var(--tw-teal-200);
     --mt-mint: #c8efbf;
     --mt-mint-dark: #9ed499;
-    --mt-panel: #dedff0;
+    --mt-panel: var(--tw-mint-150);
     --mt-paper: #ffffff;
-    --mt-line: #656d98;
-    --mt-blue-gray: #8399c8;
+    --mt-line: var(--tw-teal-500);
+    --mt-blue-gray: var(--tw-teal-300);
     --mt-selected: #fff0a5;
-    --mt-command: #244f94;
+    --mt-command: var(--tw-teal-600);
     --cd-navy: var(--mt-teal);
     --cd-navy-dark: var(--mt-teal-deep);
     --cd-navy-light: var(--mt-teal-mid);
     --cd-focus: #f5b300;
     color: #101010;
     background: var(--mt-lavender);
-    font-family: Tahoma, "MS Sans Serif", Arial, sans-serif;
+    font-family: var(--tw-font-sans);
     font-size: 11px;
     line-height: 1.25;
   }
@@ -204,16 +204,16 @@
   }
 
   .cd2004-application-header {
-    border-bottom: 2px solid #535d9b;
-    background: #d9dbf1;
+    border-bottom: 2px solid var(--tw-teal-500);
+    background: var(--tw-mint-150);
     box-shadow: inset 0 -1px var(--cd-border-light);
   }
 
   .cd2004-app-titlebar {
     height: 30px;
     padding: 3px 5px;
-    background: linear-gradient(90deg, #243a79 0%, #405a9c 58%, #7b88c1 100%);
-    border-bottom: 1px solid #172759;
+    background: linear-gradient(90deg, var(--tw-teal-800) 0%, var(--tw-teal-600) 58%, var(--tw-teal-300) 100%);
+    border-bottom: 1px solid var(--tw-teal-900);
     font-size: 11px;
     letter-spacing: 0;
   }
@@ -222,9 +222,9 @@
     width: 21px;
     height: 20px;
     margin-right: 5px;
-    color: #243a79;
-    background: #e9ebff;
-    border-color: #1d326b;
+    color: var(--tw-teal-800);
+    background: var(--tw-mint-50);
+    border-color: var(--tw-teal-900);
   }
 
   .cd2004-app-title {
@@ -235,7 +235,7 @@
 
   .cd2004-app-title > b {
     color: #fff3a5;
-    font: 700 12px/1 "Arial Narrow", Tahoma, sans-serif;
+    font: 700 12px/1 "Arial Narrow", var(--tw-font-sans);
     letter-spacing: 0.08em;
   }
 
@@ -244,7 +244,7 @@
   }
 
   .cd2004-app-title > small {
-    color: #eef0ff;
+    color: var(--tw-mint-50);
     font-size: 9px;
     font-weight: 400;
   }
@@ -259,16 +259,16 @@
 
   .cd2004-app-environment b {
     padding: 1px 4px;
-    color: #21315f;
-    background: #ececff;
-    border: 1px solid #1c316d;
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-50);
+    border: 1px solid var(--tw-teal-900);
     font-size: 8px;
   }
 
   .cd2004-app-environment small {
     overflow: hidden;
     max-width: 310px;
-    color: #eef0ff;
+    color: var(--tw-mint-50);
     font-size: 8px;
     letter-spacing: 0.08em;
     text-overflow: ellipsis;
@@ -278,8 +278,8 @@
   .cd2004-menu-bar {
     min-height: 22px;
     padding: 0 3px;
-    background: #d6d8ef;
-    border-bottom-color: #8790bc;
+    background: var(--tw-teal-200);
+    border-bottom-color: var(--tw-teal-300);
   }
 
   .cd2004-menu-title {
@@ -302,32 +302,32 @@
     grid-template-rows: minmax(42px, auto) 19px;
     min-height: 63px;
     color: #101010;
-    background: #e0e2f4;
+    background: var(--tw-mint-150);
     border-top: 1px solid var(--cd-border-light);
-    border-bottom: 2px solid #646f9e;
+    border-bottom: 2px solid var(--tw-teal-500);
   }
 
   .cd2004-patient-primary,
   .cd2004-patient-field {
     padding: 4px 8px;
-    border-right-color: #9da5ca;
+    border-right-color: var(--tw-teal-300);
     box-shadow: inset -1px 0 #f8f8ff;
   }
 
   .cd2004-patient-primary {
     grid-template-columns: 26px minmax(0, 1fr);
     gap: 5px;
-    background: #ced1ec;
+    background: var(--tw-teal-200);
   }
 
   .cd2004-patient-primary > svg {
     width: 22px;
     height: 22px;
-    color: #314879;
+    color: var(--tw-teal-600);
   }
 
   .cd2004-patient-banner small {
-    color: #48527b;
+    color: var(--tw-teal-600);
     font: 700 8px "Arial Narrow", "MS Sans Serif", sans-serif;
     letter-spacing: 0.08em;
   }
@@ -369,8 +369,8 @@
     gap: 6px;
     min-width: 0;
     padding: 2px 8px;
-    background: #d0d3ed;
-    border-top: 1px solid #9aa2c9;
+    background: var(--tw-teal-200);
+    border-top: 1px solid var(--tw-teal-300);
     font: 700 9px "Arial Narrow", "MS Sans Serif", sans-serif;
     letter-spacing: 0.03em;
   }
@@ -386,13 +386,13 @@
 
   .meditech-patient-safety b {
     overflow: hidden;
-    color: #27315f;
+    color: var(--tw-teal-900);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .meditech-patient-safety small {
-    color: #4c567f;
+    color: var(--tw-teal-600);
     font-size: 7px;
     text-align: right;
   }
@@ -406,10 +406,10 @@
     justify-self: end;
     min-height: 17px;
     padding: 1px 5px;
-    color: #23396f;
-    background: #f4f5ff;
-    border: 1px solid #6c79b0;
-    font: 700 8px Tahoma, sans-serif;
+    color: var(--tw-teal-800);
+    background: var(--tw-white);
+    border: 1px solid var(--tw-teal-500);
+    font: 700 8px var(--tw-font-sans);
   }
 
   .cd2004-patient-banner.has-mismatch {
@@ -448,11 +448,11 @@
 
   .cd2004-window {
     border-width: 1px;
-    border-color: #fbfbff #4c578e #4c578e #fbfbff;
-    background: #dedff0;
+    border-color: #fbfbff var(--tw-teal-600) var(--tw-teal-600) #fbfbff;
+    background: var(--tw-mint-150);
     box-shadow:
       inset 1px 1px #f8f8ff,
-      inset -1px -1px #777fab,
+      inset -1px -1px var(--tw-teal-300),
       1px 1px 0 rgb(0 0 0 / 24%);
   }
 
@@ -460,14 +460,14 @@
     min-height: 22px;
     padding: 2px 4px;
     color: #fff;
-    background: linear-gradient(90deg, #5267a7, #8290c4);
-    border-bottom-color: #394c89;
+    background: linear-gradient(90deg, var(--tw-teal-500), var(--tw-teal-300));
+    border-bottom-color: var(--tw-teal-600);
     font-size: 10px;
   }
 
   .cd2004-window.is-active > .cd2004-window-titlebar,
   .cd2004-help-dialog > .cd2004-window-titlebar {
-    background: linear-gradient(90deg, #2d4f98, #5a70b5);
+    background: linear-gradient(90deg, var(--tw-teal-600), var(--tw-teal-500));
   }
 
   .cd2004-window-mark {
@@ -483,8 +483,8 @@
   }
 
   .cd2004-window-toolbar {
-    background: #d7d9ee;
-    border-bottom-color: #8b94ba;
+    background: var(--tw-mint-150);
+    border-bottom-color: var(--tw-teal-300);
     font-size: 10px;
   }
 
@@ -494,7 +494,7 @@
   }
 
   .cd2004-work-window > .cd2004-window-body {
-    background: #f1f2fb;
+    background: var(--tw-mint-50);
   }
 
   /* Injection keeps its document preview in the central clinical workspace;
@@ -536,7 +536,7 @@
     color: #101010;
     background: #d5dcda;
     border: 1px solid;
-    border-color: #f7faf8 #364c4f #364c4f #f7faf8;
+    border-color: #f7faf8 var(--tw-teal-600) var(--tw-teal-600) #f7faf8;
     box-shadow: inset 1px 1px #eef3f0;
   }
 
@@ -555,8 +555,8 @@
 
   .cd2004-record-actions-state > span {
     overflow: hidden;
-    color: #314d52;
-    font: 700 8px Tahoma, "MS Sans Serif", sans-serif;
+    color: var(--tw-teal-600);
+    font: 700 8px var(--tw-font-sans);
     letter-spacing: 0.08em;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -565,7 +565,7 @@
   .cd2004-record-actions-state > strong {
     overflow: hidden;
     color: #0d2e37;
-    font: 700 10px "Arial Narrow", Tahoma, sans-serif;
+    font: 700 10px "Arial Narrow", var(--tw-font-sans);
     letter-spacing: 0.03em;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -618,7 +618,7 @@
     border: 1px solid;
     border-color: #fff #4d6265 #4d6265 #fff;
     box-shadow: inset 1px 1px #f8fbf9;
-    font: 700 9px Tahoma, "MS Sans Serif", sans-serif;
+    font: 700 9px var(--tw-font-sans);
     white-space: nowrap;
   }
 
@@ -641,8 +641,8 @@
 
   .cd2004-record-actions-buttons button.is-primary {
     color: #fff;
-    background: #1b559c;
-    border-color: #d6ebff #173e7d #173e7d #d6ebff;
+    background: var(--tw-teal-600);
+    border-color: var(--tw-mint-150) var(--tw-teal-800) var(--tw-teal-800) var(--tw-mint-150);
   }
 
   .cd2004-record-actions-buttons button.is-primary:hover:not(:disabled) {
@@ -676,7 +676,7 @@
     color: inherit;
     background: transparent;
     border: 0;
-    font: 700 8px Tahoma, sans-serif;
+    font: 700 8px var(--tw-font-sans);
   }
 
   .cd2004-record-actions-guidance {
@@ -722,15 +722,15 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin: 0;
-    border: 1px solid #7a83ad;
+    border: 1px solid var(--tw-teal-300);
     background: #fff;
   }
 
   .cd2004-attestation-review > div {
     min-width: 0;
     padding: 5px 6px;
-    border-right: 1px solid #c4c8df;
-    border-bottom: 1px solid #c4c8df;
+    border-right: 1px solid var(--tw-teal-200);
+    border-bottom: 1px solid var(--tw-teal-200);
   }
 
   .cd2004-attestation-review > div:nth-child(2n) {
@@ -742,8 +742,8 @@
   }
 
   .cd2004-attestation-review dt {
-    color: #4a5581;
-    font: 700 8px Tahoma, sans-serif;
+    color: var(--tw-teal-600);
+    font: 700 8px var(--tw-font-sans);
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -763,9 +763,9 @@
     align-items: start;
     gap: 6px;
     padding: 6px 7px;
-    color: #1e2a54;
-    background: #e6e8f7;
-    border: 1px solid #8d96be;
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-50);
+    border: 1px solid var(--tw-teal-300);
     font-weight: 700;
   }
 
@@ -818,12 +818,12 @@
     min-height: 0;
     padding: 0;
     overflow: hidden;
-    background: #d6d8ef;
+    background: var(--tw-teal-200);
     border: 1px solid;
-    border-color: #fbfbff #4c578e #4c578e #fbfbff;
+    border-color: #fbfbff var(--tw-teal-600) var(--tw-teal-600) #fbfbff;
     box-shadow:
       inset 1px 1px #f8f8ff,
-      inset -1px -1px #777fab,
+      inset -1px -1px var(--tw-teal-300),
       1px 1px 0 rgb(0 0 0 / 24%);
   }
 
@@ -835,8 +835,8 @@
     min-width: 0;
     padding: 3px 5px;
     color: #fff;
-    background: #405b9f;
-    border-bottom: 1px solid #283e7b;
+    background: var(--tw-teal-500);
+    border-bottom: 1px solid var(--tw-teal-800);
     font-weight: 700;
   }
 
@@ -847,14 +847,14 @@
     gap: 4px;
     min-width: 0;
     padding: 2px 5px;
-    color: #4b557f;
-    background: #ebecf8;
-    border-bottom: 1px solid #a6add0;
+    color: var(--tw-teal-600);
+    background: var(--tw-mint-50);
+    border-bottom: 1px solid var(--tw-teal-300);
     font-size: 7px;
   }
 
   .meditech-rail-context strong {
-    color: #2e3d72;
+    color: var(--tw-teal-800);
     font-size: 7px;
     letter-spacing: 0.06em;
   }
@@ -878,13 +878,13 @@
     place-items: center;
     padding: 0;
     color: #101010;
-    background: #e5e6f5;
+    background: var(--tw-mint-50);
     border: 1px solid;
-    border-color: #fff #4c578e #4c578e #fff;
+    border-color: #fff var(--tw-teal-600) var(--tw-teal-600) #fff;
   }
 
   .meditech-rail-records-command button:active:not(:disabled) {
-    border-color: #40546f #fff #fff #40546f;
+    border-color: var(--tw-teal-600) #fff #fff var(--tw-teal-600);
   }
 
   .meditech-rail-records-command button:disabled {
@@ -892,20 +892,20 @@
   }
 
   .meditech-rail-records-command kbd {
-    font: 700 8px/1 Tahoma, sans-serif;
+    font: 700 8px/1 var(--tw-font-sans);
   }
 
   .meditech-function-heading small {
-    color: #e7ebff;
+    color: var(--tw-mint-50);
     font-size: 8px;
     font-weight: 400;
   }
 
   .meditech-function-heading {
-    color: #2d3d72;
-    background: #c7cde9;
-    border-top: 1px solid #f5f6ff;
-    border-bottom-color: #6877aa;
+    color: var(--tw-teal-800);
+    background: var(--tw-teal-200);
+    border-top: 1px solid var(--tw-white);
+    border-bottom-color: var(--tw-teal-500);
     font-size: 9px;
     letter-spacing: 0.05em;
   }
@@ -917,8 +917,8 @@
     min-height: 0;
     padding: 1px;
     overflow: auto;
-    background: #ced1e7;
-    scrollbar-color: #8490bc #e4e5f4;
+    background: var(--tw-teal-200);
+    scrollbar-color: var(--tw-teal-300) var(--tw-mint-50);
     scrollbar-width: auto;
   }
 
@@ -931,10 +931,10 @@
     min-width: 0;
     min-height: 25px;
     padding: 1px 4px;
-    color: #252d51;
-    background: #e8e9f5;
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-50);
     border: 1px solid;
-    border-color: #fff #767fab #767fab #fff;
+    border-color: #fff var(--tw-teal-300) var(--tw-teal-300) #fff;
     box-shadow: none;
   }
 
@@ -946,7 +946,7 @@
     color: #172334;
     background: var(--mt-selected);
     border-color: #857121 #fff #fff #857121;
-    box-shadow: inset 2px 0 #314f9a;
+    box-shadow: inset 2px 0 var(--tw-teal-600);
     font-weight: 700;
   }
 
@@ -956,9 +956,9 @@
     width: 14px;
     height: 16px;
     color: #fff;
-    background: #3d5eaa;
-    border: 1px solid #233d80;
-    font: 700 8px Tahoma, sans-serif;
+    background: var(--tw-teal-500);
+    border: 1px solid var(--tw-teal-800);
+    font: 700 8px var(--tw-font-sans);
   }
 
   .meditech-record-list .cd2004-nav-item svg {
@@ -983,7 +983,7 @@
   }
 
   .meditech-record-list .cd2004-nav-item small {
-    color: #565f84;
+    color: var(--tw-teal-500);
     font-size: 7px;
     font-weight: 400;
     text-transform: capitalize;
@@ -1006,8 +1006,8 @@
   .meditech-record-list .cd2004-nav-item i {
     width: 7px;
     height: 7px;
-    background: #9da6c8;
-    border-color: #667099;
+    background: var(--tw-teal-300);
+    border-color: var(--tw-teal-500);
   }
 
   .meditech-record-list .cd2004-nav-item.is-idle:not(.is-selected) {
@@ -1022,9 +1022,9 @@
     min-width: 0;
     height: 32px;
     padding: 2px 3px;
-    background: #c8cbe7;
+    background: var(--tw-teal-200);
     border-top: 1px solid var(--cd-border-light);
-    border-bottom: 1px solid #566191;
+    border-bottom: 1px solid var(--tw-teal-500);
     box-shadow: none;
   }
 
@@ -1034,9 +1034,9 @@
     gap: 5px;
     min-width: 0;
     padding: 2px 5px;
-    color: #edf0ff;
-    background: #314f95;
-    border: 1px solid #213875;
+    color: var(--tw-mint-50);
+    background: var(--tw-teal-600);
+    border: 1px solid var(--tw-teal-800);
   }
 
   .meditech-command-prompt strong {
@@ -1058,10 +1058,10 @@
     gap: 4px;
     min-width: 0;
     padding: 2px 4px;
-    color: #252d51;
-    background: #e4e5f2;
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-50);
     border: 1px solid;
-    border-color: #fff #68719c #68719c #fff;
+    border-color: #fff var(--tw-teal-500) var(--tw-teal-500) #fff;
     box-shadow: none;
   }
 
@@ -1082,9 +1082,9 @@
 
   .meditech-command-deck kbd {
     color: #fff;
-    background: #3c5da7;
-    border: 1px solid #263e7d;
-    font: 700 8px/15px Tahoma, sans-serif;
+    background: var(--tw-teal-500);
+    border: 1px solid var(--tw-teal-800);
+    font: 700 8px/15px var(--tw-font-sans);
     text-align: center;
   }
 
@@ -1099,7 +1099,7 @@
   .cd2004-statusbar {
     height: 19px;
     min-height: 19px;
-    color: #203a3e;
+    color: var(--tw-teal-800);
     background: #d3d9d7;
     border-top-color: #f4f8f5;
     font-size: 8px;
@@ -1121,7 +1121,7 @@
     margin-bottom: 7px;
     color: #101b1d;
     background: var(--cd-paper);
-    border: 1px solid #263f42;
+    border: 1px solid var(--tw-teal-800);
     box-shadow: inset 0 0 0 1px #d2d7d2;
     font: 10px/1.2 "Courier New", Courier, monospace;
   }
@@ -1133,8 +1133,8 @@
     gap: 12px;
     padding: 7px 9px;
     color: #fff;
-    background: #285b9e;
-    border-bottom: 2px solid #173d75;
+    background: var(--tw-teal-600);
+    border-bottom: 2px solid var(--tw-teal-800);
   }
 
   .meditech-lab-header > div:last-child {
@@ -1150,7 +1150,7 @@
   .meditech-lab-header strong,
   .meditech-lab-header b {
     color: #fff9b5;
-    font: 700 11px/1.2 Tahoma, sans-serif;
+    font: 700 11px/1.2 var(--tw-font-sans);
   }
 
   .meditech-lab-header span {
@@ -1168,7 +1168,7 @@
     color: #4f3000;
     background: #fff0a9;
     border-bottom: 1px solid #a88122;
-    font-family: Tahoma, sans-serif;
+    font-family: var(--tw-font-sans);
   }
 
   .meditech-lab-status strong {
@@ -1208,7 +1208,7 @@
   .meditech-lab-demographics dt,
   .meditech-lab-device dt {
     color: #52716c;
-    font: 700 7px/1.1 Tahoma, sans-serif;
+    font: 700 7px/1.1 var(--tw-font-sans);
     letter-spacing: 0.07em;
   }
 
@@ -1232,11 +1232,11 @@
   .meditech-lab-results th {
     height: 21px;
     padding: 3px 5px;
-    color: #152d50;
-    background: #c8d9ec;
-    border-right: 1px solid #8ea4c0;
-    border-bottom: 1px solid #405b81;
-    font: 700 8px Tahoma, sans-serif;
+    color: var(--tw-teal-900);
+    background: var(--tw-teal-200);
+    border-right: 1px solid var(--tw-teal-300);
+    border-bottom: 1px solid var(--tw-teal-600);
+    font: 700 8px var(--tw-font-sans);
     letter-spacing: 0.04em;
     text-align: left;
   }
@@ -1284,7 +1284,7 @@
   .meditech-lab-results td:first-child b {
     display: inline-block;
     min-width: 38px;
-    color: #063d48;
+    color: var(--tw-teal-900);
   }
 
   .meditech-lab-results td:first-child span {
@@ -1319,7 +1319,7 @@
 
   .meditech-lab-interpretation b {
     color: #52716c;
-    font: 700 7px Tahoma, sans-serif;
+    font: 700 7px var(--tw-font-sans);
   }
 
   .meditech-lab-interpretation span {
@@ -1611,17 +1611,17 @@
   .cd2004-shell {
     --cd-selection: #fff0a5;
     --cd-selection-strong: #f5e287;
-    --cd-chrome: #c8cbe6;
-    --cd-chrome-light: #eeeff9;
-    --cd-face: #d8daf0;
+    --cd-chrome: var(--tw-teal-200);
+    --cd-chrome-light: var(--tw-mint-50);
+    --cd-face: var(--tw-mint-150);
     --cd-face-warm: #f3f1df;
-    --cd-workspace: #b8bce5;
+    --cd-workspace: var(--tw-teal-200);
     --cd-paper: #fffef8;
     --cd-white: #ffffff;
     --cd-ink: #101010;
-    --cd-ink-muted: #465277;
-    --cd-border-dark: #445181;
-    --cd-border-mid: #7b85ad;
+    --cd-ink-muted: var(--tw-teal-600);
+    --cd-border-dark: var(--tw-teal-600);
+    --cd-border-mid: var(--tw-teal-300);
     --cd-border-light: #fafaff;
     --cd-green: #227442;
     --cd-green-soft: #c8efbf;
@@ -1629,8 +1629,8 @@
     --cd-amber-soft: #fff0b4;
     --cd-red: #a20d0d;
     --cd-red-soft: #ffe2df;
-    --cd-info: #244f94;
-    --cd-info-soft: #d9e7f8;
+    --cd-info: var(--tw-teal-600);
+    --cd-info-soft: var(--tw-mint-150);
   }
 }
 
@@ -1669,7 +1669,7 @@
      context stays lavender; identified patients remain green and a mismatch
      remains amber through the higher-priority state rules above. */
   .cd2004-patient-banner.is-no-active-chart:not(.has-mismatch) {
-    background: #d9dbef;
+    background: var(--tw-mint-150);
   }
 
   .cd2004-patient-primary,
@@ -1702,7 +1702,7 @@
 
   .cd2004-patient-banner small {
     flex: 0 0 auto;
-    color: #405070;
+    color: var(--tw-teal-600);
     font-size: 8px;
   }
 
@@ -1730,7 +1730,7 @@
     gap: 5px;
     min-height: 19px;
     padding: 2px 6px;
-    background: #ced1ec;
+    background: var(--tw-teal-200);
     font-size: 9px;
   }
 
@@ -1782,7 +1782,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(260px, 0.56fr);
     gap: 2px;
     padding: 2px;
-    background: #c6c9e7;
+    background: var(--tw-teal-200);
   }
 
   .cd2004-transaction-window > .cd2004-workflow-slot {
@@ -1857,7 +1857,7 @@
     display: block;
     width: 11px;
     height: 11px;
-    color: #344f98;
+    color: var(--tw-teal-600);
   }
 
   .meditech-record-list .cd2004-nav-item.is-selected svg {
@@ -1876,7 +1876,7 @@
   .meditech-record-list .cd2004-nav-item i {
     width: 7px;
     height: 7px;
-    border: 1px solid #69739a;
+    border: 1px solid var(--tw-teal-500);
   }
 
   .meditech-record-list .cd2004-nav-item em {
@@ -1888,14 +1888,14 @@
     grid-template-rows: auto 25px 21px minmax(0, 1fr) 20px;
     gap: 2px;
     padding: 2px;
-    background: #c7cae8;
+    background: var(--tw-teal-200);
   }
 
   .cd2004-launcher {
     gap: 2px;
     padding: 2px 4px;
-    background: #eef0fb;
-    border-color: #65709a;
+    background: var(--tw-mint-50);
+    border-color: var(--tw-teal-500);
     box-shadow: inset 1px 1px #fff;
   }
 
@@ -1925,8 +1925,8 @@
     gap: 8px;
     min-height: 25px;
     padding: 2px 5px;
-    background: #eef0fb;
-    border-color: #65709a;
+    background: var(--tw-mint-50);
+    border-color: var(--tw-teal-500);
     box-shadow: inset 1px 1px #fff;
   }
 
@@ -1942,15 +1942,15 @@
 
   .cd2004-worklist-header h1 {
     margin: 0;
-    color: #1f3264;
-    font: 700 10px Tahoma, "MS Sans Serif", sans-serif;
+    color: var(--tw-teal-900);
+    font: 700 10px var(--tw-font-sans);
     letter-spacing: 0.035em;
     text-transform: uppercase;
   }
 
   .cd2004-worklist-header p {
     margin: 0;
-    color: #566384;
+    color: var(--tw-teal-500);
     font-size: 8px;
   }
 
@@ -1966,20 +1966,20 @@
     align-items: center;
     gap: 2px;
     padding: 1px 3px;
-    background: #d4d7ee;
-    border: 1px solid #65709a;
+    background: var(--tw-teal-200);
+    border: 1px solid var(--tw-teal-500);
   }
 
   .cd2004-worklist-filter-label {
     margin-right: 3px;
-    color: #33426f;
-    font: 700 8px Tahoma, sans-serif;
+    color: var(--tw-teal-800);
+    font: 700 8px var(--tw-font-sans);
   }
 
   .cd2004-worklist-tabs button {
     min-height: 17px;
     padding: 1px 5px;
-    border-bottom: 1px solid #65749d;
+    border-bottom: 1px solid var(--tw-teal-500);
     border-radius: 0;
     font-size: 8px;
   }
@@ -2010,7 +2010,7 @@
   .cd2004-worklist-empty td {
     height: auto;
     padding: 12px 8px;
-    color: #273563;
+    color: var(--tw-teal-800);
     font-size: 9px;
     text-align: left;
     vertical-align: top;
@@ -2027,7 +2027,7 @@
 
   .cd2004-worklist-empty small {
     margin-top: 2px;
-    color: #596483;
+    color: var(--tw-teal-500);
     font-size: 8px;
   }
 
@@ -2092,7 +2092,7 @@
   }
 
   .cd2004-record-actions-buttons button.is-save .cd2004-action-glyph {
-    color: #284e91;
+    color: var(--tw-teal-600);
   }
 
   .cd2004-record-actions-buttons button.is-primary .cd2004-action-glyph {
@@ -2100,7 +2100,7 @@
   }
 
   .cd2004-record-actions-buttons button.is-new .cd2004-action-glyph {
-    color: #284e91;
+    color: var(--tw-teal-600);
   }
 
   .cd2004-record-actions-buttons button.is-danger .cd2004-action-glyph {
@@ -2322,7 +2322,7 @@
      clinical-desktop.css because they were never added to this list; that
      now-redundant declaration is removed below. */
   .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar) {
-    scrollbar-color: #7e88ac #d6d8ec;
+    scrollbar-color: var(--tw-teal-300) var(--tw-mint-150);
     scrollbar-width: auto;
   }
 
@@ -2332,26 +2332,26 @@
   }
 
   .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-track {
-    background: #d6d8ec;
-    border: 1px solid #8a92b3;
+    background: var(--tw-mint-150);
+    border: 1px solid var(--tw-teal-300);
   }
 
   .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-thumb {
     min-height: 24px;
-    background: #aeb3d0;
+    background: var(--tw-teal-200);
     border: 1px solid;
-    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+    border-color: var(--tw-white) var(--tw-teal-500) var(--tw-teal-500) var(--tw-white);
   }
 
   .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button {
     display: block;
     width: 15px;
     height: 15px;
-    background-color: #d6d8ec;
+    background-color: var(--tw-mint-150);
     background-repeat: no-repeat;
     background-position: center;
     border: 1px solid;
-    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+    border-color: var(--tw-white) var(--tw-teal-500) var(--tw-teal-500) var(--tw-white);
   }
 
   .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-button:vertical:start:decrement {
@@ -2371,7 +2371,7 @@
   }
 
   .cd2004-shell :where(.cd2004-window-body, .cd2004-workflow-body, .wfp-panel, .wfp-transaction-page, .cd2004-note-sections, .wfp-lookup .wfp-option-list, .cd2004-worklist-sheet, .cd2004-readiness-list, .cd2004-note-section pre, .cd2004-navigator, .cd2004-toolbar)::-webkit-scrollbar-corner {
-    background: #d6d8ec;
+    background: var(--tw-mint-150);
   }
 
   /* These are body-appended siblings of .cd2004-shell, not descendants of it
@@ -2383,7 +2383,7 @@
      fall back to a plain scrollbar-color/width:thin declaration in
      clinical-desktop.css, now removed. */
   :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results) {
-    scrollbar-color: #7e88ac #d6d8ec;
+    scrollbar-color: var(--tw-teal-300) var(--tw-mint-150);
     scrollbar-width: auto;
   }
 
@@ -2393,26 +2393,26 @@
   }
 
   :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-track {
-    background: #d6d8ec;
-    border: 1px solid #8a92b3;
+    background: var(--tw-mint-150);
+    border: 1px solid var(--tw-teal-300);
   }
 
   :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-thumb {
     min-height: 24px;
-    background: #aeb3d0;
+    background: var(--tw-teal-200);
     border: 1px solid;
-    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+    border-color: var(--tw-white) var(--tw-teal-500) var(--tw-teal-500) var(--tw-white);
   }
 
   :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-button {
     display: block;
     width: 15px;
     height: 15px;
-    background-color: #d6d8ec;
+    background-color: var(--tw-mint-150);
     background-repeat: no-repeat;
     background-position: center;
     border: 1px solid;
-    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+    border-color: var(--tw-white) var(--tw-teal-500) var(--tw-teal-500) var(--tw-white);
   }
 
   :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-button:vertical:start:decrement {
@@ -2424,7 +2424,7 @@
   }
 
   :where(.cd2004-dialog-layer, .cd2004-modal-backdrop, .inj-completion-overlay, .inj-completion-card, .records-drawer-results)::-webkit-scrollbar-corner {
-    background: #d6d8ec;
+    background: var(--tw-mint-150);
   }
 
   /* .meditech-function-list keeps its own established (slightly cooler-blue)
@@ -2435,26 +2435,26 @@
   }
 
   .meditech-function-list::-webkit-scrollbar-track {
-    background: #e4e5f4;
-    border: 1px solid #8a92b3;
+    background: var(--tw-mint-50);
+    border: 1px solid var(--tw-teal-300);
   }
 
   .meditech-function-list::-webkit-scrollbar-thumb {
     min-height: 24px;
-    background: #8490bc;
+    background: var(--tw-teal-300);
     border: 1px solid;
-    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+    border-color: var(--tw-white) var(--tw-teal-500) var(--tw-teal-500) var(--tw-white);
   }
 
   .meditech-function-list::-webkit-scrollbar-button {
     display: block;
     width: 15px;
     height: 15px;
-    background-color: #e4e5f4;
+    background-color: var(--tw-mint-50);
     background-repeat: no-repeat;
     background-position: center;
     border: 1px solid;
-    border-color: #f6f7ff #626b91 #626b91 #f6f7ff;
+    border-color: var(--tw-white) var(--tw-teal-500) var(--tw-teal-500) var(--tw-white);
   }
 
   .meditech-function-list::-webkit-scrollbar-button:vertical:start:decrement {
@@ -2512,7 +2512,7 @@
   }
 
   .cd2004-worklist-header h1 {
-    color: #253867;
+    color: var(--tw-teal-800);
     font-size: 9px;
     letter-spacing: 0.055em;
     text-transform: uppercase;
@@ -2524,9 +2524,9 @@
     flex: 0 0 16px;
     width: 16px;
     height: 16px;
-    color: #3a5592;
-    background: #edf0fb;
-    border: 1px solid #8a93b4;
+    color: var(--tw-teal-600);
+    background: var(--tw-mint-50);
+    border: 1px solid var(--tw-teal-300);
   }
 
   .cd2004-worklist-source-icon svg {
@@ -2541,7 +2541,7 @@
   .cd2004-worklist-table tbody tr:focus-within td {
     color: #101010;
     background: var(--cd-selection);
-    box-shadow: inset 0 1px #3f4d7d, inset 0 -1px #3f4d7d;
+    box-shadow: inset 0 1px var(--tw-teal-600), inset 0 -1px var(--tw-teal-600);
   }
 
   .cd2004-worklist-new,
@@ -2550,7 +2550,7 @@
   .meditech-command-deck button,
   .cd2004-record-actions-buttons button {
     border-radius: 3px;
-    box-shadow: inset 1px 1px #fff, inset -1px -1px #8b93ad;
+    box-shadow: inset 1px 1px #fff, inset -1px -1px var(--tw-teal-300);
   }
 
   .cd2004-shell .cd2004-worklist-new,
@@ -2564,7 +2564,7 @@
 
   .cd2004-status-segment {
     min-width: 76px;
-    font: 700 8px "Arial Narrow", Tahoma, sans-serif;
+    font: 700 8px "Arial Narrow", var(--tw-font-sans);
     letter-spacing: 0.045em;
     text-align: center;
   }
@@ -2601,7 +2601,7 @@
 
   .cd2004-shell [data-workflow="administer"] .wfp-document-output-hint {
     margin: 0;
-    color: #334269;
+    color: var(--tw-teal-800);
   }
 
   .cd2004-post-zone:empty {
@@ -2654,16 +2654,16 @@
     grid-template-areas: "state actions";
     min-height: 42px;
     margin: 2px 2px 0;
-    color: #172341;
-    background: #cfd2e8;
-    border-color: var(--cd-border-light) #525f8f #525f8f var(--cd-border-light);
+    color: var(--tw-teal-900);
+    background: var(--tw-teal-200);
+    border-color: var(--cd-border-light) var(--tw-teal-500) var(--tw-teal-500) var(--cd-border-light);
     box-shadow: inset 1px 1px #fff;
   }
 
   .cd2004-record-actions-state {
     min-height: 38px;
     padding: 3px 6px;
-    border-right-color: #7c86a8;
+    border-right-color: var(--tw-teal-300);
   }
 
   .cd2004-record-actions-state > span {
@@ -2722,7 +2722,7 @@
   .cd2004-record-actions-buttons button.is-addendum {
     order: 1;
     margin-left: auto;
-    color: #1d3f74;
+    color: var(--tw-teal-800);
   }
 
   .cd2004-record-actions.is-locked .cd2004-record-actions-buttons button.is-new {
@@ -2942,7 +2942,7 @@
 
   .cd2004-record-actions {
     margin: 2px 3px 0;
-    background: #cfd2e8;
+    background: var(--tw-teal-200);
   }
 
   .cd2004-record-actions-buttons {
@@ -2995,8 +2995,8 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1px;
     padding: 1px;
-    background: #aeb3d3;
-    border-bottom: 1px solid #4f5c8b;
+    background: var(--tw-teal-200);
+    border-bottom: 1px solid var(--tw-teal-500);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-tab {
@@ -3004,7 +3004,7 @@
     min-height: 23px;
     padding: 3px 2px;
     overflow: visible;
-    border: 1px solid #65719e;
+    border: 1px solid var(--tw-teal-500);
     border-radius: 3px;
     font-size: 9px;
     text-overflow: clip;
@@ -3014,8 +3014,8 @@
   .cd2004-shell [data-workflow="administer"] .wfp-tab[aria-selected="true"] {
     top: 0;
     color: #fff;
-    background: #315495;
-    border-color: #1e326c #8194c2 #8194c2 #1e326c;
+    background: var(--tw-teal-600);
+    border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900);
   }
 
   .cd2004-worklist-source-icon {
@@ -3030,7 +3030,7 @@
   .cd2004-attestation-review > div:nth-child(2n),
   .cd2004-attestation-review > div:nth-last-child(-n + 2) {
     border-right: 0;
-    border-bottom: 1px solid #a6acc0;
+    border-bottom: 1px solid var(--tw-teal-300);
   }
 }
 
@@ -3041,14 +3041,14 @@
  */
 @media screen {
   .cd2004-shell {
-    --mt-icon-ink: #20356f;
-    --mt-icon-blue: #3764aa;
-    --mt-icon-blue-light: #b9d0ef;
+    --mt-icon-ink: var(--tw-teal-800);
+    --mt-icon-blue: var(--tw-teal-500);
+    --mt-icon-blue-light: var(--tw-teal-200);
     --mt-icon-yellow: #f2d34a;
     --mt-icon-paper: #fff3ad;
     --mt-icon-red: #b52c2c;
     --mt-icon-green: #278247;
-    --mt-icon-metal: #c8cbd6;
+    --mt-icon-metal: var(--tw-mint-200);
   }
 
   .cd2004-window-mark.has-icon {
@@ -3057,8 +3057,8 @@
     width: 14px;
     height: 14px;
     overflow: hidden;
-    background: #eef0fa;
-    border-color: #17295e;
+    background: var(--tw-mint-50);
+    border-color: var(--tw-teal-900);
     box-shadow: inset 1px 1px #fff;
   }
 
@@ -3080,7 +3080,7 @@
 
   .cd2004-navigator.meditech-record-list {
     grid-template-rows: 24px 19px minmax(0, 1fr);
-    background: #b8bde1;
+    background: var(--tw-teal-200);
   }
 
   .meditech-rail-title {
@@ -3091,12 +3091,12 @@
     min-width: 0;
     min-height: 24px;
     padding: 2px 4px 2px 6px;
-    color: #1c2f67;
-    background: #e8e9f6;
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-50);
     border: 1px solid;
-    border-color: #fff #56618f #56618f #fff;
-    box-shadow: inset 1px 1px #fdfdff, inset -1px -1px #a4a9c8;
-    font: 700 10px Tahoma, "MS Sans Serif", sans-serif;
+    border-color: #fff var(--tw-teal-500) var(--tw-teal-500) #fff;
+    box-shadow: inset 1px 1px #fdfdff, inset -1px -1px var(--tw-teal-300);
+    font: 700 10px var(--tw-font-sans);
     text-align: left;
   }
 
@@ -3105,12 +3105,12 @@
   }
 
   .meditech-rail-title:active:not(:disabled) {
-    border-color: #56618f #fff #fff #56618f;
-    box-shadow: inset 1px 1px #858dac;
+    border-color: var(--tw-teal-500) #fff #fff var(--tw-teal-500);
+    box-shadow: inset 1px 1px var(--tw-teal-300);
   }
 
   .meditech-rail-title:disabled {
-    color: #737b9b;
+    color: var(--tw-teal-300);
   }
 
   .meditech-rail-records-command {
@@ -3122,9 +3122,9 @@
   .meditech-rail-records-command kbd {
     padding: 1px 2px;
     color: #fff;
-    background: #3c5ca3;
-    border: 1px solid #243a79;
-    font: 700 7px/1 Tahoma, sans-serif;
+    background: var(--tw-teal-500);
+    border: 1px solid var(--tw-teal-800);
+    font: 700 7px/1 var(--tw-font-sans);
   }
 
   .meditech-rail-records-command svg {
@@ -3138,8 +3138,8 @@
     min-height: 19px;
     gap: 4px;
     padding: 2px 4px;
-    background: #dfe2f2;
-    border-bottom-color: #818bb5;
+    background: var(--tw-mint-150);
+    border-bottom-color: var(--tw-teal-300);
   }
 
   .meditech-rail-context strong,
@@ -3154,7 +3154,7 @@
     min-height: 0;
     padding: 1px;
     overflow: auto;
-    background: #bfc3e1;
+    background: var(--tw-teal-200);
   }
 
   .meditech-rail-group {
@@ -3184,12 +3184,12 @@
     align-items: center;
     min-height: 17px;
     padding: 1px 4px;
-    color: #27386f;
-    background: #cbd0ea;
+    color: var(--tw-teal-800);
+    background: var(--tw-teal-200);
     border: 0;
     border-top: 1px solid #f8f9ff;
-    border-bottom: 1px solid #7a84ad;
-    font: 700 9px/1.1 Tahoma, "MS Sans Serif", sans-serif;
+    border-bottom: 1px solid var(--tw-teal-300);
+    font: 700 9px/1.1 var(--tw-font-sans);
     letter-spacing: 0;
     text-transform: none;
   }
@@ -3202,11 +3202,11 @@
     gap: 2px;
     min-height: 20px;
     padding: 0 1px 0 5px;
-    color: #21305f;
-    background: #e7e8f4;
-    border-color: #fff #7079a3 #7079a3 #fff;
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-50);
+    border-color: #fff var(--tw-teal-500) var(--tw-teal-500) #fff;
     border-radius: 2px;
-    box-shadow: inset 1px 1px #fff, inset -1px -1px #a1a6c2;
+    box-shadow: inset 1px 1px #fff, inset -1px -1px var(--tw-teal-300);
   }
 
   .meditech-record-list .cd2004-nav-item > span:first-child {
@@ -3215,7 +3215,7 @@
   }
 
   .meditech-record-list .cd2004-nav-item strong {
-    font: 400 10px/1 Tahoma, "MS Sans Serif", sans-serif;
+    font: 400 10px/1 var(--tw-font-sans);
   }
 
   /* An always-visible outstanding-work count, not an alarm -- soft chip
@@ -3232,7 +3232,7 @@
     color: var(--cd-red);
     background: var(--cd-red-soft);
     border: 1px solid var(--cd-red);
-    font: 700 7px/1 Tahoma, sans-serif;
+    font: 700 7px/1 var(--tw-font-sans);
   }
 
   .meditech-record-list .cd2004-nav-item .meditech-nav-icon {
@@ -3243,7 +3243,7 @@
     width: 18px;
     min-height: 18px;
     background: rgb(255 255 255 / 22%);
-    border-left: 1px solid #a4aac7;
+    border-left: 1px solid var(--tw-teal-300);
   }
 
   .meditech-record-list .cd2004-nav-item .meditech-nav-icon svg {
@@ -3259,8 +3259,8 @@
   .meditech-record-list .cd2004-nav-item.is-selected {
     color: #111a38;
     background: var(--cd-selection);
-    border-color: #5b6387 #fff #fff #5b6387;
-    box-shadow: inset 2px 0 #31519b, inset 1px 1px #8c8051;
+    border-color: var(--tw-teal-500) #fff #fff var(--tw-teal-500);
+    box-shadow: inset 2px 0 var(--tw-teal-600), inset 1px 1px #8c8051;
   }
 
   .meditech-record-list .cd2004-nav-item.is-selected strong {
@@ -3277,9 +3277,9 @@
   }
 
   .meditech-record-list .cd2004-nav-item:disabled {
-    color: #7f83a0;
-    background: #d1d3e4;
-    text-shadow: 1px 1px #f7f7ff;
+    color: var(--tw-teal-300);
+    background: var(--tw-mint-150);
+    text-shadow: 1px 1px var(--tw-white);
   }
 
   .meditech-record-list .cd2004-nav-item:disabled svg {
@@ -3289,7 +3289,7 @@
 
   .cd2004-inspector-window > .cd2004-window-body {
     overflow: hidden;
-    background: #c5c8e3;
+    background: var(--tw-teal-200);
   }
 
   .cd2004-inspector {
@@ -3302,7 +3302,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     min-height: 21px;
     padding: 2px 4px;
-    color: #233568;
+    color: var(--tw-teal-800);
     background: #fff1aa;
     border: 1px solid;
     border-color: #fffbd6 #88762b #88762b #fffbd6;
@@ -3315,13 +3315,13 @@
   }
 
   .cd2004-readiness-score span {
-    font: 700 8px/1 Tahoma, sans-serif;
+    font: 700 8px/1 var(--tw-font-sans);
     letter-spacing: 0.03em;
     text-transform: uppercase;
   }
 
   .cd2004-readiness-score strong {
-    font: 700 9px/1 Tahoma, sans-serif;
+    font: 700 9px/1 var(--tw-font-sans);
   }
 
   .cd2004-readiness-flags {
@@ -3334,10 +3334,10 @@
   .cd2004-readiness-flags .has-stop,
   .cd2004-readiness-flags .has-warning {
     padding: 0;
-    color: #435078;
+    color: var(--tw-teal-600);
     background: transparent;
     border: 0;
-    font: 700 7px/1 Tahoma, sans-serif;
+    font: 700 7px/1 var(--tw-font-sans);
   }
 
   .cd2004-readiness-flags .has-stop {
@@ -3353,7 +3353,7 @@
     max-height: 118px;
     overflow: auto;
     background: #fff;
-    border: 1px solid #68739b;
+    border: 1px solid var(--tw-teal-500);
     border-top: 0;
   }
 
@@ -3363,7 +3363,7 @@
     gap: 3px;
     min-height: 18px;
     padding: 1px 3px;
-    border-bottom: 1px solid #c2c8da;
+    border-bottom: 1px solid var(--tw-mint-200);
   }
 
   .cd2004-readiness-marker {
@@ -3392,15 +3392,15 @@
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    color: #596583;
+    color: var(--tw-teal-500);
     font-size: 7px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .cd2004-readiness-state {
-    color: #596583;
-    font: 700 7px/1 Tahoma, sans-serif;
+    color: var(--tw-teal-500);
+    font: 700 7px/1 var(--tw-font-sans);
     letter-spacing: 0.02em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -3426,9 +3426,9 @@
     min-height: 22px;
     padding: 2px 4px;
     color: #fff;
-    background: #405aa0;
+    background: var(--tw-teal-500);
     border: 1px solid;
-    border-color: #7185bf #233b7a #233b7a #7185bf;
+    border-color: var(--tw-teal-300) var(--tw-teal-800) var(--tw-teal-800) var(--tw-teal-300);
   }
 
   .cd2004-note-heading > svg {
@@ -3438,14 +3438,14 @@
 
   .cd2004-note-heading > strong {
     overflow: hidden;
-    font: 700 10px/1 Tahoma, sans-serif;
+    font: 700 10px/1 var(--tw-font-sans);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .cd2004-note-heading > span {
-    color: #eef1ff;
-    font: 700 7px/1 Tahoma, sans-serif;
+    color: var(--tw-mint-50);
+    font: 700 7px/1 var(--tw-font-sans);
     letter-spacing: 0.05em;
   }
 
@@ -3455,10 +3455,10 @@
     gap: 2px;
     min-height: 23px;
     padding: 2px 3px;
-    color: #27345f;
-    background: #cbd0e7;
+    color: var(--tw-teal-800);
+    background: var(--tw-teal-200);
     border: 1px solid;
-    border-color: #f9faff #727ca5 #727ca5 #f9faff;
+    border-color: #f9faff var(--tw-teal-300) var(--tw-teal-300) #f9faff;
   }
 
   .cd2004-note-mode {
@@ -3466,10 +3466,10 @@
     min-width: 0;
     padding: 2px 4px;
     overflow: hidden;
-    background: #e7e8f3;
+    background: var(--tw-mint-50);
     border: 1px solid;
-    border-color: #7781a8 #fff #fff #7781a8;
-    font: 700 7px/1 Tahoma, sans-serif;
+    border-color: var(--tw-teal-300) #fff #fff var(--tw-teal-300);
+    font: 700 7px/1 var(--tw-font-sans);
     letter-spacing: 0.04em;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3482,11 +3482,11 @@
     gap: 3px;
     min-height: 18px;
     padding: 1px 4px;
-    color: #1e2d59;
-    background: #e7e8f3;
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-50);
     border: 1px solid;
-    border-color: #fff #626d99 #626d99 #fff;
-    font: 700 8px/1 Tahoma, sans-serif;
+    border-color: #fff var(--tw-teal-500) var(--tw-teal-500) #fff;
+    font: 700 8px/1 var(--tw-font-sans);
   }
 
   .cd2004-note-toolbar .cd2004-command-button svg,
@@ -3503,22 +3503,22 @@
     color: #101010;
     background: #fff;
     border: 1px solid;
-    border-color: #4f597e #fff #fff #4f597e;
+    border-color: var(--tw-teal-500) #fff #fff var(--tw-teal-500);
     font: 10px/1.38 "Courier New", Courier, monospace;
   }
 
   .cd2004-note-section + .cd2004-note-section {
-    border-top: 1px solid #7782a7;
+    border-top: 1px solid var(--tw-teal-300);
   }
 
   .cd2004-note-section > header {
     align-items: center;
     min-height: 19px;
     padding: 1px 3px 1px 4px;
-    color: #243866;
-    background: #dce5f2;
-    border-bottom: 1px solid #9aa6bd;
-    font: 700 8px/1 Tahoma, sans-serif;
+    color: var(--tw-teal-800);
+    background: var(--tw-mint-150);
+    border-bottom: 1px solid var(--tw-teal-300);
+    font: 700 8px/1 var(--tw-font-sans);
     letter-spacing: 0.02em;
     text-transform: uppercase;
   }
@@ -3544,7 +3544,7 @@
     min-width: 0;
     margin-left: 2px;
     overflow: hidden;
-    color: #596783;
+    color: var(--tw-teal-500);
     font-size: 7px;
     text-overflow: ellipsis;
     text-transform: none;

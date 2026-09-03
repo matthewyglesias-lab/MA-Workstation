@@ -291,7 +291,7 @@ function expectedContract(workflow) {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
       style: {
-        color: isHome ? 'rgb(37, 56, 103)' : 'rgb(16, 42, 86)',
+        color: isHome ? 'rgb(0, 73, 82)' : 'rgb(16, 42, 86)',
         fontSize: isHome ? '9px' : '16px',
         fontWeight: '700',
         lineHeight: isHome ? 'normal' : '18.4px'
@@ -299,8 +299,8 @@ function expectedContract(workflow) {
     },
     chrome: {
       shell: {
-        backgroundColor: 'rgb(184, 188, 229)',
-        fontFamily: expect.stringMatching(/^Tahoma,/),
+        backgroundColor: 'rgb(197, 214, 215)',
+        fontFamily: expect.stringMatching(/^"Inter Variable"/),
         fontSize: '11px',
         overflow: 'hidden'
       },
@@ -336,23 +336,24 @@ function expectedContract(workflow) {
       panelHorizontalOverflow: false,
       hero: {
         backgroundColor: isHome
-          ? 'rgb(238, 240, 251)'
+          ? 'rgb(246, 248, 248)'
           : 'rgb(219, 228, 238)',
         borderBottomColor: isHome
-          ? 'rgb(101, 112, 154)'
+          ? 'rgb(58, 109, 113)'
           : 'rgb(124, 137, 150)',
         borderRadius: '0px',
         boxShadow: expect.any(String),
         hasRelief: true
       },
-      representativeSquare: true,
-      representativeFlat: false,
-      representativeHasRelief: true,
-      controlSquare: true,
+      // Tebra's control grammar: a soft radius, a hairline border, and no bezel.
+      representativeSquare: false,
+      representativeFlat: true,
+      representativeHasRelief: false,
+      controlSquare: false,
       focusedControlBorder: 'rgb(245, 179, 0)',
       focusedControlHasGlow: false,
       recordLedgerHorizontalOverflow: false,
-      usesTahomaFirst: true,
+      usesTahomaFirst: false,
       landmarksPresent: [true, true, true, true]
     },
     containment: {

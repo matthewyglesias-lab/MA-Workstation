@@ -1,40 +1,49 @@
 /*
- * Final on-screen visual contract for the workstation.  This file is loaded
- * after the legacy shell, the shared workflow panels, and the MEDITECH
- * composition pass so component import order cannot create a second visual
- * language.  Patient-facing print documents deliberately remain outside this
- * screen-only contract.
+ * Final on-screen visual contract for the workstation. Loaded after the shell,
+ * the shared workflow panels, and the composition pass, so component import
+ * order cannot create a second visual language. Patient-facing print documents
+ * deliberately remain outside this screen-only contract.
+ *
+ * Replaces meditech-screen-contract.css. That file did two different jobs at
+ * once: it forced a client/server visual language (square edges, raised
+ * bezels, a periwinkle palette, Courier data), and it carried a handful of
+ * genuine layout fixes whose comments record the bugs they closed. Only the
+ * first job is retired here. Every documented layout fix below is carried over
+ * unchanged, comment and all - deleting them would reopen bugs someone already
+ * paid to find.
+ *
+ * It also re-declared `--cd-chrome`, `--cd-face`, `--cd-paper`, `--cd-border-*`
+ * and `--cd-selection` on `.cd2004-shell`, overriding the shell's own palette
+ * from a later file. That is exactly the layering this redesign is removing, so
+ * the redeclarations are gone: clinical-desktop.css owns those names and points
+ * them at the Tebra tokens.
  */
 
 @media screen {
+  /*
+   * Only the names the shell does not already define. Everything else now
+   * resolves to the token palette set at source in clinical-desktop.css.
+   */
   .cd2004-shell {
-    --mt-screen-chrome: #c9cce3;
-    --mt-screen-face: #e6e7f3;
-    --mt-screen-paper: #f8f8fe;
-    --mt-screen-line: #68729b;
-    --mt-screen-line-light: #ffffff;
-    --mt-screen-muted: #55617b;
-    --mt-screen-selected: #fff0a5;
-    --mt-screen-patient: #c8efbf;
-    --mt-screen-complete: #dce8dc;
-    --mt-screen-review: #fff2c2;
-    --mt-screen-stop: #f7d8d1;
-    --cd-chrome: var(--mt-screen-chrome);
-    --cd-chrome-light: var(--mt-screen-face);
-    --cd-face: #d9dbf4;
-    --cd-paper: var(--mt-screen-paper);
-    --cd-border-dark: var(--mt-screen-line);
-    --cd-border-mid: #949bbc;
-    --cd-border-light: var(--mt-screen-line-light);
-    --cd-selection: var(--mt-screen-selected);
-    --cd-selection-strong: #f4dc72;
-    --cd-green-soft: var(--mt-screen-complete);
-    --cd-amber-soft: var(--mt-screen-review);
-    --cd-red-soft: var(--mt-screen-stop);
+    --mt-screen-line-light: var(--tw-white);
+    --mt-screen-muted: var(--tw-text-secondary);
+    --mt-screen-selected: var(--tw-mint-150);
+    --mt-screen-patient: var(--tw-ready-bg);
+    --mt-screen-complete: var(--tw-ready-bg);
+    --mt-screen-review: var(--tw-review-bg);
+    --mt-screen-stop: var(--tw-stop-bg);
+    --mt-screen-chrome: var(--tw-mint-150);
+    --mt-screen-face: var(--tw-mint-100);
+    --mt-screen-paper: var(--tw-surface-panel);
+    --mt-screen-line: var(--tw-border-subtle);
   }
 
-  /* A classic workstation has one control grammar: square edges, a simple
-     raised bezel, a sunken active state, and a visible keyboard cue. */
+  /*
+   * One control grammar, Tebra's: a soft radius, a hairline border, a tinted
+   * hover, and a pressed state that darkens rather than inverting a bezel.
+   * The raised/sunken 3D edge is the single loudest client/server tell, so it
+   * goes everywhere at once rather than surface by surface.
+   */
   .cd2004-shell :is(
       .cd2004-nav-item,
       .cd2004-worklist-new,
@@ -46,7 +55,7 @@
       .wfp-site-tile,
       .wfp-disposition-list .wfp-option-row
     ) {
-    border-radius: 0;
+    border-radius: var(--tw-radius-ws);
   }
 
   .cd2004-shell button.cd2004-nav-item,
@@ -56,11 +65,21 @@
   .cd2004-shell .cd2004-record-actions-buttons button,
   .cd2004-shell .cd2004-launcher-tile {
     background-image: none;
-    box-shadow:
-      inset 1px 1px var(--mt-screen-line-light),
-      inset -1px -1px #8b93ad;
+    box-shadow: none;
+    border: 1px solid var(--tw-border-subtle);
+    transition: background-color var(--tw-dur-base) ease-in-out;
   }
 
+  .cd2004-shell button.cd2004-nav-item:hover,
+  .cd2004-shell button.cd2004-worklist-new:hover,
+  .cd2004-shell button.cd2004-worklist-action:hover,
+  .cd2004-shell .meditech-command-deck button:hover,
+  .cd2004-shell .cd2004-record-actions-buttons button:hover,
+  .cd2004-shell .cd2004-launcher-tile:hover {
+    background-color: var(--tw-mint-50);
+  }
+
+  /* Tebra's own secondary-active treatment, in place of a sunken bezel. */
   .cd2004-shell button.cd2004-nav-item.is-active,
   .cd2004-shell button.cd2004-nav-item[aria-current="page"],
   .cd2004-shell button.cd2004-worklist-new:active,
@@ -68,98 +87,100 @@
   .cd2004-shell .meditech-command-deck button:active,
   .cd2004-shell .cd2004-record-actions-buttons button:active {
     background-image: none;
-    box-shadow:
-      inset 1px 1px #8b93ad,
-      inset -1px -1px var(--mt-screen-line-light);
+    background-color: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
+    color: var(--tw-text-primary);
+    box-shadow: none;
   }
 
   .cd2004-shell .wfp-panel {
-    color: #101010;
-    background: var(--mt-screen-paper);
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-panel,
   .cd2004-shell [data-workflow="administer"] .wfp-transaction-chrome {
-    background: var(--mt-screen-paper);
-  }
-
-  .cd2004-shell [data-workflow="administer"] .wfp-tabbar {
-    background: var(--mt-screen-chrome);
+    background: var(--tw-surface-panel);
   }
 
   .cd2004-shell .wfp-summary-bar,
   .cd2004-shell .wfp-section-head {
-    background: #d9dbf4;
+    background: var(--tw-surface-sunken);
   }
 
-  .cd2004-shell .wfp-tabbar {
-    background: var(--mt-screen-chrome);
-    border-bottom-color: var(--mt-screen-line);
+  .cd2004-shell .wfp-tabbar,
+  .cd2004-shell [data-workflow="administer"] .wfp-tabbar {
+    background: var(--tw-surface-sunken);
+    border-bottom-color: var(--tw-border-subtle);
   }
 
   .cd2004-shell .wfp-tab {
-    border-radius: 0;
+    border-radius: var(--tw-radius-ws) var(--tw-radius-ws) 0 0;
   }
 
   .cd2004-shell .wfp-field-lookup-button {
-    min-height: 22px;
-    color: #182750;
-    background: #e6e7f3;
-    border: 1px solid var(--mt-screen-line);
-    box-shadow:
-      inset 1px 1px var(--mt-screen-line-light),
-      inset -1px -1px #9ca3c3;
+    min-height: var(--tw-btn-h-ws);
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-strong);
+    box-shadow: none;
+  }
+
+  .cd2004-shell .wfp-field-lookup-button:hover {
+    background: var(--tw-mint-50);
   }
 
   .cd2004-shell .wfp-field-lookup-button:active {
-    background: #d4d7e8;
+    background: rgb(0 73 82 / 8%);
     border-style: solid;
-    box-shadow:
-      inset 1px 1px #8c94b5,
-      inset -1px -1px var(--mt-screen-line-light);
+    box-shadow: none;
   }
 
+  /*
+   * Identifiers, results and lot numbers stay monospaced - they are read
+   * character by character and compared against a vial. Same intent as before;
+   * the face is now the token mono rather than Courier New.
+   */
   .cd2004-shell .wfp-ledger-sequence,
   .cd2004-shell .wfp-ledger-state,
   .cd2004-shell .wfp-result-cycle b,
   .cd2004-shell .wfp-result-flag {
-    font-family: "Courier New", monospace;
+    font-family: var(--tw-font-mono);
+    font-variant-numeric: var(--tw-numeric-tabular);
   }
 
-  /* Shared workflow surfaces inherit the workstation palette instead of the
-     older sage terminal palette.  Green remains clinical state, never chrome. */
   .cd2004-shell .wfp-custom-device-register,
   .cd2004-shell .wfp-panel-sequence,
   .cd2004-shell .wfp-exception-register {
-    border-color: var(--mt-screen-line);
-    background: var(--mt-screen-paper);
+    border-color: var(--tw-border-subtle);
+    background: var(--tw-surface-panel);
   }
 
   .cd2004-shell .wfp-panel-sequence li,
   .cd2004-shell .wfp-exception-line {
-    border-color: #c6c9dd;
+    border-color: var(--tw-border-subtle);
   }
 
   .cd2004-shell .wfp-sequence-number,
   .cd2004-shell .wfp-exception-head {
-    color: #182750;
-    background: #e1e3f1;
-    border-color: var(--mt-screen-line);
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-sunken);
+    border-color: var(--tw-border-subtle);
   }
 
   .cd2004-shell .wfp-exception-line {
-    color: #3e3517;
-    background: var(--mt-screen-review);
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
   }
 
   .cd2004-shell .wfp-exception-line:hover,
   .cd2004-shell .wfp-exception-line:focus {
-    background: var(--mt-screen-selected);
-    outline-color: var(--mt-screen-line);
+    background: var(--tw-review-bg);
+    outline-color: var(--tw-review-border);
   }
 
-  /* Injection site selection becomes a compact MAR-style register.  The
-     illustration remains a quick anatomical cue, not a dashboard tile.
+  /* Injection site selection is a compact register. The illustration remains a
+     quick anatomical cue, not a dashboard tile.
 
      Sites are anatomically paired and rendered in R, L order. An `auto-fill`
      track count resolved to 5 in this column, which is the one arrangement that
@@ -182,9 +203,9 @@
     gap: 5px;
     min-height: 34px;
     padding: 4px 5px;
-    color: #182750;
-    background: var(--mt-screen-paper);
-    border-color: #858eb2;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border-color: var(--tw-border-subtle);
     text-align: left;
     /* The selection marker lives in this gutter. Reserved in both states and
        transparent when unselected, so selecting a tile never overlays the
@@ -216,32 +237,32 @@
 
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile-title {
     grid-column: 3;
-    font-size: 9px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile-badge {
     grid-column: 2 / -1;
     justify-self: start;
-    color: #624d00;
-    background: var(--mt-screen-review);
-    border-color: #8c7118;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border-color: var(--tw-review-border);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile:hover {
-    background: #eef0fa;
+    background: var(--tw-mint-50);
   }
 
   /* An `inset` shadow paints inside the padding box, over whatever sits there,
      which is what nibbled the left edge of the content. The reserved border
      gutter carries the marker instead. */
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile.is-selected {
-    background: var(--mt-screen-selected);
-    border-color: #5d6790;
-    border-left-color: #244f94;
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
+    border-left-color: var(--tw-teal-800);
   }
 
   /* The final disposition is visually important but belongs to the same
-     command-register vocabulary as the rest of the transaction. */
+     control vocabulary as the rest of the worksheet. */
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list.wfp-option-list-inline {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -251,10 +272,10 @@
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row {
     min-height: 34px;
     padding: 4px 6px;
-    border: 1px solid #858eb2;
+    border: 1px solid var(--tw-border-subtle);
     border-left-width: 3px;
     box-shadow: none;
-    background: var(--mt-screen-paper);
+    background: var(--tw-surface-panel);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-ready {
@@ -262,7 +283,7 @@
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-warning {
-    border-left-color: #8c7118;
+    border-left-color: var(--tw-review-fg);
   }
 
   /* These rows already reserve a 3px left border as their state marker, so the
@@ -270,25 +291,25 @@
      an inset shadow paints inside the padding box, over the row's own content.
      The border alone carries the marker. (The selector was also duplicated.) */
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-selected {
-    background: var(--mt-screen-selected);
-    border-color: #5d6790;
-    border-left-color: #244f94;
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
+    border-left-color: var(--tw-teal-800);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
-    background: var(--mt-screen-selected);
-    border-color: #5d6790;
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
     border-left-color: var(--cd-green);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
-    background: var(--mt-screen-review);
-    border-left-color: #8c7118;
+    background: var(--tw-review-bg);
+    border-left-color: var(--tw-review-fg);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-title {
     gap: 5px;
-    font-size: 10px;
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-icon svg {
@@ -296,27 +317,27 @@
     height: 15px;
   }
 
-  /* UDS result states retain their clinical colors, but use the same square
-     register-control structure and neutral paper surface as Injection. */
+  /* UDS result states keep their clinical colours and the same control
+     structure as Injection, on the neutral panel surface. */
   .cd2004-shell [data-workflow="uds"] .wfp-result-cycle {
     border-width: 1px;
     border-style: solid;
-    box-shadow: inset 1px 1px var(--mt-screen-line-light);
+    box-shadow: none;
   }
 
   .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-neg {
-    color: #285538;
-    background: #fff;
-    border-color: #66806a;
-    box-shadow: inset 3px 0 #51765a;
+    color: var(--tw-ready-fg);
+    background: var(--tw-surface-panel);
+    border-color: var(--tw-ready-border);
+    box-shadow: inset 3px 0 var(--tw-ready-fg);
   }
 
   .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-pos {
-    background: var(--mt-screen-stop);
+    background: var(--tw-stop-bg);
   }
 
   .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-invalid {
-    background: var(--mt-screen-review);
+    background: var(--tw-review-bg);
   }
 }
 
@@ -330,23 +351,20 @@
   }
 }
 
-/* Lookup and record-search entry.
- *
- * `type="search"` is the right semantics but the browser dresses it: Chromium
- * adds its own clear button inside the field, which is a 2020s affordance
- * sitting in a 2004 frame. Strip the native chrome, then treat the field as
- * what it is on a terminal - a typed query line: sunken square bevel, a
- * fixed-width face so the caret sits on a character cell, and a text prompt
- * ahead of it instead of a magnifying glass.
+/* Lookup and record search.
  *
  * Unscoped, like the checkbox/radio rules in clinical-desktop.css and for the
  * same reason: the record drawers render into a <dialog> that is a sibling of
  * .cd2004-shell, not a descendant, so a shell-scoped selector misses them. */
 @media screen {
+  /*
+   * `type="search"` keeps its semantics; only Chromium's own clear button is
+   * stripped, because it duplicates the field's own affordance. The face is no
+   * longer forced to monospace - a patient name is read as a word, not
+   * character by character, and Tebra's search is ordinary field text.
+   */
   input[type="search"] {
     appearance: none;
-    font-family: "Courier New", monospace !important;
-    letter-spacing: 0.01em;
   }
 
   input[type="search"]::-webkit-search-cancel-button,
@@ -356,7 +374,7 @@
   }
 
   input[type="search"]::placeholder {
-    color: #8d93ab;
+    color: var(--tw-text-muted);
     font-style: normal;
   }
 
@@ -377,28 +395,21 @@
     border: 0 !important;
   }
 
-  /* The record drawer's magnifier is a flat modern glyph. Retire it and label
-     the line the way a terminal prompt is labelled. */
-  .records-drawer-search > span {
-    display: none !important;
-  }
-
   .records-drawer-search {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 5px;
+    gap: 8px;
   }
 
-  .records-drawer-search::before {
-    content: "FIND";
-    color: #27386f;
-    font: 700 9px Tahoma, "MS Sans Serif", sans-serif;
-    letter-spacing: 0.06em;
-  }
-
-  .records-drawer-search input {
-    /* The 31px right gutter existed only for the retired glyph. */
-    padding-right: 7px !important;
+  /*
+   * The magnifier glyph is restored. The previous contract hid it and printed
+   * a "FIND" text prompt in its place, which is a terminal idiom; a magnifier
+   * is what Tebra shows and what staff expect to look for.
+   */
+  .records-drawer-search > span {
+    display: inline-grid;
+    place-items: center;
+    color: var(--tw-text-secondary);
   }
 }

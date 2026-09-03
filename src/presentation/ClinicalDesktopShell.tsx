@@ -13,7 +13,7 @@ import "./tebra-tokens.css";
 import "./clinical-desktop.css";
 import "./workflows/workflow-panels.css";
 import "./meditech-workstation.css";
-import "./meditech-screen-contract.css";
+import "./tebra-screen-contract.css";
 import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
 import { MODULE, NOTES, PATIENT, RECORD, SHELL } from "./vocabulary";
 import { Panel } from "./Panel";

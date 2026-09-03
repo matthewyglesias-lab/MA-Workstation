@@ -682,7 +682,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administeredDisposition).toHaveClass(/is-selected/);
     await expect(administeredDisposition).toHaveCSS(
       'background-color',
-      'rgb(255, 240, 165)'
+      'rgb(235, 240, 239)'
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
@@ -855,7 +855,7 @@ test.describe('MA Workstation browser journeys', () => {
     });
     expect(drawerVisual.borderRadius).toBeLessThanOrEqual(2);
     expect(drawerVisual.searchRadius).toBeLessThanOrEqual(2);
-    expect(drawerVisual.fontFamily).toContain('Tahoma');
+    expect(drawerVisual.fontFamily).toContain('Inter Variable');
     expect(drawerVisual.headerBackground).toContain('linear-gradient');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
     expect(await maxMotionMilliseconds(drawer, 'transitionDuration'))
@@ -2928,7 +2928,7 @@ test.describe('MA Workstation browser journeys', () => {
     await bup.press('ArrowDown');
     await page.mouse.move(0, 0);
     await expect(bup).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-    await expect(bup).toHaveCSS('color', 'rgb(40, 85, 56)');
+    await expect(bup).toHaveCSS('color', 'rgb(31, 111, 92)');
     const mtd = panel.locator('.wfp-grid-row', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
     await expect(mtd).toBeFocused();
     await mtd.press('p');
