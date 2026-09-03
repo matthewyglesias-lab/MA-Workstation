@@ -45,7 +45,7 @@
    * goes everywhere at once rather than surface by surface.
    */
   .cd2004-shell :is(
-      .cd2004-nav-item,
+      .cd2004-nav-item:not(.meditech-record-list *),
       .cd2004-worklist-new,
       .cd2004-worklist-action,
       .meditech-command-deck button,
@@ -58,7 +58,16 @@
     border-radius: var(--tw-radius-ws);
   }
 
-  .cd2004-shell button.cd2004-nav-item,
+  /*
+   * `.cd2004-nav-item` addresses two different things: the launcher tiles and
+   * worklist buttons, which are controls and take the bordered button
+   * grammar, and the section-rail rows, which are not. A rail row in Tebra is
+   * a row - transparent until hovered, marked by a bar in the left gutter -
+   * so this contract stops claiming them and the rail's own declaration in
+   * meditech-workstation.css stands. Without the exclusion this file wins on
+   * load order and every rail row gets a box drawn round it.
+   */
+  .cd2004-shell button.cd2004-nav-item:not(.meditech-record-list *),
   .cd2004-shell button.cd2004-worklist-new,
   .cd2004-shell button.cd2004-worklist-action,
   .cd2004-shell .meditech-command-deck button,
@@ -70,7 +79,7 @@
     transition: background-color var(--tw-dur-base) ease-in-out;
   }
 
-  .cd2004-shell button.cd2004-nav-item:hover,
+  .cd2004-shell button.cd2004-nav-item:not(.meditech-record-list *):hover,
   .cd2004-shell button.cd2004-worklist-new:hover,
   .cd2004-shell button.cd2004-worklist-action:hover,
   .cd2004-shell .meditech-command-deck button:hover,
@@ -80,8 +89,8 @@
   }
 
   /* Tebra's own secondary-active treatment, in place of a sunken bezel. */
-  .cd2004-shell button.cd2004-nav-item.is-active,
-  .cd2004-shell button.cd2004-nav-item[aria-current="page"],
+  .cd2004-shell button.cd2004-nav-item.is-active:not(.meditech-record-list *),
+  .cd2004-shell button.cd2004-nav-item[aria-current="page"]:not(.meditech-record-list *),
   .cd2004-shell button.cd2004-worklist-new:active,
   .cd2004-shell button.cd2004-worklist-action:active,
   .cd2004-shell .meditech-command-deck button:active,
