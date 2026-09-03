@@ -227,7 +227,7 @@ async function bootDeterministicWorkstation(page, viewport) {
 }
 
 async function openWorkflow(page, workflow) {
-  const label = workflow === 'administer' ? 'Injection' : 'Start Center';
+  const label = workflow === 'administer' ? 'Injection' : 'Dashboard';
   if (workflow !== 'home') {
     // Bottom-docked strip: every nav item is reachable at every width.
     await page.locator(`.cd2004-nav-item[title="${label}"]`).click();
@@ -254,7 +254,7 @@ async function openFixtureDraft(page) {
     'background-color',
     'rgb(200, 239, 191)'
   );
-  await expect(page.locator('[data-injection-record-actions]')).toContainText('SAVED LOCAL DRAFT');
+  await expect(page.locator('[data-injection-record-actions]')).toContainText('Draft saved');
 }
 
 async function selectInjectionTab(page, name) {
@@ -347,7 +347,7 @@ async function prepareReadyInjection(page) {
 async function lockReadyInjection(page) {
   const recordActions = page.locator('[data-injection-record-actions]');
   await recordActions.locator('[data-injection-finish]').click();
-  const dialog = page.getByRole('dialog', { name: 'Attest & lock local record' });
+  const dialog = page.getByRole('dialog', { name: 'Sign' });
   await expect(dialog).toBeVisible();
   await dialog
     .getByRole('checkbox', {
@@ -355,10 +355,10 @@ async function lockReadyInjection(page) {
     })
     .check();
   await dialog
-    .getByRole('button', { name: 'Attest & lock local record', exact: true })
+    .getByRole('button', { name: 'Sign', exact: true })
     .click();
   await expect(dialog).toBeHidden();
-  await expect(recordActions).toContainText('LOCAL RECORD LOCKED');
+  await expect(recordActions).toContainText('Signed');
 }
 
 async function settleForCapture(page) {
@@ -384,7 +384,7 @@ test.describe('Client/Server workstation visual snapshots', () => {
     await bootDeterministicWorkstation(page, VIEWPORTS.desktop1024);
     await openWorkflow(page, 'administer');
     await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/is-no-active-chart/);
-    await expect(page.locator('.cd2004-patient-primary')).toContainText('NO ACTIVE CHART');
+    await expect(page.locator('.cd2004-patient-primary')).toContainText('No patient selected');
     await settleForCapture(page);
 
     await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
@@ -396,7 +396,7 @@ test.describe('Client/Server workstation visual snapshots', () => {
   test('current worklist at 1366 x 768', async ({ page }) => {
     await bootDeterministicWorkstation(page, VIEWPORTS.desktop1366);
     await openWorkflow(page, 'home');
-    await expect(page.getByRole('heading', { name: 'Current Worklist' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Open Notes' })).toBeVisible();
     await settleForCapture(page);
 
     await expect(page.locator('.cd2004-shell')).toHaveScreenshot(

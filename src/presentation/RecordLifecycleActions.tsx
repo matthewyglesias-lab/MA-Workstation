@@ -1,6 +1,6 @@
+import { RECORD_LIFECYCLE_LABEL } from "./vocabulary";
 import type { ComponentChildren } from "preact";
 import {
-  WORKSTATION_RECORD_LIFECYCLE_LABEL,
   type WorkstationRecordLifecycle,
 } from "../application/workstation-projection";
 
@@ -55,7 +55,7 @@ export function RecordLifecycleActions({
         data-locked-record-action={locked ? true : undefined}
       >
         <span>{recordLabel}</span>
-        <strong>{WORKSTATION_RECORD_LIFECYCLE_LABEL[lifecycle]}</strong>
+        <strong>{RECORD_LIFECYCLE_LABEL[lifecycle]}</strong>
         <small role="status" aria-live="polite">
           {detail}
         </small>

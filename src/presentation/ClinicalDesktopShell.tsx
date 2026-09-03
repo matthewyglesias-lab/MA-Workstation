@@ -8,11 +8,14 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+// Tokens first: every later stylesheet resolves var(--tw-*) against this one.
+import "./tebra-tokens.css";
 import "./clinical-desktop.css";
 import "./workflows/workflow-panels.css";
 import "./meditech-workstation.css";
-import "./meditech-screen-contract.css";
+import "./tebra-screen-contract.css";
 import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
+import { MODULE, NOTES, PATIENT, RECORD, SHELL } from "./vocabulary";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
 import {
@@ -63,11 +66,11 @@ const MENU_MNEMONICS: Record<string, string> = {
 };
 
 const WORKFLOW_SUMMARY_STATE_LABEL = {
-  idle: "Not started",
-  draft: "In progress",
-  ready: "Ready",
-  attention: "Needs review",
-  locked: "Locked local record",
+  idle: NOTES.statusNotStarted,
+  draft: NOTES.statusIncomplete,
+  ready: NOTES.statusReadyToSign,
+  attention: NOTES.statusNeedsReview,
+  locked: NOTES.statusSigned,
 } as const;
 
 const shortcutWorkflows: WorkflowId[] = [
@@ -186,15 +189,15 @@ function contextsMismatch(
 }
 
 export function ClinicalDesktopShell({
-  organizationName = "Integrated Psychiatric Medical Group",
+  organizationName = SHELL.organization,
   activeWorkflow,
   defaultActiveWorkflow = "home",
   onWorkflowChange,
   patient = {},
   workflowPatient,
   onUseWorkflowPatient,
-  staffLabel = "Not signed in",
-  locationLabel = "Clinic not selected",
+  staffLabel = PATIENT.notSignedIn,
+  locationLabel = PATIENT.noLocation,
   localStorageAvailable = true,
   workflowSummaries = {},
   needsReview = [],
@@ -435,7 +438,7 @@ export function ClinicalDesktopShell({
       setFocusedPane("work");
       setInternalStatus("Worksheet zone focused.");
     } else if (target.classList.contains("meditech-record-list")) {
-      setInternalStatus("Record List zone focused.");
+      setInternalStatus(`${NOTES.openNotes} zone focused.`);
     } else {
       setInternalStatus("Command zone focused.");
     }
@@ -483,7 +486,7 @@ export function ClinicalDesktopShell({
     if (select && openFieldLookup(select)) return;
     if (onLookup) {
       onLookup();
-      setInternalStatus("Local Record List opened.");
+      setInternalStatus(`${NOTES.openNotes} opened.`);
       return;
     }
     setInternalStatus("No local lookup is available in this context.");
@@ -769,9 +772,9 @@ export function ClinicalDesktopShell({
         case "local-emr":
           if (onOpenRecords) {
             onOpenRecords();
-            setInternalStatus("Local EMR / Record List opened.");
+            setInternalStatus(`${NOTES.openNotes} opened.`);
           } else {
-            setInternalStatus("Local Record List is unavailable.");
+            setInternalStatus(`${NOTES.openNotes} is unavailable.`);
           }
           return;
         case "file":
@@ -848,8 +851,8 @@ export function ClinicalDesktopShell({
 
   const windowTitle =
     selectedWorkflow === "home"
-      ? "Current Worklist"
-      : `${WORKFLOW_LABELS[selectedWorkflow]} Worksheet`;
+      ? NOTES.openNotes
+      : `${WORKFLOW_LABELS[selectedWorkflow]} note`;
   const transactionCode = WORKSTATION_TRANSACTION_CODE[selectedWorkflow];
 
   const workflowContent = renderWorkflowContent({
@@ -910,13 +913,15 @@ export function ClinicalDesktopShell({
             <DesktopIcon name="administer" />
           </span>
           <span class="cd2004-app-title">
-            <b>MA</b>
-            <span>CLINICAL WORKSTATION</span>
+            <b>IPMG</b>
+            <span>{SHELL.productName}</span>
             <small>{transactionCode}</small>
           </span>
           <span class="cd2004-app-environment">
-            <b>LOCAL / TRAINING</b>
-            <small>{staffLabel || "NO STAFF"} · {locationLabel || "NO FACILITY"}</small>
+            <b>{SHELL.localOnlyBadge}</b>
+            <small>
+              {staffLabel || PATIENT.notSignedIn} · {locationLabel || PATIENT.noLocation}
+            </small>
           </span>
         </div>
 
@@ -928,13 +933,13 @@ export function ClinicalDesktopShell({
           <MenuBarContext.Provider value={menuBar}>
           <DesktopMenu id="file" label="File" mnemonic="F">
             <MenuCommand
-              label="File local draft"
+              label={RECORD.save}
               shortcut={fileCommand.keyLabel}
               disabled={!onSaveDraft}
               onInvoke={requestDraftSave}
             />
             <MenuCommand
-              label="Local EMR / Record List"
+              label={NOTES.openNotes}
               shortcut={localEmrCommand.keyLabel}
               disabled={!onOpenRecords}
               onInvoke={onOpenRecords}
@@ -942,12 +947,12 @@ export function ClinicalDesktopShell({
           </DesktopMenu>
           <DesktopMenu id="chart" label="Chart" mnemonic="C">
             <MenuCommand
-              label="Use local workflow patient"
+              label={PATIENT.useThisPatient}
               disabled={!isMismatch || !onUseWorkflowPatient}
               onInvoke={() => onUseWorkflowPatient?.(selectedWorkflow)}
             />
             <MenuCommand
-              label="Lookup local record"
+              label={PATIENT.findPatient}
               shortcut={lookupCommand.keyLabel}
               disabled={!onLookup}
               onInvoke={openContextualLookup}
@@ -975,19 +980,19 @@ export function ClinicalDesktopShell({
               onInvoke={onOpenLocation}
             />
             <MenuCommand
-              label="Knowledge Base"
+              label={MODULE.reference}
               disabled={!onOpenKnowledge}
               onInvoke={onOpenKnowledge}
             />
             <MenuCommand
-              label="Daily Closeout"
+              label={MODULE.dailyCloseout}
               disabled={!onOpenCloseout}
               onInvoke={onOpenCloseout}
             />
           </DesktopMenu>
           <DesktopMenu id="help" label="Help" mnemonic="H">
             <MenuCommand
-              label="Keyboard Reference"
+              label={SHELL.keyboardReference}
               shortcut={helpCommand.keyLabel}
               onInvoke={(returnFocus) => {
                 previousFocusRef.current =
@@ -1007,7 +1012,7 @@ export function ClinicalDesktopShell({
           selectedWorkflow={selectedWorkflow}
           workflowStateLabel={
             postState === "posted"
-              ? "Locked local record"
+              ? NOTES.statusSigned
               : WORKFLOW_SUMMARY_STATE_LABEL[
                   workflowSummaries[selectedWorkflow]?.state ?? "idle"
                 ]
@@ -1029,7 +1034,7 @@ export function ClinicalDesktopShell({
           title={windowTitle}
           icon={selectedWorkflow}
           subtitle={
-            selectedWorkflow === "home" ? "Local records only" : "Active encounter"
+            selectedWorkflow === "home" ? SHELL.localOnlyDetail : "Active encounter"
           }
           active={focusedPane === "work"}
           onActivate={setFocusedPane}
@@ -1124,7 +1129,7 @@ export function ClinicalDesktopShell({
           file: {
             onInvoke: requestDraftSave,
             disabled: !onSaveDraft,
-            label: selectedWorkflow === "home" ? "File / save" : `Save ${transactionCode}`,
+            label: selectedWorkflow === "home" ? RECORD.save : `Save ${transactionCode}`,
           },
           back: { onInvoke: safeBack },
         } satisfies FunctionKeyActions}
@@ -1140,17 +1145,17 @@ export function ClinicalDesktopShell({
           {effectiveStatus}
         </div>
         <div class="cd2004-status-segment" title="Current record mode">
-          {postState === "posted" ? "READ ONLY" : "EDITABLE"}
+          {postState === "posted" ? RECORD.readOnly : RECORD.editable}
         </div>
         <div
           class={`cd2004-status-segment ${localStorageAvailable ? "is-online" : "is-error"}`}
           title={
             localStorageAvailable
-              ? "Records save only in this browser"
-              : "Browser storage is unavailable"
+              ? SHELL.localOnlyDetail
+              : SHELL.storageUnavailable
           }
         >
-          {localStorageAvailable ? "LOCAL" : "STORAGE ERROR"}
+          {localStorageAvailable ? SHELL.localBadge : SHELL.storageError}
         </div>
       </footer>
 
@@ -1290,7 +1295,7 @@ function InjectionRecordActions({
 
   return (
     <RecordLifecycleActions
-      recordLabel="INJECTION RECORD"
+      recordLabel={`${MODULE.injection} note`}
       ariaLabel="Injection record actions"
       lifecycle={actions.lifecycle}
       detail={detail}
@@ -1327,7 +1332,7 @@ function InjectionRecordActions({
                 <span class="cd2004-action-glyph" aria-hidden="true">
                   <DesktopIcon name="save" />
                 </span>
-                Save local draft <kbd>F12</kbd>
+                {RECORD.save} <kbd>F12</kbd>
               </button>
               <button
                 type="button"
@@ -1341,14 +1346,14 @@ function InjectionRecordActions({
                       : blockerCount
                       ? `Complete ${blockerCount} required clinical ${blockerCount === 1 ? "field" : "fields"} before attesting and locking this local record.`
                       : "Complete the required clinical fields before finishing and locking this record."
-                    : "Review the local attestation before locking this browser-local record."
+                    : "Review the note before signing it."
                 }
                 onClick={onFinish}
               >
                 <span class="cd2004-action-glyph" aria-hidden="true">
                   <DesktopIcon name="lock" />
                 </span>
-                Attest &amp; lock local record
+                {RECORD.sign}
               </button>
             </>
           )}
@@ -1382,7 +1387,7 @@ function InjectionRecordActions({
               <span class="cd2004-action-glyph" aria-hidden="true">
                 <DesktopIcon name="discard" />
               </span>
-              Discard local draft…
+              {RECORD.discardDraft}…
             </button>
           )}
         </>
@@ -1487,15 +1492,14 @@ function PatientBanner({
   const hasIdentifiedPatient = Boolean(patient.name?.trim() && patient.dob?.trim());
   const hasActiveChart = hasLocalRecord || hasIdentifiedPatient;
   const patientNameLabel = hasActiveChart
-    ? patient.name?.trim() || "LOCAL CHART"
-    : "NO ACTIVE CHART";
+    ? patient.name?.trim() || PATIENT.facesheet
+    : PATIENT.noPatient;
   const dobLabel = hasActiveChart ? patient.dob || "—" : "—";
   const recordLabel = patient.visitLabel || patient.localRecordId || "Not selected";
-  const chartContextLabel = hasLocalRecord
-    ? "Local chart"
-    : hasIdentifiedPatient
-      ? "Patient context"
-      : "Chart context";
+  // The banner is the Facesheet in every state. The client/server shell drew a
+  // three-way distinction here ("Local chart" / "Patient context" / "Chart
+  // context") that named its own internals rather than anything staff act on.
+  const chartContextLabel = PATIENT.facesheet;
   const workflowContextLabel = `${WORKFLOW_LABELS[selectedWorkflow]} — ${workflowStateLabel}`;
   const medicationContextPrefix = patient.medicationLabel
     ? `MEDICATION: ${patient.medicationLabel} · `
@@ -1520,29 +1524,29 @@ function PatientBanner({
         </span>
       </div>
       <div class="cd2004-patient-field" title={`DOB: ${dobLabel}`}>
-        <small>DOB</small>
+        <small>{PATIENT.dob}</small>
         <strong>{dobLabel}</strong>
       </div>
       <div class="cd2004-patient-field" title={`Local visit / record: ${recordLabel}`}>
-        <small>Local visit / record</small>
+        <small>{PATIENT.visitRecord}</small>
         <strong>{recordLabel}</strong>
       </div>
       <div class="cd2004-patient-field cd2004-banner-location" title={`Clinic: ${locationLabel}`}>
-        <small>Clinic</small>
+        <small>{PATIENT.clinic}</small>
         <strong>{locationLabel}</strong>
       </div>
       <div class="cd2004-patient-field cd2004-banner-staff" title={`Staff: ${staffLabel}`}>
-        <small>Staff</small>
+        <small>{PATIENT.staff}</small>
         <strong>{staffLabel}</strong>
       </div>
       <div class="meditech-patient-safety">
-        <strong>Allergy/AdvReac:</strong>
+        <strong>{PATIENT.allergiesLabel}:</strong>
         <b>
           {hasActiveChart
-            ? patient.allergyStatus || "Not available in this local record"
+            ? patient.allergyStatus || PATIENT.allergiesUnavailable
             : selectedWorkflow === "home"
-              ? "No local record selected"
-              : `No local record selected · ${workflowContextLabel}`}
+              ? PATIENT.allergiesNoPatient
+              : `${PATIENT.allergiesNoPatient} · ${workflowContextLabel}`}
         </b>
         {hasActiveChart ? (
           <small title={workflowContextLabel}>
@@ -1550,14 +1554,14 @@ function PatientBanner({
           </small>
         ) : (
           <button type="button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>
-            Select local record
+            {NOTES.openNotes}
           </button>
         )}
       </div>
       {mismatch && (
         <div class="cd2004-context-mismatch" role="status">
           <span>
-            <strong>Patient context mismatch</strong>
+            <strong>{PATIENT.contextMismatch}</strong>
             <small>
               This {WORKFLOW_LABELS[selectedWorkflow]} draft belongs to{" "}
               {workflowPatient?.name || "another patient"}.

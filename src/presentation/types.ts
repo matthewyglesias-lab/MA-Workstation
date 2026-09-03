@@ -1,4 +1,5 @@
 import type { ComponentChildren, Ref } from "preact";
+import { MODULE } from "./vocabulary";
 import type {
   WorkstationReadinessItem,
   WorkstationRecordLifecycle,
@@ -177,15 +178,19 @@ export const WORKFLOW_ORDER: WorkflowId[] = [
   "tms",
 ];
 
+/**
+ * WorkflowId keys are internal and MUST NOT change - they address legacy panel
+ * selectors (`#panel-administer`) and persisted records. Only the labels move.
+ */
 export const WORKFLOW_LABELS: Record<WorkflowId, string> = {
-  home: "Start Center",
-  administer: "Injection",
-  uds: "UDS",
-  samples: "Samples",
-  forms: "Forms",
-  reference: "Knowledge",
-  log: "Daily Closeout",
-  tms: "Future / TMS",
+  home: MODULE.dashboard,
+  administer: MODULE.injection,
+  uds: MODULE.uds,
+  samples: MODULE.samples,
+  forms: MODULE.forms,
+  reference: MODULE.reference,
+  log: MODULE.dailyCloseout,
+  tms: MODULE.future,
 };
 
 /**

@@ -1,3 +1,4 @@
+import { TRANSACTION_PHASE_LABEL } from "../../vocabulary";
 import { createContext, Fragment, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { DesktopIcon } from "../../DesktopIcon";
@@ -2294,7 +2295,7 @@ export function InjectionPanel({
                 class="wfp-transaction-readout"
                 aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}
               >
-                <b>{transactionStatus.label}</b>
+                <b>{TRANSACTION_PHASE_LABEL[transactionStatus.phase]}</b>
                 <span>PG {activePage}/{visibleTabs.length}</span>
               </span>
               {!locked && patientNeedsRestore && (

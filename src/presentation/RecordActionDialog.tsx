@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { PATIENT, RECORD } from "./vocabulary";
 
 export type RecordActionKind = "attest" | "discard";
 
@@ -48,9 +49,9 @@ export function RecordActionDialog({
   const [error, setError] = useState<string | null>(null);
   const isAttestation = kind === "attest";
   const title = isAttestation
-    ? "Attest & lock local record"
-    : "Discard Local Draft";
-  const confirmLabel = isAttestation ? "Attest & lock local record" : "Discard draft";
+    ? RECORD.sign
+    : RECORD.discardDraft;
+  const confirmLabel = isAttestation ? RECORD.sign : RECORD.discardDraft;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -123,7 +124,7 @@ export function RecordActionDialog({
                   <dd>{attestation?.patient || "Not entered"}</dd>
                 </div>
                 <div>
-                  <dt>Local visit / record</dt>
+                  <dt>{PATIENT.visitRecord}</dt>
                   <dd>{attestation?.localRecord || "Not assigned"}</dd>
                 </div>
                 <div>
@@ -136,7 +137,7 @@ export function RecordActionDialog({
                 </div>
                 <div>
                   <dt>Documenting staff</dt>
-                  <dd>{attestation?.staff || "Not signed in"}</dd>
+                  <dd>{attestation?.staff || PATIENT.notSignedIn}</dd>
                 </div>
                 <div>
                   <dt>Local timestamp</dt>
@@ -168,7 +169,7 @@ export function RecordActionDialog({
               <p class="cd2004-record-action-warning">
                 This removes the saved browser-local draft and clears the worksheet. It cannot be undone.
               </p>
-              <small>Locked records cannot be discarded.</small>
+              <small>Signed notes cannot be discarded.</small>
             </>
           )}
           {error && <p class="cd2004-record-action-error" role="alert">{error}</p>}
@@ -189,7 +190,11 @@ export function RecordActionDialog({
             disabled={submitting || (isAttestation && !acknowledged)}
             onClick={confirm}
           >
-            {submitting ? "Validating local record…" : confirmLabel}
+            {submitting
+              ? isAttestation
+                ? RECORD.signing
+                : RECORD.discarding
+              : confirmLabel}
           </button>
         </div>
       </div>

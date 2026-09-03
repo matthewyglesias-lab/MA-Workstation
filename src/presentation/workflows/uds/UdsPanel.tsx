@@ -1,3 +1,4 @@
+import { RECORD, TRANSACTION_PHASE_LABEL } from "../../vocabulary";
 import { createContext, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
@@ -947,7 +948,7 @@ export function UdsPanel({
             class="wfp-transaction-readout"
             aria-label={`Worksheet page ${UDS_TABS.indexOf(tab) + 1} of ${UDS_TABS.length}`}
           >
-            <b>{transactionStatus.label}</b>
+            <b>{TRANSACTION_PHASE_LABEL[transactionStatus.phase]}</b>
             <span>PG {UDS_TABS.indexOf(tab) + 1}/{UDS_TABS.length}</span>
           </span>
           <button
@@ -1680,7 +1681,7 @@ export function UdsPanel({
           (locked
             ? "This browser-local record is read-only. Corrections require a dated addendum."
             : activeRecordId
-              ? "Draft saved in this browser. Attest and lock only when the screen is final."
+              ? "Draft saved in this browser. Sign only when the screen is final."
               : "Enter encounter details, then save a local draft.")
         }
         buttons={
@@ -1720,7 +1721,7 @@ export function UdsPanel({
                   disabled={!canAttest}
                   title={
                     canAttest
-                      ? "Review the local attestation before locking this browser-local record."
+                      ? "Review the note before signing it."
                       : "Complete the required clinical fields and sign in staff before attesting and locking this record."
                   }
                   onClick={() => setRecordAction("attest")}
@@ -1759,7 +1760,7 @@ export function UdsPanel({
                 <span class="cd2004-action-glyph" aria-hidden="true">
                   <DesktopIcon name="discard" />
                 </span>
-                Discard local draft…
+                {RECORD.discardDraft}…
               </button>
             )}
           </>
