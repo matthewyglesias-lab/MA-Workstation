@@ -2092,43 +2092,48 @@ input[type="radio"]:disabled {
   border-bottom: 1px solid var(--tw-teal-300);
 }
 
+/* A checklist row: marker, item, state chip. */
 .cd2004-readiness-item {
   display: grid;
-  grid-template-columns: 19px minmax(0, 1fr);
-  gap: 6px;
+  grid-template-columns: 19px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   min-height: 34px;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--tw-mint-150);
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
+/*
+ * The marker was a filled square with a typographic glyph in it - a green box
+ * with a tick, a red box with a multiplication sign. It reads as a status
+ * light. It is an icon in the state's own colour now, and the word beside it
+ * in the chip is what actually carries the meaning.
+ */
 .cd2004-readiness-marker {
   display: grid;
   place-items: center;
-  align-self: start;
   width: 17px;
   height: 17px;
-  margin-top: 1px;
-  color: #fff;
-  background: #7d8791;
-  border: 1px solid #4f5861;
-  font-weight: 700;
-  line-height: 1;
+  color: var(--tw-text-muted);
+  background: none;
+  border: 0;
+}
+
+.cd2004-readiness-marker svg {
+  width: 14px;
+  height: 14px;
 }
 
 .cd2004-readiness-item.is-complete .cd2004-readiness-marker {
-  background: var(--cd-green);
-  border-color: #044d29;
+  color: var(--tw-ready-fg);
 }
 
 .cd2004-readiness-item.is-warning .cd2004-readiness-marker {
-  color: #392200;
-  background: #f5c44e;
-  border-color: #946100;
+  color: var(--tw-review-fg);
 }
 
 .cd2004-readiness-item.is-stop .cd2004-readiness-marker {
-  background: var(--cd-red);
-  border-color: #6d0909;
+  color: var(--tw-stop-fg);
 }
 
 .cd2004-readiness-item strong,

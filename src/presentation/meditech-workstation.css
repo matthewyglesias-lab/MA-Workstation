@@ -316,10 +316,17 @@
     white-space: nowrap;
   }
 
+  /*
+   * The banner's `small` is a field label - FACESHEET, DOB, CLINIC - and small
+   * caps are right for those. This one is a value: the medication, the note
+   * type and its status. It inherited the label styling and shouted them.
+   */
   .meditech-patient-safety small {
-    color: var(--tw-teal-600);
-    font-size: 7px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    letter-spacing: normal;
     text-align: right;
+    text-transform: none;
   }
 
   .cd2004-patient-banner.has-active-chart .meditech-patient-safety {

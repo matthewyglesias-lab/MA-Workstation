@@ -2814,27 +2814,47 @@
    saturated colour carrying its own word, never hue alone. Scoped to
    documentation completeness - see the note in NoteInspector for why this must
    not be worded as clearance to administer. */
+/*
+ * The verdict, as a tinted band rather than a saturated fill. Solid red across
+ * the head of a panel is an alarm, and this is a documentation-completeness
+ * summary - the note in NoteInspector is explicit that it must not be worded,
+ * or read, as clearance to administer. The tone is unchanged and still comes
+ * from `summarizeReadinessVerdict`; it now carries a border and dark text on a
+ * light ground, like every other state in the product.
+ */
 .cd2004-shell .cd2004-readiness-verdict {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px;
-  padding: 3px 7px;
-  color: #fff;
-  border-bottom: 1px solid rgb(0 0 0 / 30%);
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
 .cd2004-shell .cd2004-readiness-verdict > strong {
-  font-size: 10px;
-  letter-spacing: 0.03em;
+  font-size: var(--tw-fs-ws-dense);
 }
 
 .cd2004-shell .cd2004-readiness-verdict > span {
   margin-left: auto;
-  font-size: 9px;
-  font-weight: 700;
+  font-size: var(--tw-fs-ws-meta);
+  font-weight: 600;
 }
 
-.cd2004-shell .cd2004-readiness-verdict.is-blocked { background: var(--cd-red); }
-.cd2004-shell .cd2004-readiness-verdict.is-review { background: var(--cd-amber); }
-.cd2004-shell .cd2004-readiness-verdict.is-clear { background: var(--cd-green); }
+.cd2004-shell .cd2004-readiness-verdict.is-blocked {
+  color: var(--tw-stop-fg);
+  background: var(--tw-stop-bg);
+  border-bottom-color: var(--tw-stop-border);
+}
+
+.cd2004-shell .cd2004-readiness-verdict.is-review {
+  color: var(--tw-review-fg);
+  background: var(--tw-review-bg);
+  border-bottom-color: var(--tw-review-border);
+}
+
+.cd2004-shell .cd2004-readiness-verdict.is-clear {
+  color: var(--tw-ready-fg);
+  background: var(--tw-ready-bg);
+  border-bottom-color: var(--tw-ready-border);
+}

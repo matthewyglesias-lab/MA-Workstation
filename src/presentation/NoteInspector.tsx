@@ -2,7 +2,40 @@ import { DesktopIcon } from "./DesktopIcon";
 import { summarizeReadinessVerdict } from "../application/readiness-projection";
 import { CHECKLIST, RECORD, SHELL, readinessVerdictCopy } from "./vocabulary";
 import { noteDocumentLines, noteDocumentStats } from "./note-document";
-import type { NoteSection, PatientContext, ReadinessItem } from "./types";
+import type {
+  ClinicalTone,
+  DesktopIconName,
+  NoteSection,
+  PatientContext,
+  ReadinessItem,
+} from "./types";
+
+/**
+ * The evaluator's four readiness states, mapped to presentation. The state
+ * keys are the engine's and never derived from the words - deriving a class
+ * or an icon from display copy is what MANIFEST 5b forbids, and what silently
+ * dropped `.is-filed` in Phase 1.
+ */
+const READINESS_STATE_LABEL: Record<ReadinessItem["state"], string> = {
+  complete: CHECKLIST.stateComplete,
+  pending: CHECKLIST.statePending,
+  warning: CHECKLIST.stateWarning,
+  stop: CHECKLIST.stateStop,
+};
+
+const READINESS_TONE: Record<ReadinessItem["state"], ClinicalTone> = {
+  complete: "ready",
+  pending: "neutral",
+  warning: "warning",
+  stop: "stop",
+};
+
+const READINESS_ICON: Record<ReadinessItem["state"], DesktopIconName> = {
+  complete: "check",
+  pending: "note",
+  warning: "alert",
+  stop: "alert",
+};
 
 interface NoteInspectorProps {
   title: string;
@@ -81,6 +114,8 @@ export function NoteInspector({
   const documentState = documentSigned ? RECORD.signed : RECORD.draft;
   const verdictCopy = verdict ? readinessVerdictCopy(verdict) : null;
 
+
+
   return (
     <div class={`cd2004-inspector is-${postState}`}>
       {/* The aggregate verdict, colour-coded, because a per-row scan is slower
@@ -102,36 +137,33 @@ export function NoteInspector({
         </div>
       )}
 
-      <div class="cd2004-readiness-list" aria-label="Readiness checks">
+      {/*
+        The Care Checklist. The engine's order is the worksheet's order, and
+        it is kept: MANIFEST 4.5 sorts open items above satisfied ones, which
+        is right for a Facesheet summary card and wrong for a list someone
+        works down while holding a syringe. An item that moves when you
+        complete it is an item you have to find again.
+      */}
+      <div class="cd2004-readiness-list" aria-label={CHECKLIST.title}>
         {readiness.length ? (
           readiness.map((item) => (
             <div key={item.id} class={`cd2004-readiness-item is-${item.state}`}>
               <span class="cd2004-readiness-marker" aria-hidden="true">
-                {item.state === "complete"
-                  ? "✓"
-                  : item.state === "stop"
-                    ? "×"
-                    : item.state === "warning"
-                      ? "!"
-                      : "·"}
+                <DesktopIcon name={READINESS_ICON[item.state]} />
               </span>
               <span>
                 <strong>{item.label}</strong>
                 {item.detail && <small>{item.detail}</small>}
               </span>
-              <small class="cd2004-readiness-state">
-                {item.state === "complete"
-                  ? "Complete"
-                  : item.state === "stop"
-                    ? "Required"
-                    : item.state === "warning"
-                      ? "Review"
-                      : "Pending"}
-              </small>
+              {/* The same chip Open Notes and the step rail use. One chip
+                  vocabulary: a state looks the same wherever it appears. */}
+              <span class={`cd2004-note-chip is-${READINESS_TONE[item.state]}`}>
+                {READINESS_STATE_LABEL[item.state]}
+              </span>
             </div>
           ))
         ) : (
-          <div class="cd2004-empty-row">Start the workflow to populate readiness.</div>
+          <div class="cd2004-empty-row">Start the note to build its checklist.</div>
         )}
       </div>
 

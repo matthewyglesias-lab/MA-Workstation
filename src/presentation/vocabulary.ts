@@ -174,9 +174,22 @@ export const PATIENT = {
 
 /* ----------------------------------------------------------------- checklist */
 
-/** Tebra's name for the outstanding-items list on a patient. */
+/**
+ * Tebra's name for the outstanding-items list on a patient, and the words for
+ * each item's state. These were four inline literals in NoteInspector, which
+ * is the thing this module exists to stop: renaming one meant finding it.
+ *
+ * The states are the evaluator's - `complete` / `pending` / `warning` /
+ * `stop`, from `projectClinicalReadiness` - and nothing here changes them.
+ * `stop` reads "Required" rather than "Blocked" because on a checklist item
+ * it names what the item needs, not what the record cannot do.
+ */
 export const CHECKLIST = {
   title: "Care Checklist",
+  stateComplete: "Done",
+  statePending: "Not started",
+  stateWarning: "Check",
+  stateStop: "Required",
 } as const;
 
 /* -------------------------------------------------------------------- shell */
