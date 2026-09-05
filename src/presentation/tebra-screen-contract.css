@@ -145,9 +145,13 @@
    * Identifiers, results and lot numbers stay monospaced - they are read
    * character by character and compared against a vial. Same intent as before;
    * the face is now the token mono rather than Courier New.
+   *
+   * `.wfp-ledger-sequence` and `.wfp-ledger-state` are no longer in this
+   * group. They belonged when a step's state was `PEND` or `OK` - four
+   * characters in a terminal cell. Phase 4a made them words, and a word set
+   * in mono reads as code rather than as a status. A step number is a
+   * position in a sequence, not an identifier anyone compares against a vial.
    */
-  .cd2004-shell .wfp-ledger-sequence,
-  .cd2004-shell .wfp-ledger-state,
   .cd2004-shell .wfp-result-cycle b,
   .cd2004-shell .wfp-result-flag {
     font-family: var(--tw-font-mono);

@@ -195,6 +195,13 @@ export const SHELL = {
   /** Compact provenance marker in the note heading. */
   localBadge: "Local",
   localOnlyDetail: "Records stay in this browser",
+  /**
+   * Kiosk mode. Named for what it does to the screen, not for the mode's
+   * internal flag - and the way back out says the same in reverse, so the
+   * control never reads as a one-way door.
+   */
+  enterKioskMode: "Enter kiosk mode",
+  exitKioskMode: "Exit kiosk mode",
   storageUnavailable: "Browser storage is unavailable",
   storageError: "Storage error",
 } as const;
