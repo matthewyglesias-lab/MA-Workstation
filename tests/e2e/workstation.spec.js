@@ -1103,7 +1103,12 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(workQueue.locator('tbody tr')).toHaveCount(3);
     await page.getByRole('tab', { name: /Needs review/ }).click();
     await expect(workQueue.locator('tbody tr')).toHaveCount(1);
-    await expect(workQueue.getByRole('button', { name: 'Review', exact: true })).toBeVisible();
+    // Phase 3: the whole row opens the note, so there is no trailing Review /
+    // Resume / View button any more. The row's accessible target is the
+    // patient button in the first cell, which is what a keyboard or screen
+    // reader user activates.
+    await expect(workQueue.getByRole('button', { name: 'Chen, Avery' })).toBeVisible();
+    await expect(workQueue.locator('.cd2004-note-chip')).toHaveText('Needs review');
     await expect(page.locator('.cd2004-activity-list')).toHaveCount(0);
   });
 
@@ -2528,7 +2533,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(savedDraftsTab).toContainText('1');
     await savedDraftsTab.click();
     await expect(records).toContainText('QA, Start Center Open');
-    await records.getByRole('button', { name: 'Resume', exact: true }).click();
+    // The row is the target; the patient button carries it for the keyboard.
+    await records.getByRole('button', { name: 'QA, Start Center Open' }).click();
 
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
     await expect(page.locator('#ptName')).toHaveValue('QA, Start Center Open');

@@ -164,6 +164,81 @@ test.describe('Tebra screen contract', () => {
     expect(coralFills).toHaveLength(1);
   });
 
+  // MANIFEST 4.1. Open Notes is where a third-party build gives itself away:
+  // the column set, the click-to-sort-click-again-to-reverse behaviour, the
+  // whole-row target and the lock glyph are all Tebra conventions, and each
+  // one is a seam if it is missing or behaves differently.
+  test('runs Open Notes on Tebra table conventions', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-08-03T10:30:00-07:00'));
+    await page.addInitScript(() => {
+      localStorage.clear();
+      localStorage.setItem(
+        'ipmgMedAssistActivityLog_2026-08-03',
+        JSON.stringify([
+          { time: '9:18 AM', type: 'injection', status: 'completed', pt: 'Rivera, Jordan', summary: 'Routine administration completed' },
+          { time: '9:42 AM', type: 'uds', status: 'needs_review', pt: 'Chen, Avery', summary: 'Preliminary result requires review' },
+          { time: '10:06 AM', type: 'sample', status: 'completed', pt: 'Morgan, Casey', summary: 'Package traceability complete' }
+        ])
+      );
+    });
+    await page.goto('/');
+
+    const table = page.locator('.cd2004-worklist-table');
+    await expect(table.locator('tbody tr')).toHaveCount(3);
+
+    // Tebra's column set, in Tebra's order. The lock heading is for screen
+    // readers - the column shows a glyph.
+    const headers = await table.locator('thead th').allInnerTexts();
+    expect(headers.map(text => text.replace(/[▲▼]/g, '').trim())).toEqual([
+      'Patient', 'Lock', 'Type', 'Status', 'Visit date'
+    ]);
+    // The lock column is named for assistive technology and shows a glyph to
+    // everyone else, which is how Tebra ships it.
+    await expect(table.locator('thead th').nth(1)).toHaveText('Lock');
+    await expect(table.locator('thead th .cd2004-visually-hidden')).toHaveCount(1);
+
+    // Click sorts; click again reverses.
+    const patientHeader = table.locator('thead th').first();
+    await expect(patientHeader).toHaveAttribute('aria-sort', 'none');
+    await patientHeader.getByRole('button').click();
+    await expect(patientHeader).toHaveAttribute('aria-sort', 'ascending');
+    const ascending = await table.locator('tbody tr td:first-child').allInnerTexts();
+    await patientHeader.getByRole('button').click();
+    await expect(patientHeader).toHaveAttribute('aria-sort', 'descending');
+    const descending = await table.locator('tbody tr td:first-child').allInnerTexts();
+    expect(descending).toEqual([...ascending].reverse());
+
+    // Visit date sorts on the time, not on its text. "10:06 AM" sorting
+    // before "9:18 AM" is the failure this catches.
+    const visitHeader = table.locator('thead th').last();
+    await visitHeader.getByRole('button').click();
+    const visits = await table.locator('tbody tr td:last-child').allInnerTexts();
+    expect(visits.map(text => text.trim())).toEqual(['9:18 AM', '9:42 AM', '10:06 AM']);
+
+    // A signed note is locked and says so on hover; one awaiting review is
+    // not locked, because the work is not finished.
+    const rows = table.locator('tbody tr');
+    const lockState = await rows.evaluateAll(nodes =>
+      nodes.map(node => ({
+        patient: node.querySelector('td:first-child')?.textContent?.trim(),
+        locked: Boolean(node.querySelector('.cd2004-worklist-lock')),
+        status: node.querySelector('.cd2004-note-chip')?.textContent?.trim(),
+        // Status is never colour alone: icon and word, MANIFEST 5 q7.
+        statusHasIcon: Boolean(node.querySelector('.cd2004-note-chip svg'))
+      }))
+    );
+    expect(lockState).toEqual([
+      { patient: 'Rivera, Jordan', locked: true, status: 'Signed', statusHasIcon: true },
+      { patient: 'Chen, Avery', locked: false, status: 'Needs review', statusHasIcon: true },
+      { patient: 'Morgan, Casey', locked: true, status: 'Signed', statusHasIcon: true }
+    ]);
+
+    // The whole row opens the note - no trailing "open" link.
+    await expect(table.getByRole('button', { name: /Review|Resume|View/ })).toHaveCount(0);
+    await rows.filter({ hasText: 'Chen, Avery' }).click();
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'uds');
+  });
+
   test('boots into a skeleton of the shell, carrying the local-only disclosure', async ({ page }) => {
     // The first frame paints before the module graph loads, so it is inline
     // HTML/CSS in index.html and nothing else on the page can be relied on.

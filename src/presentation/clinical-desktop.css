@@ -1263,12 +1263,7 @@ input[type="radio"]:disabled {
   line-height: 1.25;
 }
 
-/*
- * `.cd2004-worklist-action` is the per-row secondary - Review, Resume, View -
- * and stays quiet: a hairline outline on the panel surface.
- */
-.cd2004-worklist-new,
-.cd2004-worklist-action {
+.cd2004-worklist-new {
   min-height: var(--tw-btn-h-ws);
   color: var(--tw-teal-900);
   background: var(--tw-surface-panel);
@@ -1302,25 +1297,14 @@ input[type="radio"]:disabled {
   background: var(--tw-coral-300);
 }
 
-.cd2004-worklist-action:hover:not(:disabled) {
-  background: var(--tw-mint-50);
-  border-color: var(--tw-teal-600);
-}
-
 .cd2004-worklist-new:active:not(:disabled) {
   background: var(--tw-coral-600);
 }
 
-.cd2004-worklist-action:active:not(:disabled) {
-  box-shadow: inset 1px 1px var(--tw-teal-500);
-  transform: translate(1px, 1px);
-}
-
-.cd2004-worklist-new:disabled,
-.cd2004-worklist-action:disabled {
-  color: #788390;
-  background: #e5e7eb;
-  border-color: #a2a9b4;
+.cd2004-worklist-new:disabled {
+  color: var(--tw-text-muted);
+  background: var(--tw-surface-sunken);
+  border-color: var(--tw-border-subtle);
   cursor: default;
 }
 
@@ -1417,29 +1401,38 @@ input[type="radio"]:disabled {
   letter-spacing: 0.02em;
 }
 
+/*
+ * Column widths for Tebra's set: Patient · Lock · Type · Status · Visit date.
+ * The lock and the visit date are fixed - a glyph and a clock time have a
+ * known size and should not breathe with the window - and the proportional
+ * space goes to Type, which carries the medication line.
+ *
+ * These were declared twice, here and again at the desktop breakpoint in
+ * meditech-workstation.css. The duplicate is deleted; this is the only
+ * declaration.
+ */
 .cd2004-worklist-table th:nth-child(1) {
-  width: 17%;
+  width: 24%;
 }
 
 .cd2004-worklist-table th:nth-child(2) {
-  width: 22%;
+  width: 32px;
 }
 
 .cd2004-worklist-table th:nth-child(3) {
-  width: 35%;
+  width: auto;
 }
 
 .cd2004-worklist-table th:nth-child(4) {
-  width: 15%;
+  width: 130px;
 }
 
 .cd2004-worklist-table th:last-child {
-  width: 78px;
+  width: 96px;
   border-right: 0;
 }
 
 .cd2004-worklist-table td:last-child {
-  text-align: center;
   border-right: 0;
 }
 
@@ -1485,26 +1478,152 @@ input[type="radio"]:disabled {
   text-overflow: ellipsis;
 }
 
-.cd2004-worklist-state {
-  font-size: 10px;
+/*
+ * The status chip. `.cd2004-worklist-state` was coloured text in a cell -
+ * colour carrying the state on its own. A chip carries the word inside a
+ * tinted, bordered shape, which is what Tebra ships and what MANIFEST 5
+ * question 7 requires: the state is legible without relying on hue.
+ */
+.cd2004-note-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 6px;
+  color: var(--tw-text-secondary);
+  background: var(--tw-surface-sunken);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
+  line-height: var(--tw-lh-ws-label);
+  white-space: nowrap;
 }
 
-.cd2004-worklist-state.is-ready {
-  color: #12653a;
+.cd2004-note-chip svg {
+  width: 12px;
+  height: 12px;
 }
 
-.cd2004-worklist-state.is-warning {
-  color: #875200;
+.cd2004-note-chip.is-ready {
+  color: var(--tw-ready-fg);
+  background: var(--tw-ready-bg);
+  border-color: var(--tw-ready-border);
 }
 
-.cd2004-worklist-state.is-stop {
-  color: #9c1414;
+.cd2004-note-chip.is-warning {
+  color: var(--tw-review-fg);
+  background: var(--tw-review-bg);
+  border-color: var(--tw-review-border);
 }
 
-.cd2004-worklist-action {
-  min-width: 58px;
-  padding: 2px 6px;
+.cd2004-note-chip.is-stop {
+  color: var(--tw-stop-fg);
+  background: var(--tw-stop-bg);
+  border-color: var(--tw-stop-border);
+}
+
+/*
+ * Sortable headers. The direction mark is reserved at all times and only
+ * inked on the sorted column, so sorting never shifts the header row; the
+ * others surface theirs on hover, which keeps five columns from reading as
+ * five buttons.
+ */
+.cd2004-worklist-sortable button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cd2004-worklist-sort-mark {
+  color: transparent;
+  font-size: 8px;
+}
+
+.cd2004-worklist-sortable:hover .cd2004-worklist-sort-mark {
+  color: var(--tw-text-muted);
+}
+
+.cd2004-worklist-sortable.is-sorted .cd2004-worklist-sort-mark {
+  color: var(--tw-teal-800);
+}
+
+.cd2004-worklist-lock-column {
+  width: 28px;
+  text-align: center;
+}
+
+.cd2004-worklist-lock {
+  display: inline-grid;
+  place-items: center;
+  color: var(--tw-text-secondary);
+}
+
+.cd2004-worklist-lock svg {
+  width: 13px;
+  height: 13px;
+}
+
+/*
+ * The whole row opens the note. The row carries the pointer target; this
+ * button carries the keyboard and screen-reader one, so it has to look like
+ * the cell text rather than like a control.
+ */
+.cd2004-worklist-open {
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  color: var(--tw-text-primary);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.cd2004-worklist-open:disabled {
+  color: var(--tw-text-muted);
+  cursor: default;
+}
+
+.cd2004-worklist-table tbody tr.is-openable {
+  cursor: pointer;
+}
+
+.cd2004-worklist-table tbody tr.is-openable:hover {
+  background: var(--tw-mint-50);
+}
+
+/* Type over its detail: Tebra has no detail column, and the medication is
+   the line an MA scans for, so it rides under the note type. */
+.cd2004-worklist-type {
+  display: grid;
+  min-width: 0;
+}
+
+.cd2004-worklist-type strong {
+  font-size: var(--tw-fs-ws-meta);
+  font-weight: 600;
+}
+
+.cd2004-worklist-type small,
+.cd2004-worklist-visit {
+  overflow: hidden;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-label);
+  line-height: var(--tw-lh-ws-label);
+  text-overflow: ellipsis;
+}
+
+.cd2004-worklist-visit {
+  font-variant-numeric: var(--tw-numeric-tabular);
 }
 
 .cd2004-worklist-empty td {
@@ -1621,11 +1740,6 @@ input[type="radio"]:disabled {
     grid-row: 3;
     align-self: end;
     padding-top: 4px;
-  }
-
-  .cd2004-worklist-action {
-    width: 100%;
-    min-height: 28px;
   }
 
   .cd2004-worklist-empty td {

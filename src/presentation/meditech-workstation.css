@@ -2404,26 +2404,6 @@
     text-transform: uppercase;
   }
 
-  .cd2004-worklist-source-icon {
-    display: inline-grid;
-    place-items: center;
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
-    color: var(--tw-teal-600);
-    background: var(--tw-mint-50);
-    border: 1px solid var(--tw-teal-300);
-  }
-
-  .cd2004-worklist-source-icon svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  .cd2004-worklist-priority-copy {
-    min-width: 0;
-  }
-
   .cd2004-worklist-table tbody tr:focus-within td {
     color: #101010;
     background: var(--cd-selection);
@@ -2629,16 +2609,6 @@
 
   .meditech-command-deck button > span {
     font-size: 9px;
-  }
-
-  .cd2004-worklist-table tbody tr:not(.cd2004-worklist-empty) td:first-child {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .cd2004-worklist-table .cd2004-worklist-empty td:first-child {
-    display: table-cell;
   }
 
   .cd2004-worklist-table th,
@@ -2853,10 +2823,6 @@
     color: #fff;
     background: var(--tw-teal-600);
     border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900);
-  }
-
-  .cd2004-worklist-source-icon {
-    margin-right: 5px;
   }
 
   .cd2004-attestation-review {
@@ -3258,19 +3224,6 @@
     min-height: 17px !important;
   }
 
-  .cd2004-worklist-source-icon {
-    width: 18px;
-    height: 18px;
-    color: inherit;
-    background: transparent;
-    border: 0;
-  }
-
-  .cd2004-worklist-source-icon svg {
-    width: 15px;
-    height: 15px;
-  }
-
   .cd2004-worklist-new {
     display: inline-flex;
     align-items: center;
@@ -3375,25 +3328,9 @@
     min-width: 0;
   }
 
-  .cd2004-worklist-table th:nth-child(1) {
-    width: 17%;
-  }
-
-  .cd2004-worklist-table th:nth-child(2) {
-    width: 22%;
-  }
-
-  .cd2004-worklist-table th:nth-child(3) {
-    width: 31%;
-  }
-
-  .cd2004-worklist-table th:nth-child(4) {
-    width: 16%;
-  }
-
-  .cd2004-worklist-table th:last-child {
-    width: 62px;
-  }
+  /* The duplicate column widths that lived here described the old column
+     set and were the declaration that actually applied at desktop. Deleted;
+     clinical-desktop.css owns them. */
 }
 
 @media screen and (max-width: 700px) {
