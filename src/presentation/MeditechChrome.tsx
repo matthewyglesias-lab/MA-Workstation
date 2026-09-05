@@ -185,11 +185,13 @@ export function MeditechCommandDeck({
     <div
       class="meditech-command-deck cd2004-print-exclude"
       role="toolbar"
-      aria-label="MEDITECH function key commands"
+      aria-label="Function key commands"
     >
+      {/* "CMD" was a terminal prompt marker, and the shouted context beside
+          it was the same word the screen already shows. What is useful here
+          is where you are, said once. */}
       <span class="meditech-command-prompt">
-        <strong>CMD</strong>
-        <span>{contextCode ?? WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}</span>
+        <span>{contextCode ?? WORKFLOW_LABELS[selectedWorkflow]}</span>
       </span>
       {FUNCTION_KEY_DECK_PROFILE.map((command) => {
         const action = actions[command.id] ?? {};

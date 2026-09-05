@@ -15,281 +15,225 @@
     display: none;
   }
 
-  /* Literal colours throughout this gate, not var(--cd-*): those tokens are
-     declared on .cd2004-shell, and this gate replaces the shell entirely
-     when the window is too small to render it (see .is-unsupported above). */
+  /*
+   * The unsupported-viewport gate. It is the first - often the only - screen
+   * a phone ever sees, and it was a Windows 95 dialog: a gradient caption
+   * strip with a beveled icon well, a sunken body panel, a hard offset
+   * shadow, and a warning triangle in highlight yellow. Rebuilt as a card.
+   *
+   * Token colours throughout, not `var(--cd-*)`: those are declared on
+   * .cd2004-shell, and this gate replaces the shell entirely when the window
+   * is too small to render it (see .is-unsupported above). The tokens are on
+   * :root, so they resolve here.
+   */
   .meditech-workstation-gate {
-  box-sizing: border-box;
-  display: grid;
-  min-width: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
-  place-items: center;
-  padding: 14px;
-  color: #101010;
-  background: var(--tw-teal-200);
-  font-family: var(--tw-font-sans);
+    box-sizing: border-box;
+    display: grid;
+    min-width: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    place-items: center;
+    padding: 20px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-page);
+    font-family: var(--tw-font-sans);
+    font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
   }
 
   .meditech-workstation-gate *,
   .meditech-workstation-gate *::before,
   .meditech-workstation-gate *::after {
-  box-sizing: border-box;
+    box-sizing: border-box;
   }
 
   .meditech-workstation-gate-window {
-  width: min(100%, 520px);
-  background: var(--tw-mint-150);
-  border: 1px solid var(--tw-teal-800);
-  box-shadow: 2px 2px 0 var(--tw-teal-500);
+    width: min(100%, 460px);
+    overflow: hidden;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card);
   }
 
+  /* The product bar, matching the app bar the workstation itself wears, so
+     the small-screen path is recognisably the same module. */
   .meditech-workstation-gate-window > header {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  align-items: center;
-  min-height: 25px;
-  gap: 5px;
-  padding: 2px 5px;
-  color: #fff;
-  background: linear-gradient(90deg, var(--tw-teal-800), var(--tw-teal-500) 72%, var(--tw-teal-300));
-  border-bottom: 1px solid var(--tw-teal-900);
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 38px;
+    gap: 10px;
+    padding: 0 12px;
+    color: var(--tw-white);
+    background: var(--tw-teal-900);
   }
 
   .meditech-workstation-gate-window > header > span {
-  display: grid;
-  width: 16px;
-  height: 16px;
-  place-items: center;
-  background: var(--tw-mint-50);
-  border: 1px solid var(--tw-teal-900);
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    color: var(--tw-white);
+    background: rgb(255 255 255 / 14%);
+    border-radius: var(--tw-radius-ws);
   }
 
   .meditech-workstation-gate-window > header svg {
-  width: 13px;
-  height: 13px;
+    width: 16px;
+    height: 16px;
   }
 
   .meditech-workstation-gate-window > header strong {
-  font-size: 10px;
+    font-size: var(--tw-fs-ws-base);
+    font-weight: 600;
   }
 
+  /* The local-only disclosure, as the chip it is on the app bar. This is the
+     first screen staff see on a phone and PLAN 7 requires it to be legible
+     there, not a yellow caption note. */
   .meditech-workstation-gate-window > header small {
-  color: #fff4a8;
-  font-size: 8px;
-  font-weight: 700;
+    padding: 2px 8px;
+    color: var(--tw-teal-900);
+    background: var(--tw-sand-150);
+    border-radius: var(--tw-radius-pill);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 700;
+    letter-spacing: var(--tw-ls-ws-label);
+    white-space: nowrap;
   }
 
   .meditech-workstation-gate-body {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 10px;
-  margin: 8px;
-  padding: 12px;
-  background: #fffef8;
-  border: 1px solid;
-  border-color: var(--tw-teal-500) #fff #fff var(--tw-teal-500);
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 14px;
+    margin: 0;
+    padding: 20px;
+    background: var(--tw-surface-panel);
+    border: 0;
   }
 
+  /* Review, not alarm: the window being too small is a thing to fix, not a
+     clinical stop, so it takes the review tone rather than a warning fill. */
   .meditech-workstation-gate-alert {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  background: #fff0a5;
-  border: 1px solid #9a6b16;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border: 1px solid var(--tw-review-border);
+    border-radius: var(--tw-radius-ws);
   }
 
   .meditech-workstation-gate-alert svg {
-  width: 22px;
-  height: 22px;
+    width: 22px;
+    height: 22px;
   }
 
   .meditech-workstation-gate h1 {
-  margin: 0 0 6px;
-  color: var(--tw-teal-800);
-  font-size: 15px;
-  line-height: 1.15;
+    margin: 0 0 8px;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-lead);
+    line-height: var(--tw-lh-ws-base);
   }
 
   .meditech-workstation-gate p {
-  margin: 0 0 10px;
-  font-size: 11px;
-  line-height: 1.4;
+    margin: 0 0 14px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
   }
 
   .meditech-workstation-gate dl {
-  margin: 0;
-  background: #fff;
-  border: 1px solid var(--tw-teal-300);
+    margin: 0;
+    overflow: hidden;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-ws);
   }
 
   .meditech-workstation-gate dl > div {
-  display: grid;
-  grid-template-columns: minmax(100px, 0.45fr) minmax(0, 1fr);
-  min-height: 22px;
-  border-bottom: 1px solid var(--tw-mint-200);
+    display: grid;
+    grid-template-columns: minmax(100px, 0.45fr) minmax(0, 1fr);
+    min-height: 28px;
+    border-bottom: 1px solid var(--tw-border-subtle);
   }
 
   .meditech-workstation-gate dl > div:last-child {
-  border-bottom: 0;
+    border-bottom: 0;
   }
 
   .meditech-workstation-gate dt,
   .meditech-workstation-gate dd {
-  margin: 0;
-  padding: 4px 6px;
-  font-size: 9px;
+    margin: 0;
+    padding: 5px 10px;
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
   }
 
   .meditech-workstation-gate dt {
-  color: var(--tw-teal-800);
-  background: var(--tw-mint-150);
-  border-right: 1px solid var(--tw-teal-300);
-  font-weight: 700;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-sunken);
+    border-right: 1px solid var(--tw-border-subtle);
+    font-weight: 600;
   }
 
   .meditech-workstation-gate dd {
-  font-weight: 700;
+    color: var(--tw-text-primary);
+    font-weight: 600;
   }
 
   .meditech-workstation-gate-window > footer {
-  min-height: 24px;
-  padding: 5px 8px;
-  color: var(--tw-teal-800);
-  background: var(--tw-teal-200);
-  border-top: 1px solid #fff;
-  font-size: 9px;
-  text-align: right;
+    min-height: 32px;
+    padding: 8px 20px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-sunken);
+    border-top: 1px solid var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
   }
 }
 
 @media screen {
+  /*
+   * The `--mt-*` layer is gone. It aliased eleven names onto the tokens and
+   * then redeclared `--cd-navy`, `--cd-navy-dark`, `--cd-navy-light` and
+   * `--cd-focus` on top of clinical-desktop.css's own values from a later
+   * file - the same override-the-base pattern Phase 2a removed from
+   * meditech-screen-contract.css. Only five of the aliases were ever read;
+   * those five reference the tokens directly now, and the indirection is
+   * deleted rather than retargeted.
+   *
+   * `--mt-selected` was Windows highlight yellow (#fff0a5). Nothing in the
+   * Tebra palette is that colour and selection there is a tint of the brand,
+   * so its two readers take the mint selection instead.
+   *
+   * The icon palette below is a new declaration, not an alias: DesktopIcon and
+   * SiteIcon already read `--mt-icon-*` with hard-coded blue, navy and yellow
+   * fallbacks, so the glyphs stayed MEDITECH-coloured through Phase 2a. Naming
+   * the variables here retints every icon without touching the components.
+   */
+  /* On :root, not on .cd2004-shell. DesktopIcon also renders in the
+     unsupported-viewport gate, which replaces the shell rather than sitting
+     inside it, so a shell-scoped palette left that screen's glyphs on their
+     MEDITECH fallbacks. */
+  :root {
+    --mt-icon-ink: var(--tw-teal-900);
+    --mt-icon-blue: var(--tw-teal-600);
+    --mt-icon-blue-light: var(--tw-teal-200);
+    --mt-icon-yellow: var(--tw-sand-300);
+    --mt-icon-paper: var(--tw-sand-150);
+    --mt-icon-red: var(--tw-stop-fg);
+    --mt-icon-green: var(--tw-ready-fg);
+    --mt-icon-metal: var(--tw-mint-200);
+  }
+
   .cd2004-shell {
-    --mt-teal: var(--tw-teal-600);
-    --mt-teal-deep: var(--tw-teal-800);
-    --mt-teal-mid: var(--tw-teal-300);
-    --mt-lavender: var(--tw-teal-200);
-    --mt-lavender-light: var(--tw-teal-200);
-    --mt-mint: #c8efbf;
-    --mt-mint-dark: #9ed499;
-    --mt-panel: var(--tw-mint-150);
-    --mt-paper: #ffffff;
-    --mt-line: var(--tw-teal-500);
-    --mt-blue-gray: var(--tw-teal-300);
-    --mt-selected: #fff0a5;
-    --mt-command: var(--tw-teal-600);
-    --cd-navy: var(--mt-teal);
-    --cd-navy-dark: var(--mt-teal-deep);
-    --cd-navy-light: var(--mt-teal-mid);
-    --cd-focus: #f5b300;
-    color: #101010;
-    background: var(--mt-lavender);
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-page);
     font-family: var(--tw-font-sans);
-    font-size: 11px;
-    line-height: 1.25;
-  }
-
-  .cd2004-shell :where(
-      button,
-      input,
-      select,
-      textarea,
-      [role="tab"],
-      [role="menuitem"]
-    ):focus-visible {
-    outline: 1px dotted #101010 !important;
-    outline-offset: -3px !important;
-    box-shadow: 0 0 0 1px #f3be28 !important;
-  }
-
-  .cd2004-application-header {
-    border-bottom: 2px solid var(--tw-teal-500);
-    background: var(--tw-mint-150);
-    box-shadow: inset 0 -1px var(--cd-border-light);
-  }
-
-  .cd2004-app-titlebar {
-    height: 30px;
-    padding: 3px 5px;
-    background: linear-gradient(90deg, var(--tw-teal-800) 0%, var(--tw-teal-600) 58%, var(--tw-teal-300) 100%);
-    border-bottom: 1px solid var(--tw-teal-900);
-    font-size: 11px;
-    letter-spacing: 0;
-  }
-
-  .cd2004-app-logo {
-    width: 21px;
-    height: 20px;
-    margin-right: 5px;
-    color: var(--tw-teal-800);
-    background: var(--tw-mint-50);
-    border-color: var(--tw-teal-900);
-  }
-
-  .cd2004-app-title {
-    display: flex;
-    align-items: baseline;
-    gap: 7px;
-  }
-
-  .cd2004-app-title > b {
-    color: #fff3a5;
-    font: 700 12px/1 "Arial Narrow", var(--tw-font-sans);
-    letter-spacing: 0.08em;
-  }
-
-  .cd2004-app-title > span {
-    font-weight: 700;
-  }
-
-  .cd2004-app-title > small {
-    color: var(--tw-mint-50);
-    font-size: 9px;
-    font-weight: 400;
-  }
-
-  .cd2004-app-environment {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-left: 8px;
-    letter-spacing: 0;
-  }
-
-  .cd2004-app-environment b {
-    padding: 1px 4px;
-    color: var(--tw-teal-900);
-    background: var(--tw-mint-50);
-    border: 1px solid var(--tw-teal-900);
-    font-size: 8px;
-  }
-
-  .cd2004-app-environment small {
-    overflow: hidden;
-    max-width: 310px;
-    color: var(--tw-mint-50);
-    font-size: 8px;
-    letter-spacing: 0.08em;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .cd2004-menu-bar {
-    min-height: 22px;
-    padding: 0 3px;
-    background: var(--tw-teal-200);
-    border-bottom-color: var(--tw-teal-300);
-  }
-
-  .cd2004-menu-title {
-    min-width: 40px;
-    padding: 3px 7px 4px;
-  }
-
-  .cd2004-menu-title[aria-expanded="true"],
-  .cd2004-menu-title:hover {
-    background: var(--mt-teal);
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
   }
 
   .cd2004-patient-banner {
@@ -299,89 +243,70 @@
       minmax(120px, 0.58fr)
       minmax(145px, 0.72fr)
       minmax(170px, 0.85fr);
-    grid-template-rows: minmax(42px, auto) 19px;
+    grid-template-rows: minmax(42px, auto) auto;
     min-height: 63px;
-    color: #101010;
-    background: var(--tw-mint-150);
-    border-top: 1px solid var(--cd-border-light);
-    border-bottom: 2px solid var(--tw-teal-500);
   }
 
   .cd2004-patient-primary,
   .cd2004-patient-field {
-    padding: 4px 8px;
-    border-right-color: var(--tw-teal-300);
-    box-shadow: inset -1px 0 #f8f8ff;
+    padding: 6px 10px;
   }
 
   .cd2004-patient-primary {
     grid-template-columns: 26px minmax(0, 1fr);
-    gap: 5px;
-    background: var(--tw-teal-200);
+    gap: 6px;
   }
 
   .cd2004-patient-primary > svg {
     width: 22px;
     height: 22px;
-    color: var(--tw-teal-600);
   }
 
-  .cd2004-patient-banner small {
-    color: var(--tw-teal-600);
-    font: 700 8px "Arial Narrow", "MS Sans Serif", sans-serif;
-    letter-spacing: 0.08em;
-  }
-
-  .cd2004-patient-banner strong,
-  .cd2004-patient-primary strong {
-    color: #101010;
-    font: 700 11px "Arial Narrow", "MS Sans Serif", sans-serif;
-    letter-spacing: 0.035em;
-    text-transform: uppercase;
-  }
-
-  /* Green is reserved for an identified patient context: either a local
-     record identifier or the two displayed patient identifiers. */
+  /*
+   * An identified patient context stays green. The whole state was rendered
+   * in the Windows-era greens - #b9eab0 on the name cell, #7cb07c gutters and
+   * an #edffea inset highlight beside each one - so it read as a coloured
+   * table rather than a tinted banner. The ready tokens carry the same
+   * meaning, and the state is still named in words in the banner itself.
+   */
   .cd2004-patient-banner.has-active-chart {
-    background: var(--mt-mint);
-    border-bottom-color: #4c8551;
-  }
-
-  .cd2004-patient-banner.has-active-chart .cd2004-patient-primary {
-    background: #b9eab0;
+    background: var(--tw-ready-bg);
+    border-bottom-color: var(--tw-ready-border);
   }
 
   .cd2004-patient-banner.has-active-chart .cd2004-patient-primary,
   .cd2004-patient-banner.has-active-chart .cd2004-patient-field {
-    border-right-color: #7cb07c;
-    box-shadow: inset -1px 0 #edffea;
+    border-right-color: var(--tw-ready-border);
   }
 
   .cd2004-patient-banner.has-active-chart small {
-    color: #285b32;
+    color: var(--tw-ready-fg);
   }
 
+  /* The allergy line is the one row in the banner that has to survive a
+     glance, so it sits on its own tinted strip rather than in the same
+     surface as the identifiers. */
   .meditech-patient-safety {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     min-width: 0;
-    padding: 2px 8px;
-    background: var(--tw-teal-200);
-    border-top: 1px solid var(--tw-teal-300);
-    font: 700 9px "Arial Narrow", "MS Sans Serif", sans-serif;
-    letter-spacing: 0.03em;
+    padding: 4px 12px;
+    background: var(--tw-surface-sunken);
+    border-top: 1px solid var(--cd-border-mid);
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 500;
+    line-height: var(--tw-lh-ws-meta);
   }
 
+  /* The general banner <strong> rule no longer upper-cases anything, so the
+     opt-out this label used to need is gone with it. */
   .meditech-patient-safety strong {
     color: var(--cd-red);
-    font-size: 9px;
-    /* This label reads real MEDITECH's exact mixed-case wording
-       ("Allergy/AdvReac:"); the general patient-banner <strong> rule
-       upper-cases everything else in the banner, so opt back out here. */
-    text-transform: none;
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 700;
   }
 
   .meditech-patient-safety b {
@@ -443,49 +368,15 @@
     grid-template-rows: minmax(0, 1fr);
     gap: 3px;
     padding: 3px;
-    background: var(--mt-lavender);
+    background: var(--tw-surface-page);
   }
 
-  .cd2004-window {
-    border-width: 1px;
-    border-color: #fbfbff var(--tw-teal-600) var(--tw-teal-600) #fbfbff;
-    background: var(--tw-mint-150);
-    box-shadow:
-      inset 1px 1px #f8f8ff,
-      inset -1px -1px var(--tw-teal-300),
-      1px 1px 0 rgb(0 0 0 / 24%);
-  }
-
-  .cd2004-window-titlebar {
-    min-height: 22px;
-    padding: 2px 4px;
-    color: #fff;
-    background: linear-gradient(90deg, var(--tw-teal-500), var(--tw-teal-300));
-    border-bottom-color: var(--tw-teal-600);
-    font-size: 10px;
-  }
-
-  .cd2004-window.is-active > .cd2004-window-titlebar,
-  .cd2004-help-dialog > .cd2004-window-titlebar {
-    background: linear-gradient(90deg, var(--tw-teal-600), var(--tw-teal-500));
-  }
-
-  .cd2004-window-mark {
-    width: 9px;
-    height: 9px;
-    background: #dff0e7;
-    border-color: #002e36;
-  }
-
-  .cd2004-window-title small {
-    color: #cfe7e5;
-    font-size: 8px;
-  }
-
+  /* The window was redeclared here as a bevelled frame with a gradient
+     caption. Deleted; the panel is declared once, in clinical-desktop.css. */
   .cd2004-window-toolbar {
-    background: var(--tw-mint-150);
-    border-bottom-color: var(--tw-teal-300);
-    font-size: 10px;
+    background: var(--tw-surface-panel);
+    border-bottom-color: var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-work-window {
@@ -811,20 +702,27 @@
     grid-row: auto;
   }
 
+  /*
+   * The section rail. It was drawn as a raised desktop window: a four-way
+   * bevel border, two inset highlights and a hard drop shadow, with a
+   * saturated teal caption bar per section. Tebra's rail is a panel - white,
+   * one hairline, the workstation radius - and its section headings are
+   * headings rather than title bars.
+   */
   .cd2004-navigator.meditech-record-list {
     display: grid;
-    grid-template-rows: 23px 19px 21px minmax(0, 1fr);
+    /* Three children - title, context strip, function list - and the list
+       takes the remaining height. The rail declared a fourth track that no
+       child ever occupied, and a later overlay silently corrected it; with
+       the overlay folded in, the track count is right here. */
+    grid-template-rows: auto auto minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
     padding: 0;
     overflow: hidden;
-    background: var(--tw-teal-200);
-    border: 1px solid;
-    border-color: #fbfbff var(--tw-teal-600) var(--tw-teal-600) #fbfbff;
-    box-shadow:
-      inset 1px 1px #f8f8ff,
-      inset -1px -1px var(--tw-teal-300),
-      1px 1px 0 rgb(0 0 0 / 24%);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-ws);
   }
 
   .meditech-rail-title,
@@ -833,34 +731,40 @@
     align-items: center;
     justify-content: space-between;
     min-width: 0;
-    padding: 3px 5px;
-    color: #fff;
-    background: var(--tw-teal-500);
-    border-bottom: 1px solid var(--tw-teal-800);
+    padding: 6px 10px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border-bottom: 1px solid var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-base);
     font-weight: 700;
   }
 
+  /* Two lines, not two columns: the rail is 190px wide and the context is a
+     patient name over a hint, so side-by-side truncated both. */
   .meditech-rail-context {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4px;
+    display: grid;
+    align-content: center;
+    gap: 1px;
     min-width: 0;
-    padding: 2px 5px;
-    color: var(--tw-teal-600);
-    background: var(--tw-mint-50);
-    border-bottom: 1px solid var(--tw-teal-300);
-    font-size: 7px;
+    min-height: 38px;
+    padding: 4px 10px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-sunken);
+    border-bottom: 1px solid var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
   }
 
   .meditech-rail-context strong {
-    color: var(--tw-teal-800);
-    font-size: 7px;
-    letter-spacing: 0.06em;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .meditech-rail-context span {
+    min-width: 0;
     overflow: hidden;
+    font-size: var(--tw-fs-ws-label);
+    line-height: var(--tw-lh-ws-label);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -873,92 +777,115 @@
 
   .meditech-rail-records-command button {
     display: grid;
-    width: 19px;
-    height: 17px;
+    width: 22px;
+    height: 22px;
     place-items: center;
     padding: 0;
-    color: #101010;
-    background: var(--tw-mint-50);
-    border: 1px solid;
-    border-color: #fff var(--tw-teal-600) var(--tw-teal-600) #fff;
+    color: var(--tw-text-primary);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tw-radius-ws);
   }
 
-  .meditech-rail-records-command button:active:not(:disabled) {
-    border-color: var(--tw-teal-600) #fff #fff var(--tw-teal-600);
+  .meditech-rail-records-command button:hover:not(:disabled) {
+    background: var(--tw-mint-50);
+    border-color: var(--tw-border-subtle);
   }
 
   .meditech-rail-records-command button:disabled {
-    color: #7c8387;
+    color: var(--tw-text-muted);
   }
 
   .meditech-rail-records-command kbd {
-    font: 700 8px/1 var(--tw-font-sans);
+    padding: 1px 5px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-sunken);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-tight);
+    font: 600 var(--tw-fs-ws-label)/var(--tw-lh-ws-label) var(--tw-font-sans);
   }
 
   .meditech-function-heading small {
-    color: var(--tw-mint-50);
-    font-size: 8px;
+    color: var(--tw-text-muted);
+    font-size: var(--tw-fs-ws-label);
     font-weight: 400;
   }
 
+  /* Group headings are quieter than the rail title above them: small,
+     tracked-out and secondary, the way Tebra separates rail sections. */
   .meditech-function-heading {
-    color: var(--tw-teal-800);
-    background: var(--tw-teal-200);
-    border-top: 1px solid var(--tw-white);
-    border-bottom-color: var(--tw-teal-500);
-    font-size: 9px;
-    letter-spacing: 0.05em;
+    padding: 8px 10px 4px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-panel);
+    border-bottom: 0;
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 700;
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
   }
 
+  /* A flex column, not a grid. The groups hold different numbers of rows, so
+     an auto-row grid sized every group to the same track and let the longer
+     ones paint over the heading below - which also swallowed the click on the
+     row underneath. */
   .meditech-function-list {
-    display: grid;
-    grid-auto-rows: minmax(25px, 1fr);
+    display: flex;
+    flex-direction: column;
     min-width: 0;
     min-height: 0;
-    padding: 1px;
+    padding: 4px;
     overflow: auto;
-    background: var(--tw-teal-200);
-    scrollbar-color: var(--tw-teal-300) var(--tw-mint-50);
-    scrollbar-width: auto;
+    background: var(--tw-surface-panel);
+    scrollbar-color: var(--tw-border-subtle) var(--tw-surface-panel);
+    scrollbar-width: thin;
   }
 
+  /* A rail row, not a button on a toolbar: no border of its own until it is
+     hovered, and the current item marked by a teal bar in the left gutter
+     rather than by a bevel flipped inside out. */
   .meditech-record-list .cd2004-nav-item {
     position: static;
     display: grid;
-    grid-template-columns: 16px minmax(0, 1fr) auto;
+    /* Label, outstanding count, state icon. Three different blocks used to
+       declare three different column shapes for this row; this is the one. */
+    grid-template-columns: minmax(0, 1fr) auto 20px;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     min-width: 0;
-    min-height: 25px;
-    padding: 1px 4px;
-    color: var(--tw-teal-900);
-    background: var(--tw-mint-50);
-    border: 1px solid;
-    border-color: #fff var(--tw-teal-300) var(--tw-teal-300) #fff;
+    min-height: 30px;
+    padding: 4px 8px;
+    color: var(--tw-text-primary);
+    background: transparent;
+    border: 1px solid transparent;
+    /* Reserved in both states so selecting a row never shifts its content. */
+    border-left: 3px solid transparent;
+    border-radius: var(--tw-radius-ws);
     box-shadow: none;
   }
 
   .meditech-record-list .cd2004-nav-item:hover {
-    background: var(--cd-selection);
+    background: var(--tw-mint-50);
   }
 
   .meditech-record-list .cd2004-nav-item.is-selected {
-    color: #172334;
-    background: var(--mt-selected);
-    border-color: #857121 #fff #fff #857121;
-    box-shadow: inset 2px 0 var(--tw-teal-600);
+    color: var(--tw-text-primary);
+    background: var(--tw-mint-150);
+    border-color: transparent;
+    border-left-color: var(--tw-teal-800);
+    box-shadow: none;
     font-weight: 700;
   }
 
   .meditech-record-list .cd2004-nav-item kbd {
     display: grid;
     place-items: center;
-    width: 14px;
-    height: 16px;
-    color: #fff;
-    background: var(--tw-teal-500);
-    border: 1px solid var(--tw-teal-800);
-    font: 700 8px var(--tw-font-sans);
+    min-width: 22px;
+    padding: 1px 5px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-sunken);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-tight);
+    font: 600 var(--tw-fs-ws-label)/var(--tw-lh-ws-label) var(--tw-font-sans);
   }
 
   .meditech-record-list .cd2004-nav-item svg {
@@ -967,7 +894,29 @@
 
   .meditech-record-list .cd2004-nav-item > span {
     display: block;
+    grid-column: 1;
     min-width: 0;
+  }
+
+  .meditech-record-list .cd2004-nav-item em,
+  .meditech-record-list .cd2004-nav-item i {
+    grid-column: 2;
+  }
+
+  .meditech-record-list .cd2004-nav-item .meditech-nav-icon {
+    grid-column: 3;
+    display: grid;
+    place-items: center;
+    align-self: stretch;
+    width: 20px;
+    min-height: 20px;
+    border-radius: var(--tw-radius-tight);
+  }
+
+  .meditech-record-list .cd2004-nav-item .meditech-nav-icon svg {
+    display: block;
+    width: 14px;
+    height: 14px;
   }
 
   .meditech-record-list .cd2004-nav-item strong,
@@ -979,34 +928,46 @@
   }
 
   .meditech-record-list .cd2004-nav-item strong {
-    font-size: 9px;
+    font-size: var(--tw-fs-ws-dense);
+    font-weight: 500;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-selected strong {
+    font-weight: 700;
   }
 
   .meditech-record-list .cd2004-nav-item small {
-    color: var(--tw-teal-500);
-    font-size: 7px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
     font-weight: 400;
     text-transform: capitalize;
   }
 
+  /* An outstanding-count badge. It carries a number, so it is a count in the
+     stop palette rather than a block of Windows maroon. */
   .meditech-record-list .cd2004-nav-item em,
   .meditech-record-list .cd2004-nav-item i {
     display: grid;
     place-items: center;
-    width: 16px;
-    height: 15px;
-    padding: 0;
-    color: #fff;
-    background: #8a2525;
-    border: 1px solid #581010;
-    font-size: 8px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    color: var(--tw-stop-fg);
+    background: var(--tw-stop-bg);
+    border: 1px solid var(--tw-stop-border);
+    border-radius: var(--tw-radius-pill);
+    font-size: var(--tw-fs-ws-label);
     font-style: normal;
+    font-weight: 700;
+    font-variant-numeric: var(--tw-numeric-tabular);
   }
 
   .meditech-record-list .cd2004-nav-item i {
-    width: 7px;
-    height: 7px;
-    background: var(--tw-teal-300);
+    min-width: 8px;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    background: var(--tw-border-strong);
     border-color: var(--tw-teal-500);
   }
 
@@ -1014,39 +975,44 @@
     opacity: 0.7;
   }
 
+  /*
+   * The function-key deck stays - the keys are real, staff drive the station
+   * from them, and removing a working affordance to look more like Tebra
+   * would be the wrong trade. What goes is its terminal costume: the inverted
+   * teal command prompt, the amber-on-teal key caps, the bevelled key faces
+   * and the one-pixel nudge on press that mimics a physical key travelling.
+   * It reads now as a toolbar of labelled shortcuts.
+   */
   .meditech-command-deck {
-    flex: 0 0 32px;
+    flex: 0 0 36px;
     display: grid;
     grid-template-columns: minmax(106px, 1.25fr) repeat(8, minmax(68px, 1fr));
-    gap: 1px;
+    gap: 4px;
     min-width: 0;
-    height: 32px;
-    padding: 2px 3px;
-    background: var(--tw-teal-200);
-    border-top: 1px solid var(--cd-border-light);
-    border-bottom: 1px solid var(--tw-teal-500);
+    height: 36px;
+    padding: 4px 8px;
+    background: var(--tw-surface-panel);
+    border-top: 1px solid var(--tw-border-subtle);
+    border-bottom: 1px solid var(--tw-border-subtle);
     box-shadow: none;
   }
 
   .meditech-command-prompt {
     display: flex;
-    align-items: center;
-    gap: 5px;
+    align-items: baseline;
+    gap: 6px;
     min-width: 0;
-    padding: 2px 5px;
-    color: var(--tw-mint-50);
-    background: var(--tw-teal-600);
-    border: 1px solid var(--tw-teal-800);
-  }
-
-  .meditech-command-prompt strong {
-    color: #fff2a8;
-    font-size: 9px;
+    padding: 0 6px 0 0;
+    color: var(--tw-text-secondary);
+    background: transparent;
+    border: 0;
   }
 
   .meditech-command-prompt span {
     overflow: hidden;
-    font-size: 8px;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1055,64 +1021,46 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     min-width: 0;
-    padding: 2px 4px;
-    color: var(--tw-teal-900);
-    background: var(--tw-mint-50);
-    border: 1px solid;
-    border-color: #fff var(--tw-teal-500) var(--tw-teal-500) #fff;
+    padding: 0 8px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
     box-shadow: none;
   }
 
   .meditech-command-deck button:hover:not(:disabled),
   .meditech-command-deck button.is-active {
-    color: #111;
-    background: var(--mt-selected);
+    color: var(--tw-text-primary);
+    background: var(--tw-mint-50);
   }
 
   .meditech-command-deck button:active:not(:disabled) {
-    border-color: #5d6c6d #f5f8f6 #f5f8f6 #5d6c6d;
-    transform: translate(1px, 1px);
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
   }
 
   .meditech-command-deck button:disabled {
-    color: #83908e;
+    color: var(--tw-text-muted);
   }
 
   .meditech-command-deck kbd {
-    color: #fff;
-    background: var(--tw-teal-500);
-    border: 1px solid var(--tw-teal-800);
-    font: 700 8px/15px var(--tw-font-sans);
+    padding: 1px 5px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-sunken);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-tight);
+    font: 600 var(--tw-fs-ws-label)/var(--tw-lh-ws-label) var(--tw-font-sans);
     text-align: center;
   }
 
   .meditech-command-deck button > span {
     overflow: hidden;
-    font-size: 9px;
-    font-weight: 700;
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .cd2004-statusbar {
-    height: 19px;
-    min-height: 19px;
-    color: var(--tw-teal-800);
-    background: #d3d9d7;
-    border-top-color: #f4f8f5;
-    font-size: 8px;
-  }
-
-  .cd2004-status-message,
-  .cd2004-status-segment {
-    border-right-color: #81908e;
-  }
-
-  .cd2004-status-segment.is-online {
-    color: #07552f;
-    background: #d9eee2;
   }
 
   /* On-screen clinician result sheet; the protected print renderer is separate. */
@@ -1596,7 +1544,7 @@
   }
 
   .cd2004-window-titlebar {
-    min-height: 25px;
+    min-height: 32px;
   }
 }
 
@@ -1635,29 +1583,16 @@
 }
 
 @media screen and (min-width: 701px) {
-  .cd2004-app-titlebar {
-    height: 23px;
-    padding: 2px 5px;
-  }
-
-  .cd2004-app-logo {
-    width: 17px;
-    height: 17px;
-  }
-
-  .cd2004-app-title > b {
-    font-size: 11px;
-  }
-
-  .cd2004-menu-bar {
-    min-height: 20px;
-  }
-
-  .cd2004-menu-title {
-    min-width: 36px;
-    padding: 2px 6px 3px;
-  }
-
+  /*
+   * The header used to be compressed here to 23px with a 20px menu bar and a
+   * 17px mark. That is client/server density, not Tebra's: their product is
+   * dense in the data it shows, not in the chrome that frames it, and a 23px
+   * app bar is a title strip rather than a header. These five rules are
+   * deleted outright rather than retuned - the base declarations in
+   * clinical-desktop.css are already the right size at every supported width,
+   * and the workstation gate means nothing below 800px renders the shell at
+   * all.
+   */
   .cd2004-patient-banner,
   .cd2004-patient-banner.has-mismatch {
     grid-template-columns: minmax(265px, 1.5fr) auto auto minmax(130px, 0.62fr) minmax(150px, 0.7fr);
@@ -1702,21 +1637,21 @@
 
   .cd2004-patient-banner small {
     flex: 0 0 auto;
-    color: var(--tw-teal-600);
-    font-size: 8px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-patient-banner strong,
   .cd2004-patient-primary strong {
     overflow: hidden;
-    font-size: 11px;
+    font-size: var(--tw-fs-ws-dense);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .cd2004-patient-primary strong {
-    font-size: 14px;
-    letter-spacing: 0.045em;
+    font-size: var(--tw-fs-lead);
+    line-height: var(--tw-lh-ws-base);
   }
 
   .cd2004-patient-banner.has-active-chart .cd2004-patient-primary,
@@ -1814,74 +1749,19 @@
     grid-template-rows: minmax(0, 1fr);
   }
 
-  .cd2004-navigator.meditech-record-list {
-    grid-template-rows: 22px 20px 20px minmax(0, 1fr);
-  }
-
-  .meditech-rail-title,
-  .meditech-function-heading {
-    padding: 2px 4px;
-    font-size: 10px;
-  }
-
-  .meditech-rail-context {
-    padding: 2px 4px;
-    font-size: 8px;
-  }
-
-  .meditech-function-list {
-    grid-auto-rows: 21px;
-    align-content: start;
-    padding: 1px;
-  }
-
-  .meditech-record-list .cd2004-nav-item {
-    grid-template-columns: 14px 12px minmax(0, 1fr) 9px;
-    gap: 2px;
-    min-height: 21px;
-    padding: 1px 3px;
-  }
-
-  .meditech-record-list .cd2004-nav-item kbd {
-    width: 12px;
-    height: 13px;
-    font-size: 7px;
-  }
-
-  .meditech-record-list .cd2004-nav-item strong {
-    font-size: 10px;
-    font-weight: 400;
-  }
-
-  .meditech-record-list .cd2004-nav-item svg {
-    display: block;
-    width: 11px;
-    height: 11px;
-    color: var(--tw-teal-600);
-  }
-
-  .meditech-record-list .cd2004-nav-item.is-selected svg {
-    color: #8b1d27;
-  }
-
-  .meditech-record-list .cd2004-nav-item.is-selected strong {
-    font-weight: 700;
-  }
-
+  /*
+   * The desktop rail was declared here as well - a fourth track the rail has
+   * no child for, a 21px row on a four-column grid, 10px labels, 8px context.
+   * Deleted; the single declaration at the top of this file is correct at
+   * every width the shell renders at, and nothing below 800px renders it.
+   *
+   * `em { color: transparent; background: #9d2424 }` went with it. It turned
+   * the outstanding-work count into a 7px red dot with its number hidden -
+   * colour carrying the whole meaning, which is the one thing MANIFEST 5's
+   * status rule forbids. The badge shows its number again.
+   */
   .meditech-record-list .cd2004-nav-item small {
     display: none;
-  }
-
-  .meditech-record-list .cd2004-nav-item em,
-  .meditech-record-list .cd2004-nav-item i {
-    width: 7px;
-    height: 7px;
-    border: 1px solid var(--tw-teal-500);
-  }
-
-  .meditech-record-list .cd2004-nav-item em {
-    color: transparent;
-    background: #9d2424;
   }
 
   .cd2004-shell .cd2004-start-center {
@@ -1897,10 +1777,6 @@
     background: var(--tw-mint-50);
     border-color: var(--tw-teal-500);
     box-shadow: inset 1px 1px #fff;
-  }
-
-  .cd2004-launcher-head {
-    font-size: 7px;
   }
 
   .cd2004-launcher-grid {
@@ -1942,25 +1818,18 @@
 
   .cd2004-worklist-header h1 {
     margin: 0;
-    color: var(--tw-teal-900);
-    font: 700 10px var(--tw-font-sans);
-    letter-spacing: 0.035em;
-    text-transform: uppercase;
+    color: var(--tw-text-primary);
+    font: 700 var(--tw-fs-ws-base)/var(--tw-lh-ws-base) var(--tw-font-sans);
   }
 
   .cd2004-worklist-header p {
     margin: 0;
-    color: var(--tw-teal-500);
-    font-size: 8px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
   }
 
-  .cd2004-worklist-new,
-  .cd2004-worklist-action {
-    min-height: 19px;
-    padding: 2px 6px;
-    border-radius: 0;
-    font-size: 8px;
-  }
+  /* A 19px square-cornered control at 8px is not a primary action at any
+     width this shell renders. The base declaration stands. */
 
   .cd2004-worklist-tabs {
     align-items: center;
@@ -1968,12 +1837,6 @@
     padding: 1px 3px;
     background: var(--tw-teal-200);
     border: 1px solid var(--tw-teal-500);
-  }
-
-  .cd2004-worklist-filter-label {
-    margin-right: 3px;
-    color: var(--tw-teal-800);
-    font: 700 8px var(--tw-font-sans);
   }
 
   .cd2004-worklist-tabs button {
@@ -1991,11 +1854,15 @@
     font-size: 7px;
   }
 
+  /* The first cell stacks a priority word over a timestamp, and cells clip
+     (`overflow: hidden`, for the ellipsis). At 19px the second line was cut
+     through the middle - the time was there and unreadable. Sized to the two
+     lines it actually holds. */
   .cd2004-worklist-table th,
   .cd2004-worklist-table td {
-    height: 19px;
-    padding: 2px 5px;
-    font-size: 9px;
+    height: 32px;
+    padding: 3px 6px;
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-worklist-table tbody tr:focus-within td {
@@ -2138,9 +2005,9 @@
   }
 
   .cd2004-inspector-window .cd2004-window-titlebar {
-    min-height: 19px;
-    padding: 2px 4px;
-    font-size: 9px;
+    min-height: 28px;
+    padding: 3px 8px;
+    font-size: var(--tw-fs-ws-dense);
   }
 
   .cd2004-inspector-window .cd2004-window-mark {
@@ -2512,30 +2379,8 @@
   }
 
   .cd2004-worklist-header h1 {
-    color: var(--tw-teal-800);
-    font-size: 9px;
-    letter-spacing: 0.055em;
-    text-transform: uppercase;
-  }
-
-  .cd2004-worklist-source-icon {
-    display: inline-grid;
-    place-items: center;
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
-    color: var(--tw-teal-600);
-    background: var(--tw-mint-50);
-    border: 1px solid var(--tw-teal-300);
-  }
-
-  .cd2004-worklist-source-icon svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  .cd2004-worklist-priority-copy {
-    min-width: 0;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-base);
   }
 
   .cd2004-worklist-table tbody tr:focus-within td {
@@ -2544,30 +2389,18 @@
     box-shadow: inset 0 1px var(--tw-teal-600), inset 0 -1px var(--tw-teal-600);
   }
 
-  .cd2004-worklist-new,
-  .cd2004-worklist-action,
-  .meditech-record-list .cd2004-nav-item,
-  .meditech-command-deck button,
-  .cd2004-record-actions-buttons button {
-    border-radius: 3px;
-    box-shadow: inset 1px 1px #fff, inset -1px -1px var(--tw-teal-300);
-  }
-
-  .cd2004-shell .cd2004-worklist-new,
-  .cd2004-shell .cd2004-worklist-action {
-    border-radius: 3px;
-  }
-
-  .cd2004-statusbar {
-    font-size: 9px;
-  }
-
-  .cd2004-status-segment {
-    min-width: 76px;
-    font: 700 8px "Arial Narrow", var(--tw-font-sans);
-    letter-spacing: 0.045em;
-    text-align: center;
-  }
+  /*
+   * A raised bevel and a 3px radius on every control in the shell. Phase 2a's
+   * contract resets the bevel for the controls it claims, so this survived
+   * only where the contract does not reach - which after the rail rows were
+   * excluded from the button grammar meant the rail. Deleted at the source
+   * instead: the contract's 6px is the workstation radius, and nothing in the
+   * redesign is bevelled.
+   *
+   * The status-bar overrides went with it. The bar is declared once now, in
+   * clinical-desktop.css, and Arial Narrow at 8px was the last of the
+   * MEDITECH faces in the persistent chrome.
+   */
 
   .cd2004-attestation-review dd {
     overflow: visible;
@@ -2734,74 +2567,27 @@
     margin-right: 4px;
   }
 
-  .meditech-function-list {
-    display: flex;
-    flex-direction: column;
-    align-content: stretch;
-    padding: 1px;
-  }
-
-  .meditech-record-list .cd2004-nav-item {
-    flex: 0 0 22px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 13px 8px;
-    gap: 4px;
-    min-height: 22px;
-    padding: 1px 4px 1px 7px;
-  }
-
+  /*
+   * A fourth copy of the rail row lived here, pinning it to a 22px flex track
+   * with 13px and 8px columns and hiding its key hint, and the desktop
+   * breakpoint meant this was the copy that rendered. It is deleted rather
+   * than retuned: one declaration, above.
+   *
+   * `[title="Daily Closeout"] { margin-top: auto }` went with it. A later
+   * block already recorded that bottom-anchoring the last group sheared the
+   * row in half whenever the list overflowed, and fixed it there - while this
+   * rule kept setting it. Group spacing is uniform now.
+   *
+   * Selectors keyed on `title` are also copy-derived, which MANIFEST 5b
+   * forbids for exactly this reason: renaming the module in vocabulary.ts
+   * would have silently dropped the spacing.
+   */
   .meditech-record-list .cd2004-nav-item kbd {
     display: none;
   }
 
-  .meditech-record-list .cd2004-nav-item > span {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .meditech-record-list .cd2004-nav-item svg {
-    grid-column: 2;
-    grid-row: 1;
-    width: 12px;
-    height: 12px;
-  }
-
-  .meditech-record-list .cd2004-nav-item em,
-  .meditech-record-list .cd2004-nav-item i {
-    grid-column: 3;
-    grid-row: 1;
-  }
-
-  .meditech-record-list .cd2004-nav-item strong {
-    font-size: 10px;
-  }
-
-  .meditech-record-list .cd2004-nav-item[title="Knowledge"] {
-    margin-top: 5px;
-  }
-
-  .meditech-record-list .cd2004-nav-item[title="Daily Closeout"] {
-    margin-top: auto;
-  }
-
-  .meditech-rail-context,
-  .meditech-rail-title,
-  .meditech-function-heading {
-    font-size: 9px;
-  }
-
   .meditech-command-deck button > span {
     font-size: 9px;
-  }
-
-  .cd2004-worklist-table tbody tr:not(.cd2004-worklist-empty) td:first-child {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .cd2004-worklist-table .cd2004-worklist-empty td:first-child {
-    display: table-cell;
   }
 
   .cd2004-worklist-table th,
@@ -3018,10 +2804,6 @@
     border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900);
   }
 
-  .cd2004-worklist-source-icon {
-    margin-right: 5px;
-  }
-
   .cd2004-attestation-review {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3040,26 +2822,19 @@
  * changes; every command below is backed by an existing workflow action.
  */
 @media screen {
-  .cd2004-shell {
-    --mt-icon-ink: var(--tw-teal-800);
-    --mt-icon-blue: var(--tw-teal-500);
-    --mt-icon-blue-light: var(--tw-teal-200);
-    --mt-icon-yellow: #f2d34a;
-    --mt-icon-paper: #fff3ad;
-    --mt-icon-red: #b52c2c;
-    --mt-icon-green: #278247;
-    --mt-icon-metal: var(--tw-mint-200);
-  }
-
+  /* The icon palette is declared once, on the shell, near the top of this
+     file. This copy redeclared it from further down with MEDITECH's yellow,
+     red and green still in place, which is why the glyphs kept their old
+     colours through Phase 2a even after the names existed. */
   .cd2004-window-mark.has-icon {
     display: grid;
     place-items: center;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     overflow: hidden;
-    background: var(--tw-mint-50);
-    border-color: var(--tw-teal-900);
-    box-shadow: inset 1px 1px #fff;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
   }
 
   .cd2004-window-mark.has-icon svg {
@@ -3078,83 +2853,27 @@
     height: 13px;
   }
 
-  .cd2004-navigator.meditech-record-list {
-    grid-template-rows: 24px 19px minmax(0, 1fr);
-    background: var(--tw-teal-200);
-  }
-
-  .meditech-rail-title {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    min-width: 0;
-    min-height: 24px;
-    padding: 2px 4px 2px 6px;
-    color: var(--tw-teal-900);
-    background: var(--tw-mint-50);
-    border: 1px solid;
-    border-color: #fff var(--tw-teal-500) var(--tw-teal-500) #fff;
-    box-shadow: inset 1px 1px #fdfdff, inset -1px -1px var(--tw-teal-300);
-    font: 700 10px var(--tw-font-sans);
-    text-align: left;
-  }
-
+  /*
+   * The rail is declared once, near the top of this file. This overlay
+   * restated all of it - the title as a bevelled button, the context strip at
+   * 7px, the function list on a teal ground - and being later in the same
+   * file it was the declaration that actually rendered, which is why the rail
+   * kept its client/server treatment through Phase 2a. Everything the first
+   * declaration already covers is deleted here rather than retuned; only the
+   * rules below it does not have - group spacing, the per-state icon cell,
+   * the disabled treatment - remain.
+   */
   .meditech-rail-title:hover:not(:disabled) {
-    background: var(--cd-selection);
-  }
-
-  .meditech-rail-title:active:not(:disabled) {
-    border-color: var(--tw-teal-500) #fff #fff var(--tw-teal-500);
-    box-shadow: inset 1px 1px var(--tw-teal-300);
+    background: var(--tw-mint-50);
   }
 
   .meditech-rail-title:disabled {
-    color: var(--tw-teal-300);
-  }
-
-  .meditech-rail-records-command {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-  }
-
-  .meditech-rail-records-command kbd {
-    padding: 1px 2px;
-    color: #fff;
-    background: var(--tw-teal-500);
-    border: 1px solid var(--tw-teal-800);
-    font: 700 7px/1 var(--tw-font-sans);
+    color: var(--tw-text-muted);
   }
 
   .meditech-rail-records-command svg {
     width: 15px;
     height: 15px;
-  }
-
-  .meditech-rail-context {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    min-height: 19px;
-    gap: 4px;
-    padding: 2px 4px;
-    background: var(--tw-mint-150);
-    border-bottom-color: var(--tw-teal-300);
-  }
-
-  .meditech-rail-context strong,
-  .meditech-rail-context span {
-    font-size: 7px;
-  }
-
-  .meditech-function-list {
-    display: flex;
-    flex-direction: column;
-    align-content: stretch;
-    min-height: 0;
-    padding: 1px;
-    overflow: auto;
-    background: var(--tw-teal-200);
   }
 
   .meditech-rail-group {
@@ -3179,107 +2898,22 @@
     margin-top: 4px;
   }
 
-  .meditech-function-heading {
-    display: flex;
-    align-items: center;
-    min-height: 17px;
-    padding: 1px 4px;
-    color: var(--tw-teal-800);
-    background: var(--tw-teal-200);
-    border: 0;
-    border-top: 1px solid #f8f9ff;
-    border-bottom: 1px solid var(--tw-teal-300);
-    font: 700 9px/1.1 var(--tw-font-sans);
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  .meditech-record-list .cd2004-nav-item {
-    flex: 0 0 20px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto 18px;
-    align-items: center;
-    gap: 2px;
-    min-height: 20px;
-    padding: 0 1px 0 5px;
-    color: var(--tw-teal-900);
-    background: var(--tw-mint-50);
-    border-color: #fff var(--tw-teal-500) var(--tw-teal-500) #fff;
-    border-radius: 2px;
-    box-shadow: inset 1px 1px #fff, inset -1px -1px var(--tw-teal-300);
-  }
-
-  .meditech-record-list .cd2004-nav-item > span:first-child {
-    grid-column: 1;
-    min-width: 0;
-  }
-
-  .meditech-record-list .cd2004-nav-item strong {
-    font: 400 10px/1 var(--tw-font-sans);
-  }
-
-  /* An always-visible outstanding-work count, not an alarm -- soft chip
-     rather than a solid alarm-red fill, matching the tab/section badges in
-     workflow-panels.css. Authentic MEDITECH keeps solid red for plain text
-     on genuinely critical items only, never a filled count badge. */
-  .meditech-record-list .cd2004-nav-item em {
-    grid-column: 2;
-    display: grid;
-    place-items: center;
-    min-width: 13px;
-    height: 13px;
-    padding: 0 2px;
-    color: var(--cd-red);
-    background: var(--cd-red-soft);
-    border: 1px solid var(--cd-red);
-    font: 700 7px/1 var(--tw-font-sans);
-  }
-
-  .meditech-record-list .cd2004-nav-item .meditech-nav-icon {
-    grid-column: 3;
-    display: grid;
-    place-items: center;
-    align-self: stretch;
-    width: 18px;
-    min-height: 18px;
-    background: rgb(255 255 255 / 22%);
-    border-left: 1px solid var(--tw-teal-300);
-  }
-
-  .meditech-record-list .cd2004-nav-item .meditech-nav-icon svg {
-    display: block;
-    width: 14px;
-    height: 14px;
-  }
-
   .meditech-record-list .cd2004-nav-item.is-idle:not(.is-selected) {
     opacity: 1;
   }
 
-  .meditech-record-list .cd2004-nav-item.is-selected {
-    color: #111a38;
-    background: var(--cd-selection);
-    border-color: var(--tw-teal-500) #fff #fff var(--tw-teal-500);
-    box-shadow: inset 2px 0 var(--tw-teal-600), inset 1px 1px #8c8051;
-  }
-
-  .meditech-record-list .cd2004-nav-item.is-selected strong {
-    font-weight: 700;
-  }
-
   .meditech-record-list .cd2004-nav-item.is-attention .meditech-nav-icon {
-    background: var(--cd-red-soft);
+    background: var(--tw-stop-bg);
   }
 
   .meditech-record-list .cd2004-nav-item.is-ready .meditech-nav-icon,
   .meditech-record-list .cd2004-nav-item.is-locked .meditech-nav-icon {
-    background: #d8efd8;
+    background: var(--tw-ready-bg);
   }
 
   .meditech-record-list .cd2004-nav-item:disabled {
-    color: var(--tw-teal-300);
-    background: var(--tw-mint-150);
-    text-shadow: 1px 1px var(--tw-white);
+    color: var(--tw-text-muted);
+    background: transparent;
   }
 
   .meditech-record-list .cd2004-nav-item:disabled svg {
@@ -3569,19 +3203,6 @@
     min-height: 17px !important;
   }
 
-  .cd2004-worklist-source-icon {
-    width: 18px;
-    height: 18px;
-    color: inherit;
-    background: transparent;
-    border: 0;
-  }
-
-  .cd2004-worklist-source-icon svg {
-    width: 15px;
-    height: 15px;
-  }
-
   .cd2004-worklist-new {
     display: inline-flex;
     align-items: center;
@@ -3686,25 +3307,9 @@
     min-width: 0;
   }
 
-  .cd2004-worklist-table th:nth-child(1) {
-    width: 17%;
-  }
-
-  .cd2004-worklist-table th:nth-child(2) {
-    width: 22%;
-  }
-
-  .cd2004-worklist-table th:nth-child(3) {
-    width: 31%;
-  }
-
-  .cd2004-worklist-table th:nth-child(4) {
-    width: 16%;
-  }
-
-  .cd2004-worklist-table th:last-child {
-    width: 62px;
-  }
+  /* The duplicate column widths that lived here described the old column
+     set and were the declaration that actually applied at desktop. Deleted;
+     clinical-desktop.css owns them. */
 }
 
 @media screen and (max-width: 700px) {

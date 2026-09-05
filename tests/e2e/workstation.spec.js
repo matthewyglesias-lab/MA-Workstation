@@ -1103,7 +1103,12 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(workQueue.locator('tbody tr')).toHaveCount(3);
     await page.getByRole('tab', { name: /Needs review/ }).click();
     await expect(workQueue.locator('tbody tr')).toHaveCount(1);
-    await expect(workQueue.getByRole('button', { name: 'Review', exact: true })).toBeVisible();
+    // Phase 3: the whole row opens the note, so there is no trailing Review /
+    // Resume / View button any more. The row's accessible target is the
+    // patient button in the first cell, which is what a keyboard or screen
+    // reader user activates.
+    await expect(workQueue.getByRole('button', { name: 'Chen, Avery' })).toBeVisible();
+    await expect(workQueue.locator('.cd2004-note-chip')).toHaveText('Needs review');
     await expect(page.locator('.cd2004-activity-list')).toHaveCount(0);
   });
 
@@ -1193,7 +1198,7 @@ test.describe('MA Workstation browser journeys', () => {
   test('routes the Client/Server function-key profile without unsafe global shortcuts', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
-    const deck = page.locator('[role="toolbar"][aria-label="MEDITECH function key commands"]');
+    const deck = page.locator('[role="toolbar"][aria-label="Function key commands"]');
 
     await expect(deck).toBeVisible();
     await expect(deck).toContainText('F1');
@@ -1220,7 +1225,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(helpDialog).toBeHidden();
 
     // With no clinical stops active, F8 retains the classic zone cycle.
-    const startInjection = page.getByRole('button', { name: 'Start new injection', exact: true });
+    // Phase 3b: the Dashboard's primary action is Tebra's `New note`, which
+    // opens a type menu, rather than a button that could only ever start an
+    // injection. `Start new injection` is still the label on the record
+    // lifecycle controls, where it names a record operation.
+    const startInjection = page.locator('.cd2004-worklist-new');
     await startInjection.focus();
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>
@@ -1359,7 +1368,7 @@ test.describe('MA Workstation browser journeys', () => {
     const udsPanel = page.locator('.wfp-panel');
     await udsPanel.locator('select[name="uds-reason"]').selectOption('routine');
     const udsFileCommand = page
-      .locator('[role="toolbar"][aria-label="MEDITECH function key commands"]')
+      .locator('[role="toolbar"][aria-label="Function key commands"]')
       .getByRole('button', { name: 'F12 Save UDS' });
     await expect(udsFileCommand).toBeEnabled();
     await page.keyboard.press('F12');
@@ -1448,7 +1457,10 @@ test.describe('MA Workstation browser journeys', () => {
     // persistence remains a separate status in the rail and action bar.
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    // --tw-ready-bg. The tint was #c8efbf, a saturated Windows-era green that
+    // sits outside the palette; the meaning (an identified patient context) is
+    // unchanged and still carries its own word in the banner beside it.
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(230, 242, 238)');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -1469,7 +1481,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 241, 188)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    // --tw-ready-bg. The tint was #c8efbf, a saturated Windows-era green that
+    // sits outside the palette; the meaning (an identified patient context) is
+    // unchanged and still carries its own word in the banner beside it.
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(230, 242, 238)');
     await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');
@@ -2522,7 +2537,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(savedDraftsTab).toContainText('1');
     await savedDraftsTab.click();
     await expect(records).toContainText('QA, Start Center Open');
-    await records.getByRole('button', { name: 'Resume', exact: true }).click();
+    // The row is the target; the patient button carries it for the keyboard.
+    await records.getByRole('button', { name: 'QA, Start Center Open' }).click();
 
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
     await expect(page.locator('#ptName')).toHaveValue('QA, Start Center Open');

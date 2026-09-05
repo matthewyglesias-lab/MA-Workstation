@@ -43,10 +43,17 @@ const SNAPSHOT_OPTIONS = {
 };
 
 const CAPTURE_STYLES = `
+  /* Every element, not just the shell subtree. Any surface that declares its
+     own font-family - the unsupported-viewport gate does - keeps that face
+     otherwise, because inheriting Arial from body loses to its own rule. A
+     webfont left in place rasterizes differently between the sandbox's
+     Chromium and the runner's, which is exactly the difference these captures
+     must not encode. */
   html[data-visual-regression="true"],
   html[data-visual-regression="true"] body,
-  html[data-visual-regression="true"] .cd2004-shell,
-  html[data-visual-regression="true"] .cd2004-shell * {
+  html[data-visual-regression="true"] body *,
+  html[data-visual-regression="true"] body *::before,
+  html[data-visual-regression="true"] body *::after {
     font-family: Arial, "Liberation Sans", sans-serif !important;
     font-synthesis: none !important;
   }
@@ -250,9 +257,12 @@ async function openFixtureDraft(page) {
   await expect(page.locator('dialog.records-drawer-layer')).toBeHidden();
   await expect(page.locator('.cd2004-patient-primary')).toContainText('Patel, Rowan');
   await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/has-active-chart/);
+  // --tw-ready-bg, in place of the saturated Windows-era green it replaced.
+  // The class assertion above is what carries the meaning; this pins the tint
+  // so the state cannot quietly lose its colour.
   await expect(page.locator('.cd2004-patient-banner')).toHaveCSS(
     'background-color',
-    'rgb(200, 239, 191)'
+    'rgb(230, 242, 238)'
   );
   await expect(page.locator('[data-injection-record-actions]')).toContainText('Draft saved');
 }

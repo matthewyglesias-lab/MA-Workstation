@@ -1,9 +1,10 @@
-import { NOTES, SHELL } from "./vocabulary";
+import { MODULE, NOTES, RECORD, SHELL } from "./vocabulary";
 import { useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
 import {
   WORKFLOW_LABELS,
   type ClinicalTone,
+  type DesktopIconName,
   type InjectionRecordRow,
   type WorkflowId,
   type WorkflowSummary,
@@ -50,20 +51,80 @@ export interface StartCenterProps {
    * this remains optional for embedders that only render the worklist.
    */
   onStartNewInjection?: () => void;
+  /** The low-frequency destinations the action bar holds under More. */
+  onOpenRecords?: () => void;
+  onOpenCloseout?: () => void;
 }
 
+/**
+ * `+ New Note`'s type menu. Tebra's action bar opens a new note by type from
+ * one control, which is also the fix for a real limitation: the primary
+ * action here could only ever start an injection, so beginning a UDS meant
+ * finding it in the module grid.
+ */
+const NEW_NOTE_TYPES: readonly WorkflowId[] = [
+  "administer",
+  "uds",
+  "samples",
+  "forms",
+];
+
+/**
+ * A row in Open Notes. The column set is Tebra's -
+ * `Patient · Lock · Type · Status · Visit Date` - so the shape carries one
+ * field per column rather than the Time/Task pairs the client/server register
+ * used. `detailLabel` is the medication or activity line; Tebra has no detail
+ * column, so it rides under Type as a secondary line rather than being
+ * dropped, because it is what an MA actually scans for.
+ */
 interface WorklistRow {
   id: string;
   source: WorklistSource;
-  priorityLabel: string;
-  timeLabel?: string;
   patientLabel: string;
-  taskLabel: string;
-  stateLabel: string;
-  actionLabel: "Resume" | "Review" | "View";
+  typeLabel: string;
+  detailLabel: string;
+  statusLabel: string;
+  /**
+   * The chip's tone, which is NOT the row's clinical tone. The record
+   * register reports an unsigned draft as `warning`, and an incomplete draft
+   * is not a clinical warning - it is unfinished work. The row marker keeps
+   * the register's tone; the chip states what the status means.
+   */
+  statusTone: ClinicalTone;
+  statusIcon?: DesktopIconName;
+  /** Signed notes are read-only and take the lock glyph. */
+  locked: boolean;
+  /** Absent on a draft: no visit date is held for one. */
+  visitTimeLabel?: string;
   tone?: ClinicalTone;
   queueItem?: WorkQueueItem;
   record?: InjectionRecordRow;
+}
+
+/**
+ * Sortable columns, per MANIFEST 4.1: Patient, Type and Visit Date sort;
+ * Lock and Status do not.
+ */
+type SortColumn = "patient" | "type" | "visitDate";
+type SortDirection = "asc" | "desc";
+interface SortState {
+  column: SortColumn;
+  direction: SortDirection;
+}
+
+/**
+ * "9:42 AM" to minutes past midnight. Sorting the label as text puts 10:06 AM
+ * before 9:18 AM, which is the kind of thing nobody notices until a morning
+ * list is in the wrong order.
+ */
+function minutesFromTimeLabel(label: string | undefined): number | undefined {
+  if (!label) return undefined;
+  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(label.trim());
+  const [, hours, minutes, meridiem] = match ?? [];
+  if (!hours || !minutes || !meridiem) return undefined;
+  const hour = Number(hours) % 12;
+  const afternoon = meridiem.toUpperCase() === "PM";
+  return (hour + (afternoon ? 12 : 0)) * 60 + Number(minutes);
 }
 
 const FILTERS: Array<{ id: WorklistFilter; label: string }> = [
@@ -85,28 +146,36 @@ function isLockedRecord(record: InjectionRecordRow) {
   return /locked|completed/i.test(record.statusLabel);
 }
 
-function queueStateLabel(item: WorkQueueItem) {
-  if (requiresReview(item)) return "Needs review";
-  return "Recorded locally";
-}
-
-function queueActionLabel(item: WorkQueueItem): "Review" | "View" {
-  return requiresReview(item) ? "Review" : "View";
+/**
+ * Three of the four status chips are reachable from a worklist row.
+ * `Ready to sign` is not: it distinguishes a complete draft from an
+ * incomplete one, and the row does not carry enough to tell them apart -
+ * the record register reports only Draft or Locked. The worksheet, which
+ * does know, uses it. Claiming it here would be a guess.
+ */
+function queueStatusLabel(item: WorkQueueItem) {
+  if (requiresReview(item)) return NOTES.statusNeedsReview;
+  return NOTES.statusSigned;
 }
 
 function queueWorklistRow(
   item: WorkQueueItem,
   source: "review" | "today",
 ): WorklistRow {
+  const review = requiresReview(item);
   return {
     id: `${source}:${item.id}`,
     source,
-    priorityLabel: source === "review" ? "Needs review" : "Today",
-    timeLabel: item.timeLabel,
     patientLabel: item.patientLabel,
-    taskLabel: item.detail,
-    stateLabel: queueStateLabel(item),
-    actionLabel: queueActionLabel(item),
+    typeLabel: WORKFLOW_LABELS[item.workflow],
+    detailLabel: item.detail,
+    statusLabel: queueStatusLabel(item),
+    statusTone: review ? "warning" : "ready",
+    statusIcon: review ? "alert" : "check",
+    // A signed note is locked; one still awaiting review is not, and marking
+    // it locked would say the work is finished when it is not.
+    locked: !review,
+    visitTimeLabel: item.timeLabel,
     tone: item.tone,
     queueItem: item,
   };
@@ -116,15 +185,78 @@ function recordWorklistRow(record: InjectionRecordRow): WorklistRow {
   return {
     id: `draft:${record.id}`,
     source: "drafts",
-    priorityLabel: "Saved draft",
     patientLabel: record.patientLabel,
-    taskLabel: record.medicationLabel,
-    stateLabel: record.statusLabel,
-    actionLabel: "Resume",
+    typeLabel: MODULE.injection,
+    detailLabel: record.medicationLabel,
+    statusLabel: NOTES.statusIncomplete,
+    statusTone: "neutral",
+    locked: false,
     tone: record.tone,
     record,
   };
 }
+
+/**
+ * The default order is priority, not a column: review work first, then
+ * drafts, then the rest of today. Sorting applies only once a header is
+ * clicked, so opening Open Notes still surfaces what needs attention rather
+ * than whatever happens to sort first.
+ */
+function sortRows(rows: WorklistRow[], sort: SortState | undefined) {
+  if (!sort) return rows;
+  const direction = sort.direction === "asc" ? 1 : -1;
+  return rows.slice().sort((left, right) => {
+    if (sort.column === "visitDate") {
+      const leftAt = minutesFromTimeLabel(left.visitTimeLabel);
+      const rightAt = minutesFromTimeLabel(right.visitTimeLabel);
+      // A draft holds no visit date. Undated rows sort last in both
+      // directions - reversing the sort should not bury the dated work.
+      if (leftAt === undefined && rightAt === undefined) return 0;
+      if (leftAt === undefined) return 1;
+      if (rightAt === undefined) return -1;
+      return (leftAt - rightAt) * direction;
+    }
+    const key = sort.column === "patient" ? "patientLabel" : "typeLabel";
+    return left[key].localeCompare(right[key]) * direction;
+  });
+}
+
+/**
+ * A sortable header. The direction shows on the sorted column; the others
+ * reveal their affordance on hover only, which is what keeps a five-column
+ * header from reading as five buttons.
+ */
+function sortableHeader(
+  column: SortColumn,
+  label: string,
+  sort: SortState | undefined,
+  toggleSort: (column: SortColumn) => void,
+) {
+  const active = sort?.column === column;
+  const ascending = active && sort?.direction === "asc";
+  return (
+    <th
+      class={`cd2004-worklist-sortable ${active ? "is-sorted" : ""}`}
+      aria-sort={active ? (ascending ? "ascending" : "descending") : "none"}
+    >
+      <button type="button" onClick={() => toggleSort(column)}>
+        <span>{label}</span>
+        <span class="cd2004-worklist-sort-mark" aria-hidden="true">
+          {ascending ? "▲" : "▼"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+const SORTABLE_COLUMNS = {
+  patient: (sort: SortState | undefined, toggle: (column: SortColumn) => void) =>
+    sortableHeader("patient", NOTES.columnPatient, sort, toggle),
+  type: (sort: SortState | undefined, toggle: (column: SortColumn) => void) =>
+    sortableHeader("type", NOTES.columnType, sort, toggle),
+  visitDate: (sort: SortState | undefined, toggle: (column: SortColumn) => void) =>
+    sortableHeader("visitDate", NOTES.columnVisitDate, sort, toggle),
+};
 
 function rowMatchesFilter(row: WorklistRow, filter: WorklistFilter) {
   if (filter === "all") return true;
@@ -138,17 +270,20 @@ function rowMatchesFilter(row: WorklistRow, filter: WorklistFilter) {
 }
 
 function worklistEmptyText(filter: WorklistFilter) {
-  if (filter === "review") return "No local work is awaiting review.";
-  if (filter === "today") return "No other local work is recorded for today.";
-  if (filter === "drafts") return "No saved local injection drafts are available.";
-  return "No local work or saved drafts are available.";
+  if (filter === "review") return "Nothing is waiting for review.";
+  if (filter === "today") return "Nothing else is recorded for today.";
+  if (filter === "drafts") return "No unfinished notes.";
+  return "No open notes.";
 }
 
+/**
+ * The way forward, naming the action in the bar above rather than repeating
+ * its button. Second person, imperative, no system nouns - PLAN 2.4.
+ */
 function worklistEmptyHint(filter: WorklistFilter) {
-  if (filter === "drafts") return "Use Start new injection to create an editable local record.";
-  if (filter === "review") return "Items appear here only when a saved local record needs review.";
-  if (filter === "today") return "Completed history remains available from Record List (F11).";
-  return "Start a new injection, or open Record List (F11) for local history.";
+  if (filter === "review") return "Notes appear here when one needs a second look.";
+  if (filter === "today") return "Notes you sign today appear here.";
+  return `Use ${RECORD.startNewInjection} to begin one.`;
 }
 
 export function StartCenter({
@@ -160,8 +295,20 @@ export function StartCenter({
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
+  onOpenRecords,
+  onOpenCloseout,
 }: StartCenterProps) {
+  const [openMenu, setOpenMenu] = useState<"new" | "more" | undefined>(undefined);
   const [filter, setFilter] = useState<WorklistFilter>("all");
+  const [sort, setSort] = useState<SortState | undefined>(undefined);
+
+  // Tebra sorts on the first header click and reverses on the second.
+  const toggleSort = (column: SortColumn) =>
+    setSort((current) =>
+      current?.column === column
+        ? { column, direction: current.direction === "asc" ? "desc" : "asc" }
+        : { column, direction: "asc" },
+    );
 
   // A review item is also present in the general Today queue. Keep it once in
   // its higher-priority register instead of showing the same local work twice.
@@ -181,7 +328,10 @@ export function StartCenter({
     ...savedDrafts.map(recordWorklistRow),
     ...todayItems.map((item) => queueWorklistRow(item, "today")),
   ];
-  const visibleRows = allRows.filter((row) => rowMatchesFilter(row, filter));
+  const visibleRows = sortRows(
+    allRows.filter((row) => rowMatchesFilter(row, filter)),
+    sort,
+  );
   const countFor = (candidate: WorklistFilter) =>
     allRows.filter((row) => rowMatchesFilter(row, candidate)).length;
 
@@ -193,7 +343,7 @@ export function StartCenter({
   return (
     <section class="cd2004-start-center" aria-labelledby="currentWorklistTitle">
       <nav class="cd2004-launcher" aria-label="Start a clinical workflow">
-        <span class="cd2004-launcher-head">Clinical Modules</span>
+        <span class="cd2004-launcher-head">{MODULE.startANote}</span>
         <div class="cd2004-launcher-grid">
           {LAUNCHER_WORKFLOWS.map((workflow) => {
             const summary = summaries[workflow];
@@ -226,30 +376,114 @@ export function StartCenter({
         </div>
       </nav>
 
+      {/*
+        The action bar. MANIFEST 4.3 specifies
+        `+ New Note · Print · More · Customize View`, top right, in that order.
+        Two of those four are not built, and both omissions answer convention
+        review question 4 - does any control link to something that is not
+        here:
+
+        - `Print` has nothing truthful to print from this screen. Printing in
+          this app is the patient-facing sheets, which are produced from a
+          note and are byte-identical-guarded; a worklist print does not
+          exist. Print lives on the note, where it is real.
+        - `Customize View` would toggle five columns and persist that per
+          browser. It is buildable and it is ceremony: it adds a menu, a
+          stored preference and a second source of truth for what the table
+          shows, in exchange for hiding one of five columns.
+
+        Both are recorded in MANIFEST 4.3 rather than silently dropped.
+      */}
       <header class="cd2004-worklist-header">
         <div>
-          <h1 id="currentWorklistTitle" aria-label={NOTES.openNotes}>
-            {SHELL.localOnlyDetail}
-          </h1>
+          {/* The heading is the screen. The disclosure it used to display in
+              its place is still on the window title beside it, and on the app
+              bar, so this was a third copy shouted in caps. */}
+          <h1 id="currentWorklistTitle">{NOTES.openNotes}</h1>
         </div>
-        <button
-          type="button"
-          class="cd2004-worklist-new"
-          disabled={!onStartNewInjection}
-          title={
-            onStartNewInjection
-              ? "Start a clean local injection record."
-              : "Starting a new local injection record is not available in this view."
-          }
-          onClick={() => onStartNewInjection?.()}
-        >
-          <DesktopIcon name="new" />
-          Start new injection
-        </button>
+        <div class="cd2004-worklist-actions">
+          <div class="cd2004-worklist-menu">
+            <button
+              type="button"
+              class="cd2004-worklist-new"
+              aria-haspopup="menu"
+              aria-expanded={openMenu === "new"}
+              disabled={!onStartNewInjection}
+              onClick={() =>
+                setOpenMenu((current) => (current === "new" ? undefined : "new"))
+              }
+            >
+              <DesktopIcon name="new" />
+              {NOTES.newNote}
+            </button>
+            {openMenu === "new" && (
+              <div class="cd2004-worklist-menu-popup" role="menu">
+                {NEW_NOTE_TYPES.map((workflow) => (
+                  <button
+                    key={workflow}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpenMenu(undefined);
+                      // Injection is the one type with a record lifecycle to
+                      // start; the rest are opened at their worksheet.
+                      if (workflow === "administer") onStartNewInjection?.();
+                      else onWorkflowOpen(workflow);
+                    }}
+                  >
+                    {WORKFLOW_LABELS[workflow]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div class="cd2004-worklist-menu">
+            <button
+              type="button"
+              class="cd2004-worklist-more"
+              aria-haspopup="menu"
+              aria-expanded={openMenu === "more"}
+              disabled={!onOpenRecords && !onOpenCloseout}
+              onClick={() =>
+                setOpenMenu((current) => (current === "more" ? undefined : "more"))
+              }
+            >
+              {NOTES.more}
+            </button>
+            {openMenu === "more" && (
+              <div class="cd2004-worklist-menu-popup is-right" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!onOpenRecords}
+                  onClick={() => {
+                    setOpenMenu(undefined);
+                    onOpenRecords?.();
+                  }}
+                >
+                  {NOTES.signedNotes}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!onOpenCloseout}
+                  onClick={() => {
+                    setOpenMenu(undefined);
+                    onOpenCloseout?.();
+                  }}
+                >
+                  {MODULE.dailyCloseout}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
-      <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters">
-        <span class="cd2004-worklist-filter-label">VIEW:</span>
+      {/* Tebra's filter chips carry no "VIEW:" prefix - the chips are the
+          affordance, and the tablist is already named for assistive tech. */}
+      <div class="cd2004-worklist-tabs" role="tablist" aria-label="Open note filters">
         {FILTERS.map((candidate) => (
           <button
             key={candidate.id}
@@ -269,57 +503,90 @@ export function StartCenter({
         <table class="cd2004-worklist-table">
           <thead>
             <tr>
-              <th>Time / priority</th>
-              <th>Patient / visit</th>
-              <th>Task / medication</th>
-              <th>State</th>
-              <th>
-                <span class="cd2004-visually-hidden">Action</span>
+              {SORTABLE_COLUMNS.patient(sort, toggleSort)}
+              <th class="cd2004-worklist-lock-column">
+                <span class="cd2004-visually-hidden">{NOTES.columnLock}</span>
               </th>
+              {SORTABLE_COLUMNS.type(sort, toggleSort)}
+              <th>{NOTES.columnStatus}</th>
+              {SORTABLE_COLUMNS.visitDate(sort, toggleSort)}
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map((row) => (
-              <tr key={row.id} class={`is-${row.tone ?? "neutral"}`}>
-                <td data-label="Time / priority">
-                  <span class="cd2004-worklist-source-icon" aria-hidden="true">
-                    <DesktopIcon
-                      name={
-                        row.source === "drafts"
-                          ? "administer"
-                          : row.tone === "warning" || row.tone === "stop"
-                            ? "alert"
-                            : "records"
-                      }
-                    />
-                  </span>
-                  <span class="cd2004-worklist-priority-copy">
-                    <strong>{row.priorityLabel}</strong>
-                    {row.timeLabel && <small>{row.timeLabel}</small>}
-                  </span>
-                </td>
-                <td data-label="Patient / visit">{row.patientLabel}</td>
-                <td data-label="Task / medication">{row.taskLabel}</td>
-                <td data-label="State">
-                  <span class={`cd2004-worklist-state is-${row.tone ?? "neutral"}`}>
-                    {row.stateLabel}
-                  </span>
-                </td>
-                <td data-label="Action">
-                  <button
-                    type="button"
-                    class="cd2004-worklist-action"
-                    disabled={!row.queueItem && !row.record}
-                    onClick={() => openRow(row)}
-                  >
-                    {row.actionLabel}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {visibleRows.map((row) => {
+              const openable = Boolean(row.queueItem ?? row.record);
+              return (
+                <tr
+                  key={row.id}
+                  class={`is-${row.tone ?? "neutral"} ${openable ? "is-openable" : ""}`}
+                  // Tebra opens a note from anywhere on its row, with no
+                  // trailing "open" link. The row carries the pointer target;
+                  // the patient button below carries the keyboard and screen
+                  // reader one, so neither input method loses the affordance.
+                  onClick={openable ? () => openRow(row) : undefined}
+                >
+                  <td data-label={NOTES.columnPatient}>
+                    <button
+                      type="button"
+                      class="cd2004-worklist-open"
+                      disabled={!openable}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openRow(row);
+                      }}
+                    >
+                      {row.patientLabel}
+                    </button>
+                  </td>
+                  <td class="cd2004-worklist-lock-column" data-label={NOTES.columnLock}>
+                    {row.locked && (
+                      <span
+                        class="cd2004-worklist-lock"
+                        title={
+                          row.visitTimeLabel
+                            ? `${NOTES.lockedHint} · ${row.visitTimeLabel}`
+                            : NOTES.lockedHint
+                        }
+                        aria-label={NOTES.lockedHint}
+                      >
+                        <DesktopIcon name="lock" />
+                      </span>
+                    )}
+                  </td>
+                  <td data-label={NOTES.columnType}>
+                    <span class="cd2004-worklist-type">
+                      <strong>{row.typeLabel}</strong>
+                      <small>{row.detailLabel}</small>
+                    </span>
+                  </td>
+                  <td data-label={NOTES.columnStatus}>
+                    {/* Icon and word, never colour alone: MANIFEST 5 q7. */}
+                    <span class={`cd2004-note-chip is-${row.statusTone}`}>
+                      {row.statusIcon && (
+                        <DesktopIcon name={row.statusIcon} />
+                      )}
+                      {row.statusLabel}
+                    </span>
+                  </td>
+                  <td data-label={NOTES.columnVisitDate}>
+                    <span class="cd2004-worklist-visit">
+                      {row.visitTimeLabel ?? NOTES.noVisitDate}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
             {!visibleRows.length && (
               <tr class="cd2004-worklist-empty">
                 <td colSpan={5}>
+                  {/*
+                    One line in voice, then the way out of it - never a bare
+                    "No records." MANIFEST 4.1 says the empty state carries the
+                    primary action; it is carried by the action bar directly
+                    above, and repeating it here would put two coral buttons on
+                    one screen (MANIFEST 5 q6) and two controls with the same
+                    accessible name on one table. The line names it instead.
+                  */}
                   <strong>{worklistEmptyText(filter)}</strong>
                   <small>{worklistEmptyHint(filter)}</small>
                 </td>

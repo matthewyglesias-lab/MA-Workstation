@@ -46,6 +46,12 @@ export const MODULE = {
   /** No Tebra equivalent, and the existing name is already plain. */
   dailyCloseout: "Daily Closeout",
   future: "Future / TMS",
+  /**
+   * The heading over the module grid. "Clinical Modules" named the software's
+   * parts; this names what the row is for. Shown in sentence case - the
+   * shouted caps were a client/server section rule, not a Tebra one.
+   */
+  startANote: "Start a note",
 } as const;
 
 /* -------------------------------------------------------------------- notes */
@@ -64,6 +70,37 @@ export const NOTES = {
   statusSigned: "Signed",
   statusNotStarted: "Not started",
   statusNeedsReview: "Needs review",
+
+  /**
+   * Open Notes column headings. Tebra's set is
+   * `Patient · Lock · Type · Status · Visit Date`, and the order is theirs.
+   * The lock column's heading is for screen readers only - Tebra shows a
+   * glyph there and so do we.
+   */
+  columnPatient: "Patient",
+  columnLock: "Lock",
+  columnType: "Type",
+  columnStatus: "Status",
+  columnVisitDate: "Visit date",
+
+  /**
+   * The lock hover. Tebra reveals who currently holds a note; this app has no
+   * server and no second user, and the signer is not carried on the row (it
+   * lives behind a frozen path), so ours says what it truthfully knows: the
+   * note is signed and read-only, and when it was recorded. Same affordance,
+   * less claim. See docs/redesign/MANIFEST.md 4.1.
+   */
+  lockedHint: "Signed · read only",
+  /** No visit date is held for an unsigned draft. */
+  noVisitDate: "—",
+  /** Tebra's action-bar primary. Was "Start new injection". */
+  newNote: "New note",
+  /** Tebra's action-bar overflow. */
+  more: "More",
+  /** Where signed notes live once they leave the worklist. */
+  signedNotes: "Signed notes",
+  sortAscending: "sorted A to Z",
+  sortDescending: "sorted Z to A",
 } as const;
 
 /* ---------------------------------------------------------------- lifecycle */
