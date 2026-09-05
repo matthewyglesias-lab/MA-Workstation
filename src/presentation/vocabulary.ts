@@ -103,6 +103,24 @@ export const NOTES = {
   sortDescending: "sorted Z to A",
 } as const;
 
+/**
+ * The worksheet's step states. `WorkflowLedgerTabs` is already the stepper -
+ * one control serving as both navigation and the engine's transaction ledger,
+ * which is why this redesign adds no second one - but it stamped each step
+ * with a terminal abbreviation: PEND / ENTRY / OK / REV / STOP / LOCK. Those
+ * are the ledger's internal state names shortened to fit a 1990s cell, and
+ * PLAN 2.4 retires them. The states themselves are unchanged and still come
+ * from `projectClinicalReadiness`; only the words do.
+ */
+export const STEP = {
+  pending: "Not started",
+  entry: "In progress",
+  complete: "Done",
+  review: "Check",
+  stop: "Blocked",
+  locked: "Signed",
+} as const;
+
 /* ---------------------------------------------------------------- lifecycle */
 
 /**

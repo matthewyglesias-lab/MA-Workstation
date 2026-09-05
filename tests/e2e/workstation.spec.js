@@ -986,7 +986,7 @@ test.describe('MA Workstation browser journeys', () => {
     const f8 = page.locator('.meditech-command-deck button').filter({ hasText: 'F8' });
     const f9 = page.locator('.meditech-command-deck button').filter({ hasText: 'F9' });
 
-    await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('PEND');
+    await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('Not started');
     await reason.focus();
     await expect(page.locator('.cd2004-status-message')).toContainText(
       'INJ-REASON | Encounter type'
@@ -1017,7 +1017,7 @@ test.describe('MA Workstation browser journeys', () => {
       'INJ-REASON filed as PRN / ordered.'
     );
     await expect(orderTab).toHaveClass(/is-stop/);
-    await expect(orderTab.locator('.wfp-ledger-state')).toContainText('STOP');
+    await expect(orderTab.locator('.wfp-ledger-state')).toContainText('blocking');
     await expect(f8).toContainText('Next stop');
 
     // Reconfirming the current lookup row is a no-op. It must not emit the
@@ -1046,11 +1046,11 @@ test.describe('MA Workstation browser journeys', () => {
     await openWorkflow(page, 'uds');
     const udsPanel = page.locator('.wfp-panel');
     const specimenTab = udsPanel.getByRole('tab', { name: 'Specimen', exact: true });
-    await expect(specimenTab.locator('.wfp-ledger-state')).toHaveText('PEND');
+    await expect(specimenTab.locator('.wfp-ledger-state')).toHaveText('Not started');
     await signInLocalStaff(page, 'Alex Rivera, MA');
     await udsPanel.getByLabel('Encounter type', { exact: true }).selectOption('routine');
     await expect(specimenTab).toHaveClass(/is-stop/);
-    await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('STOP');
+    await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('blocking');
 
     await udsPanel.getByRole('button', { name: 'Use signed-in staff', exact: true }).click();
     const collectorField = udsPanel.locator('.wfp-field[data-field-path="collector"]');
