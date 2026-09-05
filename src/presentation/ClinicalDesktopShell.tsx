@@ -1510,15 +1510,21 @@ function PatientBanner({
   // context") that named its own internals rather than anything staff act on.
   const chartContextLabel = PATIENT.facesheet;
   const workflowContextLabel = `${WORKFLOW_LABELS[selectedWorkflow]} — ${workflowStateLabel}`;
+  /*
+   * The context line beside the allergies. It used to read
+   * `MEDICATION: … · WORKFLOW: INJECTION · STATE: NEEDS REVIEW` - two of those
+   * three keys name this codebase rather than anything an MA does. "Workflow"
+   * is on PLAN 2.4's retirement list; "state" is a projection field. The note
+   * type and its status say the same thing in the words the rest of the
+   * screen already uses, and drop the shouted keys with them.
+   */
   const medicationContextPrefix = patient.medicationLabel
-    ? `MEDICATION: ${patient.medicationLabel} · `
+    ? `${patient.medicationLabel} · `
     : "";
   const safetyContextLabel =
     selectedWorkflow === "home"
-      ? patient.medicationLabel
-        ? `MEDICATION: ${patient.medicationLabel}`
-        : `WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
-      : `${medicationContextPrefix}WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · STATE: ${workflowStateLabel.toUpperCase()}`;
+      ? patient.medicationLabel ?? ""
+      : `${medicationContextPrefix}${WORKFLOW_LABELS[selectedWorkflow]} · ${workflowStateLabel}`;
   return (
     <div
       class={`cd2004-patient-banner ${

@@ -343,7 +343,7 @@ export function StartCenter({
   return (
     <section class="cd2004-start-center" aria-labelledby="currentWorklistTitle">
       <nav class="cd2004-launcher" aria-label="Start a clinical workflow">
-        <span class="cd2004-launcher-head">Clinical Modules</span>
+        <span class="cd2004-launcher-head">{MODULE.startANote}</span>
         <div class="cd2004-launcher-grid">
           {LAUNCHER_WORKFLOWS.map((workflow) => {
             const summary = summaries[workflow];
@@ -396,9 +396,10 @@ export function StartCenter({
       */}
       <header class="cd2004-worklist-header">
         <div>
-          <h1 id="currentWorklistTitle" aria-label={NOTES.openNotes}>
-            {SHELL.localOnlyDetail}
-          </h1>
+          {/* The heading is the screen. The disclosure it used to display in
+              its place is still on the window title beside it, and on the app
+              bar, so this was a third copy shouted in caps. */}
+          <h1 id="currentWorklistTitle">{NOTES.openNotes}</h1>
         </div>
         <div class="cd2004-worklist-actions">
           <div class="cd2004-worklist-menu">
@@ -480,8 +481,9 @@ export function StartCenter({
         </div>
       </header>
 
-      <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters">
-        <span class="cd2004-worklist-filter-label">VIEW:</span>
+      {/* Tebra's filter chips carry no "VIEW:" prefix - the chips are the
+          affordance, and the tablist is already named for assistive tech. */}
+      <div class="cd2004-worklist-tabs" role="tablist" aria-label="Open note filters">
         {FILTERS.map((candidate) => (
           <button
             key={candidate.id}

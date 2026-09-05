@@ -1144,13 +1144,14 @@ input[type="radio"]:disabled {
   box-shadow: inset 1px 1px #fff, inset -1px -1px #afb5c7;
 }
 
+/* A section heading, in sentence case. The shouted small caps were a
+   client/server section rule; Tebra writes a heading as a heading. */
 .cd2004-launcher-head {
   display: block;
-  color: var(--tw-teal-600);
-  font-size: 8px;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  line-height: var(--tw-lh-ws-meta);
 }
 
 .cd2004-launcher-grid {

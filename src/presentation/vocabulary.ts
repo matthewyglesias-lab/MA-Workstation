@@ -46,6 +46,12 @@ export const MODULE = {
   /** No Tebra equivalent, and the existing name is already plain. */
   dailyCloseout: "Daily Closeout",
   future: "Future / TMS",
+  /**
+   * The heading over the module grid. "Clinical Modules" named the software's
+   * parts; this names what the row is for. Shown in sentence case - the
+   * shouted caps were a client/server section rule, not a Tebra one.
+   */
+  startANote: "Start a note",
 } as const;
 
 /* -------------------------------------------------------------------- notes */

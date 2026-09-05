@@ -1008,13 +1008,6 @@
     border: 0;
   }
 
-  .meditech-command-prompt strong {
-    color: var(--tw-text-muted);
-    font-size: var(--tw-fs-ws-label);
-    font-weight: 700;
-    letter-spacing: var(--tw-ls-ws-label);
-  }
-
   .meditech-command-prompt span {
     overflow: hidden;
     color: var(--tw-text-primary);
@@ -1786,10 +1779,6 @@
     box-shadow: inset 1px 1px #fff;
   }
 
-  .cd2004-launcher-head {
-    font-size: 7px;
-  }
-
   .cd2004-launcher-grid {
     grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
     gap: 3px;
@@ -1829,16 +1818,14 @@
 
   .cd2004-worklist-header h1 {
     margin: 0;
-    color: var(--tw-teal-900);
-    font: 700 10px var(--tw-font-sans);
-    letter-spacing: 0.035em;
-    text-transform: uppercase;
+    color: var(--tw-text-primary);
+    font: 700 var(--tw-fs-ws-base)/var(--tw-lh-ws-base) var(--tw-font-sans);
   }
 
   .cd2004-worklist-header p {
     margin: 0;
-    color: var(--tw-teal-500);
-    font-size: 8px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
   }
 
   /* A 19px square-cornered control at 8px is not a primary action at any
@@ -1850,12 +1837,6 @@
     padding: 1px 3px;
     background: var(--tw-teal-200);
     border: 1px solid var(--tw-teal-500);
-  }
-
-  .cd2004-worklist-filter-label {
-    margin-right: 3px;
-    color: var(--tw-teal-800);
-    font: 700 8px var(--tw-font-sans);
   }
 
   .cd2004-worklist-tabs button {
@@ -2398,10 +2379,8 @@
   }
 
   .cd2004-worklist-header h1 {
-    color: var(--tw-teal-800);
-    font-size: 9px;
-    letter-spacing: 0.055em;
-    text-transform: uppercase;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-base);
   }
 
   .cd2004-worklist-table tbody tr:focus-within td {

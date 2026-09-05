@@ -1198,7 +1198,7 @@ test.describe('MA Workstation browser journeys', () => {
   test('routes the Client/Server function-key profile without unsafe global shortcuts', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
-    const deck = page.locator('[role="toolbar"][aria-label="MEDITECH function key commands"]');
+    const deck = page.locator('[role="toolbar"][aria-label="Function key commands"]');
 
     await expect(deck).toBeVisible();
     await expect(deck).toContainText('F1');
@@ -1368,7 +1368,7 @@ test.describe('MA Workstation browser journeys', () => {
     const udsPanel = page.locator('.wfp-panel');
     await udsPanel.locator('select[name="uds-reason"]').selectOption('routine');
     const udsFileCommand = page
-      .locator('[role="toolbar"][aria-label="MEDITECH function key commands"]')
+      .locator('[role="toolbar"][aria-label="Function key commands"]')
       .getByRole('button', { name: 'F12 Save UDS' });
     await expect(udsFileCommand).toBeEnabled();
     await page.keyboard.press('F12');

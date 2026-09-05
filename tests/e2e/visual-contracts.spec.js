@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const WORKFLOWS = {
   home: {
     label: 'Dashboard',
-    headingText: 'Records stay in this browser',
+    headingText: 'Open Notes',
     panel: '.cd2004-start-center',
     layout: '.cd2004-start-center',
     heading: '#currentWorklistTitle',
@@ -293,11 +293,15 @@ function expectedContract(workflow) {
     heading: {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
+      // Phase 3d: the Dashboard heading is the screen's name at the
+      // workstation base size, not the local-only disclosure shouted in 9px
+      // small caps. The disclosure is still on the window title beside it and
+      // on the app bar; this was a third copy.
       style: {
-        color: isHome ? 'rgb(0, 73, 82)' : 'rgb(16, 42, 86)',
-        fontSize: isHome ? '9px' : '16px',
+        color: isHome ? 'rgb(0, 58, 67)' : 'rgb(16, 42, 86)',
+        fontSize: isHome ? '14px' : '16px',
         fontWeight: '700',
-        lineHeight: isHome ? 'normal' : '18.4px'
+        lineHeight: isHome ? '20px' : '18.4px'
       }
     },
     chrome: {
