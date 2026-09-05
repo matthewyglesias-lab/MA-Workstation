@@ -51,7 +51,23 @@ export interface StartCenterProps {
    * this remains optional for embedders that only render the worklist.
    */
   onStartNewInjection?: () => void;
+  /** The low-frequency destinations the action bar holds under More. */
+  onOpenRecords?: () => void;
+  onOpenCloseout?: () => void;
 }
+
+/**
+ * `+ New Note`'s type menu. Tebra's action bar opens a new note by type from
+ * one control, which is also the fix for a real limitation: the primary
+ * action here could only ever start an injection, so beginning a UDS meant
+ * finding it in the module grid.
+ */
+const NEW_NOTE_TYPES: readonly WorkflowId[] = [
+  "administer",
+  "uds",
+  "samples",
+  "forms",
+];
 
 /**
  * A row in Open Notes. The column set is Tebra's -
@@ -279,7 +295,10 @@ export function StartCenter({
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
+  onOpenRecords,
+  onOpenCloseout,
 }: StartCenterProps) {
+  const [openMenu, setOpenMenu] = useState<"new" | "more" | undefined>(undefined);
   const [filter, setFilter] = useState<WorklistFilter>("all");
   const [sort, setSort] = useState<SortState | undefined>(undefined);
 
@@ -357,26 +376,108 @@ export function StartCenter({
         </div>
       </nav>
 
+      {/*
+        The action bar. MANIFEST 4.3 specifies
+        `+ New Note · Print · More · Customize View`, top right, in that order.
+        Two of those four are not built, and both omissions answer convention
+        review question 4 - does any control link to something that is not
+        here:
+
+        - `Print` has nothing truthful to print from this screen. Printing in
+          this app is the patient-facing sheets, which are produced from a
+          note and are byte-identical-guarded; a worklist print does not
+          exist. Print lives on the note, where it is real.
+        - `Customize View` would toggle five columns and persist that per
+          browser. It is buildable and it is ceremony: it adds a menu, a
+          stored preference and a second source of truth for what the table
+          shows, in exchange for hiding one of five columns.
+
+        Both are recorded in MANIFEST 4.3 rather than silently dropped.
+      */}
       <header class="cd2004-worklist-header">
         <div>
           <h1 id="currentWorklistTitle" aria-label={NOTES.openNotes}>
             {SHELL.localOnlyDetail}
           </h1>
         </div>
-        <button
-          type="button"
-          class="cd2004-worklist-new"
-          disabled={!onStartNewInjection}
-          title={
-            onStartNewInjection
-              ? "Start a clean local injection record."
-              : "Starting a new local injection record is not available in this view."
-          }
-          onClick={() => onStartNewInjection?.()}
-        >
-          <DesktopIcon name="new" />
-          Start new injection
-        </button>
+        <div class="cd2004-worklist-actions">
+          <div class="cd2004-worklist-menu">
+            <button
+              type="button"
+              class="cd2004-worklist-new"
+              aria-haspopup="menu"
+              aria-expanded={openMenu === "new"}
+              disabled={!onStartNewInjection}
+              onClick={() =>
+                setOpenMenu((current) => (current === "new" ? undefined : "new"))
+              }
+            >
+              <DesktopIcon name="new" />
+              {NOTES.newNote}
+            </button>
+            {openMenu === "new" && (
+              <div class="cd2004-worklist-menu-popup" role="menu">
+                {NEW_NOTE_TYPES.map((workflow) => (
+                  <button
+                    key={workflow}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpenMenu(undefined);
+                      // Injection is the one type with a record lifecycle to
+                      // start; the rest are opened at their worksheet.
+                      if (workflow === "administer") onStartNewInjection?.();
+                      else onWorkflowOpen(workflow);
+                    }}
+                  >
+                    {WORKFLOW_LABELS[workflow]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div class="cd2004-worklist-menu">
+            <button
+              type="button"
+              class="cd2004-worklist-more"
+              aria-haspopup="menu"
+              aria-expanded={openMenu === "more"}
+              disabled={!onOpenRecords && !onOpenCloseout}
+              onClick={() =>
+                setOpenMenu((current) => (current === "more" ? undefined : "more"))
+              }
+            >
+              {NOTES.more}
+            </button>
+            {openMenu === "more" && (
+              <div class="cd2004-worklist-menu-popup is-right" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!onOpenRecords}
+                  onClick={() => {
+                    setOpenMenu(undefined);
+                    onOpenRecords?.();
+                  }}
+                >
+                  {NOTES.signedNotes}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!onOpenCloseout}
+                  onClick={() => {
+                    setOpenMenu(undefined);
+                    onOpenCloseout?.();
+                  }}
+                >
+                  {MODULE.dailyCloseout}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
       <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters">

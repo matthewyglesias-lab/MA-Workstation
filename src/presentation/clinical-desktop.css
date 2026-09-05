@@ -1263,6 +1263,73 @@ input[type="radio"]:disabled {
   line-height: 1.25;
 }
 
+/* The action bar. Tebra puts it top right, primary first. */
+.cd2004-worklist-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cd2004-worklist-menu {
+  position: relative;
+}
+
+/* The overflow control is quiet: it holds destinations, not the task. */
+.cd2004-worklist-more {
+  min-height: var(--tw-btn-h-ws);
+  padding: 3px 12px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
+  font: 600 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
+  white-space: nowrap;
+}
+
+.cd2004-worklist-more:hover:not(:disabled) {
+  background: var(--tw-mint-50);
+  border-color: var(--tw-teal-600);
+}
+
+.cd2004-worklist-menu-popup {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  min-width: 168px;
+  padding: 4px;
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-ws);
+  box-shadow: 0 6px 16px rgb(0 58 67 / 12%);
+}
+
+.cd2004-worklist-menu-popup.is-right {
+  right: 0;
+  left: auto;
+}
+
+.cd2004-worklist-menu-popup button {
+  padding: 6px 10px;
+  color: var(--tw-text-primary);
+  background: none;
+  border: 0;
+  border-radius: var(--tw-radius-tight);
+  font: 500 var(--tw-fs-ws-dense)/var(--tw-lh-ws-dense) var(--tw-font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cd2004-worklist-menu-popup button:hover:not(:disabled) {
+  background: var(--tw-mint-50);
+}
+
+.cd2004-worklist-menu-popup button:disabled {
+  color: var(--tw-text-muted);
+  cursor: default;
+}
+
 .cd2004-worklist-new {
   min-height: var(--tw-btn-h-ws);
   color: var(--tw-teal-900);

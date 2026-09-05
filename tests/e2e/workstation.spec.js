@@ -1225,7 +1225,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(helpDialog).toBeHidden();
 
     // With no clinical stops active, F8 retains the classic zone cycle.
-    const startInjection = page.getByRole('button', { name: 'Start new injection', exact: true });
+    // Phase 3b: the Dashboard's primary action is Tebra's `New note`, which
+    // opens a type menu, rather than a button that could only ever start an
+    // injection. `Start new injection` is still the label on the record
+    // lifecycle controls, where it names a record operation.
+    const startInjection = page.locator('.cd2004-worklist-new');
     await startInjection.focus();
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>

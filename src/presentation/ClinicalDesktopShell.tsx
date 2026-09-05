@@ -871,6 +871,8 @@ export function ClinicalDesktopShell({
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
+    onOpenRecords,
+    onOpenCloseout,
   });
 
   const inspectorPanel = (
@@ -1244,6 +1246,9 @@ interface RenderWorkflowOptions {
   onQueueItemOpen?: ClinicalDesktopShellProps["onQueueItemOpen"];
   onRecordOpen?: ClinicalDesktopShellProps["onRecordOpen"];
   onStartNewInjection?: ClinicalDesktopShellProps["onStartNewInjection"];
+  /** Open Notes' action bar holds the low-frequency destinations under More. */
+  onOpenRecords?: ClinicalDesktopShellProps["onOpenRecords"];
+  onOpenCloseout?: ClinicalDesktopShellProps["onOpenCloseout"];
 }
 
 interface InjectionRecordActionsProps {
@@ -1412,6 +1417,8 @@ function renderWorkflowContent({
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
+  onOpenRecords,
+  onOpenCloseout,
 }: RenderWorkflowOptions): ComponentChildren {
   if (workflow === "home") {
     return (
@@ -1424,6 +1431,8 @@ function renderWorkflowContent({
         onQueueItemOpen={onQueueItemOpen}
         onRecordOpen={onRecordOpen}
         onStartNewInjection={onStartNewInjection}
+        onOpenRecords={onOpenRecords}
+        onOpenCloseout={onOpenCloseout}
       />
     );
   }

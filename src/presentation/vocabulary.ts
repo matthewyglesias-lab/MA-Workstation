@@ -87,6 +87,12 @@ export const NOTES = {
   lockedHint: "Signed · read only",
   /** No visit date is held for an unsigned draft. */
   noVisitDate: "—",
+  /** Tebra's action-bar primary. Was "Start new injection". */
+  newNote: "New note",
+  /** Tebra's action-bar overflow. */
+  more: "More",
+  /** Where signed notes live once they leave the worklist. */
+  signedNotes: "Signed notes",
   sortAscending: "sorted A to Z",
   sortDescending: "sorted Z to A",
 } as const;

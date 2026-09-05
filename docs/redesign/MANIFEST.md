@@ -61,7 +61,15 @@ else under `src/application/**` remains frozen.
 | `src/presentation/facesheet/PatientCardPopup.tsx` | Hover card on patient name. | 3 |
 | `src/presentation/facesheet/SummaryCard.tsx` | Card grammar for Last injection / Site rotation / Allergies / Recent notes. | 3 |
 | `src/presentation/notes/NotesTable.tsx` | Open Notes table: sort, lock, status chips. | 3 |
-| `src/presentation/notes/StatusChip.tsx` | `Incomplete` · `Ready to sign` · `Signed`. | 3 |
+| `src/presentation/notes/StatusChip.tsx` | `Incomplete` · `Ready to sign` · `Signed` · `Needs review`
+
+**Amended in Phase 3a.** `Needs review` is ours and it is not optional: a UDS
+routed for clinician review is a real state this app holds, and folding it
+into one of the other three would hide clinical meaning. `Ready to sign` is
+the reverse case — it is in the vocabulary and used on the worksheet, but it
+never appears in the table, because the record register reports only Draft or
+Locked and the row cannot tell a complete draft from an incomplete one.
+Claiming it there would be a guess.. | 3 |
 | `src/presentation/notes/LockIndicator.tsx` | Lock glyph + hover "Signed by … at …". | 3 |
 | `src/presentation/kiosk/KioskShell.tsx` | Kiosk chrome and sign-and-next loop. | 4 |
 | `src/presentation/kiosk/InjectionStepper.tsx` | 7-step rail over existing `InjectionPanel` tabs. | 4 |
@@ -330,14 +338,22 @@ item below is a Tebra behavior read off their product documentation.
 | Sorting | Click a header to sort; click again to reverse. Sortable on Patient, Type, Visit Date. |
 | Sort affordance | Header shows direction; unsorted headers show an affordance on hover only. |
 | Row target | The **whole row** opens the note. No trailing "open" link. |
-| Lock column | Glyph when the record is signed; hover reveals `Signed by A. Rivera, MA · 2:14 PM`. |
+| Lock column | Glyph when the record is signed; hover reveals `Signed by A. Rivera, MA · 2:14 PM`. **Amended in Phase 3a: the signer is not carried on the row — it lives behind `src/legacy/`, a frozen path — so the hover reads `Signed · read only` and the time. Inferring the signer from the signed-in user would be wrong the first time two people share a workstation.** |
 | Visit Date | The appointment date, or the note's creation date/time when there is no appointment. |
-| Status | `StatusChip` — see 4.2. |
-| Empty state | One line in voice, plus the primary action. Never a bare "No records." |
+| Status | `StatusChip` — see 4.2. Carries an icon **and** a word (5 q7); its tone is the status's, not the row's. |
+| Empty state | One line in voice, plus the primary action. Never a bare "No records." **Amended in Phase 3a: the line *names* the primary action rather than repeating its button — the action bar sits directly above, and a second copy would put two coral buttons on one screen (5 q6) and two controls with the same accessible name in one table.** |
 
 ### 4.2 Status chips
 
-`Incomplete` · `Ready to sign` · `Signed`
+`Incomplete` · `Ready to sign` · `Signed` · `Needs review`
+
+**Amended in Phase 3a.** `Needs review` is ours and it is not optional: a UDS
+routed for clinician review is a real state this app holds, and folding it
+into one of the other three would hide clinical meaning. `Ready to sign` is
+the reverse case — it is in the vocabulary and used on the worksheet, but it
+never appears in the table, because the record register reports only Draft or
+Locked and the row cannot tell a complete draft from an incomplete one.
+Claiming it there would be a guess.
 
 Tebra ships `Incomplete` and `Needs Cosign`. We keep `Incomplete` verbatim,
 extend with `Ready to sign` and `Signed`, and drop `Needs Cosign` — there is no
@@ -349,6 +365,26 @@ component, same placement, same size.
 `+ New Note` (dropdown: Injection · UDS · Samples · Forms) · `Print` · `More` ·
 `Customize View` — top right, in that order. This is Tebra's exact pattern.
 `More` holds the low-frequency actions; `Customize View` persists per browser.
+
+**Amended in Phase 3b — two of the four are not built, and both omissions
+answer review question 4 (does any control link to something that is not
+here):**
+
+- **`Print` is omitted from Open Notes.** Printing in this app means the
+  patient-facing sheets, which are produced from a note and asserted
+  byte-identical against `tests/fixtures/print-baseline-v1.json`. A worklist
+  print does not exist, and adding one reaches into print output, which this
+  project holds frozen. Print lives on the note, where it is real.
+- **`Customize View` is omitted.** It would toggle five columns and persist
+  that per browser: a menu, a stored preference, and a second source of truth
+  for what the table shows, in exchange for hiding one of five columns. If a
+  sixth and seventh column ever arrive, revisit it.
+
+What is built: `+ New Note` with the four note types, and `More` holding
+`Signed notes` and `Daily Closeout` — both real destinations. The type menu
+also fixes a real limitation rather than only matching a pattern: the primary
+action could previously only start an injection, so beginning a UDS meant
+finding it in the module grid.
 
 ### 4.4 Patient search
 

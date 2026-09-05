@@ -239,6 +239,38 @@ test.describe('Tebra screen contract', () => {
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'uds');
   });
 
+  // MANIFEST 4.3. The order is Tebra's and the omissions are deliberate:
+  // Print has nothing truthful to print from a worklist, and Customize View
+  // would toggle five columns for the cost of a stored preference. Both are
+  // recorded in the manifest; this pins what IS built so a dead control
+  // cannot appear later without the contract noticing.
+  test('opens a note by type from the action bar, with no dead controls', async ({ page }) => {
+    await page.goto('/');
+    const bar = page.locator('.cd2004-worklist-actions');
+
+    // Primary first, overflow second, and nothing else.
+    const controls = await bar.locator('> .cd2004-worklist-menu > button').allInnerTexts();
+    expect(controls.map(text => text.trim())).toEqual(['New note', 'More']);
+
+    // Every note type is reachable from the primary, which is the point of
+    // the menu: the action could previously only start an injection.
+    await bar.getByRole('button', { name: 'New note' }).click();
+    const types = await bar.getByRole('menuitem').allInnerTexts();
+    expect(types.map(text => text.trim())).toEqual(['Injection', 'UDS', 'Samples', 'Forms']);
+
+    await bar.getByRole('menuitem', { name: 'UDS' }).click();
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'uds');
+
+    // Every item under More goes somewhere that exists.
+    await page.locator('.cd2004-nav-item[title="Dashboard"]').click();
+    await bar.getByRole('button', { name: 'More' }).click();
+    const overflow = bar.getByRole('menuitem');
+    await expect(overflow).toHaveCount(2);
+    for (const item of await overflow.all()) {
+      await expect(item).toBeEnabled();
+    }
+  });
+
   test('boots into a skeleton of the shell, carrying the local-only disclosure', async ({ page }) => {
     // The first frame paints before the module graph loads, so it is inline
     // HTML/CSS in index.html and nothing else on the page can be relied on.
