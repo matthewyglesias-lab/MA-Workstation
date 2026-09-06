@@ -3414,10 +3414,10 @@ input[type="radio"]:disabled {
      an undimmed shell with nothing to click away on. */
   position: absolute;
   inset: 0;
-  background: rgb(8 17 34 / 42%) !important;
-  backdrop-filter: none !important;
+  background: rgb(8 17 34 / 42%);
+  backdrop-filter: none;
   opacity: 0;
-  transition: opacity 100ms linear !important;
+  transition: opacity 100ms linear;
 }
 
 .records-drawer-layer.is-open .records-drawer-scrim {
@@ -3426,41 +3426,41 @@ input[type="radio"]:disabled {
 
 .records-drawer {
   min-width: 0;
-  padding: 0 !important;
-  overflow: hidden !important;
-  color: var(--cd-util-ink) !important;
-  background: var(--cd-util-face) !important;
+  padding: 0;
+  overflow: hidden;
+  color: var(--cd-util-ink);
+  background: var(--cd-util-face);
   /* Raised Win32 window edge, and a hard offset drop shadow rather than a
      diffuse one - the same treatment the shell's own dialogs use. */
-  border: 1px solid #000 !important;
-  border-top-color: var(--cd-util-white) !important;
-  border-left-color: var(--cd-util-white) !important;
+  border: 1px solid #000;
+  border-top-color: var(--cd-util-white);
+  border-left-color: var(--cd-util-white);
   border-radius: 0 !important;
   box-shadow:
     inset 1px 1px var(--cd-util-white),
     inset -1px -1px #7a838d,
-    4px 4px 0 rgb(0 0 0 / 35%) !important;
-  transform: none !important;
-  transition: none !important;
-  font-family: var(--tw-font-sans) !important;
+    4px 4px 0 rgb(0 0 0 / 35%);
+  transform: none;
+  transition: none;
+  font-family: var(--tw-font-sans);
 }
 
 .records-drawer-head {
   position: relative;
-  display: grid !important;
+  display: grid;
   grid-template-columns: minmax(0, 1fr) 25px;
-  align-items: start !important;
-  gap: 8px !important;
+  align-items: start;
+  gap: 8px;
   min-width: 0;
-  align-content: center !important;
+  align-content: center;
   min-height: 0;
-  padding: 3px 3px 3px 6px !important;
+  padding: 3px 3px 3px 6px;
   color: #fff;
   background: linear-gradient(
     90deg,
     var(--cd-util-navy),
     var(--cd-util-navy-light)
-  ) !important;
+  );
   border-bottom: 1px solid var(--cd-util-navy-dark);
 }
 
@@ -3475,30 +3475,30 @@ input[type="radio"]:disabled {
 
 .records-drawer-kicker {
   overflow: hidden;
-  color: var(--tw-teal-200) !important;
-  font: 700 9px/1.2 var(--tw-font-sans) !important;
-  letter-spacing: 0.1em !important;
+  color: var(--tw-teal-200);
+  font: 700 9px/1.2 var(--tw-font-sans);
+  letter-spacing: 0.1em;
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .records-drawer-head h2 {
-  margin: 0 !important;
+  margin: 0;
   overflow: hidden;
-  color: #fff !important;
-  font: 700 11px/1.2 var(--tw-font-sans) !important;
-  letter-spacing: 0 !important;
+  color: #fff;
+  font: 700 11px/1.2 var(--tw-font-sans);
+  letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .records-drawer-head p {
-  max-width: none !important;
-  margin: 0 !important;
+  max-width: none;
+  margin: 0;
   overflow: hidden;
-  color: var(--tw-mint-50) !important;
-  font: 10px/1.35 var(--tw-font-sans) !important;
+  color: var(--tw-mint-50);
+  font: 10px/1.35 var(--tw-font-sans);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3506,42 +3506,42 @@ input[type="radio"]:disabled {
 .records-drawer-close {
   display: grid;
   place-items: center;
-  width: 16px !important;
-  height: 14px !important;
-  min-width: 16px !important;
-  min-height: 14px !important;
-  padding: 2px !important;
-  color: #111c2b !important;
-  background: var(--cd-util-face) !important;
-  border: 1px solid !important;
-  border-color: #fff #303841 #303841 #fff !important;
+  width: 16px;
+  height: 14px;
+  min-width: 16px;
+  min-height: 14px;
+  padding: 2px;
+  color: #111c2b;
+  background: var(--cd-util-face);
+  border: 1px solid;
+  border-color: #fff #303841 #303841 #fff;
   border-radius: 0 !important;
   box-shadow:
     inset 1px 1px var(--tw-mint-50),
-    inset -1px -1px #77818b !important;
-  transform: none !important;
+    inset -1px -1px #77818b;
+  transform: none;
   transition:
     background-color 80ms linear,
-    color 80ms linear !important;
-  font: 700 9px/1 Tahoma, Arial, sans-serif !important;
+    color 80ms linear;
+  font: 700 9px/1 Tahoma, Arial, sans-serif;
 }
 
 .records-drawer-close:hover {
-  color: #fff !important;
-  background: #9c1f1f !important;
-  border-color: #d88989 #540b0b #540b0b #d88989 !important;
+  color: #fff;
+  background: #9c1f1f;
+  border-color: #d88989 #540b0b #540b0b #d88989;
 }
 
 .records-drawer-close:active {
-  border-color: #303841 #fff #fff #303841 !important;
-  box-shadow: inset 1px 1px #77818b !important;
-  transform: translate(1px, 1px) !important;
+  border-color: #303841 #fff #fff #303841;
+  box-shadow: inset 1px 1px #77818b;
+  transform: translate(1px, 1px);
 }
 
 .records-drawer-search {
   position: relative;
   min-width: 0;
-  margin: 0 !important;
+  margin: 0;
   padding: 8px 9px 7px;
   background: var(--cd-util-face);
   border-bottom: 1px solid var(--cd-util-line);
@@ -3551,17 +3551,17 @@ input[type="radio"]:disabled {
 .records-drawer-search input {
   width: 100%;
   min-width: 0;
-  height: 32px !important;
-  padding: 5px 31px 5px 7px !important;
-  color: var(--cd-util-ink) !important;
-  background: #fff !important;
-  border: 1px solid #414c58 !important;
+  height: 32px;
+  padding: 5px 31px 5px 7px;
+  color: var(--cd-util-ink);
+  background: #fff;
+  border: 1px solid #414c58;
   border-radius: 0 !important;
   box-shadow:
     inset 1px 1px #aab2bb,
-    inset -1px -1px #eef1f4 !important;
+    inset -1px -1px #eef1f4;
   outline: 0;
-  font: 11px var(--tw-font-sans) !important;
+  font: 11px var(--tw-font-sans);
 }
 
 /* The input already reserves 31px of right padding for this glyph; legacy.css
@@ -3586,15 +3586,15 @@ input[type="radio"]:disabled {
 }
 
 .records-drawer-search input:focus {
-  border-color: var(--cd-util-navy) !important;
-  box-shadow: inset 1px 1px var(--tw-teal-300) !important;
-  outline: 2px solid #ffb400 !important;
+  border-color: var(--cd-util-navy);
+  box-shadow: inset 1px 1px var(--tw-teal-300);
+  outline: 2px solid #ffb400;
   outline-offset: -1px;
 }
 
 .records-drawer-search span {
-  right: 17px !important;
-  color: var(--cd-util-navy) !important;
+  right: 17px;
+  color: var(--cd-util-navy);
 }
 
 .records-drawer-search span svg {
@@ -3605,53 +3605,53 @@ input[type="radio"]:disabled {
 .records-drawer-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px !important;
+  gap: 3px;
   min-width: 0;
-  padding: 5px 8px 6px !important;
+  padding: 5px 8px 6px;
   background: var(--tw-mint-150);
-  border-bottom: 1px solid var(--cd-util-line) !important;
+  border-bottom: 1px solid var(--cd-util-line);
   box-shadow: inset 0 1px #f7f9fb;
 }
 
 .records-drawer-filters button {
   min-width: 62px;
-  min-height: 27px !important;
-  padding: 3px 8px !important;
-  color: var(--tw-teal-800) !important;
-  background: var(--cd-util-face) !important;
-  border: 1px solid !important;
-  border-color: #fff #4d5863 #4d5863 #fff !important;
+  min-height: 27px;
+  padding: 3px 8px;
+  color: var(--tw-teal-800);
+  background: var(--cd-util-face);
+  border: 1px solid;
+  border-color: #fff #4d5863 #4d5863 #fff;
   border-radius: 0 !important;
   box-shadow:
     inset 1px 1px var(--tw-mint-50),
-    inset -1px -1px #8c96a0 !important;
-  font: 700 10px var(--tw-font-sans) !important;
-  transform: none !important;
+    inset -1px -1px #8c96a0;
+  font: 700 10px var(--tw-font-sans);
+  transform: none;
   transition:
     color 80ms linear,
-    background-color 80ms linear !important;
+    background-color 80ms linear;
 }
 
 .records-drawer-filters button:hover:not(.on) {
-  color: var(--cd-util-navy) !important;
-  background: var(--tw-mint-50) !important;
+  color: var(--cd-util-navy);
+  background: var(--tw-mint-50);
 }
 
 .records-drawer-filters button.on {
-  color: #fff !important;
-  background: var(--cd-util-navy) !important;
-  border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900) !important;
-  box-shadow: inset 1px 1px var(--tw-teal-900) !important;
+  color: #fff;
+  background: var(--cd-util-navy);
+  border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900);
+  box-shadow: inset 1px 1px var(--tw-teal-900);
 }
 
 .records-drawer-status {
-  min-height: 27px !important;
-  align-items: center !important;
-  padding: 4px 9px !important;
-  color: var(--tw-teal-600) !important;
+  min-height: 27px;
+  align-items: center;
+  padding: 4px 9px;
+  color: var(--tw-teal-600);
   background: #e7eaed;
   border-bottom: 1px solid #a4adb6;
-  font: 700 9px var(--tw-font-sans) !important;
+  font: 700 9px var(--tw-font-sans);
   letter-spacing: 0.03em;
 }
 
@@ -3676,13 +3676,13 @@ input[type="radio"]:disabled {
   min-width: 0;
   height: 18px;
   padding: 0 4px;
-  color: var(--tw-teal-900) !important;
-  background: var(--cd-util-face) !important;
-  border: 1px solid !important;
-  border-color: #fff #97a1ab #97a1ab #fff !important;
+  color: var(--tw-teal-900);
+  background: var(--cd-util-face);
+  border: 1px solid;
+  border-color: #fff #97a1ab #97a1ab #fff;
   border-radius: 0 !important;
-  box-shadow: none !important;
-  font: 700 9px var(--tw-font-sans) !important;
+  box-shadow: none;
+  font: 700 9px var(--tw-font-sans);
   letter-spacing: 0.04em;
   text-align: left;
   text-transform: uppercase;
@@ -3690,11 +3690,11 @@ input[type="radio"]:disabled {
 }
 
 .records-drawer-columns button:hover {
-  background: var(--tw-mint-50) !important;
+  background: var(--tw-mint-50);
 }
 
 .records-drawer-columns button:active {
-  border-color: #97a1ab #fff #fff #97a1ab !important;
+  border-color: #97a1ab #fff #fff #97a1ab;
 }
 
 .records-drawer-columns button:focus-visible {
@@ -3732,8 +3732,8 @@ input[type="radio"]:disabled {
 .records-drawer-results {
   min-width: 0;
   min-height: 0;
-  gap: 2px !important;
-  padding: 5px 6px 6px !important;
+  gap: 2px;
+  padding: 5px 6px 6px;
   overflow: auto;
   background: #f2f4f5;
   /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
@@ -3753,29 +3753,29 @@ input[type="radio"]:disabled {
   grid-template-columns: 27% 33% 24% 16%;
   align-items: center;
   min-width: 0;
-  gap: 0 !important;
-  padding: 0 7px !important;
+  gap: 0;
+  padding: 0 7px;
   min-height: 20px;
-  color: var(--tw-teal-800) !important;
-  background: transparent !important;
-  border: 0 !important;
-  border-bottom: 1px solid var(--tw-mint-150) !important;
+  color: var(--tw-teal-800);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--tw-mint-150);
   border-radius: 0 !important;
-  box-shadow: none !important;
-  transform: none !important;
-  transition: none !important;
+  box-shadow: none;
+  transform: none;
+  transition: none;
   text-align: left;
 }
 
 .records-drawer-row:nth-child(even) {
-  background: #eef1f4 !important;
+  background: #eef1f4;
 }
 
 .records-drawer-row:hover {
-  color: var(--tw-teal-900) !important;
-  background: var(--cd-util-selection) !important;
-  box-shadow: none !important;
-  transform: none !important;
+  color: var(--tw-teal-900);
+  background: var(--cd-util-selection);
+  box-shadow: none;
+  transform: none;
 }
 
 .records-drawer-row-top {
@@ -3794,47 +3794,47 @@ input[type="radio"]:disabled {
 .records-drawer-row-meta {
   min-width: 0;
   overflow: hidden;
-  font-family: var(--tw-font-sans) !important;
+  font-family: var(--tw-font-sans);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .records-drawer-row-title {
-  color: var(--tw-teal-900) !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
+  color: var(--tw-teal-900);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .records-drawer-row-summary {
-  color: var(--tw-teal-600) !important;
-  font-size: 10px !important;
+  color: var(--tw-teal-600);
+  font-size: 10px;
 }
 
 .records-drawer-row-meta {
-  color: #6a7582 !important;
-  font: 9px "Courier New", monospace !important;
+  color: #6a7582;
+  font: 9px "Courier New", monospace;
 }
 
 .records-drawer-row-badge {
   flex: none;
-  padding: 0 3px !important;
-  color: var(--tw-teal-600) !important;
-  background: var(--tw-mint-50) !important;
-  border: 1px solid #919ba5 !important;
+  padding: 0 3px;
+  color: var(--tw-teal-600);
+  background: var(--tw-mint-50);
+  border: 1px solid #919ba5;
   border-radius: 0 !important;
-  font: 700 8px var(--tw-font-sans) !important;
+  font: 700 8px var(--tw-font-sans);
 }
 
 .records-drawer-row-badge.locked {
-  color: #064b27 !important;
-  background: var(--cd-util-green-soft) !important;
-  border-color: #5a9e78 !important;
+  color: #064b27;
+  background: var(--cd-util-green-soft);
+  border-color: #5a9e78;
 }
 
 .records-drawer-row-badge.draft {
-  color: #5a3800 !important;
-  background: var(--cd-util-amber-soft) !important;
-  border-color: #b68935 !important;
+  color: #5a3800;
+  background: var(--cd-util-amber-soft);
+  border-color: #b68935;
 }
 
 .records-drawer-row-action {
@@ -3848,68 +3848,68 @@ input[type="radio"]:disabled {
 }
 
 .records-drawer-empty {
-  gap: 3px !important;
-  padding: 16px 10px !important;
-  color: var(--tw-teal-500) !important;
-  background: #fff !important;
-  border: 1px solid #8d97a1 !important;
+  gap: 3px;
+  padding: 16px 10px;
+  color: var(--tw-teal-500);
+  background: #fff;
+  border: 1px solid #8d97a1;
   border-radius: 0 !important;
-  font: 10px/1.4 var(--tw-font-sans) !important;
+  font: 10px/1.4 var(--tw-font-sans);
 }
 
 .records-drawer-empty b {
-  color: var(--tw-teal-800) !important;
-  font-size: 11px !important;
+  color: var(--tw-teal-800);
+  font-size: 11px;
 }
 
 .records-drawer-foot {
-  display: grid !important;
+  display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center !important;
-  gap: 8px !important;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  padding: 7px 8px !important;
+  padding: 7px 8px;
   background: var(--tw-mint-150);
-  border-top: 1px solid #fff !important;
+  border-top: 1px solid #fff;
   box-shadow: inset 0 1px #858f99;
 }
 
 .records-drawer-foot p {
-  max-width: none !important;
-  margin: 0 !important;
+  max-width: none;
+  margin: 0;
   overflow: hidden;
-  color: var(--tw-teal-600) !important;
-  font: 9px/1.35 var(--tw-font-sans) !important;
+  color: var(--tw-teal-600);
+  font: 9px/1.35 var(--tw-font-sans);
 }
 
 .records-drawer-new {
   min-height: 29px;
-  padding: 4px 9px !important;
-  color: #fff !important;
-  background: var(--cd-util-navy) !important;
-  border: 1px solid !important;
-  border-color: var(--tw-teal-300) var(--tw-teal-900) var(--tw-teal-900) var(--tw-teal-300) !important;
+  padding: 4px 9px;
+  color: #fff;
+  background: var(--cd-util-navy);
+  border: 1px solid;
+  border-color: var(--tw-teal-300) var(--tw-teal-900) var(--tw-teal-900) var(--tw-teal-300);
   border-radius: 0 !important;
   box-shadow:
     inset 1px 1px var(--tw-teal-500),
-    inset -1px -1px var(--tw-teal-900) !important;
-  font: 700 10px var(--tw-font-sans) !important;
-  transform: none !important;
-  transition: background-color 80ms linear !important;
+    inset -1px -1px var(--tw-teal-900);
+  font: 700 10px var(--tw-font-sans);
+  transform: none;
+  transition: background-color 80ms linear;
 }
 
 .records-drawer-new:hover {
-  background: var(--tw-teal-800) !important;
+  background: var(--tw-teal-800);
   box-shadow:
     inset 1px 1px var(--tw-teal-500),
-    inset -1px -1px var(--tw-teal-900) !important;
-  transform: none !important;
+    inset -1px -1px var(--tw-teal-900);
+  transform: none;
 }
 
 .records-drawer-new:active {
-  border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900) !important;
-  box-shadow: inset 1px 1px var(--tw-teal-900) !important;
-  transform: translate(1px, 1px) !important;
+  border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900);
+  box-shadow: inset 1px 1px var(--tw-teal-900);
+  transform: translate(1px, 1px);
 }
 
 .records-drawer-foot-actions {
@@ -3939,8 +3939,8 @@ input[type="radio"]:disabled {
 .records-drawer-row:focus-visible,
 .records-drawer-new:focus-visible,
 .records-drawer-cancel:focus-visible {
-  outline: 2px solid #ffb400 !important;
-  outline-offset: 1px !important;
+  outline: 2px solid #ffb400;
+  outline-offset: 1px;
 }
 
 /* Injection completion is a decisive classic system receipt, not a celebration. */

@@ -545,6 +545,23 @@ test.describe('Client/Server workstation visual snapshots', () => {
     );
   });
 
+  // The records drawer had no baseline at all, which is how ~170 dead
+  // `!important` declarations could sit in its stylesheet with nothing able to
+  // tell whether removing them changed the picture. It is a whole dialog -
+  // caption, search, filters, table, footer - and it is where signed notes
+  // live, so it earns one.
+  test('records drawer over the dashboard at 1366 x 768', async ({ page }) => {
+    await bootDeterministicWorkstation(page, VIEWPORTS.desktop1366);
+    await page.keyboard.press('F11');
+    await expect(page.locator('.records-drawer')).toBeVisible();
+    await settleForCapture(page);
+
+    await expect(page).toHaveScreenshot(
+      'records-drawer-1366x768.png',
+      SNAPSHOT_OPTIONS
+    );
+  });
+
   test('mobile viewport shows the deliberate workstation gate', async ({ page }) => {
     await bootDeterministicWorkstation(page, VIEWPORTS.unsupportedMobile);
     const gate = page.locator('.meditech-workstation-gate');
