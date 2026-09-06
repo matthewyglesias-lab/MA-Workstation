@@ -75,9 +75,14 @@ export const OPEN_NOTES = {
   udsTitle: `${NOTES.openNotes} · UDS`,
   closeUds: "Close UDS notes",
   searchInjection: "Search injection notes",
+  searchInjectionPlaceholder: "Patient, DOB, medication, NDC, or lot",
   filterInjection: "Filter injection notes",
   searchUds: "Search UDS notes",
+  searchUdsPlaceholder: "Patient, DOB, device, or lot",
   filterUds: "Filter UDS notes",
+  filterAll: "All",
+  filterAddenda: "Addenda",
+  closeAction: "Close",
   viewSigned: "View signed note",
   resumeDraft: "Resume draft",
   noMatches: "No matching notes.",
@@ -87,6 +92,37 @@ export const OPEN_NOTES = {
   udsFooter:
     "Saved in this browser. Signed notes remain read only. Starting a new UDS screen keeps the current draft.",
 } as const;
+
+/** Visible labels for the global, filter-first Open Notes table. */
+export const NOTES_TABLE = {
+  injectionLabel: "Injection notes",
+  udsLabel: "UDS notes",
+  columnPatient: "Patient",
+  columnLock: "Lock",
+  columnType: "Type",
+  columnStatus: "Status",
+  columnVisitDate: "Visit Date",
+  typeInjection: "Injection",
+  typeUds: "UDS",
+  dateUnavailable: "—",
+  signerDetailsUnavailable: "signer details unavailable",
+  untitledInjection: "Untitled injection",
+  untitledUds: "Untitled UDS screen",
+} as const;
+
+/** Row and lock labels stay composed here rather than leaking implementation copy. */
+export const openNoteRowLabel = (
+  patient: string,
+  type: string,
+  status: string,
+): string => `Open ${status.toLocaleLowerCase()} ${type} note for ${patient}`;
+
+export const signedNoteLockLabel = (staff?: string, time?: string): string => {
+  if (staff && time) return `Signed by ${staff} · ${time}`;
+  if (staff) return `Signed by ${staff}`;
+  if (time) return `Signed · ${time}`;
+  return `${NOTES.statusSigned} · ${NOTES_TABLE.signerDetailsUnavailable}`;
+};
 
 export const WORKLIST_EMPTY = {
   review: "No notes are awaiting review.",

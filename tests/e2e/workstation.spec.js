@@ -381,7 +381,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(actions).toContainText('Draft saved');
     await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
-    await page.getByRole('button', { name: /Resume draft for QA, Vivitrol Habitus/ }).click();
+    await page.getByRole('row', {
+      name: 'Open incomplete Injection note for QA, Vivitrol Habitus',
+      exact: true
+    }).click();
     await openInjectionTab(page, 'Order');
     await expect(technique).toHaveValue('');
   });
@@ -474,7 +477,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(actions).toContainText('Draft saved');
     await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
-    await page.getByRole('button', { name: /Resume draft for QA, Other Manual Return/ }).click();
+    await page.getByRole('row', {
+      name: 'Open incomplete Injection note for QA, Other Manual Return',
+      exact: true
+    }).click();
 
     await openInjectionTab(page, 'Order');
     await expect(panel.locator('.wfp-field:has-text("Medication name") input')).toHaveValue(
@@ -540,7 +546,10 @@ test.describe('MA Workstation browser journeys', () => {
     }, patient);
     expect(legacyShapePrepared).toEqual({ nextDose: null, retCustom: false });
     await page.getByRole('button', { name: /Open saved notes/ }).click();
-    await page.getByRole('button', { name: new RegExp(`Resume draft for ${patient}`) }).click();
+    await page.getByRole('row', {
+      name: `Open incomplete Injection note for ${patient}`,
+      exact: true
+    }).click();
 
     await openInjectionTab(page, 'Order');
     const restoredRegister = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
@@ -627,7 +636,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(actions).toContainText('Draft saved');
     await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
-    await page.getByRole('button', { name: new RegExp(`Resume draft for ${patient}`) }).click();
+    await page.getByRole('row', {
+      name: `Open incomplete Injection note for ${patient}`,
+      exact: true
+    }).click();
 
     await openInjectionTab(page, 'Order');
     await expect(panel.locator('.wfp-field:has-text("Needle / technique") input')).toHaveValue('');
@@ -2659,8 +2671,12 @@ test.describe('MA Workstation browser journeys', () => {
     await page.keyboard.press('F11');
     await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
     await page.locator('#recordsDrawerSearch').fill(patient);
-    await expect(page.locator(`[data-records-open="${recordId}"]`)).toContainText('Signed (legacy)');
-    await page.locator(`[data-records-open="${recordId}"]`).click();
+    const historicalRow = page.locator(`[data-records-open="${recordId}"]`);
+    await expect(historicalRow.locator('[data-note-status="signed"]')).toHaveText('Signed');
+    await expect(historicalRow.locator('[data-note-lock]')).toHaveAccessibleName(
+      'Signed · signer details unavailable'
+    );
+    await historicalRow.click();
     await expect(page.locator('#ptName')).toHaveValue(patient);
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
     await expect(page.locator('#panel-administer')).toHaveClass(/record-readonly/);
@@ -3189,8 +3205,12 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(recordsDialog).toBeVisible();
     const rows = recordsDialog.locator('.records-drawer-row');
     await expect(rows).toHaveCount(1);
-    await expect(rows.locator('.records-drawer-row-title')).toHaveText('Rivera, Ana');
-    await expect(rows.locator('.records-drawer-row-badge')).toHaveText('Draft');
+    const draftRow = recordsDialog.getByRole('row', {
+      name: 'Open incomplete UDS note for Rivera, Ana',
+      exact: true
+    });
+    await expect(draftRow).toBeVisible();
+    await expect(draftRow.locator('[data-note-status="incomplete"]')).toHaveText('Incomplete');
 
     // Start new UDS screen from the records window blanks the worksheet, and
     // the saved draft stays listed rather than being lost.

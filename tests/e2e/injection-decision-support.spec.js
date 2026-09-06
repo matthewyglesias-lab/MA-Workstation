@@ -169,7 +169,10 @@ test.describe('Injection decision support', () => {
     // retaining component state in the same mounted panel.
     await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
-    await page.getByRole('button', { name: /Resume draft for QA, Next Due/ }).click();
+    await page.getByRole('row', {
+      name: 'Open incomplete Injection note for QA, Next Due',
+      exact: true
+    }).click();
 
     const resumedPanel = page.locator('.wfp-panel');
     await openTab(resumedPanel, 'Order');

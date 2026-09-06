@@ -4,15 +4,14 @@ Companion to `PLAN.md`. The authoritative list of **what may change**, **what is
 frozen**, **the exact design tokens**, and **the conventions that make this read
 as first-party**.
 
-**Implementation checkpoint — 2026-09-06.** Phases 0–2c are on PR #62. Phase
-2d closes the visual gate without adding a product feature: it removes one
-retired-palette assertion from the visual setup helper and promotes all eight
-Linux baselines rendered by the pinned Chromium 151 CI runner. The exact
-captures were reviewed and each initial/retry pair was byte-identical. The
-commit containing this manifest still needs one green exact-artifact run before
-Phase 3 begins. The planned Phase 3 Notes, Facesheet, patient-search, page-level
-`ActionBar`, status-chip, lock-indicator, and hover-card components do not yet
-exist.
+**Implementation checkpoint — 2026-09-06.** Phases 0–2d are on PR #62, and the
+pinned Chromium 151 code, browser, visual, and print artifact gate is green.
+Azure deployment is blocked separately by staging-environment capacity. Phase
+3a implements the shared global Open Notes `NotesTable`, lifecycle
+`StatusChip`, signed `LockIndicator`, defensive visit-date projection, sorting,
+and synthetic convention tests. Facesheet, patient search, the page-level
+`ActionBar`, patient hover card, and the distinct patient-scoped Notes surface
+remain Phase 3b.
 
 Every real-patient view in the production audit was read-only. Opening the
 Injection editor on a verified Test Patient automatically created one blank
@@ -80,6 +79,7 @@ else under `src/application/**` remains frozen.
 | `src/presentation/facesheet/PatientCardPopup.tsx` | Hover card on patient name. | 3 |
 | `src/presentation/facesheet/SummaryCard.tsx` | Card grammar for Last injection / Site rotation / Allergies / Recent notes. | 3 |
 | `src/presentation/notes/NotesTable.tsx` | Open Notes table: sort, lock, status chips. | 3 |
+| `src/presentation/notes/note-table-model.ts` | Defensive Injection/UDS row projection, Visit Date precedence, lifecycle/lock truth, and deterministic sorting. | 3 |
 | `src/presentation/notes/StatusChip.tsx` | `Incomplete` · `Ready to sign` · `Signed`. | 3 |
 | `src/presentation/notes/LockIndicator.tsx` | Lock glyph + hover "Signed by … at …". | 3 |
 | `src/presentation/kiosk/KioskShell.tsx` | Kiosk chrome and sign-and-next loop. | 4 |
@@ -128,8 +128,10 @@ else under `src/application/**` remains frozen.
 | `tests/e2e/visual-snapshots.spec.js-snapshots/win32/**` (8 PNGs) | **Currently stale; cannot be regenerated in Linux CI.** Refresh on Windows or flag in the PR body. |
 | `tests/e2e/tebra-screen-contract.spec.js` | Phase 2c updates measured shell, coral/status, and 800×600 contracts. |
 | `tests/e2e/visual-contracts.spec.js` | Update Dashboard style and keyboard-focus expectations. |
+| `tests/e2e/conventions.spec.js` | Phase 3a global Open Notes columns, 44px rows, sorting, lock detail, lifecycle chips, row activation, non-mutation, and 800×600 containment. |
 | `tests/e2e/workstation.spec.js` | Update changed visual expectations without relaxing clinical journeys. |
 | `tests/unit/ehr-refinement-contracts.test.ts` | Update if it asserts label strings. |
+| `tests/unit/note-table-model.test.ts` | Phase 3a defensive record projection, local-calendar-safe visit dates, deterministic sort, lifecycle, and lock truth. |
 
 `npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
 
@@ -141,14 +143,12 @@ else under `src/application/**` remains frozen.
 > differs materially from them and is useful for interaction checks only.
 > `win32/` is a genuinely different platform and cannot be refreshed on Linux.
 
-Current temporary-Chromium-149 evidence: screen contract 6/6, Dashboard visual
-contract 2/2, five changed journeys 5/5, and the final combined
-screen/interaction run 66/66. The repaired UDS F12 and menu-tracking races each
-passed 10/10 stress repeats. The full print suite was 13/18: four failures
-reproduced at unchanged `1387d10`, and one was the likely-flaky four-step rail
-mutation check. The two Phase-2c print-isolation paths pass 2/2. It is not the
-visual authority: against the Chromium 151 baselines its images differ by
-roughly 3–5%, so do not regenerate or loosen thresholds for that browser.
+Phase 3a temporary-Chromium-149 evidence: conventions 5/5 and broader changed
+interaction coverage 80/80. The full print suite passed 27/30; the remaining
+three AVS layout failures are the documented non-authoritative renderer drift,
+and Phase 3a changes no print source. Chromium 149 is not the visual authority:
+against the Chromium 151 baselines its images differ by roughly 3–5%, so do not
+regenerate or loosen thresholds for that browser.
 
 ---
 

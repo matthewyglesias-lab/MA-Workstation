@@ -148,6 +148,18 @@
     --tw-ready-bg: #e6f2ee;
     --tw-ready-border: #9cc6b8;
 
+    /* -------------------------------------------- note lifecycle status */
+    /* These describe documentation lifecycle, not clinical severity. */
+    --tw-note-incomplete-fg: var(--tw-teal-700);
+    --tw-note-incomplete-bg: #f0faf2;
+    --tw-note-incomplete-border: var(--tw-mint-200);
+    --tw-note-ready-fg: var(--tw-teal-800);
+    --tw-note-ready-bg: var(--tw-mint-150);
+    --tw-note-ready-border: var(--tw-teal-200);
+    --tw-note-signed-fg: var(--tw-teal-700);
+    --tw-note-signed-bg: #f0eee8;
+    --tw-note-signed-border: var(--tw-sand-300);
+
     /* ----------------------------------------------- semantic surfaces */
     /* Measured from the authenticated product shell rather than the public
        marketing palette. Keep this exact warm off-white independent from the

@@ -3,6 +3,7 @@ import {
   filteredNoteCount,
   noteCount,
   NOTES,
+  NOTES_TABLE,
   OPEN_NOTES,
   RECORD,
 } from "./vocabulary";
@@ -14,10 +15,10 @@ import { browserSafeStorage } from "../persistence/storage";
 import {
   addendaCount,
   searchText,
-  stamp,
-  timeOf,
   trapDialogTabKey,
 } from "./records-drawer-shared";
+import { NotesTable } from "./notes/NotesTable";
+import { injectionRecordToNotesTableRow } from "./notes/note-table-model";
 
 /**
  * Injection record selection window.
@@ -34,8 +35,6 @@ import {
  */
 
 type RecordFilter = "all" | "draft" | "locked" | "addenda";
-type SortKey = "patient" | "medication" | "activity";
-type SortDirection = "asc" | "desc";
 
 interface LegacyRecordsBridge {
   open: (id: string) => boolean | void;
@@ -49,32 +48,11 @@ const bridge = (): LegacyRecordsBridge | undefined =>
   (window as unknown as { IPMGRecords?: LegacyRecordsBridge }).IPMGRecords;
 
 const FILTERS: Array<[RecordFilter, string]> = [
-  ["all", "All"],
-  ["draft", "Drafts"],
+  ["all", OPEN_NOTES.filterAll],
+  ["draft", NOTES.statusIncomplete],
   ["locked", NOTES.statusSigned],
-  ["addenda", "Addenda"],
+  ["addenda", OPEN_NOTES.filterAddenda],
 ];
-
-const COLUMNS: Array<{ key: SortKey; label: string }> = [
-  { key: "patient", label: "Patient" },
-  { key: "medication", label: "Medication" },
-  { key: "activity", label: "Last activity" },
-];
-
-/** Same shape legacy's `drawerMessage()` produced. */
-const activityText = (record: InjectionRecord): string => {
-  const extra = addendaCount(record);
-  const suffix = extra ? ` / ${extra} addendum${extra === 1 ? "" : "s"}` : "";
-  return record.status === "completed"
-    ? `${record.attestation ? NOTES.statusSigned : RECORD.signedLegacy} ${stamp(record.completedAt || record.updatedAt)}${suffix}`
-    : `Draft updated ${stamp(record.updatedAt)}${suffix}`;
-};
-
-const patientOf = (record: InjectionRecord): string =>
-  record.patient?.name?.trim() || record.summary || "Untitled injection";
-
-const medicationOf = (record: InjectionRecord): string =>
-  record.summary || "No medication selected";
 
 interface RecordsWindowProps {
   open: boolean;
@@ -100,11 +78,6 @@ export function RecordsWindow({
   const [records, setRecords] = useState<InjectionRecord[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecordFilter>("all");
-  // Newest first: the encounter you were just in is the one you usually want.
-  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({
-    key: "activity",
-    direction: "desc",
-  });
 
   const reload = () => {
     const result = new InjectionRecordRepository(browserSafeStorage()).list();
@@ -137,7 +110,7 @@ export function RecordsWindow({
 
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
-    const matches = records.filter((record) => {
+    return records.filter((record) => {
       const passesFilter =
         filter === "all"
           ? true
@@ -145,24 +118,8 @@ export function RecordsWindow({
             ? addendaCount(record) > 0
             : record.status === (filter === "locked" ? "completed" : "draft");
       return passesFilter && (!needle || searchText(record).includes(needle));
-    });
-    const direction = sort.direction === "asc" ? 1 : -1;
-    return matches.sort((a, b) => {
-      if (sort.key === "activity") {
-        return (timeOf(a.updatedAt) - timeOf(b.updatedAt)) * direction;
-      }
-      const read = sort.key === "patient" ? patientOf : medicationOf;
-      return read(a).localeCompare(read(b)) * direction;
-    });
-  }, [records, query, filter, sort]);
-
-  const toggleSort = (key: SortKey) =>
-    setSort((current) =>
-      current.key === key
-        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
-        : // Names read A-Z first; a date column is more useful newest-first.
-          { key, direction: key === "activity" ? "desc" : "asc" },
-    );
+    }).map(injectionRecordToNotesTableRow);
+  }, [records, query, filter]);
 
   const onKeyDown = (event: KeyboardEvent) => trapDialogTabKey(dialogRef.current, event);
 
@@ -235,7 +192,7 @@ export function RecordsWindow({
           <input
             id="recordsDrawerSearch"
             type="search"
-            placeholder="Patient, DOB, medication, NDC, or lot"
+            placeholder={OPEN_NOTES.searchInjectionPlaceholder}
             autocomplete="off"
             value={query}
             onInput={(event) => setQuery(event.currentTarget.value)}
@@ -274,67 +231,13 @@ export function RecordsWindow({
         </div>
 
         <div class="records-drawer-results" id="recordsDrawerResults">
-          <div class="records-drawer-columns" role="row">
-            {COLUMNS.map((column) => {
-              const active = sort.key === column.key;
-              return (
-                <button
-                  key={column.key}
-                  type="button"
-                  role="columnheader"
-                  data-records-sort={column.key}
-                  class={`${active ? "is-sorted" : ""} ${active && sort.direction === "desc" ? "is-desc" : ""}`}
-                  aria-sort={
-                    active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"
-                  }
-                  onClick={() => toggleSort(column.key)}
-                >
-                  {column.label}
-                </button>
-              );
-            })}
-            <span class="records-drawer-action-heading" role="columnheader">
-              Action
-            </span>
-          </div>
-
-          {!open ? null : visible.length ? (
-            visible.map((record) => {
-              const locked = record.status === "completed";
-              const attested = locked && Boolean(record.attestation);
-              const action = locked ? OPEN_NOTES.viewSigned : OPEN_NOTES.resumeDraft;
-              return (
-                <button
-                  key={record.id}
-                  type="button"
-                  class={`records-drawer-row ${locked ? "locked" : "draft"}`}
-                  data-records-open={record.id}
-                  aria-label={`${action} for ${patientOf(record)}`}
-                  onClick={() => openRecord(String(record.id))}
-                >
-                  <span class="records-drawer-row-top">
-                    <span class="records-drawer-row-title">{patientOf(record)}</span>
-                    <span class={`records-drawer-row-badge ${locked ? "locked" : "draft"}`}>
-                      {locked
-                        ? attested
-                          ? NOTES.statusSigned
-                          : RECORD.signedLegacy
-                        : RECORD.draft}
-                    </span>
-                  </span>
-                  <span class="records-drawer-row-summary">{medicationOf(record)}</span>
-                  <span class="records-drawer-row-meta">{activityText(record)}</span>
-                  <span class="records-drawer-row-action" aria-hidden="true">
-                    {locked ? "View" : "Resume"}
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <div class="records-drawer-empty">
-              <b>{OPEN_NOTES.noMatches}</b>
-              <span>Try another patient, medication, traceability field, or filter.</span>
-            </div>
+          {!open ? null : (
+            <NotesTable
+              rows={visible}
+              label={NOTES_TABLE.injectionLabel}
+              emptyMessage={OPEN_NOTES.noMatches}
+              onOpen={openRecord}
+            />
           )}
         </div>
 
@@ -344,7 +247,7 @@ export function RecordsWindow({
           </p>
           <div class="records-drawer-foot-actions">
             <button type="button" class="records-drawer-cancel" onClick={onClose}>
-              Close
+              {OPEN_NOTES.closeAction}
             </button>
             <button
               type="button"

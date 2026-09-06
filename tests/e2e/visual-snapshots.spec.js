@@ -247,7 +247,10 @@ async function openFixtureDraft(page) {
   const railLauncher = page.getByRole('button', { name: /Open saved notes \(F11\)/ });
   await railLauncher.click();
   await page
-    .getByRole('button', { name: 'Resume draft for Patel, Rowan', exact: true })
+    .getByRole('row', {
+      name: 'Open incomplete Injection note for Patel, Rowan',
+      exact: true
+    })
     .click();
   await expect(page.locator('dialog.records-drawer-layer')).toBeHidden();
   await expect(page.locator('.cd2004-patient-primary')).toContainText('Patel, Rowan');
