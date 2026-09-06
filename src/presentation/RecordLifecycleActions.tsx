@@ -56,7 +56,7 @@ export function RecordLifecycleActions({
       >
         <span>{recordLabel}</span>
         <strong>{RECORD_LIFECYCLE_LABEL[lifecycle]}</strong>
-        <small role="status" aria-live="polite">
+        <small role="status" aria-live="polite" title={detail} tabIndex={0}>
           {detail}
         </small>
       </div>

@@ -686,7 +686,7 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
-      'rgb(34, 116, 66)'
+      'rgb(31, 111, 92)'
     );
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
@@ -854,10 +854,10 @@ test.describe('MA Workstation browser journeys', () => {
         horizontalOverflow: node.scrollWidth - node.clientWidth
       };
     });
-    expect(drawerVisual.borderRadius).toBeLessThanOrEqual(2);
-    expect(drawerVisual.searchRadius).toBeLessThanOrEqual(2);
+    expect(drawerVisual.borderRadius).toBe(16);
+    expect(drawerVisual.searchRadius).toBe(8);
     expect(drawerVisual.fontFamily).toContain('Inter Variable');
-    expect(drawerVisual.headerBackground).toContain('linear-gradient');
+    expect(drawerVisual.headerBackground).toBe('none');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
     expect(await maxMotionMilliseconds(drawer, 'transitionDuration'))
       .toBeLessThanOrEqual(180);
@@ -1058,7 +1058,8 @@ test.describe('MA Workstation browser journeys', () => {
       name: /05 PRN \/ ordered CURRENT/
     });
     await expect(currentLookupRow).toHaveAttribute('aria-selected', 'true');
-    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(255, 240, 165)');
+    await page.mouse.move(0, 0);
+    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(235, 240, 239)');
     await lookup.getByRole('searchbox', { name: 'Find value' }).press('Enter');
     await expect(reason).toHaveValue('prn');
     await expect(page.locator('.cd2004-status-message')).toContainText(
@@ -1193,7 +1194,7 @@ test.describe('MA Workstation browser journeys', () => {
     // The Dashboard is a single worklist surface. A clinical worksheet then
     // owns the work and document-review pair without redundant window chrome.
     await expect(navigator).toBeVisible();
-    await expect(navigator.getByText('Clinical Work', { exact: true })).toBeVisible();
+    await expect(navigator.getByText('Clinical work', { exact: true })).toBeVisible();
     await expect(navigator.getByText('Resources', { exact: true })).toBeVisible();
     await expect(navigator.getByText('Closeout', { exact: true })).toBeVisible();
     await expect(navigator.locator('.cd2004-nav-item > i')).toHaveCount(0);
@@ -1481,7 +1482,7 @@ test.describe('MA Workstation browser journeys', () => {
     // persistence remains a separate status in the rail and action bar.
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(252, 249, 245)');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -1499,10 +1500,11 @@ test.describe('MA Workstation browser journeys', () => {
     const mismatch = page.locator('.cd2004-context-mismatch');
     await expect(mismatch).toBeVisible();
     await expect(mismatch).toContainText('Bravo, Patient');
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 241, 188)');
+    await expect(mismatch).toHaveCSS('background-color', 'rgb(253, 243, 226)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(252, 249, 245)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(252, 249, 245)');
     await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');

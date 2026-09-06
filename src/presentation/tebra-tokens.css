@@ -149,10 +149,15 @@
     --tw-ready-border: #9cc6b8;
 
     /* ----------------------------------------------- semantic surfaces */
-    --tw-surface-page: var(--tw-sand-50);
+    /* Measured from the authenticated product shell rather than the public
+       marketing palette. Keep this exact warm off-white independent from the
+       nearby sand swatches, which still have their own component roles. */
+    --tw-surface-page: #fbf9f8;
     --tw-surface-panel: var(--tw-white);
     --tw-surface-sunken: var(--tw-mint-50);
     --tw-surface-inverse: var(--tw-teal-900);
+    --tw-surface-header: #004852;
+    --tw-surface-header-input: #002328;
     --tw-on-inverse: var(--tw-sand-150);
     --tw-border-subtle: var(--tw-mint-200);
     --tw-border-strong: var(--tw-teal-300);
@@ -171,7 +176,11 @@
     --tw-btn-h-small: 45px;
     --tw-btn-h-xsmall: 32px;
     --tw-btn-h-ws: 32px;
+    --tw-btn-h-product: 38px;
     --tw-btn-pad-cta: 14px 24px;
+    --tw-btn-border-product: #b3c6c4;
+    --tw-action-height: var(--tw-btn-h-product);
+    --tw-action-border: var(--tw-btn-border-product);
 
     /* Kiosk touch targets never go below this, whatever the button size. */
     --tw-touch-min: 44px;
@@ -186,6 +195,15 @@
     --tw-radius-ctl: 8px;
     --tw-radius-ws: 6px;
     --tw-radius-tight: 4px;
+    --tw-radius-action: 24px;
+
+    /* Material UI elevation 1, as used by Tebra's chart panels. */
+    --tw-shadow-elevation-1:
+      0 2px 1px -1px rgb(0 0 0 / 20%),
+      0 1px 1px 0 rgb(0 0 0 / 14%),
+      0 1px 3px 0 rgb(0 0 0 / 12%);
+
+    --tw-header-height: 65px;
 
     --tw-container-base: 1280px;
     --tw-container-pad: 20px; /* 30px at md, 80px at lg */

@@ -252,6 +252,7 @@ export function ClinicalDesktopShell({
   const shellRef = useRef<HTMLDivElement>(null);
   const workHostRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const saveDraftRef = useRef(onSaveDraft);
   const selectedWorkflow = activeWorkflow ?? internalWorkflow;
   const helpCommand = getFunctionKeyCommand("help");
   const fileCommand = getFunctionKeyCommand("file");
@@ -303,6 +304,14 @@ export function ClinicalDesktopShell({
     globalThis.setTimeout(() => previousFocusRef.current?.focus(), 0);
   };
 
+  // The global function-key listener is effect-backed, while a workflow can
+  // make Save available during the preceding render. Keep the callback
+  // current in a layout effect so F12 cannot land in that post-commit gap and
+  // invoke the prior render's unavailable handler.
+  useLayoutEffect(() => {
+    saveDraftRef.current = onSaveDraft;
+  }, [onSaveDraft]);
+
   const openShortcutHelp = useCallback(() => {
     previousFocusRef.current =
       typeof document !== "undefined"
@@ -312,13 +321,14 @@ export function ClinicalDesktopShell({
   }, []);
 
   const requestDraftSave = useCallback(() => {
-    if (onSaveDraft) {
-      onSaveDraft();
+    const saveDraft = saveDraftRef.current;
+    if (saveDraft) {
+      saveDraft();
       setInternalStatus(SHELL.draftSaveRequested);
     } else {
       setInternalStatus(SHELL.draftSaveUnavailable);
     }
-  }, [onSaveDraft]);
+  }, []);
 
   const focusWorksheetSection = useCallback((direction: 1 | -1) => {
     const worksheet = workHostRef.current;
@@ -483,12 +493,20 @@ export function ClinicalDesktopShell({
 
   const openContextualLookup = useCallback(() => {
     const active = document.activeElement as HTMLElement | null;
+    const activeContext = contextForFocusedControl(active);
+    const retainsWorksheetContext = Boolean(
+      active?.closest(".meditech-command-deck, .cd2004-lookup-dialog"),
+    );
+    // A focus event and the following function key can occur in the same
+    // browser task. Prefer the live focused control so a stale render cannot
+    // open the prior field's values (for example, after moving from Encounter
+    // type back to Patient name). Command/deck utilities deliberately retain
+    // the last worksheet field, as documented by handleFocus above.
     const select =
-      active?.closest<HTMLSelectElement>("select:not([disabled])") ??
-      active
-        ?.closest<HTMLElement>("[data-field-code]")
-        ?.querySelector<HTMLSelectElement>("select:not([disabled])") ??
-      focusedControl?.lookupSelect;
+      activeContext?.lookupSelect ??
+      (retainsWorksheetContext || !activeContext
+        ? focusedControl?.lookupSelect
+        : undefined);
     if (select && openFieldLookup(select)) return;
     if (onLookup) {
       onLookup();
@@ -738,13 +756,15 @@ export function ClinicalDesktopShell({
         if (target) {
           event.preventDefault();
           setOpenMenu(target);
-          globalThis.setTimeout(() => {
-            shellRef.current
-              ?.querySelector<HTMLElement>(
-                `.cd2004-menu[data-menu="${target}"] .cd2004-menu-title`,
-              )
-              ?.focus({ preventScroll: true });
-          }, 0);
+          // The title already exists before the popup is rendered. Focus it
+          // synchronously so a fast follow-up arrow key moves from the menu
+          // the mnemonic actually opened, rather than whichever title still
+          // owned focus from the previous interaction.
+          shellRef.current
+            ?.querySelector<HTMLElement>(
+              `.cd2004-menu[data-menu="${target}"] .cd2004-menu-title`,
+            )
+            ?.focus({ preventScroll: true });
           return;
         }
       }
@@ -1665,9 +1685,11 @@ function DesktopMenu({ id, label, mnemonic, children }: DesktopMenuProps) {
           if (isOpen) dismiss(true);
           else bar?.open(id);
         }}
-        onPointerEnter={() => {
-          // Menu tracking: hovering a sibling while any menu is open switches
-          // to it, exactly as a native menu bar does.
+        onPointerMove={() => {
+          // Menu tracking follows actual pointer movement. `pointerenter` can
+          // be synthesized when opening a popup changes hit-testing beneath a
+          // stationary mouse; letting that event switch menus can immediately
+          // undo an Alt+mnemonic or arrow-key choice.
           if (isTracking && !isOpen) {
             openedByHoverRef.current = true;
             bar?.open(id);

@@ -188,8 +188,10 @@
   /* ----------------------------------------------------------- shell base */
 
   .cd2004-shell {
-    --tebra-shell-gap: 12px;
-    --tebra-shell-pad: 12px;
+    --tebra-shell-gap: 0px;
+    --tebra-shell-pad: 0px;
+    --tebra-content-pad: 32px;
+    --tebra-panel-gap: 12px;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -201,8 +203,8 @@
     color: var(--tw-text-primary);
     background: var(--tw-surface-page);
     font-family: var(--tw-font-sans);
-    font-size: var(--tw-fs-ws-dense);
-    line-height: var(--tw-lh-ws-dense);
+    font-size: var(--tw-fs-body);
+    line-height: var(--tw-lh-body);
   }
 
   .cd2004-shell :where(button, input, select, textarea, summary) {
@@ -251,8 +253,8 @@
     z-index: 20;
     flex: 0 0 auto;
     min-width: 0;
-    color: var(--tw-text-primary);
-    background: var(--tw-surface-panel);
+    color: var(--tw-on-inverse);
+    background: var(--tw-surface-header);
     border: 0;
     border-bottom: 1px solid var(--tw-border-subtle);
     box-shadow: none;
@@ -263,14 +265,15 @@
     grid-template-columns: 40px minmax(138px, 190px) auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 10px;
-    height: 60px;
+    height: var(--tw-header-height);
     min-width: 0;
     padding: 8px 16px;
-    color: var(--tw-text-primary);
-    background: var(--tw-surface-panel);
+    color: var(--tw-on-inverse);
+    background: var(--tw-surface-header);
     border: 0;
     font-size: var(--tw-fs-ws-dense);
     font-weight: 400;
+    line-height: var(--tw-lh-ws-dense);
     letter-spacing: 0;
   }
 
@@ -281,8 +284,8 @@
     height: 40px;
     margin: 0;
     color: var(--tw-white);
-    background: var(--tw-teal-800);
-    border: 0;
+    background: rgb(255 255 255 / 10%);
+    border: 1px solid rgb(255 255 255 / 24%);
     border-radius: 12px;
     box-shadow: none;
   }
@@ -302,16 +305,18 @@
   }
 
   .tebra-app-identity > b {
-    color: var(--tw-teal-800);
+    color: var(--tw-on-inverse);
     font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
     letter-spacing: 0.02em;
   }
 
   .tebra-app-identity > span {
     overflow: hidden;
-    color: var(--tw-text-secondary);
+    color: rgb(248 243 235 / 76%);
     font-size: var(--tw-fs-ws-meta);
     font-weight: 500;
+    line-height: var(--tw-lh-ws-meta);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -320,13 +325,14 @@
     justify-self: start;
     padding: 5px 8px;
     overflow: hidden;
-    color: var(--tw-teal-800);
-    background: var(--tw-mint-150);
+    color: var(--tw-on-inverse);
+    background: rgb(255 255 255 / 12%);
     border-radius: var(--tw-radius-pill);
     font-family: var(--tw-font-mono);
     font-size: var(--tw-fs-ws-label);
     font-variant-numeric: var(--tw-numeric-tabular);
     font-weight: 700;
+    line-height: var(--tw-lh-ws-label);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -339,18 +345,20 @@
     max-width: 280px;
     margin: 0;
     padding: 0;
-    color: var(--tw-text-secondary);
+    color: rgb(248 243 235 / 82%);
     font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
     letter-spacing: 0;
     text-align: right;
   }
 
   .tebra-app-context b {
     padding: 3px 8px;
-    color: var(--tw-teal-800);
-    background: var(--tw-mint-150);
+    color: var(--tw-on-inverse);
+    background: rgb(255 255 255 / 12%);
     border-radius: var(--tw-radius-pill);
     font-size: var(--tw-fs-ws-label);
+    line-height: var(--tw-lh-ws-label);
     letter-spacing: var(--tw-ls-ws-label);
     text-transform: uppercase;
   }
@@ -358,9 +366,10 @@
   .tebra-app-context small {
     max-width: 100%;
     overflow: hidden;
-    color: var(--tw-text-secondary);
+    color: rgb(248 243 235 / 76%);
     font-size: var(--tw-fs-ws-label);
     font-weight: 500;
+    line-height: var(--tw-lh-ws-label);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -368,7 +377,7 @@
   .cd2004-menu-bar {
     position: absolute;
     z-index: 3;
-    top: 8px;
+    top: 10px;
     right: clamp(250px, 24vw, 340px);
     left: clamp(300px, 29vw, 390px);
     display: flex;
@@ -392,19 +401,26 @@
     min-width: 0;
     min-height: 36px;
     padding: 8px 10px;
-    color: var(--tw-text-secondary);
+    color: rgb(248 243 235 / 82%);
     background: transparent;
     border: 0;
     border-radius: var(--tw-radius-ctl);
     cursor: pointer;
     font-size: var(--tw-fs-ws-meta);
     font-weight: 650;
+    line-height: var(--tw-lh-ws-dense);
   }
 
   .cd2004-menu-title:hover,
   .cd2004-menu-title[aria-expanded="true"] {
-    color: var(--tw-text-primary);
-    background: var(--tw-mint-150);
+    color: var(--tw-on-inverse);
+    background: rgb(255 255 255 / 12%);
+  }
+
+  .cd2004-shell .cd2004-menu-bar button.cd2004-menu-title:focus-visible {
+    outline: 2px solid var(--tw-on-inverse);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgb(248 243 235 / 24%);
   }
 
   .cd2004-menu-title u {
@@ -564,6 +580,10 @@
     border-left: 3px solid var(--tw-review-border);
   }
 
+  .meditech-patient-safety:has(> button) {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
   .meditech-patient-safety strong {
     align-self: center;
     color: var(--tw-review-fg);
@@ -594,14 +614,16 @@
   }
 
   .meditech-patient-safety button {
-    grid-column: 1 / -1;
-    justify-self: start;
-    min-height: 30px;
-    padding: 4px 9px;
-    color: var(--tw-teal-800);
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    justify-self: end;
+    min-height: var(--tw-btn-h-product);
+    padding: 7px 16px;
+    color: var(--tw-teal-900);
     background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-teal-300);
-    border-radius: var(--tw-radius-ws);
+    border: 1px solid var(--tw-btn-border-product);
+    border-radius: var(--tw-radius-action);
     box-shadow: none;
     font-weight: 700;
   }
@@ -624,12 +646,12 @@
   }
 
   .cd2004-context-mismatch button {
-    min-height: 32px;
-    padding: 5px 10px;
+    min-height: var(--tw-btn-h-product);
+    padding: 7px 16px;
     color: var(--tw-review-fg);
     background: var(--tw-surface-panel);
     border: 1px solid var(--tw-review-border);
-    border-radius: var(--tw-radius-ws);
+    border-radius: var(--tw-radius-action);
     box-shadow: none;
   }
 
@@ -641,7 +663,7 @@
     z-index: 1;
     flex: 1 1 auto;
     display: grid;
-    grid-template-columns: 212px minmax(0, 1fr);
+    grid-template-columns: 192px minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     gap: var(--tebra-shell-gap);
     min-width: 0;
@@ -652,7 +674,7 @@
   }
 
   .cd2004-workspace.has-side-inspector {
-    grid-template-columns: 212px minmax(520px, 1fr) minmax(292px, 320px);
+    grid-template-columns: 192px minmax(520px, 1fr) minmax(292px, 320px);
   }
 
   .meditech-context-rail.tebra-context-rail {
@@ -667,6 +689,11 @@
   .cd2004-workspace > .cd2004-work-window {
     grid-column: 2;
     grid-row: 1;
+    margin: var(--tebra-content-pad);
+  }
+
+  .cd2004-workspace.has-side-inspector > .cd2004-work-window {
+    margin-right: var(--tebra-panel-gap);
   }
 
   .cd2004-workspace.has-side-inspector
@@ -674,6 +701,8 @@
     > .cd2004-inspector-window {
     grid-column: 3;
     grid-row: 1;
+    margin: var(--tebra-content-pad) var(--tebra-content-pad)
+      var(--tebra-content-pad) 0;
   }
 
   /* --------------------------------------------------------- section rail */
@@ -686,11 +715,12 @@
     min-height: 0;
     padding: 0;
     overflow: hidden;
-    color: var(--tw-text-primary);
+    color: var(--tw-teal-800);
     background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-card);
-    box-shadow: 0 1px 3px rgb(0 58 67 / 7%);
+    border: 0;
+    border-right: 1px solid var(--tw-border-subtle);
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .meditech-rail-title.tebra-section-rail-title {
@@ -700,14 +730,14 @@
     gap: 8px;
     width: 100%;
     min-width: 0;
-    min-height: 46px;
-    padding: 9px 12px;
+    min-height: 48px;
+    padding: 9px 16px;
     color: var(--tw-teal-800);
     text-align: left;
     background: var(--tw-surface-panel);
     border: 0;
     border-bottom: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-card) var(--tw-radius-card) 0 0;
+    border-radius: 0;
     box-shadow: none;
     font-size: var(--tw-fs-ws-base);
     font-weight: 750;
@@ -749,7 +779,7 @@
     gap: 2px;
     min-width: 0;
     min-height: 58px;
-    padding: 10px 12px;
+    padding: 10px 16px;
     background: var(--tw-sand-75);
     border: 0;
     border-bottom: 1px solid var(--tw-border-subtle);
@@ -777,7 +807,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    padding: 8px;
+    padding: 8px 0;
     overflow: auto;
     background: var(--tw-surface-panel);
   }
@@ -802,7 +832,7 @@
     display: flex;
     align-items: center;
     min-height: 24px;
-    padding: 4px 8px;
+    padding: 4px 16px;
     color: var(--tw-text-secondary);
     background: transparent;
     border: 0;
@@ -822,9 +852,9 @@
     gap: 7px;
     width: 100%;
     min-width: 0;
-    min-height: 38px;
-    padding: 5px 8px 5px 6px;
-    color: var(--tw-text-primary);
+    min-height: 48px;
+    padding: 7px 16px;
+    color: var(--tw-teal-800);
     text-align: left;
     white-space: normal;
     background: transparent;
@@ -835,7 +865,7 @@
   }
 
   .meditech-record-list .cd2004-nav-item:hover:not(:disabled) {
-    color: var(--tw-text-primary);
+    color: var(--tw-teal-900);
     background: var(--tw-mint-50);
     border-color: var(--tw-mint-200);
     border-left-color: var(--tw-mint-200);
@@ -861,7 +891,8 @@
     display: block;
     overflow: hidden;
     color: inherit;
-    font-size: var(--tw-fs-ws-meta);
+    font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -922,9 +953,9 @@
     min-height: 0;
     overflow: hidden;
     background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-card);
-    box-shadow: 0 1px 3px rgb(0 58 67 / 7%);
+    border: 0;
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
   }
 
   .cd2004-work-window {
@@ -1113,7 +1144,7 @@
     justify-content: space-between;
     gap: 20px;
     min-width: 0;
-    padding: 16px 18px;
+    padding: 22px 24px 18px;
     color: var(--tw-text-primary);
     background: var(--tw-surface-panel);
     border: 0;
@@ -1127,9 +1158,9 @@
   .cd2004-worklist-header h1 {
     margin: 0;
     color: var(--tw-text-primary);
-    font-size: var(--tw-fs-title);
-    line-height: var(--tw-lh-title);
-    letter-spacing: var(--tw-ls-title);
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -0.02em;
     text-transform: none;
   }
 
@@ -1149,12 +1180,12 @@
     align-items: center;
     justify-content: center;
     gap: 7px;
-    min-height: var(--tw-touch-min);
-    padding: 9px 17px;
-    color: var(--tw-ink-900);
+    min-height: var(--tw-btn-h-product);
+    padding: 7px 18px;
+    color: var(--tw-teal-900);
     background: var(--tw-coral-500);
     border: 1px solid var(--tw-coral-500);
-    border-radius: var(--tw-radius-cta);
+    border-radius: var(--tw-radius-action);
     box-shadow: none;
     font-size: var(--tw-fs-ws-dense);
     font-weight: 750;
@@ -1164,13 +1195,13 @@
   }
 
   .cd2004-shell [data-workflow="home"] .cd2004-worklist-new:hover:not(:disabled) {
-    color: var(--tw-ink-900);
+    color: var(--tw-teal-900);
     background: var(--tw-coral-300);
     border-color: var(--tw-coral-300);
   }
 
   .cd2004-shell [data-workflow="home"] .cd2004-worklist-new:active:not(:disabled) {
-    color: var(--tw-ink-900);
+    color: var(--tw-teal-900);
     background: var(--tw-coral-600);
     border-color: var(--tw-coral-600);
     box-shadow: none;
@@ -1193,13 +1224,13 @@
     align-items: center;
     gap: 4px;
     min-width: 0;
-    min-height: 44px;
-    padding: 0 14px;
+    min-height: 48px;
+    padding: 0 24px;
     overflow-x: auto;
     overflow-y: hidden;
     background: var(--tw-surface-panel);
     border: 0;
-    border-top: 1px solid var(--tw-border-subtle);
+    border-top: 0;
     border-bottom: 1px solid var(--tw-border-subtle);
   }
 
@@ -1273,7 +1304,7 @@
   .cd2004-worklist-table th,
   .cd2004-worklist-table td {
     min-width: 0;
-    padding: 10px 12px;
+    padding: 14px 16px;
     overflow: hidden;
     color: var(--tw-text-primary);
     text-align: left;
@@ -1288,9 +1319,9 @@
     position: sticky;
     z-index: 1;
     top: 0;
-    height: 38px;
+    height: 48px;
     color: var(--tw-text-secondary);
-    background: var(--tw-mint-50);
+    background: var(--tw-mint-200);
     font-size: var(--tw-fs-ws-label);
     font-weight: 750;
     letter-spacing: var(--tw-ls-ws-label);
@@ -1326,7 +1357,7 @@
   }
 
   .cd2004-worklist-table tbody tr:nth-child(even) {
-    background: var(--tw-sand-75);
+    background: var(--tw-surface-panel);
   }
 
   .cd2004-worklist-table tbody tr:hover,
@@ -1424,26 +1455,26 @@
     border-color: var(--tw-stop-border);
   }
 
-  .cd2004-worklist-action {
-    min-width: 62px;
-    min-height: 32px;
-    padding: 5px 9px;
-    color: var(--tw-teal-800);
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-action {
+    min-width: 72px;
+    min-height: var(--tw-btn-h-product);
+    padding: 7px 16px;
+    color: var(--tw-teal-900);
     background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-teal-300);
-    border-radius: var(--tw-radius-ctl);
+    border: 1px solid var(--tw-btn-border-product);
+    border-radius: var(--tw-radius-action);
     box-shadow: none;
     font-size: var(--tw-fs-ws-meta);
     font-weight: 700;
   }
 
-  .cd2004-worklist-action:hover:not(:disabled) {
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-action:hover:not(:disabled) {
     color: var(--tw-teal-900);
     background: var(--tw-mint-50);
     border-color: var(--tw-teal-500);
   }
 
-  .cd2004-worklist-action:active:not(:disabled) {
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-action:active:not(:disabled) {
     color: var(--tw-teal-900);
     background: var(--tw-mint-150);
     box-shadow: none;
@@ -1479,9 +1510,9 @@
     justify-content: space-between;
     gap: 12px;
     min-height: 34px;
-    padding: 8px 12px;
+    padding: 10px 16px;
     color: var(--tw-text-secondary);
-    background: var(--tw-sand-75);
+    background: var(--tw-surface-panel);
     border: 0;
     border-top: 1px solid var(--tw-border-subtle);
     font-size: var(--tw-fs-ws-label);
@@ -1712,17 +1743,17 @@
 /* Three-column workflows at wide workstation widths. */
 @media screen and (max-width: 1279px) {
   .cd2004-shell {
-    --tebra-shell-gap: 10px;
-    --tebra-shell-pad: 10px;
+    --tebra-shell-gap: 0px;
+    --tebra-shell-pad: 0px;
   }
 
   .cd2004-workspace,
   .cd2004-workspace.has-central-preview {
-    grid-template-columns: 194px minmax(0, 1fr);
+    grid-template-columns: 192px minmax(0, 1fr);
   }
 
   .cd2004-workspace.has-side-inspector {
-    grid-template-columns: 194px minmax(500px, 1fr) minmax(274px, 292px);
+    grid-template-columns: 192px minmax(500px, 1fr) minmax(274px, 292px);
   }
 
   .cd2004-app-titlebar.tebra-app-header-main {
@@ -1742,7 +1773,7 @@
 /* The inspector stacks beneath the active work at standard laptop widths. */
 @media screen and (max-width: 1179px) {
   .cd2004-workspace.has-side-inspector {
-    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-columns: 192px minmax(0, 1fr);
     grid-template-rows: minmax(210px, 1fr) minmax(132px, 0.48fr);
   }
 
@@ -1756,6 +1787,8 @@
   .cd2004-workspace.has-side-inspector > .cd2004-work-window {
     grid-column: 2;
     grid-row: 1;
+    margin: var(--tebra-content-pad) var(--tebra-content-pad)
+      var(--tebra-panel-gap);
   }
 
   .cd2004-workspace.has-side-inspector
@@ -1763,6 +1796,7 @@
     > .cd2004-inspector-window {
     grid-column: 2;
     grid-row: 2;
+    margin: 0 var(--tebra-content-pad) var(--tebra-content-pad);
   }
 
   .cd2004-transaction-window.has-document-split {
@@ -1821,7 +1855,7 @@
   .cd2004-workspace,
   .cd2004-workspace.has-central-preview,
   .cd2004-workspace.has-side-inspector {
-    grid-template-columns: 180px minmax(0, 1fr);
+    grid-template-columns: 192px minmax(0, 1fr);
   }
 
   .tebra-power-commands .meditech-command-deck {
@@ -1829,11 +1863,75 @@
   }
 }
 
+/* Short laptop viewports have more usable width than height. Keep the note
+   inspector beside the clinical work from 920px upward so it cannot consume
+   the transaction page's vertical scroll viewport. */
+@media screen and (min-width: 920px) and (max-width: 1179px) and (max-height: 700px) {
+  .cd2004-workspace.has-side-inspector {
+    grid-template-columns: 192px minmax(0, 1fr) minmax(224px, 25vw);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .cd2004-workspace.has-side-inspector
+    > .tebra-context-rail
+    > .tebra-section-rail {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cd2004-workspace.has-side-inspector > .cd2004-work-window {
+    grid-column: 2;
+    grid-row: 1;
+    margin: var(--tebra-content-pad) 0 var(--tebra-content-pad)
+      var(--tebra-content-pad);
+  }
+
+  .cd2004-workspace.has-side-inspector
+    > .tebra-context-rail
+    > .cd2004-inspector-window {
+    grid-column: 3;
+    grid-row: 1;
+    margin: var(--tebra-content-pad);
+  }
+}
+
+/* Injection owns a second, internal note inspector. On the shortest supported
+   displays, keep that inspector beside the clinical worksheet where width
+   permits; otherwise the stacked inspector consumes the worksheet's entire
+   scroll viewport. */
+@media screen and (min-width: 920px) and (max-width: 1179px) and (max-height: 700px) {
+  .cd2004-transaction-window.has-document-split {
+    grid-template-columns: minmax(0, 1fr) minmax(224px, 30%);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .cd2004-workspace.has-central-preview .cd2004-inspector {
+    display: flex;
+  }
+
+  .cd2004-workspace.has-central-preview .cd2004-readiness-list {
+    max-height: 190px;
+    border-right: 0;
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+}
+
+/* Below 920px the two panes no longer fit comfortably side by side. Preserve
+   a compact inspector dock, but give the clinical worksheet enough height for
+   at least one complete control plus its scroll affordance. */
+@media screen and (min-width: 840px) and (max-width: 919px) and (max-height: 650px) {
+  .cd2004-transaction-window.has-document-split {
+    grid-template-rows: minmax(220px, 1fr) minmax(90px, 0.3fr);
+  }
+}
+
 /* 900px workstation: preserve every region and tighten only shell chrome. */
 @media screen and (max-width: 919px) {
   .cd2004-shell {
-    --tebra-shell-gap: 8px;
-    --tebra-shell-pad: 8px;
+    --tebra-shell-gap: 0px;
+    --tebra-shell-pad: 0px;
+    --tebra-content-pad: 8px;
+    --tebra-panel-gap: 8px;
   }
 
   .cd2004-app-titlebar.tebra-app-header-main {
@@ -1905,6 +2003,7 @@
 
   .cd2004-worklist-header h1 {
     font-size: 21px;
+    line-height: 28px;
   }
 
   .cd2004-worklist-table {
@@ -1923,6 +2022,11 @@
 
 /* 800 x 600 is the smallest supported workstation, not a mobile layout. */
 @media screen and (min-width: 800px) and (max-width: 839px) and (min-height: 600px) {
+  .cd2004-shell {
+    --tebra-content-pad: 6px;
+    --tebra-panel-gap: 6px;
+  }
+
   .cd2004-app-titlebar.tebra-app-header-main {
     grid-template-columns: 36px 116px auto minmax(0, 1fr) 170px;
     height: 54px;
@@ -1985,8 +2089,8 @@
   .cd2004-workspace.has-central-preview,
   .cd2004-workspace.has-side-inspector {
     grid-template-columns: 158px minmax(0, 1fr);
-    gap: 6px;
-    padding: 6px;
+    gap: 0;
+    padding: 0;
   }
 
   .meditech-rail-title.tebra-section-rail-title {
@@ -2140,7 +2244,7 @@
   .cd2004-navigator.meditech-record-list.tebra-section-rail,
   .meditech-workstation-gate-window,
   .tebra-power-commands .meditech-command-deck {
-    border-color: var(--tw-teal-800);
+    border: 1px solid var(--tw-teal-800);
   }
 
   .cd2004-shell :where(

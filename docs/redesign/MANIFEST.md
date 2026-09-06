@@ -4,6 +4,23 @@ Companion to `PLAN.md`. The authoritative list of **what may change**, **what is
 frozen**, **the exact design tokens**, and **the conventions that make this read
 as first-party**.
 
+**Implementation checkpoint — 2026-09-06.** The local branch contains Phases
+0–2b through `1387d10`; PR #62 was still at `b674907`, so Phase 2b was not yet
+remote. The commit containing this manifest is the locally complete Phase
+2c authenticated-product refinement of shell geometry, Injection form rhythm,
+record-lifecycle actions, Note Inspector chrome, UDS scroll ownership, and
+keyboard focus. It may still need to be pushed to PR #62 alongside Phase 2b. It
+adds no Phase 3 feature. The planned Phase 3 Notes,
+Facesheet, patient-search, page-level `ActionBar`, status-chip, lock-indicator,
+and hover-card components do not exist.
+
+Every real-patient view in the production audit was read-only. Opening the
+Injection editor on a verified Test Patient automatically created one blank
+`Incomplete` note; no clinical text, Save, Sign, Submit, or Delete action
+followed. The audit confirmed that global legacy **Open Notes** and modern
+patient-chart **Notes** use different grammars; §4 records both. The committed
+visual PNGs predate Phase 2b and remain stale.
+
 ---
 
 ## 1. Frozen — do not edit
@@ -51,11 +68,12 @@ else under `src/application/**` remains frozen.
 
 | Path | Purpose | Phase |
 | --- | --- | --- |
-| `src/presentation/tebra-tokens.css` | Single source of truth for tokens. `@media screen`. Imported first. | 0 |
-| `src/presentation/tebra-screen-contract.css` | Final screen contract; replaces `meditech-screen-contract.css`. Loaded last. | 2 |
-| `src/presentation/shell/AppHeader.tsx` | Logo slot, patient search, action bar. | 2 |
-| `src/presentation/shell/SectionRail.tsx` | Left rail — only sections we truthfully have. | 2 |
-| `src/presentation/shell/ActionBar.tsx` | `+ New Note` · `Print` · `More` · `Customize View`. | 3 |
+| `src/presentation/tebra-tokens.css` | Single source of truth for tokens. `@media screen`. Imported first; authenticated-product aliases refined in Phase 2c. | 0, 2c |
+| `src/presentation/tebra-screen-contract.css` | Final screen contract; replaces `meditech-screen-contract.css`. Loaded last; lifecycle and inspector details refined in Phase 2c. | 2, 2c |
+| `src/presentation/tebra-workstation.css` | Tebra shell composition; replaces `meditech-workstation.css`; measured geometry refined in Phase 2c. | 2, 2c |
+| `src/presentation/shell/AppHeader.tsx` | Persistent product identity and truthful local-record context. Patient search and actions remain Phase 3. | 2 |
+| `src/presentation/shell/SectionRail.tsx` | Left rail — current truthful workflow navigation and global Open Notes launch. Patient-chart sections remain Phase 3. | 2 |
+| `src/presentation/shell/ActionBar.tsx` | Planned page-level coral split `New Note` · `Print` · `More` · `Customize View`; distinct from per-note `RecordLifecycleActions`. | 3 |
 | `src/presentation/shell/PatientSearch.tsx` | "first 2–3 letters of the patient's name or date of birth (mm/dd/yyyy)". | 3 |
 | `src/presentation/facesheet/FacesheetBanner.tsx` | Patient hub header. | 3 |
 | `src/presentation/facesheet/PatientCardPopup.tsx` | Hover card on patient name. | 3 |
@@ -77,25 +95,26 @@ else under `src/application/**` remains frozen.
 
 | Path | Change | Phase |
 | --- | --- | --- |
-| `index.html` | Boot splash → Tebra teal/sand; title and meta copy. **Keep `media="print"` on the legacy stylesheet link.** | 0 |
+| `index.html` | Boot identity, then Phase 2 loading skeleton; Phase 2c synchronizes measured shell geometry. **Keep `media="print"` on the legacy stylesheet link.** | 0, 2, 2c |
 | `favicon.svg` | IPMG module mark in Tebra palette. Not a Tebra logo. | 0 |
 | `package.json` | **Add** `@fontsource-variable/inter` + `@fontsource-variable/jetbrains-mono`. **Keep `plus-jakarta-sans`** — it is print-load-bearing (see §3.1). | 0 |
 | `src/main.tsx` | Font imports; kiosk wiring (Phase 4). No coordinator or store changes. | 0, 4 |
-| `src/presentation/clinical-desktop.css` | Retarget to tokens. **Keep the filename** (`check-app.js` asserts it). | 0, 2 |
-| `src/presentation/workflows/workflow-panels.css` | Retarget to tokens. **Keep the filename** (`check-app.js` asserts it). | 0, 2 |
-| `src/presentation/meditech-workstation.css` | Rewrite as Tebra composition, or delete once the contract lands. | 2, 5 |
-| `src/presentation/meditech-screen-contract.css` | Delete once replaced. | 2 |
-| `src/presentation/ClinicalDesktopShell.tsx` | Titlebar → `AppHeader`; nav → `SectionRail`; status bar → footer. ARIA preserved. | 2 |
-| `src/presentation/MeditechChrome.tsx` | Rename `TebraChrome.tsx`, restyle. | 2 |
+| `src/presentation/clinical-desktop.css` | Retarget screen surfaces to tokens and retain established print layout/isolation rules. **Keep the filename** (`check-app.js` asserts it). | 0, 2, 2c |
+| `src/presentation/workflows/workflow-panels.css` | Retarget to tokens; Phase 2c refines Injection and fixed transaction scroll ownership. **Keep the filename** (`check-app.js` asserts it). | 0, 2, 2c |
+| `src/presentation/meditech-workstation.css` | **Deleted**; replaced by `tebra-workstation.css`. | 2 |
+| `src/presentation/meditech-screen-contract.css` | **Deleted**; replaced by `tebra-screen-contract.css`. | 2 |
+| `src/presentation/ClinicalDesktopShell.tsx` | Titlebar → `AppHeader`; nav → `SectionRail`; status bar → footer. Phase 2c also repairs synchronous mnemonic-menu focus. ARIA preserved. | 2, 2c |
+| `src/presentation/MeditechChrome.tsx` | **Deleted**; replaced by `TebraChrome.tsx`. | 2 |
 | `src/presentation/types.ts` | `WORKFLOW_LABELS` string values only. **Never touch `WorkflowId` union values.** | 1 |
 | `src/presentation/StartCenter.tsx` | → "Dashboard"; facesheet card grammar. | 1, 3 |
 | `src/presentation/RecordsWindow.tsx`, `UdsRecordsWindow.tsx` | → "Open Notes"; adopt `NotesTable`. | 1, 3 |
-| `src/presentation/RecordActionDialog.tsx`, `RecordLifecycleActions.tsx` | "Attest and lock" → "Sign". Copy only; lifecycle unchanged. | 1 |
-| `src/presentation/NoteInspector.tsx` | Tebra note panel grammar. | 3 |
+| `src/presentation/RecordActionDialog.tsx`, `RecordLifecycleActions.tsx` | "Attest and lock" → "Sign"; Phase 2c styles the existing per-note lifecycle actions as a fixed modern footer through the screen contract. Component lifecycle logic is unchanged. | 1, 2c |
+| `src/presentation/NoteInspector.tsx` | Structurally unchanged in Phase 2c; its existing chrome is refined through `tebra-screen-contract.css`. Phase 3 supplies the patient Notes convention. | 3 |
 | `src/presentation/WorkstationLock.tsx` | Restyle only. | 2 |
 | `src/presentation/workflows/StatusFlag.tsx` | New triad; **verify icon + word, never color alone.** | 2 |
 | `src/presentation/workflows/OutstandingRequirements.tsx` | → "Care Checklist". | 1 |
 | `src/presentation/workflows/injection/InjectionPanel.tsx` | Stepper integration. Field logic untouched. | 4 |
+| `src/presentation/workflows/uds/UdsPanel.tsx` | Phase 2c moves the existing preliminary-screening safety statement inside the clinical scroll owner; copy and logic unchanged. | 2c |
 | `scripts/check-app.js` | Only if a CSS path above is renamed — update that assertion, **relax nothing else**. | 2 |
 | `README.md` | Architecture + design-language section. | 5 |
 
@@ -104,23 +123,30 @@ else under `src/application/**` remains frozen.
 | Path | Action |
 | --- | --- |
 | `tests/e2e/meditech-screen-contract.spec.js` | Delete; superseded. |
-| `tests/e2e/visual-snapshots.spec.js-snapshots/linux/**` (8 PNGs) | Regenerate once per phase; review each image. |
-| `tests/e2e/visual-snapshots.spec.js-snapshots/win32/**` (8 PNGs) | **Cannot be regenerated in CI.** Flag as stale in the PR body. |
-| `tests/e2e/visual-contracts.spec.js` | Update selector and style expectations. |
+| `tests/e2e/visual-snapshots.spec.js-snapshots/linux/**` (8 PNGs) | **Currently pre-Phase-2b.** Regenerate in a compatible browser and review each image. |
+| `tests/e2e/visual-snapshots.spec.js-snapshots/win32/**` (8 PNGs) | **Currently stale; cannot be regenerated in Linux CI.** Refresh on Windows or flag in the PR body. |
+| `tests/e2e/tebra-screen-contract.spec.js` | Phase 2c updates measured shell, coral/status, and 800×600 contracts. |
+| `tests/e2e/visual-contracts.spec.js` | Update Dashboard style and keyboard-focus expectations. |
+| `tests/e2e/workstation.spec.js` | Update changed visual expectations without relaxing clinical journeys. |
 | `tests/unit/ehr-refinement-contracts.test.ts` | Update if it asserts label strings. |
 
 `npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
 
 > **Baseline browser drift — measured, not assumed.** `@playwright/test` 1.62
-> pins chromium-1234 (Chromium 151); the Claude Code remote environment ships
-> chromium-1194 (Chromium 141). Before regenerating anything on a mismatched
-> build, check it: run the suite unchanged against the committed baselines. In
-> Phase 1 all 7 CI-made (151) baselines passed on 141, because the capture CSS
-> forces `Arial, "Liberation Sans"` with `font-synthesis: none` and disables
-> animations, which removes almost all rasterization variance. Regeneration on
-> 141 was therefore safe. **Re-run that check whenever the version gap widens
-> or the capture settings change** — and never regenerate on a hunch either way.
-> `win32/` is a genuinely different platform and still cannot be refreshed here.
+> pins chromium-1234 (Chromium 151), which remains authoritative. Phase 1
+> showed that its seven then-changed baselines matched Chromium 141 against
+> unchanged code. The 2026-09-06 audit used a temporary Chromium 149 binary,
+> but did not establish snapshot equivalence. Never commit its ephemeral path
+> or regenerate baselines on it without first proving unchanged-code parity.
+> `win32/` is a genuinely different platform and cannot be refreshed on Linux.
+
+Current temporary-Chromium-149 evidence: screen contract 6/6, Dashboard visual
+contract 2/2, five changed journeys 5/5, and the final combined
+screen/interaction run 66/66. The repaired UDS F12 and menu-tracking races each
+passed 10/10 stress repeats. The full print suite was 13/18: four failures
+reproduced at unchanged `1387d10`, and one was the likely-flaky four-step rail
+mutation check. The two Phase-2c print-isolation paths pass 2/2. This is not a
+pinned-browser print or visual-baseline pass.
 
 ---
 
@@ -177,6 +203,11 @@ not their marketing site):
 --tw-fs-ws-meta:  12px; --tw-lh-ws-meta:  16px;
 --tw-fs-ws-label: 11px; --tw-lh-ws-label: 14px; --tw-ls-ws-label: 0.48px;
 ```
+
+The authenticated desktop product uses 16px/24px body text and a 32px/48px
+main-view title. The workstation Dashboard's 32px/40px desktop title and
+21px/28px compact title are deliberate local adaptations, not live
+measurements.
 
 ### 3.2 Color
 
@@ -252,10 +283,12 @@ Derived to stay in the Tebra family while remaining unambiguous next to coral.
 #### 3.2.2 Semantic surface aliases
 
 ```css
---tw-surface-page:    var(--tw-sand-50);
+--tw-surface-page:    #fbf9f8; /* authenticated product page canvas */
 --tw-surface-panel:   var(--tw-white);
 --tw-surface-sunken:  var(--tw-mint-50);
 --tw-surface-inverse: var(--tw-teal-900);
+--tw-surface-header:  #004852; /* authenticated product header */
+--tw-surface-header-input: #002328;
 --tw-on-inverse:      var(--tw-sand-150);
 --tw-border-subtle:   var(--tw-mint-200);
 --tw-border-strong:   var(--tw-teal-300);
@@ -265,7 +298,10 @@ Derived to stay in the Tebra family while remaining unambiguous next to coral.
 --tw-focus-ring:      0 0 0 3px rgb(0 73 82 / 0.24);
 ```
 
-### 3.3 Buttons — Tebra's exact observed spec
+### 3.3 Buttons — source-specific observed specs
+
+The first block is the public brand-stylesheet grammar. The authenticated
+product is authoritative where it differs.
 
 ```css
 /* primary */              background:#ff8d6e; border:2px solid #ff8d6e; color:#232323;
@@ -285,8 +321,12 @@ medium 49px · small 45px · x-small 32px (12px/18px type). cta and large drop t
 46/49px on narrow.
 
 **Workstation tier adds** a `ws` size — **32px tall, radius 6px** — for dense
-toolbars. Kiosk-primary actions keep Tebra's 57px/32px-radius pill.
-**Kiosk minimum touch target: 44×44 CSS px.**
+toolbars. In the authenticated product, modern outlined actions are **38px
+high, radius 24, with a `#b3c6c4` border**. The patient Notes `New Note` group
+is a distinct **36px-high split action**. Use those product measurements for
+shell and chart actions; use the public `#004952` border only where that broader
+brand grammar is intended. Kiosk-primary actions keep Tebra's 57px/32px-radius
+pill. **Kiosk minimum touch target: 44×44 CSS px.**
 
 ### 3.4 Radii, spacing, motion
 
@@ -299,6 +339,14 @@ toolbars. Kiosk-primary actions keep Tebra's 57px/32px-radius pill.
 --tw-radius-ctl:   8px;    /* most common */
 --tw-radius-ws:    6px;    /* workstation tier */
 --tw-radius-tight: 4px;
+--tw-radius-action: 24px;
+
+--tw-shadow-elevation-1:
+  0 2px 1px -1px rgb(0 0 0 / 20%),
+  0 1px 1px 0 rgb(0 0 0 / 14%),
+  0 1px 3px 0 rgb(0 0 0 / 12%);
+
+--tw-header-height: 65px;
 
 --tw-container-base: 1280px;
 --tw-container-pad:  20px;   /* 30px @ md, 80px @ lg */
@@ -308,6 +356,12 @@ toolbars. Kiosk-primary actions keep Tebra's 57px/32px-radius pill.
 --tw-dur-fast: 120ms;   /* workstation feedback */
 --tw-dur-base: 300ms;   /* Tebra's own .3s ease-in-out */
 ```
+
+Authenticated-product desktop geometry: 65px `#004852` header; 347×33
+`#002328` search well; `#fbf9f8` page; 192px flush rail with 48px rows and 16px
+row padding; 32px content inset; radius-4 elevation-1 cards. The repository's
+56/54px compact headers, 166/158px compact rails, and 8/6px compact insets are
+supported-workstation adaptations, not live Tebra measurements.
 
 ```css
 @media (prefers-reduced-motion: reduce) {
@@ -319,21 +373,50 @@ toolbars. Kiosk-primary actions keep Tebra's 57px/32px-radius pill.
 
 ## 4. Convention spec
 
-The tokens make it look right. This section makes it *feel* first-party. Every
-item below is a Tebra behavior read off their product documentation.
+The tokens make it look right. This section makes it *feel* first-party. It
+combines authenticated-product observations, legacy workflow observations, and
+explicit repository adaptations; each subsection names which source governs.
 
-### 4.1 Tables (Open Notes and every list)
+### 4.1 Global Open Notes table
+
+This is the legacy global worklist grammar observed in production, not the
+modern patient-chart list in §4.1.1. Its worklist and editor inform workflow
+structure only. The modern authenticated product remains authoritative for the
+surrounding shell, cards, fields, and actions.
 
 | Behavior | Spec |
 | --- | --- |
 | Columns | `Patient · Lock · Type · Status · Visit Date` |
-| Sorting | Click a header to sort; click again to reverse. Sortable on Patient, Type, Visit Date. |
-| Sort affordance | Header shows direction; unsorted headers show an affordance on hover only. |
+| Header | Sparse pale mint surface observed near `#d4e0dd`; use the nearest repository token, `--tw-mint-200` (`#d2dcda`), without heavy cell or row boxes. |
+| Rows | 44px, white, without zebra striping or heavy boxes. |
+| Sorting | Default to Visit Date descending. Click a sortable header to sort; click again to reverse. Sortable on Patient, Type, Visit Date. |
+| Sort affordance | Visit Date shows its direction caret; other unsorted headers show an affordance on hover only. |
 | Row target | The **whole row** opens the note. No trailing "open" link. |
-| Lock column | Glyph when the record is signed; hover reveals `Signed by A. Rivera, MA · 2:14 PM`. |
+| Lock column | Glyph when the record is signed; hover reveals `Signed by {staff} · {time}` from the existing attestation. |
 | Visit Date | The appointment date, or the note's creation date/time when there is no appointment. |
 | Status | `StatusChip` — see 4.2. |
 | Empty state | One line in voice, plus the primary action. Never a bare "No records." |
+
+For the existing record shapes, resolve Visit Date in presentation only:
+injection `fields.adminDate`, UDS `collectionDateTime`, then `createdAt` as the
+fallback. Resolve the lock tooltip from the existing `attestation` staff and
+timestamp. Do not add or change persistence fields for this table.
+
+### 4.1.1 Patient-chart Notes list
+
+The current patient Notes product uses a newer, roomier list convention. Build
+it as a patient-scoped view; do not make the global Open Notes table imitate it.
+
+| Element | Measured spec |
+| --- | --- |
+| Page | 32px content padding. |
+| Filters | Exactly four 200×40 fields in one white panel; 4px radius (`--tw-radius-tight`) and elevation 1. |
+| Row | 100px high with 16px padding. |
+| Row title | Approximately 20px, bold. |
+| Metadata | 14px sans text. |
+| Status | 32px lifecycle chips, intrinsic width: observed `Open` 59px on `#f0faf2`, `Signed` 69px on `#f0eee8`. Do not reuse the clinical stop/review/ready triad. |
+| Open | 73×38 outlined button on the row. |
+| New note | Coral 36px split action: primary `New Note` segment plus disclosure; its menu is about 242px wide with 36px rows. |
 
 ### 4.2 Status chips
 
@@ -341,14 +424,28 @@ item below is a Tebra behavior read off their product documentation.
 
 Tebra ships `Incomplete` and `Needs Cosign`. We keep `Incomplete` verbatim,
 extend with `Ready to sign` and `Signed`, and drop `Needs Cosign` — there is no
-cosign flow here and inventing one is worse than omitting it. Same chip
-component, same placement, same size.
+cosign flow here and inventing one is worse than omitting it. Keep a shared
+32px-high component, but allow intrinsic text width and status-specific neutral
+backgrounds: the observed `Open` and `Signed` chips were different widths and
+used `#f0faf2` and `#f0eee8`, respectively. These are note-lifecycle states,
+not clinical readiness states; the stop/review/ready triad remains reserved for
+clinical meaning.
 
 ### 4.3 Action bar
 
-`+ New Note` (dropdown: Injection · UDS · Samples · Forms) · `Print` · `More` ·
-`Customize View` — top right, in that order. This is Tebra's exact pattern.
-`More` holds the low-frequency actions; `Customize View` persists per browser.
+The planned page-level `ActionBar` holds a 36px coral split `New Note` (primary
+segment plus adjacent menu for Injection · UDS · Samples · Forms), then
+`Print` · `More` · `Customize View`, top right in that order. Its menu is about
+242px wide with 36px rows. `More` holds low-frequency actions; `Customize View`
+persists per browser. The split control is one primary-action group, not two
+competing coral buttons, and it is not the existing per-note
+`RecordLifecycleActions` footer.
+
+Workflow observation: selecting Injection in the live product opened the
+editor and immediately created a blank `Incomplete` note, before Save. Record
+creation is therefore not safe to treat as read-only navigation. Preserve this
+repository's frozen persistence and confirmation contracts rather than copying
+that side effect blindly.
 
 ### 4.4 Patient search
 
@@ -394,13 +491,15 @@ Full rewrite table in `PLAN.md` §2.4. The rules:
 Screen by screen, answer yes to all of these. A no is a seam.
 
 1. Would a Tebra PM recognize every component on this screen as one of theirs?
-2. Does every table sort, lock, and open the way Tebra's Open Notes does?
+2. Does global Open Notes sort, lock, and row-open like the legacy worklist,
+   while patient Notes uses its four-filter panel, modern list, and `Open`
+   button?
 3. Is every string in Tebra's product voice — imperative, plain, named after the
    user's action rather than the system's internals?
 4. Does any control link to something that doesn't exist here?
 5. Is the density calibrated to Tebra's *product*, not their marketing site?
-6. Does coral appear exactly once, on the primary action, carrying no clinical
-   meaning?
+6. Does coral appear on exactly one primary action or split-action group,
+   carrying no clinical meaning?
 7. Does every clinical status carry an icon and a word?
 8. Is the local-only storage disclosure visible and in voice?
 9. Does the screen still say truthfully which system this is?
@@ -416,9 +515,10 @@ exist so this one does not repeat that.
 1. **Change rules at their source.** A MEDITECH value gets edited where it is
    declared. Adding a later rule that overrides it is forbidden, even when it
    is faster.
-2. **Net CSS must go down.** `meditech-screen-contract.css` exists only to force
-   one visual language over another; once tokens own that, it shrinks and is
-   deleted, not superseded. Report the line-count delta in every phase's PR.
+2. **Net CSS must go down.** Phase 2 deleted
+   `meditech-screen-contract.css` and `meditech-workstation.css` instead of
+   superseding them. Continue changing rules at their source and report the
+   line-count delta in every phase's PR.
 3. **Zero new `!important`.** Each one that survives review carries a comment
    naming exactly what it beats.
 4. **No dead conditionals.** Collapsing a distinction is fine; leaving a
@@ -435,15 +535,19 @@ exist so this one does not repeat that.
 
 ## 5c. Boot experience — skeleton, not splash
 
-The Phase 0 boot splash is **interim**. A full-screen brand splash is a native
+Phase 2 replaced the interim Phase 0 splash with a loading skeleton. A
+full-screen brand splash is a native
 desktop idiom — the same idiom the MEDITECH shell was built on. A Tebra-quality
 web product shows the chrome immediately with placeholder content, so the first
 frame communicates *what is loading* rather than *who made it*.
 
-Phase 2 replaces it with a loading skeleton:
+The current Phase 2b plus Phase 2c contract is:
 
-- The app header, section rail and an empty Open Notes table render as neutral
-  placeholder blocks in `--tw-mint-50`, with the real layout geometry.
+- The 65px `#004852` app header (56px compact; 54px at 800–839px), `#002328`
+  search well, patient context band, flush white section rail, and 32px page
+  inset paint immediately with the real shell geometry.
+- The placeholder Open Notes panel uses the landed 4px/elevation-1 card and
+  38px action geometry; its cells remain quiet mint skeleton blocks.
 - No shimmer animation by default; a slow, low-contrast pulse at most, disabled
   under `prefers-reduced-motion`.
 - It stays inline HTML+CSS in `index.html` with literal token values, because
@@ -459,19 +563,23 @@ Phase 2 replaces it with a loading skeleton:
 
 ```
 1. tebra-tokens.css               @media screen — tokens only, no selectors past :root
-2. clinical-desktop.css           @media screen — structural base (filename pinned)
+2. clinical-desktop.css           mixed — screen structural base plus established print rules (filename pinned)
 3. workflows/workflow-panels.css  @media screen — (filename pinned)
-4. kiosk/kiosk.css                @media screen — kiosk layout
-5. tebra-screen-contract.css      @media screen — final contract, loaded last
---- print, entirely separate ---
-   public/legacy/legacy.css       media="print" — FROZEN, never joins the screen cascade
+4. tebra-workstation.css          @media screen — shell composition
+5. kiosk/kiosk.css                @media screen — kiosk layout (Phase 4; not present yet)
+6. tebra-screen-contract.css      @media screen — final contract, loaded last
+--- print never joins the Tebra screen cascade ---
+   clinical-desktop.css           @media print — established typed-sheet layout and shell isolation
+   public/legacy/legacy.css       media="print" — FROZEN legacy print rules
 ```
 
 > `legacy.css` was moved to `media="print"` precisely so the screen cascade
 > would be clean; the previous redesign needed ~900 `!important` declarations
-> because it was fighting a print stylesheet loading on screen. Do not
-> reintroduce that. **Zero new `!important` is the target**; each survivor needs
-> a comment naming what it beats.
+> because it was fighting a print stylesheet loading on screen.
+> `clinical-desktop.css` still intentionally owns print layout and isolation.
+> Do not expose either print source to the Tebra screen cascade. **Zero new
+> `!important` is the target**; each survivor needs a comment naming what it
+> beats.
 
 ---
 
@@ -480,7 +588,7 @@ Phase 2 replaces it with a loading skeleton:
 ```bash
 npm run check        # typecheck + check-app.js (all ~50 clinical assertions)
 npm run test:unit
-npm run test:print   # MUST be zero-diff
+npm run test:print   # renderer hashes plus print-layout/PDF gate
 npm run test:e2e
 git diff --stat -- public/legacy src/legacy src/domain src/application \
                    src/persistence src/documentation tests/fixtures

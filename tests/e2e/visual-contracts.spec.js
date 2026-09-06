@@ -17,12 +17,11 @@ const WORKFLOWS = {
       '.cd2004-worklist-table'
     ]
   },
-  // 'forms', 'uds', 'administer' (injection), and 'samples' are
-  // intentionally not covered here: they've been migrated to real new
-  // panels (`.wfp-panel`) with a fundamentally different structure from the
-  // shared legacy card/chip contract this suite validates for the still
-  // legacy-hosted workflows. A dedicated visual contract for the new panels
-  // is a follow-up, not part of this generic legacy contract.
+  // Phase 2c intentionally keeps this exact visual snapshot focused on the
+  // Dashboard at two widths. Clinical workflows use the measured screen and
+  // reachability contracts in tebra-screen-contract.spec.js plus their full
+  // interaction journeys in workstation.spec.js; Phase 3 will add the two
+  // dedicated Notes grammars here when their components exist.
 };
 
 async function openWorkflow(page, workflow) {
@@ -34,8 +33,8 @@ async function openWorkflow(page, workflow) {
     return;
   }
 
-  // The workflow strip is docked along the bottom at every width, so every
-  // nav item is directly clickable - there is no NAV pane to switch to first.
+  // The section rail remains visible at every supported workstation width, so
+  // every workflow item is directly clickable.
   await page.locator(
     `.cd2004-nav-item[title="${WORKFLOWS[workflow].label}"]`
   ).click();
@@ -160,7 +159,10 @@ async function collectVisualContract(page, workflow) {
     control?.focus();
     const focusedControlStyle = styleOf(control, [
       'borderColor',
-      'boxShadow'
+      'boxShadow',
+      'outlineColor',
+      'outlineStyle',
+      'outlineWidth'
     ]);
 
     return {
@@ -228,6 +230,11 @@ async function collectVisualContract(page, workflow) {
         controlSquare: controlStyle?.borderRadius === '0px',
         focusedControlBorder: focusedControlStyle?.borderColor,
         focusedControlHasGlow: focusedControlStyle?.boxShadow !== 'none',
+        focusedControlOutline: {
+          color: focusedControlStyle?.outlineColor,
+          style: focusedControlStyle?.outlineStyle,
+          width: focusedControlStyle?.outlineWidth
+        },
         recordLedgerHorizontalOverflow: hasHorizontalOverflow(recordTableWrap),
         usesTahomaFirst:
           controlStyle?.fontFamily.trim().toLowerCase().startsWith('tahoma') ??
@@ -269,19 +276,28 @@ async function collectVisualContract(page, workflow) {
     const style = getComputedStyle(control);
     return {
       borderColor: style.borderColor,
-      hasGlow: style.boxShadow !== 'none'
+      hasGlow: style.boxShadow !== 'none',
+      outline: {
+        color: style.outlineColor,
+        style: style.outlineStyle,
+        width: style.outlineWidth
+      }
     };
   }, WORKFLOWS[workflow].control);
   contract.surface.focusedControlBorder = focusedControlStyle?.borderColor;
   contract.surface.focusedControlHasGlow = focusedControlStyle?.hasGlow;
+  contract.surface.focusedControlOutline = focusedControlStyle?.outline;
   return contract;
 }
 
-function expectedContract(workflow) {
+function expectedContract(workflow, viewport) {
   const module = WORKFLOWS[workflow];
   const isHome = workflow === 'home';
-  const titlebarHeight = '23px';
-  const windowTitlebarMinHeight = '22px';
+  const compact = viewport.width <= 919;
+  const titlebarHeight = compact ? '56px' : '65px';
+  const windowTitlebarMinHeight = compact ? '42px' : '48px';
+  const headingFontSize = compact ? '21px' : '32px';
+  const headingLineHeight = compact ? '28px' : '40px';
 
   return {
     workflow,
@@ -291,33 +307,33 @@ function expectedContract(workflow) {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
       style: {
-        color: isHome ? 'rgb(0, 73, 82)' : 'rgb(16, 42, 86)',
-        fontSize: isHome ? '9px' : '16px',
+        color: 'rgb(0, 58, 67)',
+        fontSize: isHome ? headingFontSize : '16px',
         fontWeight: '700',
-        lineHeight: isHome ? 'normal' : '18.4px'
+        lineHeight: isHome ? headingLineHeight : '18.4px'
       }
     },
     chrome: {
       shell: {
-        backgroundColor: 'rgb(197, 214, 215)',
+        backgroundColor: 'rgb(251, 249, 248)',
         fontFamily: expect.stringMatching(/^"Inter Variable"/),
-        fontSize: '11px',
+        fontSize: '16px',
         overflow: 'hidden'
       },
       applicationTitlebar: {
-        color: 'rgb(255, 255, 255)',
+        color: 'rgb(248, 243, 235)',
         height: titlebarHeight,
-        backgroundColor: 'rgba(0, 0, 0, 0)',
-        backgroundImage: expect.stringMatching(/^linear-gradient/),
-        usesGradient: true
+        backgroundColor: 'rgb(0, 72, 82)',
+        backgroundImage: 'none',
+        usesGradient: false
       },
       activeWindow: {
-        borderRadius: '0px',
-        borderTopWidth: '1px',
-        borderRightWidth: '1px',
-        titlebarColor: 'rgb(255, 255, 255)',
+        borderRadius: '4px',
+        borderTopWidth: '0px',
+        borderRightWidth: '0px',
+        titlebarColor: 'rgb(0, 58, 67)',
         titlebarMinHeight: windowTitlebarMinHeight,
-        titlebarUsesGradient: true,
+        titlebarUsesGradient: false,
         titlebarUsesNavy: false
       }
     },
@@ -335,23 +351,24 @@ function expectedContract(workflow) {
       horizontalOverflow: false,
       panelHorizontalOverflow: false,
       hero: {
-        backgroundColor: isHome
-          ? 'rgb(246, 248, 248)'
-          : 'rgb(219, 228, 238)',
-        borderBottomColor: isHome
-          ? 'rgb(58, 109, 113)'
-          : 'rgb(124, 137, 150)',
+        backgroundColor: isHome ? 'rgb(255, 255, 255)' : 'rgb(246, 248, 248)',
+        borderBottomColor: isHome ? 'rgb(0, 58, 67)' : 'rgb(210, 220, 218)',
         borderRadius: '0px',
-        boxShadow: expect.any(String),
-        hasRelief: true
+        boxShadow: 'none',
+        hasRelief: false
       },
       // Tebra's control grammar: a soft radius, a hairline border, and no bezel.
       representativeSquare: false,
       representativeFlat: true,
       representativeHasRelief: false,
       controlSquare: false,
-      focusedControlBorder: 'rgb(245, 179, 0)',
+      focusedControlBorder: 'rgb(255, 141, 110)',
       focusedControlHasGlow: false,
+      focusedControlOutline: {
+        color: 'rgb(0, 73, 82)',
+        style: 'solid',
+        width: '2px'
+      },
       recordLedgerHorizontalOverflow: false,
       usesTahomaFirst: false,
       landmarksPresent: [true, true, true, true]
@@ -413,7 +430,7 @@ for (const viewport of [
             `\n${viewport.name}/${workflow}\n${JSON.stringify(contract, null, 2)}`
           );
         }
-        expect(contract).toEqual(expectedContract(workflow));
+        expect(contract).toEqual(expectedContract(workflow, viewport));
       });
     }
   });

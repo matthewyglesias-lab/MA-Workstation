@@ -39,13 +39,12 @@
   }
 
   /*
-   * One control grammar, Tebra's: a soft radius, a hairline border, a tinted
-   * hover, and a pressed state that darkens rather than inverting a bezel.
-   * The raised/sunken 3D edge is the single loudest client/server tell, so it
-   * goes everywhere at once rather than surface by surface.
+   * Tebra uses two related control grammars. Chart navigation is a flat,
+   * full-width row; explicit actions are pills. Keeping those jobs separate
+   * matters here: a border around every rail row turns the chart back into a
+   * stack of desktop-era buttons even when the palette is otherwise right.
    */
   .cd2004-shell :is(
-      .cd2004-nav-item,
       .cd2004-worklist-new,
       .cd2004-worklist-action,
       .meditech-command-deck button,
@@ -58,7 +57,6 @@
     border-radius: var(--tw-radius-ws);
   }
 
-  .cd2004-shell button.cd2004-nav-item,
   .cd2004-shell button.cd2004-worklist-new,
   .cd2004-shell button.cd2004-worklist-action,
   .cd2004-shell .meditech-command-deck button,
@@ -70,7 +68,6 @@
     transition: background-color var(--tw-dur-base) ease-in-out;
   }
 
-  .cd2004-shell button.cd2004-nav-item:hover,
   .cd2004-shell button.cd2004-worklist-new:hover,
   .cd2004-shell button.cd2004-worklist-action:hover,
   .cd2004-shell .meditech-command-deck button:hover,
@@ -79,9 +76,7 @@
     background-color: var(--tw-mint-50);
   }
 
-  /* Tebra's own secondary-active treatment, in place of a sunken bezel. */
-  .cd2004-shell button.cd2004-nav-item.is-active,
-  .cd2004-shell button.cd2004-nav-item[aria-current="page"],
+  /* Tebra's secondary-active treatment, in place of a sunken bezel. */
   .cd2004-shell button.cd2004-worklist-new:active,
   .cd2004-shell button.cd2004-worklist-action:active,
   .cd2004-shell .meditech-command-deck button:active,
@@ -91,6 +86,348 @@
     border-color: var(--tw-border-strong);
     color: var(--tw-text-primary);
     box-shadow: none;
+  }
+
+  /* Modern chart actions: 38px pills, white outlined secondaries and one
+     coral primary. The workflow may contain several consequential actions,
+     but only Save/Sign (the explicitly marked primary) receives coral. */
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-worklist-action,
+      .cd2004-record-actions-buttons button
+    ) {
+    min-height: var(--tw-action-height);
+    padding: 6px 16px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-action-border);
+    border-radius: var(--tw-radius-action);
+    font: 600 var(--tw-fs-ws-dense) / var(--tw-lh-ws-dense) var(--tw-font-sans);
+  }
+
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-record-actions-buttons button.is-primary
+    ) {
+    color: var(--tw-teal-800);
+    background: var(--tw-coral-500);
+    border-color: var(--tw-coral-500);
+  }
+
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-record-actions-buttons button.is-primary
+    ):hover:not(:disabled) {
+    background: var(--tw-coral-300);
+    border-color: var(--tw-coral-300);
+  }
+
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-record-actions-buttons button.is-primary
+    ):active:not(:disabled) {
+    color: var(--tw-teal-900);
+    background: var(--tw-coral-600);
+    border-color: var(--tw-coral-600);
+  }
+
+  .cd2004-shell .cd2004-record-actions-buttons button.is-danger {
+    color: var(--tw-stop-fg);
+    background: var(--tw-stop-bg);
+    border-color: var(--tw-stop-border);
+  }
+
+  .cd2004-shell .cd2004-record-actions-buttons button:disabled {
+    color: var(--tw-text-muted);
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-subtle);
+    cursor: not-allowed;
+  }
+
+  /* Lifecycle chrome follows the note editor's useful structure (a fixed
+     action footer) without copying its dated 11px controls. It remains a
+     sibling of the scrolling clinical page, so Save/Sign/New never disappear
+     when the worksheet is long. */
+  .cd2004-shell .cd2004-record-actions {
+    position: relative;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 8px 12px;
+    background: var(--tw-surface-panel);
+    border-top: 1px solid var(--tw-border-subtle);
+    box-shadow: 0 -2px 8px rgb(0 58 67 / 8%);
+  }
+
+  .cd2004-shell .cd2004-record-actions-state {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 2px 8px;
+    min-width: 0;
+    padding-left: 8px;
+    border-left: 3px solid var(--tw-border-strong);
+  }
+
+  .cd2004-shell .cd2004-record-actions-state > span {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 700;
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .cd2004-shell .cd2004-record-actions-state > strong {
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
+  }
+
+  .cd2004-shell .cd2004-record-actions-state > small {
+    grid-column: 1 / -1;
+    min-width: 0;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+    overflow-wrap: anywhere;
+  }
+
+  .cd2004-shell .cd2004-record-actions.is-draft .cd2004-record-actions-state,
+  .cd2004-shell .cd2004-record-actions.is-saving .cd2004-record-actions-state {
+    border-left-color: var(--tw-review-border);
+  }
+
+  .cd2004-shell .cd2004-record-actions.is-locked .cd2004-record-actions-state {
+    border-left-color: var(--tw-ready-fg);
+  }
+
+  .cd2004-shell .cd2004-record-actions.is-error .cd2004-record-actions-state {
+    border-left-color: var(--tw-stop-fg);
+  }
+
+  .cd2004-shell .cd2004-record-actions-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .cd2004-shell .cd2004-record-actions-buttons button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell .cd2004-action-glyph {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+  }
+
+  .cd2004-shell .cd2004-action-glyph svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .cd2004-shell .cd2004-record-action-separator {
+    align-self: center;
+    width: 1px;
+    height: 24px;
+    margin-inline: 2px;
+    background: var(--tw-border-subtle);
+  }
+
+  @media (max-width: 919px),
+    (min-width: 920px) and (max-width: 1599px) and (max-height: 800px) {
+    .cd2004-shell .cd2004-record-actions {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+      padding: 6px 8px;
+    }
+
+    .cd2004-shell .cd2004-record-actions-state {
+      grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    .cd2004-shell .cd2004-record-actions-state > small {
+      grid-column: auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* The compact bar cannot grow with an arbitrary clinical/persistence
+       sentence without stealing the worksheet's scroll viewport. Keyboard
+       focus reveals that complete sentence in an anchored popover instead of
+       leaving the ellipsis discoverable only through a mouse-only title. */
+    .cd2004-shell .cd2004-record-actions-state > small:focus-visible {
+      position: absolute;
+      z-index: 6;
+      right: 8px;
+      bottom: calc(100% + 4px);
+      left: 8px;
+      max-height: min(160px, 40vh);
+      padding: 8px 10px;
+      overflow: auto;
+      color: var(--tw-text-primary);
+      background: var(--tw-surface-panel);
+      border: 1px solid var(--tw-border-strong);
+      border-radius: var(--tw-radius-tight);
+      box-shadow: var(--tw-shadow-elevation-1);
+      white-space: normal;
+      text-overflow: clip;
+    }
+
+    .cd2004-shell .cd2004-record-actions-buttons {
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .cd2004-shell .cd2004-record-actions-buttons button {
+      min-height: 36px;
+      padding: 5px 12px;
+    }
+
+    /* This row scrolls horizontally when actions outgrow a compact work pane.
+       Draw its keyboard ring inward so the scroller cannot clip the top and
+       bottom strokes while preserving the full 2px focus indicator. */
+    .cd2004-shell .cd2004-record-actions-buttons button:focus-visible {
+      outline-offset: -2px;
+    }
+  }
+
+  @media (min-width: 800px) and (max-width: 1599px) and (max-height: 800px) {
+    .cd2004-shell .cd2004-record-actions {
+      gap: 2px;
+      padding: 3px 8px;
+    }
+
+    .cd2004-shell .cd2004-record-actions-state {
+      min-height: 18px;
+    }
+
+    .cd2004-shell .cd2004-record-actions-buttons {
+      gap: 6px;
+    }
+
+    .cd2004-shell .cd2004-record-actions-buttons button {
+      padding-inline: 10px;
+    }
+  }
+
+  /* The document inspector previously left its direct icons at the SVG's
+     intrinsic size. In the stacked layout that turned a small note glyph (and
+     the copy glyph below it) into full-card illustrations that displaced the
+     readiness content. Give the header and toolbar their real control
+     geometry, then keep the empty state intentionally restrained. */
+  .cd2004-shell .cd2004-note-heading > svg {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--tw-teal-800);
+  }
+
+  .cd2004-shell .cd2004-note-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 34px;
+    padding: 4px 8px;
+    background: var(--tw-surface-panel);
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .cd2004-shell .cd2004-note-mode {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tw-text-secondary);
+    font: 700 var(--tw-fs-ws-label) / var(--tw-lh-ws-label) var(--tw-font-sans);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell .cd2004-note-copy-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 4px 9px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-action-border);
+    border-radius: var(--tw-radius-action);
+    font: 600 var(--tw-fs-ws-label) / var(--tw-lh-ws-label) var(--tw-font-sans);
+  }
+
+  .cd2004-shell .cd2004-note-copy-all svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .cd2004-shell .cd2004-note-empty {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 4px;
+    min-height: 96px;
+    padding: 16px;
+    color: var(--tw-text-secondary);
+    text-align: center;
+    font: var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
+  }
+
+  .cd2004-shell .cd2004-note-empty svg {
+    display: block;
+    width: 30px;
+    height: 30px;
+    color: var(--tw-teal-300);
+  }
+
+  .cd2004-shell .cd2004-note-empty strong {
+    color: var(--tw-text-primary);
+    font-weight: 700;
+  }
+
+  .cd2004-shell .cd2004-note-empty strong::before,
+  .cd2004-shell .cd2004-note-empty strong::after {
+    content: none;
+  }
+
+  .cd2004-shell .cd2004-note-empty span {
+    max-width: 28ch;
+    margin: 0;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  @media (min-width: 800px) and (max-width: 839px) and (min-height: 600px) {
+    .cd2004-shell .cd2004-note-empty {
+      gap: 2px;
+      min-height: 0;
+      padding: 6px;
+    }
+
+    .cd2004-shell .cd2004-note-empty svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .cd2004-shell .cd2004-note-empty span {
+      display: none;
+    }
   }
 
   .cd2004-shell .wfp-panel {

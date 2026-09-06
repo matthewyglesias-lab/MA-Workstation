@@ -42,14 +42,20 @@
         inset: 0;
         z-index: 9999;
         display: grid;
-        grid-template-rows: 64px minmax(0, 1fr) 36px;
+        grid-template-rows: 65px 64px minmax(0, 1fr) 38px 32px;
         min-width: 320px;
         overflow: hidden;
         color: #003a43;
-        background: #f9f7f6;
+        background: #fbf9f8;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
           Arial, sans-serif;
         transition: opacity 160ms linear;
+      }
+      #boot-splash,
+      #boot-splash *,
+      #boot-splash *::before,
+      #boot-splash *::after {
+        box-sizing: border-box;
       }
       #boot-splash.is-done {
         opacity: 0;
@@ -61,8 +67,9 @@
         align-items: center;
         gap: 24px;
         padding: 0 20px;
-        background: #ffffff;
-        border-bottom: 1px solid #d2dcda;
+        color: #f8f3eb;
+        background: #004852;
+        border-bottom: 0;
       }
       #boot-splash .boot-brand {
         display: flex;
@@ -78,7 +85,8 @@
         place-items: center;
         border-radius: 8px;
         color: #f8f3eb;
-        background: #004952;
+        background: rgb(255 255 255 / 10%);
+        border: 1px solid rgb(255 255 255 / 24%);
         font-size: 9px;
         font-weight: 700;
         letter-spacing: 0.08em;
@@ -92,10 +100,10 @@
         white-space: nowrap;
       }
       #boot-splash .boot-search {
-        height: 34px;
-        border: 1px solid #c5d6d7;
-        border-radius: 8px;
-        background: #f6f8f8;
+        height: 38px;
+        border: 1px solid rgb(255 255 255 / 24%);
+        border-radius: 24px;
+        background: #002328;
       }
       #boot-splash .boot-header-actions {
         display: flex;
@@ -104,27 +112,67 @@
       }
       #boot-splash .boot-header-action {
         width: 72px;
-        height: 32px;
-        border-radius: 6px;
-        background: #ebf0ef;
+        height: 38px;
+        border: 1px solid rgb(255 255 255 / 24%);
+        border-radius: 24px;
+        background: rgb(255 255 255 / 10%);
       }
       #boot-splash .boot-header-action:last-child {
         width: 92px;
       }
+      #boot-splash .boot-patient {
+        display: grid;
+        grid-template-columns:
+          minmax(190px, 1.35fr) minmax(82px, 0.55fr) minmax(110px, 0.7fr)
+          minmax(116px, 0.78fr) minmax(116px, 0.78fr)
+          minmax(240px, 1.55fr);
+        min-width: 0;
+        background: #fcf9f5;
+        border-bottom: 1px solid #d2dcda;
+      }
+      #boot-splash .boot-patient-block {
+        display: grid;
+        align-content: center;
+        gap: 7px;
+        min-width: 0;
+        padding: 9px 12px;
+        border-right: 1px solid #e7ded2;
+      }
+      #boot-splash .boot-patient-block:first-child {
+        background: #f8f3eb;
+      }
+      #boot-splash .boot-patient-block:last-child {
+        border-right: 0;
+      }
+      #boot-splash .boot-patient-block::before,
+      #boot-splash .boot-patient-block::after {
+        display: block;
+        height: 8px;
+        border-radius: 4px;
+        background: #d2dcda;
+        content: "";
+      }
+      #boot-splash .boot-patient-block::before {
+        width: 42%;
+        height: 7px;
+      }
+      #boot-splash .boot-patient-block::after {
+        width: 74%;
+      }
       #boot-splash .boot-workspace {
         display: grid;
-        grid-template-columns: 188px minmax(0, 1fr);
+        grid-template-columns: 192px minmax(0, 1fr);
         min-height: 0;
       }
       #boot-splash .boot-rail {
-        padding: 22px 14px;
+        padding: 16px 0;
         background: #ffffff;
         border-right: 1px solid #d2dcda;
       }
       #boot-splash .boot-rail-title {
         width: 68px;
         height: 10px;
-        margin: 0 8px 17px;
+        margin: 0 16px 14px;
         border-radius: 4px;
         background: #d2dcda;
       }
@@ -132,10 +180,10 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        height: 34px;
-        margin-bottom: 4px;
-        padding: 0 8px;
-        border-radius: 6px;
+        height: 48px;
+        margin-bottom: 0;
+        padding: 0 16px;
+        border-radius: 0;
       }
       #boot-splash .boot-rail-item:first-of-type {
         background: #ebf0ef;
@@ -156,7 +204,7 @@
       #boot-splash .boot-main {
         min-width: 0;
         overflow: hidden;
-        padding: 24px;
+        padding: 32px;
       }
       #boot-splash .boot-page-heading {
         display: flex;
@@ -168,9 +216,9 @@
       }
       #boot-splash .boot-page-heading h1 {
         margin: 0;
-        font-size: 24px;
-        line-height: 1.25;
-        letter-spacing: -0.01em;
+        font-size: 32px;
+        line-height: 40px;
+        letter-spacing: -0.02em;
       }
       #boot-splash .boot-page-actions {
         display: flex;
@@ -178,19 +226,26 @@
       }
       #boot-splash .boot-page-action {
         width: 78px;
-        height: 32px;
-        border-radius: 6px;
-        background: #ebf0ef;
+        height: 38px;
+        border: 1px solid #b3c6c4;
+        border-radius: 24px;
+        background: #ffffff;
       }
       #boot-splash .boot-page-action:first-child {
         width: 108px;
+        background: #ff8d6e;
+        border-color: #ff8d6e;
       }
       #boot-splash .boot-table {
         overflow: hidden;
         min-height: 248px;
         background: #ffffff;
-        border: 1px solid #d2dcda;
-        border-radius: 16px;
+        border: 0;
+        border-radius: 4px;
+        box-shadow:
+          0 2px 1px -1px rgb(0 0 0 / 20%),
+          0 1px 1px 0 rgb(0 0 0 / 14%),
+          0 1px 3px 0 rgb(0 0 0 / 12%);
       }
       #boot-splash .boot-table-head,
       #boot-splash .boot-table-row {
@@ -202,9 +257,9 @@
         padding: 0 18px;
       }
       #boot-splash .boot-table-head {
-        height: 42px;
+        height: 48px;
         color: #1f5f67;
-        background: #f6f8f8;
+        background: #ffffff;
         border-bottom: 1px solid #d2dcda;
         font-size: 11px;
         font-weight: 700;
@@ -212,7 +267,7 @@
         text-transform: uppercase;
       }
       #boot-splash .boot-table-row {
-        height: 48px;
+        height: 54px;
         border-bottom: 1px solid #ebf0ef;
       }
       #boot-splash .boot-table-row:last-child {
@@ -226,6 +281,22 @@
       }
       #boot-splash .boot-cell.is-short {
         width: 44%;
+      }
+      #boot-splash .boot-shortcuts {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 4px 12px;
+        background: #fcf9f5;
+        border-top: 1px solid #d2dcda;
+      }
+      #boot-splash .boot-shortcuts::after {
+        width: 132px;
+        height: 29px;
+        border: 1px solid #d2dcda;
+        border-radius: 8px;
+        background: #ffffff;
+        content: "";
       }
       /* Static by default: loading feedback has no shimmer or motion. */
       #boot-splash .boot-footer {
@@ -247,7 +318,58 @@
         background: #1f6f5c;
         content: "";
       }
+      @media (min-width: 800px) and (max-width: 919px) {
+        #boot-splash {
+          grid-template-rows: 56px 58px minmax(0, 1fr) 38px 32px;
+        }
+        #boot-splash .boot-workspace {
+          grid-template-columns: 166px minmax(0, 1fr);
+        }
+        #boot-splash .boot-main {
+          padding: 8px;
+        }
+        #boot-splash .boot-page-heading h1 {
+          font-size: 21px;
+          line-height: 28px;
+          letter-spacing: -0.01em;
+        }
+      }
+      @media (min-width: 800px) and (max-width: 839px) and (min-height: 600px) {
+        #boot-splash {
+          grid-template-rows: 54px 54px minmax(0, 1fr) 34px 29px;
+        }
+        #boot-splash .boot-workspace {
+          grid-template-columns: 158px minmax(0, 1fr);
+        }
+        #boot-splash .boot-rail {
+          padding: 4px 0;
+        }
+        #boot-splash .boot-rail-title {
+          margin: 0 8px 7px;
+        }
+        #boot-splash .boot-rail-item {
+          height: 31px;
+          padding: 0 8px;
+        }
+        #boot-splash .boot-main {
+          padding: 6px;
+        }
+        #boot-splash .boot-shortcuts {
+          padding-block: 2px;
+        }
+        #boot-splash .boot-shortcuts::after {
+          height: 28px;
+        }
+      }
+      @media (max-height: 700px) and (min-width: 800px) {
+        #boot-splash .boot-rail-item {
+          height: 31px;
+        }
+      }
       @media (max-width: 799px) {
+        #boot-splash {
+          grid-template-rows: 56px 54px minmax(0, 1fr) 34px 29px;
+        }
         #boot-splash .boot-header {
           grid-template-columns: minmax(160px, 1fr) minmax(180px, 2fr);
         }
@@ -256,6 +378,12 @@
         }
         #boot-splash .boot-workspace {
           grid-template-columns: 64px minmax(0, 1fr);
+        }
+        #boot-splash .boot-patient-block:nth-child(n + 4) {
+          display: none;
+        }
+        #boot-splash .boot-patient {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
         #boot-splash .boot-rail {
           padding-inline: 10px;
@@ -297,6 +425,14 @@
           <span class="boot-header-action"></span>
         </div>
       </header>
+      <div class="boot-patient" aria-hidden="true">
+        <span class="boot-patient-block"></span>
+        <span class="boot-patient-block"></span>
+        <span class="boot-patient-block"></span>
+        <span class="boot-patient-block"></span>
+        <span class="boot-patient-block"></span>
+        <span class="boot-patient-block"></span>
+      </div>
       <div class="boot-workspace" aria-hidden="true">
         <aside class="boot-rail">
           <div class="boot-rail-title"></div>
@@ -373,6 +509,7 @@
           </div>
         </main>
       </div>
+      <div class="boot-shortcuts" aria-hidden="true"></div>
       <!-- The local-only disclosure is visible on the very first frame. -->
       <div class="boot-footer">Records stay in this browser</div>
     </div>

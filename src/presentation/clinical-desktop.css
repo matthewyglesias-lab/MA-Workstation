@@ -3751,6 +3751,7 @@ input[type="radio"]:disabled {
  */
 @media print {
   .cd2004-print-exclude,
+  .cd2004-record-actions,
   .cd2004-window-titlebar,
   .cd2004-window-toolbar,
   .cd2004-window-footer,

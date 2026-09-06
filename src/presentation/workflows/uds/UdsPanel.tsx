@@ -1034,12 +1034,16 @@ export function UdsPanel({
         aria-label="UDS clinical page"
         tabIndex={0}
       >
-      {invalidationReceipt && (
-        <div class="wfp-invalidation-receipt" role="status">
-          <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
-          <button type="button" class="cd2004-link-button" aria-label="Dismiss invalidation receipt" onClick={() => setInvalidationReceipt(null)}>×</button>
-        </div>
-      )}
+        <p class="wfp-field-hint">
+          UDS results are point-of-care preliminary screening only. Provider reviews results in
+          clinical context; outside lab order may be placed when clinically indicated.
+        </p>
+        {invalidationReceipt && (
+          <div class="wfp-invalidation-receipt" role="status">
+            <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
+            <button type="button" class="cd2004-link-button" aria-label="Dismiss invalidation receipt" onClick={() => setInvalidationReceipt(null)}>×</button>
+          </div>
+        )}
 
       <OutstandingRequirements<UdsTab>
         open={requirementsOpen}
@@ -1894,10 +1898,6 @@ export function UdsPanel({
         />
       )}
 
-      <p class="wfp-field-hint">
-        UDS results are point-of-care preliminary screening only. Provider reviews results in
-        clinical context; outside lab order may be placed when clinically indicated.
-      </p>
     </div>
     </UdsRequirementsContext.Provider>
     </UdsIncompleteFieldsContext.Provider>
