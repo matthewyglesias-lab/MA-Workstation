@@ -1,4 +1,11 @@
-import { RECORD, TRANSACTION_PHASE_LABEL } from "../../vocabulary";
+import {
+  CHECKLIST,
+  NOTES,
+  RECORD,
+  signedAtCopy,
+  signedByCopy,
+  TRANSACTION_PHASE_LABEL,
+} from "../../vocabulary";
 import { createContext, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
@@ -730,7 +737,7 @@ export function UdsPanel({
     setLocked(true);
     setAddenda(result.value.addenda);
     setAttestation(nextAttestation);
-    setRecordStatus(`Locked ${new Date().toLocaleTimeString()}.`);
+    setRecordStatus(signedAtCopy(new Date().toLocaleTimeString()));
     setRecordStatusIsError(false);
     setRecordsRefreshToken((value) => value + 1);
     return true;
@@ -956,7 +963,7 @@ export function UdsPanel({
             class="cd2004-link-button"
             onClick={() => setRecordsOpen(true)}
           >
-            UDS records…
+            {NOTES.openUdsNotes}…
           </button>
           {!locked && (
             <button
@@ -1601,7 +1608,7 @@ export function UdsPanel({
                     {" — "}
                     {stops.length === 1
                       ? firstStopMessage
-                      : `${stops.length} outstanding requirements, starting with: ${firstStopMessage}`}
+                      : CHECKLIST.remainingFromFirst(stops.length, firstStopMessage)}
                   </>
                 )}
                 .{" "}
@@ -1610,7 +1617,7 @@ export function UdsPanel({
                   class="cd2004-link-button"
                   onClick={() => setRequirementsOpen(true)}
                 >
-                  View outstanding requirements
+                  {CHECKLIST.view}
                 </button>
               </p>
             )}
@@ -1623,13 +1630,14 @@ export function UdsPanel({
           <h2 class="wfp-section-head">Addendum</h2>
           <div class="wfp-section-body">
             <p class="wfp-field-hint">
-              Read-only completed record. The original encounter snapshot is locked. Add a dated
-              addendum instead of changing the completed documentation.
+              Signed note. {RECORD.readOnlyDetail}
               {attestation && (
                 <>
                   {" "}
-                  Attested by {attestation.staff} at{" "}
-                  {new Date(attestation.timestamp).toLocaleString()}.
+                  {signedByCopy(
+                    attestation.staff,
+                    new Date(attestation.timestamp).toLocaleString(),
+                  )}
                 </>
               )}
             </p>
@@ -1673,16 +1681,16 @@ export function UdsPanel({
       </div>
 
       <RecordLifecycleActions
-        recordLabel="UDS RECORD"
-        ariaLabel="UDS record actions"
+        recordLabel="UDS note"
+        ariaLabel={RECORD.udsActions}
         lifecycle={recordLifecycle.state}
         detail={
           recordStatus ??
           (locked
-            ? "This browser-local record is read-only. Corrections require a dated addendum."
+            ? RECORD.readOnlyDetail
             : activeRecordId
-              ? "Draft saved in this browser. Sign only when the screen is final."
-              : "Enter encounter details, then save a local draft.")
+              ? RECORD.draftSavedDetail
+              : RECORD.newDraftDetail)
         }
         buttons={
           <>
@@ -1708,12 +1716,12 @@ export function UdsPanel({
                   class="is-save"
                   onClick={saveLocalDraft}
                   disabled={evaluation.readiness === "idle"}
-                  title="Save this editable UDS draft locally."
+                  title={RECORD.saveUdsDraftDescription}
                 >
                   <span class="cd2004-action-glyph" aria-hidden="true">
                     <DesktopIcon name="save" />
                   </span>
-                  Save local draft
+                  {RECORD.save}
                 </button>
                 <button
                   type="button"
@@ -1722,14 +1730,14 @@ export function UdsPanel({
                   title={
                     canAttest
                       ? "Review the note before signing it."
-                      : "Complete the required clinical fields and sign in staff before attesting and locking this record."
+                      : RECORD.udsFieldsBeforeSigning
                   }
                   onClick={() => setRecordAction("attest")}
                 >
                   <span class="cd2004-action-glyph" aria-hidden="true">
                     <DesktopIcon name="lock" />
                   </span>
-                  Attest &amp; lock local record
+                  {RECORD.sign}
                 </button>
               </>
             )}
@@ -1737,13 +1745,13 @@ export function UdsPanel({
             <button
               type="button"
               class="is-new"
-              title="Start a blank UDS screen. Any current editable work is saved as a local draft first."
+              title={RECORD.startUdsDescription}
               onClick={startNewUdsScreen}
             >
               <span class="cd2004-action-glyph" aria-hidden="true">
                 <DesktopIcon name="new" />
               </span>
-              Start new UDS screen
+              {RECORD.startNewUds}
             </button>
             {!locked && (
               <button
@@ -1752,8 +1760,8 @@ export function UdsPanel({
                 disabled={!activeRecordId}
                 title={
                   activeRecordId
-                    ? "Discard this editable local draft. This cannot be undone."
-                    : "There is no editable local draft to discard."
+                    ? RECORD.discardDraftDescription
+                    : RECORD.noDraftToDiscard
                 }
                 onClick={() => setRecordAction("discard")}
               >
@@ -1862,7 +1870,7 @@ export function UdsPanel({
       {recordAction && (
         <RecordActionDialog
           kind={recordAction}
-          recordNoun="UDS screen"
+          recordNoun="UDS"
           recordLabel={encounter.patient.name.trim() || "this UDS screen"}
           attestation={
             recordAction === "attest"

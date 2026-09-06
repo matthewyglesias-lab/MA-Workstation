@@ -1,4 +1,4 @@
-import { TRANSACTION_PHASE_LABEL } from "../../vocabulary";
+import { RECORD, TRANSACTION_PHASE_LABEL } from "../../vocabulary";
 import { createContext, Fragment, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { DesktopIcon } from "../../DesktopIcon";
@@ -2788,8 +2788,7 @@ export function InjectionPanel({
                 </div>
               )}
               <p class="wfp-field-hint">
-                Read-only rotation history from this workstation's local records. It informs site
-                selection; it never gates it.
+                {RECORD.rotationHistoryDetail}
               </p>
             </div>
           </div>
@@ -3930,8 +3929,7 @@ export function InjectionPanel({
                   rather than presenting a competing early completion route. */}
               {evaluation?.output.recordStatus === "handoff-ready" && (
                 <p class="wfp-done-line is-info">
-                  <strong>Handoff documented.</strong> No medication administration was recorded, so
-                  this local administration record cannot be attested and locked.
+                  <strong>Handoff documented.</strong> {RECORD.handoffNoAdministration}
                 </p>
               )}
             </div>

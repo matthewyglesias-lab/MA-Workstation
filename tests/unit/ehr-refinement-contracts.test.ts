@@ -245,7 +245,7 @@ describe("workstation status projection", () => {
   });
 });
 
-describe("Client/Server function-key profile", () => {
+describe("workstation function-key profile", () => {
   it.each([
     ["F1", false, "help"],
     ["F6", false, "next-section"],
@@ -270,7 +270,7 @@ describe("Client/Server function-key profile", () => {
     expect(resolveFunctionKeyCommand("F10")).toBeUndefined();
   });
 
-  it("uses one visible deck for the documented primary command set", () => {
+  it("exposes the documented primary command set in the power-user disclosure", () => {
     expect(FUNCTION_KEY_DECK_PROFILE.map((command) => command.keyLabel)).toEqual([
       "F1",
       "F6",

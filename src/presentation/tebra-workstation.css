@@ -1,0 +1,2190 @@
+/*
+ * Phase 2 workstation composition.
+ *
+ * This sheet owns only the persistent screen shell: the supported-viewport
+ * boundary, application header, patient context, section rail, work frame,
+ * Dashboard worklist, power-command disclosure, and footer. Workflow panels
+ * keep their own layout in workflow-panels.css. The older cd2004/meditech
+ * class names remain as compatibility aliases until the mechanical rename
+ * phase; the tebra-* names describe the new composition.
+ *
+ * Every rule is screen-scoped so the established print cascade cannot see it.
+ */
+
+@media screen {
+  /* ------------------------------------------------------ viewport boundary */
+
+  .meditech-workstation-content {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  .meditech-workstation-content.is-unsupported {
+    display: none;
+  }
+
+  .meditech-workstation-gate {
+    position: fixed;
+    z-index: 30000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 24px;
+    overflow: auto;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-page);
+    font-family: var(--tw-font-sans);
+  }
+
+  .meditech-workstation-gate *,
+  .meditech-workstation-gate *::before,
+  .meditech-workstation-gate *::after {
+    box-sizing: border-box;
+  }
+
+  .meditech-workstation-gate-window {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: min(580px, 100%);
+    overflow: hidden;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-panel);
+    box-shadow: 0 18px 48px rgb(0 58 67 / 14%);
+  }
+
+  .meditech-workstation-gate-window > header {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 12px 18px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .meditech-workstation-gate-window > header > span {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    color: var(--tw-white);
+    background: var(--tw-teal-800);
+    border-radius: 12px;
+  }
+
+  .meditech-workstation-gate-window > header svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .meditech-workstation-gate-window > header strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--tw-fs-lead);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meditech-workstation-gate-window > header small {
+    padding: 5px 9px;
+    color: var(--tw-teal-800);
+    background: var(--tw-mint-150);
+    border-radius: var(--tw-radius-pill);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 700;
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .meditech-workstation-gate-body {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 16px;
+    padding: 28px;
+  }
+
+  .meditech-workstation-gate-alert {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border: 1px solid var(--tw-review-border);
+    border-radius: 50%;
+  }
+
+  .meditech-workstation-gate-alert svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .meditech-workstation-gate h1 {
+    margin: 0;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-title);
+    line-height: var(--tw-lh-title);
+    letter-spacing: var(--tw-ls-title);
+  }
+
+  .meditech-workstation-gate p {
+    margin: 8px 0 18px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
+  }
+
+  .meditech-workstation-gate dl {
+    display: grid;
+    gap: 1px;
+    margin: 0;
+    overflow: hidden;
+    background: var(--tw-border-subtle);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-ctl);
+  }
+
+  .meditech-workstation-gate dl > div {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.3fr);
+    gap: 12px;
+    padding: 9px 11px;
+    background: var(--tw-surface-panel);
+  }
+
+  .meditech-workstation-gate dt,
+  .meditech-workstation-gate dd {
+    margin: 0;
+  }
+
+  .meditech-workstation-gate dt {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 700;
+  }
+
+  .meditech-workstation-gate dd {
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .meditech-workstation-gate-window > footer {
+    padding: 11px 18px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-sand-75);
+    border-top: 1px solid var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+  }
+
+  /* ----------------------------------------------------------- shell base */
+
+  .cd2004-shell {
+    --tebra-shell-gap: 12px;
+    --tebra-shell-pad: 12px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 800px;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 600px;
+    overflow: hidden;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-page);
+    font-family: var(--tw-font-sans);
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
+  }
+
+  .cd2004-shell :where(button, input, select, textarea, summary) {
+    font: inherit;
+  }
+
+  .cd2004-shell :where(
+      button,
+      input,
+      select,
+      textarea,
+      summary,
+      [role="tab"],
+      [role="menuitem"]
+    ):focus-visible {
+    outline: 2px solid var(--tw-teal-800);
+    outline-offset: 2px;
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  .cd2004-shell :where(
+      .cd2004-window-body,
+      .cd2004-workflow-body,
+      .cd2004-worklist-sheet,
+      .meditech-function-list
+    ) {
+    scrollbar-color: var(--tw-teal-300) var(--tw-mint-50);
+    scrollbar-width: thin;
+  }
+
+  .cd2004-skip-link {
+    top: 8px;
+    left: 8px;
+    padding: 8px 12px;
+    color: var(--tw-white);
+    background: var(--tw-teal-900);
+    border: 0;
+    border-radius: var(--tw-radius-ctl);
+    font-weight: 700;
+  }
+
+  /* ---------------------------------------------------- product app header */
+
+  .cd2004-application-header.tebra-app-header {
+    position: relative;
+    z-index: 20;
+    flex: 0 0 auto;
+    min-width: 0;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 0;
+    border-bottom: 1px solid var(--tw-border-subtle);
+    box-shadow: none;
+  }
+
+  .cd2004-app-titlebar.tebra-app-header-main {
+    display: grid;
+    grid-template-columns: 40px minmax(138px, 190px) auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    height: 60px;
+    min-width: 0;
+    padding: 8px 16px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 0;
+    font-size: var(--tw-fs-ws-dense);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  .cd2004-app-logo.tebra-app-mark {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    color: var(--tw-white);
+    background: var(--tw-teal-800);
+    border: 0;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .cd2004-app-logo.tebra-app-mark svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cd2004-app-title.tebra-app-identity {
+    display: grid;
+    align-content: center;
+    min-width: 0;
+    overflow: visible;
+    line-height: 1.1;
+    white-space: normal;
+  }
+
+  .tebra-app-identity > b {
+    color: var(--tw-teal-800);
+    font-size: var(--tw-fs-ws-base);
+    letter-spacing: 0.02em;
+  }
+
+  .tebra-app-identity > span {
+    overflow: hidden;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tebra-app-workspace {
+    justify-self: start;
+    padding: 5px 8px;
+    overflow: hidden;
+    color: var(--tw-teal-800);
+    background: var(--tw-mint-150);
+    border-radius: var(--tw-radius-pill);
+    font-family: var(--tw-font-mono);
+    font-size: var(--tw-fs-ws-label);
+    font-variant-numeric: var(--tw-numeric-tabular);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-app-environment.tebra-app-context {
+    grid-column: 5;
+    display: grid;
+    justify-items: end;
+    min-width: 0;
+    max-width: 280px;
+    margin: 0;
+    padding: 0;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    letter-spacing: 0;
+    text-align: right;
+  }
+
+  .tebra-app-context b {
+    padding: 3px 8px;
+    color: var(--tw-teal-800);
+    background: var(--tw-mint-150);
+    border-radius: var(--tw-radius-pill);
+    font-size: var(--tw-fs-ws-label);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .tebra-app-context small {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-menu-bar {
+    position: absolute;
+    z-index: 3;
+    top: 8px;
+    right: clamp(250px, 24vw, 340px);
+    left: clamp(300px, 29vw, 390px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+    border: 0;
+  }
+
+  .cd2004-menu {
+    position: relative;
+    min-width: 0;
+  }
+
+  .cd2004-menu-title {
+    min-width: 0;
+    min-height: 36px;
+    padding: 8px 10px;
+    color: var(--tw-text-secondary);
+    background: transparent;
+    border: 0;
+    border-radius: var(--tw-radius-ctl);
+    cursor: pointer;
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 650;
+  }
+
+  .cd2004-menu-title:hover,
+  .cd2004-menu-title[aria-expanded="true"] {
+    color: var(--tw-text-primary);
+    background: var(--tw-mint-150);
+  }
+
+  .cd2004-menu-title u {
+    text-underline-offset: 3px;
+  }
+
+  .cd2004-menu-popup {
+    top: calc(100% + 7px);
+    left: 0;
+    display: grid;
+    min-width: 240px;
+    padding: 6px;
+    overflow: hidden;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card);
+    box-shadow: 0 14px 34px rgb(0 58 67 / 16%);
+  }
+
+  .cd2004-menu-popup button {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 9px;
+    color: var(--tw-text-primary);
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-radius: var(--tw-radius-ws);
+  }
+
+  .cd2004-menu-popup button:hover:not(:disabled),
+  .cd2004-menu-popup button:focus-visible:not(:disabled) {
+    color: var(--tw-text-primary);
+    background: var(--tw-mint-150);
+  }
+
+  .cd2004-menu-popup button:disabled {
+    color: var(--tw-text-muted);
+    text-shadow: none;
+  }
+
+  .cd2004-menu-popup kbd {
+    color: var(--tw-text-secondary);
+    font-family: var(--tw-font-mono);
+    font-size: var(--tw-fs-ws-label);
+  }
+
+  /* ------------------------------------------------------ patient context */
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    display: grid;
+    grid-template-columns:
+      minmax(190px, 1.35fr)
+      minmax(82px, 0.55fr)
+      minmax(110px, 0.7fr)
+      minmax(116px, 0.78fr)
+      minmax(116px, 0.78fr)
+      minmax(240px, 1.55fr);
+    min-width: 0;
+    min-height: 64px;
+    color: var(--tw-text-primary);
+    background: var(--tw-sand-75);
+    border: 0;
+    border-top: 1px solid var(--tw-border-subtle);
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .cd2004-patient-primary,
+  .cd2004-patient-field {
+    display: grid;
+    align-content: center;
+    min-width: 0;
+    padding: 9px 12px;
+    background: transparent;
+    border: 0;
+    border-right: 1px solid var(--tw-sand-300);
+    box-shadow: none;
+  }
+
+  .cd2004-patient-primary {
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    background: var(--tw-sand-150);
+  }
+
+  .cd2004-patient-primary > svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+    color: var(--tw-teal-800);
+  }
+
+  .cd2004-patient-primary span {
+    display: grid;
+    min-width: 0;
+  }
+
+  .cd2004-patient-banner small {
+    display: block;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 700;
+    letter-spacing: var(--tw-ls-ws-label);
+    line-height: var(--tw-lh-ws-label);
+    text-transform: uppercase;
+  }
+
+  .cd2004-patient-banner strong,
+  .cd2004-patient-primary strong {
+    min-width: 0;
+    margin: 1px 0 0;
+    overflow: hidden;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-patient-primary strong {
+    font-size: var(--tw-fs-ws-base);
+  }
+
+  .cd2004-patient-banner.has-active-chart,
+  .cd2004-patient-banner.is-no-active-chart {
+    background: var(--tw-sand-75);
+  }
+
+  .cd2004-patient-banner.has-active-chart .cd2004-patient-primary,
+  .cd2004-patient-banner.has-active-chart .cd2004-patient-field {
+    background-color: transparent;
+    border-right-color: var(--tw-sand-300);
+    box-shadow: none;
+  }
+
+  .cd2004-patient-banner.has-active-chart .cd2004-patient-primary {
+    background: var(--tw-sand-150);
+  }
+
+  .meditech-patient-safety {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: center;
+    gap: 1px 7px;
+    min-width: 0;
+    min-height: 64px;
+    padding: 8px 12px;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border: 0;
+    border-left: 3px solid var(--tw-review-border);
+  }
+
+  .meditech-patient-safety strong {
+    align-self: center;
+    color: var(--tw-review-fg);
+    font-size: var(--tw-fs-ws-label);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .meditech-patient-safety b {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tw-review-fg);
+    font-size: var(--tw-fs-ws-dense);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meditech-patient-safety small {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    color: var(--tw-review-fg);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  .meditech-patient-safety button {
+    grid-column: 1 / -1;
+    justify-self: start;
+    min-height: 30px;
+    padding: 4px 9px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-teal-300);
+    border-radius: var(--tw-radius-ws);
+    box-shadow: none;
+    font-weight: 700;
+  }
+
+  .cd2004-patient-banner.has-mismatch {
+    border-bottom-color: var(--tw-review-border);
+  }
+
+  .cd2004-context-mismatch {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border: 0;
+    border-top: 1px solid var(--tw-review-border);
+  }
+
+  .cd2004-context-mismatch button {
+    min-height: 32px;
+    padding: 5px 10px;
+    color: var(--tw-review-fg);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-review-border);
+    border-radius: var(--tw-radius-ws);
+    box-shadow: none;
+  }
+
+  /* --------------------------------------------------- workspace geometry */
+
+  .cd2004-workspace,
+  .cd2004-workspace.has-central-preview {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 212px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: var(--tebra-shell-gap);
+    min-width: 0;
+    min-height: 0;
+    padding: var(--tebra-shell-pad);
+    overflow: hidden;
+    background: var(--tw-surface-page);
+  }
+
+  .cd2004-workspace.has-side-inspector {
+    grid-template-columns: 212px minmax(520px, 1fr) minmax(292px, 320px);
+  }
+
+  .meditech-context-rail.tebra-context-rail {
+    display: contents;
+  }
+
+  .tebra-context-rail > .tebra-section-rail {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+
+  .cd2004-workspace > .cd2004-work-window {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cd2004-workspace.has-side-inspector
+    > .tebra-context-rail
+    > .cd2004-inspector-window {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  /* --------------------------------------------------------- section rail */
+
+  .cd2004-navigator.meditech-record-list.tebra-section-rail {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-items: stretch;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card);
+    box-shadow: 0 1px 3px rgb(0 58 67 / 7%);
+  }
+
+  .meditech-rail-title.tebra-section-rail-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 9px 12px;
+    color: var(--tw-teal-800);
+    text-align: left;
+    background: var(--tw-surface-panel);
+    border: 0;
+    border-bottom: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card) var(--tw-radius-card) 0 0;
+    box-shadow: none;
+    font-size: var(--tw-fs-ws-base);
+    font-weight: 750;
+  }
+
+  .meditech-rail-title:hover:not(:disabled) {
+    background: var(--tw-mint-50);
+  }
+
+  .meditech-rail-title:disabled {
+    color: var(--tw-text-muted);
+    cursor: default;
+  }
+
+  .meditech-rail-records-command {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .meditech-rail-records-command kbd {
+    padding: 2px 5px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-mint-150);
+    border: 0;
+    border-radius: var(--tw-radius-tight);
+    font-family: var(--tw-font-mono);
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .meditech-rail-records-command svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .meditech-rail-context.tebra-section-rail-context {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    min-height: 58px;
+    padding: 10px 12px;
+    background: var(--tw-sand-75);
+    border: 0;
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .meditech-rail-context strong,
+  .meditech-rail-context span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meditech-rail-context strong {
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .meditech-rail-context span {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+  }
+
+  .meditech-function-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 8px;
+    overflow: auto;
+    background: var(--tw-surface-panel);
+  }
+
+  .meditech-rail-group {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 0 0 8px;
+    margin: 0;
+    border: 0;
+  }
+
+  .meditech-rail-group + .meditech-rail-group {
+    padding-top: 6px;
+    border-top: 1px solid var(--tw-border-subtle);
+  }
+
+  .meditech-function-heading {
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 8px;
+    color: var(--tw-text-secondary);
+    background: transparent;
+    border: 0;
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 750;
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .meditech-record-list .cd2004-nav-item {
+    position: relative;
+    top: auto;
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: 25px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 5px 8px 5px 6px;
+    color: var(--tw-text-primary);
+    text-align: left;
+    white-space: normal;
+    background: transparent;
+    border: 1px solid transparent;
+    border-left: 3px solid transparent;
+    border-radius: var(--tw-radius-ctl);
+    box-shadow: none;
+  }
+
+  .meditech-record-list .cd2004-nav-item:hover:not(:disabled) {
+    color: var(--tw-text-primary);
+    background: var(--tw-mint-50);
+    border-color: var(--tw-mint-200);
+    border-left-color: var(--tw-mint-200);
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-selected,
+  .meditech-record-list .cd2004-nav-item[aria-current="page"] {
+    top: auto;
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-150);
+    border-color: var(--tw-mint-200);
+    border-left-color: var(--tw-teal-800);
+    font-weight: 700;
+  }
+
+  .meditech-record-list .cd2004-nav-item > span:first-child {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .meditech-record-list .cd2004-nav-item strong {
+    display: block;
+    overflow: hidden;
+    color: inherit;
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meditech-record-list .cd2004-nav-item em {
+    grid-column: 3;
+    grid-row: 1;
+    display: grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border: 1px solid var(--tw-review-border);
+    border-radius: var(--tw-radius-pill);
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 750;
+  }
+
+  .meditech-record-list .cd2004-nav-item .meditech-nav-icon {
+    grid-column: 1;
+    grid-row: 1;
+    display: grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    color: var(--tw-teal-600);
+    background: var(--tw-mint-50);
+    border: 0;
+    border-radius: var(--tw-radius-ws);
+  }
+
+  .meditech-record-list .cd2004-nav-item .meditech-nav-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-selected .meditech-nav-icon {
+    color: var(--tw-white);
+    background: var(--tw-teal-800);
+  }
+
+  .meditech-record-list .cd2004-nav-item:disabled {
+    color: var(--tw-text-muted);
+    background: transparent;
+    opacity: 0.62;
+  }
+
+  /* --------------------------------------------------------- work panels */
+
+  .cd2004-window {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card);
+    box-shadow: 0 1px 3px rgb(0 58 67 / 7%);
+  }
+
+  .cd2004-work-window {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .cd2004-window-titlebar,
+  .cd2004-window.is-active > .cd2004-window-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 9px 14px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 0;
+    border-bottom: 1px solid var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-base);
+    font-weight: 750;
+    user-select: none;
+  }
+
+  .cd2004-window-mark,
+  .cd2004-window-mark.has-icon {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    overflow: hidden;
+    color: var(--tw-teal-800);
+    background: var(--tw-mint-150);
+    border: 0;
+    border-radius: var(--tw-radius-ctl);
+    box-shadow: none;
+  }
+
+  .cd2004-window-mark:empty {
+    display: none;
+  }
+
+  .cd2004-window-mark.has-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cd2004-window-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tw-text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-window-title small {
+    margin: 0;
+    overflow: hidden;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-window-toolbar,
+  .cd2004-toolbar {
+    min-width: 0;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-sunken);
+    border: 0;
+    border-bottom: 1px solid var(--tw-border-subtle);
+    box-shadow: none;
+  }
+
+  .cd2004-toolbar-separator {
+    flex: 0 0 1px;
+    width: 1px;
+    background: var(--tw-border-subtle);
+  }
+
+  .cd2004-window-body {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-work-window > .cd2004-window-body {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .cd2004-window-footer {
+    min-height: 28px;
+    padding: 5px 10px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-sand-75);
+    border: 0;
+    border-top: 1px solid var(--tw-border-subtle);
+  }
+
+  .cd2004-transaction-window {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .cd2004-transaction-window.has-document-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+    background: var(--tw-surface-sunken);
+  }
+
+  .cd2004-transaction-window > .cd2004-workflow-slot {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    overflow: auto;
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-workflow-slot {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .cd2004-workflow-slot > .cd2004-workflow-body {
+    min-width: 0;
+    min-height: 100%;
+  }
+
+  .cd2004-workflow-slot[data-workflow="home"] {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .cd2004-workflow-slot[data-workflow="home"] > .cd2004-workflow-body {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cd2004-document-split {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .cd2004-document-split > .cd2004-inspector-window {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ---------------------------------------------------------- Dashboard */
+
+  .cd2004-shell .cd2004-start-center {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 0;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    padding: 0;
+    overflow: hidden;
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-worklist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    min-width: 0;
+    padding: 16px 18px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 0;
+    box-shadow: none;
+  }
+
+  .cd2004-worklist-header > div {
+    min-width: 0;
+  }
+
+  .cd2004-worklist-header h1 {
+    margin: 0;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-title);
+    line-height: var(--tw-lh-title);
+    letter-spacing: var(--tw-ls-title);
+    text-transform: none;
+  }
+
+  .cd2004-worklist-header p {
+    margin: 3px 0 0;
+    overflow: hidden;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-new {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: var(--tw-touch-min);
+    padding: 9px 17px;
+    color: var(--tw-ink-900);
+    background: var(--tw-coral-500);
+    border: 1px solid var(--tw-coral-500);
+    border-radius: var(--tw-radius-cta);
+    box-shadow: none;
+    font-size: var(--tw-fs-ws-dense);
+    font-weight: 750;
+    transition:
+      background-color var(--tw-dur-fast) var(--tw-ease),
+      border-color var(--tw-dur-fast) var(--tw-ease);
+  }
+
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-new:hover:not(:disabled) {
+    color: var(--tw-ink-900);
+    background: var(--tw-coral-300);
+    border-color: var(--tw-coral-300);
+  }
+
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-new:active:not(:disabled) {
+    color: var(--tw-ink-900);
+    background: var(--tw-coral-600);
+    border-color: var(--tw-coral-600);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-new:disabled {
+    color: var(--tw-text-muted);
+    background: var(--tw-ink-200);
+    border-color: var(--tw-ink-200);
+  }
+
+  .cd2004-worklist-new svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cd2004-worklist-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--tw-surface-panel);
+    border: 0;
+    border-top: 1px solid var(--tw-border-subtle);
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .cd2004-worklist-filter-label {
+    flex: 0 0 auto;
+    margin-right: 3px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 750;
+    letter-spacing: var(--tw-ls-ws-label);
+  }
+
+  .cd2004-worklist-tabs button {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 5px 9px;
+    color: var(--tw-text-secondary);
+    background: transparent;
+    border: 0;
+    border-radius: var(--tw-radius-ctl);
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 650;
+  }
+
+  .cd2004-worklist-tabs button:hover {
+    color: var(--tw-text-primary);
+    background: var(--tw-mint-50);
+  }
+
+  .cd2004-worklist-tabs button.is-selected {
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-150);
+    border: 0;
+  }
+
+  .cd2004-worklist-tabs b,
+  .cd2004-worklist-tabs button.is-selected b {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-pill);
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .cd2004-worklist-sheet {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    background: var(--tw-surface-panel);
+    border: 0;
+    box-shadow: none;
+  }
+
+  .cd2004-worklist-table {
+    width: 100%;
+    min-width: 580px;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .cd2004-worklist-table th,
+  .cd2004-worklist-table td {
+    min-width: 0;
+    padding: 10px 12px;
+    overflow: hidden;
+    color: var(--tw-text-primary);
+    text-align: left;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    white-space: nowrap;
+    border: 0;
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .cd2004-worklist-table th {
+    position: sticky;
+    z-index: 1;
+    top: 0;
+    height: 38px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-mint-50);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 750;
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .cd2004-worklist-table th:nth-child(1) {
+    width: 18%;
+  }
+
+  .cd2004-worklist-table th:nth-child(2) {
+    width: 22%;
+  }
+
+  .cd2004-worklist-table th:nth-child(3) {
+    width: 31%;
+  }
+
+  .cd2004-worklist-table th:nth-child(4) {
+    width: 17%;
+  }
+
+  .cd2004-worklist-table th:last-child {
+    width: 76px;
+  }
+
+  .cd2004-worklist-table td:last-child {
+    text-align: right;
+  }
+
+  .cd2004-worklist-table tbody tr {
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-worklist-table tbody tr:nth-child(even) {
+    background: var(--tw-sand-75);
+  }
+
+  .cd2004-worklist-table tbody tr:hover,
+  .cd2004-worklist-table tbody tr:focus-within {
+    background: var(--tw-mint-50);
+  }
+
+  .cd2004-worklist-table tbody tr.is-warning {
+    box-shadow: inset 3px 0 var(--tw-review-border);
+  }
+
+  .cd2004-worklist-table tbody tr.is-stop {
+    box-shadow: inset 3px 0 var(--tw-stop-border);
+  }
+
+  .cd2004-worklist-table tbody tr.is-ready {
+    box-shadow: inset 3px 0 var(--tw-ready-border);
+  }
+
+  .cd2004-worklist-table td:first-child {
+    display: table-cell;
+  }
+
+  .cd2004-worklist-source-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 6px;
+    color: var(--tw-teal-600);
+    vertical-align: middle;
+    background: var(--tw-mint-150);
+    border: 0;
+    border-radius: var(--tw-radius-ws);
+  }
+
+  .cd2004-worklist-source-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .cd2004-worklist-priority-copy {
+    display: inline-grid;
+    max-width: calc(100% - 36px);
+    vertical-align: middle;
+  }
+
+  .cd2004-worklist-table td:first-child strong {
+    display: block;
+    overflow: hidden;
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 700;
+    text-overflow: ellipsis;
+  }
+
+  .cd2004-worklist-table td:first-child small {
+    display: block;
+    overflow: hidden;
+    color: var(--tw-text-secondary);
+    font-family: var(--tw-font-mono);
+    font-size: 10px;
+    font-variant-numeric: var(--tw-numeric-tabular);
+    text-overflow: ellipsis;
+  }
+
+  .cd2004-worklist-state {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 3px 7px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-mint-50);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-pill);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 750;
+  }
+
+  .cd2004-worklist-state.is-ready {
+    color: var(--tw-ready-fg);
+    background: var(--tw-ready-bg);
+    border-color: var(--tw-ready-border);
+  }
+
+  .cd2004-worklist-state.is-warning {
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border-color: var(--tw-review-border);
+  }
+
+  .cd2004-worklist-state.is-stop {
+    color: var(--tw-stop-fg);
+    background: var(--tw-stop-bg);
+    border-color: var(--tw-stop-border);
+  }
+
+  .cd2004-worklist-action {
+    min-width: 62px;
+    min-height: 32px;
+    padding: 5px 9px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-teal-300);
+    border-radius: var(--tw-radius-ctl);
+    box-shadow: none;
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 700;
+  }
+
+  .cd2004-worklist-action:hover:not(:disabled) {
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-50);
+    border-color: var(--tw-teal-500);
+  }
+
+  .cd2004-worklist-action:active:not(:disabled) {
+    color: var(--tw-teal-900);
+    background: var(--tw-mint-150);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .cd2004-worklist-empty td {
+    height: 120px;
+    color: var(--tw-text-secondary);
+    text-align: center;
+    white-space: normal;
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-worklist-empty strong,
+  .cd2004-worklist-empty small {
+    display: block;
+  }
+
+  .cd2004-worklist-empty strong {
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-base);
+  }
+
+  .cd2004-worklist-empty small {
+    margin-top: 4px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .cd2004-worklist-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+    padding: 8px 12px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-sand-75);
+    border: 0;
+    border-top: 1px solid var(--tw-border-subtle);
+    font-size: var(--tw-fs-ws-label);
+  }
+
+  /* ---------------------------------------------- power-user command menu */
+
+  .tebra-power-commands {
+    position: relative;
+    z-index: 30;
+    flex: 0 0 38px;
+    min-width: 0;
+    min-height: 38px;
+    padding: 4px 12px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-sand-75);
+    border-top: 1px solid var(--tw-border-subtle);
+  }
+
+  .tebra-power-commands > summary {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: max-content;
+    min-height: 29px;
+    padding: 4px 9px;
+    margin-left: auto;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-ctl);
+    cursor: pointer;
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 700;
+    list-style: none;
+    user-select: none;
+  }
+
+  .tebra-power-commands > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .tebra-power-commands > summary:hover {
+    background: var(--tw-mint-50);
+  }
+
+  .tebra-power-commands > summary svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .tebra-power-commands > summary kbd {
+    padding: 2px 5px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-mint-150);
+    border: 0;
+    border-radius: var(--tw-radius-tight);
+    font-family: var(--tw-font-mono);
+    font-size: 9px;
+  }
+
+  .tebra-power-commands .meditech-command-deck {
+    position: absolute;
+    right: 12px;
+    bottom: calc(100% + 8px);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+    gap: 6px;
+    width: min(880px, calc(100vw - 24px));
+    max-height: min(420px, calc(100vh - 96px));
+    padding: 12px;
+    overflow: auto;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card);
+    box-shadow: 0 16px 42px rgb(0 58 67 / 18%);
+  }
+
+  .tebra-power-commands:not([open]) .meditech-command-deck {
+    display: none;
+  }
+
+  .meditech-command-prompt {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    min-height: 34px;
+    padding: 5px 7px 9px;
+    color: var(--tw-text-secondary);
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .meditech-command-prompt strong {
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .meditech-command-prompt span {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--tw-font-mono);
+    font-size: var(--tw-fs-ws-label);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meditech-command-deck button {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 40px;
+    padding: 7px 9px;
+    color: var(--tw-text-primary);
+    text-align: left;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-ctl);
+    box-shadow: none;
+  }
+
+  .meditech-command-deck button:hover:not(:disabled),
+  .meditech-command-deck button.is-active {
+    color: var(--tw-text-primary);
+    background: var(--tw-mint-50);
+    border-color: var(--tw-teal-300);
+  }
+
+  .meditech-command-deck button:active:not(:disabled) {
+    background: var(--tw-mint-150);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .meditech-command-deck button:disabled {
+    color: var(--tw-text-muted);
+    background: var(--tw-mint-50);
+    opacity: 0.68;
+  }
+
+  .meditech-command-deck button kbd {
+    display: grid;
+    place-items: center;
+    min-width: 27px;
+    min-height: 23px;
+    padding: 2px 4px;
+    color: var(--tw-teal-800);
+    background: var(--tw-mint-150);
+    border: 0;
+    border-radius: var(--tw-radius-tight);
+    font-family: var(--tw-font-mono);
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .meditech-command-deck button > span {
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* -------------------------------------------------------- status footer */
+
+  .cd2004-statusbar.tebra-app-footer {
+    display: flex;
+    flex: 0 0 32px;
+    align-items: center;
+    min-width: 0;
+    min-height: 32px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-surface-panel);
+    border: 0;
+    border-top: 1px solid var(--tw-border-subtle);
+    box-shadow: none;
+    font-size: var(--tw-fs-ws-label);
+  }
+
+  .tebra-app-footer .cd2004-status-message,
+  .tebra-app-footer .cd2004-status-segment {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 100%;
+    padding: 6px 12px;
+    overflow: hidden;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-right: 1px solid var(--tw-border-subtle);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tebra-app-footer .cd2004-status-message {
+    flex: 1 1 auto;
+  }
+
+  .tebra-app-footer .cd2004-status-segment {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .tebra-app-footer .cd2004-status-segment:last-child {
+    border-right: 0;
+  }
+
+  .tebra-app-footer .cd2004-status-segment.is-online {
+    color: var(--tw-ready-fg);
+    background: var(--tw-ready-bg);
+  }
+
+  .tebra-app-footer .cd2004-status-segment.is-error {
+    color: var(--tw-stop-fg);
+    background: var(--tw-stop-bg);
+  }
+}
+
+/* Three-column workflows at wide workstation widths. */
+@media screen and (max-width: 1279px) {
+  .cd2004-shell {
+    --tebra-shell-gap: 10px;
+    --tebra-shell-pad: 10px;
+  }
+
+  .cd2004-workspace,
+  .cd2004-workspace.has-central-preview {
+    grid-template-columns: 194px minmax(0, 1fr);
+  }
+
+  .cd2004-workspace.has-side-inspector {
+    grid-template-columns: 194px minmax(500px, 1fr) minmax(274px, 292px);
+  }
+
+  .cd2004-app-titlebar.tebra-app-header-main {
+    grid-template-columns: 40px minmax(130px, 170px) auto minmax(0, 1fr) auto;
+  }
+
+  .cd2004-menu-bar {
+    right: 270px;
+    left: 310px;
+  }
+
+  .cd2004-app-environment.tebra-app-context {
+    max-width: 240px;
+  }
+}
+
+/* The inspector stacks beneath the active work at standard laptop widths. */
+@media screen and (max-width: 1179px) {
+  .cd2004-workspace.has-side-inspector {
+    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-rows: minmax(210px, 1fr) minmax(132px, 0.48fr);
+  }
+
+  .cd2004-workspace.has-side-inspector
+    > .tebra-context-rail
+    > .tebra-section-rail {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+
+  .cd2004-workspace.has-side-inspector > .cd2004-work-window {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cd2004-workspace.has-side-inspector
+    > .tebra-context-rail
+    > .cd2004-inspector-window {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .cd2004-transaction-window.has-document-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(190px, 1fr) minmax(126px, 0.52fr);
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns:
+      minmax(190px, 1.35fr)
+      minmax(82px, 0.55fr)
+      minmax(110px, 0.7fr)
+      minmax(116px, 0.78fr)
+      minmax(116px, 0.78fr)
+      minmax(224px, 1.45fr);
+  }
+}
+
+/* Compact laptop composition, including the protected 1000px width. */
+@media screen and (max-width: 1099px) {
+  .cd2004-app-titlebar.tebra-app-header-main {
+    grid-template-columns: 40px minmax(126px, 154px) auto minmax(0, 1fr) minmax(180px, auto);
+    padding-inline: 12px;
+  }
+
+  .cd2004-menu-bar {
+    right: 210px;
+    left: 280px;
+  }
+
+  .cd2004-menu-title {
+    padding-inline: 8px;
+  }
+
+  .cd2004-app-environment.tebra-app-context {
+    max-width: 190px;
+  }
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns:
+      minmax(190px, 1.4fr)
+      minmax(82px, 0.55fr)
+      minmax(110px, 0.72fr)
+      minmax(230px, 1.55fr);
+  }
+
+  .cd2004-banner-location,
+  .cd2004-banner-staff {
+    display: none;
+  }
+
+  .cd2004-workspace,
+  .cd2004-workspace.has-central-preview,
+  .cd2004-workspace.has-side-inspector {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+
+  .tebra-power-commands .meditech-command-deck {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+}
+
+/* 900px workstation: preserve every region and tighten only shell chrome. */
+@media screen and (max-width: 919px) {
+  .cd2004-shell {
+    --tebra-shell-gap: 8px;
+    --tebra-shell-pad: 8px;
+  }
+
+  .cd2004-app-titlebar.tebra-app-header-main {
+    grid-template-columns: 38px 124px auto minmax(0, 1fr) 178px;
+    gap: 8px;
+    height: 56px;
+    padding: 7px 10px;
+  }
+
+  .cd2004-app-logo.tebra-app-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .cd2004-menu-bar {
+    top: 6px;
+    right: 196px;
+    left: 246px;
+  }
+
+  .cd2004-menu-title {
+    min-height: 34px;
+    padding: 7px 6px;
+    font-size: var(--tw-fs-ws-label);
+  }
+
+  .tebra-app-context b {
+    padding-inline: 6px;
+  }
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    min-height: 58px;
+    grid-template-columns: minmax(174px, 1.4fr) 80px 106px minmax(214px, 1.55fr);
+  }
+
+  .cd2004-patient-primary,
+  .cd2004-patient-field,
+  .meditech-patient-safety {
+    min-height: 58px;
+    padding: 7px 9px;
+  }
+
+  .cd2004-workspace,
+  .cd2004-workspace.has-central-preview,
+  .cd2004-workspace.has-side-inspector {
+    grid-template-columns: 166px minmax(0, 1fr);
+  }
+
+  .meditech-function-list {
+    padding: 6px;
+  }
+
+  .meditech-record-list .cd2004-nav-item {
+    grid-template-columns: 23px minmax(0, 1fr) auto;
+    gap: 5px;
+    padding-inline: 4px 6px;
+  }
+
+  .cd2004-window-titlebar,
+  .cd2004-window.is-active > .cd2004-window-titlebar {
+    min-height: 42px;
+    padding: 7px 10px;
+  }
+
+  .cd2004-worklist-header {
+    padding: 12px 14px;
+  }
+
+  .cd2004-worklist-header h1 {
+    font-size: 21px;
+  }
+
+  .cd2004-worklist-table {
+    min-width: 540px;
+  }
+
+  .cd2004-worklist-table th,
+  .cd2004-worklist-table td {
+    padding-inline: 8px;
+  }
+
+  .tebra-power-commands .meditech-command-deck {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+/* 800 x 600 is the smallest supported workstation, not a mobile layout. */
+@media screen and (min-width: 800px) and (max-width: 839px) and (min-height: 600px) {
+  .cd2004-app-titlebar.tebra-app-header-main {
+    grid-template-columns: 36px 116px auto minmax(0, 1fr) 170px;
+    height: 54px;
+  }
+
+  .cd2004-app-logo.tebra-app-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .cd2004-app-logo.tebra-app-mark svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .cd2004-menu-bar {
+    top: 5px;
+    right: 187px;
+    left: 234px;
+  }
+
+  .cd2004-menu-title {
+    padding-inline: 5px;
+  }
+
+  .cd2004-patient-banner,
+  .cd2004-patient-banner.has-mismatch {
+    grid-template-columns: minmax(166px, 1.35fr) 76px 100px minmax(202px, 1.5fr);
+    min-height: 54px;
+  }
+
+  .cd2004-patient-primary,
+  .cd2004-patient-field,
+  .meditech-patient-safety {
+    min-height: 54px;
+    padding: 5px 7px;
+  }
+
+  .cd2004-patient-primary {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .cd2004-patient-primary > svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .cd2004-patient-banner small {
+    font-size: 9px;
+  }
+
+  .cd2004-patient-banner strong,
+  .cd2004-patient-primary strong {
+    font-size: 11px;
+  }
+
+  .cd2004-workspace,
+  .cd2004-workspace.has-central-preview,
+  .cd2004-workspace.has-side-inspector {
+    grid-template-columns: 158px minmax(0, 1fr);
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .meditech-rail-title.tebra-section-rail-title {
+    min-height: 38px;
+    padding: 6px 8px;
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .meditech-rail-context.tebra-section-rail-context {
+    min-height: 44px;
+    padding: 6px 8px;
+  }
+
+  .meditech-function-list {
+    padding: 4px;
+  }
+
+  .meditech-rail-group {
+    gap: 1px;
+    padding-bottom: 4px;
+  }
+
+  .meditech-rail-group + .meditech-rail-group {
+    padding-top: 3px;
+  }
+
+  .meditech-function-heading {
+    min-height: 19px;
+    padding: 2px 5px;
+    font-size: 9px;
+  }
+
+  .meditech-record-list .cd2004-nav-item {
+    grid-template-columns: 21px minmax(0, 1fr) auto;
+    min-height: 31px;
+    padding-block: 3px;
+  }
+
+  .meditech-record-list .cd2004-nav-item .meditech-nav-icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .meditech-record-list .cd2004-nav-item .meditech-nav-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .cd2004-workspace.has-side-inspector {
+    grid-template-rows: minmax(190px, 1fr) minmax(112px, 0.42fr);
+  }
+
+  .cd2004-transaction-window.has-document-split {
+    grid-template-rows: minmax(174px, 1fr) minmax(108px, 0.44fr);
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .cd2004-window-titlebar,
+  .cd2004-window.is-active > .cd2004-window-titlebar {
+    min-height: 38px;
+    padding: 5px 8px;
+  }
+
+  .cd2004-window-mark,
+  .cd2004-window-mark.has-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cd2004-worklist-header {
+    gap: 10px;
+    padding: 8px 10px;
+  }
+
+  .cd2004-worklist-header h1 {
+    font-size: 19px;
+  }
+
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-new {
+    min-height: 38px;
+    padding: 6px 12px;
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .cd2004-worklist-tabs {
+    min-height: 38px;
+    padding-inline: 8px;
+  }
+
+  .cd2004-worklist-tabs button {
+    min-height: 28px;
+    padding: 4px 6px;
+  }
+
+  .cd2004-worklist-table {
+    min-width: 520px;
+  }
+
+  .cd2004-worklist-table th,
+  .cd2004-worklist-table td {
+    padding: 7px 6px;
+  }
+
+  .tebra-power-commands {
+    flex-basis: 34px;
+    min-height: 34px;
+    padding: 2px 8px;
+  }
+
+  .tebra-power-commands > summary {
+    min-height: 28px;
+  }
+
+  .cd2004-statusbar.tebra-app-footer {
+    flex-basis: 29px;
+    min-height: 29px;
+  }
+}
+
+@media screen and (max-height: 700px) and (min-width: 800px) {
+  .meditech-record-list .cd2004-nav-item {
+    min-height: 31px;
+  }
+
+  .meditech-function-heading {
+    min-height: 19px;
+    padding-block: 2px;
+  }
+
+  .cd2004-worklist-table th,
+  .cd2004-worklist-table td {
+    padding-block: 7px;
+  }
+}
+
+@media screen and (prefers-reduced-motion: reduce) {
+  .cd2004-shell *,
+  .cd2004-shell *::before,
+  .cd2004-shell *::after,
+  .meditech-workstation-gate *,
+  .meditech-workstation-gate *::before,
+  .meditech-workstation-gate *::after {
+    scroll-behavior: auto;
+    transition-duration: 0s;
+  }
+}
+
+@media screen and (prefers-contrast: more) {
+  .cd2004-window,
+  .cd2004-navigator.meditech-record-list.tebra-section-rail,
+  .meditech-workstation-gate-window,
+  .tebra-power-commands .meditech-command-deck {
+    border-color: var(--tw-teal-800);
+  }
+
+  .cd2004-shell :where(
+      button,
+      input,
+      select,
+      textarea,
+      summary,
+      [role="tab"],
+      [role="menuitem"]
+    ):focus-visible {
+    outline-width: 3px;
+  }
+}
+
+@media screen and (forced-colors: active) {
+  .cd2004-window,
+  .cd2004-navigator.meditech-record-list.tebra-section-rail,
+  .meditech-workstation-gate-window,
+  .tebra-power-commands .meditech-command-deck,
+  .cd2004-menu-popup {
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+
+  .meditech-record-list .cd2004-nav-item.is-selected,
+  .meditech-record-list .cd2004-nav-item[aria-current="page"] {
+    color: HighlightText;
+    background: Highlight;
+    border-left-color: Highlight;
+  }
+
+  .cd2004-shell [data-workflow="home"] .cd2004-worklist-new {
+    color: HighlightText;
+    background: Highlight;
+    border-color: Highlight;
+  }
+
+  .tebra-app-footer .cd2004-status-segment.is-online,
+  .tebra-app-footer .cd2004-status-segment.is-error,
+  .meditech-patient-safety,
+  .cd2004-worklist-state {
+    color: CanvasText;
+    background: Canvas;
+    border-color: CanvasText;
+  }
+}

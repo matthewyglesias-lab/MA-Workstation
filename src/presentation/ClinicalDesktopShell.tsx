@@ -12,16 +12,22 @@ import {
 import "./tebra-tokens.css";
 import "./clinical-desktop.css";
 import "./workflows/workflow-panels.css";
-import "./meditech-workstation.css";
+import "./tebra-workstation.css";
 import "./tebra-screen-contract.css";
 import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
-import { MODULE, NOTES, PATIENT, RECORD, SHELL } from "./vocabulary";
+import {
+  fieldsBeforeSigning,
+  MODULE,
+  NOTES,
+  PATIENT,
+  RECORD,
+  SHELL,
+} from "./vocabulary";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
-import {
-  MeditechCommandDeck,
-  MeditechRecordRail,
-} from "./MeditechChrome";
+import { AppFooter, PowerCommandMenu } from "./TebraChrome";
+import { AppHeader } from "./shell/AppHeader";
+import { SectionRail } from "./shell/SectionRail";
 import {
   FUNCTION_KEY_PROFILE,
   getFunctionKeyCommand,
@@ -276,7 +282,7 @@ export function ClinicalDesktopShell({
     internalStatus ??
     fieldPrompt ??
     statusMessage ??
-    "Ready. Select a workflow to begin.";
+    SHELL.readyToBegin;
   const hasOutstandingStops = readiness.some((item) => item.state === "stop");
 
   const openWorkflow = (workflow: WorkflowId) => {
@@ -308,9 +314,9 @@ export function ClinicalDesktopShell({
   const requestDraftSave = useCallback(() => {
     if (onSaveDraft) {
       onSaveDraft();
-      setInternalStatus("Draft save requested.");
+      setInternalStatus(SHELL.draftSaveRequested);
     } else {
-      setInternalStatus("Draft saving is unavailable in this workflow.");
+      setInternalStatus(SHELL.draftSaveUnavailable);
     }
   }, [onSaveDraft]);
 
@@ -851,7 +857,7 @@ export function ClinicalDesktopShell({
 
   const windowTitle =
     selectedWorkflow === "home"
-      ? NOTES.openNotes
+      ? MODULE.dashboard
       : `${WORKFLOW_LABELS[selectedWorkflow]} note`;
   const transactionCode = WORKSTATION_TRANSACTION_CODE[selectedWorkflow];
 
@@ -863,11 +869,9 @@ export function ClinicalDesktopShell({
     workflowSlots,
     legacyPanels,
     workHostRef,
-    summaries: workflowSummaries,
     needsReview,
     todayQueue,
     injectionRecords,
-    onWorkflowOpen: openWorkflow,
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
@@ -904,27 +908,14 @@ export function ClinicalDesktopShell({
       data-post-state={postState}
     >
       <a class="cd2004-skip-link" href="#cd2004-work-area">
-        Skip to active workflow
+        {SHELL.skipToActiveNote}
       </a>
 
-      <header class="cd2004-application-header cd2004-print-exclude">
-        <div class="cd2004-app-titlebar">
-          <span class="cd2004-app-logo" aria-hidden="true">
-            <DesktopIcon name="administer" />
-          </span>
-          <span class="cd2004-app-title">
-            <b>IPMG</b>
-            <span>{SHELL.productName}</span>
-            <small>{transactionCode}</small>
-          </span>
-          <span class="cd2004-app-environment">
-            <b>{SHELL.localOnlyBadge}</b>
-            <small>
-              {staffLabel || PATIENT.notSignedIn} · {locationLabel || PATIENT.noLocation}
-            </small>
-          </span>
-        </div>
-
+      <AppHeader
+        transactionCode={transactionCode}
+        staffLabel={staffLabel}
+        locationLabel={locationLabel}
+      >
         <nav
           class="cd2004-menu-bar"
           role="menubar"
@@ -958,7 +949,7 @@ export function ClinicalDesktopShell({
               onInvoke={openContextualLookup}
             />
           </DesktopMenu>
-          <DesktopMenu id="workflows" label="Workflows" mnemonic="W">
+          <DesktopMenu id="workflows" label={SHELL.noteTypes} mnemonic="W">
             {shortcutWorkflows.map((workflow, index) => (
               <MenuCommand
                 key={workflow}
@@ -1022,13 +1013,32 @@ export function ClinicalDesktopShell({
           onUseWorkflowPatient={onUseWorkflowPatient}
           onSelectLocalRecord={onOpenRecords}
         />
-      </header>
+      </AppHeader>
 
       <main
-        class={`cd2004-workspace ${selectedWorkflow === "administer" ? "has-central-preview" : ""}`}
+        class={[
+          "cd2004-workspace",
+          selectedWorkflow === "administer" ? "has-central-preview" : "",
+          selectedWorkflow !== "administer" && selectedWorkflow !== "home"
+            ? "has-side-inspector"
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         id="cd2004-work-area"
         data-workflow={selectedWorkflow}
       >
+        <aside class="meditech-context-rail tebra-context-rail">
+          <SectionRail
+            selectedWorkflow={selectedWorkflow}
+            summaries={workflowSummaries}
+            patient={patient}
+            onWorkflowOpen={openWorkflow}
+            onOpenRecords={onOpenRecords}
+          />
+          {selectedWorkflow !== "administer" && selectedWorkflow !== "home" && inspectorPanel}
+        </aside>
+
         <Panel
           pane="work"
           title={windowTitle}
@@ -1058,7 +1068,7 @@ export function ClinicalDesktopShell({
               {postState === "posting" && (
                 <div class="cd2004-posting-strip" role="status">
                   <span aria-hidden="true" />
-                  Validating required fields and writing local record…
+                  {RECORD.validatingAndSaving}
                 </div>
               )}
               {workflowContent}
@@ -1090,19 +1100,9 @@ export function ClinicalDesktopShell({
           </div>
         </Panel>
 
-        <aside class="meditech-context-rail">
-          <MeditechRecordRail
-            selectedWorkflow={selectedWorkflow}
-            summaries={workflowSummaries}
-            patient={patient}
-            onWorkflowOpen={openWorkflow}
-            onOpenRecords={onOpenRecords}
-          />
-          {selectedWorkflow !== "administer" && selectedWorkflow !== "home" && inspectorPanel}
-        </aside>
       </main>
 
-      <MeditechCommandDeck
+      <PowerCommandMenu
         selectedWorkflow={selectedWorkflow}
         contextCode={focusedControl?.fieldCode}
         actions={{
@@ -1135,29 +1135,17 @@ export function ClinicalDesktopShell({
         } satisfies FunctionKeyActions}
       />
 
-      {/*
-        Segmented status bar. Replaces the taskbar/Start button, which emulated
-        the Windows shell rather than an EHR application. `.cd2004-status-message`
-        keeps its live-region contract and exact strings.
-      */}
-      <footer class="cd2004-statusbar cd2004-print-exclude">
-        <div class="cd2004-status-message" aria-live="polite" aria-atomic="true">
-          {effectiveStatus}
-        </div>
-        <div class="cd2004-status-segment" title="Current record mode">
-          {postState === "posted" ? RECORD.readOnly : RECORD.editable}
-        </div>
-        <div
-          class={`cd2004-status-segment ${localStorageAvailable ? "is-online" : "is-error"}`}
-          title={
-            localStorageAvailable
-              ? SHELL.localOnlyDetail
-              : SHELL.storageUnavailable
-          }
-        >
-          {localStorageAvailable ? SHELL.localBadge : SHELL.storageError}
-        </div>
-      </footer>
+      <AppFooter
+        message={effectiveStatus}
+        readOnly={postState === "posted"}
+        localStorageAvailable={localStorageAvailable}
+        readOnlyLabel={RECORD.readOnly}
+        editableLabel={RECORD.editable}
+        localLabel={SHELL.localBadge}
+        storageErrorLabel={SHELL.storageError}
+        localDetail={SHELL.localOnlyDetail}
+        storageErrorDetail={SHELL.storageUnavailable}
+      />
 
       {fieldLookup && (
         <WorkstationLookupDialog
@@ -1236,11 +1224,9 @@ interface RenderWorkflowOptions {
   workflowSlots: NonNullable<ClinicalDesktopShellProps["workflowSlots"]>;
   legacyPanels: NonNullable<ClinicalDesktopShellProps["legacyPanels"]>;
   workHostRef: { current: HTMLDivElement | null };
-  summaries: NonNullable<ClinicalDesktopShellProps["workflowSummaries"]>;
   needsReview: NonNullable<ClinicalDesktopShellProps["needsReview"]>;
   todayQueue: NonNullable<ClinicalDesktopShellProps["todayQueue"]>;
   injectionRecords: NonNullable<ClinicalDesktopShellProps["injectionRecords"]>;
-  onWorkflowOpen: (workflow: WorkflowId) => void;
   onQueueItemOpen?: ClinicalDesktopShellProps["onQueueItemOpen"];
   onRecordOpen?: ClinicalDesktopShellProps["onRecordOpen"];
   onStartNewInjection?: ClinicalDesktopShellProps["onStartNewInjection"];
@@ -1257,11 +1243,11 @@ interface InjectionRecordActionsProps {
 }
 
 const INJECTION_DEFAULT_DETAIL: Record<RecordLifecycle, string> = {
-  new: "Enter encounter details to begin a local draft.",
-  draft: "Draft saved in this browser. Finish only when the disposition is final.",
-  locked: "This browser-local record is read-only. Corrections require a dated addendum.",
-  saving: "Writing the latest encounter changes to this browser.",
-  error: "The local draft needs storage attention before you leave this encounter.",
+  new: RECORD.newDraftDetail,
+  draft: RECORD.draftSavedDetail,
+  locked: RECORD.readOnlyDetail,
+  saving: RECORD.savingDetail,
+  error: RECORD.storageAttentionDetail,
 };
 
 /**
@@ -1296,7 +1282,7 @@ function InjectionRecordActions({
   return (
     <RecordLifecycleActions
       recordLabel={`${MODULE.injection} note`}
-      ariaLabel="Injection record actions"
+      ariaLabel={RECORD.injectionActions}
       lifecycle={actions.lifecycle}
       detail={detail}
       rootTestAttribute="data-injection-record-actions"
@@ -1324,8 +1310,8 @@ function InjectionRecordActions({
                 disabled={saveDisabled}
                 title={
                   saveDisabled
-                    ? "Enter encounter details before saving a local draft."
-                    : "Save this editable injection draft locally (F12)."
+                    ? RECORD.enterBeforeSaving
+                    : RECORD.saveInjectionDraftDescription
                 }
                 onClick={onSaveDraft}
               >
@@ -1344,8 +1330,8 @@ function InjectionRecordActions({
                     ? actions.blockingDetail
                       ? actions.blockingDetail
                       : blockerCount
-                      ? `Complete ${blockerCount} required clinical ${blockerCount === 1 ? "field" : "fields"} before attesting and locking this local record.`
-                      : "Complete the required clinical fields before finishing and locking this record."
+                      ? fieldsBeforeSigning(blockerCount)
+                      : RECORD.fieldsBeforeSigning
                     : "Review the note before signing it."
                 }
                 onClick={onFinish}
@@ -1363,13 +1349,13 @@ function InjectionRecordActions({
             class="is-new"
             data-injection-new
             disabled={posting}
-            title="Start a blank injection. Any current editable work is saved as a local draft first."
+            title={RECORD.startInjectionDescription}
             onClick={actions.onStartNew}
           >
             <span class="cd2004-action-glyph" aria-hidden="true">
               <DesktopIcon name="new" />
             </span>
-            Start new injection
+            {RECORD.startNewInjection}
           </button>
           {!locked && (
             <button
@@ -1379,8 +1365,8 @@ function InjectionRecordActions({
               disabled={discardDisabled}
               title={
                 discardDisabled
-                  ? "There is no editable local draft to discard."
-                  : "Discard this editable local draft. This cannot be undone."
+                  ? RECORD.noDraftToDiscard
+                  : RECORD.discardDraftDescription
               }
               onClick={actions.onDiscard}
             >
@@ -1404,11 +1390,9 @@ function renderWorkflowContent({
   workflowSlots,
   legacyPanels,
   workHostRef,
-  summaries,
   needsReview,
   todayQueue,
   injectionRecords,
-  onWorkflowOpen,
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
@@ -1416,11 +1400,9 @@ function renderWorkflowContent({
   if (workflow === "home") {
     return (
       <StartCenter
-        summaries={summaries}
         needsReview={needsReview}
         todayQueue={todayQueue}
         injectionRecords={injectionRecords}
-        onWorkflowOpen={onWorkflowOpen}
         onQueueItemOpen={onQueueItemOpen}
         onRecordOpen={onRecordOpen}
         onStartNewInjection={onStartNewInjection}
@@ -1453,8 +1435,7 @@ function renderWorkflowContent({
     <div class="cd2004-workflow-placeholder">
       <DesktopIcon name={workflow} />
       <strong>{WORKFLOW_LABELS[workflow]}</strong>
-      <span>The application has not connected this workflow panel yet.</span>
-      <code>workflowSlots.{workflow}</code>
+      <span>{SHELL.notePanelUnavailable}</span>
     </div>
   );
 }
@@ -1508,8 +1489,8 @@ function PatientBanner({
     selectedWorkflow === "home"
       ? patient.medicationLabel
         ? `MEDICATION: ${patient.medicationLabel}`
-        : `WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
-      : `${medicationContextPrefix}WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · STATE: ${workflowStateLabel.toUpperCase()}`;
+        : `${SHELL.noteType.toUpperCase()}: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
+      : `${medicationContextPrefix}${SHELL.noteType.toUpperCase()}: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · ${SHELL.status.toUpperCase()}: ${workflowStateLabel.toUpperCase()}`;
   return (
     <div
       class={`cd2004-patient-banner ${

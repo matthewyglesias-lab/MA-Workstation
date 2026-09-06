@@ -1,42 +1,33 @@
 /*
- * Shared structural patterns for migrated workflow panels: dense,
- * utilitarian, tab-folder navigation and sunken field groups in the same
- * late-90s clinical-terminal idiom as the shell chrome (clinical-desktop.css)
- * — native form controls and list-style pickers instead of the legacy app's
- * rounded "chip" buttons. Reuses the --cd-* tokens defined on .cd2004-shell.
+ * Shared structural patterns for the clinical workflow panels. The worksheets
+ * keep their compact, high-information layout while using the same flat field,
+ * section and status language as the rest of the Tebra-inspired shell.
  */
 
+@media screen {
 .cd2004-shell .wfp-panel {
   display: flex;
   flex-direction: column;
   gap: 7px;
   min-width: 0;
   padding: 8px;
-  background: #eff0ed;
-  /* The panel's own base size. Without it anything unstyled - buttons in
-     particular - inherits the document's 12px and sits a step above the 11px
-     body text beside it. A period form runs on one size. */
-  font-size: 11px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  font-size: var(--tw-fs-ws-dense);
+  line-height: var(--tw-lh-ws-dense);
 }
 
-/* Safety net: legacy.css's unscoped `input,select,textarea{border-radius:...}`
-   rule otherwise wins on every native form control anywhere in a migrated
-   panel (not just ones wrapped in .wfp-field, e.g. .wfp-table cell inputs),
-   since nothing else in this file's cascade happens to out-rank it. */
+/* Workstation controls share Tebra's compact field radius. The print-only
+   legacy sheet no longer participates in this screen cascade. */
 .cd2004-shell .wfp-panel input,
 .cd2004-shell .wfp-panel select,
 .cd2004-shell .wfp-panel textarea {
-  border-radius: 0 !important;
+  border-radius: var(--tw-radius-ctl);
 }
 
-/* ...but a radio has to stay round. That circle is the only thing separating
-   "pick one" from "pick any", and the blanket above - aimed at text inputs and
-   selects - was squaring every radio in every workflow panel, so single-select
-   fields like the injection site read as a checkbox list. Restated with the
-   same `!important` weight rather than carved out of the selector above, so
-   legacy.css cannot win the radius back either way. */
+/* A radio stays round so single-select fields remain distinct from checklists. */
 .cd2004-shell .wfp-panel input[type="radio"] {
-  border-radius: 50% !important;
+  border-radius: 50%;
 }
 
 .cd2004-shell .wfp-summary-bar {
@@ -44,46 +35,41 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  padding: 4px 7px;
-  background: var(--cd-face);
-  border: 1px solid;
-  border-color: var(--cd-border-light) var(--cd-border-dark) var(--cd-border-dark)
-    var(--cd-border-light);
+  padding: 6px 8px;
+  background: var(--tw-surface-sunken);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-ws);
 }
 
 .cd2004-shell .wfp-summary-bar strong {
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
 }
 
-@media screen {
-  /* Injection and UDS are transaction workstations: their title/register and
-     page tabs are fixed chrome, while the active clinical page is the only
-     scrolling surface. This also prevents the shell and worksheet from
-     competing for the same wheel/keyboard scroll at short window heights. */
-  .cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) {
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
+/* Injection and UDS keep fixed transaction chrome while their clinical page
+   remains the only scrolling surface at short window heights. */
+.cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
 
-  .cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) > .cd2004-workflow-body {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
+.cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) > .cd2004-workflow-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
 
-  .cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) > .cd2004-workflow-body > .wfp-panel {
-    flex: 1 1 auto;
-    height: auto;
-    min-height: 0;
-    overflow: hidden;
-  }
+.cd2004-shell .cd2004-workflow-slot:is([data-workflow="administer"], [data-workflow="uds"]) > .cd2004-workflow-body > .wfp-panel {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
 
-  .cd2004-shell [data-workflow="uds"] .cd2004-record-actions {
-    flex: 0 0 auto;
-  }
+.cd2004-shell [data-workflow="uds"] .cd2004-record-actions {
+  flex: 0 0 auto;
 }
 
 .cd2004-shell .wfp-transaction-chrome {
@@ -94,7 +80,7 @@
   flex-direction: column;
   gap: 7px;
   min-width: 0;
-  background: #eff0ed;
+  background: var(--tw-surface-panel);
 }
 
 .cd2004-shell .wfp-transaction-page {
@@ -116,25 +102,26 @@
   min-width: 0;
   max-width: 150px;
   min-height: 17px;
-  padding: 1px 4px;
+  padding: 3px 6px;
   color: var(--tw-teal-900);
   background: #fff;
   border: 1px solid var(--tw-teal-300);
-  font-family: "Arial Narrow", var(--tw-font-sans);
-  line-height: 13px;
+  border-radius: var(--tw-radius-tight);
+  font-family: var(--tw-font-sans);
+  line-height: var(--tw-lh-ws-meta);
   white-space: nowrap;
 }
 
 .cd2004-shell .wfp-summary-fact > b {
   color: var(--tw-teal-600);
-  font-size: 8px;
+  font-size: var(--tw-fs-ws-label);
   letter-spacing: 0.05em;
 }
 
 .cd2004-shell .wfp-summary-fact > span {
   min-width: 0;
   overflow: hidden;
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
   text-overflow: ellipsis;
 }
@@ -163,7 +150,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   white-space: nowrap;
 }
 
@@ -182,98 +169,91 @@
 .cd2004-shell .wfp-status-flag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
+  gap: 5px;
+  padding: 3px 8px;
   border: 1px solid;
-  font-size: 10px;
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
 .cd2004-shell .wfp-status-flag::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border: 1px solid rgb(0 0 0 / 35%);
+  content: none;
+}
+
+.cd2004-shell .wfp-status-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: var(--tw-fs-ws-label);
+  line-height: 1;
 }
 
 .cd2004-shell .wfp-status-flag.is-ready {
-  color: var(--cd-green);
-  background: var(--cd-green-soft);
-  border-color: var(--cd-green);
-}
-.cd2004-shell .wfp-status-flag.is-ready::before {
-  background: var(--cd-green);
+  color: var(--tw-ready-fg);
+  background: var(--tw-ready-bg);
+  border-color: var(--tw-ready-border);
 }
 
 .cd2004-shell .wfp-status-flag.is-warning {
-  color: var(--cd-amber);
-  background: var(--cd-amber-soft);
-  border-color: var(--cd-amber);
-}
-.cd2004-shell .wfp-status-flag.is-warning::before {
-  background: var(--cd-amber);
+  color: var(--tw-review-fg);
+  background: var(--tw-review-bg);
+  border-color: var(--tw-review-border);
 }
 
 .cd2004-shell .wfp-status-flag.is-stop {
-  color: var(--cd-red);
-  background: var(--cd-red-soft);
-  border-color: var(--cd-red);
-}
-.cd2004-shell .wfp-status-flag.is-stop::before {
-  background: var(--cd-red);
+  color: var(--tw-stop-fg);
+  background: var(--tw-stop-bg);
+  border-color: var(--tw-stop-border);
 }
 
 .cd2004-shell .wfp-status-flag.is-idle {
-  color: var(--cd-ink-muted);
-  background: var(--cd-face);
-  border-color: var(--cd-border-mid);
-}
-.cd2004-shell .wfp-status-flag.is-idle::before {
-  background: var(--cd-border-mid);
+  color: var(--tw-text-secondary);
+  background: var(--tw-surface-sunken);
+  border-color: var(--tw-border-subtle);
 }
 
 /* Tab-folder */
 
 .cd2004-shell .wfp-tabbar {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
-  padding-inline: 2px;
-  background: #d5dcda;
-  border-bottom: 2px solid var(--cd-border-dark);
+  padding-inline: 0;
+  background: var(--tw-surface-panel);
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
 .cd2004-shell .wfp-tab {
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
-  padding: 4px 7px;
+  padding: 7px 9px;
   color: var(--cd-ink-muted);
-  background: var(--cd-chrome-light);
-  border: 1px solid var(--cd-border-mid);
-  border-bottom: none;
-  font-size: 11px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--tw-radius-ws) var(--tw-radius-ws) 0 0;
+  font-size: var(--tw-fs-ws-dense);
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .cd2004-shell .wfp-tab[aria-selected="true"] {
-  position: relative;
-  top: 2px;
-  color: var(--cd-ink);
-  background: var(--cd-paper);
-  border-color: var(--cd-border-dark);
-  border-bottom: 2px solid var(--cd-paper);
+  color: var(--tw-teal-800);
+  background: var(--tw-mint-50);
+  border-color: var(--tw-border-subtle);
+  border-bottom-color: var(--tw-teal-800);
 }
 
-/* A count is still-to-do work, not an alarm: the soft-chip treatment below
-   matches .wfp-status-flag.is-stop rather than a solid alarm-red fill. Real
-   MEDITECH reserves a solid red fill for nothing in this severity system --
-   red there is always plain text on a genuinely critical item (allergy/code
-   status, an out-of-range lab value), never a filled badge for a count. */
+/* Counts stay compact and distinct from the icon-and-word status triad. */
 .cd2004-shell .wfp-tab .wfp-tab-badge {
   display: inline-block;
   min-width: 14px;
@@ -282,7 +262,8 @@
   color: var(--cd-red);
   background: var(--cd-red-soft);
   border: 1px solid var(--cd-red);
-  font-size: 9px;
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
   text-align: center;
 }
@@ -294,7 +275,8 @@
   color: var(--cd-red);
   background: var(--cd-red-soft);
   border: 1px solid var(--cd-red);
-  font-size: 9px;
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
   text-align: center;
 }
@@ -311,9 +293,7 @@
   text-transform: uppercase;
 }
 
-/* Empty state. A dashed outline around centred copy is a modern
-   "drop things here" idiom; a period application just says what is not there,
-   on one line, where the missing rows would have started. */
+/* Empty states remain compact so they do not displace the surrounding form. */
 .cd2004-shell .wfp-wall {
   display: flex;
   flex-direction: column;
@@ -323,12 +303,12 @@
   text-align: left;
   background: var(--cd-white);
   border: 1px solid var(--cd-border-mid);
-  box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
+  border-radius: var(--tw-radius-ws);
 }
 
 .cd2004-shell .wfp-wall-title {
   color: var(--cd-ink);
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-base);
   font-weight: 700;
 }
 
@@ -340,7 +320,9 @@
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   border: 1px solid var(--cd-border-mid);
+  border-radius: var(--tw-radius-ws);
   background: var(--cd-white);
+  overflow: hidden;
 }
 
 .cd2004-shell .wfp-kpi-row > * {
@@ -362,7 +344,7 @@
 
 .cd2004-shell .wfp-kpi-label {
   color: var(--cd-ink-muted);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -370,7 +352,7 @@
 .cd2004-shell .wfp-wall p {
   max-width: 70ch;
   margin: 0;
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-dense);
   line-height: 1.4;
 }
 
@@ -383,12 +365,13 @@
   background: var(--cd-green-soft);
   border: 1px solid var(--cd-green);
   border-left-width: 4px;
-  font-size: 10px;
+  border-radius: var(--tw-radius-ws);
+  font-size: var(--tw-fs-ws-meta);
   line-height: 1.45;
 }
 
 .cd2004-shell .wfp-done-line strong {
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
 }
 
 .cd2004-shell .wfp-done-line.is-info {
@@ -403,6 +386,8 @@
 .cd2004-shell .wfp-exception-block {
   border: 1px solid var(--cd-amber);
   border-left-width: 4px;
+  border-radius: var(--tw-radius-ws);
+  overflow: hidden;
 }
 
 .cd2004-shell .wfp-exception-block .wfp-section-head {
@@ -417,7 +402,7 @@
   color: var(--cd-ink-muted);
   background: var(--cd-white);
   border-bottom: 1px solid var(--cd-chrome);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   line-height: 1.4;
 }
 
@@ -476,9 +461,10 @@
   flex-direction: column;
   gap: 7px;
   padding: 8px;
-  background: var(--cd-paper);
-  border: 1px solid var(--cd-border-dark);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-subtle);
   border-top: none;
+  border-radius: 0 0 var(--tw-radius-ws) var(--tw-radius-ws);
 }
 
 .cd2004-shell .wfp-workflow-title {
@@ -500,20 +486,21 @@
 /* Field groups */
 
 .cd2004-shell .wfp-section {
-  background: var(--cd-white);
-  border: 1px solid var(--cd-border-mid);
-  box-shadow: inset 1px 1px var(--cd-border-light);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-ws);
+  overflow: hidden;
 }
 
 .cd2004-shell .wfp-section-head {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 7px;
+  padding: 6px 8px;
   color: var(--cd-ink);
-  background: var(--cd-face);
-  border-bottom: 1px solid var(--cd-border-mid);
-  font-size: 11px;
+  background: var(--tw-surface-sunken);
+  border-bottom: 1px solid var(--tw-border-subtle);
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -522,8 +509,8 @@
 .cd2004-shell .wfp-section-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 7px;
+  gap: 8px;
+  padding: 8px;
 }
 
 .cd2004-shell .wfp-row {
@@ -552,9 +539,9 @@
   gap: 4px;
   align-items: baseline;
   min-width: 0;
-  color: var(--cd-ink-muted);
-  font-size: 11px;
-  font-weight: 400;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-meta);
+  font-weight: 600;
 }
 
 /* The colon belongs to the caption, not the label - otherwise it lands after
@@ -579,7 +566,7 @@
 
 .cd2004-shell .wfp-opt {
   color: var(--cd-ink-muted);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-label);
   font-style: italic;
 }
 
@@ -638,8 +625,9 @@
    up on the slash, and it is sized to exactly what it holds. */
 .cd2004-shell .wfp-field input.wfp-date-entry {
   max-width: 104px;
-  font-family: "Courier New", monospace;
-  font-size: 11px;
+  font-family: var(--tw-font-mono);
+  font-size: var(--tw-fs-ws-meta);
+  font-variant-numeric: var(--tw-numeric-tabular);
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -657,7 +645,7 @@
    terminal refuses a bad entry rather than silently discarding a clinical date. */
 .cd2004-shell .wfp-field input.wfp-date-entry.is-rejected {
   background: var(--cd-red-soft, #f7d8d1);
-  border-color: #9c5348 #e8c4bc #e8c4bc #9c5348;
+  border-color: var(--tw-stop-border);
 }
 
 .cd2004-shell .wfp-field input.mono {
@@ -683,37 +671,32 @@
 .cd2004-shell .wfp-field input,
 .cd2004-shell .wfp-field select,
 .cd2004-shell .wfp-field textarea {
-  padding: 4px 6px;
+  min-height: 32px;
+  padding: 5px 8px;
   color: var(--cd-ink);
   background: var(--cd-white);
-  border: 1px solid;
-  border-color: var(--cd-border-mid) var(--cd-border-light) var(--cd-border-light)
-    var(--cd-border-mid);
-  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ctl);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
 }
 
-/* A native select's dropdown arrow is the current OS's modern flat chevron
-   on every platform - swap it for a small beveled button with a solid
-   triangle, matching the classic Windows dropdown control. */
+/* Use one quiet chevron without introducing a second button surface. */
 .cd2004-shell .wfp-field select {
   appearance: none;
   padding-right: 22px;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23101828'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, var(--cd-chrome-light) 0%, var(--cd-chrome) 100%);
-  background-repeat: no-repeat, no-repeat;
-  background-position: right 7px center, right 0 top 0;
-  background-size: 8px 6px, 18px 100%;
-  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23004952'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 8px 6px;
 }
 
 .cd2004-shell .wfp-field input:focus-visible,
 .cd2004-shell .wfp-field select:focus-visible,
 .cd2004-shell .wfp-field textarea:focus-visible {
-  outline: 2px solid var(--cd-focus);
-  outline-offset: -1px;
+  outline: 2px solid var(--tw-teal-800);
+  outline-offset: 2px;
+  box-shadow: var(--tw-focus-ring);
 }
 
 .cd2004-shell .wfp-field textarea {
@@ -723,7 +706,7 @@
 
 .cd2004-shell .wfp-field-hint {
   color: var(--cd-ink-muted);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 /* Print buttons that are disabled pending completion get a hint that's
@@ -735,12 +718,13 @@
   color: var(--cd-amber);
   background: var(--cd-amber-soft);
   border: 1px solid var(--cd-amber);
-  font-size: 9px;
+  border-radius: var(--tw-radius-ws);
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
 }
 
 .cd2004-shell .wfp-print-block-hint .cd2004-link-button {
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
 }
 
@@ -749,7 +733,9 @@
 .cd2004-shell .wfp-option-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--cd-border-mid);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-ws);
+  overflow: hidden;
 }
 
 .cd2004-shell .wfp-option-row {
@@ -757,7 +743,7 @@
   grid-template-columns: 16px minmax(0, 1fr);
   align-items: start;
   gap: 8px;
-  padding: 4px 7px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--cd-chrome);
   cursor: pointer;
 }
@@ -789,7 +775,7 @@
 
 .cd2004-shell .wfp-pending {
   color: var(--cd-ink-muted);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   font-style: italic;
 }
 
@@ -798,6 +784,7 @@
   padding: 6px 8px;
   border: 1px solid var(--cd-amber);
   border-left-width: 4px;
+  border-radius: var(--tw-radius-ws);
   background: var(--cd-amber-soft);
   color: #4a2d00;
 }
@@ -814,7 +801,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 4px 12px;
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   letter-spacing: 0.035em;
 }
 
@@ -825,7 +812,7 @@
 .cd2004-shell .wfp-review-contract p {
   margin: 3px 0 0;
   color: var(--cd-ink-muted);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   line-height: 1.35;
 }
 
@@ -836,7 +823,8 @@
   border: 1px solid currentColor;
   color: var(--cd-amber);
   background: var(--cd-amber-soft);
-  font-size: 8px;
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
   letter-spacing: 0.04em;
   vertical-align: 1px;
@@ -857,13 +845,13 @@
 }
 
 .cd2004-shell .wfp-option-title {
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
   font-weight: 700;
 }
 
 .cd2004-shell .wfp-option-desc {
   color: var(--cd-ink-muted);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 .cd2004-shell .wfp-option-list.wfp-option-list-inline {
@@ -881,12 +869,8 @@
   border-right: none;
 }
 
-/* Clinical disposition: the most consequential single choice on the
-   worksheet, so it gets real raised MEDITECH command-button weight - not a
-   thin radio row shared visually with routine checklist items. Each option
-   is its own beveled tile; a left-edge color band plus a bigger icon still
-   separates the completed-administration outcome from the three handoff
-   outcomes at a glance. */
+/* Clinical disposition is the most consequential choice in the worksheet.
+   A flat card and semantic edge keep each outcome easy to scan. */
 .cd2004-shell .wfp-disposition-list.wfp-option-list-inline {
   gap: 8px;
   border: none;
@@ -898,9 +882,7 @@
   padding: 11px 14px;
   border: 1px solid var(--cd-border-mid);
   border-left: 4px solid transparent;
-  box-shadow:
-    inset 1px 1px var(--cd-white),
-    inset -2px -1px var(--cd-border-mid);
+  border-radius: var(--tw-radius-ctl);
   background: var(--cd-face);
 }
 
@@ -914,12 +896,7 @@
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-selected {
   background: var(--cd-selection);
-  border-top-color: var(--cd-border-dark);
-  border-right-color: var(--cd-border-light);
-  border-bottom-color: var(--cd-border-light);
-  box-shadow:
-    inset 1px 1px var(--cd-border-mid),
-    inset -2px -1px var(--cd-white);
+  border-color: var(--tw-border-strong);
 }
 
 .cd2004-shell .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
@@ -945,7 +922,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--tw-fs-ws-base);
 }
 
 .cd2004-shell .wfp-option-icon svg {
@@ -958,7 +935,7 @@
   margin: 4px 0;
 }
 
-/* Native select groups — the period-correct control for single choice */
+/* Native select groups retain compact, platform-familiar interaction. */
 
 .cd2004-shell .wfp-select-group {
   display: flex;
@@ -968,30 +945,26 @@
 }
 
 .cd2004-shell .wfp-select-group select {
-  padding: 3px 4px;
+  min-height: 32px;
+  padding: 5px 8px;
   color: var(--cd-ink);
   background: var(--cd-white);
-  border: 1px solid;
-  border-color: var(--cd-border-mid) var(--cd-border-light) var(--cd-border-light)
-    var(--cd-border-mid);
-  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ctl);
   font: inherit;
-  font-size: 11px;
-  /* Same classic-Windows dropdown button as .wfp-field select - see the
-     comment there for why. */
+  font-size: var(--tw-fs-ws-dense);
   appearance: none;
   padding-right: 22px;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23101828'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, var(--cd-chrome-light) 0%, var(--cd-chrome) 100%);
-  background-repeat: no-repeat, no-repeat;
-  background-position: right 7px center, right 0 top 0;
-  background-size: 8px 6px, 18px 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0L8 0L4 6Z' fill='%23004952'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 8px 6px;
 }
 
 .cd2004-shell .wfp-select-group select:focus-visible {
-  outline: 2px solid var(--cd-focus);
-  outline-offset: -1px;
+  outline: 2px solid var(--tw-teal-800);
+  outline-offset: 2px;
+  box-shadow: var(--tw-focus-ring);
 }
 
 /* The description of the *chosen* option, not a tooltip: text like
@@ -1000,7 +973,7 @@
 .cd2004-shell .wfp-select-desc {
   padding-left: 1px;
   color: var(--cd-ink-muted);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   line-height: 1.35;
 }
 
@@ -1024,9 +997,9 @@
   color: var(--cd-ink);
   background: var(--cd-white);
   border: 1px solid var(--cd-border-mid);
-  box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
+  border-radius: var(--tw-radius-ws);
   font-family: var(--tw-font-sans);
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
   line-height: 1.5;
   white-space: pre-wrap;
 }
@@ -1066,7 +1039,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
 }
 
 /* Dense result grid — one row per analyte/item, replaces legacy chip grids */
@@ -1084,7 +1057,7 @@
   color: var(--cd-ink-muted);
   background: var(--cd-face);
   border-bottom: 1px solid var(--cd-border-mid);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -1098,7 +1071,7 @@
   min-height: 19px;
   padding: 1px 7px;
   border-bottom: 1px solid var(--cd-chrome);
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
 }
 
 .cd2004-shell .wfp-grid-row:last-child {
@@ -1157,15 +1130,17 @@
   padding: 2px 6px;
   color: var(--cd-ink);
   background: var(--cd-white);
-  border: 2px outset var(--cd-face);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
 .cd2004-shell .wfp-result-cycle b {
-  font-family: "Courier New", Consolas, monospace;
-  font-size: 10px;
+  font-family: var(--tw-font-mono);
+  font-size: var(--tw-fs-ws-meta);
+  font-variant-numeric: var(--tw-numeric-tabular);
   letter-spacing: 0.03em;
 }
 
@@ -1178,7 +1153,7 @@
   color: #285538;
   background: var(--cd-white);
   border-color: #66806a;
-  box-shadow: inset 3px 0 var(--cd-green);
+  border-left: 3px solid var(--cd-green);
 }
 
 .cd2004-shell .wfp-result-cycle.is-neg:hover,
@@ -1211,7 +1186,7 @@
   color: var(--cd-ink-muted);
   background: var(--cd-face);
   border-bottom: 1px solid var(--cd-border-mid);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 .cd2004-shell .wfp-results-sticky-status {
@@ -1226,7 +1201,7 @@
 .cd2004-shell .wfp-field-action {
   align-self: flex-start;
   margin-top: 2px;
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 /* An analyte the physical cup does not carry. The row stays on the report -
@@ -1237,14 +1212,15 @@
 }
 
 .cd2004-shell .wfp-grid-note {
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   font-style: italic;
   color: var(--cd-ink-muted);
 }
 
 .cd2004-shell .wfp-result-flag {
-  font-family: "Courier New", Consolas, monospace;
-  font-size: 11px;
+  font-family: var(--tw-font-mono);
+  font-size: var(--tw-fs-ws-meta);
+  font-variant-numeric: var(--tw-numeric-tabular);
   font-weight: 700;
   text-align: center;
 }
@@ -1255,7 +1231,7 @@
 
 .cd2004-shell .wfp-result-status {
   color: var(--cd-ink-muted);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 /* Dose-history MAR grid: Date | Medication | Route | Site. Read-only. */
@@ -1275,12 +1251,13 @@
   background: var(--cd-chrome-light);
   border: 1px solid var(--cd-border-mid);
   border-left: 4px solid var(--cd-amber);
-  font-size: 10px;
+  border-radius: var(--tw-radius-ws);
+  font-size: var(--tw-fs-ws-meta);
 }
 
 .cd2004-shell .wfp-report-status strong {
   flex: none;
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
   letter-spacing: 0.06em;
 }
 
@@ -1294,7 +1271,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 1px 8px;
   margin: 0;
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 .cd2004-shell .wfp-report-meta dt {
@@ -1306,7 +1283,7 @@
 
 .cd2004-shell .wfp-report-meta dd {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
 }
 
 .cd2004-shell .wfp-grid-cell-actions {
@@ -1320,7 +1297,8 @@
   color: var(--cd-ink-muted);
   background: var(--cd-white);
   border: 1px solid var(--cd-border-mid);
-  font-size: 9px;
+  border-radius: var(--tw-radius-tight);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
   text-transform: uppercase;
   cursor: pointer;
@@ -1333,7 +1311,6 @@
 .cd2004-shell .wfp-grid-toggle.is-selected {
   color: var(--cd-ink);
   border-color: var(--cd-border-dark);
-  box-shadow: inset 1px 1px rgb(0 0 0 / 12%);
 }
 
 .cd2004-shell .wfp-grid-toggle.is-selected.is-neg {
@@ -1362,7 +1339,7 @@
 
 .cd2004-shell .wfp-group-action {
   margin-left: 10px;
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-label);
   text-transform: uppercase;
 }
 
@@ -1372,16 +1349,17 @@
 .cd2004-shell .wfp-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--cd-border-mid);
+  border-radius: var(--tw-radius-ws);
 }
 
 .cd2004-shell .wfp-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 .cd2004-shell .wfp-table th {
-  padding: 3px 5px;
+  padding: 6px 8px;
   color: var(--cd-ink-muted);
   background: var(--cd-face);
   border-right: 1px solid var(--cd-border-mid);
@@ -1394,7 +1372,7 @@
 }
 
 .cd2004-shell .wfp-table td {
-  padding: 3px 5px;
+  padding: 6px 8px;
   border-right: 1px solid var(--cd-chrome);
   border-bottom: 1px solid var(--cd-chrome);
   vertical-align: top;
@@ -1434,13 +1412,13 @@
   align-items: baseline;
   gap: 8px;
   width: 100%;
-  padding: 4px 7px;
+  padding: 6px 8px;
   color: var(--cd-ink);
   background: var(--cd-paper);
   border: none;
   border-bottom: 1px solid var(--cd-chrome);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
   text-align: left;
   cursor: pointer;
 }
@@ -1458,7 +1436,7 @@
   min-width: 82px;
   color: var(--cd-red);
   font-weight: 700;
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -1480,8 +1458,9 @@
   color: var(--cd-ink);
   background: var(--cd-white);
   border: 1px solid var(--cd-border-dark);
-  font-family: "Arial Narrow", var(--tw-font-sans);
-  font-size: 9px;
+  border-radius: var(--tw-radius-tight);
+  font-family: var(--tw-font-sans);
+  font-size: var(--tw-fs-ws-meta);
   line-height: 15px;
   white-space: nowrap;
 }
@@ -1501,7 +1480,7 @@
 .cd2004-shell .wfp-session-default,
 .cd2004-shell .wfp-calculated-value {
   color: var(--cd-ink-muted);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   line-height: 1.25;
 }
 
@@ -1512,9 +1491,10 @@
 
 .cd2004-shell .wfp-operator-guidance {
   border: 1px solid var(--cd-border-mid);
-  border-left: 4px solid var(--cd-focus);
+  border-left: 4px solid var(--tw-teal-600);
   background: var(--cd-white);
-  box-shadow: inset 1px 1px var(--cd-border-light);
+  border-radius: var(--tw-radius-ws);
+  overflow: hidden;
 }
 
 .cd2004-shell .wfp-operator-guidance-head {
@@ -1525,11 +1505,11 @@
   color: var(--cd-ink);
   background: var(--cd-face);
   border-bottom: 1px solid var(--cd-border-mid);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 .cd2004-shell .wfp-operator-guidance-head strong {
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-dense);
   letter-spacing: 0.035em;
   text-transform: uppercase;
 }
@@ -1537,8 +1517,8 @@
 .cd2004-shell .wfp-operator-guidance-head small {
   margin-left: auto;
   color: var(--cd-ink-muted);
-  font-family: "Courier New", Consolas, monospace;
-  font-size: 9px;
+  font-family: var(--tw-font-mono);
+  font-size: var(--tw-fs-ws-label);
 }
 
 .cd2004-shell .wfp-operator-guidance-list {
@@ -1552,7 +1532,7 @@
   gap: 7px;
   padding: 3px 7px;
   border-bottom: 1px solid var(--cd-chrome);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   line-height: 1.35;
 }
 
@@ -1598,7 +1578,7 @@
   border: 0;
   border-top: 1px solid var(--cd-border-mid);
   font: inherit;
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   text-align: left;
   cursor: pointer;
 }
@@ -1614,7 +1594,7 @@
 .cd2004-shell .wfp-reference summary {
   padding: 3px 7px;
   color: var(--cd-ink-muted);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   cursor: pointer;
   list-style: none;
 }
@@ -1657,7 +1637,7 @@
   gap: 4px;
   align-items: baseline;
   color: var(--cd-ink-muted);
-  font-size: 11px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 /* No `::after` colon here. This element is the whole caption row - text, the
@@ -1683,7 +1663,7 @@
   display: block;
   margin-bottom: 4px;
   color: var(--cd-ink-muted);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1703,7 +1683,7 @@
   display: block;
   margin-bottom: 4px;
   color: var(--cd-ink-muted);
-  font-size: 8px;
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1725,6 +1705,7 @@
   padding: 9px 6px 7px;
   background: var(--cd-paper, #fff);
   border: 1px solid var(--cd-border-mid);
+  border-radius: var(--tw-radius-ctl);
   cursor: pointer;
   text-align: center;
 }
@@ -1751,7 +1732,7 @@
 }
 
 .cd2004-shell .wfp-site-tile-title {
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
   line-height: 1.15;
 }
@@ -1761,7 +1742,8 @@
   background: var(--cd-info-soft);
   border: 1px solid var(--cd-info);
   padding: 0 3px;
-  font-size: 8px;
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -1776,7 +1758,8 @@
   color: var(--tw-teal-800);
   background: var(--cd-info-soft);
   border: 1px solid var(--cd-info);
-  font-size: 10px;
+  border-radius: var(--tw-radius-ws);
+  font-size: var(--tw-fs-ws-meta);
 }
 
 .cd2004-shell .wfp-site-suggestion .cd2004-link-button {
@@ -1814,7 +1797,7 @@
 
 .cd2004-shell .wfp-ndc-status,
 .cd2004-shell .wfp-ndc-source {
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   line-height: 1.25;
 }
 
@@ -1834,17 +1817,15 @@
   color: var(--cd-ink-muted);
 }
 
-/* Injection is the active medication-administration transaction, not a page
-   of cards.  Compress its open worksheet into a Client/Server register while
-   retaining the exact evaluator-driven required states and all disclosure
-   detail. */
+/* Injection remains the densest workflow. It retains the same information and
+   scroll ownership while using readable workstation-tier type. */
 @media (min-width: 701px) {
   .cd2004-shell [data-workflow="administer"] .wfp-panel {
     gap: 3px;
     padding: 3px;
-    color: var(--cd-ink);
-    background: #f4f4fb;
-    font-size: 10px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    font-size: var(--tw-fs-ws-dense);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-transaction-chrome,
@@ -1853,7 +1834,7 @@
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-transaction-chrome {
-    background: #f4f4fb;
+    background: var(--tw-surface-panel);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-summary-bar {
@@ -1869,17 +1850,17 @@
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-summary-bar strong {
-    font-size: 10px;
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-injection-context .wfp-status-flag {
     padding: 1px 4px;
-    font-size: 8px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-summary-print-avs {
     padding: 1px 5px;
-    font-size: 9px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-summary-print-avs svg {
@@ -1898,11 +1879,7 @@
     flex: 0 1 auto;
     min-height: 20px;
     padding: 2px 12px;
-    font-size: 9px;
-  }
-
-  .cd2004-shell [data-workflow="administer"] .wfp-tab[aria-selected="true"] {
-    top: 1px;
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-tabpanel {
@@ -1971,7 +1948,7 @@
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-site-tile-title {
-    font-size: 9px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-section-body > .wfp-field > .wfp-field-hint,
@@ -1986,16 +1963,16 @@
 
   .cd2004-shell [data-workflow="administer"] .wfp-field label,
   .cd2004-shell [data-workflow="administer"] .wfp-choice-caption {
-    font-size: 9px;
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-field input,
   .cd2004-shell [data-workflow="administer"] .wfp-field select,
   .cd2004-shell [data-workflow="administer"] .wfp-field textarea,
   .cd2004-shell [data-workflow="administer"] .wfp-select-group select {
-    min-height: 20px;
-    padding: 2px 4px;
-    font-size: 10px;
+    min-height: 28px;
+    padding: 4px 6px;
+    font-size: var(--tw-fs-ws-dense);
   }
 
   /* The shorthand `padding` above resets padding-right too, which would
@@ -2010,16 +1987,16 @@
     grid-template-columns: 14px minmax(0, 1fr);
     gap: 5px;
     padding: 2px 5px;
-    font-size: 9px;
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-option-title {
-    font-size: 9px;
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-option-desc,
   .cd2004-shell [data-workflow="administer"] .wfp-field-hint {
-    font-size: 8px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance {
@@ -2031,12 +2008,12 @@
     min-height: 18px;
     gap: 5px;
     padding: 2px 5px;
-    font-size: 8px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head strong {
     flex: 0 0 auto;
-    font-size: 8px;
+    font-size: var(--tw-fs-ws-meta);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-head > span {
@@ -2049,7 +2026,7 @@
     grid-template-columns: 92px minmax(0, 1fr);
     gap: 4px;
     padding: 2px 5px;
-    font-size: 8px;
+    font-size: var(--tw-fs-ws-label);
     line-height: 1.2;
   }
 
@@ -2059,18 +2036,18 @@
 
   .cd2004-shell [data-workflow="administer"] .wfp-operator-guidance-action {
     padding: 2px 5px;
-    font-size: 8px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-reference summary {
     padding: 2px 5px;
-    font-size: 8px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell [data-workflow="administer"] .wfp-issue-row {
     min-height: 18px;
     padding: 2px 5px;
-    font-size: 9px;
+    font-size: var(--tw-fs-ws-meta);
   }
 }
 
@@ -2102,11 +2079,8 @@
   }
 }
 
-/* ── Needle & technique ─────────────────────────────────────────────────────
-   MEDITECH MAGIC readout conventions, reusing the shell's existing devices:
-   Win9x inset bevels for chrome, "Courier New" for every clinical value, and
-   the same --cd-amber alarm treatment the operator-guidance rows already use.
-   No new colour literals, no radii, no gradients, no transitions. */
+/* Needle and technique keeps precise clinical values while sharing the flat
+   controls, token typography and status treatments of the surrounding form. */
 
 .cd2004-shell .wfp-site-restriction {
   display: grid;
@@ -2119,7 +2093,8 @@
   background: var(--cd-amber-soft);
   border: 1px solid var(--cd-amber);
   border-left: 4px solid var(--cd-amber);
-  font-size: 10px;
+  border-radius: var(--tw-radius-ws);
+  font-size: var(--tw-fs-ws-meta);
   line-height: 1.35;
 }
 
@@ -2138,7 +2113,7 @@
 
 .cd2004-shell .wfp-needle-ref {
   color: var(--cd-ink-muted);
-  font: 9px "Courier New", Consolas, monospace;
+  font: var(--tw-fs-ws-label)/var(--tw-lh-ws-label) var(--tw-font-mono);
   letter-spacing: 0.06em;
   text-transform: none;
 }
@@ -2158,7 +2133,7 @@
 
 .cd2004-shell .wfp-needle-input-caption {
   color: var(--cd-ink-muted);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -2171,8 +2146,7 @@
   gap: 4px;
 }
 
-/* Bracket toggles rather than a modern segmented control: the [X] / [ ] glyph
-   is the period-correct affordance and stays legible in mono print. */
+/* Compact segmented choices keep weight, needle length and technique together. */
 .cd2004-shell .wfp-needle-band-option {
   display: inline-flex;
   align-items: center;
@@ -2180,18 +2154,14 @@
   padding: 2px 6px;
   background: var(--cd-face);
   border: 1px solid var(--cd-border-mid);
-  box-shadow:
-    inset 1px 1px var(--cd-white),
-    inset -2px -1px var(--cd-border-mid);
-  font-size: 10px;
+  border-radius: var(--tw-radius-ws);
+  font-size: var(--tw-fs-ws-meta);
   cursor: pointer;
 }
 
 .cd2004-shell .wfp-needle-band-option.is-selected {
   background: var(--cd-selection);
-  box-shadow:
-    inset 1px 1px var(--cd-border-mid),
-    inset -2px -1px var(--cd-white);
+  border-color: var(--tw-border-strong);
 }
 
 .cd2004-shell .wfp-needle-band-option input {
@@ -2205,7 +2175,8 @@
 .cd2004-shell .wfp-needle-band-mark {
   min-width: 12px;
   color: var(--cd-ink);
-  font: 10px "Courier New", Consolas, monospace;
+  border-radius: var(--tw-radius-tight);
+  font: var(--tw-fs-ws-meta)/1 var(--tw-font-mono);
   text-align: center;
   background: var(--cd-white);
   border: 1px solid var(--cd-border-dark);
@@ -2222,8 +2193,9 @@
   color: var(--cd-ink);
   background: var(--cd-white);
   border: 1px solid var(--cd-border-dark);
-  box-shadow: inset 1px 1px rgb(0 0 0 / 10%);
-  font: 11px "Courier New", Consolas, monospace;
+  border-radius: var(--tw-radius-ctl);
+  font: var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-mono);
+  font-variant-numeric: var(--tw-numeric-tabular);
   text-align: right;
 }
 
@@ -2235,7 +2207,7 @@
   padding: 8px;
   background: var(--cd-paper);
   border: 1px solid var(--cd-border-dark);
-  box-shadow: inset 1px 1px rgb(0 0 0 / 8%);
+  border-radius: var(--tw-radius-ws);
 }
 
 .cd2004-shell .wfp-needle-readouts {
@@ -2253,7 +2225,8 @@
   grid-template-columns: minmax(0, auto) minmax(12px, 1fr) minmax(0, auto);
   gap: 4px;
   align-items: baseline;
-  font: 11px "Courier New", Consolas, monospace;
+  font: var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-mono);
+  font-variant-numeric: var(--tw-numeric-tabular);
 }
 
 .cd2004-shell .wfp-needle-readout-label {
@@ -2280,6 +2253,7 @@
   height: auto;
   background: var(--cd-white);
   border: 1px solid var(--cd-border-dark);
+  border-radius: var(--tw-radius-ws);
 }
 
 /* Flat bands with hard edges. The subcutaneous layer is hatched rather than
@@ -2304,7 +2278,7 @@
 
 .cd2004-shell .wfp-needle-layer-label {
   fill: var(--cd-ink-muted);
-  font: 700 8px "Courier New", Consolas, monospace;
+  font: 700 var(--tw-fs-ws-label)/1 var(--tw-font-sans);
   letter-spacing: 0.08em;
 }
 
@@ -2316,7 +2290,7 @@
 
 .cd2004-shell .wfp-needle-depth-label {
   fill: var(--cd-red);
-  font: 700 9px "Courier New", Consolas, monospace;
+  font: 700 var(--tw-fs-ws-label)/1 var(--tw-font-sans);
 }
 
 .cd2004-shell .wfp-needle-section .wfp-operator-guidance-row {
@@ -2355,7 +2329,7 @@
   display: inline-flex;
   gap: 2px;
   margin-left: auto;
-  font: 700 9px/1 "Segoe UI", Arial, sans-serif;
+  font: 700 var(--tw-fs-ws-label)/1 var(--tw-font-sans);
   letter-spacing: .03em;
 }
 
@@ -2363,6 +2337,7 @@
 .wfp-register-change,
 .wfp-register-state {
   border: 1px solid #7d8a86;
+  border-radius: var(--tw-radius-pill);
   background: #f4f1e8;
   color: #33413e;
   padding: 2px 4px;
@@ -2391,17 +2366,17 @@
 .wfp-field-action { display: flex; flex-direction: column; align-self: end; gap: 3px; padding-bottom: 2px; }
 .wfp-field-action small { max-width: 250px; color: #56615f; }
 
-.wfp-custom-device-register { border: 1px solid #80908c; background: #f5f7f3; padding: 7px; margin: 7px 0; }
-.wfp-panel-sequence { list-style: none; padding: 0; margin: 5px 0; border: 1px solid #a4aeab; background: #fff; }
+.wfp-custom-device-register { border: 1px solid #80908c; border-radius: var(--tw-radius-ws); background: #f5f7f3; padding: 7px; margin: 7px 0; }
+.wfp-panel-sequence { list-style: none; padding: 0; margin: 5px 0; border: 1px solid #a4aeab; border-radius: var(--tw-radius-ws); background: #fff; overflow: hidden; }
 .wfp-panel-sequence li { display: grid; grid-template-columns: 28px minmax(190px, 1fr) 30px 30px auto; align-items: center; gap: 3px; padding: 3px; border-bottom: 1px solid #d4d9d7; }
 .wfp-panel-sequence li:last-child { border-bottom: 0; }
-.wfp-sequence-number { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border: 1px solid #788783; background: #edf1ed; font: 700 10px/1 monospace; }
+.wfp-sequence-number { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border: 1px solid #788783; border-radius: var(--tw-radius-tight); background: #edf1ed; font: 700 var(--tw-fs-ws-label)/1 var(--tw-font-mono); }
 
 .wfp-device-ledger .wfp-grid-row { min-height: 33px; }
 .wfp-grid-empty { padding: 14px; color: #5d6865; font-style: italic; }
 
-.wfp-exception-register { margin: 7px 0; border: 1px solid #6e7d79; background: #fff; }
-.wfp-exception-head { display: flex; justify-content: space-between; padding: 5px 7px; background: #dfe7df; border-bottom: 1px solid #6e7d79; font-size: 10px; letter-spacing: .04em; }
+.wfp-exception-register { margin: 7px 0; border: 1px solid #6e7d79; border-radius: var(--tw-radius-ws); background: #fff; overflow: hidden; }
+.wfp-exception-head { display: flex; justify-content: space-between; padding: 5px 7px; background: #dfe7df; border-bottom: 1px solid #6e7d79; font-size: var(--tw-fs-ws-meta); letter-spacing: .04em; }
 .wfp-exception-line { width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 6px; text-align: left; align-items: center; padding: 5px 7px; border: 0; border-bottom: 1px solid #ccd2d0; background: #fff7dc; color: #2f3025; }
 .wfp-exception-line:hover, .wfp-exception-line:focus { background: #e9f0e7; outline: 2px solid #4f6f68; outline-offset: -2px; }
 
@@ -2415,15 +2390,15 @@
   color: var(--tw-teal-900);
   background: var(--tw-mint-50);
   border: 1px solid var(--tw-teal-300);
-  box-shadow: inset 1px 1px #fff, inset -1px -1px var(--tw-teal-200);
-  font: 11px/1.25 var(--tw-font-sans);
+  border-radius: var(--tw-radius-ws);
+  font: var(--tw-fs-ws-dense)/var(--tw-lh-ws-dense) var(--tw-font-sans);
 }
 
 .cd2004-shell .wfp-prerequisite-line > strong {
   padding-right: 7px;
   color: #7d4e00;
   border-right: 1px solid var(--tw-teal-300);
-  font: 700 9px/1.2 "Arial Narrow", "MS Sans Serif", sans-serif;
+  font: 700 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
   letter-spacing: 0.07em;
 }
 
@@ -2431,6 +2406,8 @@
   margin: 4px 0 6px;
   background: var(--cd-paper);
   border: 1px solid var(--cd-border-dark);
+  border-radius: var(--tw-radius-ws);
+  overflow: hidden;
 }
 
 .cd2004-shell .wfp-report-preview > summary {
@@ -2444,7 +2421,7 @@
   border-bottom: 1px solid transparent;
   cursor: default;
   list-style: none;
-  font: 700 10px/1.2 "Arial Narrow", "MS Sans Serif", sans-serif;
+  font: 700 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
   letter-spacing: 0.05em;
 }
 
@@ -2453,9 +2430,9 @@
 }
 
 .cd2004-shell .wfp-report-preview > summary::before {
-  content: "[+]";
+  content: "+";
   color: var(--tw-teal-600);
-  font-family: "Courier New", monospace;
+  font-family: var(--tw-font-sans);
 }
 
 .cd2004-shell .wfp-report-preview[open] > summary {
@@ -2463,13 +2440,13 @@
 }
 
 .cd2004-shell .wfp-report-preview[open] > summary::before {
-  content: "[−]";
+  content: "−";
 }
 
 .cd2004-shell .wfp-report-preview > summary strong {
   margin-left: auto;
   color: var(--tw-teal-600);
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-label);
 }
 
 @media (max-width: 700px) {
@@ -2482,18 +2459,18 @@
     justify-self: start;
   }
 }
-.wfp-exception-line > span:first-child { font: 700 9px/1 monospace; color: #8a5211; }
-.wfp-exception-line > span:last-child { font-size: 9px; }
+.wfp-exception-line > span:first-child { font: 700 var(--tw-fs-ws-label)/1 var(--tw-font-mono); color: #8a5211; }
+.wfp-exception-line > span:last-child { font-size: var(--tw-fs-ws-label); }
 .wfp-exception-clear { padding: 7px; color: #4f6458; }
 
-.wfp-transaction { border: 1px solid #798783; margin: 5px 0; }
+.wfp-transaction { border: 1px solid #798783; border-radius: var(--tw-radius-ws); margin: 5px 0; overflow: hidden; }
 .wfp-transaction-line { width: 100%; display: grid; grid-template-columns: 20px 1fr auto; gap: 5px; text-align: left; padding: 5px 7px; background: #e7ece7; border: 0; color: #172420; }
-.wfp-transaction-state { font: 700 9px/1.2 monospace; color: #68716f; }
+.wfp-transaction-state { font: 700 var(--tw-fs-ws-label)/1.2 var(--tw-font-mono); color: #68716f; }
 .wfp-transaction-state.is-documented { color: #315d43; }
 .wfp-transaction-body { padding: 7px; border-top: 1px solid #9aa5a2; background: #f9faf7; }
-.wfp-output-option { border: 1px solid #9ca7a3; background: #eef2ed; padding: 6px; margin-bottom: 7px; }
-.wfp-invalidation-receipt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 7px; padding: 4px 7px; border: 1px solid #9a7426; border-top: 0; background: #fff0c8; color: #4e3b15; font-size: 10px; }
-.wfp-invalidation-receipt strong { font: 700 9px/1 monospace; letter-spacing: .04em; }
+.wfp-output-option { border: 1px solid #9ca7a3; border-radius: var(--tw-radius-ws); background: #eef2ed; padding: 6px; margin-bottom: 7px; }
+.wfp-invalidation-receipt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 7px; padding: 4px 7px; border: 1px solid #9a7426; border-radius: var(--tw-radius-ws); background: #fff0c8; color: #4e3b15; font-size: var(--tw-fs-ws-meta); }
+.wfp-invalidation-receipt strong { font: 700 var(--tw-fs-ws-label)/1 var(--tw-font-mono); letter-spacing: .04em; }
 
 /*
  * The active field keeps a compact workstation marker without a persistent
@@ -2501,9 +2478,8 @@
  * low-vision use.
  */
 .cd2004-shell .wfp-field:focus-within {
-  box-shadow: inset 3px 0 var(--tw-teal-600);
-  outline: 1px solid #8d8252;
-  outline-offset: 1px;
+  outline: 2px solid var(--tw-teal-800);
+  outline-offset: 2px;
 }
 
 .cd2004-shell .wfp-field:focus-within > .wfp-field-label {
@@ -2532,20 +2508,21 @@
   min-width: 24px;
   min-height: 23px;
   padding: 0 4px;
-  color: #101010;
-  background: linear-gradient(#f7f7f7, #d4d0c8);
-  border: 2px outset #d4d0c8;
-  border-radius: 0;
-  font: 700 13px/1 Tahoma, Arial, sans-serif;
+  color: var(--tw-teal-800);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ctl);
+  font: 700 var(--tw-fs-ws-dense)/1 var(--tw-font-sans);
 }
 
 .cd2004-shell .wfp-field-lookup-button:active {
-  border-style: inset;
+  background: var(--tw-mint-150);
 }
 
 .cd2004-shell .wfp-field-lookup-button:focus-visible {
-  outline: 1px dotted #101010;
-  outline-offset: -4px;
+  outline: 2px solid var(--tw-teal-800);
+  outline-offset: 2px;
+  box-shadow: var(--tw-focus-ring);
 }
 
 /* Tabs double as the transaction ledger: one navigation surface, with the
@@ -2561,7 +2538,7 @@
 
 .cd2004-shell .wfp-ledger-sequence {
   color: #68716f;
-  font: 700 8px/1 Consolas, monospace;
+  font: 700 var(--tw-fs-ws-label)/1 var(--tw-font-mono);
 }
 
 .cd2004-shell .wfp-ledger-label {
@@ -2575,7 +2552,8 @@
   border: 1px solid #8b9693;
   background: #eff1ec;
   color: #596360;
-  font: 700 8px/1.15 Consolas, monospace;
+  border-radius: var(--tw-radius-pill);
+  font: 700 var(--tw-fs-ws-label)/1.15 var(--tw-font-sans);
   text-align: center;
 }
 
@@ -2611,7 +2589,7 @@
   }
 
   .cd2004-shell .wfp-ledger-label {
-    font-size: 8px;
+    font-size: var(--tw-fs-ws-label);
   }
 
   .cd2004-shell .wfp-ledger-state {
@@ -2637,6 +2615,8 @@
   background: var(--cd-white);
   border: 1px solid var(--cd-border-dark);
   border-left: 6px solid var(--cd-border-mid);
+  border-radius: var(--tw-radius-ws);
+  overflow: hidden;
 }
 
 .cd2004-shell .wfp-schedule-register.is-ok { border-left-color: var(--cd-green); }
@@ -2655,7 +2635,7 @@
 }
 
 .cd2004-shell .wfp-schedule-head > strong {
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   letter-spacing: 0.04em;
 }
 
@@ -2671,7 +2651,8 @@
   color: var(--tw-teal-900);
   background: var(--cd-face);
   border: 1px solid #fff;
-  font-size: 8px;
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
 }
 
@@ -2681,7 +2662,8 @@
   padding: 1px 6px;
   color: #fff;
   border: 1px solid rgb(0 0 0 / 35%);
-  font-size: 9px;
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -2709,7 +2691,7 @@
 .cd2004-shell .wfp-schedule-row > dd {
   margin: 0;
   padding: 3px 7px;
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
 .cd2004-shell .wfp-schedule-row > dt {
@@ -2720,9 +2702,10 @@
 }
 
 .cd2004-shell .wfp-schedule-value {
-  font-family: "Courier New", monospace;
-  font-size: 11px;
+  font-family: var(--tw-font-mono);
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
+  font-variant-numeric: var(--tw-numeric-tabular);
 }
 
 .cd2004-shell .wfp-schedule-note {
@@ -2735,7 +2718,8 @@
   margin-left: 5px;
   padding: 0 3px;
   border: 1px solid;
-  font-size: 9px;
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
 }
 
@@ -2772,10 +2756,10 @@
   gap: 6px;
   padding: 3px 7px;
   border-top: 1px solid var(--tw-mint-200);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
 }
 
-.cd2004-shell .wfp-schedule-band > strong { flex: 0 0 auto; font-size: 10px; }
+.cd2004-shell .wfp-schedule-band > strong { flex: 0 0 auto; font-size: var(--tw-fs-ws-meta); }
 .cd2004-shell .wfp-schedule-band > span { min-width: 0; }
 
 .cd2004-shell .wfp-schedule-band.is-ok { color: #14532b; background: var(--cd-green-soft); }
@@ -2811,19 +2795,21 @@
   padding: 3px 7px;
   color: #fff;
   border-bottom: 1px solid rgb(0 0 0 / 30%);
+  border-radius: var(--tw-radius-ws) var(--tw-radius-ws) 0 0;
 }
 
 .cd2004-shell .cd2004-readiness-verdict > strong {
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   letter-spacing: 0.03em;
 }
 
 .cd2004-shell .cd2004-readiness-verdict > span {
   margin-left: auto;
-  font-size: 9px;
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
 }
 
 .cd2004-shell .cd2004-readiness-verdict.is-blocked { background: var(--cd-red); }
 .cd2004-shell .cd2004-readiness-verdict.is-review { background: var(--cd-amber); }
 .cd2004-shell .cd2004-readiness-verdict.is-clear { background: var(--cd-green); }
+}

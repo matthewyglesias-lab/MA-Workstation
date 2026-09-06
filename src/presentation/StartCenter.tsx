@@ -1,48 +1,19 @@
-import { NOTES, SHELL } from "./vocabulary";
+import { NOTES, RECORD, SHELL, WORKLIST_EMPTY } from "./vocabulary";
 import { useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
 import {
-  WORKFLOW_LABELS,
   type ClinicalTone,
   type InjectionRecordRow,
-  type WorkflowId,
-  type WorkflowSummary,
   type WorkQueueItem,
 } from "./types";
-
-// The module tiles a real EHR home screen opens work from - everything a
-// shift touches except Start Center itself. Order follows the same
-// clinical-first, administrative-last sequence as the workflow nav strip.
-const LAUNCHER_WORKFLOWS: readonly WorkflowId[] = [
-  "administer",
-  "uds",
-  "samples",
-  "forms",
-  "reference",
-  "log",
-  "tms",
-];
-
-const LAUNCHER_HINT: Partial<Record<WorkflowId, string>> = {
-  administer: "Start or resume a medication administration record.",
-  uds: "Document a point-of-care urine drug screen.",
-  samples: "Log dispensed sample packages.",
-  forms: "Build a letter, form, or handoff document.",
-  reference: "Look up clinical and formulary reference material.",
-  log: "Review and close out today's local activity log.",
-  tms: "Open the future / TMS workspace.",
-};
 
 type WorklistFilter = "all" | "review" | "today" | "drafts";
 type WorklistSource = "review" | "today" | "drafts";
 
 export interface StartCenterProps {
-  /** Retained for callers that also summarize the module rail. */
-  summaries: Partial<Record<WorkflowId, WorkflowSummary>>;
   needsReview: WorkQueueItem[];
   todayQueue: WorkQueueItem[];
   injectionRecords: InjectionRecordRow[];
-  onWorkflowOpen: (workflow: WorkflowId) => void;
   onQueueItemOpen?: (item: WorkQueueItem) => void;
   onRecordOpen?: (record: InjectionRecordRow) => void;
   /**
@@ -138,25 +109,23 @@ function rowMatchesFilter(row: WorklistRow, filter: WorklistFilter) {
 }
 
 function worklistEmptyText(filter: WorklistFilter) {
-  if (filter === "review") return "No local work is awaiting review.";
-  if (filter === "today") return "No other local work is recorded for today.";
-  if (filter === "drafts") return "No saved local injection drafts are available.";
-  return "No local work or saved drafts are available.";
+  if (filter === "review") return WORKLIST_EMPTY.review;
+  if (filter === "today") return WORKLIST_EMPTY.today;
+  if (filter === "drafts") return WORKLIST_EMPTY.drafts;
+  return WORKLIST_EMPTY.all;
 }
 
 function worklistEmptyHint(filter: WorklistFilter) {
-  if (filter === "drafts") return "Use Start new injection to create an editable local record.";
-  if (filter === "review") return "Items appear here only when a saved local record needs review.";
-  if (filter === "today") return "Completed history remains available from Record List (F11).";
-  return "Start a new injection, or open Record List (F11) for local history.";
+  if (filter === "drafts") return WORKLIST_EMPTY.draftsHint;
+  if (filter === "review") return WORKLIST_EMPTY.reviewHint;
+  if (filter === "today") return WORKLIST_EMPTY.todayHint;
+  return WORKLIST_EMPTY.allHint;
 }
 
 export function StartCenter({
-  summaries,
   needsReview,
   todayQueue,
   injectionRecords,
-  onWorkflowOpen,
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
@@ -192,45 +161,10 @@ export function StartCenter({
 
   return (
     <section class="cd2004-start-center" aria-labelledby="currentWorklistTitle">
-      <nav class="cd2004-launcher" aria-label="Start a clinical workflow">
-        <span class="cd2004-launcher-head">Clinical Modules</span>
-        <div class="cd2004-launcher-grid">
-          {LAUNCHER_WORKFLOWS.map((workflow) => {
-            const summary = summaries[workflow];
-            const count = summary?.count ?? 0;
-            return (
-              <button
-                key={workflow}
-                type="button"
-                class={`cd2004-launcher-tile ${summary?.state ? `is-${summary.state}` : ""}`}
-                title={LAUNCHER_HINT[workflow]}
-                aria-label={
-                  summary?.detail
-                    ? `${WORKFLOW_LABELS[workflow]} — ${summary.detail}`
-                    : WORKFLOW_LABELS[workflow]
-                }
-                onClick={() => onWorkflowOpen(workflow)}
-              >
-                <span class="cd2004-launcher-icon" aria-hidden="true">
-                  <DesktopIcon name={workflow} />
-                </span>
-                <span class="cd2004-launcher-label">{WORKFLOW_LABELS[workflow]}</span>
-                {count > 0 && (
-                  <span class="cd2004-launcher-badge" aria-label={`${count} items`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
       <header class="cd2004-worklist-header">
         <div>
-          <h1 id="currentWorklistTitle" aria-label={NOTES.openNotes}>
-            {SHELL.localOnlyDetail}
-          </h1>
+          <h1 id="currentWorklistTitle">{NOTES.openNotes}</h1>
+          <p>{SHELL.localOnlyDetail}</p>
         </div>
         <button
           type="button"
@@ -238,13 +172,13 @@ export function StartCenter({
           disabled={!onStartNewInjection}
           title={
             onStartNewInjection
-              ? "Start a clean local injection record."
-              : "Starting a new local injection record is not available in this view."
+              ? "Start a clean injection note."
+              : "Starting an injection note is unavailable in this view."
           }
           onClick={() => onStartNewInjection?.()}
         >
           <DesktopIcon name="new" />
-          Start new injection
+          {RECORD.startNewInjection}
         </button>
       </header>
 

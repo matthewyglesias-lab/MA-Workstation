@@ -168,7 +168,7 @@ test.describe('Injection decision support', () => {
     // list. This exercises persisted next-dose provenance rather than merely
     // retaining component state in the same mounted panel.
     await actions.locator('[data-injection-new]').click();
-    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('button', { name: /Resume draft for QA, Next Due/ }).click();
 
     const resumedPanel = page.locator('.wfp-panel');

@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { NOTES, RECORD } from "./vocabulary";
+import {
+  filteredNoteCount,
+  noteCount,
+  NOTES,
+  OPEN_NOTES,
+  RECORD,
+} from "./vocabulary";
 import {
   InjectionRecordRepository,
   type InjectionRecord,
@@ -215,7 +221,7 @@ export function RecordsWindow({
           <button
             type="button"
             class="records-drawer-close"
-            aria-label="Close Local EMR / Record List"
+            aria-label={OPEN_NOTES.close}
             onClick={onClose}
           >
             X
@@ -224,7 +230,7 @@ export function RecordsWindow({
 
         <div class="records-drawer-search">
           <label class="records-sr-only" for="recordsDrawerSearch">
-            Search local injection records
+            {OPEN_NOTES.searchInjection}
           </label>
           <input
             id="recordsDrawerSearch"
@@ -242,7 +248,11 @@ export function RecordsWindow({
           </span>
         </div>
 
-        <div class="records-drawer-filters" role="group" aria-label="Filter local injection records">
+        <div
+          class="records-drawer-filters"
+          role="group"
+          aria-label={OPEN_NOTES.filterInjection}
+        >
           {FILTERS.map(([key, label]) => (
             <button
               key={key}
@@ -259,8 +269,8 @@ export function RecordsWindow({
 
         <div class="records-drawer-status" id="recordsDrawerStatus" role="status" aria-live="polite">
           {visible.length === records.length
-            ? `${records.length} local record${records.length === 1 ? "" : "s"}`
-            : `${visible.length} of ${records.length} local record${records.length === 1 ? "" : "s"}`}
+            ? noteCount(records.length)
+            : filteredNoteCount(visible.length, records.length)}
         </div>
 
         <div class="records-drawer-results" id="recordsDrawerResults">
@@ -292,7 +302,7 @@ export function RecordsWindow({
             visible.map((record) => {
               const locked = record.status === "completed";
               const attested = locked && Boolean(record.attestation);
-              const action = locked ? "View locked snapshot" : "Resume draft";
+              const action = locked ? OPEN_NOTES.viewSigned : OPEN_NOTES.resumeDraft;
               return (
                 <button
                   key={record.id}
@@ -322,7 +332,7 @@ export function RecordsWindow({
             })
           ) : (
             <div class="records-drawer-empty">
-              <b>No matching notes.</b>
+              <b>{OPEN_NOTES.noMatches}</b>
               <span>Try another patient, medication, traceability field, or filter.</span>
             </div>
           )}
@@ -330,8 +340,7 @@ export function RecordsWindow({
 
         <div class="records-drawer-foot">
           <p>
-            Saved only in this browser. Locked records remain read-only. Starting a new
-            injection retains any current local draft.
+            {OPEN_NOTES.injectionFooter}
           </p>
           <div class="records-drawer-foot-actions">
             <button type="button" class="records-drawer-cancel" onClick={onClose}>
@@ -347,7 +356,7 @@ export function RecordsWindow({
                 bridge()?.create();
               }}
             >
-              Start new injection
+              {RECORD.startNewInjection}
             </button>
           </div>
         </div>

@@ -59,11 +59,44 @@ export const MODULE = {
 export const NOTES = {
   /** Tebra's screen name. Was "Record List" / "Current Worklist". */
   openNotes: "Open Notes",
+  /** Action label when the current workflow narrows Open Notes to UDS. */
+  openUdsNotes: "Open UDS notes",
+  openNotesDescription: "Open notes saved in this browser.",
   statusIncomplete: "Incomplete",
   statusReadyToSign: "Ready to sign",
   statusSigned: "Signed",
   statusNotStarted: "Not started",
   statusNeedsReview: "Needs review",
+} as const;
+
+/** Labels and guidance shared by the note-selection dialogs. */
+export const OPEN_NOTES = {
+  close: `Close ${NOTES.openNotes}`,
+  udsTitle: `${NOTES.openNotes} · UDS`,
+  closeUds: "Close UDS notes",
+  searchInjection: "Search injection notes",
+  filterInjection: "Filter injection notes",
+  searchUds: "Search UDS notes",
+  filterUds: "Filter UDS notes",
+  viewSigned: "View signed note",
+  resumeDraft: "Resume draft",
+  noMatches: "No matching notes.",
+  noUdsMatches: "No matching UDS notes.",
+  injectionFooter:
+    "Saved in this browser. Signed notes remain read only. Starting a new injection keeps the current draft.",
+  udsFooter:
+    "Saved in this browser. Signed notes remain read only. Starting a new UDS screen keeps the current draft.",
+} as const;
+
+export const WORKLIST_EMPTY = {
+  review: "No notes are awaiting review.",
+  today: "No other work is recorded for today.",
+  drafts: "No saved injection drafts are available.",
+  all: "No work or saved drafts are available.",
+  reviewHint: "Items appear here only when a saved note needs review.",
+  todayHint: `Completed history remains available in ${NOTES.openNotes} (F11).`,
+  draftsHint: "Use Start new injection to create an editable draft.",
+  allHint: `Start a new injection, or press F11 to view ${NOTES.openNotes} history.`,
 } as const;
 
 /* ---------------------------------------------------------------- lifecycle */
@@ -77,6 +110,9 @@ export const RECORD = {
   sign: "Sign",
   signed: "Signed",
   save: "Save",
+  saveDraft: "Save draft",
+  saveDraftDescription: "Save the editable draft.",
+  validatingAndSaving: "Validating required fields and saving…",
   saving: "Saving…",
   saved: "Saved",
   discard: "Discard",
@@ -90,7 +126,75 @@ export const RECORD = {
   editable: "Editable",
   addendum: "Add addendum",
   startNewInjection: "Start new injection",
+  startNewUds: "Start new UDS screen",
+  noteReview: "Note review",
+  signAcknowledgement: "I reviewed this note and am ready to sign it.",
+  signReadOnlyDetail:
+    "Signing saves your name and time in this browser and makes the note read only. Use a dated addendum for later clarification.",
+  signFailedRetry:
+    "The note could not be signed. It is still editable; review the required fields and browser storage, then try again.",
+  signFailed:
+    "The note could not be signed. It is still editable; no signature was saved.",
+  discardFailed: "The draft could not be discarded. It remains available for review.",
+  discardWarning:
+    "This removes the draft saved in this browser and clears the worksheet. It cannot be undone.",
+  signedCannotDiscard: "Signed notes cannot be discarded.",
+  closeConfirmation: "Close confirmation",
+  signatureTime: "Signature time",
+  backToEditing: "Back to editing",
+  keepEditing: "Keep editing",
+  draftSavedDetail: "Draft saved in this browser. Sign only when the note is final.",
+  readOnlyDetail: "This note is read only. Corrections require a dated addendum.",
+  newDraftDetail: "Enter encounter details to begin a draft.",
+  savingDetail: "Saving the latest changes in this browser.",
+  storageAttentionDetail: "This draft needs storage attention before you leave.",
+  notePreview: "Note preview",
+  saveFailed: "Note was not saved.",
+  saveFailedDetail: "No changes were cleared or signed.",
+  fieldsBeforeSigning: "Complete the required clinical fields before signing this note.",
+  injectionActions: "Injection note actions",
+  udsActions: "UDS note actions",
+  enterBeforeSaving: "Enter encounter details before saving a draft.",
+  saveInjectionDraftDescription:
+    "Save this editable injection draft in this browser (F12).",
+  startInjectionDescription:
+    "Start a blank injection. Any current editable work is saved as a draft first.",
+  noDraftToDiscard: "There is no editable draft to discard.",
+  discardDraftDescription: "Discard this editable draft. This cannot be undone.",
+  saveUdsDraftDescription: "Save this editable UDS draft in this browser.",
+  udsFieldsBeforeSigning:
+    "Complete the required clinical fields and sign in staff before signing this note.",
+  startUdsDescription:
+    "Start a blank UDS screen. Any current editable work is saved as a draft first.",
+  handoffNoAdministration:
+    "No medication was administered, so there is no administration note to sign.",
+  rotationHistoryDetail:
+    "Read-only rotation history from notes saved in this workstation. It informs site selection; it never gates it.",
 } as const;
+
+/** Copy helpers keep variable note names and counts out of component literals. */
+export const noteReviewPrompt = (recordNoun: string): string =>
+  `Review this ${recordNoun} note for`;
+
+export const discardDraftPrompt = (recordNoun: string): string =>
+  `Discard the editable ${recordNoun} draft for`;
+
+export const noteCount = (count: number, noun = "note"): string =>
+  `${count} ${noun}${count === 1 ? "" : "s"}`;
+
+export const filteredNoteCount = (
+  visible: number,
+  total: number,
+  noun = "note",
+): string => `${visible} of ${noteCount(total, noun)}`;
+
+export const fieldsBeforeSigning = (count: number): string =>
+  `Complete ${count} required clinical ${count === 1 ? "field" : "fields"} before signing this note.`;
+
+export const signedByCopy = (staff: string, timestamp: string): string =>
+  `Signed by ${staff} at ${timestamp}.`;
+
+export const signedAtCopy = (timestamp: string): string => `Signed ${timestamp}.`;
 
 /* ---------------------------------------------------------------- facesheet */
 
@@ -122,14 +226,32 @@ export const PATIENT = {
 /** Tebra's name for the outstanding-items list on a patient. */
 export const CHECKLIST = {
   title: "Care Checklist",
+  view: "View Care Checklist",
+  stopCount: (count: number) => `${count} stop${count === 1 ? "" : "s"}`,
+  reviewCount: (count: number) => `${count} to review`,
+  remainingFromFirst: (count: number, first: string) =>
+    `${count} checklist items, starting with: ${first}`,
 } as const;
 
 /* -------------------------------------------------------------------- shell */
 
 export const SHELL = {
   productName: "MA Workstation",
+  organizationShort: "IPMG",
   organization: "Integrated Psychiatric Medical Group",
   keyboardReference: "Keyboard Reference",
+  shortcuts: "Keyboard shortcuts",
+  currentWorkspace: "Current workspace",
+  currentRecordMode: "Current note mode",
+  noteTypes: "Note types",
+  noteType: "Note type",
+  status: "Status",
+  readyToBegin: "Ready. Select a note type to begin.",
+  skipToActiveNote: "Skip to active note",
+  draftSaveRequested: "Draft save requested.",
+  draftSaveUnavailable: "Draft saving is unavailable for this note type.",
+  notePanelUnavailable: "This note type is not connected yet.",
+  startNoteForReadiness: "Start this note to populate the Care Checklist.",
   /**
    * The local-only disclosure. This app has no server and no sync, and the
    * more faithfully it reads as a real EHR the likelier staff are to assume
@@ -142,6 +264,20 @@ export const SHELL = {
   localOnlyDetail: "Records stay in this browser",
   storageUnavailable: "Browser storage is unavailable",
   storageError: "Storage error",
+} as const;
+
+/* --------------------------------------------------------------- navigation */
+
+/**
+ * Section-rail labels. The rail only points at work that exists in this local
+ * module; it never advertises a Tebra destination the workstation cannot open.
+ */
+export const NAVIGATION = {
+  clinicalWork: "Clinical work",
+  resources: "Resources",
+  closeout: "Closeout",
+  localChart: "Local chart",
+  selectRecordHint: "Use F11 to select a note",
 } as const;
 
 /* ------------------------------------------------------------------ verdict */

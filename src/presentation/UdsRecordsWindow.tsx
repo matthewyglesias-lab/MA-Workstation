@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  filteredNoteCount,
+  noteCount,
+  NOTES,
+  OPEN_NOTES,
+  RECORD,
+} from "./vocabulary";
 import { UdsRecordRepository, type UdsRecord } from "../persistence/uds-records";
 import { browserSafeStorage } from "../persistence/storage";
 import {
@@ -27,7 +34,7 @@ type SortDirection = "asc" | "desc";
 const FILTERS: Array<[RecordFilter, string]> = [
   ["all", "All"],
   ["draft", "Drafts"],
-  ["locked", "Locked"],
+  ["locked", NOTES.statusSigned],
   ["addenda", "Addenda"],
 ];
 
@@ -41,7 +48,7 @@ const activityText = (record: UdsRecord): string => {
   const extra = addendaCount(record);
   const suffix = extra ? ` / ${extra} addendum${extra === 1 ? "" : "s"}` : "";
   return record.status === "completed"
-    ? `Attested local lock ${stamp(record.completedAt || record.updatedAt)}${suffix}`
+    ? `${record.attestation ? NOTES.statusSigned : RECORD.signedLegacy} ${stamp(record.completedAt || record.updatedAt)}${suffix}`
     : `Draft updated ${stamp(record.updatedAt)}${suffix}`;
 };
 
@@ -164,12 +171,12 @@ export function UdsRecordsWindow({
       <section class="records-drawer" role="dialog" aria-labelledby="udsRecordsDrawerTitle">
         <div class="records-drawer-head">
           <div>
-            <h2 id="udsRecordsDrawerTitle">UDS Records</h2>
+            <h2 id="udsRecordsDrawerTitle">{OPEN_NOTES.udsTitle}</h2>
           </div>
           <button
             type="button"
             class="records-drawer-close"
-            aria-label="Close UDS Records"
+            aria-label={OPEN_NOTES.closeUds}
             onClick={onClose}
           >
             X
@@ -178,7 +185,7 @@ export function UdsRecordsWindow({
 
         <div class="records-drawer-search">
           <label class="records-sr-only" for="udsRecordsDrawerSearch">
-            Search local UDS screens
+            {OPEN_NOTES.searchUds}
           </label>
           <input
             id="udsRecordsDrawerSearch"
@@ -196,7 +203,7 @@ export function UdsRecordsWindow({
           </span>
         </div>
 
-        <div class="records-drawer-filters" role="group" aria-label="Filter local UDS screens">
+        <div class="records-drawer-filters" role="group" aria-label={OPEN_NOTES.filterUds}>
           {FILTERS.map(([key, label]) => (
             <button
               key={key}
@@ -213,8 +220,8 @@ export function UdsRecordsWindow({
 
         <div class="records-drawer-status" id="udsRecordsDrawerStatus" role="status" aria-live="polite">
           {visible.length === records.length
-            ? `${records.length} local UDS screen${records.length === 1 ? "" : "s"}`
-            : `${visible.length} of ${records.length} local UDS screen${records.length === 1 ? "" : "s"}`}
+            ? noteCount(records.length, "UDS note")
+            : filteredNoteCount(visible.length, records.length, "UDS note")}
         </div>
 
         <div class="records-drawer-results" id="udsRecordsDrawerResults">
@@ -246,7 +253,7 @@ export function UdsRecordsWindow({
             visible.map((record) => {
               const locked = record.status === "completed";
               const attested = locked && Boolean(record.attestation);
-              const action = locked ? "View locked snapshot" : "Resume draft";
+              const action = locked ? OPEN_NOTES.viewSigned : OPEN_NOTES.resumeDraft;
               return (
                 <button
                   key={record.id}
@@ -259,7 +266,11 @@ export function UdsRecordsWindow({
                   <span class="records-drawer-row-top">
                     <span class="records-drawer-row-title">{patientOf(record)}</span>
                     <span class={`records-drawer-row-badge ${locked ? "locked" : "draft"}`}>
-                      {locked ? (attested ? "Locked" : "Legacy lock") : "Draft"}
+                      {locked
+                        ? attested
+                          ? NOTES.statusSigned
+                          : RECORD.signedLegacy
+                        : RECORD.draft}
                     </span>
                   </span>
                   <span class="records-drawer-row-summary">{summaryOf(record)}</span>
@@ -272,7 +283,7 @@ export function UdsRecordsWindow({
             })
           ) : (
             <div class="records-drawer-empty">
-              <b>No matching local UDS screens.</b>
+              <b>{OPEN_NOTES.noUdsMatches}</b>
               <span>Try another patient, device, or filter.</span>
             </div>
           )}
@@ -280,8 +291,7 @@ export function UdsRecordsWindow({
 
         <div class="records-drawer-foot">
           <p>
-            Saved only in this browser. Locked records remain read-only. Starting a new
-            UDS screen retains any current local draft.
+            {OPEN_NOTES.udsFooter}
           </p>
           <div class="records-drawer-foot-actions">
             <button type="button" class="records-drawer-cancel" onClick={onClose}>
@@ -297,7 +307,7 @@ export function UdsRecordsWindow({
                 onCreate();
               }}
             >
-              Start new UDS screen
+              {RECORD.startNewUds}
             </button>
           </div>
         </div>

@@ -16,10 +16,9 @@ const metal = "var(--mt-icon-metal, #c8cbd6)";
 const white = "#fff";
 
 /**
- * Small 16-bit-style pictograms modelled on the colored chart, pencil,
- * specimen, and command glyphs used by MEDITECH Client/Server workstations.
- * Integer geometry and crisp edges keep each object legible in a 12px rail
- * gutter; the adjacent text remains the accessible name.
+ * Compact clinical pictograms for the workstation rail and actions. Integer
+ * geometry keeps each object legible in a dense rail; adjacent text remains
+ * the accessible name.
  */
 export function DesktopIcon({ name, ...props }: DesktopIconProps) {
   const common = {

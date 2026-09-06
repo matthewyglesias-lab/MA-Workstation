@@ -46,7 +46,9 @@ const CAPTURE_STYLES = `
   html[data-visual-regression="true"],
   html[data-visual-regression="true"] body,
   html[data-visual-regression="true"] .cd2004-shell,
-  html[data-visual-regression="true"] .cd2004-shell * {
+  html[data-visual-regression="true"] .cd2004-shell *,
+  html[data-visual-regression="true"] .meditech-workstation-gate,
+  html[data-visual-regression="true"] .meditech-workstation-gate * {
     font-family: Arial, "Liberation Sans", sans-serif !important;
     font-synthesis: none !important;
   }
@@ -242,7 +244,7 @@ async function openWorkflow(page, workflow) {
 
 async function openFixtureDraft(page) {
   await openWorkflow(page, 'administer');
-  const railLauncher = page.getByRole('button', { name: /Open saved local records \(F11\)/ });
+  const railLauncher = page.getByRole('button', { name: /Open saved notes \(F11\)/ });
   await railLauncher.click();
   await page
     .getByRole('button', { name: 'Resume draft for Patel, Rowan', exact: true })
@@ -351,7 +353,7 @@ async function lockReadyInjection(page) {
   await expect(dialog).toBeVisible();
   await dialog
     .getByRole('checkbox', {
-      name: /^I attest that I reviewed this local record before locking it\./
+      name: /^I reviewed this note and am ready to sign it\./
     })
     .check();
   await dialog
@@ -379,7 +381,7 @@ async function settleForCapture(page) {
   });
 }
 
-test.describe('Client/Server workstation visual snapshots', () => {
+test.describe('workstation visual snapshots', () => {
   test('empty chart at 1024 x 768', async ({ page }) => {
     await bootDeterministicWorkstation(page, VIEWPORTS.desktop1024);
     await openWorkflow(page, 'administer');
@@ -420,7 +422,8 @@ test.describe('Client/Server workstation visual snapshots', () => {
     await bootDeterministicWorkstation(page, VIEWPORTS.narrowDesktop);
     await openFixtureDraft(page);
     await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
-    await expect(page.locator('.meditech-command-deck')).toBeVisible();
+    await expect(page.locator('.tebra-power-commands > summary')).toBeVisible();
+    await expect(page.locator('.meditech-command-deck')).toBeHidden();
     await expect(page.locator('.meditech-context-rail')).toBeVisible();
     await expect(page.locator('.cd2004-inspector-window')).toBeVisible();
     await expect(page.locator('[data-injection-record-actions]')).toBeVisible();
@@ -432,7 +435,7 @@ test.describe('Client/Server workstation visual snapshots', () => {
     );
   });
 
-  test('minimum workstation keeps both bottom command zones fully visible', async ({ page }) => {
+  test('minimum workstation keeps command disclosure and clinical actions reachable', async ({ page }) => {
     await bootDeterministicWorkstation(page, VIEWPORTS.minimumDesktop);
     await openFixtureDraft(page);
     await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
@@ -443,28 +446,35 @@ test.describe('Client/Server workstation visual snapshots', () => {
       SNAPSHOT_OPTIONS
     );
 
-    const deck = page.locator('.meditech-command-deck');
+    const powerCommands = page.locator('.tebra-power-commands');
+    const disclosure = powerCommands.locator(':scope > summary');
+    const deck = powerCommands.locator('.meditech-command-deck');
     const statusbar = page.locator('.cd2004-statusbar');
     const recordActions = page.locator('[data-injection-record-actions]');
     const transaction = page.locator('.cd2004-transaction-window.has-document-split');
     const inspector = page.locator('.cd2004-inspector-window');
     const workWindow = page.locator('.cd2004-work-window');
-    const deckBox = await deck.boundingBox();
+    await expect(disclosure).toBeVisible();
+    await expect(deck).toBeHidden();
+    const disclosureBox = await disclosure.boundingBox();
     const statusBox = await statusbar.boundingBox();
     const recordBox = await recordActions.boundingBox();
     const inspectorBox = await inspector.boundingBox();
     const workWindowBox = await workWindow.boundingBox();
-    expect(deckBox).not.toBeNull();
+    expect(disclosureBox).not.toBeNull();
     expect(statusBox).not.toBeNull();
     expect(recordBox).not.toBeNull();
     expect(inspectorBox).not.toBeNull();
     expect(workWindowBox).not.toBeNull();
-    expect(deckBox.y + deckBox.height).toBeLessThanOrEqual(statusBox.y + 1);
+    expect(disclosureBox.x).toBeGreaterThanOrEqual(0);
+    expect(disclosureBox.x + disclosureBox.width)
+      .toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.width + 1);
+    expect(disclosureBox.y + disclosureBox.height)
+      .toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
     expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
     expect(inspectorBox.y + inspectorBox.height).toBeLessThanOrEqual(
       workWindowBox.y + workWindowBox.height + 1
     );
-    expect(await deck.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
     expect(await transaction.evaluate((node) => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(1);
 
     const clippedCoreIdentifiers = await page
@@ -474,18 +484,20 @@ test.describe('Client/Server workstation visual snapshots', () => {
         .map((label) => label.textContent?.trim()));
     expect(clippedCoreIdentifiers).toEqual([]);
 
-    const compactCommandLabels = await deck.locator('button > span').evaluateAll((labels) =>
-      labels.map((label) => getComputedStyle(label, '::after').content.replace(/^"|"$/g, ''))
-    );
-    expect(compactCommandLabels).toEqual([
-      'Help',
-      'Section',
-      'Page',
-      'Stop',
-      'Lookup',
-      'EMR',
-      'Save',
-      'Back'
+    await disclosure.click();
+    await expect(deck).toBeVisible();
+    const deckBox = await deck.boundingBox();
+    expect(deckBox).not.toBeNull();
+    expect(await deck.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(deck.locator('button > kbd')).toHaveText([
+      'F1',
+      'F6',
+      'F7',
+      'F8',
+      'F9',
+      'F11',
+      'F12',
+      'Esc'
     ]);
 
     for (const button of await deck.locator('button:visible').all()) {
@@ -540,6 +552,8 @@ test.describe('Client/Server workstation visual snapshots', () => {
     const gate = page.locator('.meditech-workstation-gate');
     await expect(gate).toBeVisible();
     await expect(gate).toContainText('Workstation view required');
+    await expect(gate.locator('header strong')).toHaveText('IPMG MA Workstation');
+    await expect(gate.locator('header small')).toHaveText('Local only');
     await expect(gate).toContainText('800 x 600 px');
     await expect(page.locator('.cd2004-shell')).toBeHidden();
     await expect(page.locator('.meditech-workstation-content')).toHaveAttribute('inert', '');

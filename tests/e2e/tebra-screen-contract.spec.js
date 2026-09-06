@@ -29,18 +29,20 @@ test.describe('Tebra screen contract', () => {
     await page.goto('/');
 
     const home = await page.evaluate(() => {
-      const launcher = document.querySelector('.cd2004-launcher-tile');
+      const primaryAction = document.querySelector('.cd2004-worklist-new');
       const nav = document.querySelector('button.cd2004-nav-item');
       return {
-        launcherGradient: getComputedStyle(launcher).backgroundImage,
-        launcherRelief: getComputedStyle(launcher).boxShadow,
+        primaryActionGradient: getComputedStyle(primaryAction).backgroundImage,
+        primaryActionRelief: getComputedStyle(primaryAction).boxShadow,
+        retiredLauncherCount: document.querySelectorAll('.cd2004-launcher-tile').length,
         navRadius: getComputedStyle(nav).borderRadius,
         navFont: getComputedStyle(nav).fontFamily
       };
     });
     // No gradients and no raised/sunken bezel: those are the client/server tell.
-    expect(home.launcherGradient).toBe('none');
-    expect(home.launcherRelief).toBe('none');
+    expect(home.primaryActionGradient).toBe('none');
+    expect(home.primaryActionRelief).toBe('none');
+    expect(home.retiredLauncherCount).toBe(0);
     // Rounded, not square. 6px is --tw-radius-ws, the workstation-tier radius.
     expect(home.navRadius).toBe('6px');
     expect(home.navFont).toMatch(/^"Inter Variable"/);

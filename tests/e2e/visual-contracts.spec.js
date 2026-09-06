@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const WORKFLOWS = {
   home: {
     label: 'Dashboard',
-    headingText: 'Records stay in this browser',
+    headingText: 'Open Notes',
     panel: '.cd2004-start-center',
     layout: '.cd2004-start-center',
     heading: '#currentWorklistTitle',
@@ -286,7 +286,7 @@ function expectedContract(workflow) {
   return {
     workflow,
     activeWorkflow: workflow,
-    workTitle: isHome ? 'Open Notes' : `${module.label} note`,
+    workTitle: isHome ? 'Dashboard' : `${module.label} note`,
     heading: {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',

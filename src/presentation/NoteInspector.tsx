@@ -131,7 +131,7 @@ export function NoteInspector({
             </div>
           ))
         ) : (
-          <div class="cd2004-empty-row">Start the workflow to populate readiness.</div>
+          <div class="cd2004-empty-row">{SHELL.startNoteForReadiness}</div>
         )}
       </div>
 
@@ -249,7 +249,7 @@ export function NoteInspector({
             {stats.sections} SECTION{stats.sections === 1 ? "" : "S"} · {stats.lines} LINE
             {stats.lines === 1 ? "" : "S"}
           </span>
-          <span class="cd2004-note-foot-state">{subtitle ?? "LOCAL PREVIEW"}</span>
+          <span class="cd2004-note-foot-state">{subtitle ?? RECORD.notePreview}</span>
         </div>
       )}
 
@@ -258,14 +258,14 @@ export function NoteInspector({
           <div class="cd2004-post-error" role="alert">
             <DesktopIcon name="alert" />
             <span>
-              <strong>Record was not posted.</strong>
-              <small>{postMessage ?? "No changes were cleared or locked."}</small>
+              <strong>{RECORD.saveFailed}</strong>
+              <small>{postMessage ?? RECORD.saveFailedDetail}</small>
             </span>
           </div>
         )}
         {postState === "posting" && (
           <div class="cd2004-post-pending" role="status">
-            Saving and validating the local record…
+            {RECORD.validatingAndSaving}
           </div>
         )}
       </div>

@@ -18,7 +18,7 @@ test.describe('MA Workstation browser journeys', () => {
     uds: 'UDS',
     samples: 'Samples',
     forms: 'Forms',
-    reference: 'Knowledge',
+    reference: 'Reference',
     log: 'Daily Closeout',
     tms: 'Future / TMS'
   };
@@ -40,10 +40,10 @@ test.describe('MA Workstation browser journeys', () => {
       workflow === 'reference' ||
       workflow === 'log'
     ) {
-      // Forms, UDS, Injection, Samples, TMS, Knowledge, and Daily Closeout
+      // Forms, UDS, Injection, Samples, TMS, Reference, and Daily Closeout
       // are migrated to real panels. Forms/UDS/Injection/Samples' legacy
       // #panel-* markup stays loaded hidden as a print/readiness
-      // compatibility mirror; TMS, Knowledge, and Daily Closeout have no
+      // compatibility mirror; TMS, Reference, and Daily Closeout have no
       // print/readiness dependency on their own panel being mounted, so
       // their legacy panels are never mounted at all.
       await expect(page.locator('.wfp-panel')).toBeVisible();
@@ -87,7 +87,7 @@ test.describe('MA Workstation browser journeys', () => {
   async function confirmLocalAttestation(page) {
     const dialog = page.getByRole('dialog', { name: 'Sign' });
     const acknowledgement = dialog.getByRole('checkbox', {
-      name: /^I attest that I reviewed this local record before locking it\./
+      name: /^I reviewed this note and am ready to sign it\./
     });
     const confirm = dialog.getByRole('button', {
       name: 'Sign',
@@ -95,7 +95,7 @@ test.describe('MA Workstation browser journeys', () => {
     });
 
     await expect(dialog).toBeVisible();
-    // The safe route is the initial focus; attesting is deliberately gated.
+    // The safe route is the initial focus; signing is deliberately gated.
     await expect(dialog.getByRole('button', { name: 'Back to editing', exact: true }))
       .toBeFocused();
     await expect(confirm).toBeDisabled();
@@ -380,7 +380,7 @@ test.describe('MA Workstation browser journeys', () => {
     await actions.locator('[data-injection-save]').click();
     await expect(actions).toContainText('Draft saved');
     await actions.locator('[data-injection-new]').click();
-    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('button', { name: /Resume draft for QA, Vivitrol Habitus/ }).click();
     await openInjectionTab(page, 'Order');
     await expect(technique).toHaveValue('');
@@ -473,7 +473,7 @@ test.describe('MA Workstation browser journeys', () => {
     await actions.locator('[data-injection-save]').click();
     await expect(actions).toContainText('Draft saved');
     await actions.locator('[data-injection-new]').click();
-    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('button', { name: /Resume draft for QA, Other Manual Return/ }).click();
 
     await openInjectionTab(page, 'Order');
@@ -539,7 +539,7 @@ test.describe('MA Workstation browser journeys', () => {
       };
     }, patient);
     expect(legacyShapePrepared).toEqual({ nextDose: null, retCustom: false });
-    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('button', { name: new RegExp(`Resume draft for ${patient}`) }).click();
 
     await openInjectionTab(page, 'Order');
@@ -626,7 +626,7 @@ test.describe('MA Workstation browser journeys', () => {
     await actions.locator('[data-injection-save]').click();
     await expect(actions).toContainText('Draft saved');
     await actions.locator('[data-injection-new]').click();
-    await page.getByRole('button', { name: /Open saved local records/ }).click();
+    await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('button', { name: new RegExp(`Resume draft for ${patient}`) }).click();
 
     await openInjectionTab(page, 'Order');
@@ -786,14 +786,15 @@ test.describe('MA Workstation browser journeys', () => {
     });
   });
 
-  test('boots in a clearly local environment and exposes the local EMR record list', async ({ page }) => {
+  test('boots in a clearly local environment and exposes Open Notes', async ({ page }) => {
     const pageErrors = [];
     page.on('pageerror', error => pageErrors.push(error.message));
 
     await page.goto('/');
     await expect(page.locator('.cd2004-shell')).toBeVisible();
-    await expect(page.locator('.cd2004-app-title')).toContainText('MA Workstation');
-    await expect(page.locator('.cd2004-app-title small')).toHaveText('WKL');
+    await expect(page.locator('.cd2004-app-title b')).toHaveText('IPMG');
+    await expect(page.locator('.cd2004-app-title > span')).toHaveText('MA Workstation');
+    await expect(page.locator('.tebra-app-workspace')).toHaveText('WKL');
     await expect(page.locator('.cd2004-app-environment')).toContainText('Local only');
     await expect(page.locator('.cd2004-app-environment')).not.toContainText('LIVE');
     const chartBanner = page.locator('.cd2004-patient-banner');
@@ -807,7 +808,7 @@ test.describe('MA Workstation browser journeys', () => {
     // intentionally no duplicate top Save / Records / Note command toolbar.
     await expect(page.locator('[role="toolbar"][aria-label="Clinical commands"]')).toHaveCount(0);
     const drawerLauncher = page.getByRole('button', {
-      name: /Open saved local records \(F11\)/
+      name: /Open saved notes \(F11\)/
     });
     await expect(drawerLauncher).toBeVisible();
     await drawerLauncher.click();
@@ -878,7 +879,7 @@ test.describe('MA Workstation browser journeys', () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test('uses the keyboard-accessible MEDITECH record list, launchers, and workflow routing', async ({ page }) => {
+  test('uses the keyboard-accessible section rail and workflow routing', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
     const navigator = page.locator('.cd2004-navigator');
@@ -891,6 +892,13 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(navigator.locator('.cd2004-nav-item')).toHaveCount(8);
     await expect(home).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('.cd2004-launcher-tile')).toHaveCount(0);
+    await expect(page.locator('.cd2004-work-window .cd2004-window-title'))
+      .toContainText('Dashboard');
+    await expect(page.getByRole('heading', { name: 'Open Notes', level: 1 }))
+      .toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start new injection', exact: true }))
+      .toBeVisible();
 
     await page.keyboard.press('Alt+2');
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
@@ -923,7 +931,7 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('keeps module codes, field states, and blank-record commands honest', async ({ page }) => {
     await page.goto('/');
-    const transactionCode = page.locator('.cd2004-app-title small');
+    const transactionCode = page.locator('.tebra-app-workspace');
     await expect(transactionCode).toHaveText('WKL');
 
     await openWorkflow(page, 'administer');
@@ -958,8 +966,16 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.meditech-patient-safety')).toContainText(
       'UDS — Not started'
     );
+    const powerCommands = page.locator('.tebra-power-commands');
+    const commandDeck = powerCommands.locator(
+      '[role="toolbar"][aria-label="Keyboard shortcuts"]'
+    );
+    await expect(powerCommands.locator(':scope > summary')).toBeVisible();
+    await expect(commandDeck).toBeHidden();
+    await powerCommands.locator(':scope > summary').click();
+    await expect(commandDeck).toBeVisible();
     await expect(
-      page.locator('.meditech-command-deck button').filter({ hasText: 'F9' })
+      commandDeck.locator('button').filter({ hasText: 'F9' })
     ).toContainText('Lookup');
     await expect(panel.getByRole('button', { name: 'Add to daily log' })).toBeDisabled();
     await expect(panel.getByRole('button', { name: 'Save' })).toBeDisabled();
@@ -983,8 +999,15 @@ test.describe('MA Workstation browser journeys', () => {
     const panel = page.locator('.wfp-panel');
     const reason = panel.getByLabel('Encounter type', { exact: true });
     const orderTab = panel.getByRole('tab', { name: 'Order & Timing', exact: true });
-    const f8 = page.locator('.meditech-command-deck button').filter({ hasText: 'F8' });
-    const f9 = page.locator('.meditech-command-deck button').filter({ hasText: 'F9' });
+    const powerCommands = page.locator('.tebra-power-commands');
+    const commandDeck = powerCommands.locator(
+      '[role="toolbar"][aria-label="Keyboard shortcuts"]'
+    );
+    await expect(commandDeck).toBeHidden();
+    await powerCommands.locator(':scope > summary').click();
+    await expect(commandDeck).toBeVisible();
+    const f8 = commandDeck.locator('button').filter({ hasText: 'F8' });
+    const f9 = commandDeck.locator('button').filter({ hasText: 'F9' });
 
     await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('PEND');
     await reason.focus();
@@ -1161,8 +1184,8 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('keeps the navigator fixed and adds document context only inside a clinical workflow', async ({ page }) => {
     await page.goto('/');
-    // The MEDITECH-style right verb strip is persistent; documentation stays
-    // inside the central child workspace instead of occupying that rail.
+    // The left section rail is persistent; documentation stays inside the
+    // clinical workspace instead of displacing that navigation.
     const navigator = page.locator('.cd2004-navigator');
     const work = page.locator('.cd2004-work-window');
     const inspector = page.locator('.cd2004-inspector-window');
@@ -1190,11 +1213,20 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(navigator.locator('.cd2004-inspector-window')).toHaveCount(0);
   });
 
-  test('routes the Client/Server function-key profile without unsafe global shortcuts', async ({ page }) => {
+  test('keeps power-user function keys available without a permanent command deck', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
-    const deck = page.locator('[role="toolbar"][aria-label="MEDITECH function key commands"]');
+    const powerCommands = page.locator('.tebra-power-commands');
+    const disclosure = powerCommands.locator(':scope > summary');
+    const deck = powerCommands.locator(
+      '[role="toolbar"][aria-label="Keyboard shortcuts"]'
+    );
 
+    await expect(disclosure).toBeVisible();
+    await expect(disclosure).toContainText('Keyboard shortcuts');
+    await expect(deck).toBeHidden();
+    await disclosure.click();
+    await expect(powerCommands).toHaveAttribute('open', '');
     await expect(deck).toBeVisible();
     await expect(deck).toContainText('F1');
     await expect(deck).toContainText('F6');
@@ -1215,11 +1247,12 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(helpDialog).toContainText(/previous section/i);
     await expect(helpDialog).toContainText(/next page/i);
     await expect(helpDialog).toContainText(/previous page/i);
-    await expect(helpDialog).toContainText(/local record list/i);
+    await expect(helpDialog).toContainText(/notes saved in this browser/i);
     await page.keyboard.press('Escape');
     await expect(helpDialog).toBeHidden();
 
-    // With no clinical stops active, F8 retains the classic zone cycle.
+    // With no clinical stops active, F8 cycles the visible work, navigation,
+    // and opt-in command zones.
     const startInjection = page.getByRole('button', { name: 'Start new injection', exact: true });
     await startInjection.focus();
     await page.keyboard.press('F8');
@@ -1343,7 +1376,7 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await page.keyboard.press('F12');
     await expect(page.locator('.cd2004-status-message')).toHaveText(
-      'Draft saving is unavailable in this workflow.'
+      'Draft saving is unavailable for this note type.'
     );
     expect(await page.evaluate(() =>
       JSON.stringify(
@@ -1359,11 +1392,11 @@ test.describe('MA Workstation browser journeys', () => {
     const udsPanel = page.locator('.wfp-panel');
     await udsPanel.locator('select[name="uds-reason"]').selectOption('routine');
     const udsFileCommand = page
-      .locator('[role="toolbar"][aria-label="MEDITECH function key commands"]')
-      .getByRole('button', { name: 'F12 Save UDS' });
+      .locator('[role="toolbar"][aria-label="Keyboard shortcuts"] button')
+      .filter({ hasText: 'F12' });
     await expect(udsFileCommand).toBeEnabled();
     await page.keyboard.press('F12');
-    await expect(udsPanel.getByRole('region', { name: 'UDS record actions' }))
+    await expect(udsPanel.getByRole('region', { name: 'UDS note actions' }))
       .toContainText('Draft saved');
     await expect.poll(() => page.evaluate(() => {
       const records = JSON.parse(localStorage.getItem('ipmgMedAssistUdsRecordsV1') || '[]');
@@ -1494,7 +1527,13 @@ test.describe('MA Workstation browser journeys', () => {
       matchMedia('(prefers-reduced-motion: reduce)').matches
     )).toBe(true);
 
-    const transitionSeconds = await page.locator('.meditech-command-deck button').first().evaluate(node =>
+    const powerCommands = page.locator('.tebra-power-commands');
+    const commandDeck = powerCommands.locator('.meditech-command-deck');
+    await expect(powerCommands.locator(':scope > summary')).toBeVisible();
+    await expect(commandDeck).toBeHidden();
+    await powerCommands.locator(':scope > summary').click();
+    await expect(commandDeck).toBeVisible();
+    const transitionSeconds = await commandDeck.locator('button').first().evaluate(node =>
       getComputedStyle(node).transitionDuration
         .split(',')
         .map(value => Number.parseFloat(value) * (value.includes('ms') ? 0.001 : 1))
@@ -1534,7 +1573,7 @@ test.describe('MA Workstation browser journeys', () => {
     })).toBe(true);
 
     const recordsButton = page.getByRole('button', {
-      name: /Open saved local records \(F11\)/
+      name: /Open saved notes \(F11\)/
     });
     await recordsButton.click();
     const drawer = page.locator('.records-drawer');
@@ -1585,7 +1624,8 @@ test.describe('MA Workstation browser journeys', () => {
     await patientName.fill('QA, Resize Safety');
     await expect(patientName).toHaveValue('QA, Resize Safety');
     await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
-    await expect(page.locator('.meditech-command-deck')).toBeVisible();
+    await expect(page.locator('.tebra-power-commands > summary')).toBeVisible();
+    await expect(page.locator('.meditech-command-deck')).toBeHidden();
     await expect(page.locator('.meditech-context-rail')).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
@@ -1593,6 +1633,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(gate).toBeVisible();
     await expect(gate).toBeFocused();
     await expect(gate).toContainText('Workstation view required');
+    await expect(gate.locator('header strong')).toHaveText('IPMG MA Workstation');
+    await expect(gate.locator('header small')).toHaveText('Local only');
     await expect(gate).toContainText('800 x 600 px');
     await expect(page.locator('.meditech-workstation-content')).toHaveAttribute('inert', '');
     await expect(page.locator('.meditech-workstation-content')).toHaveAttribute('aria-hidden', 'true');
@@ -1702,10 +1744,19 @@ test.describe('MA Workstation browser journeys', () => {
       expect(shellBox.x).toBeGreaterThanOrEqual(0);
       expect(shellBox.width).toBeLessThanOrEqual(width);
 
-      const commandDeckOverflow = await page
-        .locator('.meditech-command-deck')
-        .evaluate((deck) => deck.scrollWidth - deck.clientWidth);
+      const powerCommands = page.locator('.tebra-power-commands');
+      const commandDisclosure = powerCommands.locator(':scope > summary');
+      const commandDeck = powerCommands.locator('.meditech-command-deck');
+      await expect(commandDisclosure).toBeVisible();
+      await expect(commandDeck).toBeHidden();
+      await commandDisclosure.click();
+      await expect(commandDeck).toBeVisible();
+      const commandDeckOverflow = await commandDeck.evaluate(
+        (deck) => deck.scrollWidth - deck.clientWidth
+      );
       expect(commandDeckOverflow).toBeLessThanOrEqual(1);
+      await commandDisclosure.click();
+      await expect(commandDeck).toBeHidden();
 
       // The Dashboard owns one worklist window. Clinical workflows add the
       // documentation child window throughout the supported desktop range.
@@ -2296,7 +2347,7 @@ test.describe('MA Workstation browser journeys', () => {
     const initiation = page.locator('#initiationProtocolCard');
     await panel.getByText('1-day initiation', { exact: true }).click();
     // Scoped to the option row rather than a bare getByText: the same stop
-    // message also appears verbatim in the "Outstanding requirements"
+    // message also appears verbatim in the Care Checklist
     // floating window (opened from the status chip) once the 1-day protocol
     // is selected but not yet plan-verified.
     await panel
@@ -2963,7 +3014,9 @@ test.describe('MA Workstation browser journeys', () => {
     // guard it wrote a negative into the omitted analyte and immediately
     // blocked the screen on a stop the operator never chose.
     await applyDisplayedPanelsNegative(page, panel);
-    await expect(panel.locator('.wfp-status-flag')).toHaveText('Ready');
+    const readyFlag = panel.locator('.wfp-status-flag');
+    await expect(readyFlag).toContainText('Ready to sign');
+    await expect(readyFlag.locator('.wfp-status-icon')).toHaveText('✓');
 
     await panel.locator('.wfp-grid-row', { hasText: 'Cannabinoids / THC' })
       .locator('.wfp-result-cycle').click();
@@ -3086,7 +3139,9 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.getByRole('tab', { name: /^Results/ }).click();
     await applyDisplayedPanelsNegative(page, panel);
 
-    await expect(panel.locator('.wfp-status-flag')).toHaveText('Ready');
+    const readyFlag = panel.locator('.wfp-status-flag');
+    await expect(readyFlag).toContainText('Ready to sign');
+    await expect(readyFlag.locator('.wfp-status-icon')).toHaveText('✓');
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
 
     // The panel sequence is part of the physical device identity. Changing it
@@ -3127,7 +3182,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.cd2004-record-actions')).toHaveClass(/is-draft/);
     await expect(panel.locator('.cd2004-record-actions-state strong')).toHaveText('Draft saved');
 
-    await panel.getByRole('button', { name: 'UDS records…' }).click();
+    await panel.getByRole('button', { name: 'Open UDS notes…' }).click();
     const recordsDialog = page.locator('[role="dialog"][aria-labelledby="udsRecordsDrawerTitle"]');
     await expect(recordsDialog).toBeVisible();
     const rows = recordsDialog.locator('.records-drawer-row');
@@ -3141,7 +3196,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(recordsDialog).toBeHidden();
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
 
-    await panel.getByRole('button', { name: 'UDS records…' }).click();
+    await panel.getByRole('button', { name: 'Open UDS notes…' }).click();
     await expect(recordsDialog).toBeVisible();
     await expect(recordsDialog.locator('.records-drawer-row')).toHaveCount(1);
     await recordsDialog.locator('.records-drawer-row').click();
@@ -3159,7 +3214,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('.cd2004-record-actions button.is-danger').click();
     const dialog = page.getByRole('dialog', { name: 'Discard draft' });
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText('editable local UDS screen draft');
+    await expect(dialog).toContainText('editable UDS draft');
 
     // Keep editing leaves the draft intact.
     await dialog.getByRole('button', { name: 'Keep editing' }).click();
@@ -3191,7 +3246,9 @@ test.describe('MA Workstation browser journeys', () => {
     const attestDialog = page.getByRole('dialog', { name: 'Sign' });
     await expect(attestDialog).toBeVisible();
     await expect(attestDialog).toContainText('SAFE life 14-Panel Cup');
-    await attestDialog.getByRole('checkbox', { name: /I attest that I reviewed/ }).check();
+    await attestDialog.getByRole('checkbox', {
+      name: /I reviewed this note and am ready to sign it/
+    }).check();
     await attestDialog.getByRole('button', { name: 'Sign', exact: true }).click();
     await expect(attestDialog).toBeHidden();
 
@@ -3232,7 +3289,9 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(attestButton).toBeEnabled();
     await attestButton.click();
     const attestDialog = page.getByRole('dialog', { name: 'Sign' });
-    await attestDialog.getByRole('checkbox', { name: /I attest that I reviewed/ }).check();
+    await attestDialog.getByRole('checkbox', {
+      name: /I reviewed this note and am ready to sign it/
+    }).check();
     await attestDialog.getByRole('button', { name: 'Sign', exact: true }).click();
     await expect(attestDialog).toBeHidden();
     await expect(panel.locator('.wfp-status-flag.is-idle')).toHaveText('Read only');
@@ -3242,18 +3301,20 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-print-block-hint')).toHaveCount(0);
   });
 
-  test('lists outstanding requirements and jumps to the tab that owns each one', async ({ page }) => {
+  test('lists the Care Checklist and jumps to the tab that owns each stop', async ({ page }) => {
     await page.goto('/');
 
     // A bare stop count leaves staff opening every tab to find what is
-    // missing. The status chip opens a floating window (matching real
-    // MEDITECH's separate popups for this kind of thing); each row names
-    // its tab and navigates straight to it, closing the window on click.
+    // missing. The status chip opens the Care Checklist; each row names its
+    // tab and navigates straight to it, closing the window on click.
     await openWorkflow(page, 'uds');
     const uds = page.locator('.wfp-panel');
     await uds.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
-    await uds.locator('.wfp-status-flag.is-stop').click();
-    const udsDialog = page.getByRole('dialog', { name: 'Outstanding requirements' });
+    const udsStopFlag = uds.locator('.wfp-status-flag.is-stop');
+    await expect(udsStopFlag).toContainText(/\d+ stops?/);
+    await expect(udsStopFlag.locator('.wfp-status-icon')).toHaveText('×');
+    await udsStopFlag.click();
+    const udsDialog = page.getByRole('dialog', { name: 'Care Checklist' });
     await expect(udsDialog).toBeVisible();
     const udsRows = udsDialog.locator('.wfp-issue-row');
     await expect(udsRows.first()).toBeVisible();
@@ -3266,8 +3327,11 @@ test.describe('MA Workstation browser journeys', () => {
     await openWorkflow(page, 'samples');
     const samples = page.locator('.wfp-panel');
     await samples.locator('input[placeholder="Last, First"]').fill('Okafor, Ben');
-    await samples.locator('.wfp-status-flag.is-stop').click();
-    const samplesDialog = page.getByRole('dialog', { name: 'Outstanding requirements' });
+    const samplesStopFlag = samples.locator('.wfp-status-flag.is-stop');
+    await expect(samplesStopFlag).toContainText(/\d+ stops?/);
+    await expect(samplesStopFlag.locator('.wfp-status-icon')).toHaveText('×');
+    await samplesStopFlag.click();
+    const samplesDialog = page.getByRole('dialog', { name: 'Care Checklist' });
     await expect(samplesDialog).toBeVisible();
     const educationRow = samplesDialog.locator('.wfp-issue-row', { hasText: 'patient education status' });
     await expect(educationRow.locator('.wfp-issue-tab')).toHaveText('Safety / review');

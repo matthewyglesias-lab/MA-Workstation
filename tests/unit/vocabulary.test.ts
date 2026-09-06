@@ -4,7 +4,16 @@ import {
   type ReadinessVerdict,
 } from "../../src/application/readiness-projection";
 import type { WorkstationReadinessItem } from "../../src/application/workstation-projection";
-import { MODULE, NOTES, RECORD, readinessVerdictCopy } from "../../src/presentation/vocabulary";
+import {
+  CHECKLIST,
+  MODULE,
+  NAVIGATION,
+  NOTES,
+  OPEN_NOTES,
+  RECORD,
+  readinessVerdictCopy,
+  SHELL,
+} from "../../src/presentation/vocabulary";
 import { WORKFLOW_LABELS } from "../../src/presentation/types";
 
 const item = (
@@ -89,6 +98,18 @@ describe("workstation vocabulary", () => {
     );
   });
 
+  it("keeps the product shell, section rail, and Care Checklist vocabulary aligned", () => {
+    expect(SHELL.organizationShort).toBe("IPMG");
+    expect(SHELL.productName).toBe("MA Workstation");
+    expect(SHELL.shortcuts).toBe("Keyboard shortcuts");
+    expect(NAVIGATION.clinicalWork).toBe("Clinical work");
+    expect(OPEN_NOTES.udsTitle).toBe("Open Notes · UDS");
+    expect(CHECKLIST.title).toBe("Care Checklist");
+    expect(CHECKLIST.stopCount(1)).toBe("1 stop");
+    expect(CHECKLIST.stopCount(2)).toBe("2 stops");
+    expect(CHECKLIST.reviewCount(2)).toBe("2 to review");
+  });
+
   /*
    * The words below describe how this codebase is built, not what a medical
    * assistant is doing. Client/server-era naming is exactly what the redesign
@@ -101,7 +122,10 @@ describe("workstation vocabulary", () => {
     const surfaces = [
       ...Object.values(MODULE),
       ...Object.values(NOTES),
+      ...Object.values(OPEN_NOTES),
       ...Object.values(RECORD),
+      ...Object.values(SHELL),
+      ...Object.values(NAVIGATION),
       ...Object.values(WORKFLOW_LABELS),
     ];
     for (const surface of surfaces) {
