@@ -232,7 +232,14 @@ assert.match(html, /event\.key==='Escape'\)\{event\.preventDefault\(\);close\(\)
 // are typed panels. The square-surface guarantee it used to encode now lives
 // in the panel library, so assert it there instead of on a deleted file.
 assert.match(panelStyle, /border-radius: 0 !important;/, 'Migrated workflow panels must keep the square classic-EHR surface treatment');
-assert.match(desktopStyle, /\.records-drawer \{[^}]*border-radius: 0 !important;/, 'The global records drawer must use the classic-EHR treatment');
+// Was `border-radius: 0 !important`, asserting the classic-EHR treatment.
+// The redesign retires that treatment on this surface, so the assertion pins
+// the replacement with the same precision rather than being dropped: the
+// drawer is a panel with the card radius, and it carries no `!important` at
+// all now that legacy.css no longer loads on screen to be fought.
+// See docs/redesign/MANIFEST.md 1, Phase 4a amendment.
+assert.match(desktopStyle, /\.records-drawer \{[^}]*border-radius: var\(--tw-radius-card\);/, 'The records drawer must use the panel treatment');
+assert.doesNotMatch(desktopStyle, /\.records-drawer \{[^}]*!important/, 'The records drawer must not need !important: legacy.css is print-only');
 // Was `1px`. The receipt was flattened to a true square edge during the
 // old-EHR polish pass - it had been the last nonzero radius left in either
 // stylesheet - and this assertion was not updated with it. It went unnoticed

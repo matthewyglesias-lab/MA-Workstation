@@ -354,6 +354,12 @@ input[type="radio"]:disabled {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Tebra focuses with a soft teal ring around the control rather than a hard
+   outline sitting on top of it. Both !important declarations beat the
+   per-control border and bezel rules that come later in this file: focus has
+   to win on every control, and losing it on one is an accessibility defect
+   rather than a cosmetic one. Neither is new - the previous rule needed the
+   same two to force `box-shadow: none` over the bezels. */
 .cd2004-shell button:focus-visible,
 .cd2004-shell summary:focus-visible,
 .cd2004-shell a:focus-visible,
@@ -364,7 +370,7 @@ input[type="radio"]:disabled {
   outline: 2px solid var(--cd-focus);
   outline-offset: 1px;
   border-color: var(--cd-focus) !important;
-  box-shadow: none !important;
+  box-shadow: var(--tw-focus-ring) !important;
 }
 
 .cd2004-skip-link {
@@ -397,73 +403,152 @@ input[type="radio"]:disabled {
 
 /* Application chrome */
 
+/*
+ * An app bar, not a window caption. The client/server grammar here was a
+ * raised bezel around the whole header - an inset highlight along the top and
+ * an inset shadow under it - carrying a 27px OS title strip: the shell
+ * announcing that it is a window on a desktop. A web product has one flat band
+ * and a hairline under it, so both bezels go and the band carries the product
+ * mark instead of a caption.
+ *
+ * These rules were also being redeclared wholesale from meditech-workstation.
+ * css, which is why editing them here previously changed nothing on screen.
+ * That duplicate is deleted; this is now the only declaration of the header.
+ */
 .cd2004-application-header {
   position: relative;
   z-index: 10;
   min-width: 0;
-  border-bottom: 1px solid var(--cd-border-dark);
-  background: var(--cd-face);
-  box-shadow:
-    inset 0 1px var(--cd-border-light),
-    inset 0 -1px #9ca6b0;
+  background: var(--tw-surface-panel);
+  border-bottom: 1px solid var(--cd-border-mid);
 }
 
 .cd2004-app-titlebar {
   display: flex;
   align-items: center;
+  gap: 10px;
   min-width: 0;
-  height: 27px;
-  padding: 3px 6px;
-  color: #fff;
-  background: var(--cd-navy);
-  border-bottom: 1px solid var(--cd-navy-dark);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  height: 38px;
+  padding: 0 12px;
+  color: var(--tw-white);
+  background: var(--tw-teal-900);
+  font-size: var(--tw-fs-ws-base);
+  line-height: var(--tw-lh-ws-base);
+  font-weight: 600;
 }
 
+/* The mark is a mark, not a beveled icon well: no border, no inset highlight,
+   and the workstation radius the rest of the control grammar uses.
+   The glyph carries the shell's icon palette, which is tuned for light
+   surfaces, so this is the one place that restates it for a dark ground -
+   otherwise the mark renders teal-on-teal and reads as an empty tile. */
 .cd2004-app-logo {
+  --mt-icon-ink: var(--tw-white);
+  --mt-icon-blue: var(--tw-teal-200);
+  --mt-icon-blue-light: var(--tw-teal-600);
+  --mt-icon-yellow: var(--tw-sand-150);
+  --mt-icon-paper: var(--tw-teal-800);
+  --mt-icon-metal: var(--tw-teal-300);
   display: grid;
+  flex: 0 0 auto;
   place-items: center;
-  width: 20px;
-  height: 19px;
-  margin-right: 6px;
-  color: var(--cd-navy);
-  background: #f7f7f0;
-  border: 1px solid var(--tw-teal-900);
-  box-shadow: inset 1px 1px #fff;
+  width: 24px;
+  height: 24px;
+  color: var(--tw-white);
+  background: rgb(255 255 255 / 14%);
+  border-radius: var(--tw-radius-ws);
 }
 
 .cd2004-app-logo svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 .cd2004-app-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cd2004-app-environment {
+.cd2004-app-title > b {
   flex: 0 0 auto;
-  margin-left: auto;
-  padding-left: 12px;
   color: var(--tw-white);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: var(--tw-fs-ws-base);
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
+.cd2004-app-title > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tw-teal-200);
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+/* The transaction code is an internal address. It stays available for support
+   calls but reads as metadata, not as part of the product name. */
+.cd2004-app-title > small {
+  flex: 0 0 auto;
+  color: var(--tw-teal-300);
+  font-family: var(--tw-font-mono);
+  font-size: var(--tw-fs-ws-label);
+  letter-spacing: var(--tw-ls-ws-label);
+}
+
+.cd2004-app-environment {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-left: auto;
+  padding-left: 12px;
+}
+
+/* The local-only disclosure. It is the one thing on this bar that has to stay
+   legible at a glance, so it is a chip rather than tracked-out small caps. */
+.cd2004-app-environment b {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  color: var(--tw-teal-900);
+  background: var(--tw-sand-150);
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
+  font-weight: 700;
+  line-height: var(--tw-lh-ws-label);
+  letter-spacing: var(--tw-ls-ws-label);
+  white-space: nowrap;
+}
+
+.cd2004-app-environment small {
+  min-width: 0;
+  max-width: 340px;
+  overflow: hidden;
+  color: var(--tw-teal-200);
+  font-size: var(--tw-fs-ws-meta);
+  line-height: var(--tw-lh-ws-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A utility nav on the header surface, not an OS menu bar: no face colour of
+   its own, a hairline beneath, and a hover that tints rather than inverting to
+   a navy selection block. */
 .cd2004-menu-bar {
   display: flex;
   align-items: stretch;
+  gap: 2px;
   min-width: 0;
-  min-height: 25px;
-  padding: 1px 4px 0;
+  min-height: 32px;
+  padding: 3px 8px 0;
   overflow: visible;
-  background: var(--cd-face);
-  border-bottom: 1px solid #a6afb8;
+  background: var(--tw-surface-panel);
+  border-bottom: 1px solid var(--cd-border-mid);
 }
 
 .cd2004-menu {
@@ -473,25 +558,40 @@ input[type="radio"]:disabled {
 
 .cd2004-menu-title {
   min-width: 42px;
-  padding: 4px 8px 5px;
-  color: inherit;
+  padding: 0 10px;
+  color: var(--tw-text-secondary);
   background: transparent;
   border: 0;
+  border-radius: var(--tw-radius-ws) var(--tw-radius-ws) 0 0;
   font: inherit;
-  cursor: default;
+  font-size: var(--tw-fs-ws-dense);
+  font-weight: 500;
+  line-height: var(--tw-lh-ws-dense);
+  cursor: pointer;
   user-select: none;
+  transition: background-color var(--tw-dur-fast) var(--tw-ease);
 }
 
-/* Access-key underline, as a native menu bar shows. */
+/* The access key stays underlined - the mnemonics are real and Alt still
+   drives them - but it is the only underline in the bar, so it reads as a
+   keyboard hint rather than as chrome. */
 .cd2004-menu-title u {
   text-decoration: underline;
-  text-underline-offset: 1px;
+  text-underline-offset: 2px;
 }
 
-.cd2004-menu-title[aria-expanded="true"],
 .cd2004-menu-title:hover {
-  color: #fff;
-  background: var(--cd-navy);
+  color: var(--tw-text-primary);
+  background: var(--tw-mint-50);
+}
+
+/* Open, not selected: an underline in the brand teal, the way a product tab
+   marks its current item. Inverting to a solid navy block was the menu
+   telling you it was an operating-system menu. */
+.cd2004-menu-title[aria-expanded="true"] {
+  color: var(--tw-text-primary);
+  background: var(--tw-mint-100);
+  box-shadow: inset 0 -2px var(--tw-teal-800);
 }
 
 .cd2004-menu-popup {
@@ -625,6 +725,17 @@ input[type="radio"]:disabled {
 
 /* Patient context band */
 
+/*
+ * The facesheet banner. Tebra's patient hub leads with the name, set large
+ * and read as a name, and keeps the identifiers beside it as labelled fields.
+ * This banner was setting every value in tracked-out upper case in Arial
+ * Narrow, boxed between two-tone gutters - a terminal masthead. Upper case is
+ * for the labels only now, and the name takes the brand tier: MANIFEST 3
+ * reserves it for exactly this kind of surface.
+ *
+ * The gutter treatment was a 1px border with an inset highlight painted just
+ * inside it, which is a bevel drawn two ways. One hairline does the job.
+ */
 .cd2004-patient-banner {
   display: grid;
   grid-template-columns:
@@ -635,18 +746,16 @@ input[type="radio"]:disabled {
     minmax(160px, 0.9fr);
   min-width: 0;
   min-height: 53px;
-  color: #172235;
-  background: var(--tw-mint-50);
-  border-top: 1px solid #f9fbff;
-  border-bottom: 1px solid #5c6874;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border-bottom: 1px solid var(--cd-border-mid);
 }
 
 .cd2004-patient-primary,
 .cd2004-patient-field {
   min-width: 0;
-  padding: 7px 10px;
-  border-right: 1px solid #adb7c2;
-  box-shadow: inset -1px 0 #f8fafc;
+  padding: 7px 12px;
+  border-right: 1px solid var(--cd-border-mid);
 }
 
 .cd2004-patient-primary {
@@ -654,13 +763,13 @@ input[type="radio"]:disabled {
   grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
   gap: 7px;
-  background: var(--tw-mint-150);
+  background: transparent;
 }
 
 .cd2004-patient-primary > svg {
   width: 25px;
   height: 25px;
-  color: var(--cd-navy);
+  color: var(--tw-text-secondary);
 }
 
 .cd2004-patient-primary span,
@@ -671,11 +780,11 @@ input[type="radio"]:disabled {
 
 .cd2004-patient-banner small {
   display: block;
-  color: var(--tw-teal-500);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-label);
+  font-weight: 600;
+  letter-spacing: var(--tw-ls-ws-label);
+  line-height: var(--tw-lh-ws-label);
   text-transform: uppercase;
 }
 
@@ -683,16 +792,20 @@ input[type="radio"]:disabled {
   min-width: 0;
   margin-top: 2px;
   overflow: hidden;
-  color: #11213a;
-  font-size: 12px;
-  line-height: 1.25;
+  color: var(--tw-text-primary);
+  font-size: var(--tw-fs-ws-base);
+  font-weight: 600;
+  line-height: var(--tw-lh-ws-base);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Brand tier: the one name on the screen that a station three feet away has
+   to be able to read before touching anything. */
 .cd2004-patient-primary strong {
-  font-size: 12px;
-  letter-spacing: 0.015em;
+  font-size: var(--tw-fs-lead);
+  font-weight: 700;
+  line-height: var(--tw-lh-ws-base);
 }
 
 .cd2004-patient-banner.has-mismatch {
@@ -776,50 +889,58 @@ input[type="radio"]:disabled {
     var(--cd-workspace);
 }
 
+/*
+ * A panel, not a window. `.cd2004-window` was a 2px four-way bevel with two
+ * inset edges and a hard offset shadow, and its `.cd2004-window-titlebar` was
+ * an OS caption - inverted, bold, with an inactive shade and a beveled mark
+ * beside the title. Nothing in a web product looks like that, and it is the
+ * last piece of the desktop-window grammar in the shell.
+ *
+ * The structure is unchanged: these still tile the workspace and still carry
+ * an active state, because which pane owns the keyboard is real information.
+ * Active now reads as a teal rule under the header rather than as a caption
+ * changing colour.
+ */
 .cd2004-window {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--cd-face);
-  border: 2px solid;
-  border-color: var(--cd-border-light) var(--cd-border-dark)
-    var(--cd-border-dark) var(--cd-border-light);
-  box-shadow:
-    inset 1px 1px var(--tw-mint-150),
-    inset -1px -1px #737d88,
-    1px 1px 1px rgb(0 0 0 / 24%);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--cd-border-mid);
+  border-radius: var(--tw-radius-ws);
 }
-
 
 .cd2004-window-titlebar {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   min-width: 0;
-  min-height: 24px;
-  padding: 2px 2px 2px 4px;
-  color: var(--tw-mint-50);
-  background: var(--tw-teal-500);
-  border-bottom: 1px solid #424e5a;
+  min-height: 32px;
+  padding: 4px 10px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-sunken);
+  border-bottom: 1px solid var(--cd-border-mid);
+  font-size: var(--tw-fs-ws-base);
   font-weight: 700;
   user-select: none;
 }
 
 .cd2004-window.is-active > .cd2004-window-titlebar,
 .cd2004-help-dialog > .cd2004-window-titlebar {
-  color: #fff;
-  background: var(--cd-navy);
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-sunken);
+  border-bottom: 2px solid var(--tw-teal-800);
 }
 
 .cd2004-window-mark {
   flex: 0 0 auto;
   width: 11px;
   height: 11px;
-  background: #f6f5e9;
-  border: 1px solid var(--tw-teal-900);
-  box-shadow: inset 2px 2px var(--tw-teal-300);
+  background: var(--tw-border-strong);
+  border: 0;
+  border-radius: var(--tw-radius-tight);
 }
 
 .cd2004-window-title {
@@ -830,36 +951,38 @@ input[type="radio"]:disabled {
 }
 
 .cd2004-window-title small {
-  margin-left: 7px;
-  color: var(--tw-mint-150);
-  font-size: 9px;
+  margin-left: 8px;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 400;
 }
 
+/* A close control, not a caption box: the beveled square with a bold Arial
+   glyph and a one-pixel travel on press was a title-bar button. */
 .cd2004-caption-button {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 20px;
-  height: 19px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  color: #111;
-  background: var(--cd-face);
-  border: 1px solid;
-  border-color: #f6f8fa #303841 #303841 #f6f8fa;
-  box-shadow:
-    inset 1px 1px var(--tw-mint-150),
-    inset -1px -1px #79828c;
-  font-family: Arial, sans-serif;
+  color: var(--tw-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--tw-radius-ws);
+  font-family: inherit;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
 }
 
+.cd2004-caption-button:hover {
+  color: var(--tw-text-primary);
+  background: var(--tw-mint-150);
+}
+
 .cd2004-caption-button:active {
-  border-color: #303841 #f6f8fa #f6f8fa #303841;
-  box-shadow: inset 1px 1px #79828c;
-  transform: translate(1px, 1px);
+  background: var(--tw-mint-200);
 }
 
 .cd2004-caption-close {
@@ -1021,13 +1144,14 @@ input[type="radio"]:disabled {
   box-shadow: inset 1px 1px #fff, inset -1px -1px #afb5c7;
 }
 
+/* A section heading, in sentence case. The shouted small caps were a
+   client/server section rule; Tebra writes a heading as a heading. */
 .cd2004-launcher-head {
   display: block;
-  color: var(--tw-teal-600);
-  font-size: 8px;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  line-height: var(--tw-lh-ws-meta);
 }
 
 .cd2004-launcher-grid {
@@ -1140,40 +1264,115 @@ input[type="radio"]:disabled {
   line-height: 1.25;
 }
 
-.cd2004-worklist-new,
-.cd2004-worklist-action {
-  min-height: 23px;
-  color: var(--tw-teal-900);
-  background: linear-gradient(#fff, var(--tw-mint-150));
-  border: 1px solid var(--tw-teal-500);
-  border-radius: 2px;
-  box-shadow: inset 1px 1px #fff, inset -1px -1px var(--tw-teal-300);
-  font: 700 10px var(--tw-font-sans);
+/* The action bar. Tebra puts it top right, primary first. */
+.cd2004-worklist-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cd2004-worklist-menu {
+  position: relative;
+}
+
+/* The overflow control is quiet: it holds destinations, not the task. */
+.cd2004-worklist-more {
+  min-height: var(--tw-btn-h-ws);
+  padding: 3px 12px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
+  font: 600 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
   white-space: nowrap;
 }
 
+.cd2004-worklist-more:hover:not(:disabled) {
+  background: var(--tw-mint-50);
+  border-color: var(--tw-teal-600);
+}
+
+.cd2004-worklist-menu-popup {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  min-width: 168px;
+  padding: 4px;
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-ws);
+  box-shadow: 0 6px 16px rgb(0 58 67 / 12%);
+}
+
+.cd2004-worklist-menu-popup.is-right {
+  right: 0;
+  left: auto;
+}
+
+.cd2004-worklist-menu-popup button {
+  padding: 6px 10px;
+  color: var(--tw-text-primary);
+  background: none;
+  border: 0;
+  border-radius: var(--tw-radius-tight);
+  font: 500 var(--tw-fs-ws-dense)/var(--tw-lh-ws-dense) var(--tw-font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cd2004-worklist-menu-popup button:hover:not(:disabled) {
+  background: var(--tw-mint-50);
+}
+
+.cd2004-worklist-menu-popup button:disabled {
+  color: var(--tw-text-muted);
+  cursor: default;
+}
+
 .cd2004-worklist-new {
-  padding: 3px 9px;
+  min-height: var(--tw-btn-h-ws);
+  color: var(--tw-teal-900);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
+  box-shadow: none;
+  font: 600 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
+  white-space: nowrap;
 }
 
-.cd2004-worklist-new:hover:not(:disabled),
-.cd2004-worklist-action:hover:not(:disabled) {
-  color: #fff;
-  background: var(--tw-teal-600);
-  border-color: var(--tw-teal-800);
+/*
+ * `.cd2004-worklist-new` is the one thing the Dashboard is for: start a note.
+ * It takes the coral primary - the first and only coral on this screen, and
+ * the answer to MANIFEST 5 question 6, which had no answer at all while the
+ * palette was applied but the accent was not.
+ *
+ * Coral carries no clinical meaning anywhere: PLAN 2.7. It sits close to a
+ * warning hue, so it marks the primary action and nothing else, and the
+ * clinical triad stays entirely separate. Ink is --tw-ink-900, Tebra's own
+ * button text, which measures 8.6:1 on coral-500 - white would be 2.3:1.
+ */
+.cd2004-worklist-new {
+  padding: 3px 12px;
+  color: var(--tw-ink-900);
+  background: var(--tw-coral-500);
+  border-color: var(--tw-coral-600);
+  font-weight: 700;
 }
 
-.cd2004-worklist-new:active:not(:disabled),
-.cd2004-worklist-action:active:not(:disabled) {
-  box-shadow: inset 1px 1px var(--tw-teal-500);
-  transform: translate(1px, 1px);
+.cd2004-worklist-new:hover:not(:disabled) {
+  background: var(--tw-coral-300);
 }
 
-.cd2004-worklist-new:disabled,
-.cd2004-worklist-action:disabled {
-  color: #788390;
-  background: #e5e7eb;
-  border-color: #a2a9b4;
+.cd2004-worklist-new:active:not(:disabled) {
+  background: var(--tw-coral-600);
+}
+
+.cd2004-worklist-new:disabled {
+  color: var(--tw-text-muted);
+  background: var(--tw-surface-sunken);
+  border-color: var(--tw-border-subtle);
   cursor: default;
 }
 
@@ -1270,29 +1469,38 @@ input[type="radio"]:disabled {
   letter-spacing: 0.02em;
 }
 
+/*
+ * Column widths for Tebra's set: Patient · Lock · Type · Status · Visit date.
+ * The lock and the visit date are fixed - a glyph and a clock time have a
+ * known size and should not breathe with the window - and the proportional
+ * space goes to Type, which carries the medication line.
+ *
+ * These were declared twice, here and again at the desktop breakpoint in
+ * meditech-workstation.css. The duplicate is deleted; this is the only
+ * declaration.
+ */
 .cd2004-worklist-table th:nth-child(1) {
-  width: 17%;
+  width: 24%;
 }
 
 .cd2004-worklist-table th:nth-child(2) {
-  width: 22%;
+  width: 32px;
 }
 
 .cd2004-worklist-table th:nth-child(3) {
-  width: 35%;
+  width: auto;
 }
 
 .cd2004-worklist-table th:nth-child(4) {
-  width: 15%;
+  width: 130px;
 }
 
 .cd2004-worklist-table th:last-child {
-  width: 78px;
+  width: 96px;
   border-right: 0;
 }
 
 .cd2004-worklist-table td:last-child {
-  text-align: center;
   border-right: 0;
 }
 
@@ -1319,39 +1527,171 @@ input[type="radio"]:disabled {
 .cd2004-worklist-table td:first-child strong {
   display: block;
   color: var(--tw-teal-800);
-  font-size: 10px;
+  font-size: var(--tw-fs-ws-meta);
   font-weight: 700;
+  line-height: var(--tw-lh-ws-meta);
 }
 
+/* A clock time, so it keeps a monospaced face for column alignment - but the
+   token mono rather than Courier New, which Phase 2a's Tahoma pass did not
+   reach. */
 .cd2004-worklist-table td:first-child small {
   display: block;
-  margin-top: 1px;
   overflow: hidden;
-  color: var(--tw-teal-500);
-  font: 9px "Courier New", monospace;
+  color: var(--tw-text-secondary);
+  font-family: var(--tw-font-mono);
+  font-size: var(--tw-fs-ws-label);
+  line-height: var(--tw-lh-ws-label);
+  font-variant-numeric: var(--tw-numeric-tabular);
   text-overflow: ellipsis;
 }
 
-.cd2004-worklist-state {
-  font-size: 10px;
+/*
+ * The status chip. `.cd2004-worklist-state` was coloured text in a cell -
+ * colour carrying the state on its own. A chip carries the word inside a
+ * tinted, bordered shape, which is what Tebra ships and what MANIFEST 5
+ * question 7 requires: the state is legible without relying on hue.
+ */
+.cd2004-note-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 6px;
+  color: var(--tw-text-secondary);
+  background: var(--tw-surface-sunken);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-pill);
+  font-size: var(--tw-fs-ws-label);
   font-weight: 700;
+  line-height: var(--tw-lh-ws-label);
+  white-space: nowrap;
 }
 
-.cd2004-worklist-state.is-ready {
-  color: #12653a;
+.cd2004-note-chip svg {
+  width: 12px;
+  height: 12px;
 }
 
-.cd2004-worklist-state.is-warning {
-  color: #875200;
+.cd2004-note-chip.is-ready {
+  color: var(--tw-ready-fg);
+  background: var(--tw-ready-bg);
+  border-color: var(--tw-ready-border);
 }
 
-.cd2004-worklist-state.is-stop {
-  color: #9c1414;
+.cd2004-note-chip.is-warning {
+  color: var(--tw-review-fg);
+  background: var(--tw-review-bg);
+  border-color: var(--tw-review-border);
 }
 
-.cd2004-worklist-action {
-  min-width: 58px;
-  padding: 2px 6px;
+.cd2004-note-chip.is-stop {
+  color: var(--tw-stop-fg);
+  background: var(--tw-stop-bg);
+  border-color: var(--tw-stop-border);
+}
+
+/*
+ * Sortable headers. The direction mark is reserved at all times and only
+ * inked on the sorted column, so sorting never shifts the header row; the
+ * others surface theirs on hover, which keeps five columns from reading as
+ * five buttons.
+ */
+.cd2004-worklist-sortable button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cd2004-worklist-sort-mark {
+  color: transparent;
+  font-size: 8px;
+}
+
+.cd2004-worklist-sortable:hover .cd2004-worklist-sort-mark {
+  color: var(--tw-text-muted);
+}
+
+.cd2004-worklist-sortable.is-sorted .cd2004-worklist-sort-mark {
+  color: var(--tw-teal-800);
+}
+
+.cd2004-worklist-lock-column {
+  width: 28px;
+  text-align: center;
+}
+
+.cd2004-worklist-lock {
+  display: inline-grid;
+  place-items: center;
+  color: var(--tw-text-secondary);
+}
+
+.cd2004-worklist-lock svg {
+  width: 13px;
+  height: 13px;
+}
+
+/*
+ * The whole row opens the note. The row carries the pointer target; this
+ * button carries the keyboard and screen-reader one, so it has to look like
+ * the cell text rather than like a control.
+ */
+.cd2004-worklist-open {
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  color: var(--tw-text-primary);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.cd2004-worklist-open:disabled {
+  color: var(--tw-text-muted);
+  cursor: default;
+}
+
+.cd2004-worklist-table tbody tr.is-openable {
+  cursor: pointer;
+}
+
+.cd2004-worklist-table tbody tr.is-openable:hover {
+  background: var(--tw-mint-50);
+}
+
+/* Type over its detail: Tebra has no detail column, and the medication is
+   the line an MA scans for, so it rides under the note type. */
+.cd2004-worklist-type {
+  display: grid;
+  min-width: 0;
+}
+
+.cd2004-worklist-type strong {
+  font-size: var(--tw-fs-ws-meta);
+  font-weight: 600;
+}
+
+.cd2004-worklist-type small,
+.cd2004-worklist-visit {
+  overflow: hidden;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-label);
+  line-height: var(--tw-lh-ws-label);
+  text-overflow: ellipsis;
+}
+
+.cd2004-worklist-visit {
+  font-variant-numeric: var(--tw-numeric-tabular);
 }
 
 .cd2004-worklist-empty td {
@@ -1468,11 +1808,6 @@ input[type="radio"]:disabled {
     grid-row: 3;
     align-self: end;
     padding-top: 4px;
-  }
-
-  .cd2004-worklist-action {
-    width: 100%;
-    min-height: 28px;
   }
 
   .cd2004-worklist-empty td {
@@ -1757,43 +2092,48 @@ input[type="radio"]:disabled {
   border-bottom: 1px solid var(--tw-teal-300);
 }
 
+/* A checklist row: marker, item, state chip. */
 .cd2004-readiness-item {
   display: grid;
-  grid-template-columns: 19px minmax(0, 1fr);
-  gap: 6px;
+  grid-template-columns: 19px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   min-height: 34px;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--tw-mint-150);
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
+/*
+ * The marker was a filled square with a typographic glyph in it - a green box
+ * with a tick, a red box with a multiplication sign. It reads as a status
+ * light. It is an icon in the state's own colour now, and the word beside it
+ * in the chip is what actually carries the meaning.
+ */
 .cd2004-readiness-marker {
   display: grid;
   place-items: center;
-  align-self: start;
   width: 17px;
   height: 17px;
-  margin-top: 1px;
-  color: #fff;
-  background: #7d8791;
-  border: 1px solid #4f5861;
-  font-weight: 700;
-  line-height: 1;
+  color: var(--tw-text-muted);
+  background: none;
+  border: 0;
+}
+
+.cd2004-readiness-marker svg {
+  width: 14px;
+  height: 14px;
 }
 
 .cd2004-readiness-item.is-complete .cd2004-readiness-marker {
-  background: var(--cd-green);
-  border-color: #044d29;
+  color: var(--tw-ready-fg);
 }
 
 .cd2004-readiness-item.is-warning .cd2004-readiness-marker {
-  color: #392200;
-  background: #f5c44e;
-  border-color: #946100;
+  color: var(--tw-review-fg);
 }
 
 .cd2004-readiness-item.is-stop .cd2004-readiness-marker {
-  background: var(--cd-red);
-  border-color: #6d0909;
+  color: var(--tw-stop-fg);
 }
 
 .cd2004-readiness-item strong,
@@ -2191,19 +2531,21 @@ input[type="radio"]:disabled {
  * segments sit to its right.
  */
 
+/* One flat footer band with a hairline over it. The sunken segment wells -
+   each status readout boxed in its own two-tone bevel - were the loudest
+   remaining client/server tell below the fold. */
 .cd2004-statusbar {
   position: relative;
   z-index: 20;
   flex: 0 0 auto;
   display: flex;
   align-items: stretch;
-  gap: 2px;
+  gap: 16px;
   min-width: 0;
-  height: 22px;
-  padding: 2px 3px;
-  background: var(--cd-face);
-  border-top: 1px solid #f8fafc;
-  box-shadow: inset 0 1px #fff;
+  height: 26px;
+  padding: 0 12px;
+  background: var(--tw-surface-panel);
+  border-top: 1px solid var(--cd-border-mid);
 }
 
 .cd2004-status-message,
@@ -2211,13 +2553,12 @@ input[type="radio"]:disabled {
   display: flex;
   align-items: center;
   min-width: 0;
-  padding: 0 6px;
   overflow: hidden;
-  color: var(--tw-teal-600);
-  background: var(--cd-face);
-  border: 1px solid;
-  border-color: #7c8791 #f5f7f9 #f5f7f9 #7c8791;
-  font-size: 9px;
+  color: var(--tw-text-secondary);
+  background: transparent;
+  border: 0;
+  font-size: var(--tw-fs-ws-meta);
+  line-height: var(--tw-lh-ws-meta);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2229,8 +2570,7 @@ input[type="radio"]:disabled {
 .cd2004-status-segment {
   flex: 0 1 auto;
   max-width: 190px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 .cd2004-status-segment.is-online {
@@ -2238,8 +2578,10 @@ input[type="radio"]:disabled {
 }
 
 .cd2004-status-segment.is-error {
+  padding: 0 8px;
   color: var(--cd-red);
   background: var(--cd-red-soft);
+  border-radius: var(--tw-radius-ws);
 }
 
 /* Modal and shortcut reference */
@@ -3072,54 +3414,49 @@ input[type="radio"]:disabled {
      an undimmed shell with nothing to click away on. */
   position: absolute;
   inset: 0;
-  background: rgb(8 17 34 / 42%) !important;
-  backdrop-filter: none !important;
+  background: rgb(0 58 67 / 32%);
   opacity: 0;
-  transition: opacity 100ms linear !important;
+  transition: opacity var(--tw-dur-fast) linear;
 }
 
 .records-drawer-layer.is-open .records-drawer-scrim {
   opacity: 1;
 }
 
+/*
+ * The signed-notes drawer. It is where `Signed notes` in the action bar goes,
+ * so it is Open Notes' other half and now shares its conventions: sentence-
+ * case sortable headers, the note chip for status, a whole-row target with no
+ * trailing action text, and a panel rather than a window.
+ *
+ * It was the last Win32 dialog in the app: a raised four-way bevel, a hard
+ * offset shadow, a gradient caption bar and an `[x]` caption box.
+ */
 .records-drawer {
   min-width: 0;
-  padding: 0 !important;
-  overflow: hidden !important;
-  color: var(--cd-util-ink) !important;
-  background: var(--cd-util-face) !important;
-  /* Raised Win32 window edge, and a hard offset drop shadow rather than a
-     diffuse one - the same treatment the shell's own dialogs use. */
-  border: 1px solid #000 !important;
-  border-top-color: var(--cd-util-white) !important;
-  border-left-color: var(--cd-util-white) !important;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px var(--cd-util-white),
-    inset -1px -1px #7a838d,
-    4px 4px 0 rgb(0 0 0 / 35%) !important;
-  transform: none !important;
-  transition: none !important;
-  font-family: var(--tw-font-sans) !important;
+  padding: 0;
+  overflow: hidden;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-card);
+  box-shadow: 0 12px 32px rgb(0 58 67 / 18%);
+  font-family: var(--tw-font-sans);
 }
 
+/* A section header, the same one the work and inspector panels wear. */
 .records-drawer-head {
   position: relative;
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) 25px;
-  align-items: start !important;
-  gap: 8px !important;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  align-content: center;
+  gap: 8px;
   min-width: 0;
-  align-content: center !important;
   min-height: 0;
-  padding: 3px 3px 3px 6px !important;
-  color: #fff;
-  background: linear-gradient(
-    90deg,
-    var(--cd-util-navy),
-    var(--cd-util-navy-light)
-  ) !important;
-  border-bottom: 1px solid var(--cd-util-navy-dark);
+  padding: 8px 10px;
+  background: var(--tw-surface-sunken);
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
 .records-drawer-head > div {
@@ -3133,108 +3470,84 @@ input[type="radio"]:disabled {
 
 .records-drawer-kicker {
   overflow: hidden;
-  color: var(--tw-teal-200) !important;
-  font: 700 9px/1.2 var(--tw-font-sans) !important;
-  letter-spacing: 0.1em !important;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
 .records-drawer-head h2 {
-  margin: 0 !important;
+  margin: 0;
   overflow: hidden;
-  color: #fff !important;
-  font: 700 11px/1.2 var(--tw-font-sans) !important;
-  letter-spacing: 0 !important;
+  color: var(--tw-text-primary);
+  font: 700 var(--tw-fs-ws-base)/var(--tw-lh-ws-base) var(--tw-font-sans);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .records-drawer-head p {
-  max-width: none !important;
-  margin: 0 !important;
+  max-width: none;
+  margin: 0;
   overflow: hidden;
-  color: var(--tw-mint-50) !important;
-  font: 10px/1.35 var(--tw-font-sans) !important;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
+/* A close control, not a caption box. Same grammar as the panels'. */
 .records-drawer-close {
   display: grid;
   place-items: center;
-  width: 16px !important;
-  height: 14px !important;
-  min-width: 16px !important;
-  min-height: 14px !important;
-  padding: 2px !important;
-  color: #111c2b !important;
-  background: var(--cd-util-face) !important;
-  border: 1px solid !important;
-  border-color: #fff #303841 #303841 #fff !important;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px var(--tw-mint-50),
-    inset -1px -1px #77818b !important;
-  transform: none !important;
-  transition:
-    background-color 80ms linear,
-    color 80ms linear !important;
-  font: 700 9px/1 Tahoma, Arial, sans-serif !important;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  color: var(--tw-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--tw-radius-ws);
+  font: 500 14px/1 var(--tw-font-sans);
+  cursor: pointer;
 }
 
 .records-drawer-close:hover {
-  color: #fff !important;
-  background: #9c1f1f !important;
-  border-color: #d88989 #540b0b #540b0b #d88989 !important;
+  color: var(--tw-text-primary);
+  background: var(--tw-mint-150);
 }
 
 .records-drawer-close:active {
-  border-color: #303841 #fff #fff #303841 !important;
-  box-shadow: inset 1px 1px #77818b !important;
-  transform: translate(1px, 1px) !important;
+  background: var(--tw-mint-200);
 }
 
 .records-drawer-search {
   position: relative;
   min-width: 0;
-  margin: 0 !important;
-  padding: 8px 9px 7px;
-  background: var(--cd-util-face);
-  border-bottom: 1px solid var(--cd-util-line);
-  box-shadow: inset 0 1px #fff;
+  margin: 0;
+  padding: 12px 12px 8px;
 }
 
 .records-drawer-search input {
   width: 100%;
   min-width: 0;
-  height: 32px !important;
-  padding: 5px 31px 5px 7px !important;
-  color: var(--cd-util-ink) !important;
-  background: #fff !important;
-  border: 1px solid #414c58 !important;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px #aab2bb,
-    inset -1px -1px #eef1f4 !important;
-  outline: 0;
-  font: 11px var(--tw-font-sans) !important;
+  height: var(--tw-btn-h-ws);
+  padding: 5px 31px 5px 10px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
+  font: var(--tw-fs-ws-dense)/var(--tw-lh-ws-dense) var(--tw-font-sans);
 }
 
-/* The input already reserves 31px of right padding for this glyph; legacy.css
-   was supplying the absolute placement and the SVG's size. Unpositioned it
-   dropped below the field at its 84px intrinsic default. */
+.records-drawer-search input:focus {
+  border-color: var(--cd-focus);
+  outline: none;
+  box-shadow: var(--tw-focus-ring);
+}
+
+/* The input already reserves 31px of right padding for this glyph. */
 .records-drawer-search > span {
   position: absolute;
   top: 50%;
-  right: 18px;
+  right: 22px;
   display: block;
   width: 13px;
   height: 13px;
-  color: #5c6673;
+  color: var(--tw-text-secondary);
   transform: translateY(-50%);
-  pointer-events: none;
 }
 
 .records-drawer-search > span svg {
@@ -3243,88 +3556,55 @@ input[type="radio"]:disabled {
   height: 100%;
 }
 
-.records-drawer-search input:focus {
-  border-color: var(--cd-util-navy) !important;
-  box-shadow: inset 1px 1px var(--tw-teal-300) !important;
-  outline: 2px solid #ffb400 !important;
-  outline-offset: -1px;
-}
-
-.records-drawer-search span {
-  right: 17px !important;
-  color: var(--cd-util-navy) !important;
-}
-
-.records-drawer-search span svg {
-  width: 16px;
-  height: 16px;
-}
-
 .records-drawer-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px !important;
+  gap: 6px;
   min-width: 0;
-  padding: 5px 8px 6px !important;
-  background: var(--tw-mint-150);
-  border-bottom: 1px solid var(--cd-util-line) !important;
-  box-shadow: inset 0 1px #f7f9fb;
+  padding: 0 12px 10px;
 }
 
 .records-drawer-filters button {
   min-width: 62px;
-  min-height: 27px !important;
-  padding: 3px 8px !important;
-  color: var(--tw-teal-800) !important;
-  background: var(--cd-util-face) !important;
-  border: 1px solid !important;
-  border-color: #fff #4d5863 #4d5863 #fff !important;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px var(--tw-mint-50),
-    inset -1px -1px #8c96a0 !important;
-  font: 700 10px var(--tw-font-sans) !important;
-  transform: none !important;
-  transition:
-    color 80ms linear,
-    background-color 80ms linear !important;
+  min-height: var(--tw-btn-h-ws);
+  padding: 3px 12px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-pill);
+  font: 600 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
+  cursor: pointer;
 }
 
 .records-drawer-filters button:hover:not(.on) {
-  color: var(--cd-util-navy) !important;
-  background: var(--tw-mint-50) !important;
+  background: var(--tw-mint-50);
 }
 
 .records-drawer-filters button.on {
-  color: #fff !important;
-  background: var(--cd-util-navy) !important;
-  border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900) !important;
-  box-shadow: inset 1px 1px var(--tw-teal-900) !important;
+  color: var(--tw-white);
+  background: var(--tw-teal-800);
+  border-color: var(--tw-teal-800);
 }
 
 .records-drawer-status {
-  min-height: 27px !important;
-  align-items: center !important;
-  padding: 4px 9px !important;
-  color: var(--tw-teal-600) !important;
-  background: #e7eaed;
-  border-bottom: 1px solid #a4adb6;
-  font: 700 9px var(--tw-font-sans) !important;
-  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 0 12px 6px;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-meta);
 }
 
-/* Column headers for the record list. Shares the row's exact track sizing so
-   the labels stay locked to their columns, and carries the sunken/raised Win32
-   header-button treatment that made list headers look clickable. */
+/* Column headers. Shares the row's exact track sizing so the labels line up
+   with the values, and sentence case like Open Notes' - the shouted caps were
+   the last of that treatment in the app. */
 .records-drawer-columns {
   display: grid;
-  /* No column gap: percentage tracks already total 100%, so any gap pushes
-     the header past the window edge. Win32 list headers butt together
-     anyway - the button borders are the separator. */
-  grid-template-columns: 27% 33% 24% 16%;
-  padding: 0 7px;
-  background: var(--cd-util-face);
-  border-bottom: 1px solid #818c97;
+  grid-template-columns: 30% 36% 34%;
+  padding: 0 12px;
+  background: var(--tw-surface-sunken);
+  border-top: 1px solid var(--tw-border-subtle);
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
 .records-drawer-columns button {
@@ -3332,113 +3612,73 @@ input[type="radio"]:disabled {
   gap: 4px;
   align-items: center;
   min-width: 0;
-  height: 18px;
+  height: 28px;
   padding: 0 4px;
-  color: var(--tw-teal-900) !important;
-  background: var(--cd-util-face) !important;
-  border: 1px solid !important;
-  border-color: #fff #97a1ab #97a1ab #fff !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  font: 700 9px var(--tw-font-sans) !important;
-  letter-spacing: 0.04em;
+  color: var(--tw-text-primary);
+  background: none;
+  border: 0;
+  font: 700 var(--tw-fs-ws-label)/var(--tw-lh-ws-label) var(--tw-font-sans);
   text-align: left;
-  text-transform: uppercase;
   cursor: pointer;
 }
 
-.records-drawer-columns button:hover {
-  background: var(--tw-mint-50) !important;
+.records-drawer-columns button::after {
+  content: "▼";
+  color: transparent;
+  font-size: 8px;
 }
 
-.records-drawer-columns button:active {
-  border-color: #97a1ab #fff #fff #97a1ab !important;
+.records-drawer-columns button:hover::after {
+  color: var(--tw-text-muted);
 }
 
-.records-drawer-columns button:focus-visible {
-  outline: 2px solid #ffb400;
-  outline-offset: -2px;
-}
-
-.records-drawer-action-heading {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  height: 18px;
-  padding: 0 4px;
-  color: var(--tw-teal-900);
-  background: var(--cd-util-face);
-  border: 1px solid;
-  border-color: #fff #97a1ab #97a1ab #fff;
-  font: 700 9px var(--tw-font-sans);
-  letter-spacing: 0.04em;
-  text-align: left;
-  text-transform: uppercase;
-}
-
-/* The sort marker is a plain triangle, drawn in text rather than an icon. */
 .records-drawer-columns button.is-sorted::after {
-  content: "\25B2";
-  color: var(--tw-teal-600);
-  font-size: 7px;
+  color: var(--tw-teal-800);
 }
 
 .records-drawer-columns button.is-sorted.is-desc::after {
-  content: "\25BC";
+  content: "▲";
+}
+
+/* The Action column is gone with the action text it headed. */
+.records-drawer-action-heading {
+  display: none;
 }
 
 .records-drawer-results {
   min-width: 0;
   min-height: 0;
-  gap: 2px !important;
-  padding: 5px 6px 6px !important;
+  padding: 0;
   overflow: auto;
-  background: #f2f4f5;
-  /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
-     shared scrollbar block. */
 }
 
-/* One record per line, in columns - Patient / Medication / Last activity /
-   Action - the way an encounter-selection list has always read. Stacked
-   "cards" with a chevron are a touch-target idiom, not a records list. */
+/* One record per line - Patient / Medication / Last activity - and the whole
+   line is the target, which is what Open Notes does and what Tebra does. */
 .records-drawer-row {
   display: grid;
-  /* Percentages, and an explicit full width: each row is its own grid
-     container, so `fr` units resolve against that row's own content and the
-     columns come out ragged from line to line. Percentages resolve against
-     the same container width for every row, so the columns line up. */
   width: 100%;
-  grid-template-columns: 27% 33% 24% 16%;
+  grid-template-columns: 30% 36% 34%;
   align-items: center;
   min-width: 0;
-  gap: 0 !important;
-  padding: 0 7px !important;
-  min-height: 20px;
-  color: var(--tw-teal-800) !important;
-  background: transparent !important;
-  border: 0 !important;
-  border-bottom: 1px solid var(--tw-mint-150) !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  transform: none !important;
-  transition: none !important;
+  gap: 0;
+  min-height: 36px;
+  padding: 6px 12px;
+  color: var(--tw-text-primary);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--tw-border-subtle);
+  font: var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
   text-align: left;
-}
-
-.records-drawer-row:nth-child(even) {
-  background: #eef1f4 !important;
+  cursor: pointer;
 }
 
 .records-drawer-row:hover {
-  color: var(--tw-teal-900) !important;
-  background: var(--cd-util-selection) !important;
-  box-shadow: none !important;
-  transform: none !important;
+  background: var(--tw-mint-50);
 }
 
 .records-drawer-row-top {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   min-width: 0;
 }
@@ -3452,144 +3692,92 @@ input[type="radio"]:disabled {
 .records-drawer-row-meta {
   min-width: 0;
   overflow: hidden;
-  font-family: var(--tw-font-sans) !important;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .records-drawer-row-title {
-  color: var(--tw-teal-900) !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-}
-
-.records-drawer-row-summary {
-  color: var(--tw-teal-600) !important;
-  font-size: 10px !important;
+  font-weight: 600;
 }
 
 .records-drawer-row-meta {
-  color: #6a7582 !important;
-  font: 9px "Courier New", monospace !important;
-}
-
-.records-drawer-row-badge {
-  flex: none;
-  padding: 0 3px !important;
-  color: var(--tw-teal-600) !important;
-  background: var(--tw-mint-50) !important;
-  border: 1px solid #919ba5 !important;
-  border-radius: 0 !important;
-  font: 700 8px var(--tw-font-sans) !important;
-}
-
-.records-drawer-row-badge.locked {
-  color: #064b27 !important;
-  background: var(--cd-util-green-soft) !important;
-  border-color: #5a9e78 !important;
-}
-
-.records-drawer-row-badge.draft {
-  color: #5a3800 !important;
-  background: var(--cd-util-amber-soft) !important;
-  border-color: #b68935 !important;
-}
-
-.records-drawer-row-action {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--tw-teal-600);
-  font: 700 9px var(--tw-font-sans);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--tw-text-secondary);
 }
 
 .records-drawer-empty {
-  gap: 3px !important;
-  padding: 16px 10px !important;
-  color: var(--tw-teal-500) !important;
-  background: #fff !important;
-  border: 1px solid #8d97a1 !important;
-  border-radius: 0 !important;
-  font: 10px/1.4 var(--tw-font-sans) !important;
+  display: grid;
+  gap: 4px;
+  padding: 24px 12px;
+  color: var(--tw-text-secondary);
+  text-align: center;
 }
 
 .records-drawer-empty b {
-  color: var(--tw-teal-800) !important;
-  font-size: 11px !important;
+  color: var(--tw-text-primary);
+  font-size: var(--tw-fs-ws-dense);
 }
 
 .records-drawer-foot {
-  display: grid !important;
+  display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center !important;
-  gap: 8px !important;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
-  padding: 7px 8px !important;
-  background: var(--tw-mint-150);
-  border-top: 1px solid #fff !important;
-  box-shadow: inset 0 1px #858f99;
+  padding: 10px 12px;
+  background: var(--tw-surface-sunken);
+  border-top: 1px solid var(--tw-border-subtle);
 }
 
 .records-drawer-foot p {
-  max-width: none !important;
-  margin: 0 !important;
+  max-width: none;
+  margin: 0;
   overflow: hidden;
-  color: var(--tw-teal-600) !important;
-  font: 9px/1.35 var(--tw-font-sans) !important;
-}
-
-.records-drawer-new {
-  min-height: 29px;
-  padding: 4px 9px !important;
-  color: #fff !important;
-  background: var(--cd-util-navy) !important;
-  border: 1px solid !important;
-  border-color: var(--tw-teal-300) var(--tw-teal-900) var(--tw-teal-900) var(--tw-teal-300) !important;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px var(--tw-teal-500),
-    inset -1px -1px var(--tw-teal-900) !important;
-  font: 700 10px var(--tw-font-sans) !important;
-  transform: none !important;
-  transition: background-color 80ms linear !important;
-}
-
-.records-drawer-new:hover {
-  background: var(--tw-teal-800) !important;
-  box-shadow:
-    inset 1px 1px var(--tw-teal-500),
-    inset -1px -1px var(--tw-teal-900) !important;
-  transform: none !important;
-}
-
-.records-drawer-new:active {
-  border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900) !important;
-  box-shadow: inset 1px 1px var(--tw-teal-900) !important;
-  transform: translate(1px, 1px) !important;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-label);
+  line-height: var(--tw-lh-ws-label);
 }
 
 .records-drawer-foot-actions {
   display: flex;
-  gap: 5px;
+  gap: 8px;
   justify-content: flex-end;
 }
 
-.records-drawer-cancel {
-  min-height: 29px;
-  padding: 4px 9px;
-  color: #1f2d3a;
-  background: #e1e5e8;
-  border: 1px solid;
-  border-color: #fff #6d7781 #6d7781 #fff;
-  border-radius: 0;
-  font: 700 10px var(--tw-font-sans);
+/*
+ * The dialog's affirmative action. Filled teal, not coral: the Dashboard
+ * behind it already carries the one coral primary this screen is allowed
+ * (MANIFEST 5 q6), and a second one in a modal over it would make neither
+ * the primary action. Strong enough to lead the dialog without taking the
+ * accent that means "the one thing this screen is for".
+ */
+.records-drawer-new {
+  min-height: var(--tw-btn-h-ws);
+  padding: 4px 14px;
+  color: var(--tw-white);
+  background: var(--tw-teal-800);
+  border: 1px solid var(--tw-teal-800);
+  border-radius: var(--tw-radius-ws);
+  font: 700 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
+  cursor: pointer;
 }
 
-.records-drawer-cancel:active {
-  border-color: #6d7781 #fff #fff #6d7781;
-  transform: translate(1px, 1px);
+.records-drawer-new:hover {
+  background: var(--tw-teal-700);
+}
+
+.records-drawer-cancel {
+  min-height: var(--tw-btn-h-ws);
+  padding: 4px 14px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
+  font: 600 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
+  cursor: pointer;
+}
+
+.records-drawer-cancel:hover {
+  background: var(--tw-mint-50);
 }
 
 .records-drawer-close:focus-visible,
@@ -3597,8 +3785,9 @@ input[type="radio"]:disabled {
 .records-drawer-row:focus-visible,
 .records-drawer-new:focus-visible,
 .records-drawer-cancel:focus-visible {
-  outline: 2px solid #ffb400 !important;
-  outline-offset: 1px !important;
+  outline: 2px solid var(--cd-focus);
+  outline-offset: 1px;
+  box-shadow: var(--tw-focus-ring);
 }
 
 /* Injection completion is a decisive classic system receipt, not a celebration. */
@@ -3841,7 +4030,7 @@ input[type="radio"]:disabled {
 
 @media (max-width: 520px) {
   .records-drawer {
-    width: 100vw !important;
+    width: 100vw;
   }
 
   .records-drawer-head {
@@ -3850,7 +4039,7 @@ input[type="radio"]:disabled {
 
   .records-drawer-filters button {
     flex: 1 1 calc(50% - 3px);
-    min-height: 34px !important;
+    min-height: 34px;
   }
 
   .records-drawer-foot {
@@ -3872,34 +4061,34 @@ input[type="radio"]:disabled {
   }
 
   .inj-completion-overlay {
-    align-items: start !important;
-    padding: 7px !important;
+    align-items: start;
+    padding: 7px;
   }
 
   .inj-completion-card {
-    width: 100% !important;
-    max-height: calc(100dvh - 14px) !important;
-    padding-inline: 8px !important;
+    width: 100%;
+    max-height: calc(100dvh - 14px);
+    padding-inline: 8px;
   }
 
   .inj-completion-card h2 {
-    margin-inline: -8px !important;
+    margin-inline: -8px;
   }
 
   .inj-completion-receipt {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   .inj-completion-receipt > div,
   .inj-completion-receipt > div:nth-child(even),
   .inj-completion-receipt > div:nth-last-child(-n + 2),
   .inj-completion-receipt.paired > div:nth-last-child(2) {
-    border-right: 0 !important;
-    border-bottom: 1px solid #aab2bb !important;
+    border-right: 0;
+    border-bottom: 1px solid #aab2bb;
   }
 
   .inj-completion-receipt > div:last-child {
-    border-bottom: 0 !important;
+    border-bottom: 0;
   }
 
   .inj-completion-card > button {

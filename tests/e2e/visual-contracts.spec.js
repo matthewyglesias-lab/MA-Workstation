@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const WORKFLOWS = {
   home: {
     label: 'Dashboard',
-    headingText: 'Records stay in this browser',
+    headingText: 'Open Notes',
     panel: '.cd2004-start-center',
     layout: '.cd2004-start-center',
     heading: '#currentWorklistTitle',
@@ -280,8 +280,11 @@ async function collectVisualContract(page, workflow) {
 function expectedContract(workflow) {
   const module = WORKFLOWS[workflow];
   const isHome = workflow === 'home';
-  const titlebarHeight = '23px';
-  const windowTitlebarMinHeight = '22px';
+  // Phase 2b: the app bar is a header band, not a 23px OS title strip. The
+  // compressed desktop override that produced that height is deleted, so this
+  // is the base declaration measured at every supported width.
+  const titlebarHeight = '38px';
+  const windowTitlebarMinHeight = '32px';
 
   return {
     workflow,
@@ -290,34 +293,51 @@ function expectedContract(workflow) {
     heading: {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
+      // Phase 3d: the Dashboard heading is the screen's name at the
+      // workstation base size, not the local-only disclosure shouted in 9px
+      // small caps. The disclosure is still on the window title beside it and
+      // on the app bar; this was a third copy.
       style: {
-        color: isHome ? 'rgb(0, 73, 82)' : 'rgb(16, 42, 86)',
-        fontSize: isHome ? '9px' : '16px',
+        color: isHome ? 'rgb(0, 58, 67)' : 'rgb(16, 42, 86)',
+        fontSize: isHome ? '14px' : '16px',
         fontWeight: '700',
-        lineHeight: isHome ? 'normal' : '18.4px'
+        lineHeight: isHome ? '20px' : '18.4px'
       }
     },
     chrome: {
       shell: {
-        backgroundColor: 'rgb(197, 214, 215)',
+        // --tw-surface-page. The shell ground was teal-200, saturated enough
+        // to read as a coloured desktop behind the windows; Tebra grounds a
+        // product page in a warm near-white and lets the panels carry colour.
+        backgroundColor: 'rgb(249, 247, 246)',
         fontFamily: expect.stringMatching(/^"Inter Variable"/),
-        fontSize: '11px',
+        // --tw-fs-ws-dense. 11px was below the floor of the workstation tier.
+        fontSize: '13px',
         overflow: 'hidden'
       },
+      // A flat teal-900 band. The gradient was the single clearest statement
+      // that this is a desktop window rather than an application header, so
+      // the contract now asserts its absence: a gradient reappearing here is
+      // the regression, not the baseline.
       applicationTitlebar: {
         color: 'rgb(255, 255, 255)',
         height: titlebarHeight,
-        backgroundColor: 'rgba(0, 0, 0, 0)',
-        backgroundImage: expect.stringMatching(/^linear-gradient/),
-        usesGradient: true
+        backgroundColor: 'rgb(0, 58, 67)',
+        backgroundImage: 'none',
+        usesGradient: false
       },
+      // Phase 2b: the work and inspector panes are panels, not windows. They
+      // keep their active state - which pane owns the keyboard is real
+      // information - but it reads as a teal rule under a section header
+      // rather than as an OS caption inverting to a gradient. Square corners
+      // and white-on-teal caption text are the regression to catch here.
       activeWindow: {
-        borderRadius: '0px',
+        borderRadius: '6px',
         borderTopWidth: '1px',
         borderRightWidth: '1px',
-        titlebarColor: 'rgb(255, 255, 255)',
+        titlebarColor: 'rgb(0, 58, 67)',
         titlebarMinHeight: windowTitlebarMinHeight,
-        titlebarUsesGradient: true,
+        titlebarUsesGradient: false,
         titlebarUsesNavy: false
       }
     },
@@ -350,8 +370,12 @@ function expectedContract(workflow) {
       representativeFlat: true,
       representativeHasRelief: false,
       controlSquare: false,
-      focusedControlBorder: 'rgb(245, 179, 0)',
-      focusedControlHasGlow: false,
+      // Tebra focuses with a soft teal ring, so a focused control now does
+      // carry a shadow. The old expectation - MEDITECH amber #f5b300 with no
+      // glow - was the amber `--cd-focus` override that meditech-workstation.
+      // css layered over the shell's own teal focus colour.
+      focusedControlBorder: 'rgb(0, 73, 82)',
+      focusedControlHasGlow: true,
       recordLedgerHorizontalOverflow: false,
       usesTahomaFirst: false,
       landmarksPresent: [true, true, true, true]

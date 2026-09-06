@@ -59,6 +59,12 @@ export interface WorkQueueItem {
   timeLabel?: string;
   tone?: ClinicalTone;
   actionLabel?: string;
+  /**
+   * Who documented the entry. Held in the activity log all along and simply
+   * not carried across; Open Notes' lock hover names the signer with it, the
+   * way Tebra's does. See the MANIFEST 1 amendment.
+   */
+  signedByLabel?: string;
 }
 
 export interface InjectionRecordRow {
@@ -68,6 +74,10 @@ export interface InjectionRecordRow {
   administeredLabel: string;
   statusLabel: string;
   tone?: ClinicalTone;
+  /** As typed into the record. Identity verification reads name AND DOB. */
+  patientDob?: string;
+  /** ISO timestamp the record was last written. Presentation formats it. */
+  updatedAtIso?: string;
 }
 
 export interface NoteSection {

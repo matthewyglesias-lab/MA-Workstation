@@ -1,0 +1,127 @@
+/*
+ * Kiosk layout. PLAN 3.1: the section rail collapses to what this task needs,
+ * the work column is single, and every target clears 44x44 CSS px.
+ *
+ * WHY @media screen: like every other stylesheet in this redesign, and for the
+ * same reason - patient-facing print output is owned exclusively by
+ * public/legacy/legacy.css and the @media print block in clinical-desktop.css,
+ * and is asserted byte-identical. Kiosk mode must not reach print at all: a
+ * handout printed from a kiosk is the same handout.
+ *
+ * WHY THIS FILE IS FOURTH in the load order (MANIFEST 6): it layers on the
+ * shell rather than replacing it, because kiosk mode is a mode of the same
+ * screen and not a second application. Everything here is scoped to
+ * [data-kiosk="true"], so with kiosk off this file styles nothing.
+ */
+
+@media screen {
+  /*
+   * One work column. The document inspector is chart-review furniture; in
+   * kiosk mode the worksheet is the whole task and the checklist rail carries
+   * what the inspector was showing.
+   */
+  .cd2004-shell[data-kiosk="true"] .cd2004-workspace,
+  .cd2004-shell[data-kiosk="true"] .cd2004-workspace.has-central-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cd2004-shell[data-kiosk="true"] .cd2004-navigator.meditech-record-list {
+    display: none;
+  }
+
+  /*
+   * The menu bar is chart-review navigation. Kiosk mode keeps the app bar -
+   * the product mark and the local-only disclosure stay on screen, PLAN 7 -
+   * and drops the menus, which have no place in a single-task shell.
+   */
+  .cd2004-shell[data-kiosk="true"] .cd2004-menu-bar {
+    display: none;
+  }
+
+  /*
+   * Touch tier. The workstation type scale is calibrated for a mouse at a
+   * desk; a kiosk is used standing up, at arm's length, with gloves on.
+   */
+  .cd2004-shell[data-kiosk="true"] {
+    font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
+  }
+
+  .cd2004-shell[data-kiosk="true"] .cd2004-patient-primary strong {
+    font-size: var(--tw-fs-title);
+    line-height: var(--tw-lh-title);
+  }
+
+  /*
+   * PLAN 3.4: minimum 44x44 targets throughout kiosk mode. This is one rule
+   * over every control rather than a size per component, so a control added
+   * later is compliant without anyone remembering to make it so.
+   */
+  .cd2004-shell[data-kiosk="true"] :is(button, [role="tab"], [role="menuitem"], select) {
+    min-height: var(--tw-touch-min);
+  }
+
+  .cd2004-shell[data-kiosk="true"] :is(input, textarea) {
+    min-height: var(--tw-touch-min);
+    font-size: var(--tw-fs-ws-base);
+  }
+
+  /*
+   * The step rail is the primary navigation in kiosk mode, so it gets the
+   * room the menu bar gave up.
+   *
+   * Two rows, not one. At kiosk sizes a step's label and its state chip do
+   * not both fit across a quarter of the screen, and the label is what loses:
+   * "03 Administra..." is not a step name. Stacking them gives the label the
+   * full tab width, which is the whole reason the rail is there.
+   */
+  .cd2004-shell[data-kiosk="true"] .wfp-ledger-tabs .wfp-tab {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "sequence label"
+      "state    state";
+    justify-items: start;
+    gap: 4px 8px;
+    padding: 8px 12px;
+  }
+
+  .cd2004-shell[data-kiosk="true"] .wfp-ledger-sequence {
+    grid-area: sequence;
+  }
+
+  .cd2004-shell[data-kiosk="true"] .wfp-ledger-label {
+    grid-area: label;
+    font-size: var(--tw-fs-ws-dense);
+    white-space: normal;
+  }
+
+  .cd2004-shell[data-kiosk="true"] .wfp-ledger-state {
+    grid-area: state;
+  }
+
+  /*
+   * The exit. It is deliberately quiet - this is not an action anyone should
+   * take mid-injection - but it is always visible and always reachable,
+   * because the alternative to a visible exit is clearing site data.
+   */
+  .cd2004-app-kiosk-exit {
+    padding: 2px 10px;
+    color: var(--tw-teal-200);
+    background: rgb(255 255 255 / 12%);
+    border: 1px solid rgb(255 255 255 / 24%);
+    border-radius: var(--tw-radius-pill);
+    font: 600 var(--tw-fs-ws-label)/var(--tw-lh-ws-label) var(--tw-font-sans);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .cd2004-app-kiosk-exit:hover {
+    color: var(--tw-white);
+    background: rgb(255 255 255 / 20%);
+  }
+
+  /* The command deck is a keyboard affordance. A kiosk has no keyboard. */
+  .cd2004-shell[data-kiosk="true"] .meditech-command-deck {
+    display: none;
+  }
+}

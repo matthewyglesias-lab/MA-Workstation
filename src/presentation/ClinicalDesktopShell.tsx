@@ -13,6 +13,7 @@ import "./tebra-tokens.css";
 import "./clinical-desktop.css";
 import "./workflows/workflow-panels.css";
 import "./meditech-workstation.css";
+import "./kiosk/kiosk.css";
 import "./tebra-screen-contract.css";
 import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
 import { MODULE, NOTES, PATIENT, RECORD, SHELL } from "./vocabulary";
@@ -36,6 +37,7 @@ import {
   type RecordLifecycle,
 } from "./RecordLifecycleActions";
 import { StartCenter } from "./StartCenter";
+import { useKioskMode } from "./use-kiosk-mode";
 import {
   WorkstationLookupDialog,
   type WorkstationLookupOption,
@@ -242,6 +244,7 @@ export function ClinicalDesktopShell({
   const [fieldLookup, setFieldLookup] =
     useState<WorkstationLookupTransaction | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const { kiosk, setKiosk, requestFullscreen } = useKioskMode();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const workHostRef = useRef<HTMLDivElement>(null);
@@ -871,6 +874,8 @@ export function ClinicalDesktopShell({
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
+    onOpenRecords,
+    onOpenCloseout,
   });
 
   const inspectorPanel = (
@@ -902,6 +907,10 @@ export function ClinicalDesktopShell({
       class={`cd2004-shell ${className}`.trim()}
       data-active-workflow={selectedWorkflow}
       data-post-state={postState}
+      // Kiosk is a mode of this screen, not a second application, so it is an
+      // attribute on the shell rather than a different tree. kiosk.css is
+      // scoped entirely to it: off, that stylesheet styles nothing.
+      data-kiosk={kiosk ? "true" : undefined}
     >
       <a class="cd2004-skip-link" href="#cd2004-work-area">
         Skip to active workflow
@@ -918,6 +927,21 @@ export function ClinicalDesktopShell({
             <small>{transactionCode}</small>
           </span>
           <span class="cd2004-app-environment">
+            {/*
+              The way out. Kiosk mode hides the menu bar, which is where the
+              way in lives, so without this the mode is a one-way door that
+              can only be left by clearing site data. It sits on the app bar
+              because that is the one piece of chrome kiosk mode keeps.
+            */}
+            {kiosk && (
+              <button
+                type="button"
+                class="cd2004-app-kiosk-exit"
+                onClick={() => setKiosk(false)}
+              >
+                {SHELL.exitKioskMode}
+              </button>
+            )}
             <b>{SHELL.localOnlyBadge}</b>
             <small>
               {staffLabel || PATIENT.notSignedIn} · {locationLabel || PATIENT.noLocation}
@@ -988,6 +1012,15 @@ export function ClinicalDesktopShell({
               label={MODULE.dailyCloseout}
               disabled={!onOpenCloseout}
               onInvoke={onOpenCloseout}
+            />
+            <MenuCommand
+              label={SHELL.enterKioskMode}
+              onInvoke={() => {
+                setKiosk(true);
+                // Fullscreen is only granted during a user gesture, so it is
+                // requested from the click and never on load.
+                requestFullscreen();
+              }}
             />
           </DesktopMenu>
           <DesktopMenu id="help" label="Help" mnemonic="H">
@@ -1244,6 +1277,9 @@ interface RenderWorkflowOptions {
   onQueueItemOpen?: ClinicalDesktopShellProps["onQueueItemOpen"];
   onRecordOpen?: ClinicalDesktopShellProps["onRecordOpen"];
   onStartNewInjection?: ClinicalDesktopShellProps["onStartNewInjection"];
+  /** Open Notes' action bar holds the low-frequency destinations under More. */
+  onOpenRecords?: ClinicalDesktopShellProps["onOpenRecords"];
+  onOpenCloseout?: ClinicalDesktopShellProps["onOpenCloseout"];
 }
 
 interface InjectionRecordActionsProps {
@@ -1412,6 +1448,8 @@ function renderWorkflowContent({
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
+  onOpenRecords,
+  onOpenCloseout,
 }: RenderWorkflowOptions): ComponentChildren {
   if (workflow === "home") {
     return (
@@ -1424,6 +1462,8 @@ function renderWorkflowContent({
         onQueueItemOpen={onQueueItemOpen}
         onRecordOpen={onRecordOpen}
         onStartNewInjection={onStartNewInjection}
+        onOpenRecords={onOpenRecords}
+        onOpenCloseout={onOpenCloseout}
       />
     );
   }
@@ -1501,15 +1541,21 @@ function PatientBanner({
   // context") that named its own internals rather than anything staff act on.
   const chartContextLabel = PATIENT.facesheet;
   const workflowContextLabel = `${WORKFLOW_LABELS[selectedWorkflow]} — ${workflowStateLabel}`;
+  /*
+   * The context line beside the allergies. It used to read
+   * `MEDICATION: … · WORKFLOW: INJECTION · STATE: NEEDS REVIEW` - two of those
+   * three keys name this codebase rather than anything an MA does. "Workflow"
+   * is on PLAN 2.4's retirement list; "state" is a projection field. The note
+   * type and its status say the same thing in the words the rest of the
+   * screen already uses, and drop the shouted keys with them.
+   */
   const medicationContextPrefix = patient.medicationLabel
-    ? `MEDICATION: ${patient.medicationLabel} · `
+    ? `${patient.medicationLabel} · `
     : "";
   const safetyContextLabel =
     selectedWorkflow === "home"
-      ? patient.medicationLabel
-        ? `MEDICATION: ${patient.medicationLabel}`
-        : `WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
-      : `${medicationContextPrefix}WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · STATE: ${workflowStateLabel.toUpperCase()}`;
+      ? patient.medicationLabel ?? ""
+      : `${medicationContextPrefix}${WORKFLOW_LABELS[selectedWorkflow]} · ${workflowStateLabel}`;
   return (
     <div
       class={`cd2004-patient-banner ${

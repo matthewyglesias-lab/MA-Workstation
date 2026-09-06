@@ -46,6 +46,12 @@ export const MODULE = {
   /** No Tebra equivalent, and the existing name is already plain. */
   dailyCloseout: "Daily Closeout",
   future: "Future / TMS",
+  /**
+   * The heading over the module grid. "Clinical Modules" named the software's
+   * parts; this names what the row is for. Shown in sentence case - the
+   * shouted caps were a client/server section rule, not a Tebra one.
+   */
+  startANote: "Start a note",
 } as const;
 
 /* -------------------------------------------------------------------- notes */
@@ -64,6 +70,66 @@ export const NOTES = {
   statusSigned: "Signed",
   statusNotStarted: "Not started",
   statusNeedsReview: "Needs review",
+
+  /**
+   * Open Notes column headings. Tebra's set is
+   * `Patient · Lock · Type · Status · Visit Date`, and the order is theirs.
+   * The lock column's heading is for screen readers only - Tebra shows a
+   * glyph there and so do we.
+   */
+  columnPatient: "Patient",
+  columnLock: "Lock",
+  columnType: "Type",
+  columnStatus: "Status",
+  columnVisitDate: "Visit date",
+
+  /**
+   * The lock hover. Tebra's reveals who holds a note; ours reveals who signed
+   * it and when, which is the same affordance over the fact this app actually
+   * has. The signer was always in the activity log and simply was not carried
+   * onto the row - the MANIFEST 1 amendment maps it across.
+   *
+   * `lockedHint` remains the fallback for a signed note whose signer was not
+   * recorded. Saying less is right there; guessing the signed-in user would be
+   * wrong the first time two people share a workstation.
+   */
+  lockedHint: "Signed · read only",
+  /**
+   * A prefix, not a template function. `vocabulary.test.ts` iterates every
+   * value in these maps to keep internal vocabulary off the screen, and a
+   * function is not a string it can check - so the words live here and the
+   * composition lives in the component, which keeps the guard covering
+   * everything this module exports.
+   */
+  lockedByPrefix: "Signed by",
+  /** No visit date is held for an unsigned draft. */
+  noVisitDate: "—",
+  /** Tebra's action-bar primary. Was "Start new injection". */
+  newNote: "New note",
+  /** Tebra's action-bar overflow. */
+  more: "More",
+  /** Where signed notes live once they leave the worklist. */
+  signedNotes: "Signed notes",
+  sortAscending: "sorted A to Z",
+  sortDescending: "sorted Z to A",
+} as const;
+
+/**
+ * The worksheet's step states. `WorkflowLedgerTabs` is already the stepper -
+ * one control serving as both navigation and the engine's transaction ledger,
+ * which is why this redesign adds no second one - but it stamped each step
+ * with a terminal abbreviation: PEND / ENTRY / OK / REV / STOP / LOCK. Those
+ * are the ledger's internal state names shortened to fit a 1990s cell, and
+ * PLAN 2.4 retires them. The states themselves are unchanged and still come
+ * from `projectClinicalReadiness`; only the words do.
+ */
+export const STEP = {
+  pending: "Not started",
+  entry: "In progress",
+  complete: "Done",
+  review: "Check",
+  stop: "Blocked",
+  locked: "Signed",
 } as const;
 
 /* ---------------------------------------------------------------- lifecycle */
@@ -119,9 +185,22 @@ export const PATIENT = {
 
 /* ----------------------------------------------------------------- checklist */
 
-/** Tebra's name for the outstanding-items list on a patient. */
+/**
+ * Tebra's name for the outstanding-items list on a patient, and the words for
+ * each item's state. These were four inline literals in NoteInspector, which
+ * is the thing this module exists to stop: renaming one meant finding it.
+ *
+ * The states are the evaluator's - `complete` / `pending` / `warning` /
+ * `stop`, from `projectClinicalReadiness` - and nothing here changes them.
+ * `stop` reads "Required" rather than "Blocked" because on a checklist item
+ * it names what the item needs, not what the record cannot do.
+ */
 export const CHECKLIST = {
   title: "Care Checklist",
+  stateComplete: "Done",
+  statePending: "Not started",
+  stateWarning: "Check",
+  stateStop: "Required",
 } as const;
 
 /* -------------------------------------------------------------------- shell */
@@ -140,6 +219,13 @@ export const SHELL = {
   /** Compact provenance marker in the note heading. */
   localBadge: "Local",
   localOnlyDetail: "Records stay in this browser",
+  /**
+   * Kiosk mode. Named for what it does to the screen, not for the mode's
+   * internal flag - and the way back out says the same in reverse, so the
+   * control never reads as a one-way door.
+   */
+  enterKioskMode: "Enter kiosk mode",
+  exitKioskMode: "Exit kiosk mode",
   storageUnavailable: "Browser storage is unavailable",
   storageError: "Storage error",
 } as const;

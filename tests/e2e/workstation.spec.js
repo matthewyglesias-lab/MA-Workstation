@@ -849,14 +849,21 @@ test.describe('MA Workstation browser journeys', () => {
         borderRadius: Number.parseFloat(style.borderRadius),
         fontFamily: style.fontFamily,
         headerBackground: headerStyle.backgroundImage,
+        headerColor: headerStyle.backgroundColor,
         searchRadius: Number.parseFloat(searchStyle.borderRadius),
         horizontalOverflow: node.scrollWidth - node.clientWidth
       };
     });
-    expect(drawerVisual.borderRadius).toBeLessThanOrEqual(2);
-    expect(drawerVisual.searchRadius).toBeLessThanOrEqual(2);
+    // The drawer is a panel now, not a Win32 dialog. This pinned the old
+    // treatment by value - square corners and a gradient caption bar - so it
+    // pins the replacement with the same precision rather than being relaxed:
+    // the card radius, the workstation radius on the search field, and a
+    // section header on the sunken surface with no gradient at all.
+    expect(drawerVisual.borderRadius).toBe(16);
+    expect(drawerVisual.searchRadius).toBe(6);
     expect(drawerVisual.fontFamily).toContain('Inter Variable');
-    expect(drawerVisual.headerBackground).toContain('linear-gradient');
+    expect(drawerVisual.headerBackground).toBe('none');
+    expect(drawerVisual.headerColor).toBe('rgb(246, 248, 248)');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
     expect(await maxMotionMilliseconds(drawer, 'transitionDuration'))
       .toBeLessThanOrEqual(180);
@@ -986,7 +993,7 @@ test.describe('MA Workstation browser journeys', () => {
     const f8 = page.locator('.meditech-command-deck button').filter({ hasText: 'F8' });
     const f9 = page.locator('.meditech-command-deck button').filter({ hasText: 'F9' });
 
-    await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('PEND');
+    await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('Not started');
     await reason.focus();
     await expect(page.locator('.cd2004-status-message')).toContainText(
       'INJ-REASON | Encounter type'
@@ -1017,7 +1024,7 @@ test.describe('MA Workstation browser journeys', () => {
       'INJ-REASON filed as PRN / ordered.'
     );
     await expect(orderTab).toHaveClass(/is-stop/);
-    await expect(orderTab.locator('.wfp-ledger-state')).toContainText('STOP');
+    await expect(orderTab.locator('.wfp-ledger-state')).toContainText('blocking');
     await expect(f8).toContainText('Next stop');
 
     // Reconfirming the current lookup row is a no-op. It must not emit the
@@ -1046,11 +1053,11 @@ test.describe('MA Workstation browser journeys', () => {
     await openWorkflow(page, 'uds');
     const udsPanel = page.locator('.wfp-panel');
     const specimenTab = udsPanel.getByRole('tab', { name: 'Specimen', exact: true });
-    await expect(specimenTab.locator('.wfp-ledger-state')).toHaveText('PEND');
+    await expect(specimenTab.locator('.wfp-ledger-state')).toHaveText('Not started');
     await signInLocalStaff(page, 'Alex Rivera, MA');
     await udsPanel.getByLabel('Encounter type', { exact: true }).selectOption('routine');
     await expect(specimenTab).toHaveClass(/is-stop/);
-    await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('STOP');
+    await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('blocking');
 
     await udsPanel.getByRole('button', { name: 'Use signed-in staff', exact: true }).click();
     const collectorField = udsPanel.locator('.wfp-field[data-field-path="collector"]');
@@ -1103,7 +1110,12 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(workQueue.locator('tbody tr')).toHaveCount(3);
     await page.getByRole('tab', { name: /Needs review/ }).click();
     await expect(workQueue.locator('tbody tr')).toHaveCount(1);
-    await expect(workQueue.getByRole('button', { name: 'Review', exact: true })).toBeVisible();
+    // Phase 3: the whole row opens the note, so there is no trailing Review /
+    // Resume / View button any more. The row's accessible target is the
+    // patient button in the first cell, which is what a keyboard or screen
+    // reader user activates.
+    await expect(workQueue.getByRole('button', { name: 'Chen, Avery' })).toBeVisible();
+    await expect(workQueue.locator('.cd2004-note-chip')).toHaveText('Needs review');
     await expect(page.locator('.cd2004-activity-list')).toHaveCount(0);
   });
 
@@ -1193,7 +1205,7 @@ test.describe('MA Workstation browser journeys', () => {
   test('routes the Client/Server function-key profile without unsafe global shortcuts', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
-    const deck = page.locator('[role="toolbar"][aria-label="MEDITECH function key commands"]');
+    const deck = page.locator('[role="toolbar"][aria-label="Function key commands"]');
 
     await expect(deck).toBeVisible();
     await expect(deck).toContainText('F1');
@@ -1220,7 +1232,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(helpDialog).toBeHidden();
 
     // With no clinical stops active, F8 retains the classic zone cycle.
-    const startInjection = page.getByRole('button', { name: 'Start new injection', exact: true });
+    // Phase 3b: the Dashboard's primary action is Tebra's `New note`, which
+    // opens a type menu, rather than a button that could only ever start an
+    // injection. `Start new injection` is still the label on the record
+    // lifecycle controls, where it names a record operation.
+    const startInjection = page.locator('.cd2004-worklist-new');
     await startInjection.focus();
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>
@@ -1359,7 +1375,7 @@ test.describe('MA Workstation browser journeys', () => {
     const udsPanel = page.locator('.wfp-panel');
     await udsPanel.locator('select[name="uds-reason"]').selectOption('routine');
     const udsFileCommand = page
-      .locator('[role="toolbar"][aria-label="MEDITECH function key commands"]')
+      .locator('[role="toolbar"][aria-label="Function key commands"]')
       .getByRole('button', { name: 'F12 Save UDS' });
     await expect(udsFileCommand).toBeEnabled();
     await page.keyboard.press('F12');
@@ -1448,7 +1464,10 @@ test.describe('MA Workstation browser journeys', () => {
     // persistence remains a separate status in the rail and action bar.
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    // --tw-ready-bg. The tint was #c8efbf, a saturated Windows-era green that
+    // sits outside the palette; the meaning (an identified patient context) is
+    // unchanged and still carries its own word in the banner beside it.
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(230, 242, 238)');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -1469,7 +1488,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 241, 188)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(200, 239, 191)');
+    // --tw-ready-bg. The tint was #c8efbf, a saturated Windows-era green that
+    // sits outside the palette; the meaning (an identified patient context) is
+    // unchanged and still carries its own word in the banner beside it.
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(230, 242, 238)');
     await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');
@@ -2522,7 +2544,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(savedDraftsTab).toContainText('1');
     await savedDraftsTab.click();
     await expect(records).toContainText('QA, Start Center Open');
-    await records.getByRole('button', { name: 'Resume', exact: true }).click();
+    // The row is the target; the patient button carries it for the keyboard.
+    await records.getByRole('button', { name: 'QA, Start Center Open' }).click();
 
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
     await expect(page.locator('#ptName')).toHaveValue('QA, Start Center Open');

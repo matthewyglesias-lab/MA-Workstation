@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
+import { SHELL } from "./vocabulary";
 
 export const MIN_WORKSTATION_VIEWPORT_WIDTH = 800;
 
@@ -74,8 +75,8 @@ export function WorkstationViewportBoundary({
               <span aria-hidden="true">
                 <DesktopIcon name="administer" />
               </span>
-              <strong>MA CLINICAL WORKSTATION</strong>
-              <small>LOCAL / TRAINING</small>
+              <strong>{SHELL.productName}</strong>
+              <small>{SHELL.localOnlyBadge}</small>
             </header>
             <div class="meditech-workstation-gate-body">
               <span class="meditech-workstation-gate-alert" aria-hidden="true">

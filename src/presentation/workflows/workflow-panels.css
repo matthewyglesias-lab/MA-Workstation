@@ -2559,9 +2559,13 @@
   text-align: left;
 }
 
+/* The step number. It reads as a step in a sequence, not as a record id, so
+   it is not monospaced any more - only identifiers that get compared against
+   a vial keep the mono face. */
 .cd2004-shell .wfp-ledger-sequence {
-  color: #68716f;
-  font: 700 8px/1 Consolas, monospace;
+  color: var(--tw-text-muted);
+  font: 700 var(--tw-fs-ws-label)/1 var(--tw-font-sans);
+  font-variant-numeric: var(--tw-numeric-tabular);
 }
 
 .cd2004-shell .wfp-ledger-label {
@@ -2569,39 +2573,46 @@
   text-overflow: ellipsis;
 }
 
+/*
+ * The step's state, as the same chip Open Notes uses for a note's status.
+ * One chip vocabulary across the product: a state means the same thing and
+ * looks the same whether it is on a row or on a step. The states themselves
+ * still come from the evaluator; only their presentation is here.
+ */
 .cd2004-shell .wfp-ledger-state {
-  min-width: 31px;
-  padding: 1px 3px;
-  border: 1px solid #8b9693;
-  background: #eff1ec;
-  color: #596360;
-  font: 700 8px/1.15 Consolas, monospace;
+  padding: 1px 7px;
+  color: var(--tw-text-secondary);
+  background: var(--tw-surface-sunken);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-pill);
+  font: 700 var(--tw-fs-ws-label)/var(--tw-lh-ws-label) var(--tw-font-sans);
   text-align: center;
+  white-space: nowrap;
 }
 
 .cd2004-shell .wfp-ledger-state.is-entry {
-  border-color: var(--tw-teal-600);
-  background: var(--tw-mint-150);
   color: var(--tw-teal-800);
+  background: var(--tw-mint-150);
+  border-color: var(--tw-border-strong);
 }
 
 .cd2004-shell .wfp-ledger-state.is-complete,
 .cd2004-shell .wfp-ledger-state.is-locked {
-  border-color: #66806a;
-  background: #dce8dc;
-  color: #285538;
+  color: var(--tw-ready-fg);
+  background: var(--tw-ready-bg);
+  border-color: var(--tw-ready-border);
 }
 
 .cd2004-shell .wfp-ledger-state.is-review {
-  border-color: #947220;
-  background: #f7e8b8;
-  color: #654700;
+  color: var(--tw-review-fg);
+  background: var(--tw-review-bg);
+  border-color: var(--tw-review-border);
 }
 
 .cd2004-shell .wfp-ledger-state.is-stop {
-  border-color: #a94537;
-  background: #f7d8d1;
-  color: #7e2118;
+  color: var(--tw-stop-fg);
+  background: var(--tw-stop-bg);
+  border-color: var(--tw-stop-border);
 }
 
 @media (max-width: 900px) {
@@ -2803,27 +2814,47 @@
    saturated colour carrying its own word, never hue alone. Scoped to
    documentation completeness - see the note in NoteInspector for why this must
    not be worded as clearance to administer. */
+/*
+ * The verdict, as a tinted band rather than a saturated fill. Solid red across
+ * the head of a panel is an alarm, and this is a documentation-completeness
+ * summary - the note in NoteInspector is explicit that it must not be worded,
+ * or read, as clearance to administer. The tone is unchanged and still comes
+ * from `summarizeReadinessVerdict`; it now carries a border and dark text on a
+ * light ground, like every other state in the product.
+ */
 .cd2004-shell .cd2004-readiness-verdict {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px;
-  padding: 3px 7px;
-  color: #fff;
-  border-bottom: 1px solid rgb(0 0 0 / 30%);
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
 .cd2004-shell .cd2004-readiness-verdict > strong {
-  font-size: 10px;
-  letter-spacing: 0.03em;
+  font-size: var(--tw-fs-ws-dense);
 }
 
 .cd2004-shell .cd2004-readiness-verdict > span {
   margin-left: auto;
-  font-size: 9px;
-  font-weight: 700;
+  font-size: var(--tw-fs-ws-meta);
+  font-weight: 600;
 }
 
-.cd2004-shell .cd2004-readiness-verdict.is-blocked { background: var(--cd-red); }
-.cd2004-shell .cd2004-readiness-verdict.is-review { background: var(--cd-amber); }
-.cd2004-shell .cd2004-readiness-verdict.is-clear { background: var(--cd-green); }
+.cd2004-shell .cd2004-readiness-verdict.is-blocked {
+  color: var(--tw-stop-fg);
+  background: var(--tw-stop-bg);
+  border-bottom-color: var(--tw-stop-border);
+}
+
+.cd2004-shell .cd2004-readiness-verdict.is-review {
+  color: var(--tw-review-fg);
+  background: var(--tw-review-bg);
+  border-bottom-color: var(--tw-review-border);
+}
+
+.cd2004-shell .cd2004-readiness-verdict.is-clear {
+  color: var(--tw-ready-fg);
+  background: var(--tw-ready-bg);
+  border-bottom-color: var(--tw-ready-border);
+}

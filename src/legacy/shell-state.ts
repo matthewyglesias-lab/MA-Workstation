@@ -175,6 +175,8 @@ function readQueues(): {
       timeLabel: activity.time,
       tone: activityTone(activity.status),
       actionLabel: 'Open workflow',
+      // Carried, not derived: `by` is what the activity log already recorded.
+      signedByLabel: activity.by,
     }));
 
   return {
@@ -207,6 +209,10 @@ function readInjectionRecords(): InjectionRecordRow[] {
             : 'No administration site',
         statusLabel: record.status === 'completed' ? 'Locked' : 'Draft',
         tone: record.status === 'completed' ? 'ready' : 'warning',
+        // Both carried verbatim from the stored record. No decision is made
+        // about either: presentation formats them and decides what to show.
+        patientDob: record.patient?.dob,
+        updatedAtIso: record.completedAt ?? record.updatedAt,
       };
     });
 }
