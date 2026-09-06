@@ -212,13 +212,15 @@ export function RecordsWindow({
           <div>
             <h2 id="recordsDrawerTitle">{NOTES.openNotes}</h2>
           </div>
+          {/* "Local EMR / Record List" was the client/server name for this
+              drawer; it is Open Notes everywhere else on screen. */}
           <button
             type="button"
             class="records-drawer-close"
-            aria-label="Close Local EMR / Record List"
+            aria-label={`Close ${NOTES.openNotes}`}
             onClick={onClose}
           >
-            X
+            ×
           </button>
         </div>
 
@@ -304,19 +306,21 @@ export function RecordsWindow({
                 >
                   <span class="records-drawer-row-top">
                     <span class="records-drawer-row-title">{patientOf(record)}</span>
-                    <span class={`records-drawer-row-badge ${locked ? "locked" : "draft"}`}>
+                    {/* The same chip Open Notes, the step rail and the Care
+                        Checklist use. One chip vocabulary across the product. */}
+                    <span class={`cd2004-note-chip ${locked ? "is-ready" : ""}`}>
                       {locked
                         ? attested
                           ? NOTES.statusSigned
                           : RECORD.signedLegacy
-                        : RECORD.draft}
+                        : NOTES.statusIncomplete}
                     </span>
                   </span>
                   <span class="records-drawer-row-summary">{medicationOf(record)}</span>
+                  {/* No trailing action text. The whole row is the target -
+                      Open Notes retired the Resume/View column in Phase 3a and
+                      this is the same list. */}
                   <span class="records-drawer-row-meta">{activityText(record)}</span>
-                  <span class="records-drawer-row-action" aria-hidden="true">
-                    {locked ? "View" : "Resume"}
-                  </span>
                 </button>
               );
             })

@@ -849,14 +849,21 @@ test.describe('MA Workstation browser journeys', () => {
         borderRadius: Number.parseFloat(style.borderRadius),
         fontFamily: style.fontFamily,
         headerBackground: headerStyle.backgroundImage,
+        headerColor: headerStyle.backgroundColor,
         searchRadius: Number.parseFloat(searchStyle.borderRadius),
         horizontalOverflow: node.scrollWidth - node.clientWidth
       };
     });
-    expect(drawerVisual.borderRadius).toBeLessThanOrEqual(2);
-    expect(drawerVisual.searchRadius).toBeLessThanOrEqual(2);
+    // The drawer is a panel now, not a Win32 dialog. This pinned the old
+    // treatment by value - square corners and a gradient caption bar - so it
+    // pins the replacement with the same precision rather than being relaxed:
+    // the card radius, the workstation radius on the search field, and a
+    // section header on the sunken surface with no gradient at all.
+    expect(drawerVisual.borderRadius).toBe(16);
+    expect(drawerVisual.searchRadius).toBe(6);
     expect(drawerVisual.fontFamily).toContain('Inter Variable');
-    expect(drawerVisual.headerBackground).toContain('linear-gradient');
+    expect(drawerVisual.headerBackground).toBe('none');
+    expect(drawerVisual.headerColor).toBe('rgb(246, 248, 248)');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
     expect(await maxMotionMilliseconds(drawer, 'transitionDuration'))
       .toBeLessThanOrEqual(180);

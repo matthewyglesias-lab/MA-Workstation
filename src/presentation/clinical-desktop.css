@@ -3414,54 +3414,49 @@ input[type="radio"]:disabled {
      an undimmed shell with nothing to click away on. */
   position: absolute;
   inset: 0;
-  background: rgb(8 17 34 / 42%);
-  backdrop-filter: none;
+  background: rgb(0 58 67 / 32%);
   opacity: 0;
-  transition: opacity 100ms linear;
+  transition: opacity var(--tw-dur-fast) linear;
 }
 
 .records-drawer-layer.is-open .records-drawer-scrim {
   opacity: 1;
 }
 
+/*
+ * The signed-notes drawer. It is where `Signed notes` in the action bar goes,
+ * so it is Open Notes' other half and now shares its conventions: sentence-
+ * case sortable headers, the note chip for status, a whole-row target with no
+ * trailing action text, and a panel rather than a window.
+ *
+ * It was the last Win32 dialog in the app: a raised four-way bevel, a hard
+ * offset shadow, a gradient caption bar and an `[x]` caption box.
+ */
 .records-drawer {
   min-width: 0;
   padding: 0;
   overflow: hidden;
-  color: var(--cd-util-ink);
-  background: var(--cd-util-face);
-  /* Raised Win32 window edge, and a hard offset drop shadow rather than a
-     diffuse one - the same treatment the shell's own dialogs use. */
-  border: 1px solid #000;
-  border-top-color: var(--cd-util-white);
-  border-left-color: var(--cd-util-white);
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px var(--cd-util-white),
-    inset -1px -1px #7a838d,
-    4px 4px 0 rgb(0 0 0 / 35%);
-  transform: none;
-  transition: none;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-card);
+  box-shadow: 0 12px 32px rgb(0 58 67 / 18%);
   font-family: var(--tw-font-sans);
 }
 
+/* A section header, the same one the work and inspector panels wear. */
 .records-drawer-head {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 25px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  align-content: center;
   gap: 8px;
   min-width: 0;
-  align-content: center;
   min-height: 0;
-  padding: 3px 3px 3px 6px;
-  color: #fff;
-  background: linear-gradient(
-    90deg,
-    var(--cd-util-navy),
-    var(--cd-util-navy-light)
-  );
-  border-bottom: 1px solid var(--cd-util-navy-dark);
+  padding: 8px 10px;
+  background: var(--tw-surface-sunken);
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
 .records-drawer-head > div {
@@ -3475,20 +3470,13 @@ input[type="radio"]:disabled {
 
 .records-drawer-kicker {
   overflow: hidden;
-  color: var(--tw-teal-200);
-  font: 700 9px/1.2 var(--tw-font-sans);
-  letter-spacing: 0.1em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
 .records-drawer-head h2 {
   margin: 0;
   overflow: hidden;
-  color: #fff;
-  font: 700 11px/1.2 var(--tw-font-sans);
-  letter-spacing: 0;
+  color: var(--tw-text-primary);
+  font: 700 var(--tw-fs-ws-base)/var(--tw-lh-ws-base) var(--tw-font-sans);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3497,86 +3485,69 @@ input[type="radio"]:disabled {
   max-width: none;
   margin: 0;
   overflow: hidden;
-  color: var(--tw-mint-50);
-  font: 10px/1.35 var(--tw-font-sans);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
+/* A close control, not a caption box. Same grammar as the panels'. */
 .records-drawer-close {
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 14px;
-  min-width: 16px;
-  min-height: 14px;
-  padding: 2px;
-  color: #111c2b;
-  background: var(--cd-util-face);
-  border: 1px solid;
-  border-color: #fff #303841 #303841 #fff;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px var(--tw-mint-50),
-    inset -1px -1px #77818b;
-  transform: none;
-  transition:
-    background-color 80ms linear,
-    color 80ms linear;
-  font: 700 9px/1 Tahoma, Arial, sans-serif;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  color: var(--tw-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--tw-radius-ws);
+  font: 500 14px/1 var(--tw-font-sans);
+  cursor: pointer;
 }
 
 .records-drawer-close:hover {
-  color: #fff;
-  background: #9c1f1f;
-  border-color: #d88989 #540b0b #540b0b #d88989;
+  color: var(--tw-text-primary);
+  background: var(--tw-mint-150);
 }
 
 .records-drawer-close:active {
-  border-color: #303841 #fff #fff #303841;
-  box-shadow: inset 1px 1px #77818b;
-  transform: translate(1px, 1px);
+  background: var(--tw-mint-200);
 }
 
 .records-drawer-search {
   position: relative;
   min-width: 0;
   margin: 0;
-  padding: 8px 9px 7px;
-  background: var(--cd-util-face);
-  border-bottom: 1px solid var(--cd-util-line);
-  box-shadow: inset 0 1px #fff;
+  padding: 12px 12px 8px;
 }
 
 .records-drawer-search input {
   width: 100%;
   min-width: 0;
-  height: 32px;
-  padding: 5px 31px 5px 7px;
-  color: var(--cd-util-ink);
-  background: #fff;
-  border: 1px solid #414c58;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px #aab2bb,
-    inset -1px -1px #eef1f4;
-  outline: 0;
-  font: 11px var(--tw-font-sans);
+  height: var(--tw-btn-h-ws);
+  padding: 5px 31px 5px 10px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
+  font: var(--tw-fs-ws-dense)/var(--tw-lh-ws-dense) var(--tw-font-sans);
 }
 
-/* The input already reserves 31px of right padding for this glyph; legacy.css
-   was supplying the absolute placement and the SVG's size. Unpositioned it
-   dropped below the field at its 84px intrinsic default. */
+.records-drawer-search input:focus {
+  border-color: var(--cd-focus);
+  outline: none;
+  box-shadow: var(--tw-focus-ring);
+}
+
+/* The input already reserves 31px of right padding for this glyph. */
 .records-drawer-search > span {
   position: absolute;
   top: 50%;
-  right: 18px;
+  right: 22px;
   display: block;
   width: 13px;
   height: 13px;
-  color: #5c6673;
+  color: var(--tw-text-secondary);
   transform: translateY(-50%);
-  pointer-events: none;
 }
 
 .records-drawer-search > span svg {
@@ -3585,88 +3556,55 @@ input[type="radio"]:disabled {
   height: 100%;
 }
 
-.records-drawer-search input:focus {
-  border-color: var(--cd-util-navy);
-  box-shadow: inset 1px 1px var(--tw-teal-300);
-  outline: 2px solid #ffb400;
-  outline-offset: -1px;
-}
-
-.records-drawer-search span {
-  right: 17px;
-  color: var(--cd-util-navy);
-}
-
-.records-drawer-search span svg {
-  width: 16px;
-  height: 16px;
-}
-
 .records-drawer-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: 6px;
   min-width: 0;
-  padding: 5px 8px 6px;
-  background: var(--tw-mint-150);
-  border-bottom: 1px solid var(--cd-util-line);
-  box-shadow: inset 0 1px #f7f9fb;
+  padding: 0 12px 10px;
 }
 
 .records-drawer-filters button {
   min-width: 62px;
-  min-height: 27px;
-  padding: 3px 8px;
-  color: var(--tw-teal-800);
-  background: var(--cd-util-face);
-  border: 1px solid;
-  border-color: #fff #4d5863 #4d5863 #fff;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px var(--tw-mint-50),
-    inset -1px -1px #8c96a0;
-  font: 700 10px var(--tw-font-sans);
-  transform: none;
-  transition:
-    color 80ms linear,
-    background-color 80ms linear;
+  min-height: var(--tw-btn-h-ws);
+  padding: 3px 12px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-subtle);
+  border-radius: var(--tw-radius-pill);
+  font: 600 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
+  cursor: pointer;
 }
 
 .records-drawer-filters button:hover:not(.on) {
-  color: var(--cd-util-navy);
   background: var(--tw-mint-50);
 }
 
 .records-drawer-filters button.on {
-  color: #fff;
-  background: var(--cd-util-navy);
-  border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900);
-  box-shadow: inset 1px 1px var(--tw-teal-900);
+  color: var(--tw-white);
+  background: var(--tw-teal-800);
+  border-color: var(--tw-teal-800);
 }
 
 .records-drawer-status {
-  min-height: 27px;
+  display: flex;
   align-items: center;
-  padding: 4px 9px;
-  color: var(--tw-teal-600);
-  background: #e7eaed;
-  border-bottom: 1px solid #a4adb6;
-  font: 700 9px var(--tw-font-sans);
-  letter-spacing: 0.03em;
+  min-height: 27px;
+  padding: 0 12px 6px;
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-meta);
 }
 
-/* Column headers for the record list. Shares the row's exact track sizing so
-   the labels stay locked to their columns, and carries the sunken/raised Win32
-   header-button treatment that made list headers look clickable. */
+/* Column headers. Shares the row's exact track sizing so the labels line up
+   with the values, and sentence case like Open Notes' - the shouted caps were
+   the last of that treatment in the app. */
 .records-drawer-columns {
   display: grid;
-  /* No column gap: percentage tracks already total 100%, so any gap pushes
-     the header past the window edge. Win32 list headers butt together
-     anyway - the button borders are the separator. */
-  grid-template-columns: 27% 33% 24% 16%;
-  padding: 0 7px;
-  background: var(--cd-util-face);
-  border-bottom: 1px solid #818c97;
+  grid-template-columns: 30% 36% 34%;
+  padding: 0 12px;
+  background: var(--tw-surface-sunken);
+  border-top: 1px solid var(--tw-border-subtle);
+  border-bottom: 1px solid var(--tw-border-subtle);
 }
 
 .records-drawer-columns button {
@@ -3674,113 +3612,73 @@ input[type="radio"]:disabled {
   gap: 4px;
   align-items: center;
   min-width: 0;
-  height: 18px;
+  height: 28px;
   padding: 0 4px;
-  color: var(--tw-teal-900);
-  background: var(--cd-util-face);
-  border: 1px solid;
-  border-color: #fff #97a1ab #97a1ab #fff;
-  border-radius: 0 !important;
-  box-shadow: none;
-  font: 700 9px var(--tw-font-sans);
-  letter-spacing: 0.04em;
+  color: var(--tw-text-primary);
+  background: none;
+  border: 0;
+  font: 700 var(--tw-fs-ws-label)/var(--tw-lh-ws-label) var(--tw-font-sans);
   text-align: left;
-  text-transform: uppercase;
   cursor: pointer;
 }
 
-.records-drawer-columns button:hover {
-  background: var(--tw-mint-50);
+.records-drawer-columns button::after {
+  content: "▼";
+  color: transparent;
+  font-size: 8px;
 }
 
-.records-drawer-columns button:active {
-  border-color: #97a1ab #fff #fff #97a1ab;
+.records-drawer-columns button:hover::after {
+  color: var(--tw-text-muted);
 }
 
-.records-drawer-columns button:focus-visible {
-  outline: 2px solid #ffb400;
-  outline-offset: -2px;
-}
-
-.records-drawer-action-heading {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  height: 18px;
-  padding: 0 4px;
-  color: var(--tw-teal-900);
-  background: var(--cd-util-face);
-  border: 1px solid;
-  border-color: #fff #97a1ab #97a1ab #fff;
-  font: 700 9px var(--tw-font-sans);
-  letter-spacing: 0.04em;
-  text-align: left;
-  text-transform: uppercase;
-}
-
-/* The sort marker is a plain triangle, drawn in text rather than an icon. */
 .records-drawer-columns button.is-sorted::after {
-  content: "\25B2";
-  color: var(--tw-teal-600);
-  font-size: 7px;
+  color: var(--tw-teal-800);
 }
 
 .records-drawer-columns button.is-sorted.is-desc::after {
-  content: "\25BC";
+  content: "▲";
+}
+
+/* The Action column is gone with the action text it headed. */
+.records-drawer-action-heading {
+  display: none;
 }
 
 .records-drawer-results {
   min-width: 0;
   min-height: 0;
-  gap: 2px;
-  padding: 5px 6px 6px;
+  padding: 0;
   overflow: auto;
-  background: #f2f4f5;
-  /* Classic beveled scrollbar treatment lives in meditech-workstation.css's
-     shared scrollbar block. */
 }
 
-/* One record per line, in columns - Patient / Medication / Last activity /
-   Action - the way an encounter-selection list has always read. Stacked
-   "cards" with a chevron are a touch-target idiom, not a records list. */
+/* One record per line - Patient / Medication / Last activity - and the whole
+   line is the target, which is what Open Notes does and what Tebra does. */
 .records-drawer-row {
   display: grid;
-  /* Percentages, and an explicit full width: each row is its own grid
-     container, so `fr` units resolve against that row's own content and the
-     columns come out ragged from line to line. Percentages resolve against
-     the same container width for every row, so the columns line up. */
   width: 100%;
-  grid-template-columns: 27% 33% 24% 16%;
+  grid-template-columns: 30% 36% 34%;
   align-items: center;
   min-width: 0;
   gap: 0;
-  padding: 0 7px;
-  min-height: 20px;
-  color: var(--tw-teal-800);
+  min-height: 36px;
+  padding: 6px 12px;
+  color: var(--tw-text-primary);
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--tw-mint-150);
-  border-radius: 0 !important;
-  box-shadow: none;
-  transform: none;
-  transition: none;
+  border-bottom: 1px solid var(--tw-border-subtle);
+  font: var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
   text-align: left;
-}
-
-.records-drawer-row:nth-child(even) {
-  background: #eef1f4;
+  cursor: pointer;
 }
 
 .records-drawer-row:hover {
-  color: var(--tw-teal-900);
-  background: var(--cd-util-selection);
-  box-shadow: none;
-  transform: none;
+  background: var(--tw-mint-50);
 }
 
 .records-drawer-row-top {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   min-width: 0;
 }
@@ -3794,144 +3692,92 @@ input[type="radio"]:disabled {
 .records-drawer-row-meta {
   min-width: 0;
   overflow: hidden;
-  font-family: var(--tw-font-sans);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .records-drawer-row-title {
-  color: var(--tw-teal-900);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.records-drawer-row-summary {
-  color: var(--tw-teal-600);
-  font-size: 10px;
+  font-weight: 600;
 }
 
 .records-drawer-row-meta {
-  color: #6a7582;
-  font: 9px "Courier New", monospace;
-}
-
-.records-drawer-row-badge {
-  flex: none;
-  padding: 0 3px;
-  color: var(--tw-teal-600);
-  background: var(--tw-mint-50);
-  border: 1px solid #919ba5;
-  border-radius: 0 !important;
-  font: 700 8px var(--tw-font-sans);
-}
-
-.records-drawer-row-badge.locked {
-  color: #064b27;
-  background: var(--cd-util-green-soft);
-  border-color: #5a9e78;
-}
-
-.records-drawer-row-badge.draft {
-  color: #5a3800;
-  background: var(--cd-util-amber-soft);
-  border-color: #b68935;
-}
-
-.records-drawer-row-action {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--tw-teal-600);
-  font: 700 9px var(--tw-font-sans);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--tw-text-secondary);
 }
 
 .records-drawer-empty {
-  gap: 3px;
-  padding: 16px 10px;
-  color: var(--tw-teal-500);
-  background: #fff;
-  border: 1px solid #8d97a1;
-  border-radius: 0 !important;
-  font: 10px/1.4 var(--tw-font-sans);
+  display: grid;
+  gap: 4px;
+  padding: 24px 12px;
+  color: var(--tw-text-secondary);
+  text-align: center;
 }
 
 .records-drawer-empty b {
-  color: var(--tw-teal-800);
-  font-size: 11px;
+  color: var(--tw-text-primary);
+  font-size: var(--tw-fs-ws-dense);
 }
 
 .records-drawer-foot {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
-  padding: 7px 8px;
-  background: var(--tw-mint-150);
-  border-top: 1px solid #fff;
-  box-shadow: inset 0 1px #858f99;
+  padding: 10px 12px;
+  background: var(--tw-surface-sunken);
+  border-top: 1px solid var(--tw-border-subtle);
 }
 
 .records-drawer-foot p {
   max-width: none;
   margin: 0;
   overflow: hidden;
-  color: var(--tw-teal-600);
-  font: 9px/1.35 var(--tw-font-sans);
-}
-
-.records-drawer-new {
-  min-height: 29px;
-  padding: 4px 9px;
-  color: #fff;
-  background: var(--cd-util-navy);
-  border: 1px solid;
-  border-color: var(--tw-teal-300) var(--tw-teal-900) var(--tw-teal-900) var(--tw-teal-300);
-  border-radius: 0 !important;
-  box-shadow:
-    inset 1px 1px var(--tw-teal-500),
-    inset -1px -1px var(--tw-teal-900);
-  font: 700 10px var(--tw-font-sans);
-  transform: none;
-  transition: background-color 80ms linear;
-}
-
-.records-drawer-new:hover {
-  background: var(--tw-teal-800);
-  box-shadow:
-    inset 1px 1px var(--tw-teal-500),
-    inset -1px -1px var(--tw-teal-900);
-  transform: none;
-}
-
-.records-drawer-new:active {
-  border-color: var(--tw-teal-900) var(--tw-teal-300) var(--tw-teal-300) var(--tw-teal-900);
-  box-shadow: inset 1px 1px var(--tw-teal-900);
-  transform: translate(1px, 1px);
+  color: var(--tw-text-secondary);
+  font-size: var(--tw-fs-ws-label);
+  line-height: var(--tw-lh-ws-label);
 }
 
 .records-drawer-foot-actions {
   display: flex;
-  gap: 5px;
+  gap: 8px;
   justify-content: flex-end;
 }
 
-.records-drawer-cancel {
-  min-height: 29px;
-  padding: 4px 9px;
-  color: #1f2d3a;
-  background: #e1e5e8;
-  border: 1px solid;
-  border-color: #fff #6d7781 #6d7781 #fff;
-  border-radius: 0;
-  font: 700 10px var(--tw-font-sans);
+/*
+ * The dialog's affirmative action. Filled teal, not coral: the Dashboard
+ * behind it already carries the one coral primary this screen is allowed
+ * (MANIFEST 5 q6), and a second one in a modal over it would make neither
+ * the primary action. Strong enough to lead the dialog without taking the
+ * accent that means "the one thing this screen is for".
+ */
+.records-drawer-new {
+  min-height: var(--tw-btn-h-ws);
+  padding: 4px 14px;
+  color: var(--tw-white);
+  background: var(--tw-teal-800);
+  border: 1px solid var(--tw-teal-800);
+  border-radius: var(--tw-radius-ws);
+  font: 700 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
+  cursor: pointer;
 }
 
-.records-drawer-cancel:active {
-  border-color: #6d7781 #fff #fff #6d7781;
-  transform: translate(1px, 1px);
+.records-drawer-new:hover {
+  background: var(--tw-teal-700);
+}
+
+.records-drawer-cancel {
+  min-height: var(--tw-btn-h-ws);
+  padding: 4px 14px;
+  color: var(--tw-text-primary);
+  background: var(--tw-surface-panel);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-ws);
+  font: 600 var(--tw-fs-ws-meta)/var(--tw-lh-ws-meta) var(--tw-font-sans);
+  cursor: pointer;
+}
+
+.records-drawer-cancel:hover {
+  background: var(--tw-mint-50);
 }
 
 .records-drawer-close:focus-visible,
@@ -3939,8 +3785,9 @@ input[type="radio"]:disabled {
 .records-drawer-row:focus-visible,
 .records-drawer-new:focus-visible,
 .records-drawer-cancel:focus-visible {
-  outline: 2px solid #ffb400;
+  outline: 2px solid var(--cd-focus);
   outline-offset: 1px;
+  box-shadow: var(--tw-focus-ring);
 }
 
 /* Injection completion is a decisive classic system receipt, not a celebration. */
@@ -4183,7 +4030,7 @@ input[type="radio"]:disabled {
 
 @media (max-width: 520px) {
   .records-drawer {
-    width: 100vw !important;
+    width: 100vw;
   }
 
   .records-drawer-head {
@@ -4192,7 +4039,7 @@ input[type="radio"]:disabled {
 
   .records-drawer-filters button {
     flex: 1 1 calc(50% - 3px);
-    min-height: 34px !important;
+    min-height: 34px;
   }
 
   .records-drawer-foot {
@@ -4214,34 +4061,34 @@ input[type="radio"]:disabled {
   }
 
   .inj-completion-overlay {
-    align-items: start !important;
-    padding: 7px !important;
+    align-items: start;
+    padding: 7px;
   }
 
   .inj-completion-card {
-    width: 100% !important;
-    max-height: calc(100dvh - 14px) !important;
-    padding-inline: 8px !important;
+    width: 100%;
+    max-height: calc(100dvh - 14px);
+    padding-inline: 8px;
   }
 
   .inj-completion-card h2 {
-    margin-inline: -8px !important;
+    margin-inline: -8px;
   }
 
   .inj-completion-receipt {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   .inj-completion-receipt > div,
   .inj-completion-receipt > div:nth-child(even),
   .inj-completion-receipt > div:nth-last-child(-n + 2),
   .inj-completion-receipt.paired > div:nth-last-child(2) {
-    border-right: 0 !important;
-    border-bottom: 1px solid #aab2bb !important;
+    border-right: 0;
+    border-bottom: 1px solid #aab2bb;
   }
 
   .inj-completion-receipt > div:last-child {
-    border-bottom: 0 !important;
+    border-bottom: 0;
   }
 
   .inj-completion-card > button {
