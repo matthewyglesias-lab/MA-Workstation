@@ -1,6 +1,6 @@
 # Handoff — Tebra Injection Kiosk Redesign
 
-**Updated:** 2026-09-06 · after Phase 2c authenticated-product refinement
+**Updated:** 2026-09-06 · Phase 2d Chromium 151 visual-baseline closure
 **Repo:** `matthewyglesias-lab/MA-Workstation`
 **Branch:** `claude/ma-workstation-tebra-redesign-nu1aeq` · **PR:** #62 (draft)
 
@@ -20,13 +20,12 @@ prompt refers to. Update this file at the end of each phase.
 > `docs/redesign/MANIFEST.md` (frozen paths, design tokens, convention spec, and
 > the restructure posture in §5b).
 >
-> The local branch contains Phases 0 through 2b through `1387d10`. At the
-> 2026-09-06 audit, PR #62 still pointed at `b674907`, so **both Phase 2b and the
-> Phase 2c commit containing this handoff may need to be pushed first.** Phase
-> 2c is the locally complete authenticated-product refinement of the shell,
-> Injection worksheet, record-lifecycle footer, Note Inspector, responsive
-> scroll ownership, and keyboard behavior. Close every gate in §5 and confirm
-> the remote branch contains both commits before starting Phase 3.
+> PR #62 contains Phases 0–2c and the Phase 2d snapshot-setup repair. The
+> commit containing this handoff promotes all eight Linux baselines captured by
+> the pinned Chromium 151 CI runner. Every capture was reviewed and every
+> initial/retry pair was byte-identical. Push this closure commit and require a
+> green exact-production-artifact run before starting Phase 3. Leave the eight
+> `win32/` images unchanged and flagged stale for a Windows maintainer.
 >
 > **Then take Phase 3 as a separate conventions change.** Build the Facesheet
 > and the two distinct Notes surfaces recorded in §4.1: global Open Notes uses
@@ -70,8 +69,9 @@ third-party build gives itself away.
 
 ## 3. What exists on the local branch
 
-At the 2026-09-06 audit, the remote PR head was still `b674907`. Entries after
-that commit are local until a successful push is verified.
+PR #62 was fast-forwarded through Phase 2c with GitHub's Git Data API because
+the shell had no Git credential. The API-authored commit ids differ from the
+local ids, but both tree hashes were checked byte-for-byte before the ref moved.
 
 | Commit | Phase | What it did |
 | --- | --- | --- |
@@ -79,13 +79,14 @@ that commit are local until a successful push is verified.
 | `0f89f28` | **0 — Tokens** | `tebra-tokens.css` (the full colour/type/geometry/motion vocabulary, `:root` declarations only, `@media screen`). Added Inter Variable + JetBrains Mono. Boot splash and favicon in the palette. Deliberately pixel-inert in the shell. |
 | `bf4ab1a` | **1 — Voice** | `vocabulary.ts` as the single source of user-facing copy. Dashboard / Open Notes / Facesheet / Care Checklist / Sign / Incomplete. Display copy extracted out of `src/application/`. |
 | `b674907` | **2a — Visual base** | Retargeted the existing chrome and workflow styles at their source; removed the MEDITECH workstation and screen-contract stylesheets. |
-| `1387d10` | **2b — Shell** | Adds `TebraChrome`, `AppHeader`, `SectionRail`, `tebra-workstation.css`, the flat white application shell, loading skeleton, and current Tebra screen contract. Local at audit time; not yet on PR #62. |
-| *this commit* | **2c — Authenticated-product refinement** | Aligns measured shell/workflow geometry; repairs responsive clinical reachability, lifecycle/accessibility chrome, menu tracking, and immediate F12 dispatch; records the production-safe Tebra audit. |
+| `1387d10` local / `4c1df21` remote | **2b — Shell** | Adds `TebraChrome`, `AppHeader`, `SectionRail`, `tebra-workstation.css`, the flat white application shell, loading skeleton, and current Tebra screen contract. Exact tree `4d32a24`. |
+| `fb54d4a` local / `7eb8c9e` remote | **2c — Authenticated-product refinement** | Aligns measured shell/workflow geometry; repairs responsive clinical reachability, lifecycle/accessibility chrome, menu tracking, and immediate F12 dispatch; records the production-safe Tebra audit. Exact tree `f1daed58`. |
+| `069ac15` local / `4cdce08` remote | **2d — Visual setup** | Removes the retired green-banner pixel assertion from the functional draft-opening helper so all three responsive states reach their snapshot assertions. |
+| *this commit* | **2d — Visual closure** | Promotes the eight reviewed Chromium 151 Linux captures and records their provenance. `win32/` remains intentionally untouched. |
 
-**The Phase 2c shell refinement is locally complete.** Phase 2b and Phase 2c may
-both remain unpushed when GitHub write access is unavailable. The Dashboard and current Open Notes
-drawers still use provisional markup; Phase 3 replaces those conventions
-without reopening the shell architecture.
+**Phase 2 is visually complete once CI is green on this commit.** The Dashboard
+and current Open Notes drawers still use provisional markup; Phase 3 replaces
+those conventions without reopening the shell architecture.
 
 ### Load-bearing facts about what landed
 
@@ -229,6 +230,8 @@ PW_CHROMIUM=/path/to/chromium \
 
 ### Current local verification status
 
+- Phase 2d local gate: `npm run check`, 570/570 unit tests, and production build
+  pass. The frozen-path diff is empty.
 - `tebra-screen-contract.spec.js`: 6/6 passed on temporary Chromium 149,
   including visible clinical-page intersection and keyboard detail/focus-ring
   coverage at short workstation sizes plus lifecycle overlap checks at tall
@@ -242,23 +245,27 @@ PW_CHROMIUM=/path/to/chromium \
 - Full print suite on Chromium 149: 13/18 passed. Four failures reproduce at
   unchanged `1387d10`; the fifth is the likely-flaky four-step rail mutation
   check. The two print-isolation paths touched by Phase 2c (early Injection AVS
-  and UDS clinician report) pass 2/2. Chromium 151 remains authoritative, so
-  the complete print gate is still open.
-- No full Chromium 151 e2e run or current committed snapshot review is recorded.
+  and UDS clinician report) pass 2/2. Chromium 151 is authoritative.
+- Pinned Chromium 151 CI run `34058368138` completed 105/112 tests; its only
+  seven failures were the deliberately stale visual-snapshot tests. All other
+  browser and print paths passed. The run produced all eight named actual PNGs.
+- The closure commit imports those exact PNGs. Its follow-up exact-artifact CI
+  run is the remaining Phase 2 gate.
 
 ### Visual baselines
 
-Phase 1 **measured** the version gap rather than assuming it: all 7 then-changed
-CI-made Chromium 151 baselines passed on Chromium 141 against unchanged code,
-because the capture CSS forces `Arial, "Liberation Sans"` with
-`font-synthesis: none` and disables animations. That established compatibility
-for those captures at that time; it does not authorize regeneration on the
-temporary Chromium 149 binary.
+Pinned Chromium 151 CI run `34058368138` captured all eight current Linux
+states after the functional setup checks. Each initial/retry pair was
+byte-identical. Every image was reviewed at full resolution: empty chart,
+Dashboard worklist, active draft at 1366, active draft at 840, minimum 800×600,
+ready to sign, signed/read-only, and the deliberate 390px unsupported gate.
+They contain fixed test fixtures only, not production patient data.
 
-The committed Linux images still show the pre-Phase-2b shell and must be
-regenerated against the current implementation before Phase 2's visual gate is
-closed. The `win32/` set is also stale and can only be refreshed on that
-platform. Never update either set without reviewing every image.
+Those exact CI `*-actual.png` files are now the committed Linux baselines.
+Temporary Chromium 149 differs from them by roughly 3–5%, so it is not a
+baseline authority and the threshold must not be loosened to accommodate it.
+The `win32/` set still shows the pre-Phase-2b shell and can only be refreshed on
+that platform.
 
 **Re-run that check whenever the version gap widens or the capture settings
 change.** The method: `git worktree add <tmp> <last green commit>`, symlink
@@ -271,7 +278,7 @@ npx playwright test --config=/tmp/.../pw-local.cjs \
 ```
 
 Review every regenerated image. `win32/` is a different platform and **cannot**
-be refreshed here — flag it as stale in the PR body.
+be refreshed here — it remains flagged as stale in the PR body.
 
 ---
 
@@ -331,16 +338,16 @@ be refreshed here — flag it as stale in the PR body.
 
 ## 8. Last known CI status — verify before acting
 
-At the Phase 1 handoff, `Build and Deploy` was red on PR #62 because Azure
-rejected the preview deploy with:
+PR #62 head `4cdce08` passed typecheck, static checks, 570 unit tests, and the
+production build in run `34058368138`. Its exact-artifact job passed 105 tests
+and failed only the seven visual test cases against the intentionally stale
+Linux PNGs; the eight actual captures are now committed here. `Build and
+Deploy` was skipped because of that prerequisite failure, so Azure staging was
+not attempted on this head.
 
-```
-This Static Web App already has the maximum number of staging environments.
-```
-
-That was external staging-capacity state, not a code failure. It was not
-re-checked during the 2026-09-06 design audit. Inspect the current run before
-acting or repeating the standing-down comment (`issuecomment-5504255572`).
+Push the closure commit and inspect its run. The expected result is 112/112 in
+the exact-artifact job. A later Azure staging-capacity error would be external
+deployment state, not a code or visual regression; report it separately.
 
 ---
 
@@ -348,9 +355,10 @@ acting or repeating the standing-down comment (`issuecomment-5504255572`).
 
 | Phase | Scope |
 | --- | --- |
-| **2b — Shell** | **Present locally at `1387d10`; PR #62 was still at `b674907` during the audit.** App header, section rail, footer, dialogs, buttons, fields, loading skeleton, and deletion of the MEDITECH contract. |
-| **2c — Authenticated-product refinement** | **Completed by the commit containing this handoff; its remote push may still be pending alongside Phase 2b.** Confirm PR #62 contains both commits, then finish the full Chromium 151 browser/print gate and regenerate/review current visual baselines. |
-| **3 — Conventions** | **After 2c lands.** Facesheet cards; global legacy-style Open Notes table with date sort/lock/status; separate modern patient Notes filters/list; hover patient card; page-level coral split `New Note`, `Print`, `More`, `Customize View`. **Where first-party feel is won or lost.** |
+| **2b — Shell** | **On PR #62.** App header, section rail, footer, dialogs, buttons, fields, loading skeleton, and deletion of the MEDITECH contract. |
+| **2c — Authenticated-product refinement** | **On PR #62.** Measured geometry, responsive/keyboard repairs, lifecycle footer, inspector, and UDS scroll ownership. |
+| **2d — Visual closure** | **This commit; require green CI.** Eight reviewed Chromium 151 Linux baselines; `win32/` remains stale for a Windows maintainer. |
+| **3 — Conventions** | **Begin only after 2d is green.** Facesheet cards; global legacy-style Open Notes table with date sort/lock/status; separate modern patient Notes filters/list; hover patient card; page-level coral split `New Note`, `Print`, `More`, `Customize View`. **Where first-party feel is won or lost.** |
 | **4 — Kiosk** | Kiosk shell (`?kiosk=1`), 7-step injection stepper over existing `InjectionPanel` tabs, touch site picker, Care Checklist rail, sign-and-next card. |
 | **5 — Cleanup** | Delete dead MEDITECH CSS, update `README.md`. |
 | **(unscheduled)** | The `cd2004-*` / `meditech-*` / `wfp-*` class rename. Mechanical, ~1000 usages, touches every e2e selector — **its own phase**, never mixed with design work. |

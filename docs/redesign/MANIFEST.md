@@ -4,22 +4,23 @@ Companion to `PLAN.md`. The authoritative list of **what may change**, **what is
 frozen**, **the exact design tokens**, and **the conventions that make this read
 as first-party**.
 
-**Implementation checkpoint — 2026-09-06.** The local branch contains Phases
-0–2b through `1387d10`; PR #62 was still at `b674907`, so Phase 2b was not yet
-remote. The commit containing this manifest is the locally complete Phase
-2c authenticated-product refinement of shell geometry, Injection form rhythm,
-record-lifecycle actions, Note Inspector chrome, UDS scroll ownership, and
-keyboard focus. It may still need to be pushed to PR #62 alongside Phase 2b. It
-adds no Phase 3 feature. The planned Phase 3 Notes,
-Facesheet, patient-search, page-level `ActionBar`, status-chip, lock-indicator,
-and hover-card components do not exist.
+**Implementation checkpoint — 2026-09-06.** Phases 0–2c are on PR #62. Phase
+2d closes the visual gate without adding a product feature: it removes one
+retired-palette assertion from the visual setup helper and promotes all eight
+Linux baselines rendered by the pinned Chromium 151 CI runner. The exact
+captures were reviewed and each initial/retry pair was byte-identical. The
+commit containing this manifest still needs one green exact-artifact run before
+Phase 3 begins. The planned Phase 3 Notes, Facesheet, patient-search, page-level
+`ActionBar`, status-chip, lock-indicator, and hover-card components do not yet
+exist.
 
 Every real-patient view in the production audit was read-only. Opening the
 Injection editor on a verified Test Patient automatically created one blank
 `Incomplete` note; no clinical text, Save, Sign, Submit, or Delete action
 followed. The audit confirmed that global legacy **Open Notes** and modern
-patient-chart **Notes** use different grammars; §4 records both. The committed
-visual PNGs predate Phase 2b and remain stale.
+patient-chart **Notes** use different grammars; §4 records both. Linux visual
+PNGs now describe the Phase 2c shell. The eight `win32/` PNGs still predate
+Phase 2b and require a maintainer on Windows.
 
 ---
 
@@ -123,7 +124,7 @@ else under `src/application/**` remains frozen.
 | Path | Action |
 | --- | --- |
 | `tests/e2e/meditech-screen-contract.spec.js` | Delete; superseded. |
-| `tests/e2e/visual-snapshots.spec.js-snapshots/linux/**` (8 PNGs) | **Currently pre-Phase-2b.** Regenerate in a compatible browser and review each image. |
+| `tests/e2e/visual-snapshots.spec.js-snapshots/linux/**` (8 PNGs) | **Phase 2d current.** Captured by pinned Chromium 151 in CI, reviewed image-by-image, and byte-identical across retry. |
 | `tests/e2e/visual-snapshots.spec.js-snapshots/win32/**` (8 PNGs) | **Currently stale; cannot be regenerated in Linux CI.** Refresh on Windows or flag in the PR body. |
 | `tests/e2e/tebra-screen-contract.spec.js` | Phase 2c updates measured shell, coral/status, and 800×600 contracts. |
 | `tests/e2e/visual-contracts.spec.js` | Update Dashboard style and keyboard-focus expectations. |
@@ -133,11 +134,11 @@ else under `src/application/**` remains frozen.
 `npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
 
 > **Baseline browser drift — measured, not assumed.** `@playwright/test` 1.62
-> pins chromium-1234 (Chromium 151), which remains authoritative. Phase 1
-> showed that its seven then-changed baselines matched Chromium 141 against
-> unchanged code. The 2026-09-06 audit used a temporary Chromium 149 binary,
-> but did not establish snapshot equivalence. Never commit its ephemeral path
-> or regenerate baselines on it without first proving unchanged-code parity.
+> pins chromium-1234 (Chromium 151), which remains authoritative. CI run
+> `34058368138` captured all eight Phase 2c Linux images after the functional
+> setup checks; every first-run/retry pair was byte-identical. Those exact
+> `*-actual.png` files are the Phase 2d baselines. Temporary Chromium 149
+> differs materially from them and is useful for interaction checks only.
 > `win32/` is a genuinely different platform and cannot be refreshed on Linux.
 
 Current temporary-Chromium-149 evidence: screen contract 6/6, Dashboard visual
@@ -145,8 +146,9 @@ contract 2/2, five changed journeys 5/5, and the final combined
 screen/interaction run 66/66. The repaired UDS F12 and menu-tracking races each
 passed 10/10 stress repeats. The full print suite was 13/18: four failures
 reproduced at unchanged `1387d10`, and one was the likely-flaky four-step rail
-mutation check. The two Phase-2c print-isolation paths pass 2/2. This is not a
-pinned-browser print or visual-baseline pass.
+mutation check. The two Phase-2c print-isolation paths pass 2/2. It is not the
+visual authority: against the Chromium 151 baselines its images differ by
+roughly 3–5%, so do not regenerate or loosen thresholds for that browser.
 
 ---
 
