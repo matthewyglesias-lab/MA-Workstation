@@ -220,9 +220,8 @@ function formatRecordTimestamp(iso: string | undefined): string | undefined {
  * note is signed and read-only rather than guessing one.
  */
 function lockHint(row: WorklistRow): string {
-  const who = row.signedByLabel?.trim()
-    ? NOTES.lockedBy(row.signedByLabel.trim())
-    : NOTES.lockedHint;
+  const signer = row.signedByLabel?.trim();
+  const who = signer ? `${NOTES.lockedByPrefix} ${signer}` : NOTES.lockedHint;
   return row.visitTimeLabel ? `${who} · ${row.visitTimeLabel}` : who;
 }
 

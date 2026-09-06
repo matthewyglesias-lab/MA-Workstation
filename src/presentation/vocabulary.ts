@@ -94,7 +94,14 @@ export const NOTES = {
    * wrong the first time two people share a workstation.
    */
   lockedHint: "Signed · read only",
-  lockedBy: (staff: string) => `Signed by ${staff}`,
+  /**
+   * A prefix, not a template function. `vocabulary.test.ts` iterates every
+   * value in these maps to keep internal vocabulary off the screen, and a
+   * function is not a string it can check - so the words live here and the
+   * composition lives in the component, which keeps the guard covering
+   * everything this module exports.
+   */
+  lockedByPrefix: "Signed by",
   /** No visit date is held for an unsigned draft. */
   noVisitDate: "—",
   /** Tebra's action-bar primary. Was "Start new injection". */
