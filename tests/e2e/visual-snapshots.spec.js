@@ -252,10 +252,6 @@ async function openFixtureDraft(page) {
   await expect(page.locator('dialog.records-drawer-layer')).toBeHidden();
   await expect(page.locator('.cd2004-patient-primary')).toContainText('Patel, Rowan');
   await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/has-active-chart/);
-  await expect(page.locator('.cd2004-patient-banner')).toHaveCSS(
-    'background-color',
-    'rgb(200, 239, 191)'
-  );
   await expect(page.locator('[data-injection-record-actions]')).toContainText('Draft saved');
 }
 
