@@ -175,9 +175,9 @@ test.describe('Tebra screen contract', () => {
       localStorage.setItem(
         'ipmgMedAssistActivityLog_2026-08-03',
         JSON.stringify([
-          { time: '9:18 AM', type: 'injection', status: 'completed', pt: 'Rivera, Jordan', summary: 'Routine administration completed' },
-          { time: '9:42 AM', type: 'uds', status: 'needs_review', pt: 'Chen, Avery', summary: 'Preliminary result requires review' },
-          { time: '10:06 AM', type: 'sample', status: 'completed', pt: 'Morgan, Casey', summary: 'Package traceability complete' }
+          { time: '9:18 AM', type: 'injection', status: 'completed', pt: 'Rivera, Jordan', summary: 'Routine administration completed', by: 'Alex Rivera, MA' },
+          { time: '9:42 AM', type: 'uds', status: 'needs_review', pt: 'Chen, Avery', summary: 'Preliminary result requires review', by: 'Alex Rivera, MA' },
+          { time: '10:06 AM', type: 'sample', status: 'completed', pt: 'Morgan, Casey', summary: 'Package traceability complete', by: 'Alex Rivera, MA' }
         ])
       );
     });
@@ -218,6 +218,13 @@ test.describe('Tebra screen contract', () => {
     // A signed note is locked and says so on hover; one awaiting review is
     // not locked, because the work is not finished.
     const rows = table.locator('tbody tr');
+
+    // The lock hover names who signed it. Tebra's names who holds the note;
+    // this is the same affordance over the fact this app actually has, and
+    // the signer comes off the record rather than from whoever is signed in.
+    await expect(rows.filter({ hasText: 'Rivera, Jordan' }).locator('.cd2004-worklist-lock'))
+      .toHaveAttribute('title', 'Signed by Alex Rivera, MA · 9:18 AM');
+
     const lockState = await rows.evaluateAll(nodes =>
       nodes.map(node => ({
         patient: node.querySelector('td:first-child')?.textContent?.trim(),

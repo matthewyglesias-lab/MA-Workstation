@@ -39,6 +39,35 @@ threshold, ordering rule, or clinical decision changed** (verify with
 `git diff -- src/application`: it is deletions and comments only). Everything
 else under `src/application/**` remains frozen.
 
+**Amendment (Phase 3c): the freeze protects clinical decisions, not the
+patient identifiers stored alongside them.**
+Same shape as the Phase 1 amendment, and the same test. `src/legacy/shell-state.ts`
+builds `WorkQueueItem` and `InjectionRecordRow`, and it was dropping four
+fields that the browser store already holds: the signer on an activity
+(`by`), and a record's patient DOB and last-written timestamp. Without them
+Open Notes could not name who signed a note, every draft's Visit date column
+read `—`, and MANIFEST 4.5/4.6 were unbuildable — not because the data does
+not exist, but because it stopped at the boundary.
+
+Four lines of pure field mapping now carry them across. **No conditional,
+threshold, ordering rule, or clinical decision changed** — verify with
+`git diff -- src/legacy`: it is six added lines, four of them assignments and
+two of them comments. Presentation decides what to show and how to format it;
+`shell-state.ts` decides nothing new. Everything else under `src/legacy/**`
+remains frozen, and `legacy-runtime.js`, `legacy.css` and `legacy-markup.html`
+remain untouched in every phase.
+
+**Amendment (Phase 4a): `scripts/check-app.js` guards clinical behaviour, and
+three of its assertions guard the old design instead.**
+`border-radius: 0 !important` is asserted on the panel library, the records
+drawer and the completion receipt, each described as "the classic-EHR
+treatment". Those encode the visual language this redesign replaces, so a
+phase that legitimately retires one of those surfaces updates its assertion
+**in the same commit, with the reason stated**. This applies to those three
+and to nothing else: the ~50 clinical regexes — NKDA defaults, UDS panel
+neutrality, cup-expiry gating, dose-picker ordering — are never relaxed, and a
+red one still means the change reached the engine.
+
 **Frozen in behavior, editable in style only:**
 `WorkstationLock.tsx` (idle-lock timing and semantics),
 `FunctionKeyProfile.ts` (command vocabulary — restyle its surface, keep the commands).

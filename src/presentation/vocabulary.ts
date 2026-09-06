@@ -84,13 +84,17 @@ export const NOTES = {
   columnVisitDate: "Visit date",
 
   /**
-   * The lock hover. Tebra reveals who currently holds a note; this app has no
-   * server and no second user, and the signer is not carried on the row (it
-   * lives behind a frozen path), so ours says what it truthfully knows: the
-   * note is signed and read-only, and when it was recorded. Same affordance,
-   * less claim. See docs/redesign/MANIFEST.md 4.1.
+   * The lock hover. Tebra's reveals who holds a note; ours reveals who signed
+   * it and when, which is the same affordance over the fact this app actually
+   * has. The signer was always in the activity log and simply was not carried
+   * onto the row - the MANIFEST 1 amendment maps it across.
+   *
+   * `lockedHint` remains the fallback for a signed note whose signer was not
+   * recorded. Saying less is right there; guessing the signed-in user would be
+   * wrong the first time two people share a workstation.
    */
   lockedHint: "Signed · read only",
+  lockedBy: (staff: string) => `Signed by ${staff}`,
   /** No visit date is held for an unsigned draft. */
   noVisitDate: "—",
   /** Tebra's action-bar primary. Was "Start new injection". */

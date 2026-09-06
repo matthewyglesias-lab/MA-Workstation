@@ -94,8 +94,9 @@ interface WorklistRow {
   statusIcon?: DesktopIconName;
   /** Signed notes are read-only and take the lock glyph. */
   locked: boolean;
-  /** Absent on a draft: no visit date is held for one. */
   visitTimeLabel?: string;
+  /** Who signed it, when the record says. */
+  signedByLabel?: string;
   tone?: ClinicalTone;
   queueItem?: WorkQueueItem;
   record?: InjectionRecordRow;
@@ -176,6 +177,7 @@ function queueWorklistRow(
     // it locked would say the work is finished when it is not.
     locked: !review,
     visitTimeLabel: item.timeLabel,
+    signedByLabel: item.signedByLabel,
     tone: item.tone,
     queueItem: item,
   };
@@ -191,9 +193,37 @@ function recordWorklistRow(record: InjectionRecordRow): WorklistRow {
     statusLabel: NOTES.statusIncomplete,
     statusTone: "neutral",
     locked: false,
+    // A draft has no visit yet, so its visit date is when it was last
+    // written. MANIFEST 4.1: the note's creation date when there is no
+    // appointment. Before the MANIFEST 1 amendment this column read "—" for
+    // every draft, because the timestamp stopped at the frozen boundary.
+    visitTimeLabel: formatRecordTimestamp(record.updatedAtIso),
     tone: record.tone,
     record,
   };
+}
+
+/**
+ * A stored ISO timestamp as the same clock time the activity log shows, so
+ * one column reads consistently whichever kind of row it is on.
+ */
+function formatRecordTimestamp(iso: string | undefined): string | undefined {
+  if (!iso) return undefined;
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return undefined;
+  return at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+/**
+ * What the lock glyph reveals. Tebra names who holds the note; this names who
+ * signed it and when. Where the record kept no signer, it says only that the
+ * note is signed and read-only rather than guessing one.
+ */
+function lockHint(row: WorklistRow): string {
+  const who = row.signedByLabel?.trim()
+    ? NOTES.lockedBy(row.signedByLabel.trim())
+    : NOTES.lockedHint;
+  return row.visitTimeLabel ? `${who} · ${row.visitTimeLabel}` : who;
 }
 
 /**
@@ -542,12 +572,8 @@ export function StartCenter({
                     {row.locked && (
                       <span
                         class="cd2004-worklist-lock"
-                        title={
-                          row.visitTimeLabel
-                            ? `${NOTES.lockedHint} · ${row.visitTimeLabel}`
-                            : NOTES.lockedHint
-                        }
-                        aria-label={NOTES.lockedHint}
+                        title={lockHint(row)}
+                        aria-label={lockHint(row)}
                       >
                         <DesktopIcon name="lock" />
                       </span>
