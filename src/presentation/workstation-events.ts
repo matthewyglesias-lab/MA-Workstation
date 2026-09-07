@@ -4,6 +4,9 @@ export const WORKSTATION_FIELD_LOOKUP_REQUEST =
 export const WORKSTATION_DRAFT_SAVE_REQUEST =
   "ipmg:workstation-draft-save-request";
 
+export const WORKSTATION_UDS_LEAVE_BLOCKED_REQUEST =
+  "ipmg:workstation-uds-leave-blocked-request";
+
 export interface WorkstationFieldLookupRequestDetail {
   select: HTMLSelectElement;
 }
@@ -28,6 +31,14 @@ export function requestWorkstationFieldLookup(select: HTMLSelectElement) {
 
 export interface WorkstationDraftSaveRequestDetail {
   workflow: "uds";
+  /** Set synchronously by the mounted workflow that owns the request. */
+  handled: boolean;
+  /** Set synchronously to the persistence result when the request is handled. */
+  saved: boolean;
+}
+
+export interface WorkstationUdsLeaveBlockedRequestDetail {
+  reason: "addendum" | "photo";
 }
 
 /**
@@ -37,11 +48,29 @@ export interface WorkstationDraftSaveRequestDetail {
  */
 export function requestWorkstationDraftSave(
   workflow: WorkstationDraftSaveRequestDetail["workflow"],
-) {
+): boolean {
+  const detail: WorkstationDraftSaveRequestDetail = {
+    workflow,
+    handled: false,
+    saved: false,
+  };
   window.dispatchEvent(
     new CustomEvent<WorkstationDraftSaveRequestDetail>(
       WORKSTATION_DRAFT_SAVE_REQUEST,
-      { detail: { workflow } },
+      { detail },
+    ),
+  );
+  return detail.handled && detail.saved;
+}
+
+/** Asks the mounted UDS editor to explain and focus a navigation veto. */
+export function requestWorkstationUdsLeaveBlocked(
+  reason: WorkstationUdsLeaveBlockedRequestDetail["reason"],
+) {
+  window.dispatchEvent(
+    new CustomEvent<WorkstationUdsLeaveBlockedRequestDetail>(
+      WORKSTATION_UDS_LEAVE_BLOCKED_REQUEST,
+      { detail: { reason } },
     ),
   );
 }

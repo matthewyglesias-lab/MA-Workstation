@@ -74,10 +74,23 @@ function tabForSamplesField(field?: string): SamplesTab {
 
 interface SamplesPanelProps {
   initialEncounter: SamplesEncounter;
+  initialDirty?: boolean;
   activePatient: PatientContext;
   evaluation?: ClinicalEvaluation<SamplesEvaluationOutput>;
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
+  /**
+   * Reports whether this mounted worksheet has received an edit. Dirty state
+   * is conservative and sticky: it starts from initialDirty, becomes true on
+   * the first field edit or encounter-changing action, and never clears until
+   * remount.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Retains the exact typed encounter across shell/chart remounts. */
+  onWorkflowStateChange?: (
+    encounter: SamplesEncounter,
+    state: { dirty: boolean },
+  ) => void;
 }
 
 interface AdditionalRow {
@@ -204,15 +217,40 @@ function Field({
 
 export function SamplesPanel({
   initialEncounter,
+  initialDirty = false,
   activePatient,
   evaluation,
   staffSignInValue,
   previewRef,
+  onDirtyChange,
+  onWorkflowStateChange,
 }: SamplesPanelProps) {
   const [encounter, setEncounter] = useState<SamplesEncounter>(initialEncounter);
   const [tab, setTab] = useState<SamplesTab>("order");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const mirroredOnMount = useRef(false);
+  const dirty = useRef(initialDirty);
+  const encounterRef = useRef(initialEncounter);
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  const onWorkflowStateChangeRef = useRef(onWorkflowStateChange);
+  onDirtyChangeRef.current = onDirtyChange;
+  onWorkflowStateChangeRef.current = onWorkflowStateChange;
+
+  const markDirty = () => {
+    if (dirty.current) return;
+    dirty.current = true;
+    onDirtyChangeRef.current?.(true);
+  };
+
+  useEffect(() => {
+    onDirtyChangeRef.current?.(dirty.current);
+  }, []);
+
+  useEffect(() => {
+    onWorkflowStateChangeRef.current?.(encounterRef.current, {
+      dirty: dirty.current,
+    });
+  }, []);
 
   useEffect(() => {
     if (mirroredOnMount.current) return;
@@ -222,30 +260,50 @@ export function SamplesPanel({
   }, []);
 
   useEffect(() => {
+    // A remounted dirty draft may intentionally have no patient yet. Ambient
+    // shell context must not silently rewrite that draft while restoring it.
+    if (dirty.current) return;
     if (!patientIsEmpty(encounter.patient)) return;
     if (!activePatient.name?.trim() && !activePatient.dob?.trim()) return;
-    patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } });
+    patch(
+      { patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } },
+      false,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePatient.name, activePatient.dob]);
 
-  const patch = (partial: Partial<SamplesEncounter>) => {
-    setEncounter((previous) => {
-      const next = { ...previous, ...partial };
-      mirrorSamplesEncounterToLegacyDom(next);
-      return next;
-    });
+  const patch = (
+    update:
+      | Partial<SamplesEncounter>
+      | ((previous: SamplesEncounter) => Partial<SamplesEncounter>),
+    userEdited = true,
+  ) => {
+    if (userEdited) markDirty();
+    const previous = encounterRef.current;
+    const partial = typeof update === "function" ? update(previous) : update;
+    const next = { ...previous, ...partial };
+    encounterRef.current = next;
+    mirrorSamplesEncounterToLegacyDom(next);
+    // Workflow navigation can occur later in this same browser task. Publish
+    // the exact next encounter before React/Preact effects or rendering so an
+    // immediate unmount cannot restore the prior value with dirty=true.
+    onWorkflowStateChangeRef.current?.(next, { dirty: dirty.current });
+    setEncounter(next);
   };
 
   const patchPatient = (partial: Partial<SamplesEncounter["patient"]>) => {
-    patch({ patient: { ...encounter.patient, ...partial } });
+    patch((previous) => ({
+      patient: { ...previous.patient, ...partial },
+    }));
   };
 
   const patchMedicationQuantity = (
     partial: Partial<Pick<SamplesEncounter, "medicationLabel" | "quantity">>,
   ) => {
-    const next = { ...encounter, ...partial };
-    const primary = primaryPackage(encounter);
-    const rows = rowsFromEncounter(encounter);
+    const current = encounterRef.current;
+    const next = { ...current, ...partial };
+    const primary = primaryPackage(current);
+    const rows = rowsFromEncounter(current);
     const { plan, packages } = buildPlanAndPackages(
       next.medicationLabel,
       next.quantity,
@@ -257,10 +315,11 @@ export function SamplesPanel({
   };
 
   const patchRows = (nextRows: AdditionalRow[]) => {
-    const primary = primaryPackage(encounter);
+    const current = encounterRef.current;
+    const primary = primaryPackage(current);
     const { plan, packages } = buildPlanAndPackages(
-      encounter.medicationLabel,
-      encounter.quantity,
+      current.medicationLabel,
+      current.quantity,
       primary.lot,
       primary.expiration,
       nextRows,
@@ -269,28 +328,29 @@ export function SamplesPanel({
   };
 
   const updateRow = (id: string, rowPatch: Partial<AdditionalRow>) => {
-    patchRows(rowsFromEncounter(encounter).map((row) => (row.id === id ? { ...row, ...rowPatch } : row)));
+    patchRows(rowsFromEncounter(encounterRef.current).map((row) => (row.id === id ? { ...row, ...rowPatch } : row)));
   };
 
   const addRow = () => {
     patchRows([
-      ...rowsFromEncounter(encounter),
+      ...rowsFromEncounter(encounterRef.current),
       { id: newRowId(), strength: "", quantity: "", days: "", directions: "", lot: "", expiration: "" },
     ]);
   };
 
   const removeRow = (id: string) => {
-    patchRows(rowsFromEncounter(encounter).filter((row) => row.id !== id));
+    patchRows(rowsFromEncounter(encounterRef.current).filter((row) => row.id !== id));
   };
 
   const patchPrimaryTrace = (field: "lot" | "expiration", value: string) => {
-    const rows = rowsFromEncounter(encounter);
-    const primary = primaryPackage(encounter);
+    const current = encounterRef.current;
+    const rows = rowsFromEncounter(current);
+    const primary = primaryPackage(current);
     const nextLot = field === "lot" ? value : primary.lot;
     const nextExpiration = field === "expiration" ? value : primary.expiration;
     const { plan, packages } = buildPlanAndPackages(
-      encounter.medicationLabel,
-      encounter.quantity,
+      current.medicationLabel,
+      current.quantity,
       nextLot,
       nextExpiration,
       rows,
@@ -308,8 +368,9 @@ export function SamplesPanel({
       return;
     }
     const defaults = sampleMedicationDefaults(med, 0);
-    const primary = primaryPackage(encounter);
-    const rows = rowsFromEncounter(encounter);
+    const current = encounterRef.current;
+    const primary = primaryPackage(current);
+    const rows = rowsFromEncounter(current);
     const { plan, packages } = buildPlanAndPackages(
       defaults.medicationLabel,
       defaults.quantity,
@@ -335,7 +396,7 @@ export function SamplesPanel({
     const option = medication.sigOptions[index];
     if (!option) return;
     const defaults = sampleMedicationDefaults(medication, index);
-    setEncounter((previous) => {
+    patch((previous) => {
       const primary = primaryPackage(previous);
       let rows = rowsFromEncounter(previous);
       if (option.multiDose?.length) {
@@ -370,7 +431,6 @@ export function SamplesPanel({
         plan,
         packages,
       };
-      mirrorSamplesEncounterToLegacyDom(next);
       return next;
     });
   };
@@ -381,12 +441,8 @@ export function SamplesPanel({
 
   const confirmReview = () => {
     const confirmedAt = new Date().toISOString();
-    setEncounter((previous) => {
-      const next = confirmSampleReview(previous, confirmedAt);
-      mirrorSamplesEncounterToLegacyDom(next);
-      clickLegacyControl("sampleReviewedToday");
-      return next;
-    });
+    patch((previous) => confirmSampleReview(previous, confirmedAt));
+    clickLegacyControl("sampleReviewedToday");
   };
 
   const noteInput = samplesEncounterToDocumentationInput(encounter, today);
@@ -402,7 +458,13 @@ export function SamplesPanel({
   const firstSampleStopMessage = stops[0]?.message;
 
   return (
-    <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
+    <div
+      class="wfp-panel cd2004-print-exclude"
+      ref={previewRef}
+      tabIndex={-1}
+      onInput={markDirty}
+      onChange={markDirty}
+    >
       <div class="wfp-summary-bar">
         <strong>Oral sample encounter</strong>
         <StatusFlag

@@ -134,7 +134,7 @@ async function bootWithSyntheticNotes(page, viewport) {
 async function openGlobalNotes(page) {
   const launcher = page.getByRole('button', { name: /Open saved notes \(F11\)/ });
   await launcher.click();
-  const dialog = page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]');
+  const dialog = page.locator('dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer');
   await expect(dialog).toBeVisible();
   return { dialog, launcher, table: dialog.locator('table.notes-table') };
 }
@@ -271,6 +271,8 @@ test.describe('Phase 3a global Open Notes conventions', () => {
       await expect(
         page.locator('.wfp-panel input[placeholder="Last, First"]')
       ).toHaveValue('Diaz, Test');
+      await expect(page.locator('.wfp-panel textarea[data-addendum-input]'))
+        .toBeFocused();
     });
   }
 
@@ -353,7 +355,11 @@ const SYNTHETIC_UDS_RECORDS = [
   }
 ];
 
-async function bootWithPatientChart(page, viewport) {
+async function bootWithPatientChart(
+  page,
+  viewport,
+  udsRecords = SYNTHETIC_UDS_RECORDS
+) {
   if (viewport) await page.setViewportSize(viewport);
   // Seeds once per tab rather than on every navigation. A reload must be able
   // to prove that a per-browser preference survived it, which it cannot if the
@@ -375,7 +381,7 @@ async function bootWithPatientChart(page, viewport) {
       injectionKey: INJECTION_RECORDS_KEY,
       injections: SYNTHETIC_INJECTION_RECORDS,
       udsKey: UDS_RECORDS_KEY,
-      udsRecords: SYNTHETIC_UDS_RECORDS
+      udsRecords
     }
   );
   await page.goto('/');
@@ -394,6 +400,44 @@ async function openBakerChart(page) {
   const chart = page.locator('[data-patient-chart]');
   await expect(chart).toBeVisible();
   return chart;
+}
+
+async function startChartNote(page, label) {
+  const actionBar = page.locator('[data-action-bar]');
+  await actionBar.locator('.tebra-action-split-disclosure').click();
+  await actionBar.getByRole('menuitem', { name: label, exact: true }).click();
+}
+
+async function editAndLeaveInSameTask(control, value) {
+  await control.evaluate((node, nextValue) => {
+    const prototype = node instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+    const valueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+    if (!valueSetter) throw new Error('Expected a native form control value setter.');
+    valueSetter.call(node, nextValue);
+    node.dispatchEvent(new Event('input', { bubbles: true }));
+    node.dispatchEvent(new KeyboardEvent('keydown', {
+      key: '1',
+      code: 'Digit1',
+      altKey: true,
+      bubbles: true,
+      cancelable: true
+    }));
+  }, value);
+}
+
+async function invokeAndLeaveInSameTask(control) {
+  await control.evaluate((node) => {
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    node.dispatchEvent(new KeyboardEvent('keydown', {
+      key: '1',
+      code: 'Digit1',
+      altKey: true,
+      bubbles: true,
+      cancelable: true
+    }));
+  });
 }
 
 test.describe('Phase 3b patient chart conventions', () => {
@@ -423,7 +467,33 @@ test.describe('Phase 3b patient chart conventions', () => {
 
     // Either half of "Last, First" is searchable.
     await search.fill('te');
-    expect(await page.locator('[data-patient-result]').count()).toBeGreaterThan(1);
+    const keyboardResults = page.locator('[data-patient-result]');
+    expect(await keyboardResults.count()).toBeGreaterThan(1);
+    await expect(keyboardResults.first()).toHaveAttribute('aria-selected', 'true');
+    await expect(search).toHaveAttribute(
+      'aria-activedescendant',
+      await keyboardResults.first().getAttribute('id')
+    );
+
+    await search.press('ArrowDown');
+    await expect(keyboardResults.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await search.press('Home');
+    await expect(keyboardResults.first()).toHaveAttribute('aria-selected', 'true');
+    await search.press('End');
+    await expect(keyboardResults.last()).toHaveAttribute('aria-selected', 'true');
+    await search.press('Escape');
+    await expect(search).toHaveAttribute('aria-expanded', 'false');
+    await expect(search).not.toHaveAttribute('aria-activedescendant', /.+/);
+
+    // A closed list reopens from either direction without moving DOM focus
+    // away from the combobox.
+    await search.press('ArrowDown');
+    await expect(keyboardResults.first()).toHaveAttribute('aria-selected', 'true');
+    await expect(search).toBeFocused();
+    await search.press('Escape');
+    await search.press('ArrowUp');
+    await expect(keyboardResults.last()).toHaveAttribute('aria-selected', 'true');
+    await expect(search).toBeFocused();
 
     // Date of birth narrows as it is typed.
     await search.fill('02/03');
@@ -433,6 +503,11 @@ test.describe('Phase 3b patient chart conventions', () => {
     await search.fill('zz');
     await expect(page.locator('[data-patient-result]')).toHaveCount(0);
     await expect(page.locator('[data-patient-search]')).toContainText('No patients match.');
+
+    await search.fill('ba');
+    await search.press('Enter');
+    await expect(page.locator('[data-patient-chart]')).toBeVisible();
+    await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
   });
 
   test('shows Facesheet cards that each state their ordering rule', async ({ page }) => {
@@ -571,10 +646,19 @@ test.describe('Phase 3b patient chart conventions', () => {
     ).toEqual(['New Note', 'Print', 'More', 'Customize View']);
 
     // The split menu offers the note types this module actually has.
-    await bar.locator('.tebra-action-split-disclosure').click();
+    const disclosure = bar.locator('.tebra-action-split-disclosure');
+    await disclosure.focus();
+    await disclosure.press('Enter');
     const menu = bar.locator('[data-action-new-note-type]');
     await expect(menu).toHaveCount(4);
     expect(await menu.allTextContents()).toEqual(['Injection', 'UDS', 'Samples', 'Forms']);
+    await expect(menu.first()).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(menu.nth(1)).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(menu.last()).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(menu.first()).toBeFocused();
     expect(
       await bar.locator('.tebra-action-menu-list').first().evaluate((node) =>
         Math.round(node.getBoundingClientRect().width)
@@ -582,6 +666,7 @@ test.describe('Phase 3b patient chart conventions', () => {
     ).toBe(242);
     await page.keyboard.press('Escape');
     await expect(menu).toHaveCount(0);
+    await expect(disclosure).toBeFocused();
   });
 
   test('persists Customize View per browser without touching records', async ({ page }) => {
@@ -630,6 +715,22 @@ test.describe('Phase 3b patient chart conventions', () => {
     expect(await recordStorageSnapshot(page)).toBe(before);
   });
 
+  test('chart browsing cannot save the editable note hidden beneath it', async ({ page }) => {
+    await bootWithPatientChart(page);
+    const { table } = await openGlobalNotes(page);
+    await table.locator('[data-records-open="conventions-newest"]').click();
+    await openBakerChart(page);
+    const chartSnapshot = await recordStorageSnapshot(page);
+
+    // A normal draft save rewrites updatedAt. Neither advertised accelerator
+    // may reach that hidden editor while the read-only chart owns the work area.
+    await page.waitForTimeout(25);
+    await page.keyboard.press('F12');
+    await page.keyboard.press('Control+s');
+    expect(await recordStorageSnapshot(page)).toBe(chartSnapshot);
+    await expect(page.locator('[data-patient-chart]')).toBeVisible();
+  });
+
   test('opens a note only on an explicit action', async ({ page }) => {
     await bootWithPatientChart(page);
     await openBakerChart(page);
@@ -647,7 +748,41 @@ test.describe('Phase 3b patient chart conventions', () => {
       'administer'
     );
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Baker, Test');
+    await expect(page.locator('.wfp-panel input[placeholder="Last, First"]'))
+      .toBeFocused();
   });
+
+  for (const handoff of ['Open', 'New']) {
+    test(`${handoff} from global notes dismisses the chart before focusing Injection`, async ({ page }) => {
+      await bootWithPatientChart(page);
+      await openBakerChart(page);
+      await page.keyboard.press('F11');
+      const dialog = page.locator(
+        'dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer'
+      );
+      await expect(dialog).toBeVisible();
+
+      if (handoff === 'Open') {
+        await dialog.locator('[data-records-open="conventions-newest"]').click();
+      } else {
+        await dialog.locator('[data-records-new]').click();
+      }
+
+      await expect(dialog).toBeHidden();
+      await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
+      await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+        'data-active-workflow',
+        'administer'
+      );
+      const patientName = page.locator(
+        '.wfp-panel input[placeholder="Last, First"]'
+      );
+      await expect(patientName).toHaveValue(
+        handoff === 'Open' ? 'Baker, Test' : ''
+      );
+      await expect(patientName).toBeFocused();
+    });
+  }
 
   test('opens a UDS note through the panel that owns it', async ({ page }) => {
     await bootWithPatientChart(page);
@@ -674,6 +809,126 @@ test.describe('Phase 3b patient chart conventions', () => {
     await expect(panel.locator('.cd2004-record-actions-state strong')).toHaveText(
       'Signed'
     );
+    await expect(panel.locator('textarea[data-addendum-input]')).toBeFocused();
+  });
+
+  test('rejects a stale chart row whose durable UDS record changed patients', async ({ page, context }) => {
+    const recordId = 'conventions-uds-stale-patient';
+    const alphaRecord = {
+      ...SYNTHETIC_UDS_RECORDS[0],
+      id: recordId,
+      patient: { name: 'Alpha, Synthetic', dob: '02/03/1992' },
+      summary: 'Synthetic identity race',
+      snapshot: {
+        ...SYNTHETIC_UDS_RECORDS[0].snapshot,
+        patient: { name: 'Alpha, Synthetic', dob: '02/03/1992' }
+      }
+    };
+    await bootWithPatientChart(page, undefined, [alphaRecord]);
+
+    const search = page.locator('[data-patient-search] input');
+    await search.fill('al');
+    const alphaResult = page.locator('[data-patient-result]');
+    await expect(alphaResult).toHaveCount(1);
+    await expect(alphaResult).toContainText('Alpha, Synthetic');
+    await alphaResult.click();
+    await page.locator('[data-chart-tab="notes"]').click();
+    const chart = page.locator('[data-patient-chart]');
+    await expect(chart).toContainText('Alpha, Synthetic');
+
+    // A second tab changes the same valid durable id to a different patient
+    // after this chart has already projected Alpha's row.
+    const secondPage = await context.newPage();
+    await secondPage.goto('/');
+    await secondPage.waitForFunction(
+      () => document.body.dataset.applicationReady === 'true'
+    );
+    const betaBytes = await secondPage.evaluate(
+      ({ key, id }) => {
+        const records = JSON.parse(localStorage.getItem(key) ?? '[]');
+        const next = records.map((record) => record.id === id
+          ? {
+              ...record,
+              updatedAt: '2026-08-20T10:00:00-07:00',
+              patient: { name: 'Beta, Synthetic', dob: '04/05/1993' },
+              snapshot: {
+                ...record.snapshot,
+                patient: { name: 'Beta, Synthetic', dob: '04/05/1993' }
+              }
+            }
+          : record);
+        const serialized = JSON.stringify(next);
+        localStorage.setItem(key, serialized);
+        return serialized;
+      },
+      { key: UDS_RECORDS_KEY, id: recordId }
+    );
+    await secondPage.close();
+
+    await page.locator(`[data-patient-note-open="${recordId}"]`).click();
+
+    // The exact durable patient is checked before any active record, patient,
+    // workflow, or persistence state changes. Staff must leave this stale
+    // chart and deliberately find the record under its current patient.
+    await expect(chart).toBeVisible();
+    await expect(chart).toContainText('Alpha, Synthetic');
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'home'
+    );
+    await expect(page.locator('[data-toast]')).toContainText(
+      'This saved note now belongs to a different patient'
+    );
+    expect(await page.evaluate(
+      (key) => localStorage.getItem(key),
+      UDS_RECORDS_KEY
+    )).toBe(betaBytes);
+
+    await page.keyboard.press('Escape');
+    await expect(chart).toHaveCount(0);
+    await expect(page.locator('.cd2004-patient-banner')).not.toContainText(
+      'Beta, Synthetic'
+    );
+    await search.fill('be');
+    const betaResult = page.locator('[data-patient-result]');
+    await expect(betaResult).toHaveCount(1);
+    await expect(betaResult).toContainText('Beta, Synthetic');
+    await betaResult.click();
+    await page.locator('[data-chart-tab="notes"]').click();
+    await page.locator(`[data-patient-note-open="${recordId}"]`).click();
+
+    await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'uds'
+    );
+    await expect(
+      page.locator('.wfp-panel input[placeholder="Last, First"]')
+    ).toHaveValue('Beta, Synthetic');
+  });
+
+  test('uses the note type as well as id when chart records share an imported id', async ({ page }) => {
+    const sameIdUds = {
+      ...SYNTHETIC_UDS_RECORDS[0],
+      id: 'conventions-newest',
+      summary: 'Synthetic cross-type id collision'
+    };
+    await bootWithPatientChart(page, undefined, [sameIdUds]);
+    await openBakerChart(page);
+    await page.locator('[data-chart-tab="notes"]').click();
+
+    const udsRow = page.locator(
+      '.tebra-record-row[data-note-type="uds"]'
+    );
+    await expect(udsRow).toContainText('Synthetic cross-type id collision');
+    await udsRow.getByRole('button', { name: /Open signed UDS note/ }).click();
+
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'uds'
+    );
+    await expect(page.locator('.wfp-panel .cd2004-record-actions-state strong'))
+      .toHaveText('Signed');
   });
 
   test('replaces the masthead rather than contradicting it', async ({ page }) => {
@@ -747,5 +1002,362 @@ test.describe('Phase 3b patient chart conventions', () => {
       .locator('[data-patient-notes]')
       .evaluate((node) => node.scrollWidth - node.clientWidth);
     expect(listOverflow).toBeLessThanOrEqual(1);
+  });
+
+  for (const replacement of [
+    {
+      label: 'Samples',
+      workflow: 'samples',
+      markerSelector: 'input[placeholder="Staff name"]',
+      marker: 'Samples session A marker'
+    },
+    {
+      label: 'Forms',
+      workflow: 'forms',
+      markerSelector: '.wfp-field:has(.wfp-field-caption:text-is("Assigned staff")) input',
+      marker: 'Forms session A marker'
+    }
+  ]) {
+    test(`${replacement.label} replacement defaults safe, preserves the current note, then explicitly starts clean`, async ({ page }) => {
+      await bootWithPatientChart(page);
+      await page.locator(`.cd2004-nav-item[title="${replacement.label}"]`).click();
+      const panel = page.locator('.wfp-panel');
+      await panel.locator('input[placeholder="Last, First"]').fill('Session A, Synthetic');
+      await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('03/04/1980');
+      await panel.locator(replacement.markerSelector).fill(replacement.marker);
+
+      await openBakerChart(page);
+      await startChartNote(page, replacement.label);
+      const dialog = page.getByRole('dialog', {
+        name: `Start a new ${replacement.label} note?`
+      });
+      await expect(dialog).toBeVisible();
+      const keep = dialog.getByRole('button', {
+        name: 'Keep current note',
+        exact: true
+      });
+      await expect(keep).toBeFocused();
+      await keep.click();
+
+      await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+        'data-active-workflow',
+        replacement.workflow
+      );
+      await expect(panel.locator('input[placeholder="Last, First"]'))
+        .toHaveValue('Session A, Synthetic');
+      await expect(panel.locator('input[placeholder="MM/DD/YYYY"]'))
+        .toHaveValue('03/04/1980');
+      await expect(panel.locator(replacement.markerSelector)).toHaveValue(replacement.marker);
+      await expect(panel.locator('input[placeholder="Last, First"]'))
+        .toBeFocused();
+
+      await openBakerChart(page);
+      await startChartNote(page, replacement.label);
+      await expect(keep).toBeFocused();
+      await dialog.getByRole('button', {
+        name: 'Replace and start new',
+        exact: true
+      }).click();
+
+      await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+        'data-active-workflow',
+        replacement.workflow
+      );
+      await expect(panel.locator('input[placeholder="Last, First"]'))
+        .toHaveValue('Baker, Test');
+      await expect(panel.locator('input[placeholder="MM/DD/YYYY"]'))
+        .toHaveValue('02/03/1992');
+      await expect(panel.locator(replacement.markerSelector)).toHaveValue('');
+      await expect(panel).not.toContainText('Session A, Synthetic');
+      await expect(panel.locator('input[placeholder="Last, First"]'))
+        .toBeFocused();
+    });
+  }
+
+  for (const dirtyOnly of [
+    {
+      label: 'Samples',
+      field: 'DOB',
+      prepare: async (panel) => {
+        const input = panel.locator('input[placeholder="MM/DD/YYYY"]');
+        await input.fill('03/04/1980');
+        return { input, expected: '03/04/1980' };
+      }
+    },
+    {
+      label: 'Samples',
+      field: 'directions',
+      prepare: async (panel) => {
+        await panel.getByRole('tab', { name: /^Medication/ }).click();
+        const input = panel.locator(
+          'textarea[placeholder^="Example: Take 1 capsule"]'
+        );
+        await input.fill('Synthetic directions that must not be replaced.');
+        return { input, expected: 'Synthetic directions that must not be replaced.' };
+      }
+    },
+    {
+      label: 'Forms',
+      field: 'requested date',
+      prepare: async (panel) => {
+        const input = panel.locator(
+          '.wfp-field:has(.wfp-field-caption:text-is("Requested date")) input'
+        );
+        await input.fill('090826');
+        await input.press('Tab');
+        return { input, expected: '09/08/26' };
+      }
+    },
+    {
+      label: 'Forms',
+      field: 'action',
+      prepare: async (panel) => {
+        const input = panel.locator(
+          'textarea[placeholder^="Prepared draft, requested records"]'
+        );
+        await input.fill('Synthetic action that must not be replaced.');
+        return { input, expected: 'Synthetic action that must not be replaced.' };
+      }
+    }
+  ]) {
+    test(`${dirtyOnly.label} ${dirtyOnly.field}-only edits require explicit replacement`, async ({ page }) => {
+      await bootWithPatientChart(page);
+      await page.locator(`.cd2004-nav-item[title="${dirtyOnly.label}"]`).click();
+      const panel = page.locator('.wfp-panel');
+      const { input, expected } = await dirtyOnly.prepare(panel);
+      await expect(input).toHaveValue(expected);
+
+      await openBakerChart(page);
+      await startChartNote(page, dirtyOnly.label);
+      const dialog = page.getByRole('dialog', {
+        name: `Start a new ${dirtyOnly.label} note?`
+      });
+      await expect(dialog).toBeVisible();
+      const keep = dialog.getByRole('button', {
+        name: 'Keep current note',
+        exact: true
+      });
+      await expect(keep).toBeFocused();
+      await keep.click();
+
+      if (dirtyOnly.field === 'directions') {
+        await panel.getByRole('tab', { name: /^Medication/ }).click();
+      }
+      await expect(input).toHaveValue(expected);
+    });
+  }
+
+  test('dirty state stays sticky after a Forms value is cleared back to blank', async ({ page }) => {
+    await bootWithPatientChart(page);
+    await page.locator('.cd2004-nav-item[title="Forms"]').click();
+    const action = page.locator('.wfp-panel').locator(
+      'textarea[placeholder^="Prepared draft, requested records"]'
+    );
+    await action.fill('Synthetic transient value.');
+    await action.fill('');
+
+    await openBakerChart(page);
+    await startChartNote(page, 'Forms');
+    const dialog = page.getByRole('dialog', { name: 'Start a new Forms note?' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', {
+      name: 'Keep current note',
+      exact: true
+    })).toBeFocused();
+  });
+
+  for (const transient of [
+    {
+      label: 'Samples',
+      shortcut: '4',
+      markerSelector: 'input[placeholder="Staff name"]',
+      marker: 'Samples same-task marker',
+      dateLabel: 'Date dispensed'
+    },
+    {
+      label: 'Forms',
+      shortcut: '5',
+      markerSelector: '.wfp-field:has(.wfp-field-caption:text-is("Assigned staff")) input',
+      marker: 'Forms same-task marker',
+      dateLabel: 'Requested date'
+    }
+  ]) {
+    test(`${transient.label} publishes the exact edit before same-task workflow navigation`, async ({ page }) => {
+      await bootWithPatientChart(page);
+      await page.locator(`.cd2004-nav-item[title="${transient.label}"]`).click();
+      const panel = page.locator('.wfp-panel');
+      const marker = panel.locator(transient.markerSelector);
+
+      await editAndLeaveInSameTask(marker, transient.marker);
+      await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+        'data-active-workflow',
+        'home'
+      );
+      expect(await page.evaluate(() => {
+        const event = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      })).toBe(true);
+
+      await page.keyboard.press(`Alt+${transient.shortcut}`);
+      await expect(panel.locator(transient.markerSelector)).toHaveValue(transient.marker);
+
+      await editAndLeaveInSameTask(panel.locator(transient.markerSelector), '');
+      await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+        'data-active-workflow',
+        'home'
+      );
+      await page.keyboard.press(`Alt+${transient.shortcut}`);
+      await expect(panel.locator(transient.markerSelector)).toHaveValue('');
+      expect(await page.evaluate(() => {
+        const event = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      })).toBe(true);
+    });
+
+    test(`${transient.label} commits a focused date before same-task Alt navigation`, async ({ page }) => {
+      await bootWithPatientChart(page);
+      await page.locator(`.cd2004-nav-item[title="${transient.label}"]`).click();
+      const panel = page.locator('.wfp-panel');
+      const date = panel.locator(
+        `.wfp-field:has(.wfp-field-caption:text-is("${transient.dateLabel}")) input`
+      );
+
+      await editAndLeaveInSameTask(date, '091526');
+      await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+        'data-active-workflow',
+        'home'
+      );
+
+      await page.keyboard.press(`Alt+${transient.shortcut}`);
+      await expect(panel.locator(
+        `.wfp-field:has(.wfp-field-caption:text-is("${transient.dateLabel}")) input`
+      )).toHaveValue('09/15/26');
+    });
+  }
+
+  test('Samples publishes SIG and review actions before same-task navigation', async ({ page }) => {
+    await bootWithPatientChart(page);
+    await page.locator('.cd2004-nav-item[title="Samples"]').click();
+    const panel = page.locator('.wfp-panel');
+    const field = (label) => panel.locator('.wfp-field').filter({
+      has: page.getByText(label, { exact: true })
+    });
+
+    await panel.getByRole('tab', { name: /^Medication/ }).click();
+    await field('Medication').locator('select').selectOption({ label: 'Trintellix' });
+    await invokeAndLeaveInSameTask(
+      panel.getByRole('button', { name: '20 mg daily', exact: true })
+    );
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'home'
+    );
+
+    await page.keyboard.press('Alt+4');
+    await panel.getByRole('tab', { name: /^Medication/ }).click();
+    await expect(field('Primary medication / strength').locator('input')).toHaveValue(
+      'Trintellix 20 mg tablet (vortioxetine)'
+    );
+
+    await panel.getByRole('tab', { name: /^Patient/ }).click();
+    await field('Patient name').locator('input').fill('Review, Synthetic');
+    await field('DOB').locator('input').fill('01/02/1990');
+    await field('Prescriber').locator('select').selectOption({ index: 1 });
+    await field('Dispensed by').locator('input').fill('Test Staff');
+    for (const label of ['Date dispensed', 'Start date']) {
+      const date = field(label).locator('input');
+      await date.fill('T');
+      await date.press('Enter');
+    }
+    await panel.getByRole('tab', { name: /^Plan/ }).click();
+    await field('Primary package lot #').locator('input').fill('SYNTHETIC-LOT');
+    await field('Primary package exp').locator('input').fill('2099-12');
+    await panel.getByRole('tab', { name: /^Safety/ }).click();
+    await field('Medication list / interaction check').locator('select').selectOption({
+      label: 'Prescriber reviewed / ok to dispense'
+    });
+    await field('Patient education').locator('select').selectOption({
+      label: 'Reviewed with patient'
+    });
+    const review = panel.getByRole('button', { name: 'Mark reviewed today' });
+    await expect(review).toBeEnabled();
+
+    await invokeAndLeaveInSameTask(review);
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'home'
+    );
+    await page.keyboard.press('Alt+4');
+    await panel.getByRole('tab', { name: /^Safety/ }).click();
+    await expect(panel.getByRole('button', { name: 'Reviewed today' }))
+      .toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('a pristine transient target starts directly for the chart patient', async ({ page }) => {
+    await bootWithPatientChart(page);
+    await openBakerChart(page);
+    await startChartNote(page, 'Samples');
+
+    await expect(page.getByRole('dialog', {
+      name: 'Start a new Samples note?'
+    })).toHaveCount(0);
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'samples'
+    );
+    const panel = page.locator('.wfp-panel');
+    await expect(panel.locator('input[placeholder="Last, First"]'))
+      .toHaveValue('Baker, Test');
+    await expect(panel.locator('input[placeholder="MM/DD/YYYY"]'))
+      .toHaveValue('02/03/1992');
+    await expect(panel.locator('input[placeholder="Last, First"]'))
+      .toBeFocused();
+  });
+
+  test('starts a pristine UDS note for the exact chart patient without writing a record', async ({ page }) => {
+    await bootWithPatientChart(page);
+    const before = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      UDS_RECORDS_KEY
+    );
+    await openBakerChart(page);
+    await startChartNote(page, 'UDS');
+
+    await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'uds'
+    );
+    const panel = page.locator('.wfp-panel');
+    const patientName = panel.locator('input[placeholder="Last, First"]');
+    await expect(patientName).toHaveValue('Baker, Test');
+    await expect(panel.locator('input[placeholder="MM/DD/YYYY"]'))
+      .toHaveValue('02/03/1992');
+    await expect(patientName).toBeFocused();
+    expect(await page.evaluate(
+      (key) => localStorage.getItem(key),
+      UDS_RECORDS_KEY
+    )).toBe(before);
+  });
+
+  test('starts Injection from the chart with the exact synthetic chart patient', async ({ page }) => {
+    await bootWithPatientChart(page);
+    await openBakerChart(page);
+    await startChartNote(page, 'Injection');
+
+    await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'administer'
+    );
+    const panel = page.locator('.wfp-panel');
+    await expect(panel.locator('input[placeholder="Last, First"]'))
+      .toHaveValue('Baker, Test');
+    await expect(panel.locator('input[placeholder="MM/DD/YYYY"]'))
+      .toHaveValue('02/03/1992');
+    await expect(panel.locator('input[placeholder="Last, First"]'))
+      .toBeFocused();
   });
 });

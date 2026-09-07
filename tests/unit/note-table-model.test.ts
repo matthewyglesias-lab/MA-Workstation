@@ -8,6 +8,8 @@ import {
   injectionRecordToNotesTableRow,
   nextNoteSort,
   noteLockLabel,
+  notesTableRowAccessibleLabel,
+  patientNoteOpenAccessibleLabel,
   sortNotesTableRows,
   udsRecordToNotesTableRow,
   type NotesTableRow,
@@ -170,6 +172,60 @@ describe("Open Notes lock detail", () => {
     expect(noteLockLabel({ staff: "A. Rivera, MA", timestamp: "invalid" })).toBe(
       "Signed by A. Rivera, MA",
     );
+  });
+});
+
+describe("patient note Open names", () => {
+  it("adds the stable local record id only when visible note facts collide", () => {
+    const first = tableRow("first", "Patel, Rowan", "Injection", 1);
+    first.visit.label = "Aug 2, 2026";
+    const second = {
+      ...first,
+      key: "second",
+      recordId: "second",
+    };
+    const distinct = tableRow("distinct", "Patel, Rowan", "UDS", 1);
+    distinct.visit.label = "Aug 2, 2026";
+
+    expect(patientNoteOpenAccessibleLabel(distinct, [first, distinct])).toBe(
+      "Open incomplete UDS note from Aug 2, 2026",
+    );
+
+    const names = [first, second].map((row) =>
+      patientNoteOpenAccessibleLabel(row, [first, second]),
+    );
+    expect(names).toEqual([
+      "Open incomplete Injection note from Aug 2, 2026, saved note first",
+      "Open incomplete Injection note from Aug 2, 2026, saved note second",
+    ]);
+    expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe("global Open Notes row names", () => {
+  it("includes visit detail and adds the record id only for exact collisions", () => {
+    const first = tableRow("first", "Patel, Rowan", "Injection", 1);
+    first.visit.label = "Aug 2, 2026";
+    const later = tableRow("later", "Patel, Rowan", "Injection", 2);
+    later.visit.label = "Aug 3, 2026";
+    const duplicate = {
+      ...first,
+      key: "duplicate",
+      recordId: "duplicate",
+    };
+
+    expect(notesTableRowAccessibleLabel(later, [first, later])).toBe(
+      "Open incomplete Injection note for Patel, Rowan, visit Aug 3, 2026",
+    );
+
+    const names = [first, duplicate].map((row) =>
+      notesTableRowAccessibleLabel(row, [first, duplicate]),
+    );
+    expect(names).toEqual([
+      "Open incomplete Injection note for Patel, Rowan, visit Aug 2, 2026, saved note first",
+      "Open incomplete Injection note for Patel, Rowan, visit Aug 2, 2026, saved note duplicate",
+    ]);
+    expect(new Set(names).size).toBe(names.length);
   });
 });
 

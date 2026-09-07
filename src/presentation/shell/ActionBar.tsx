@@ -17,7 +17,7 @@ interface ActionBarProps {
    * crosses from browsing into a workflow, and it is always an explicit
    * choice - never a side effect of opening a chart.
    */
-  onNewNote: (workflow: WorkflowId) => void;
+  onNewNote: (workflow: WorkflowId) => boolean | void;
   onPrint?: () => void;
   /** Card visibility, persisted by the caller. */
   customizeOptions: ReadonlyArray<{ id: string; label: string; checked: boolean }>;
@@ -65,8 +65,7 @@ export function ActionBar({
                 role="menuitem"
                 data-action-new-note-type={workflow}
                 onClick={() => {
-                  dismiss(false);
-                  onNewNote(workflow);
+                  if (onNewNote(workflow) !== false) dismiss(false);
                 }}
               >
                 {WORKFLOW_LABELS[workflow]}
@@ -106,9 +105,11 @@ export function ActionBar({
       >
         {() =>
           customizeOptions.map((option) => (
-            <label key={option.id} class="tebra-action-menu-check" role="menuitemcheckbox" aria-checked={option.checked}>
+            <label key={option.id} class="tebra-action-menu-check">
               <input
                 type="checkbox"
+                role="menuitemcheckbox"
+                aria-checked={option.checked}
                 data-action-customize={option.id}
                 checked={option.checked}
                 onChange={() => onToggleCustomize(option.id)}

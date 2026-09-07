@@ -16,6 +16,10 @@ import {
 } from "./records-drawer-shared";
 import { NotesTable } from "./notes/NotesTable";
 import { udsRecordToNotesTableRow } from "./notes/note-table-model";
+import {
+  isUnambiguousUsableUdsRecordList,
+  isUsableUdsRecord,
+} from "./uds-record-safety";
 
 /**
  * UDS record selection window.
@@ -40,8 +44,10 @@ const FILTERS: Array<[RecordFilter, string]> = [
 interface UdsRecordsWindowProps {
   open: boolean;
   onClose: () => void;
-  onRecordOpen: (record: UdsRecord) => void;
-  onCreate: () => void;
+  onRecordOpen: (record: UdsRecord) => boolean | void;
+  onCreate: () => boolean | void;
+  /** Focuses the accepted record only after the native dialog is closed. */
+  onHandoffComplete?: () => void;
   /** Bumped by the caller after a save/discard/lock so the list re-reads. */
   refreshToken?: number;
 }
@@ -51,6 +57,7 @@ export function UdsRecordsWindow({
   onClose,
   onRecordOpen,
   onCreate,
+  onHandoffComplete,
   refreshToken,
 }: UdsRecordsWindowProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -60,10 +67,21 @@ export function UdsRecordsWindow({
   const [records, setRecords] = useState<UdsRecord[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecordFilter>("all");
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   const reload = () => {
     const result = repository.list();
-    setRecords(result.ok ? result.value : []);
+    if (!result.ok) {
+      setRecords([]);
+      setStorageError(result.error.message);
+      return;
+    }
+    const storageSafe =
+      result.warnings.length === 0 &&
+      isUnambiguousUsableUdsRecordList(result.value);
+    setRecords(storageSafe ? result.value : []);
+    setStorageError(storageSafe ? null : RECORD.udsStorageNeedsAttention);
   };
 
   useEffect(() => {
@@ -72,10 +90,19 @@ export function UdsRecordsWindow({
   }, [refreshToken]);
 
   useEffect(() => {
+    const refreshFromAnotherTab = () => reload();
+    window.addEventListener("storage", refreshFromAnotherTab);
+    return () => window.removeEventListener("storage", refreshFromAnotherTab);
+    // repository is stable for this component lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (open && !dialog.open) {
       reload();
+      setActionError(null);
       openerRef.current = document.activeElement as HTMLElement | null;
       dialog.showModal();
       dialog.querySelector<HTMLInputElement>("#udsRecordsDrawerSearch")?.focus();
@@ -101,19 +128,61 @@ export function UdsRecordsWindow({
   const onKeyDown = (event: KeyboardEvent) => trapDialogTabKey(dialogRef.current, event);
 
   const handleDialogClose = () => {
+    setActionError(null);
     onClose();
     const opener = openerRef.current;
     const handedOff = handedOffRef.current;
     handedOffRef.current = false;
-    if (handedOff || !opener?.isConnected) return;
+    if (handedOff) {
+      requestAnimationFrame(() => onHandoffComplete?.());
+      return;
+    }
+    if (!opener?.isConnected) return;
     requestAnimationFrame(() => {
       if (opener.isConnected) opener.focus();
     });
   };
 
-  const openRecord = (record: UdsRecord) => {
+  const openRecord = (recordId: string) => {
+    const invoked = document.activeElement as HTMLElement | null;
+    // Re-read by id at handoff. A different tab may have completed or edited
+    // the record since this window rendered its cached row.
+    const latest = repository.list();
+    const storageSafe = Boolean(
+      latest.ok &&
+        latest.warnings.length === 0 &&
+        isUnambiguousUsableUdsRecordList(latest.value),
+    );
+    const matches = latest.ok
+      ? latest.value.filter((record) => record.id === recordId)
+      : [];
+    const current = matches.length === 1 ? matches[0] : undefined;
+    if (!storageSafe || !current || !isUsableUdsRecord(current)) {
+      setActionError(
+        storageSafe ? RECORD.invalidUdsRecord : RECORD.udsStorageNeedsAttention,
+      );
+      reload();
+      requestAnimationFrame(() => {
+        if (invoked?.isConnected && dialogRef.current?.contains(invoked)) {
+          invoked.focus();
+        } else {
+          dialogRef.current
+            ?.querySelector<HTMLInputElement>("#udsRecordsDrawerSearch")
+            ?.focus();
+        }
+      });
+      return;
+    }
+    const opened = onRecordOpen(current);
+    if (opened === false) {
+      setActionError(RECORD.currentNoteStayedOpen);
+      requestAnimationFrame(() => {
+        if (invoked?.isConnected && dialogRef.current?.contains(invoked)) invoked.focus();
+      });
+      return;
+    }
+    setActionError(null);
     handedOffRef.current = true;
-    onRecordOpen(record);
     onClose();
   };
 
@@ -123,13 +192,12 @@ export function UdsRecordsWindow({
       class="records-drawer-layer"
       aria-labelledby="udsRecordsDrawerTitle"
       onClose={handleDialogClose}
-      onCancel={handleDialogClose}
       onKeyDown={onKeyDown}
       onClick={(event) => {
         if (event.target === dialogRef.current) onClose();
       }}
     >
-      <section class="records-drawer" role="dialog" aria-labelledby="udsRecordsDrawerTitle">
+      <section class="records-drawer">
         <div class="records-drawer-head">
           <div>
             <h2 id="udsRecordsDrawerTitle">{OPEN_NOTES.udsTitle}</h2>
@@ -185,16 +253,19 @@ export function UdsRecordsWindow({
             : filteredNoteCount(visible.length, records.length, "UDS note")}
         </div>
 
+        {(actionError ?? storageError) && (
+          <p class="cd2004-system-message is-error records-drawer-action-error" role="alert">
+            {actionError ?? storageError}
+          </p>
+        )}
+
         <div class="records-drawer-results" id="udsRecordsDrawerResults">
           {!open ? null : (
             <NotesTable
               rows={visible}
               label={NOTES_TABLE.udsLabel}
               emptyMessage={OPEN_NOTES.noUdsMatches}
-              onOpen={(recordId) => {
-                const record = records.find((entry) => entry.id === recordId);
-                if (record) openRecord(record);
-              }}
+              onOpen={openRecord}
             />
           )}
         </div>
@@ -211,10 +282,37 @@ export function UdsRecordsWindow({
               type="button"
               class="records-drawer-new"
               data-records-new
+              disabled={Boolean(storageError)}
               onClick={() => {
+                const invoked = document.activeElement as HTMLElement | null;
+                const latest = repository.list();
+                if (
+                  !latest.ok ||
+                  latest.warnings.length > 0 ||
+                  !isUnambiguousUsableUdsRecordList(latest.value)
+                ) {
+                  setActionError(RECORD.udsStorageNeedsAttention);
+                  reload();
+                  requestAnimationFrame(() => {
+                    if (invoked?.isConnected && dialogRef.current?.contains(invoked)) {
+                      invoked.focus();
+                    }
+                  });
+                  return;
+                }
+                const created = onCreate();
+                if (created === false) {
+                  setActionError(RECORD.currentNoteStayedOpen);
+                  requestAnimationFrame(() => {
+                    if (invoked?.isConnected && dialogRef.current?.contains(invoked)) {
+                      invoked.focus();
+                    }
+                  });
+                  return;
+                }
+                setActionError(null);
                 handedOffRef.current = true;
                 onClose();
-                onCreate();
               }}
             >
               {RECORD.startNewUds}

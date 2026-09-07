@@ -2,7 +2,8 @@
 
 **Repository:** `matthewyglesias-lab/MA-Workstation`
 **Branch:** `claude/ma-workstation-tebra-redesign-nu1aeq`
-**Status:** Proposed. Nothing in this plan has been implemented.
+**Status:** Phases 0–4 are implemented on PR #62. A safety-closure gate is in
+verification before Phase 5 Kiosk work begins.
 
 ---
 
@@ -220,20 +221,25 @@ ship a focused one.
 
 ## 4. Phasing
 
-One commit per phase, CI green before the next. Visual snapshots regenerated
-**deliberately, once per phase** — never as a reflex to a red run.
+Use one independently reviewable commit per subphase or change set, with CI
+green before the next. Regenerate visual snapshots only for an intentional
+visual change on the pinned renderer — never once-per-phase by reflex.
 
 | Phase | Scope | Risk |
 | --- | --- | --- |
-| **0 — Tokens** | `tebra-tokens.css` (screen-scoped). Add Inter Variable + JetBrains Mono (Plus Jakarta stays — print). Boot splash and favicon. No structural change. | Low |
+| **0 — Tokens** | `tebra-tokens.css` (screen-scoped). Add Inter Variable + JetBrains Mono (Plus Jakarta stays — print). Boot splash and favicon. No structural change. *(Done.)* | Low |
 | **1 — Voice** | Microcopy per §2.4, routed through one `vocabulary.ts`. Display copy extracted out of `src/application` (see MANIFEST §1 amendment). No keys, no clinical logic. *(Done.)* | Low |
-| **2 — Chrome** | App header, section rail, action bar, footer, dialogs, buttons, fields. Boot splash → loading skeleton (MANIFEST §5c). Retire `meditech-screen-contract.*` by deletion, not supersession (MANIFEST §5b). | Medium |
-| **3 — Conventions** | Facesheet cards, Open Notes table with sort/lock/status chips, hover patient card, `+ New Note` menu, `More`, `Customize View`. | Medium |
-| **4 — Kiosk** | Kiosk shell, stepper, site picker, sign-and-next. | Medium-high |
-| **5 — Cleanup** | Delete dead MEDITECH CSS, refresh README. | Low |
+| **2 — Chrome** | App header, section rail, action bar, footer, dialogs, buttons, fields. Boot splash → loading skeleton (MANIFEST §5c). Retire `meditech-screen-contract.*` by deletion, not supersession (MANIFEST §5b). *(Done.)* | Medium |
+| **3 — Conventions** | Facesheet cards, Open Notes table with sort/lock/status chips, hover patient card, `+ New Note` menu, `More`, `Customize View`. *(Done.)* | Medium |
+| **4 — Product Voice** | Contemporary icons and empty-state illustrations; display typography; component-owned control geometry; lighter masthead; neutral untouched-readiness presentation. Information architecture stays task-shaped per §2.1. *(Done.)* | Medium |
+| **Safety closure** | Presentation-layer guards and synthetic regression coverage for draft replacement, UDS session locking, Injection material-semantic preservation, patient-identity handoffs, pending addenda/photos, navigation vetoes and keyboard/accessibility behavior. Must pass the full gate and authoritative CI before Kiosk work. *(In verification.)* | High |
+| **5 — Kiosk** | Kiosk shell, stepper, site picker, Care Checklist rail, sign-and-next. *(Next after safety closure CI.)* | Medium-high |
+| **6 — Cleanup** | Delete dead MEDITECH CSS, refresh README. | Low |
 
-**Rollback:** every phase is additive at the CSS layer until Phase 5. Reverting
-a phase commit restores the prior look with the engine untouched throughout.
+**Rollback:** each independently reviewable change set is source-scoped and can
+be reverted as a commit. Earlier phases deliberately replaced and deleted old
+CSS at its source; rollback does not depend on the stylesheet layer being
+additive. The frozen engine remains untouched throughout.
 
 ---
 
@@ -258,8 +264,16 @@ a phase commit restores the prior look with the engine untouched throughout.
 6. Viewport floor is **800×600**; 390px is an intentional unsupported-mobile
    gate and must keep failing gracefully.
 7. **Win32 visual baselines cannot be regenerated in CI** (`snapshotPathTemplate`
-   is per-platform). Only `linux/` can be refreshed here. Flag the stale
-   `win32/` set for a maintainer on Windows.
+   is per-platform). The `win32/` set is stale and needs a Windows maintainer.
+   The current Linux set came from pinned Chromium 151 and is authoritative;
+   never regenerate it with local Chromium 149 or loosen thresholds to absorb
+   that browser's 3–5% drift.
+8. **Concurrency guarantees differ by workflow.** UDS writes require an
+   exclusive same-origin Web Lock held across the selected session; during
+   rollout, close or reload older/noncooperating tabs. A changed active UDS row
+   quarantines stale preview/print/copy output until an explicit fresh reopen.
+   Injection has exact durable guards and a same-write semantic extension but
+   no CAS/Web Lock, so only one editable Injection tab is supported.
 
 ---
 
@@ -277,9 +291,10 @@ Telehealth, Labs ordering, Referrals, Recall.** No dead-end navigation.
 Match Tebra's craft completely. Be unambiguous about what system this is. Those
 are not in tension, and the reason is clinical, not legal.
 
-**This app has no server, no database, and no synchronization.** Records,
-drafts, and audit activity live in the current browser and nowhere else. The
-README already requires the status bar to disclose that. If the interface
+**This app has no server, no database, and no backend/EHR synchronization or
+record replication.** Records, drafts, and audit activity live in the current
+browser and nowhere else. The
+README already requires the persistent shell/header to disclose that. If the interface
 becomes visually indistinguishable from Tebra with no other signal, a medical
 assistant will reasonably conclude their documentation landed in the patient's
 chart. It did not. That is a real patient-safety failure mode, and the more
@@ -311,10 +326,12 @@ a conversation with Tebra — a partnership and an API, not a stylesheet.
 
 ## 8. Definition of done
 
-- [ ] `npm run test:ci` green.
-- [ ] `npm run test:print` green with **zero** print-fixture diff.
+- [ ] Pushed Chromium 151 `npm run test:ci` equivalent green against the exact
+      production artifact; local Chromium 149 is interaction evidence only.
+- [ ] Pinned-renderer print suite green with **zero** print-fixture diff.
 - [ ] `scripts/check-app.js` green with **no assertion relaxed**.
-- [ ] Linux visual baselines regenerated and reviewed image-by-image.
+- [ ] Linux visual baselines pass unchanged; regenerate and review them only
+      for a separately intentional visual change on pinned Chromium 151.
 - [ ] Stale `win32/` baselines flagged in the PR body.
 - [ ] No horizontal overflow at 800×600, 1024×768, 1366×768, 1440×900.
 - [ ] Kiosk mode fully keyboard-operable; `prefers-reduced-motion` honored.
@@ -322,4 +339,5 @@ a conversation with Tebra — a partnership and an API, not a stylesheet.
 - [ ] Contrast ≥ 4.5:1 body text, ≥ 3:1 UI boundaries.
 - [ ] Local-only storage disclosure visible on every screen, in voice.
 - [ ] **Convention review** (`MANIFEST.md` §5) passed screen by screen.
-- [ ] `git diff --stat` shows **zero** changed lines under the frozen paths in §5.2.
+- [ ] Base-relative tracked and untracked checks show **zero** changes under the
+      frozen paths in §5.

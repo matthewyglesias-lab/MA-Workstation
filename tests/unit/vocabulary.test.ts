@@ -157,11 +157,14 @@ describe("workstation vocabulary", () => {
   it("keeps system vocabulary off the screen", () => {
     const internalSpeak =
       /\b(attest|attestation|file local|local record|posting|compatibility|projection|workflow key|transaction)\b/i;
+    const recordCopy = Object.values(RECORD).map((value) =>
+      typeof value === "function" ? value("injection") : value,
+    );
     const surfaces = [
       ...Object.values(MODULE),
       ...Object.values(NOTES),
       ...Object.values(OPEN_NOTES),
-      ...Object.values(RECORD),
+      ...recordCopy,
       ...Object.values(SHELL),
       ...Object.values(NAVIGATION),
       ...Object.values(WORKFLOW_LABELS),

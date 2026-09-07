@@ -170,8 +170,7 @@ test.describe('Injection decision support', () => {
     await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
-      name: 'Open incomplete Injection note for QA, Next Due',
-      exact: true
+      name: /^Open incomplete Injection note for QA, Next Due, visit /
     }).click();
 
     const resumedPanel = page.locator('.wfp-panel');

@@ -37,10 +37,23 @@ const LETTER_BUILDER_ENABLED = false;
 
 interface FormsPanelProps {
   initialEncounter: FormsEncounter;
+  initialDirty?: boolean;
   activePatient: PatientContext;
   evaluation?: ClinicalEvaluation<FormsEvaluationOutput>;
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
+  /**
+   * Reports whether this mounted worksheet has received an edit. Dirty state
+   * is conservative and sticky: it starts from initialDirty, becomes true on
+   * the first field edit or encounter-changing action, and never clears until
+   * remount.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Retains the exact typed encounter across shell/chart remounts. */
+  onWorkflowStateChange?: (
+    encounter: FormsEncounter,
+    state: { dirty: boolean },
+  ) => void;
 }
 
 const patientIsEmpty = (patient: FormsEncounter["patient"]): boolean =>
@@ -134,14 +147,39 @@ function Field({
 
 export function FormsPanel({
   initialEncounter,
+  initialDirty = false,
   activePatient,
   evaluation,
   staffSignInValue,
   previewRef,
+  onDirtyChange,
+  onWorkflowStateChange,
 }: FormsPanelProps) {
   const [encounter, setEncounter] = useState<FormsEncounter>(initialEncounter);
   const [tab, setTab] = useState<FormsTab>("request");
   const mirroredOnMount = useRef(false);
+  const dirty = useRef(initialDirty);
+  const encounterRef = useRef(initialEncounter);
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  const onWorkflowStateChangeRef = useRef(onWorkflowStateChange);
+  onDirtyChangeRef.current = onDirtyChange;
+  onWorkflowStateChangeRef.current = onWorkflowStateChange;
+
+  const markDirty = () => {
+    if (dirty.current) return;
+    dirty.current = true;
+    onDirtyChangeRef.current?.(true);
+  };
+
+  useEffect(() => {
+    onDirtyChangeRef.current?.(dirty.current);
+  }, []);
+
+  useEffect(() => {
+    onWorkflowStateChangeRef.current?.(encounterRef.current, {
+      dirty: dirty.current,
+    });
+  }, []);
 
   useEffect(() => {
     if (mirroredOnMount.current) return;
@@ -151,22 +189,41 @@ export function FormsPanel({
   }, []);
 
   useEffect(() => {
+    // A remounted dirty draft may intentionally have no patient yet. Ambient
+    // shell context must not silently rewrite that draft while restoring it.
+    if (dirty.current) return;
     if (!patientIsEmpty(encounter.patient)) return;
     if (!activePatient.name?.trim() && !activePatient.dob?.trim()) return;
-    patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } });
+    patch(
+      { patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } },
+      false,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePatient.name, activePatient.dob]);
 
-  const patch = (partial: Partial<FormsEncounter>) => {
-    setEncounter((previous) => {
-      const next = { ...previous, ...partial };
-      mirrorFormsEncounterToLegacyDom(next);
-      return next;
-    });
+  const patch = (
+    update:
+      | Partial<FormsEncounter>
+      | ((previous: FormsEncounter) => Partial<FormsEncounter>),
+    userEdited = true,
+  ) => {
+    if (userEdited) markDirty();
+    const previous = encounterRef.current;
+    const partial = typeof update === "function" ? update(previous) : update;
+    const next = { ...previous, ...partial };
+    encounterRef.current = next;
+    mirrorFormsEncounterToLegacyDom(next);
+    // Workflow navigation can occur later in this same browser task. Publish
+    // the exact next encounter before React/Preact effects or rendering so an
+    // immediate unmount cannot restore the prior value with dirty=true.
+    onWorkflowStateChangeRef.current?.(next, { dirty: dirty.current });
+    setEncounter(next);
   };
 
   const patchPatient = (partial: Partial<FormsEncounter["patient"]>) => {
-    patch({ patient: { ...encounter.patient, ...partial } });
+    patch((previous) => ({
+      patient: { ...previous.patient, ...partial },
+    }));
   };
 
   const noteText = DocumentationEngine.format(
@@ -191,7 +248,13 @@ export function FormsPanel({
   const formsLogCompleted = evaluation?.output.activityStatus === "completed";
 
   return (
-    <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
+    <div
+      class="wfp-panel cd2004-print-exclude"
+      ref={previewRef}
+      tabIndex={-1}
+      onInput={markDirty}
+      onChange={markDirty}
+    >
       <div class="wfp-summary-bar">
         <strong>Forms &amp; letters</strong>
         <StatusFlag

@@ -35,8 +35,9 @@ interface PatientChartProps {
   checklistAppliesToPatient: boolean;
   view: PatientChartView;
   onViewChange: (view: PatientChartView) => void;
-  onOpenNote: (recordId: string) => void;
-  onNewNote: (workflow: WorkflowId) => void;
+  /** Type-qualified row key, so cross-workflow id collisions cannot misroute. */
+  onOpenNote: (recordKey: string) => void;
+  onNewNote: (workflow: WorkflowId) => boolean | void;
   onPrint?: () => void;
   /** Name of the patient an open note belongs to, when it is not this one. */
   otherNotePatient?: string;

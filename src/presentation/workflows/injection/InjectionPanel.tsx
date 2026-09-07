@@ -405,6 +405,12 @@ interface InjectionPanelProps {
   /** True once the record has been completed and locked (read-only) via the
    * records workspace. Matches legacy's #panel-administer.record-readonly. */
   locked?: boolean;
+  /** Prevents edits when the shell cannot safely preserve material typed fields. */
+  editorUnavailable?: boolean;
+  /** Keeps an unsaved dated addendum from being abandoned by shell navigation. */
+  onPendingAddendumChange?: (pending: boolean) => void;
+  /** Sticky all-field edit signal used by the shell's record lifecycle guard. */
+  onDirtyChange?: (dirty: boolean) => void;
   onWorkflowStateChange?: (
     encounter: InjectionEncounter,
     evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
@@ -1240,16 +1246,24 @@ export function InjectionPanel({
   staffSignInValue,
   previewRef,
   locked,
+  editorUnavailable = false,
+  onPendingAddendumChange,
+  onDirtyChange,
   onWorkflowStateChange,
 }: InjectionPanelProps) {
+  const editorDisabled = Boolean(locked || editorUnavailable);
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
   // The typed encounter is the workflow authority. Mirroring to the legacy
   // document remains a compatibility path for records and print output, but
   // readiness and commands must update synchronously with the field edit that
   // caused them rather than after a MutationObserver polling cycle.
   const evaluation = useMemo(() => InjectionEngine.evaluate(encounter, {}), [encounter]);
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  const onWorkflowStateChangeRef = useRef(onWorkflowStateChange);
+  onDirtyChangeRef.current = onDirtyChange;
+  onWorkflowStateChangeRef.current = onWorkflowStateChange;
   useEffect(() => {
-    onWorkflowStateChange?.(encounter, evaluation);
+    onWorkflowStateChangeRef.current?.(encounter, evaluation);
     // The callback is a notification boundary, not an input to evaluation.
     // Re-notifying on a parent render would create a shell/panel render loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1325,6 +1339,8 @@ export function InjectionPanel({
   // [data-inj-addendum] the same one-way-mirror way as everything else.
   const [addendumAuthor, setAddendumAuthor] = useState(staffSignInValue);
   const [addendumText, setAddendumText] = useState("");
+  const [addendumSaving, setAddendumSaving] = useState(false);
+  const addendumSavingRef = useRef(false);
   const [addenda, setAddenda] = useState<Array<{ author: string; text: string; stamp: string }>>([]);
   const nonAdministration = Boolean(
     encounter.disposition.kind && encounter.disposition.kind !== "administered",
@@ -1338,6 +1354,22 @@ export function InjectionPanel({
     }));
 
   useEffect(() => {
+    onPendingAddendumChange?.(Boolean(addendumText.trim()));
+  }, [addendumText, onPendingAddendumChange]);
+
+  useEffect(() => {
+    // A workstation staff handoff changes the default author for the next
+    // clarification, while a non-empty in-progress addendum retains exactly
+    // the author/text staff already entered.
+    if (addendumText.trim()) return;
+    setAddendumAuthor(staffSignInValue);
+    if (locked) setLegacyFieldValue("injAddendumAuthor", staffSignInValue);
+    // Only a staff handoff should refresh this default; author edits remain
+    // deliberate until another handoff occurs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffSignInValue]);
+
+  useEffect(() => {
     if (!locked) return;
     setAddenda(readAddenda());
     setLegacyFieldValue("injAddendumAuthor", addendumAuthor);
@@ -1346,50 +1378,74 @@ export function InjectionPanel({
 
   useEffect(() => {
     if (mirroredOnMount.current) return;
+    if (
+      editorDisabled ||
+      document.getElementById("panel-administer")?.classList.contains("record-readonly")
+    ) {
+      return;
+    }
     mirroredOnMount.current = true;
     mirrorInjectionEncounterToLegacyDom(encounter, { forceChipState: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [editorUnavailable]);
 
   useEffect(() => {
+    if (editorDisabled) return;
     if (!patientIsEmpty(encounter.patient)) return;
     if (!activePatient.name?.trim() && !activePatient.dob?.trim()) return;
-    patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } });
+    patch(
+      { patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } },
+      false,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePatient.name, activePatient.dob]);
+  }, [activePatient.name, activePatient.dob, editorDisabled]);
 
   const updateEncounter = (
     updater: (previous: InjectionEncounter) => InjectionEncounter,
     mirrorOptions?: InjectionLegacyMirrorOptions,
+    markDirty = true,
   ) => {
-    setEncounter((previous) => {
-      const candidate = updater(previous);
-      const materialFactsChanged =
-        injectionAdministrationReviewFingerprint(previous) !==
-        injectionAdministrationReviewFingerprint(candidate);
-      const next =
-        materialFactsChanged && previous.disposition.kind
-          ? {
-              ...candidate,
-              disposition: {
-                kind: "" as const,
-                provider: "",
-                time: "",
-                outcome: "",
-                reviewedBy: "",
-                reviewedAt: "",
-                reviewFingerprint: "",
-              },
-            }
-          : candidate;
-      encounterRef.current = next;
-      mirrorInjectionEncounterToLegacyDom(next, mirrorOptions);
-      return next;
-    });
+    if (
+      editorDisabled ||
+      document.getElementById("panel-administer")?.classList.contains("record-readonly")
+    ) {
+      return;
+    }
+    // Refs, not the render/effect cycle, own the persistence boundary. A
+    // keyboard shortcut can edit a field and request navigation in the same
+    // browser task; publish the exact next encounter before that guard runs.
+    const previous = encounterRef.current;
+    const candidate = updater(previous);
+    const materialFactsChanged =
+      injectionAdministrationReviewFingerprint(previous) !==
+      injectionAdministrationReviewFingerprint(candidate);
+    const next =
+      materialFactsChanged && previous.disposition.kind
+        ? {
+            ...candidate,
+            disposition: {
+              kind: "" as const,
+              provider: "",
+              time: "",
+              outcome: "",
+              reviewedBy: "",
+              reviewedAt: "",
+              reviewFingerprint: "",
+            },
+          }
+        : candidate;
+    encounterRef.current = next;
+    if (markDirty) onDirtyChangeRef.current?.(true);
+    mirrorInjectionEncounterToLegacyDom(next, mirrorOptions);
+    onWorkflowStateChangeRef.current?.(
+      next,
+      InjectionEngine.evaluate(next, {}),
+    );
+    setEncounter(next);
   };
 
-  const patch = (partial: Partial<InjectionEncounter>) => {
-    updateEncounter((previous) => ({ ...previous, ...partial }));
+  const patch = (partial: Partial<InjectionEncounter>, markDirty = true) => {
+    updateEncounter((previous) => ({ ...previous, ...partial }), undefined, markDirty);
   };
 
   const flushPatientIdentityLegacySync = () => {
@@ -1432,11 +1488,11 @@ export function InjectionPanel({
   // the empty field; once staff edits the value, their documentation wins.
   useEffect(() => {
     const sessionStaff = staffSignInValue.trim();
-    if (locked || !sessionStaff || encounter.administeredBy.trim()) return;
-    patch({ administeredBy: sessionStaff });
+    if (editorDisabled || !sessionStaff || encounter.administeredBy.trim()) return;
+    patch({ administeredBy: sessionStaff }, false);
     // `patch` is intentionally a render-local bridge to the legacy mirror.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staffSignInValue, locked, encounter.administeredBy]);
+  }, [staffSignInValue, editorDisabled, encounter.administeredBy]);
 
   const patchPatient = (partial: Partial<InjectionEncounter["patient"]>) => {
     updateEncounter(
@@ -1611,12 +1667,36 @@ export function InjectionPanel({
   const onAddendumTextChange = (value: string) => {
     setAddendumText(value);
     setLegacyFieldValue("injAddendumText", value);
+    onPendingAddendumChange?.(Boolean(value.trim()));
   };
 
   const saveAddendum = () => {
+    if (addendumSavingRef.current) return;
+    addendumSavingRef.current = true;
+    setAddendumSaving(true);
+    // The legacy renderer may have refreshed its hidden defaults since these
+    // controlled fields were edited. Reassert the exact reviewed pair at the
+    // persistence boundary so visible and stored authorship cannot diverge.
+    setLegacyFieldValue("injAddendumAuthor", addendumAuthor);
+    setLegacyFieldValue("injAddendumText", addendumText);
     document.querySelector<HTMLButtonElement>("[data-inj-addendum]")?.click();
-    setAddendumText("");
-    window.setTimeout(() => setAddenda(readAddenda()), 60);
+    window.setTimeout(() => {
+      const legacyText = (
+        document.getElementById("injAddendumText") as HTMLTextAreaElement | null
+      )?.value ?? addendumText;
+      // The legacy record handler clears its field only after persistence
+      // succeeds. Mirror that outcome instead of erasing the visible draft on
+      // an invalid author or storage failure.
+      setAddendumText(legacyText);
+      onPendingAddendumChange?.(Boolean(legacyText.trim()));
+      if (!legacyText.trim()) {
+        setAddendumAuthor(staffSignInValue);
+        setLegacyFieldValue("injAddendumAuthor", staffSignInValue);
+      }
+      setAddenda(readAddenda());
+      addendumSavingRef.current = false;
+      setAddendumSaving(false);
+    }, 60);
   };
 
   const presentationOutput = evaluation?.output as InjectionOutputWithPresentation | undefined;
@@ -1673,7 +1753,7 @@ export function InjectionPanel({
     // allowed sites. When the current order has no site yet, select that
     // alternate for the MA; any explicit site selection remains untouched.
     if (
-      locked ||
+      editorDisabled ||
       nonAdministration ||
       siteRequiresActiveOrderEntry ||
       !recommendedSite ||
@@ -1685,7 +1765,7 @@ export function InjectionPanel({
     // `patch` is intentionally render-local; using the value dependencies
     // prevents a manual site choice from being overwritten.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [encounter.site, locked, nonAdministration, recommendedSite, siteRequiresActiveOrderEntry]);
+  }, [encounter.site, editorDisabled, nonAdministration, recommendedSite, siteRequiresActiveOrderEntry]);
 
   const needleProjection = presentationOutput?.needle;
 
@@ -2095,7 +2175,7 @@ export function InjectionPanel({
   // staff change is preserved: only an empty value or the last calculation is
   // replaced when the date/cadence changes.
   useEffect(() => {
-    if (locked || nonAdministration) return;
+    if (editorDisabled || nonAdministration) return;
     const current = encounter.nextDoseDate;
     if (!suggestedNextDose) {
       // No calculated date currently applies (e.g. switching onto a
@@ -2133,7 +2213,7 @@ export function InjectionPanel({
     applyCalculatedNextDose(suggestedNextDose);
     // `patch` mirrors the same value to legacy and is intentionally omitted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [encounter.nextDoseDate, locked, nextDoseMetadata?.source, nonAdministration, suggestedNextDose]);
+  }, [encounter.nextDoseDate, editorDisabled, nextDoseMetadata?.source, nonAdministration, suggestedNextDose]);
 
   useEffect(() => {
     if (!nonAdministration) return;
@@ -2168,7 +2248,7 @@ export function InjectionPanel({
   // "40 days late" and pop a modal that blocks staff mid-entry, on a value
   // nobody has finished typing yet. By Review the real dates are in.
   useEffect(() => {
-    if (locked || tab !== "review" || !evaluation?.output.lateDoseWarning) return;
+    if (editorDisabled || tab !== "review" || !evaluation?.output.lateDoseWarning) return;
     if (currentLateDoseReview) return;
     if (lateDosePromptedFor.current === lateDoseReviewFingerprint) return;
     lateDosePromptedFor.current = lateDoseReviewFingerprint;
@@ -2181,7 +2261,7 @@ export function InjectionPanel({
     currentLateDoseReview,
     lateDoseReviewFingerprint,
     evaluation?.output.lateDoseWarning,
-    locked,
+    editorDisabled,
   ]);
 
   const confirmLateDoseReview = () => {
@@ -2254,6 +2334,10 @@ export function InjectionPanel({
               <h1 class="wfp-workflow-title"><strong>Injection worksheet</strong></h1>
               {locked ? (
                 <span class="wfp-status-flag is-idle">Read only</span>
+              ) : editorUnavailable ? (
+                <span class="wfp-status-flag is-stop">
+                  {RECORD.injectionProtectionUnavailableShort}
+                </span>
               ) : (
                 <StatusFlag
                   idle={(evaluation?.readiness ?? "idle") === "idle"}
@@ -2279,7 +2363,7 @@ export function InjectionPanel({
                   data-patient-screening-print="summary"
                   aria-haspopup="dialog"
                   onClick={() => setPatientScreeningDialogOpen(true)}
-                  disabled={!patientScreeningReady}
+                  disabled={editorUnavailable || !patientScreeningReady}
                   title={
                     patientScreeningReady
                       ? "Print the patient screening and consent form."
@@ -2298,7 +2382,7 @@ export function InjectionPanel({
                 <b>{TRANSACTION_PHASE_LABEL[transactionStatus.phase]}</b>
                 <span>PG {activePage}/{visibleTabs.length}</span>
               </span>
-              {!locked && patientNeedsRestore && (
+              {!editorDisabled && patientNeedsRestore && (
                 <button
                   type="button"
                   class="cd2004-link-button"
@@ -2309,7 +2393,7 @@ export function InjectionPanel({
                   Use selected local patient
                 </button>
               )}
-              {!locked && staffNeedsRestore && (
+              {!editorDisabled && staffNeedsRestore && (
                 <button
                   type="button"
                   class="cd2004-link-button"
@@ -2354,7 +2438,7 @@ export function InjectionPanel({
       />
 
       {/* A locked record is read-only, so there is nothing to act on. */}
-      {!locked && (
+      {!editorDisabled && (
         <OutstandingRequirements<InjectionTab>
           open={requirementsOpen}
           onClose={() => setRequirementsOpen(false)}
@@ -2367,7 +2451,7 @@ export function InjectionPanel({
         />
       )}
 
-      <fieldset disabled={locked} style="border:none;padding:0;margin:0;display:contents">
+      <fieldset disabled={editorDisabled} style="border:none;padding:0;margin:0;display:contents">
 
       {tab === "order" && (
         <div
@@ -3955,7 +4039,7 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-link-button"
                 onClick={() => navigator.clipboard?.writeText(noteText)}
-                disabled={!noteText}
+                disabled={editorUnavailable || !noteText}
               >
                 <DesktopIcon name="copy" />
                 Copy note
@@ -3965,7 +4049,7 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-command-button"
                 onClick={() => requestClinicalPrint("injection-avs")}
-                disabled={!hasAdministrationDetailsForAvs}
+                disabled={editorUnavailable || !hasAdministrationDetailsForAvs}
                 title={
                   hasAdministrationDetailsForAvs
                     ? undefined
@@ -3982,7 +4066,7 @@ export function InjectionPanel({
                   data-patient-screening-print="outcome"
                   aria-haspopup="dialog"
                   onClick={() => setPatientScreeningDialogOpen(true)}
-                  disabled={!patientScreeningReady}
+                  disabled={editorUnavailable || !patientScreeningReady}
                   title={
                     patientScreeningReady
                       ? "Print the patient screening and consent form."
@@ -3997,7 +4081,7 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-link-button"
                 onClick={() => requestClinicalPrint("injection-worksheet")}
-                disabled={!transactionStarted}
+                disabled={editorUnavailable || !transactionStarted}
                 title={
                   transactionStarted
                     ? "Print the current injection worksheet."
@@ -4011,6 +4095,7 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-link-button"
                 onClick={() => requestClinicalPrint("injection-worksheet-blank")}
+                disabled={editorUnavailable}
               >
                 <DesktopIcon name="print" />
                 Blank worksheet
@@ -4039,6 +4124,7 @@ export function InjectionPanel({
               <input
                 value={addendumAuthor}
                 placeholder="Current staff name or initials"
+                disabled={editorUnavailable}
                 onInput={(event) => onAddendumAuthorChange(event.currentTarget.value)}
               />
             </Field>
@@ -4047,6 +4133,7 @@ export function InjectionPanel({
                 data-addendum-input
                 value={addendumText}
                 placeholder="Clarification, correction, or follow-up. The original completed record remains unchanged."
+                disabled={editorUnavailable}
                 onInput={(event) => onAddendumTextChange(event.currentTarget.value)}
               />
             </Field>
@@ -4055,7 +4142,12 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-command-button"
                 onClick={saveAddendum}
-                disabled={!addendumText.trim()}
+                disabled={
+                  addendumSaving ||
+                  editorUnavailable ||
+                  !addendumText.trim() ||
+                  !addendumAuthor.trim()
+                }
               >
                 Save addendum
               </button>

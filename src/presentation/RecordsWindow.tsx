@@ -19,6 +19,7 @@ import {
 } from "./records-drawer-shared";
 import { NotesTable } from "./notes/NotesTable";
 import { injectionRecordToNotesTableRow } from "./notes/note-table-model";
+import { isUsableInjectionRecord } from "./workflows/injection/injection-presentation-extension";
 
 /**
  * Injection record selection window.
@@ -63,12 +64,22 @@ interface RecordsWindowProps {
    * let the previous blank worksheet mirror back over its restored values.
    */
   onRecordOpen?: (id: string) => boolean;
+  /** Starts a new injection only after the shell accepts the transition. */
+  onCreate?: () => boolean;
+  /**
+   * Runs only after the native dialog has actually closed following a
+   * successful Open/New handoff. At that point the background is no longer
+   * inert and browser focus restoration cannot overwrite the editor focus.
+   */
+  onHandoffComplete?: () => void;
 }
 
 export function RecordsWindow({
   open,
   onClose,
   onRecordOpen,
+  onCreate,
+  onHandoffComplete,
 }: RecordsWindowProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -78,10 +89,29 @@ export function RecordsWindow({
   const [records, setRecords] = useState<InjectionRecord[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecordFilter>("all");
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   const reload = () => {
     const result = new InjectionRecordRepository(browserSafeStorage()).list();
-    setRecords(result.ok ? result.value : []);
+    if (!result.ok) {
+      setRecords([]);
+      setStorageError(result.error.message);
+      return;
+    }
+    const idCounts = result.value.reduce<Map<string, number>>((counts, record) => {
+      counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+      return counts;
+    }, new Map());
+    const usableRecords = result.value.filter(
+      (record) => idCounts.get(record.id) === 1 && isUsableInjectionRecord(record),
+    );
+    setRecords(usableRecords);
+    setStorageError(
+      result.warnings.length > 0 || usableRecords.length !== result.value.length
+        ? RECORD.injectionStorageNeedsAttention
+        : null,
+    );
   };
 
   useEffect(() => {
@@ -97,6 +127,7 @@ export function RecordsWindow({
     if (!dialog) return;
     if (open && !dialog.open) {
       reload();
+      setActionError(null);
       openerRef.current = document.activeElement as HTMLElement | null;
       dialog.showModal();
       // showModal() focuses the first autofocus element, but the search field
@@ -136,19 +167,47 @@ export function RecordsWindow({
    * after everyone else has had their turn.
    */
   const handleDialogClose = () => {
+    setActionError(null);
     onClose();
     const opener = openerRef.current;
     const handedOff = handedOffRef.current;
     handedOffRef.current = false;
-    if (handedOff || !opener?.isConnected) return;
+    if (handedOff) {
+      requestAnimationFrame(() => onHandoffComplete?.());
+      return;
+    }
+    if (!opener?.isConnected) return;
     requestAnimationFrame(() => {
       if (opener.isConnected) opener.focus();
     });
   };
 
   const openRecord = (id: string) => {
+    const invoked = document.activeElement as HTMLElement | null;
     const opened = onRecordOpen ? onRecordOpen(id) : bridge()?.open(id);
-    if (opened === false) return;
+    if (opened === false) {
+      setActionError(RECORD.currentNoteStayedOpen);
+      requestAnimationFrame(() => {
+        if (invoked?.isConnected && dialogRef.current?.contains(invoked)) invoked.focus();
+      });
+      return;
+    }
+    setActionError(null);
+    handedOffRef.current = true;
+    onClose();
+  };
+
+  const createRecord = () => {
+    const invoked = document.activeElement as HTMLElement | null;
+    const created = onCreate ? onCreate() : bridge()?.create();
+    if (created === false) {
+      setActionError(RECORD.currentNoteStayedOpen);
+      requestAnimationFrame(() => {
+        if (invoked?.isConnected && dialogRef.current?.contains(invoked)) invoked.focus();
+      });
+      return;
+    }
+    setActionError(null);
     handedOffRef.current = true;
     onClose();
   };
@@ -164,13 +223,12 @@ export function RecordsWindow({
       class="records-drawer-layer"
       aria-labelledby="recordsDrawerTitle"
       onClose={handleDialogClose}
-      onCancel={handleDialogClose}
       onKeyDown={onKeyDown}
       onClick={(event) => {
         if (event.target === dialogRef.current) onClose();
       }}
     >
-      <section class="records-drawer" role="dialog" aria-labelledby="recordsDrawerTitle">
+      <section class="records-drawer">
         <div class="records-drawer-head">
           <div>
             <h2 id="recordsDrawerTitle">{NOTES.openNotes}</h2>
@@ -230,6 +288,12 @@ export function RecordsWindow({
             : filteredNoteCount(visible.length, records.length)}
         </div>
 
+        {(actionError ?? storageError) && (
+          <p class="cd2004-system-message is-error records-drawer-action-error" role="alert">
+            {actionError ?? storageError}
+          </p>
+        )}
+
         <div class="records-drawer-results" id="recordsDrawerResults">
           {!open ? null : (
             <NotesTable
@@ -253,11 +317,8 @@ export function RecordsWindow({
               type="button"
               class="records-drawer-new"
               data-records-new
-              onClick={() => {
-                handedOffRef.current = true;
-                onClose();
-                bridge()?.create();
-              }}
+              onClick={createRecord}
+              disabled={Boolean(storageError)}
             >
               {RECORD.startNewInjection}
             </button>

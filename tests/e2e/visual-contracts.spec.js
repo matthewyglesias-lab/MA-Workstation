@@ -142,6 +142,7 @@ async function collectVisualContract(page, workflow) {
     const controlStyle = styleOf(control, ['borderRadius', 'fontFamily']);
     const headingStyle = styleOf(heading, [
       'color',
+      'fontFamily',
       'fontSize',
       'fontWeight',
       'lineHeight'
@@ -310,6 +311,7 @@ function expectedContract(workflow, viewport) {
       tag: isHome ? 'H1' : 'H2',
       style: {
         color: 'rgb(0, 58, 67)',
+        fontFamily: expect.stringMatching(/^"Plus Jakarta Sans Variable"/),
         fontSize: isHome ? headingFontSize : '16px',
         fontWeight: '700',
         lineHeight: isHome ? headingLineHeight : '18.4px'

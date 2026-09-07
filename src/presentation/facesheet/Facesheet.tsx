@@ -51,7 +51,8 @@ interface FacesheetProps {
   readiness: readonly ReadinessItem[];
   checklistAppliesToPatient: boolean;
   visibleCards: readonly FacesheetCardId[];
-  onOpenNote: (recordId: string) => void;
+  /** Type-qualified row key (`injection:<id>` / `uds:<id>`). */
+  onOpenNote: (recordKey: string) => void;
   onViewAllNotes: () => void;
 }
 
@@ -93,7 +94,8 @@ export function Facesheet({
             ? {
                 action: {
                   label: FACESHEET.openNote,
-                  onSelect: () => onOpenNote(patient.lastInjection!.recordId),
+                  onSelect: () =>
+                    onOpenNote(`injection:${patient.lastInjection!.recordId}`),
                 },
               }
             : {})}
@@ -183,7 +185,7 @@ export function Facesheet({
                     type="button"
                     class="tebra-summary-note-row"
                     data-facesheet-open={row.recordId}
-                    onClick={() => onOpenNote(row.recordId)}
+                    onClick={() => onOpenNote(row.key)}
                   >
                     <span class="tebra-summary-note-type">{row.typeLabel}</span>
                     <span class="tebra-summary-note-visit">{row.visit.label}</span>

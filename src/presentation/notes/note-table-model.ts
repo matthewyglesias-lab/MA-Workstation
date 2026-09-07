@@ -1,6 +1,14 @@
 import type { InjectionRecord } from "../../persistence/injection-records";
 import type { UdsRecord } from "../../persistence/uds-records";
-import { NOTES, NOTES_TABLE, signedNoteLockLabel } from "../vocabulary";
+import {
+  disambiguatedSavedNoteLabel,
+  NOTES,
+  NOTES_TABLE,
+  noteRowVisitLabel,
+  openNoteRowLabel,
+  openPatientNoteLabel,
+  signedNoteLockLabel,
+} from "../vocabulary";
 
 export type NoteType = "injection" | "uds";
 export type NoteStatus = "incomplete" | "ready-to-sign" | "signed";
@@ -349,6 +357,58 @@ export const noteStatusLabel = (status: NoteStatus): string => {
     case "incomplete":
       return NOTES.statusIncomplete;
   }
+};
+
+const patientNoteOpenBaseLabel = (row: NotesTableRow): string =>
+  openPatientNoteLabel(
+    row.typeLabel,
+    row.visit.label,
+    noteStatusLabel(row.status),
+  );
+
+const notesTableRowOpenBaseLabel = (row: NotesTableRow): string => {
+  const base = openNoteRowLabel(
+    row.patientLabel,
+    row.typeLabel,
+    noteStatusLabel(row.status),
+  );
+  return noteRowVisitLabel(
+    base,
+    row.visit.label === NOTES_TABLE.dateUnavailable ? undefined : row.visit.label,
+  );
+};
+
+/**
+ * Gives each focusable global Open Notes row the visible visit fact as part of
+ * its name. If all visible facts still collide, append the stable local id so
+ * assistive-technology users never encounter two indistinguishable rows.
+ */
+export const notesTableRowAccessibleLabel = (
+  row: NotesTableRow,
+  peers: readonly NotesTableRow[],
+): string => {
+  const base = notesTableRowOpenBaseLabel(row);
+  const hasDuplicate = peers.some(
+    (peer) => peer.key !== row.key && notesTableRowOpenBaseLabel(peer) === base,
+  );
+  return hasDuplicate ? disambiguatedSavedNoteLabel(base, row.recordId) : base;
+};
+
+/**
+ * Names a patient-chart Open control with the note facts visible in its row.
+ * Type, visit and status distinguish the normal case. If two rows still have
+ * the same name, their stable browser-local record ids provide the final
+ * disambiguator rather than leaving two indistinguishable "Open" controls.
+ */
+export const patientNoteOpenAccessibleLabel = (
+  row: NotesTableRow,
+  peers: readonly NotesTableRow[],
+): string => {
+  const base = patientNoteOpenBaseLabel(row);
+  const hasDuplicate = peers.some(
+    (peer) => peer.key !== row.key && patientNoteOpenBaseLabel(peer) === base,
+  );
+  return hasDuplicate ? disambiguatedSavedNoteLabel(base, row.recordId) : base;
 };
 
 export const noteLockLabel = (lock: NoteLock): string => {

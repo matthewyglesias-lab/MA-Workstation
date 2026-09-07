@@ -149,12 +149,17 @@ const FIXED_LOCAL_DATA = {
           route: 'IM',
           site: 'Left deltoid'
         },
+        initiation: {},
+        smartVitals: {},
+        disposition: {},
         fields: {
           ptName: 'Rivera, Jordan',
           ptDOB: '06/14/1989',
           lot: 'FIXED-2407',
           adminDate: FIXED_DATE_KEY
-        }
+        },
+        safetyNone: false,
+        note: { cc: '', as: '', pl: '' }
       },
       addenda: []
     },
@@ -175,12 +180,17 @@ const FIXED_LOCAL_DATA = {
           route: 'IM',
           site: 'Right deltoid'
         },
+        initiation: {},
+        smartVitals: {},
+        disposition: {},
         fields: {
           ptName: 'Patel, Rowan',
           ptDOB: '11/03/1994',
           lot: 'FIXED-DRAFT',
           adminDate: FIXED_DATE_KEY
-        }
+        },
+        safetyNone: false,
+        note: { cc: '', as: '', pl: '' }
       },
       addenda: []
     }
@@ -256,8 +266,7 @@ async function openFixtureDraft(page) {
   await railLauncher.click();
   await page
     .getByRole('row', {
-      name: 'Open incomplete Injection note for Patel, Rowan',
-      exact: true
+      name: /^Open incomplete Injection note for Patel, Rowan, visit /
     })
     .click();
   await expect(page.locator('dialog.records-drawer-layer')).toBeHidden();

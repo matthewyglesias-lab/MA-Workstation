@@ -118,6 +118,14 @@ export const openNoteRowLabel = (
   status: string,
 ): string => `Open ${status.toLocaleLowerCase()} ${type} note for ${patient}`;
 
+export const noteRowVisitLabel = (base: string, visit?: string): string =>
+  visit ? `${base}, visit ${visit}` : `${base}, visit date unavailable`;
+
+export const disambiguatedSavedNoteLabel = (
+  base: string,
+  recordId: string,
+): string => `${base}, saved note ${recordId}`;
+
 export const signedNoteLockLabel = (staff?: string, time?: string): string => {
   if (staff && time) return `Signed by ${staff} · ${time}`;
   if (staff) return `Signed by ${staff}`;
@@ -152,6 +160,7 @@ export const RECORD = {
   validatingAndSaving: "Validating required fields and saving…",
   saving: "Saving…",
   saved: "Saved",
+  unsavedChanges: "Unsaved changes.",
   discard: "Discard",
   discardDraft: "Discard draft",
   signing: "Signing…",
@@ -162,6 +171,46 @@ export const RECORD = {
   readOnly: "Read only",
   editable: "Editable",
   addendum: "Add addendum",
+  finishAddendumBeforeLeaving:
+    "Save the dated addendum or clear its text before leaving this note.",
+  removePhotoBeforeLeaving:
+    "Remove the unstored device photo before leaving this note.",
+  removePhotoBeforeSigning:
+    "Remove the report-only device photo before signing this note.",
+  removeSelectedPhoto: "Remove selected photo",
+  photoReportOnlyDetail:
+    "The selected photo is available to the current report only and is not saved with the note.",
+  photoReadFailed:
+    "The selected device photo could not be read. Choose it again or continue without it.",
+  waitForPhotoBeforePrinting:
+    "Wait for the selected device photo to finish loading before printing.",
+  currentNoteStayedOpen:
+    "The current note stayed open. Close this window and resolve the current note before switching notes.",
+  invalidUdsRecord:
+    "This saved UDS note cannot be opened because its stored data is incomplete or invalid.",
+  udsRecordChangedElsewhere:
+    "This UDS note changed in another browser tab. Your current version stayed open and was not written. Reload this page to use the saved version; the browser will warn first if this version has unsaved changes.",
+  savedNoteCouldNotOpen:
+    "The saved note could not be opened. The current view stayed open.",
+  savedNotePatientChanged:
+    "This saved note now belongs to a different patient. The current chart stayed open and no note was opened. Close this chart, search again, and explicitly choose the current patient's note.",
+  udsStorageNeedsAttention:
+    "Some saved UDS data could not be read safely. It was left unchanged; resolve it before saving or changing UDS records.",
+  injectionStorageNeedsAttention:
+    "Some saved Injection data could not be read safely. It was left unchanged.",
+  injectionDraftProtectionUnavailable:
+    "Exact Injection draft protection is unavailable. Reload before signing.",
+  injectionProtectionUnavailableShort: "Protection unavailable",
+  injectionPresentationDataInvalid:
+    "Saved Injection data could not be verified. It was left unchanged; reload or recover browser storage before continuing.",
+  replaceStartedNoteTitle: (noteType: string) =>
+    `Start a new ${noteType} note?`,
+  replaceStartedNotePrompt: (noteType: string) =>
+    `The current ${noteType} note already has entered values.`,
+  replaceStartedNoteWarning:
+    "Starting another note will replace the entered values in that session.",
+  keepCurrentNote: "Keep current note",
+  replaceAndStart: "Replace and start new",
   startNewInjection: "Start new injection",
   startNewUds: "Start new UDS screen",
   noteReview: "Note review",
@@ -232,6 +281,9 @@ export const signedByCopy = (staff: string, timestamp: string): string =>
   `Signed by ${staff} at ${timestamp}.`;
 
 export const signedAtCopy = (timestamp: string): string => `Signed ${timestamp}.`;
+
+export const draftSavedAtCopy = (timestamp: string): string =>
+  `Draft saved ${timestamp}.`;
 
 /* ---------------------------------------------------------------- facesheet */
 

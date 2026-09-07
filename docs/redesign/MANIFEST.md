@@ -4,29 +4,42 @@ Companion to `PLAN.md`. The authoritative list of **what may change**, **what is
 frozen**, **the exact design tokens**, and **the conventions that make this read
 as first-party**.
 
-**Implementation checkpoint — 2026-09-06.** Phases 0–2d are on PR #62, and the
-pinned Chromium 151 code, browser, visual, and print artifact gate is green.
-Azure deployment is blocked separately by staging-environment capacity. Phase
-3a implements the shared global Open Notes `NotesTable`, lifecycle
-`StatusChip`, signed `LockIndicator`, defensive visit-date projection, sorting,
-and synthetic convention tests. Facesheet, patient search, the page-level
-`ActionBar`, patient hover card, and the distinct patient-scoped Notes surface
-remain Phase 3b.
+**Implementation checkpoint — 2026-09-07.** Phases 0–4 are on PR #62 through
+remote head `aed2096`. The pinned Chromium 151 production browser, visual, and
+print job is green at 129/129, and its committed Linux baselines are current.
+Azure deployment is blocked separately by staging-environment capacity. A
+presentation-layer safety closure is in verification before Phase 5: it adds
+synthetic coverage and guards for transient Forms/Samples drafts, exclusive UDS
+mutation ownership, Injection material-draft preservation, patient-scoped note
+handoffs, pending addenda/photos, navigation vetoes, duplicate note labels, and
+keyboard operation. The local gate passes (653/653 units and 177/177 explicit
+non-baseline interactions); do not call the closure complete until pushed
+authoritative CI passes.
 
 Every real-patient view in the production audit was read-only. Opening the
 Injection editor on a verified Test Patient automatically created one blank
 `Incomplete` note; no clinical text, Save, Sign, Submit, or Delete action
 followed. The audit confirmed that global legacy **Open Notes** and modern
 patient-chart **Notes** use different grammars; §4 records both. Linux visual
-PNGs now describe the Phase 2c shell. The eight `win32/` PNGs still predate
-Phase 2b and require a maintainer on Windows.
+PNGs describe the current Phase 4 base and are authoritative only from the
+pinned Chromium 151 job. Temporary Chromium 149 is for interaction checks and
+must not regenerate them. The eight `win32/` PNGs still predate Phase 2b and
+require a maintainer on Windows.
+
+**Forward production-audit boundary.** Prefer a verified demo/test patient for
+all cloud-browser inspection. Real charts are observation-only, only when
+necessary, and an editor that creates a note must never be opened for them.
+Re-verify demo/test identity immediately before every create, save, sign,
+submit, delete, or upload action. PHI must never enter repository files,
+screenshots, logs, prompts, or fixtures.
 
 ---
 
 ## 1. Frozen — do not edit
 
-A change under any of these paths means the change is wrong. `git diff --stat`
-against them must be empty at PR time.
+A change under any of these paths means the change is wrong. The base-relative
+tracked diff and untracked-file check against them must both be empty at PR
+time.
 
 ```
 public/legacy/legacy-runtime.js      11,605 lines — clinical runtime, authoritative
@@ -94,9 +107,25 @@ else under `src/application/**` remains frozen.
 | `src/presentation/kiosk/kiosk.css` | Kiosk-only layout. `@media screen`. | 5 |
 | `src/presentation/use-kiosk-mode.ts` | `?kiosk=1` + persisted preference + Fullscreen API. | 5 |
 | `src/presentation/Illustration.tsx` | **Phase 4 implemented.** Warm spot illustrations for empty and placeholder states, in brand colour rather than `currentColor` - the opposite rule from `DesktopIcon`, because these are pictures occupying a region, not glyphs taking the colour of a control. Every value is a token with its literal as fallback, so one landing inside a print rule renders rather than collapsing. | 4 |
+| `src/presentation/uds-record-safety.ts` | Full-shape, engine-backed fail-closed validation plus the session-held Web Lock and owned-mutation gate. | Safety closure |
+| `src/presentation/workflows/injection/injection-draft-bridge.ts` | Synchronous typed-to-legacy draft boundary for typed-only edits, without persisting a bootstrap placeholder. | Safety closure |
+| `src/presentation/workflows/injection/injection-presentation-extension.ts` | Versioned preservation for material typed fields that frozen v4 omits or normalizes, injected into the same record write. | Safety closure |
 | `tests/e2e/tebra-screen-contract.spec.js` | Replaces `meditech-screen-contract.spec.js`. | 2 |
 | `tests/e2e/conventions.spec.js` | Asserts §4 grammar: sort, chips, lock hover, row click. | 3 |
 | `tests/e2e/kiosk-flow.spec.js` | Identify → sign → next-patient loop. | 5 |
+
+The Injection extension does change record behavior while keeping every frozen
+source path byte-identical. It preserves only the material typed fields the
+legacy v4 snapshot otherwise omits or normalizes: stable provider id,
+habitus/weight, structured response, and the site-assessed, observation,
+education and departure facts. They live under
+`snapshot.documentation.typedEncounterV1`, inside the frozen writer's same
+atomic local-storage write. There is no second write or side store. The legacy
+snapshot plus this subset preserves current visible clinical semantics; it is
+not a byte-exact full `InjectionEncounter` store. The writer emits envelope v2
+and remains compatible with v1. Invalid or stale extension data fails closed
+instead of being silently replaced. This same-write extension is not a CAS or
+Web Lock; one editable Injection tab remains the supported mode.
 
 ### 2.2 Modified files
 
@@ -105,23 +134,23 @@ else under `src/application/**` remains frozen.
 | `index.html` | Boot identity, then Phase 2 loading skeleton; Phase 2c synchronizes measured shell geometry. **Keep `media="print"` on the legacy stylesheet link.** | 0, 2, 2c |
 | `favicon.svg` | IPMG module mark in Tebra palette. Not a Tebra logo. | 0 |
 | `package.json` | **Add** `@fontsource-variable/inter` + `@fontsource-variable/jetbrains-mono`. **Keep `plus-jakarta-sans`** — it is print-load-bearing (see §3.1). | 0 |
-| `src/main.tsx` | Font imports; kiosk wiring (Phase 5). No coordinator or store changes. | 0, 5 |
+| `src/main.tsx` | Font imports; Phase 3 chart wiring; safety-closure handoff, dirty-state and guarded Injection/UDS lifecycle orchestration; top-level session-held UDS lock ownership survives keyed panel remounts; exact active-row storage changes latch a stale-output quarantine; patient-scoped opens verify durable identity before state changes. Kiosk wiring remains Phase 5. No coordinator/store source change. | 0, 3b, Safety closure, 5 |
 | `src/presentation/clinical-desktop.css` | Retarget screen surfaces to tokens and retain established print layout/isolation rules. **Keep the filename** (`check-app.js` asserts it). | 0, 2, 2c |
 | `src/presentation/workflows/workflow-panels.css` | Retarget to tokens; Phase 2c refines Injection and fixed transaction scroll ownership. **Keep the filename** (`check-app.js` asserts it). | 0, 2, 2c |
 | `src/presentation/meditech-workstation.css` | **Deleted**; replaced by `tebra-workstation.css`. | 2 |
 | `src/presentation/meditech-screen-contract.css` | **Deleted**; replaced by `tebra-screen-contract.css`. | 2 |
-| `src/presentation/ClinicalDesktopShell.tsx` | Titlebar → `AppHeader`; nav → `SectionRail`; status bar → footer. Phase 2c also repairs synchronous mnemonic-menu focus. ARIA preserved. | 2, 2c |
+| `src/presentation/ClinicalDesktopShell.tsx` | Titlebar → `AppHeader`; nav → `SectionRail`; status bar → footer; chart navigation; safety-closure keyboard, chart-handoff and focus ownership. ARIA preserved. | 2, 2c, 3b, Safety closure |
 | `src/presentation/MeditechChrome.tsx` | **Deleted**; replaced by `TebraChrome.tsx`. | 2 |
-| `src/presentation/types.ts` | `WORKFLOW_LABELS` string values only. **Never touch `WorkflowId` union values.** | 1 |
+| `src/presentation/types.ts` | `WORKFLOW_LABELS` string values, safety callbacks, and the explicit patient-scoped note-open outcome. **Never touch `WorkflowId` union values.** | 1, Safety closure |
 | `src/presentation/DesktopIcon.tsx` | **Phase 4 rebuilt.** 24 skeuomorphic 16px pictograms in a fixed yellow/blue/red palette replaced by a 24-unit duotone set: 1.5 stroke, round caps and joins, `currentColor` throughout. Names and call sites unchanged. | 4 |
 | `src/presentation/SiteIcon.tsx` | **Phase 4.** Same treatment; the `SITE_DOTS` coordinate table is untouched, so every marker stays where it was calibrated. | 4 |
 | `src/presentation/StartCenter.tsx` | → "Dashboard"; facesheet card grammar. | 1, 3 |
-| `src/presentation/RecordsWindow.tsx`, `UdsRecordsWindow.tsx` | → "Open Notes"; adopt `NotesTable`. | 1, 3 |
+| `src/presentation/RecordsWindow.tsx`, `UdsRecordsWindow.tsx` | → "Open Notes"; adopt `NotesTable`; fail closed on rejected/corrupt handoffs and restore focus only after native-dialog close. | 1, 3, Safety closure |
 | `src/presentation/RecordActionDialog.tsx`, `RecordLifecycleActions.tsx` | "Attest and lock" → "Sign"; Phase 2c styles the existing per-note lifecycle actions as a fixed modern footer through the screen contract. Component lifecycle logic is unchanged. | 1, 2c |
 | `src/presentation/NoteInspector.tsx` | Structurally unchanged in Phase 2c; its existing chrome is refined through `tebra-screen-contract.css`. Phase 3b extracted its four inline Care Checklist state words into `CHECKLIST` so the inspector and the Facesheet card cannot drift. | 3b |
 | `src/presentation/tebra-workstation.css` | Phase 3b adds the chart page, Facesheet cards, patient Notes list, action bar and header search, plus their compact-width rules. Zero new `!important`. | 3b |
-| `src/presentation/shell/AppHeader.tsx` | Phase 3b adds the header search well (Tebra's 347px central slot). | 3b |
-| `src/presentation/shell/SectionRail.tsx` | Phase 3b adds the patient group (Facesheet · Notes), rendered only when a patient is in context. | 3b |
+| `src/presentation/shell/AppHeader.tsx` | Phase 3b product header and account context. | 3b |
+| `src/presentation/shell/SectionRail.tsx` | Phase 3b adds patient search plus the patient group (Facesheet · Notes), rendered only when a patient is in context. | 3b |
 | `src/presentation/ClinicalDesktopShell.tsx` | Phase 3b adds chart navigation: the chart replaces work-area content, leaves the selected workflow untouched, and suppresses the document split and per-note footer while open. | 3b |
 | `src/presentation/notes/note-table-model.ts` | Phase 3b adds `summaryLabel` (the patient list titles rows with it) and `noteStatusLabel`, shared by both note surfaces. | 3b |
 | `src/presentation/workflows/uds/UdsPanel.tsx` | Phase 3b adds a listener for `WORKSTATION_OPEN_NOTE_REQUEST`: the chart lists UDS notes but the panel owns restoring one. Encounter logic unchanged. | 3b |
@@ -129,35 +158,44 @@ else under `src/application/**` remains frozen.
 | `src/presentation/WorkstationLock.tsx` | Restyle only. | 2 |
 | `src/presentation/workflows/StatusFlag.tsx` | New triad; **verify icon + word, never color alone.** | 2 |
 | `src/presentation/workflows/OutstandingRequirements.tsx` | → "Care Checklist". | 1 |
-| `src/presentation/workflows/injection/InjectionPanel.tsx` | Stepper integration. Field logic untouched. | 5 |
-| `src/presentation/workflows/uds/UdsPanel.tsx` | Phase 2c moves the existing preliminary-screening safety statement inside the clinical scroll owner; copy and logic unchanged. | 2c |
+| `src/presentation/workflows/injection/InjectionPanel.tsx` | Safety-closure synchronous dirty publication, addendum retention/authorship and persistence-unavailable lockout; stepper integration remains Phase 5. Clinical engine rules stay untouched. | Safety closure, 5 |
+| `src/presentation/workflows/uds/UdsPanel.tsx` | Preliminary-screening layout plus safety-closure record validation, owned-only mutations, pending/busy/unsupported read-only states, lock-acquisition focus recovery, stale preview/print/copy quarantine, photo/addendum retention and staff-handoff behavior. | 2c, 3b, Safety closure |
+| `src/presentation/workflows/forms/FormsPanel.tsx`, `samples/SamplesPanel.tsx` | Sticky all-field dirty state retained across unmounts and explicit patient-note replacement. | Safety closure |
+| `src/presentation/workstation-events.ts`, `src/presentation/types.ts` | Typed synchronous save/leave handshakes and external handoff focus token. | Safety closure |
+| `src/presentation/workflows/WorkstationDateField.tsx` | Capture-phase publication of valid dates before shortcuts/lifecycle events; invalid or partial raw input vetoes commands and survives focus/navigation attempts. | Safety closure |
+| `src/presentation/WorkstationViewportBoundary.tsx` | Unsupported-viewport gate that suspends and restores native dialogs, including dialogs opened while gated, without losing transient editor state. | Safety closure |
+| `src/presentation/shell/ActionBar.tsx`, `MenuButton.tsx`, `PatientSearch.tsx` | Escape/Tab/arrow-key behavior, unique accessible names and focus restoration. | Safety closure |
+| `src/presentation/facesheet/Facesheet.tsx`, `PatientChart.tsx`, `notes/PatientNotesList.tsx`, `NotesTable.tsx`, `note-table-model.ts` | Type-qualified record activation plus unique, fact-complete note action labels. | Safety closure |
 | `scripts/check-app.js` | Only if a CSS path above is renamed — update that assertion, **relax nothing else**. | 2 |
-| `README.md` | Architecture + design-language section. | 5 |
+| `README.md` | Architecture + design-language section. | 6 |
 
 ### 2.3 Test artifacts
 
 | Path | Action |
 | --- | --- |
 | `tests/e2e/meditech-screen-contract.spec.js` | Delete; superseded. |
-| `tests/e2e/visual-snapshots.spec.js-snapshots/linux/**` (8 PNGs) | **Phase 2d current.** Captured by pinned Chromium 151 in CI, reviewed image-by-image, and byte-identical across retry. |
+| `tests/e2e/visual-snapshots.spec.js-snapshots/linux/**` (8 PNGs) | **Current for the Phase 4 base.** Captured by pinned Chromium 151 in CI, reviewed image-by-image, and green in the 129/129 production-artifact job. Never refresh from local Chromium 149. |
 | `tests/e2e/visual-snapshots.spec.js-snapshots/win32/**` (8 PNGs) | **Currently stale; cannot be regenerated in Linux CI.** Refresh on Windows or flag in the PR body. |
 | `tests/e2e/tebra-screen-contract.spec.js` | Phase 2c updates measured shell, coral/status, and 800×600 contracts. |
-| `tests/e2e/visual-contracts.spec.js` | Update Dashboard style and keyboard-focus expectations. |
-| `tests/e2e/conventions.spec.js` | Phase 3a global Open Notes columns, 44px rows, sorting, lock detail, lifecycle chips, row activation, non-mutation, and 800×600 containment. Phase 3b adds patient search, Facesheet cards and their stated rules, the hover card, the 200×40/100px/73×38 patient list grammar, the single coral action group, Customize View persistence, read-only browsing, and 800×600 containment. |
+| `tests/e2e/visual-contracts.spec.js` | Dashboard style, keyboard-focus and shipped Plus Jakarta display-font expectations. |
+| `tests/e2e/conventions.spec.js` | Phase 3 conventions plus synthetic safety-closure cases for Forms/Samples draft preservation, explicit replacement, partial-field/sticky-dirty behavior, and stale patient-scoped note rejection. |
+| `tests/e2e/uds-record-integrity.spec.js` | Synthetic UDS record-switching, session-held Web Lock/remount behavior, competing-tab read-only and stale-output quarantine, draft/addendum/photo integrity and malformed-record safety coverage. |
+| `tests/e2e/injection-full-draft-safety.spec.js` | Synthetic typed-only Injection save, leave, failure, corruption and material-field round-trip coverage. |
+| `tests/e2e/visual-snapshots.spec.js` | Fixture-only safety repair: two synthetic v4 Injection rows carry required empty encounter sections and the row matcher includes its accessible date suffix, so all seven tests reach eight screenshot assertions. No baseline or threshold change. |
+| `tests/unit/injection-draft-bridge.test.ts`, `injection-presentation-extension.test.ts` | Draft-gate and single-write extension failure/round-trip contracts. |
+| `tests/unit/uds-record-safety.test.ts`, `workstation-events.test.ts` | UDS full-shape guard and synchronous event-handshake coverage. |
 | `tests/unit/patient-chart-model.test.ts` | Phase 3b patient identity and grouping, search matching, list filtering, and the Facesheet derivations. |
 | `tests/e2e/workstation.spec.js` | Update changed visual expectations without relaxing clinical journeys. |
 | `tests/unit/ehr-refinement-contracts.test.ts` | Update if it asserts label strings. |
 | `tests/unit/note-table-model.test.ts` | Phase 3a defensive record projection, local-calendar-safe visit dates, deterministic sort, lifecycle, and lock truth. |
 
-`npx playwright test tests/e2e/visual-snapshots.spec.js --update-snapshots`
-
 > **Baseline browser drift — measured, not assumed.** `@playwright/test` 1.62
-> pins chromium-1234 (Chromium 151), which remains authoritative. CI run
-> `34058368138` captured all eight Phase 2c Linux images after the functional
-> setup checks; every first-run/retry pair was byte-identical. Those exact
-> `*-actual.png` files are the Phase 2d baselines. Temporary Chromium 149
-> differs materially from them and is useful for interaction checks only.
-> `win32/` is a genuinely different platform and cannot be refreshed on Linux.
+> pins chromium-1234 (Chromium 151), which remains authoritative. The current
+> Phase 4 Linux images passed the 129/129 production-artifact job. Temporary
+> Chromium 149 differs materially from them and is useful for interaction
+> checks only: never use it with `--update-snapshots`, and never loosen the
+> threshold to absorb its drift. `win32/` is a genuinely different platform
+> and cannot be refreshed on Linux.
 
 Phase 3a temporary-Chromium-149 evidence: conventions 5/5 and broader changed
 interaction coverage 80/80. The full print suite passed 27/30; the remaining
@@ -615,9 +653,19 @@ The current Phase 2b plus Phase 2c contract is:
 ```bash
 npm run check        # typecheck + check-app.js (all ~50 clinical assertions)
 npm run test:unit
-npm run test:print   # renderer hashes plus print-layout/PDF gate
-npm run test:e2e
-git diff --stat -- public/legacy src/legacy src/domain src/application \
-                   src/persistence src/documentation tests/fixtures
-                   # ^ MUST be empty
+npm run build
+
+# Run HANDOFF.md §5's explicit non-baseline suites under local Chromium 149.
+# The pushed Chromium 151 exact-artifact job owns the full visual/print gate.
+
+safety_base=aed20964a1761b5affaaee9ef4e6925498156172
+git diff --exit-code "$safety_base" -- public/legacy src/legacy src/domain \
+  src/application src/persistence src/documentation tests/fixtures
+git status --porcelain=v1 --untracked-files=all -- public/legacy src/legacy \
+  src/domain src/application src/persistence src/documentation tests/fixtures
 ```
+
+The same base-relative, tracked-plus-untracked check must also print nothing
+for all `**/*.css` files and `tests/e2e/*-snapshots/**`. Do not run local
+Chromium 149 with `--update-snapshots`, and do not treat its renderer-sensitive
+PNG/PDF differences as release failures.

@@ -2,7 +2,6 @@ import {
   NOTES,
   NOTES_TABLE,
   PATIENT_NOTES,
-  openPatientNoteLabel,
 } from "../vocabulary";
 import { Illustration } from "../Illustration";
 import {
@@ -14,13 +13,17 @@ import {
   type PatientNotesFilter,
 } from "../patient-chart-model";
 import { LockIndicator } from "./LockIndicator";
-import { noteStatusLabel, type NotesTableRow } from "./note-table-model";
+import {
+  patientNoteOpenAccessibleLabel,
+  type NotesTableRow,
+} from "./note-table-model";
 import { StatusChip } from "./StatusChip";
 import { useMemo, useState } from "preact/hooks";
 
 interface PatientNotesListProps {
   rows: readonly NotesTableRow[];
-  onOpen: (recordId: string) => void;
+  /** Type-qualified row key (`injection:<id>` / `uds:<id>`). */
+  onOpen: (recordKey: string) => void;
 }
 
 const TYPE_OPTIONS: ReadonlyArray<[PatientNoteTypeFilter, string]> = [
@@ -159,12 +162,8 @@ export function PatientNotesList({ rows, onOpen }: PatientNotesListProps) {
                   type="button"
                   class="tebra-record-action"
                   data-patient-note-open={row.recordId}
-                  aria-label={openPatientNoteLabel(
-                    row.typeLabel,
-                    row.visit.label,
-                    noteStatusLabel(row.status),
-                  )}
-                  onClick={() => onOpen(row.recordId)}
+                  aria-label={patientNoteOpenAccessibleLabel(row, visible)}
+                  onClick={() => onOpen(row.key)}
                 >
                   {PATIENT_NOTES.open}
                 </button>

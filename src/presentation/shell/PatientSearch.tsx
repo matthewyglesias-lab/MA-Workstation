@@ -9,7 +9,7 @@ import {
 interface PatientSearchProps {
   patients: readonly ChartPatient[];
   /** Opens that patient's chart. Read-only: it starts no note. */
-  onSelect: (patient: ChartPatient) => void;
+  onSelect: (patient: ChartPatient) => boolean | void;
 }
 
 /**
@@ -28,6 +28,7 @@ interface PatientSearchProps {
 export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
   const listId = useId();
@@ -37,20 +38,43 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
     [patients, query],
   );
   const longEnough = query.trim().length >= PATIENT_QUERY_MIN_LENGTH;
+  const activeIndex = results.findIndex((patient) => patient.key === activeKey);
+
+  const closeResults = () => {
+    setOpen(false);
+    setActiveKey(null);
+  };
 
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!hostRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!hostRef.current?.contains(event.target as Node)) closeResults();
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !results.length) {
+      if (activeKey !== null) setActiveKey(null);
+      return;
+    }
+    if (!results.some((patient) => patient.key === activeKey)) {
+      setActiveKey(results[0]!.key);
+    }
+  }, [activeKey, open, results]);
+
   const choose = (patient: ChartPatient) => {
-    setOpen(false);
+    if (onSelect(patient) === false) return;
+    closeResults();
     setQuery("");
-    onSelect(patient);
+  };
+
+  const moveActive = (index: number) => {
+    const patient = results[index];
+    if (!patient) return;
+    setOpen(true);
+    setActiveKey(patient.key);
   };
 
   return (
@@ -67,16 +91,66 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
         placeholder={PATIENT_SEARCH.placeholder}
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
+        aria-autocomplete="list"
+        aria-activedescendant={
+          open && activeIndex >= 0 ? `${listId}-option-${activeIndex}` : undefined
+        }
         value={query}
         onInput={(event) => {
-          setQuery(event.currentTarget.value);
+          const nextQuery = event.currentTarget.value;
+          const nextResults = searchChartPatients(patients, nextQuery);
+          setQuery(nextQuery);
           setOpen(true);
+          setActiveKey(nextResults[0]?.key ?? null);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          setOpen(true);
+          setActiveKey(results[0]?.key ?? null);
+        }}
         onKeyDown={(event) => {
-          if (event.key !== "Escape") return;
-          event.stopPropagation();
-          setOpen(false);
+          if (event.key === "Escape") {
+            if (!open) return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeResults();
+            return;
+          }
+
+          if (!results.length) return;
+
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            moveActive(
+              !open || activeIndex < 0
+                ? 0
+                : Math.min(activeIndex + 1, results.length - 1),
+            );
+            return;
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            moveActive(
+              !open || activeIndex < 0
+                ? results.length - 1
+                : Math.max(activeIndex - 1, 0),
+            );
+            return;
+          }
+          if (event.key === "Home" && open) {
+            event.preventDefault();
+            moveActive(0);
+            return;
+          }
+          if (event.key === "End" && open) {
+            event.preventDefault();
+            moveActive(results.length - 1);
+            return;
+          }
+          if (event.key === "Enter" && open && activeIndex >= 0) {
+            event.preventDefault();
+            const patient = results[activeIndex];
+            if (patient) choose(patient);
+          }
         }}
       />
       {open ? (
@@ -85,14 +159,17 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
           {!longEnough ? (
             <p class="tebra-patient-search-empty">{PATIENT_SEARCH.keepTyping}</p>
           ) : results.length ? (
-            results.map((patient) => (
+            results.map((patient, index) => (
               <button
+                id={`${listId}-option-${index}`}
                 key={patient.key}
                 type="button"
                 role="option"
-                aria-selected="false"
+                aria-selected={patient.key === activeKey}
+                tabIndex={-1}
                 class="tebra-patient-search-result"
                 data-patient-result={patient.key}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(patient)}
               >
                 <strong>{patient.name}</strong>

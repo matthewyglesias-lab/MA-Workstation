@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "preact/hooks";
@@ -17,6 +18,8 @@ import {
 } from "../persistence/injection-records";
 import { browserSafeStorage } from "../persistence/storage";
 import { UdsRecordRepository } from "../persistence/uds-records";
+import { isUsableUdsRecord } from "./uds-record-safety";
+import { isUsableInjectionRecord } from "./workflows/injection/injection-presentation-extension";
 import {
   fieldsBeforeSigning,
   MODULE,
@@ -71,6 +74,7 @@ import {
   LOCKED_RECORD_ACTION_SELECTOR,
   type ClinicalDesktopShellProps,
   type DesktopPane,
+  type InjectionRecordRow,
   type InjectionRecordActions as InjectionRecordActionsConfig,
   type PatientContext,
   type WorkflowId,
@@ -93,6 +97,65 @@ const shortcutWorkflows: WorkflowId[] = [
   "reference",
   "log",
 ];
+
+const SAFE_CLINICAL_TONES = new Set([
+  "stop",
+  "warning",
+  "ready",
+  "info",
+  "neutral",
+]);
+
+/**
+ * The legacy shell snapshot is an untrusted display projection of localStorage.
+ * Cross-check every Dashboard row against the typed, fully validated record
+ * list before Preact sees its labels. This prevents malformed object-valued
+ * labels from throwing during render and quarantines the whole worklist when
+ * even one persisted row is ambiguous or unsafe.
+ */
+function safeInjectionWorklistRows(
+  rows: InjectionRecordRow[],
+): InjectionRecordRow[] {
+  const listed = new InjectionRecordRepository(browserSafeStorage()).list();
+  if (!listed.ok || listed.warnings.length) return [];
+
+  const idCounts = listed.value.reduce<Map<string, number>>((counts, record) => {
+    counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+    return counts;
+  }, new Map());
+  if (
+    !listed.value.every(
+      (record) => idCounts.get(record.id) === 1 && isUsableInjectionRecord(record),
+    )
+  ) {
+    return [];
+  }
+
+  const safeIds = new Set(listed.value.map((record) => record.id));
+  const seen = new Set<string>();
+  if (rows.length !== safeIds.size) return [];
+  for (const candidate of rows as unknown[]) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+      return [];
+    }
+    const row = candidate as Record<string, unknown>;
+    if (
+      typeof row.id !== "string" ||
+      !safeIds.has(row.id) ||
+      seen.has(row.id) ||
+      typeof row.patientLabel !== "string" ||
+      typeof row.medicationLabel !== "string" ||
+      typeof row.administeredLabel !== "string" ||
+      typeof row.statusLabel !== "string" ||
+      (row.tone !== undefined &&
+        (typeof row.tone !== "string" || !SAFE_CLINICAL_TONES.has(row.tone)))
+    ) {
+      return [];
+    }
+    seen.add(row.id);
+  }
+  return rows;
+}
 
 function normalizedPatientValue(value?: string) {
   return (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -204,6 +267,7 @@ export function ClinicalDesktopShell({
   activeWorkflow,
   defaultActiveWorkflow = "home",
   onWorkflowChange,
+  onBeforeViewChange,
   patient = {},
   workflowPatient,
   onUseWorkflowPatient,
@@ -238,6 +302,10 @@ export function ClinicalDesktopShell({
   onQueueItemOpen,
   onRecordOpen,
   onOpenInjectionRecord,
+  onOpenUdsRecord,
+  onStartNewUds,
+  onStartNewTransientNote,
+  externalWorkflowHandoffToken,
   onEscape,
   onWorkAreaReady,
   className = "",
@@ -268,11 +336,18 @@ export function ClinicalDesktopShell({
   }));
   /** A UDS note chosen in the chart, waiting for its panel to mount. */
   const pendingUdsNoteRef = useRef<string | null>(null);
+  /** Refreshes search only after a stale chart has been explicitly closed. */
+  const patientChartRefreshPendingRef = useRef(false);
+  const lastExternalHandoffTokenRef = useRef(externalWorkflowHandoffToken);
   const shellRef = useRef<HTMLDivElement>(null);
   const workHostRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const saveDraftRef = useRef(onSaveDraft);
   const selectedWorkflow = activeWorkflow ?? internalWorkflow;
+  const dashboardInjectionRecords = useMemo(
+    () => safeInjectionWorklistRows(injectionRecords),
+    [injectionRecords],
+  );
   const previousWorkflowRef = useRef<WorkflowId>(selectedWorkflow);
   const workflowScrollPositionsRef = useRef<
     Partial<Record<WorkflowId, number>>
@@ -313,7 +388,8 @@ export function ClinicalDesktopShell({
   const ambientPrompt = fieldPrompt ?? statusMessage ?? SHELL.readyToBegin;
   const hasOutstandingStops = readiness.some((item) => item.state === "stop");
 
-  const openWorkflow = (workflow: WorkflowId) => {
+  const openWorkflow = (workflow: WorkflowId): boolean => {
+    if (onWorkflowChange?.(workflow) === false) return false;
     const scrollBody = shellRef.current?.querySelector<HTMLElement>(
       ".cd2004-work-window .cd2004-window-body",
     );
@@ -323,8 +399,8 @@ export function ClinicalDesktopShell({
       capturedScrollWorkflowRef.current = selectedWorkflow;
     }
     if (activeWorkflow === undefined) setInternalWorkflow(workflow);
-    onWorkflowChange?.(workflow);
     setInternalStatus(`${WORKFLOW_LABELS[workflow]} opened.`);
+    return true;
   };
 
   /**
@@ -340,10 +416,33 @@ export function ClinicalDesktopShell({
     const storage = browserSafeStorage();
     const injections = new InjectionRecordRepository(storage).list();
     const uds = new UdsRecordRepository(storage).list();
+    const rawUds = uds.ok ? uds.value : [];
+    const udsIdCounts = rawUds.reduce<Map<string, number>>((counts, record) => {
+      counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+      return counts;
+    }, new Map());
+    const unambiguousUds = rawUds.filter(
+      (record) =>
+        udsIdCounts.get(record.id) === 1 && isUsableUdsRecord(record),
+    );
+    const rawInjections =
+      injections.ok && !injections.warnings.length ? injections.value : [];
+    const injectionIdCounts = rawInjections.reduce<Map<string, number>>(
+      (counts, record) => {
+        counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+        return counts;
+      },
+      new Map(),
+    );
+    const unambiguousInjections = rawInjections.filter(
+      (record) =>
+        injectionIdCounts.get(record.id) === 1 &&
+        isUsableInjectionRecord(record),
+    );
     setChartIndex(
       buildPatientChartIndex(
-        injections.ok ? injections.value : [],
-        uds.ok ? uds.value : [],
+        unambiguousInjections,
+        unambiguousUds,
       ),
     );
   }, []);
@@ -362,18 +461,77 @@ export function ClinicalDesktopShell({
   // only shown on a chart when that chart is the patient the note is for.
   const activePatientKey = chartPatientKey(patient.name ?? "", patient.dob ?? "");
 
-  const openChart = (key: string, view: PatientChartView = "facesheet") => {
-    if (!key) return;
+  const openChart = (
+    key: string,
+    view: PatientChartView = "facesheet",
+  ): boolean => {
+    if (!key) return false;
+    if (!chartPatientKeyState && onBeforeViewChange?.() === false) return false;
     reloadChartIndex();
     setChartPatientKeyState(key);
     setChartView(view);
     setInternalStatus(`${PATIENT.facesheet} opened.`);
+    return true;
   };
 
-  const closeChart = () => {
+  const focusWorkflowContentNextFrame = useCallback(() => {
+    // Two frames let the chart unmount and the selected workflow mount before
+    // choosing a target. This also runs after native <dialog> focus restore
+    // when invoked by the external-handoff token below.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const host = workHostRef.current;
+        if (!host) return;
+        const isVisible = (candidate: HTMLElement) =>
+          candidate.getClientRects().length > 0 &&
+          !candidate.closest('[hidden], [aria-hidden="true"], [inert]');
+        const preferredSelectors = [
+          'input[placeholder="Last, First"]:not(:disabled)',
+          'textarea[data-addendum-input]:not(:disabled)',
+        ];
+        const preferredTarget = preferredSelectors
+          .map((selector) => host.querySelector<HTMLElement>(selector))
+          .find((candidate): candidate is HTMLElement =>
+            Boolean(candidate && isVisible(candidate)),
+          );
+        const fieldCandidates = host.querySelectorAll<HTMLElement>(
+          'input:not([type="hidden"]):not(:disabled), ' +
+            'select:not(:disabled), textarea:not(:disabled)',
+        );
+        const actionCandidates = host.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])',
+        );
+        const target =
+          preferredTarget ??
+          Array.from(fieldCandidates).find(isVisible) ??
+          Array.from(actionCandidates).find(isVisible);
+        const fallback = host.querySelector<HTMLElement>('[tabindex="-1"]');
+        (target ?? fallback)?.focus({ preventScroll: true });
+      });
+    });
+  }, []);
+
+  const closeChart = (destination = selectedWorkflow) => {
+    if (patientChartRefreshPendingRef.current) {
+      patientChartRefreshPendingRef.current = false;
+      reloadChartIndex();
+    }
     setChartPatientKeyState(null);
-    setInternalStatus(`${WORKFLOW_LABELS[selectedWorkflow]} opened.`);
+    setInternalStatus(`${WORKFLOW_LABELS[destination]} opened.`);
+    focusWorkflowContentNextFrame();
   };
+
+  useEffect(() => {
+    if (
+      externalWorkflowHandoffToken === undefined ||
+      externalWorkflowHandoffToken === lastExternalHandoffTokenRef.current
+    ) {
+      return;
+    }
+    lastExternalHandoffTokenRef.current = externalWorkflowHandoffToken;
+    setChartPatientKeyState(null);
+    focusWorkflowContentNextFrame();
+  }, [externalWorkflowHandoffToken, focusWorkflowContentNextFrame]);
 
   /**
    * Opening a note from the chart is the explicit crossing from browsing into
@@ -385,17 +543,49 @@ export function ClinicalDesktopShell({
    * listening and the note would simply never open. It is held until the
    * effect below, which runs after the panel has mounted and registered.
    */
-  const openChartNote = (recordId: string) => {
-    const row = chartRows.find((candidate) => candidate.recordId === recordId);
-    if (!row) return;
+  const openChartNote = (recordKey: string) => {
+    const row = chartRows.find((candidate) => candidate.key === recordKey);
+    if (!row || !chartPatient) return;
+    const { recordId } = row;
+    const expectedPatient = {
+      name: chartPatient.name,
+      dob: chartPatient.dob,
+    };
     if (row.noteType === "injection") {
-      if (onOpenInjectionRecord?.(recordId) === false) return;
-      setChartPatientKeyState(null);
+      if (onOpenInjectionRecord) {
+        const result = onOpenInjectionRecord(recordId, expectedPatient);
+        if (result === "patient-identity-mismatch") {
+          patientChartRefreshPendingRef.current = true;
+          setInternalStatus(RECORD.savedNotePatientChanged);
+          return;
+        }
+        if (result === false) {
+          setInternalStatus(RECORD.savedNoteCouldNotOpen);
+          return;
+        }
+        closeChart("administer");
+        return;
+      }
+      closeChart("administer");
       openWorkflow("administer");
       return;
     }
+    if (onOpenUdsRecord) {
+      const result = onOpenUdsRecord(recordId, expectedPatient);
+      if (result === "patient-identity-mismatch") {
+        patientChartRefreshPendingRef.current = true;
+        setInternalStatus(RECORD.savedNotePatientChanged);
+        return;
+      }
+      if (result === false) {
+        setInternalStatus(RECORD.savedNoteCouldNotOpen);
+        return;
+      }
+      closeChart("uds");
+      return;
+    }
     pendingUdsNoteRef.current = recordId;
-    setChartPatientKeyState(null);
+    closeChart("uds");
     openWorkflow("uds");
   };
 
@@ -406,14 +596,46 @@ export function ClinicalDesktopShell({
     requestWorkstationOpenNote({ noteType: "uds", recordId });
   }, [chartPatientKeyState, selectedWorkflow]);
 
-  const startNoteFromChart = (workflow: WorkflowId) => {
-    setChartPatientKeyState(null);
-    openWorkflow(workflow);
-    if (workflow === "administer") onStartNewInjection?.();
+  const startNoteFromChart = (workflow: WorkflowId): boolean => {
+    if (workflow === "uds" && onStartNewUds && chartPatient) {
+      if (onStartNewUds(chartPatient) === false) {
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return false;
+      }
+      closeChart("uds");
+      return true;
+    }
+    if (
+      (workflow === "samples" || workflow === "forms") &&
+      onStartNewTransientNote &&
+      chartPatient
+    ) {
+      if (onStartNewTransientNote(workflow, chartPatient) === false) {
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return false;
+      }
+      closeChart(workflow);
+      return true;
+    }
+    if (workflow === "administer" && onStartNewInjection) {
+      // The callback owns both the guarded leave boundary and activating the
+      // new Injection. Do not switch the workflow first: on a veto the chart's
+      // return destination must remain exactly where staff left it.
+      if (onStartNewInjection(chartPatient ?? undefined) === false) {
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return false;
+      }
+    } else if (!openWorkflow(workflow)) {
+      return false;
+    }
+    closeChart(workflow);
+    return true;
   };
 
   const restorePreviousFocus = () => {
-    globalThis.setTimeout(() => previousFocusRef.current?.focus(), 0);
+    const previous = previousFocusRef.current;
+    previousFocusRef.current = null;
+    globalThis.setTimeout(() => previous?.focus(), 0);
   };
 
   // The global function-key listener is effect-backed, while a workflow can
@@ -421,8 +643,10 @@ export function ClinicalDesktopShell({
   // current in a layout effect so F12 cannot land in that post-commit gap and
   // invoke the prior render's unavailable handler.
   useLayoutEffect(() => {
-    saveDraftRef.current = onSaveDraft;
-  }, [onSaveDraft]);
+    // A chart is read-only and covers the mounted editor. Never let F12 or
+    // Ctrl/Cmd+S mutate that hidden note while staff are browsing a patient.
+    saveDraftRef.current = chartPatientKeyState ? undefined : onSaveDraft;
+  }, [chartPatientKeyState, onSaveDraft]);
 
   const openShortcutHelp = useCallback(() => {
     previousFocusRef.current =
@@ -682,7 +906,6 @@ export function ClinicalDesktopShell({
       return;
     }
     onEscape?.();
-    restorePreviousFocus();
     setInternalStatus("Back: no draft was discarded.");
   }, [chartPatientKeyState, onEscape, selectedWorkflow, showShortcutHelp]);
 
@@ -855,12 +1078,26 @@ export function ClinicalDesktopShell({
         return;
       }
 
-      if (event.altKey && /^[1-7]$/.test(event.key)) {
+      if (
+        event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        /^[1-7]$/.test(event.key)
+      ) {
         event.preventDefault();
         const workflow = shortcutWorkflows[Number(event.key) - 1];
-        if (workflow) openWorkflow(workflow);
+        if (workflow && openWorkflow(workflow)) {
+          if (chartPatientKeyState) closeChart(workflow);
+          else if (workflow !== selectedWorkflow) focusWorkflowContentNextFrame();
+        }
         return;
       }
+
+      // Function-key commands are unmodified (Shift is part of the published
+      // profile for alternate commands). Do not steal browser/OS chords such
+      // as Ctrl+F11, Alt+F1, or Ctrl+Alt+3.
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
 
       const command = resolveFunctionKeyCommand(event.key, event.shiftKey);
       if (!command) return;
@@ -949,7 +1186,7 @@ export function ClinicalDesktopShell({
     workHostRef,
     needsReview,
     todayQueue,
-    injectionRecords,
+    injectionRecords: dashboardInjectionRecords,
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
@@ -1048,8 +1285,11 @@ export function ClinicalDesktopShell({
             summaries={workflowSummaries}
             patient={patient}
             onWorkflowOpen={(workflow) => {
-              closeChart();
-              openWorkflow(workflow);
+              // openWorkflow already publishes the correct destination status;
+              // only clear the chart layer after that guarded transition.
+              if (openWorkflow(workflow) && chartPatientKeyState) {
+                closeChart(workflow);
+              }
             }}
             onOpenRecords={onOpenRecords}
             search={
@@ -1177,7 +1417,7 @@ export function ClinicalDesktopShell({
           },
           file: {
             onInvoke: requestDraftSave,
-            disabled: !onSaveDraft,
+            disabled: Boolean(chartPatientKeyState) || !onSaveDraft,
             label: RECORD.save,
           },
           back: { onInvoke: safeBack },
@@ -1334,7 +1574,7 @@ function InjectionRecordActions({
       detail={detail}
       rootTestAttribute="data-injection-record-actions"
       buttons={
-        <>
+        actions.unavailable ? null : <>
           {locked && (
             <button
               type="button"

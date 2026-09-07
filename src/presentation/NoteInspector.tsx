@@ -193,7 +193,7 @@ export function NoteInspector({
         <button
           type="button"
           class="cd2004-command-button cd2004-note-copy-all"
-          disabled={!sections.length}
+          disabled={!sections.length || !onCopyAll}
           onClick={onCopyAll}
           title={
             documentIsDraft
@@ -233,6 +233,7 @@ export function NoteInspector({
                   class="cd2004-note-mark cd2004-note-copy"
                   aria-label={`Copy ${section.label} section`}
                   title={`Copy ${section.label} section`}
+                  disabled={!onCopySection}
                   onClick={() => onCopySection?.(section)}
                 >
                   COPY

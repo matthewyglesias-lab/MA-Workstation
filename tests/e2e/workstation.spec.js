@@ -382,8 +382,7 @@ test.describe('MA Workstation browser journeys', () => {
     await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
-      name: 'Open incomplete Injection note for QA, Vivitrol Habitus',
-      exact: true
+      name: /^Open incomplete Injection note for QA, Vivitrol Habitus, visit /
     }).click();
     await openInjectionTab(page, 'Order');
     await expect(technique).toHaveValue('');
@@ -478,8 +477,7 @@ test.describe('MA Workstation browser journeys', () => {
     await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
-      name: 'Open incomplete Injection note for QA, Other Manual Return',
-      exact: true
+      name: /^Open incomplete Injection note for QA, Other Manual Return, visit /
     }).click();
 
     await openInjectionTab(page, 'Order');
@@ -547,8 +545,7 @@ test.describe('MA Workstation browser journeys', () => {
     expect(legacyShapePrepared).toEqual({ nextDose: null, retCustom: false });
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
-      name: `Open incomplete Injection note for ${patient}`,
-      exact: true
+      name: new RegExp(`^Open incomplete Injection note for ${patient}, visit `)
     }).click();
 
     await openInjectionTab(page, 'Order');
@@ -637,8 +634,7 @@ test.describe('MA Workstation browser journeys', () => {
     await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
-      name: `Open incomplete Injection note for ${patient}`,
-      exact: true
+      name: new RegExp(`^Open incomplete Injection note for ${patient}, visit `)
     }).click();
 
     await openInjectionTab(page, 'Order');
@@ -824,7 +820,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(drawerLauncher).toBeVisible();
     await drawerLauncher.click();
 
-    const drawer = page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]');
+    const drawer = page.locator('dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer');
     await expect(drawer).toBeVisible();
     await expect(page.locator('#recordsDrawerSearch')).toBeFocused();
     // The records window is a native <dialog> opened with showModal(), so the
@@ -1258,6 +1254,15 @@ test.describe('MA Workstation browser journeys', () => {
     await page.keyboard.press('Escape');
     await expect(helpDialog).toBeHidden();
 
+    // Only the published, unmodified chords belong to the workstation.
+    // Browser/OS modifier combinations must not leak into local commands.
+    await page.keyboard.press('Control+F11');
+    await expect(page.locator('.records-drawer-layer')).toBeHidden();
+    await page.keyboard.press('Alt+F1');
+    await expect(helpDialog).toBeHidden();
+    await page.keyboard.press('Control+Alt+3');
+    await expect(shell).toHaveAttribute('data-active-workflow', 'home');
+
     // With no clinical stops active, F8 cycles the visible work, navigation,
     // and opt-in command zones.
     const startInjection = page.getByRole('button', { name: 'Start new injection', exact: true });
@@ -1279,9 +1284,13 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
     const injectionPanel = page.locator('.wfp-panel');
     const patientName = injectionPanel.locator('input[placeholder="Last, First"]');
+    const patientDob = injectionPanel.locator('input[placeholder="MM/DD/YYYY"]');
     await patientName.fill('QA, Shortcut');
-    await injectionPanel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
+    await patientDob.fill('01/02/1990');
     await setProvider(injectionPanel, 'QA Provider');
+    await patientDob.focus();
+    await page.keyboard.press('Alt+2');
+    await expect(patientDob).toBeFocused();
 
     // F6 / Shift+F6 move through the current worksheet's sections, rather
     // than opening records as the retired key map did.
@@ -1338,6 +1347,16 @@ test.describe('MA Workstation browser journeys', () => {
     await patientName.focus();
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+
+    // Focus restoration belongs to the utility that captured it. A later,
+    // plain Escape in the worksheet must not jump to that stale control.
+    await patientName.focus();
+    await page.keyboard.press('F1');
+    await page.keyboard.press('Escape');
+    await expect(patientName).toBeFocused();
+    await patientDob.focus();
+    await page.keyboard.press('Escape');
+    await expect(patientDob).toBeFocused();
 
     // Retired global F3/F4/F10 bindings must be inert; Finish is only the
     // explicit worksheet lifecycle action. Escape cannot navigate home or
@@ -1409,6 +1428,121 @@ test.describe('MA Workstation browser journeys', () => {
       const records = JSON.parse(localStorage.getItem('ipmgMedAssistUdsRecordsV1') || '[]');
       return records.at(0)?.status;
     })).toBe('draft');
+  });
+
+  test('publishes a focused UDS date before F12 and protects invalid or valid transient entry', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'uds');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('select[name="uds-reason"]').selectOption('routine');
+    const collectionDate = panel
+      .locator('.wfp-field', { hasText: 'Collection date / time' })
+      .locator('input[data-workstation-date="datetime"]');
+
+    // Keep focus in the text control: no blur/change commit is allowed to
+    // make this pass before the target-phase F12 handler runs.
+    await collectionDate.fill('091526 1430');
+    await collectionDate.evaluate((input) => {
+      input.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'F12',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true
+      }));
+    });
+    await expect(collectionDate).toHaveValue('091526 1430');
+    expect(await page.evaluate(() =>
+      localStorage.getItem('ipmgMedAssistUdsRecordsV1')
+    )).toBeNull();
+    await page.keyboard.press('F12');
+    await expect.poll(() => page.evaluate(() => {
+      const records = JSON.parse(
+        localStorage.getItem('ipmgMedAssistUdsRecordsV1') || '[]'
+      );
+      return records.at(0)?.snapshot?.collectionDateTime;
+    })).toBe('2026-09-15T14:30');
+
+    // An incomplete draft is not part of the typed encounter. Save and
+    // navigation shortcuts must veto their parent command without erasing the
+    // raw text or moving focus away from the field that still needs repair.
+    await collectionDate.fill('091');
+    await page.keyboard.press('F12');
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'uds'
+    );
+    await expect(collectionDate).toHaveValue('091');
+    await expect(collectionDate).toBeFocused();
+    await page.keyboard.press('Alt+2');
+    await expect(page.locator('.cd2004-shell')).toHaveAttribute(
+      'data-active-workflow',
+      'uds'
+    );
+    await expect(collectionDate).toHaveValue('091');
+    await expect(collectionDate).toBeFocused();
+
+    // The date field itself must also own the unload warning and keep the raw
+    // value visible when the browser lets the user cancel navigation.
+    expect(await page.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    })).toBe(true);
+    await expect(collectionDate).toHaveValue('091');
+
+    // A valid raw token is synchronously published before the later unload
+    // guards inspect their encounter refs, and is still protected as work
+    // that had not yet been explicitly filed.
+    await collectionDate.fill('091626 1500');
+    expect(await page.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    })).toBe(true);
+    await expect(collectionDate).toHaveValue('09/16/26 1500');
+  });
+
+  test('publishes a focused Injection date before Ctrl+S and lifecycle draft flushes', async ({ page }) => {
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('select[name="inj-medication"]')
+      .selectOption({ label: 'Vivitrol' });
+    await panel.locator('select[name="inj-reason"]')
+      .selectOption({ label: 'Scheduled' });
+    const priorDose = panel
+      .locator('.wfp-field', { hasText: 'Prior dose' })
+      .locator('input[data-workstation-date="date"]');
+    const storedPriorDose = () => page.evaluate(() => {
+      const records = JSON.parse(
+        localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]'
+      );
+      return records.at(0)?.snapshot?.fields?.priorDose;
+    });
+
+    await priorDose.fill('091526');
+    await page.keyboard.press('Control+s');
+    await expect.poll(storedPriorDose).toBe('2026-09-15');
+
+    // Dispatch edit + lifecycle event in one task. The field's early capture
+    // listener must publish before Injection's pagehide saver reads its ref.
+    await priorDose.evaluate((input) => {
+      input.value = '091626';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await expect.poll(storedPriorDose).toBe('2026-09-16');
+
+    await priorDose.evaluate((input) => {
+      input.value = '091726';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.defineProperty(document, 'hidden', {
+        configurable: true,
+        value: true
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect.poll(storedPriorDose).toBe('2026-09-17');
   });
 
   test('keeps non-injection activity logging distinct from the injection lifecycle', async ({ page }) => {
@@ -1633,10 +1767,23 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.meditech-command-deck')).toBeHidden();
     await expect(page.locator('.meditech-context-rail')).toBeVisible();
 
+    // Native dialogs live in the top layer rather than inside the ordinary
+    // stacking tree. The viewport gate must close one before it can own focus,
+    // while keeping the worksheet itself mounted and intact.
+    await page.keyboard.press('F11');
+    const recordsDialog = page.locator(
+      'dialog[aria-labelledby="recordsDrawerTitle"]'
+    );
+    await expect(recordsDialog).toBeVisible();
+    const recordsSearch = recordsDialog.locator('#recordsDrawerSearch');
+    await recordsSearch.fill('preserved query');
+    await expect(recordsSearch).toBeFocused();
+
     await page.setViewportSize({ width: 390, height: 844 });
     const gate = page.locator('.meditech-workstation-gate');
     await expect(gate).toBeVisible();
     await expect(gate).toBeFocused();
+    await expect(recordsDialog).not.toHaveAttribute('open', '');
     await expect(gate).toContainText('Workstation view required');
     await expect(gate.locator('header strong')).toHaveText('IPMG MA Workstation');
     await expect(gate.locator('header small')).toHaveText('Local only');
@@ -1658,7 +1805,123 @@ test.describe('MA Workstation browser journeys', () => {
     await page.setViewportSize({ width: 840, height: 720 });
     await expect(gate).toHaveCount(0);
     await expect(page.locator('.cd2004-shell')).toBeVisible();
+    await expect(recordsDialog).toBeVisible();
+    await expect(recordsSearch).toHaveValue('preserved query');
+    await expect(recordsSearch).toBeFocused();
     await expect(patientName).toHaveValue('QA, Resize Safety');
+    await recordsDialog.getByRole('button', { name: 'Close Open Notes' }).click();
+    await expect(recordsDialog).toBeHidden();
+
+    // The same boundary suspends controlled shell and record-action dialogs,
+    // not merely the two record drawers. Their owner state and any unsubmitted
+    // fields remain intact while the viewport gate owns the keyboard.
+    await page.keyboard.press('F1');
+    const keyboardReference = page.getByRole('dialog', {
+      name: 'Keyboard Reference'
+    });
+    await expect(keyboardReference).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(gate).toBeFocused();
+    await page.setViewportSize({ width: 840, height: 720 });
+    await expect(keyboardReference).toBeVisible();
+    await expect(keyboardReference.getByRole('button', {
+      name: 'Close keyboard reference'
+    })).toBeFocused();
+    await page.keyboard.press('Escape');
+
+    await page.locator('.tebra-account-trigger').click();
+    await page.locator('[data-account-action="staff"]').click();
+    const staffDialog = page.getByRole('dialog', { name: 'Staff Sign-In' });
+    const staffDraft = staffDialog.getByRole('textbox', { name: 'Name or initials' });
+    await staffDraft.fill('Unsaved Resize, Test MA');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(gate).toBeFocused();
+    await page.setViewportSize({ width: 840, height: 720 });
+    await expect(staffDialog).toBeVisible();
+    await expect(staffDraft).toHaveValue('Unsaved Resize, Test MA');
+    await expect(staffDraft).toBeFocused();
+    await staffDialog.getByRole('button', { name: 'Cancel' }).click();
+
+    const discard = page.locator('[data-injection-discard]');
+    await expect(discard).toBeEnabled();
+    await discard.click();
+    const discardDialog = page.getByRole('dialog', { name: 'Discard draft' });
+    await expect(discardDialog).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(gate).toBeFocused();
+    await page.setViewportSize({ width: 840, height: 720 });
+    await expect(discardDialog).toBeVisible();
+    await discardDialog.getByRole('button', { name: 'Keep editing' }).click();
+    await expect(patientName).toHaveValue('QA, Resize Safety');
+  });
+
+  test('preserves an unfinished workstation date through the viewport gate', async ({ page }) => {
+    await page.setViewportSize({ width: 840, height: 720 });
+    await page.goto('/');
+    await openWorkflow(page, 'administer');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('select[name="inj-medication"]')
+      .selectOption({ label: 'Vivitrol' });
+    await panel.locator('select[name="inj-reason"]')
+      .selectOption({ label: 'Scheduled' });
+    const partialDate = page
+      .locator('.wfp-panel input[data-workstation-date="date"]')
+      .first();
+
+    // 0101 is itself a valid short-form date for the current year, but here it
+    // is only the first four digits of the intended six-digit 010127 entry.
+    // A viewport-driven blur must not silently commit that different fact.
+    await partialDate.pressSequentially('0101');
+    await expect(partialDate).toHaveValue('0101');
+    await expect(page.locator('#priorDose')).toHaveValue('');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const gate = page.locator('.meditech-workstation-gate');
+    await expect(gate).toBeFocused();
+    await expect(page.locator('#priorDose')).toHaveValue('');
+
+    await page.setViewportSize({ width: 840, height: 720 });
+    await expect(gate).toHaveCount(0);
+    await expect(partialDate).toHaveValue('0101');
+    await expect(partialDate).toBeFocused();
+    await expect(page.locator('#priorDose')).toHaveValue('');
+  });
+
+  test('keeps a late idle lock behind the viewport gate, then resumes it', async ({ page }) => {
+    const staff = 'Idle Resize, Test MA';
+    await page.setViewportSize({ width: 840, height: 720 });
+    await page.addInitScript(() => {
+      const nativeSetTimeout = window.setTimeout.bind(window);
+      window.setTimeout = (handler, delay, ...args) =>
+        nativeSetTimeout(handler, delay === 15 * 60_000 ? 700 : delay, ...args);
+    });
+    await page.goto('/');
+    await signInLocalStaff(page, staff);
+
+    // The viewport gate is already active when the shortened idle timer
+    // mounts its native modal. The boundary must notice that later top-layer
+    // entry, suspend it without unlocking/unmounting it, and keep the gate as
+    // the sole keyboard surface.
+    await page.setViewportSize({ width: 390, height: 844 });
+    const gate = page.locator('.meditech-workstation-gate');
+    const lock = page.locator('dialog.cd2004-lock-overlay');
+    await expect(gate).toBeVisible();
+    await expect(lock).toHaveCount(1, { timeout: 3_000 });
+    await expect(lock).not.toHaveAttribute('open', '');
+    await expect(gate).toBeFocused();
+    await expect(page.locator('.meditech-workstation-content dialog[open]'))
+      .toHaveCount(0);
+
+    // Widening resumes the same lock transaction rather than dropping it.
+    await page.setViewportSize({ width: 840, height: 720 });
+    await expect(gate).toHaveCount(0);
+    await expect(lock).toBeVisible();
+    expect(await lock.evaluate(node => node.matches(':modal'))).toBe(true);
+    const unlockName = lock.getByLabel('Type your name to unlock');
+    await expect(unlockName).toBeFocused();
+    await unlockName.fill(staff);
+    await lock.getByRole('button', { name: 'Unlock' }).click();
+    await expect(lock).toHaveCount(0);
   });
 
   test('keeps Injection and UDS transaction chrome fixed while only the clinical page scrolls', async ({ page }) => {
@@ -2481,7 +2744,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
 
     await page.keyboard.press('F11');
-    await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
+    await expect(page.locator('dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer')).toBeVisible();
     await page.locator('#recordsDrawerSearch').fill('QA, Draft Detail');
     await page.locator('[data-records-open]').click();
 
@@ -2660,7 +2923,7 @@ test.describe('MA Workstation browser journeys', () => {
     await page.reload();
     await openWorkflow(page, 'administer');
     await page.keyboard.press('F11');
-    await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
+    await expect(page.locator('dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer')).toBeVisible();
     await page.locator('#recordsDrawerSearch').fill(patient);
     const historicalRow = page.locator(`[data-records-open="${recordId}"]`);
     await expect(historicalRow.locator('[data-note-status="signed"]')).toHaveText('Signed');
@@ -2772,7 +3035,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-field:has-text("SpO2") input')).toHaveCount(0);
 
     await page.keyboard.press('F11');
-    await expect(page.locator('[role="dialog"][aria-labelledby="recordsDrawerTitle"]')).toBeVisible();
+    await expect(page.locator('dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer')).toBeVisible();
     await page.locator('#recordsDrawerSearch').fill('QA, Smart Vitals Draft');
     await page.locator('[data-records-open]').click();
 
@@ -2821,9 +3084,13 @@ test.describe('MA Workstation browser journeys', () => {
     await persistencePanel.locator('input[placeholder="Last, First"]').fill('QA, Persistence Guard');
     await persistencePanel.locator('input[placeholder="MM/DD/YYYY"]').fill('03/04/1992');
     await setProvider(persistencePanel, 'QA Provider');
+    await persistencePanel.locator('select[name="inj-reason"]').selectOption('scheduled');
 
     await page.locator('[data-injection-record-actions] [data-injection-new]').click();
-    await expect(page.locator('#ptName')).toHaveValue('QA, Persistence Guard');
+    await expect(persistencePanel.locator('input[placeholder="Last, First"]'))
+      .toHaveValue('QA, Persistence Guard');
+    await expect(persistencePanel.locator('select[name="inj-reason"]'))
+      .toHaveValue('scheduled');
     await expect(page.locator('#injRecordStatus')).toHaveText('Save failed');
     await expect(page.locator('#injRecordStatus')).toHaveAttribute('role', 'status');
     await expect(page.locator('#panel-administer')).not.toHaveClass(/record-readonly/);
@@ -3192,13 +3459,12 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.cd2004-record-actions-state strong')).toHaveText('Draft saved');
 
     await panel.getByRole('button', { name: 'Open UDS notes…' }).click();
-    const recordsDialog = page.locator('[role="dialog"][aria-labelledby="udsRecordsDrawerTitle"]');
+    const recordsDialog = page.locator('dialog[aria-labelledby="udsRecordsDrawerTitle"] > .records-drawer');
     await expect(recordsDialog).toBeVisible();
     const rows = recordsDialog.locator('.records-drawer-row');
     await expect(rows).toHaveCount(1);
     const draftRow = recordsDialog.getByRole('row', {
-      name: 'Open incomplete UDS note for Rivera, Ana',
-      exact: true
+      name: /^Open incomplete UDS note for Rivera, Ana, visit /
     });
     await expect(draftRow).toBeVisible();
     await expect(draftRow.locator('[data-note-status="incomplete"]')).toHaveText('Incomplete');

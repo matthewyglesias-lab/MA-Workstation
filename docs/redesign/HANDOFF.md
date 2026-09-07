@@ -1,6 +1,6 @@
 # Handoff — Tebra Injection Kiosk Redesign
 
-**Updated:** 2026-09-07 · Phase 3b patient conventions
+**Updated:** 2026-09-07 · Safety closure in verification
 **Repo:** `matthewyglesias-lab/MA-Workstation`
 **Branch:** `claude/ma-workstation-tebra-redesign-nu1aeq` · **PR:** #62 (draft)
 
@@ -20,35 +20,46 @@ prompt refers to. Update this file at the end of each phase.
 > `docs/redesign/MANIFEST.md` (frozen paths, design tokens, convention spec, and
 > the restructure posture in §5b).
 >
-> PR #62 is complete through Phase 3b. Azure deployment alone is blocked
-> because the Static Web App already has its maximum number of staging
-> environments; do not delete an environment or conflate that external capacity
-> error with a code failure. Leave the eight `win32/` images unchanged and
-> flagged stale for a Windows maintainer.
+> PR #62 is complete through Phase 4 Product Voice. A presentation-layer
+> safety closure is now in verification before Phase 5 begins. Azure deployment
+> alone is blocked because the Static Web App already has its maximum number of
+> staging environments; do not delete an environment or conflate that external
+> capacity error with a code failure. Leave the eight `win32/` images unchanged
+> and flagged stale for a Windows maintainer.
 >
-> The commit containing this handoff is **Phase 3b**: the patient chart -
-> Facesheet cards, the distinct patient-scoped Notes list, patient search, the
-> hover card, and the page-level `ActionBar`. Browsing is read-only and only an
-> explicit New Note or Open crosses into a workflow.
+> The remote head, `aed2096`, contains Phase 4 Product Voice and its corrected
+> product-family information-architecture rationale. The current working tree
+> adds safety closure around transient Forms/Samples notes, UDS record switching
+> and exclusive mutation access, Injection draft preservation and navigation
+> vetoes, patient-scoped note handoffs, duplicate note labels, keyboard
+> operation, and malformed local records. Keep these changes synthetic and
+> presentation-scoped; do not edit the frozen clinical or persistence paths.
 >
-> **Your first job is the Phase 3b visual closure, not new work.** Phase 3b
-> changes the section rail and the work area, so all seven `.cd2004-shell`
-> baselines are stale by construction and CI's visual-snapshot tests are
-> expected to fail on the current head. Do exactly what Phase 2d did: read the
-> pinned Chromium 151 run's `*-actual.png` artifacts, review every image at full
-> resolution, and promote those exact files as the new Linux baselines in their
-> own commit. Do NOT regenerate them here - the local Chromium is 149 and
-> differs from the pinned renderer by roughly 3-5%, and do not loosen the
-> threshold to absorb that.
+> **Your first job is to finish and verify the safety closure, not Kiosk work.**
+> Run the static, unit, build, non-baseline interaction, and frozen-path gates
+> before pushing; the pushed job owns renderer-sensitive print/visual checks.
+> The committed Linux baselines are already current and authoritative
+> for the Phase 4 base: GitHub's pinned chromium-1234 (Chromium 151) passed the
+> production browser/visual/print job 129/129. Do NOT regenerate them with the
+> local Chromium 149, which differs by roughly 3-5%, and do not loosen the
+> threshold to absorb that. Use Chromium 149 for interaction evidence only.
 >
 > **Then take Phase 5.** Kiosk shell (`?kiosk=1`), the 7-step injection stepper
 > over the existing `InjectionPanel` tabs, touch site picker, Care Checklist
-> rail, and sign-and-next card, per `MANIFEST.md` §2.1 and §9.
+> rail, and sign-and-next card, per `MANIFEST.md` §2.1, `PLAN.md` §4, and this
+> handoff's §9.
 >
 > The bar is *a module Tebra's own team built*: a Tebra user should notice no
 > seam in how anything works. The engine does not change — this is a
 > presentation project, and `git diff --stat` over the frozen paths must be
 > empty at review.
+
+> **Production Tebra boundary:** prefer a verified demo/test patient for every
+> cloud-browser inspection. Real charts are observation-only and only when
+> necessary. Never open an editor that creates a note for a real patient.
+> Re-verify the demo/test identity before every create, save, sign, submit,
+> delete, or upload action, and never copy PHI into repository files,
+> screenshots, logs, prompts, or fixtures.
 >
 > **Restructure, do not overlay.** The previous redesign failed by layering a
 > stylesheet over one it was fighting, and needed ~900 `!important` declarations
@@ -94,12 +105,14 @@ local ids, but both tree hashes were checked byte-for-byte before the ref moved.
 | `069ac15` local / `4cdce08` remote | **2d — Visual setup** | Removes the retired green-banner pixel assertion from the functional draft-opening helper so all three responsive states reach their snapshot assertions. |
 | `13f7359` local / `353c117` remote | **2d — Visual closure** | Promotes the eight reviewed Chromium 151 Linux captures and records their provenance. `win32/` remains intentionally untouched. |
 | `b791b21` | **3a — Global Open Notes** | Shared semantic five-column table for Injection and UDS; Visit Date sort, lifecycle chips, truthful signed lock, whole-row keyboard/mouse opening, exact 44px/mint grammar, synthetic tests. |
-| *this commit* | **3b — Patient conventions** | Patient chart: Facesheet cards with stated ordering rules, the modern patient-scoped Notes list, patient search, hover card, and the page-level coral split `ActionBar`. Read-only browsing; `patient-chart-model.ts` is pure and unit-tested. |
+| `9988c71`–`681d4d4` | **3b–3e — Patient conventions and visual closure** | Patient chart and shared list grammar; desktop chrome retirement; reviewed Chromium 151 Linux baselines; 800×600 reachability repair. |
+| `8592715` / `aed2096` | **4 — Product Voice** | Contemporary icon/illustration language, display typography and control geometry; corrected the chart-clone premise without changing information architecture. |
+| *working tree* | **Safety closure** | Synthetic regression coverage and presentation guards for transient-note replacement, UDS record integrity, addenda/photos, navigation vetoes, keyboard access and duplicate note labels. Full verification and CI are still required before Phase 5. |
 
-**Phase 3 is complete.** Phase 3a replaced the provisional saved-note rows
-without reopening the shell architecture; Phase 3b adds the patient-scoped
-conventions on top of it. What remained before Phase 4 was the visual closure
-described in section 5.
+**Phase 4 Product Voice is complete on the remote head.** The safety-closure
+working tree is intentionally a gate between it and Phase 5: no Kiosk work
+starts until the closure is committed, pushed, and its authoritative CI is
+green apart from the known Azure capacity failure.
 
 ### Load-bearing facts about what landed
 
@@ -234,45 +247,67 @@ The last two were caught by the new unit test, not by review. Keep it.
 
 ## 5. The verification gate
 
-Run all of it before every commit.
+Run all of it before every commit. This closure has no intentional CSS or
+baseline-image change. Local Chromium 149 is authoritative for interactions
+and computed-layout contracts only; GitHub's pinned Chromium 151 owns the full
+visual/print result.
 
 ```bash
-npm run check        # typecheck + check-app.js (~50 clinical assertions)
+export VITE_ENABLE_INJECTION_PATIENT_SCREENING=true
+npm run check
 npm run test:unit
-npm run test:print   # renderer hashes plus print-layout/PDF gate
 npm run build
-npx playwright test --config=<local config, see below>
 
-git diff --stat -- public/legacy src/legacy src/domain src/documentation \
-                   src/persistence tests/fixtures        # MUST be empty
+test -f dist/index.html
+test -f dist/staticwebapp.config.json
+test -f dist/legacy/legacy-runtime.js
+test -f dist/legacy/legacy.css
+
+npx playwright test --config=<Chromium-149 config, see below> \
+  tests/e2e/conventions.spec.js \
+  tests/e2e/injection-decision-support.spec.js \
+  tests/e2e/injection-full-draft-safety.spec.js \
+  tests/e2e/persistence-hardening.spec.js \
+  tests/e2e/print-hardening.spec.js \
+  tests/e2e/tebra-screen-contract.spec.js \
+  tests/e2e/uds-record-integrity.spec.js \
+  tests/e2e/visual-contracts.spec.js \
+  tests/e2e/workstation.spec.js
+
+safety_base=aed20964a1761b5affaaee9ef4e6925498156172
+assert_unchanged() {
+  scope_name=$1
+  shift
+  git diff --exit-code "$safety_base" -- "$@"
+  if git status --porcelain=v1 --untracked-files=all -- "$@" | rg .; then
+    echo "Unexpected changes in ${scope_name}" >&2
+    return 1
+  fi
+}
+assert_unchanged frozen-clinical-paths \
+  public/legacy src/legacy src/domain src/application src/documentation \
+  src/persistence tests/fixtures
+assert_unchanged stylesheets ':(glob)**/*.css'
+assert_unchanged visual-baseline-images \
+  ':(glob)tests/e2e/*-snapshots/**'
 ```
+
+Do not use local `npm run test:e2e`, `npm run test:ci`, `npm run test:visual`,
+`npm run test:print`, or `--update-snapshots` as release evidence: those mix
+Chromium-151-sensitive PNG/PDF assertions into a Chromium 149 run. A local
+`print-regression.spec.js` run may be diagnostic only. The pushed
+`Test the exact production artifact` job runs the complete suite with the
+pinned renderer and is the release gate.
 
 ### Running Playwright in a remote sandbox
 
-**The pinned browser is obtainable here. Download it rather than settling for
-whatever the sandbox preinstalled.** The repo pins `@playwright/test` 1.62,
-whose authoritative browser is chromium-1234 (Chromium 151), and
-
-```bash
-PLAYWRIGHT_BROWSERS_PATH=<scratch> PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 \
-  npx playwright install chromium
-```
-
-fetches exactly that build from `cdn.playwright.dev`, which the agent proxy
-allows. Run the suite with `PLAYWRIGHT_BROWSERS_PATH=<scratch>` and the repo's
-own `playwright.config.cjs` - no `executablePath` override - and it behaves as
-CI does. Verified: the §5 safety check below passes 7/7 against the committed
-baselines at `353c117`, so this environment reproduces the CI renderer.
-
-Two earlier phases assumed the preinstalled Chromium 149 was all that was
-available and reported the visual baselines as unfixable without a maintainer
-downloading CI artifacts. That was wrong, and it cost three phases of stale
-baselines. Check what you can install before declaring a browser blocker.
-
-The older Chromium-149 workaround, kept only for reference: locate the
-preinstalled binary, pass it as `PW_CHROMIUM` through a throwaway config, and
-never commit the path. It is interaction evidence only and is NOT a baseline
-authority.
+The current workspace has Chromium 149 and a throwaway local Playwright config
+at `/workspace/scratch/7f69ca486a14/playwright.current.config.cjs`. Use that
+exact config while this scratch workspace exists. If it does not, recreate an
+equivalent config from the recipe below. Never commit the executable path or
+run visual/print baseline updates through it. GitHub's repo-pinned
+chromium-1234 (Chromium 151) remains the authoritative visual and print
+renderer.
 
 ```js
 // /tmp/.../pw-local.cjs
@@ -294,14 +329,29 @@ module.exports = {
 };
 ```
 
-```bash
-PW_CHROMIUM=/path/to/chromium \
-  npx playwright test --config=/tmp/.../pw-local.cjs --reporter=line
-```
+Use the explicit nine-file command in §5, substituting the recreated config
+path. A generic all-suite command is intentionally not shown because it would
+reintroduce the false local baseline failures this split prevents.
 
 ### Current local verification status
 
-**Phase 3b, on this exact tree, temporary Chromium 149:**
+**Safety-closure working tree:** the local gate is complete. TypeScript/static
+checks, the production build, and **653/653 unit tests** pass.
+Focused synthetic interaction results include Injection safety **27/27**, UDS
+record integrity **22/22**, date/viewport regressions **5/5**, and UDS
+lock/focus handoffs **3/3**; these sets overlap and must not be summed. The
+explicit nine-file Chromium 149 interaction run passed **177/177** serially;
+the base-relative frozen, CSS, PNG, package/browser-config, and workflow checks
+also passed with no changes. Do not mark the closure complete or begin Phase 5
+until the pushed Chromium 151 exact-production-artifact job is green.
+Renderer-sensitive print and visual release evidence comes only from that
+pushed job, not local Chromium 149.
+
+All patient names and clinical details in the new coverage are synthetic test
+fixtures. The closure must not add captured production data, touch the frozen
+engine/persistence paths, or create a new visual baseline from Chromium 149.
+
+**Historical Phase 3b evidence, temporary Chromium 149:**
 
 - `npm run check` - passed (typecheck plus the ~50 clinical assertions).
 - Unit tests - **602/602 passed** across 39 files (Phase 3a was 580/580; the 22
@@ -324,7 +374,7 @@ PW_CHROMIUM=/path/to/chromium \
   components that had no predecessor to delete, so there was no MEDITECH rule
   to remove at its source. The posture's other four clauses hold (no new
   `!important`, no dead conditionals, no class derived from copy, all copy in
-  `vocabulary.ts`). If the net-down clause is to be met, Phase 5's deletion of
+  `vocabulary.ts`). If the net-down clause is to be met, Phase 6's deletion of
   dead MEDITECH CSS is where it happens, and it should be sized against this
   number.
 - **Visual snapshots pass.** The eight Linux baselines were regenerated on the
@@ -363,31 +413,18 @@ PW_CHROMIUM=/path/to/chromium \
 
 ### Visual baselines
 
-Pinned Chromium 151 CI run `34058368138` captured all eight current Linux
-states after the functional setup checks. Each initial/retry pair was
-byte-identical. Every image was reviewed at full resolution: empty chart,
-Dashboard worklist, active draft at 1366, active draft at 840, minimum 800×600,
-ready to sign, signed/read-only, and the deliberate 390px unsupported gate.
-They contain fixed test fixtures only, not production patient data.
+The eight committed Linux states are current for the Phase 4 base and passed in
+the pinned Chromium 151 production-artifact job: empty chart, Dashboard
+worklist, active draft at 1366, active draft at 840, minimum 800×600, ready to
+sign, signed/read-only, and the deliberate 390px unsupported gate. They contain
+fixed synthetic fixtures only, not production patient data.
 
-Those exact CI `*-actual.png` files are now the committed Linux baselines.
-Temporary Chromium 149 differs from them by roughly 3–5%, so it is not a
-baseline authority and the threshold must not be loosened to accommodate it.
-The `win32/` set still shows the pre-Phase-2b shell and can only be refreshed on
-that platform.
-
-**Re-run that check whenever the version gap widens or the capture settings
-change.** The method: `git worktree add <tmp> <last green commit>`, symlink
-`node_modules`, build, and run `visual-snapshots.spec.js` there against the
-committed baselines. If they pass, regeneration is safe.
-
-```bash
-npx playwright test --config=/tmp/.../pw-local.cjs \
-  tests/e2e/visual-snapshots.spec.js --update-snapshots
-```
-
-Review every regenerated image. `win32/` is a different platform and **cannot**
-be refreshed here — it remains flagged as stale in the PR body.
+Chromium 151 is the sole visual authority. Temporary Chromium 149 differs from
+these images by roughly 3–5%, so it must not regenerate them and the threshold
+must not be loosened to accommodate it. If an intentional later visual change
+requires new baselines, capture them with the pinned Chromium 151 job and
+review every image at full resolution before promotion. The `win32/` set still
+shows the pre-Phase-2b shell and can only be refreshed on that platform.
 
 ---
 
@@ -423,18 +460,26 @@ be refreshed here — it remains flagged as stale in the PR body.
    containment *after* its screenshot. While the baseline was stale the
    screenshot assertion threw first, so those containment checks never ran -
    and a genuinely clipped control sat undetected behind a failure everyone
-   (including this handoff) had written off as cosmetic. Regenerate baselines
-   promptly; a stale one is not a harmless red.
+   (including this handoff) had written off as cosmetic. For an intentional
+   visual change, regenerate promptly on authoritative Chromium 151 and review
+   the image; this nonvisual safety closure must keep the current PNGs
+   unchanged. A stale baseline is not a harmless red, and neither is a
+   mismatched-renderer diff evidence that a baseline is stale.
+   The safety closure repairs the *synthetic setup* for two Injection v4 rows in
+   `visual-snapshots.spec.js` by supplying required empty encounter sections
+   and matching the accessible row name with its date suffix. All seven tests
+   now reach their eight screenshot assertions. No PNG, CSS, threshold, browser
+   config, package pin, or workflow changed.
 8. **A transient must never enter a baseline.** The toast clears on a 4s
    timer, so whether it appears in a capture depends on how long the preceding
    steps took. It is excluded in `CAPTURE_STYLES`, alongside the print action.
 9. **A panel that is not mounted cannot hear an event.** Phase 3b's chart
    replaces the work area, so `UdsPanel` is unmounted while a chart is open.
-   Dispatching `WORKSTATION_OPEN_NOTE_REQUEST` in the same handler that
-   navigates to UDS sent it before the listener existed and the note silently
-   never opened. The shell now holds the id in a ref and dispatches from an
-   effect keyed on the workflow and the chart state, after the panel has
-   mounted. Any future shell-to-panel request has the same hazard.
+   The production chart path now calls the top-level `onOpenUdsRecord` boundary,
+   which validates and stages the durable record before navigation. The delayed
+   `WORKSTATION_OPEN_NOTE_REQUEST` path remains only as a fallback for a shell
+   without that callback; it must still dispatch after the panel mounts. Any
+   future event-only shell-to-panel request has the same timing hazard.
 10. **`.wfp-panel` renders encounter fields, not the record summary.** An e2e
    assertion that a resumed record shows its `summary` string will fail even
    when the restore worked. Assert a restored field value instead - the
@@ -455,6 +500,26 @@ be refreshed here — it remains flagged as stale in the PR body.
    `verdict.blockers` when the presentation needs to tell them apart. Do not
    "fix" this in `readiness-projection.ts`: it is frozen, and presentation is
    the layer that chooses treatment, exactly as it chooses the words.
+13. **UDS and Injection have deliberately different concurrency guarantees.**
+   UDS holds an exclusive same-origin Web Lock in the unkeyed application
+   parent for the whole time UDS is selected, so keyed panel remounts and chart
+   Open/New handoffs keep one owner. Every mutation requires owned access;
+   pending, busy, or unsupported sessions are read-only and contenders do not
+   auto-promote. Leave and reopen UDS after the owner releases the lock.
+   A durable change to the active UDS row also latches an output quarantine:
+   stale report preview, print, panel copy, shell copy, and confirmations stay
+   unavailable until staff explicitly re-open freshly validated bytes.
+   Pre-deploy tabs and direct/noncooperating `localStorage` writers do not honor
+   that lock, and there is no CAS against them: close or reload old tabs during
+   rollout. Injection re-reads durable bytes, reacts to storage events, and
+   embeds its material semantic sidecar in the frozen writer's same write, but
+   it has no Web Lock or CAS. One editable Injection tab is the supported mode.
+14. **A cached chart row is not authority for patient identity.** Both UDS and
+   Injection chart opens re-read the durable record and compare normalized
+   name plus DOB before changing patient, workflow, or active-record state. A
+   mismatch keeps the chart open, writes nothing, announces the problem, and
+   defers index refresh until the chart closes so the user must search and
+   explicitly select the record under its current patient.
 
 ---
 
@@ -484,20 +549,18 @@ be refreshed here — it remains flagged as stale in the PR body.
 
 ## 8. Last known CI status — verify before acting
 
-PR #62 remote head `b791b21` (Phase 3a) passed `Type, static, unit, and
-production build` and the full pinned Chromium 151 `Test the exact production
-artifact` job. `Build and Deploy` failed only because Azure Static Web Apps
-reported the maximum number of staging environments. That cap is unchanged and
-has since got worse: five drafts are open against `main` (#56, #59, #60, #62,
-#63) against a Free-tier limit of three. No deployment started and its smoke
-test was therefore skipped. Do not delete an environment without separate
-authorization.
+PR #62 remote head `aed2096` (Phase 4 documentation correction) passed the
+pinned Chromium 151 production browser, visual, and print job **129/129**.
+The committed Linux baselines are current for that base. `Build and Deploy`
+remains the only known external red because Azure Static Web Apps is at its
+staging-environment capacity; no deployment started. Do not delete an
+environment without separate authorization.
 
-Push the Phase 3b commit and inspect its exact-artifact job. Expect the seven
-`.cd2004-shell` visual-snapshot tests to fail and the rest of that job to pass;
-the failing run is what produces the `*-actual.png` files the closure commit
-promotes. Treat pinned Chromium 151 as visual/print authority; temporary
-Chromium 149 is interaction evidence only.
+The safety-closure working tree has not yet established an authoritative CI
+result. Push it only after the complete local gate passes, then inspect the
+exact-artifact job. Treat pinned Chromium 151 as visual/print authority;
+temporary Chromium 149 is interaction evidence only. Do not refresh snapshots
+merely because Chromium 149 reports pixel drift.
 
 ---
 
@@ -509,13 +572,14 @@ Chromium 149 is interaction evidence only.
 | **2c — Authenticated-product refinement** | **On PR #62.** Measured geometry, responsive/keyboard repairs, lifecycle footer, inspector, and UDS scroll ownership. |
 | **2d — Visual closure** | **On PR #62; exact artifact green.** Eight reviewed Chromium 151 Linux baselines; `win32/` remains stale for a Windows maintainer. |
 | **3a — Global Open Notes** | **On PR #62.** Shared Injection/UDS table with date sort, lock, lifecycle, and whole-row open conventions. |
-| **3b — Patient conventions** | **This commit; require green CI.** Facesheet cards; separate modern patient Notes filters/list; patient search and hover card; page-level coral split `New Note`, backed actions only. |
+| **3b — Patient conventions** | **On PR #62.** Facesheet cards; separate modern patient Notes filters/list; patient search and hover card; page-level coral split `New Note`, backed actions only. |
 | **3c — Retire the desktop chrome** | **On PR #62.** Menu bar, status bar and transaction-code chip deleted; account menu and Toast added. |
-| **3d — One list grammar** | **This commit.** The Dashboard's 2004 worklist table becomes the same card list the patient chart uses. |
-| **3e — Visual closure** | **This commit.** Eight baselines regenerated on the pinned browser and reviewed; a clipped 800x600 control fixed; the toast excluded from captures. |
+| **3d — One list grammar** | **On PR #62.** The Dashboard's 2004 worklist table becomes the same card list the patient chart uses. |
+| **3e — Visual closure** | **On PR #62; exact artifact green.** Eight baselines regenerated on the pinned browser and reviewed; a clipped 800x600 control fixed; the toast excluded from captures. |
 | ~~3b/3c visual closure~~ | ~~Superseded by 3e; done.~~ |
-| **4 — Product voice** | **This commit.** Contemporary duotone icon set; spot illustrations for empty states; Plus Jakarta Sans on the display tier; the square-control reset removed at its source so components own their geometry; masthead lightened; the readiness verdict stops rendering "not filled in yet" as a clinical stop. Information architecture deliberately unchanged — see `PLAN.md` 2.1, amended. |
-| **5 — Kiosk** | Kiosk shell (`?kiosk=1`), 7-step injection stepper over existing `InjectionPanel` tabs, touch site picker, Care Checklist rail, sign-and-next card. |
+| **4 — Product voice** | **On PR #62.** Contemporary duotone icon set; spot illustrations for empty states; Plus Jakarta Sans on the display tier; component-owned geometry; lighter masthead; neutral treatment for an untouched readiness state. Information architecture deliberately unchanged — see `PLAN.md` 2.1, amended. |
+| **Safety closure** | **Working tree; full gate and CI pending.** Synthetic record-integrity, draft-preservation, navigation-veto and accessibility coverage before Kiosk work. |
+| **5 — Kiosk** | **Next only after safety closure CI.** Kiosk shell (`?kiosk=1`), 7-step injection stepper over existing `InjectionPanel` tabs, touch site picker, Care Checklist rail, sign-and-next card. |
 | **6 — Cleanup** | Delete dead MEDITECH CSS, update `README.md`. |
 | **(unscheduled)** | The `cd2004-*` / `meditech-*` / `wfp-*` class rename. Mechanical, ~1000 usages, touches every e2e selector — **its own phase**, never mixed with design work. |
 

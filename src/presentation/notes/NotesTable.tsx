@@ -1,10 +1,10 @@
 import { useMemo, useState } from "preact/hooks";
-import { NOTES_TABLE, openNoteRowLabel } from "../vocabulary";
+import { NOTES_TABLE } from "../vocabulary";
 import { LockIndicator } from "./LockIndicator";
 import {
   DEFAULT_NOTE_SORT,
   nextNoteSort,
-  noteStatusLabel,
+  notesTableRowAccessibleLabel,
   sortNotesTableRows,
   type NoteSort,
   type NoteSortKey,
@@ -69,11 +69,7 @@ export function NotesTable({ rows, label, emptyMessage, onOpen }: NotesTableProp
               tabIndex={0}
               data-records-open={row.recordId}
               data-note-type={row.noteType}
-              aria-label={openNoteRowLabel(
-                row.patientLabel,
-                row.typeLabel,
-                noteStatusLabel(row.status),
-              )}
+              aria-label={notesTableRowAccessibleLabel(row, sortedRows)}
               onClick={() => onOpen(row.recordId)}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" && event.key !== " ") return;
