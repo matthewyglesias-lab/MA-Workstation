@@ -1113,7 +1113,12 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const activateWorkflow = (workflow: WorkflowId): boolean => {
     coordinator.navigate(DESKTOP_TO_APPLICATION[workflow]);
     runtime.activate(workflow);
-    coordinator.synchronize();
+    // A query-driven kiosk launch can arrive from a child mount effect before
+    // this parent's coordinator subscription effect has attached. Publish the
+    // synchronized snapshot directly as well as through the normal subscriber
+    // path so controlled activeWorkflow cannot remain stuck on Dashboard until
+    // an unrelated legacy mutation happens to refresh it.
+    setClinical(coordinator.synchronize());
     refresh();
     return true;
   };

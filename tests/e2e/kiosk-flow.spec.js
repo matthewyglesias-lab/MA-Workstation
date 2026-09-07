@@ -33,11 +33,13 @@ test.describe('Injection focus workspace', () => {
       let fullscreenElement = null;
       window.__kioskFullscreenRequests = 0;
       window.__kioskFullscreenExits = 0;
-      Object.defineProperty(document, 'fullscreenElement', {
+      Object.defineProperty(Document.prototype, 'fullscreenElement', {
         configurable: true,
         get: () => fullscreenElement,
       });
-      Object.defineProperty(document.documentElement, 'requestFullscreen', {
+      // Init scripts run before documentElement exists. Install the browser
+      // contract on the prototypes the eventual root/document inherit from.
+      Object.defineProperty(Element.prototype, 'requestFullscreen', {
         configurable: true,
         value: async function requestFullscreen() {
           window.__kioskFullscreenRequests += 1;
@@ -45,7 +47,7 @@ test.describe('Injection focus workspace', () => {
           document.dispatchEvent(new Event('fullscreenchange'));
         },
       });
-      Object.defineProperty(document, 'exitFullscreen', {
+      Object.defineProperty(Document.prototype, 'exitFullscreen', {
         configurable: true,
         value: async function exitFullscreen() {
           window.__kioskFullscreenExits += 1;
