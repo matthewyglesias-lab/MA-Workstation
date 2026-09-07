@@ -11,6 +11,13 @@ export interface InjectionDraftBridgeOptions {
   typedDirty: boolean;
   readLegacyState: () => InjectionDraftState;
   saveLegacyDraft: () => boolean;
+  /**
+   * Explicit lifecycle saves reassert the full compatibility projection.
+   * Background autosave can leave this false: ordinary typed edits already
+   * project changed chip facts synchronously, while identity-only edits must
+   * not rebuild the hidden chip workspace merely because the timer fired.
+   */
+  forceChipState?: boolean;
   /** Test seams for the browser-only compatibility projection. */
   mirrorEncounter?: (encounter: InjectionEncounter) => void;
   enableLegacyDraftGate?: () => (() => void) | undefined;
@@ -69,18 +76,9 @@ export function saveFullInjectionDraft({
   typedDirty,
   readLegacyState,
   saveLegacyDraft,
-  /*
-   * Deliberately not `forceChipState`. This mirror runs on the debounced
-   * autosave, so forcing rebuilt the legacy hidden chip workspace on every
-   * save - including saves whose only edit was a patient name or a free-text
-   * field, which own none of that state. `injection-legacy-mirror` says so
-   * itself where it memoises the fingerprint: only rerender when a
-   * chip/provenance fact actually changes. The memo is what keeps the write
-   * correct; the mount-time mirror establishes it with a force, and every
-   * chip-relevant edit updates it. Forcing here only paid for a rebuild that
-   * reapplied identical state.
-   */
-  mirrorEncounter = (value) => mirrorInjectionEncounterToLegacyDom(value),
+  forceChipState = true,
+  mirrorEncounter = (value) =>
+    mirrorInjectionEncounterToLegacyDom(value, { forceChipState }),
   enableLegacyDraftGate = enableOneReadLegacyDraftGate,
   extensionAvailable = () => true,
 }: InjectionDraftBridgeOptions): boolean {

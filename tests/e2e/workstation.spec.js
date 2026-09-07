@@ -292,6 +292,14 @@ test.describe('MA Workstation browser journeys', () => {
     const panel = page.locator('.wfp-panel');
     await openInjectionTab(page, 'Order');
 
+    // The typed panel's first projection installs this pull accessor before
+    // its one required compatibility-chip initialization. Measure only the
+    // subsequent identity edits, not startup work that can land after the
+    // panel first becomes visible on a slower browser runner.
+    await expect.poll(() => page.evaluate(() =>
+      typeof window.ipmgInjectionNoteFacts
+    )).toBe('function');
+
     await page.evaluate(() => {
       const original = window.ipmgSetInjectionChipState;
       window.__identityChipBridgeCalls = 0;
@@ -1352,7 +1360,9 @@ test.describe('MA Workstation browser journeys', () => {
     // plain Escape in the worksheet must not jump to that stale control.
     await patientName.focus();
     await page.keyboard.press('F1');
+    await expect(helpDialog).toBeVisible();
     await page.keyboard.press('Escape');
+    await expect(helpDialog).toBeHidden();
     await expect(patientName).toBeFocused();
     await patientDob.focus();
     await page.keyboard.press('Escape');

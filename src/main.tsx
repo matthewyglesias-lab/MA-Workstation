@@ -688,6 +688,10 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         typedDirty: true,
         readLegacyState: runtime.injectionRecordState,
         saveLegacyDraft: runtime.saveDraft,
+        // Field edits have already synchronously projected changed chip
+        // facts. Do not make patient-only background saves rebuild the heavy
+        // hidden chip workspace; explicit lifecycle saves still force it.
+        forceChipState: false,
         extensionAvailable: injectionPresentationExtensionAvailable,
       });
       if (saved) rememberInjectionDirty(false);

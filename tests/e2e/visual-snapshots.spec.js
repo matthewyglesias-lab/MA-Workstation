@@ -88,7 +88,8 @@ const CAPTURE_STYLES = `
      depends on how long the steps before settleForCapture happened to take,
      which is a race, not a contract - so a baseline must never contain one.
      Its content and live-region behavior are covered by workstation.spec.js. */
-  html[data-visual-regression="true"] .tebra-toast-region {
+  html[data-visual-regression="true"] .tebra-toast-region,
+  html[data-visual-regression="true"] #toast {
     display: none !important;
   }
 `;
