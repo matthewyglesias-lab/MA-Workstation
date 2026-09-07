@@ -133,6 +133,11 @@ test.describe('Injection focus workspace', () => {
     await expect.poll(() => page.evaluate(() =>
       document.documentElement.scrollWidth - window.innerWidth
     )).toBeLessThanOrEqual(1);
+    // Reduced motion here is off, not absent. `clinical-desktop.css` applies
+    // the standard `transition-duration: 0.01ms !important` reset rather than
+    // 0, deliberately, so a `transitionend` listener still fires and no
+    // handler waiting on one can hang. An exact zero is therefore a value this
+    // repository never produces; assert no perceptible motion instead.
     expect(await prepare.evaluate((node) => Math.max(
       0,
       ...getComputedStyle(node).transitionDuration.split(',').map((value) =>
@@ -140,7 +145,7 @@ test.describe('Injection focus workspace', () => {
           ? Number.parseFloat(value)
           : Number.parseFloat(value) * 1000
       ),
-    ))).toBe(0);
+    ))).toBeLessThanOrEqual(0.01);
   });
 
   test('moves a synthetic note from Identify through Sign and starts the next patient', async ({ page }) => {
