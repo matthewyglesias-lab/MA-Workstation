@@ -249,10 +249,30 @@ git diff --stat -- public/legacy src/legacy src/domain src/documentation \
 
 ### Running Playwright in a remote sandbox
 
-The repo pins `@playwright/test` 1.62, whose authoritative browser is
-chromium-1234 (Chromium 151). This audit used a temporary Chromium 149 binary
-through a throwaway config. Its scratch path is ephemeral: locate the current
-binary, pass it as `PW_CHROMIUM`, and never commit the path.
+**The pinned browser is obtainable here. Download it rather than settling for
+whatever the sandbox preinstalled.** The repo pins `@playwright/test` 1.62,
+whose authoritative browser is chromium-1234 (Chromium 151), and
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH=<scratch> PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 \
+  npx playwright install chromium
+```
+
+fetches exactly that build from `cdn.playwright.dev`, which the agent proxy
+allows. Run the suite with `PLAYWRIGHT_BROWSERS_PATH=<scratch>` and the repo's
+own `playwright.config.cjs` - no `executablePath` override - and it behaves as
+CI does. Verified: the §5 safety check below passes 7/7 against the committed
+baselines at `353c117`, so this environment reproduces the CI renderer.
+
+Two earlier phases assumed the preinstalled Chromium 149 was all that was
+available and reported the visual baselines as unfixable without a maintainer
+downloading CI artifacts. That was wrong, and it cost three phases of stale
+baselines. Check what you can install before declaring a browser blocker.
+
+The older Chromium-149 workaround, kept only for reference: locate the
+preinstalled binary, pass it as `PW_CHROMIUM` through a throwaway config, and
+never commit the path. It is interaction evidence only and is NOT a baseline
+authority.
 
 ```js
 // /tmp/.../pw-local.cjs
@@ -307,9 +327,10 @@ PW_CHROMIUM=/path/to/chromium \
   `vocabulary.ts`). If the net-down clause is to be met, Phase 5's deletion of
   dead MEDITECH CSS is where it happens, and it should be sized against this
   number.
-- **Visual snapshots are expected to FAIL on this head.** Phase 3b changes the
-  section rail and the work area, so all seven `.cd2004-shell` baselines are
-  stale by construction. They were not regenerated here - see below.
+- **Visual snapshots pass.** The eight Linux baselines were regenerated on the
+  pinned chromium-1234 after the §5 safety check confirmed this environment
+  reproduces the CI renderer, and every image was reviewed at full resolution.
+  The full suite is 129/129.
 
 **Prior (Phase 3a) status, retained for comparison:**
 
@@ -397,14 +418,24 @@ be refreshed here — it remains flagged as stale in the PR body.
    Modifier classes come from state keys.
 6. **Do not leave dead conditionals.** Collapsing a distinction is fine; leaving
    a three-branch ternary whose branches are now identical is not.
-7. **A panel that is not mounted cannot hear an event.** Phase 3b's chart
+7. **The stale baseline was hiding a real failure.** `minimum workstation
+   keeps command disclosure and clinical actions reachable` asserts 800x600
+   containment *after* its screenshot. While the baseline was stale the
+   screenshot assertion threw first, so those containment checks never ran -
+   and a genuinely clipped control sat undetected behind a failure everyone
+   (including this handoff) had written off as cosmetic. Regenerate baselines
+   promptly; a stale one is not a harmless red.
+8. **A transient must never enter a baseline.** The toast clears on a 4s
+   timer, so whether it appears in a capture depends on how long the preceding
+   steps took. It is excluded in `CAPTURE_STYLES`, alongside the print action.
+9. **A panel that is not mounted cannot hear an event.** Phase 3b's chart
    replaces the work area, so `UdsPanel` is unmounted while a chart is open.
    Dispatching `WORKSTATION_OPEN_NOTE_REQUEST` in the same handler that
    navigates to UDS sent it before the listener existed and the note silently
    never opened. The shell now holds the id in a ref and dispatches from an
    effect keyed on the workflow and the chart state, after the panel has
    mounted. Any future shell-to-panel request has the same hazard.
-8. **`.wfp-panel` renders encounter fields, not the record summary.** An e2e
+10. **`.wfp-panel` renders encounter fields, not the record summary.** An e2e
    assertion that a resumed record shows its `summary` string will fail even
    when the restore worked. Assert a restored field value instead - the
    existing UDS journeys use `input[placeholder="Last, First"]`.
@@ -465,7 +496,8 @@ Chromium 149 is interaction evidence only.
 | **3b — Patient conventions** | **This commit; require green CI.** Facesheet cards; separate modern patient Notes filters/list; patient search and hover card; page-level coral split `New Note`, backed actions only. |
 | **3c — Retire the desktop chrome** | **On PR #62.** Menu bar, status bar and transaction-code chip deleted; account menu and Toast added. |
 | **3d — One list grammar** | **This commit.** The Dashboard's 2004 worklist table becomes the same card list the patient chart uses. |
-| **3b/3c visual closure** | **Next, before Phase 4.** Promote the pinned Chromium 151 `*-actual.png` files as the eight Linux baselines, reviewed image by image, in their own commit — exactly as Phase 2d did. |
+| **3e — Visual closure** | **This commit.** Eight baselines regenerated on the pinned browser and reviewed; a clipped 800x600 control fixed; the toast excluded from captures. |
+| ~~3b/3c visual closure~~ | ~~Superseded by 3e.~~ **Next, before Phase 4.** Promote the pinned Chromium 151 `*-actual.png` files as the eight Linux baselines, reviewed image by image, in their own commit — exactly as Phase 2d did. |
 | **4 — Kiosk** | Kiosk shell (`?kiosk=1`), 7-step injection stepper over existing `InjectionPanel` tabs, touch site picker, Care Checklist rail, sign-and-next card. |
 | **5 — Cleanup** | Delete dead MEDITECH CSS, update `README.md`. |
 | **(unscheduled)** | The `cd2004-*` / `meditech-*` / `wfp-*` class rename. Mechanical, ~1000 usages, touches every e2e selector — **its own phase**, never mixed with design work. |

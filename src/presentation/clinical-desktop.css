@@ -1854,7 +1854,8 @@ input[type="radio"]:disabled {
 
   .cd2004-worklist-tabs button {
     justify-content: space-between;
-  }}
+  }
+}
 
 
 /* Workflow host and legacy bridge */
@@ -3230,7 +3231,8 @@ input[type="radio"]:disabled {
 
   .cd2004-readiness-flags span {
     padding-inline: 3px;
-  }}
+  }
+}
 
 @media (max-width: 320px) {
   .cd2004-toolbar-button {
@@ -3297,7 +3299,8 @@ input[type="radio"]:disabled {
  * Print renderers remain responsible for their document layout. These rules only
  * remove the new workstation chrome and expose the active workflow content.
  */
-@media print {  .cd2004-print-exclude,
+@media print {
+  .cd2004-print-exclude,
   .cd2004-record-actions,
   .cd2004-window-titlebar,
   .cd2004-window-toolbar,

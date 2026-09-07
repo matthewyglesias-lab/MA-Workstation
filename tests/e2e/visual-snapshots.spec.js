@@ -83,6 +83,14 @@ const CAPTURE_STYLES = `
   html[data-visual-regression="true"] [data-patient-screening-print] {
     display: none !important;
   }
+
+  /* The toast clears itself on a timer. Whether it is still up at capture
+     depends on how long the steps before settleForCapture happened to take,
+     which is a race, not a contract - so a baseline must never contain one.
+     Its content and live-region behavior are covered by workstation.spec.js. */
+  html[data-visual-regression="true"] .tebra-toast-region {
+    display: none !important;
+  }
 `;
 
 const FIXED_LOCAL_DATA = {

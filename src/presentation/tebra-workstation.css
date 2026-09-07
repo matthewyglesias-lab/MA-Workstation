@@ -2679,15 +2679,23 @@
     padding: 4px 6px;
   }
 
+  /*
+   * Sized to its summary, not to a fixed 34px. The summary is 38px here, so a
+   * 34px basis let it hang 4px past its own parent - invisible while the
+   * status bar sat underneath and absorbed it, and a clipped control the
+   * moment that bar was retired and the disclosure landed on the viewport
+   * edge. Four pixels of workspace is the right price for a reachable one.
+   */
   .tebra-power-commands {
-    flex-basis: 34px;
-    min-height: 34px;
+    flex: 0 0 auto;
+    min-height: 38px;
     padding: 2px 8px;
   }
 
   .tebra-power-commands > summary {
     min-height: 28px;
-  }}
+  }
+}
 
 @media screen and (max-height: 700px) and (min-width: 800px) {
   .meditech-record-list .cd2004-nav-item {
@@ -2697,7 +2705,8 @@
   .meditech-function-heading {
     min-height: 19px;
     padding-block: 2px;
-  }}
+  }
+}
 
 /*
  * Compact workstation widths. The chart keeps the authenticated product's
@@ -2795,7 +2804,8 @@
   }
 }
 
-@media screen and (forced-colors: active) {  .cd2004-window,
+@media screen and (forced-colors: active) {
+  .cd2004-window,
   .cd2004-navigator.meditech-record-list.tebra-section-rail,
   .meditech-workstation-gate-window,
   .tebra-power-commands .meditech-command-deck{
