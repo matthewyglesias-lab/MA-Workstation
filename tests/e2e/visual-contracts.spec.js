@@ -310,7 +310,9 @@ function expectedContract(workflow, viewport) {
       text: module.headingText,
       tag: isHome ? 'H1' : 'H2',
       style: {
-        color: 'rgb(0, 58, 67)',
+        // Cream on the Dashboard's teal band; teal-900 on the workflow
+        // headings, which still sit on a light surface.
+        color: isHome ? 'rgb(248, 243, 235)' : 'rgb(0, 58, 67)',
         fontFamily: expect.stringMatching(/^"Plus Jakarta Sans Variable"/),
         fontSize: isHome ? headingFontSize : '16px',
         fontWeight: '700',
@@ -357,9 +359,16 @@ function expectedContract(workflow, viewport) {
       topLevelColumns: 1,
       horizontalOverflow: false,
       panelHorizontalOverflow: false,
+      // The Dashboard hero is a deep-teal band with cream type. Counting
+      // Tebra's own production CSS, #004952 is their second most used
+      // background after white and #f8f3eb their second most used text
+      // colour - cream exists to sit on that teal, and alternating teal
+      // against white is the most recognisable thing about how they look. A
+      // white hero here made the first screen of the shift read as any SaaS
+      // product. Still flush and square: it is a section band, not a card.
       hero: {
-        backgroundColor: isHome ? 'rgb(255, 255, 255)' : 'rgb(246, 248, 248)',
-        borderBottomColor: isHome ? 'rgb(0, 58, 67)' : 'rgb(210, 220, 218)',
+        backgroundColor: isHome ? 'rgb(0, 73, 82)' : 'rgb(246, 248, 248)',
+        borderBottomColor: isHome ? 'rgb(248, 243, 235)' : 'rgb(210, 220, 218)',
         borderRadius: '0px',
         boxShadow: 'none',
         hasRelief: false

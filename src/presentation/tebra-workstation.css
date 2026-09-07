@@ -1148,15 +1148,25 @@
     background: var(--tw-surface-panel);
   }
 
+  /*
+   * The Dashboard opens on the same teal block the chart does.
+   *
+   * This is the first screen of the shift, and it was the strongest argument
+   * that the workstation had drifted into looking like any SaaS product: an
+   * all-white page with one coral button on it. Tebra alternates blocks of
+   * deep teal against white; the chart's patient banner does that now, and
+   * the landing screen has to agree with it or the two most-used screens
+   * belong to different products.
+   */
   .cd2004-worklist-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 20px;
     min-width: 0;
-    padding: 22px 24px 18px;
-    color: var(--tw-text-primary);
-    background: var(--tw-surface-panel);
+    padding: 24px 24px 26px;
+    color: var(--tw-on-inverse);
+    background: var(--tw-teal-800);
     border: 0;
     box-shadow: none;
   }
@@ -1167,7 +1177,7 @@
 
   .cd2004-worklist-header h1 {
     margin: 0;
-    color: var(--tw-text-primary);
+    color: var(--tw-on-inverse);
     font-family: var(--tw-font-display);
     font-size: 32px;
     font-weight: 700;
@@ -1179,7 +1189,7 @@
   .cd2004-worklist-header p {
     margin: 3px 0 0;
     overflow: hidden;
-    color: var(--tw-text-secondary);
+    color: var(--tw-teal-200);
     font-size: var(--tw-fs-ws-meta);
     line-height: var(--tw-lh-ws-meta);
     text-overflow: ellipsis;
@@ -1606,16 +1616,32 @@
     background: var(--tw-surface-page);
   }
 
+  /*
+   * The patient banner is a teal block, not another white card.
+   *
+   * Counting Tebra's own production stylesheets: #004952 is their second most
+   * used background after white (45 occurrences), and #f8f3eb - warm cream -
+   * is their second most used text colour (76). Cream text only exists to sit
+   * on that teal. Alternating full blocks of deep teal against white is the
+   * single most recognisable thing about how Tebra looks, and a shell that
+   * spends teal on a 65px header strip and renders everything below it as
+   * white cards on near-white has taken their palette and used only the pale
+   * end of it. That reads as any SaaS product, which is exactly what this is
+   * not meant to be.
+   *
+   * The patient is the anchor of the chart, so the patient gets the block.
+   */
   .tebra-facesheet-banner {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
     align-items: flex-start;
     justify-content: space-between;
-    padding: 16px;
-    background: var(--tw-surface-panel);
-    border-radius: var(--tw-radius-card);
-    box-shadow: var(--tw-shadow-elevation-1);
+    padding: 20px;
+    color: var(--tw-on-inverse);
+    background: var(--tw-teal-800);
+    border-radius: var(--tw-radius-panel);
+    box-shadow: none;
   }
 
   .tebra-facesheet-identity {
@@ -1652,7 +1678,7 @@
     flex-wrap: wrap;
     gap: 6px;
     margin: 2px 0 0;
-    color: var(--tw-text-secondary);
+    color: var(--tw-teal-200);
     font: var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
   }
 
@@ -1670,15 +1696,43 @@
   }
 
   .tebra-facesheet-allergies strong {
-    color: var(--tw-text-secondary);
+    color: var(--tw-teal-200);
     font-size: var(--tw-fs-ws-label);
     letter-spacing: var(--tw-ls-ws-label);
     text-transform: uppercase;
   }
 
   .tebra-facesheet-scope {
-    color: var(--tw-text-secondary);
+    color: var(--tw-teal-200);
     font-size: var(--tw-fs-ws-meta);
+  }
+
+  /*
+   * On the teal block the secondary actions become ghost buttons in cream -
+   * Tebra's own treatment for a control group inside a teal section. The coral
+   * primary is unchanged: it is the one action that should look the same
+   * wherever it lands.
+   */
+  .tebra-facesheet-banner .tebra-action-outlined {
+    color: var(--tw-on-inverse);
+    background: transparent;
+    border-color: var(--tw-teal-300);
+  }
+
+  .tebra-facesheet-banner .tebra-action-outlined:hover:not(:disabled) {
+    background: rgb(255 255 255 / 12%);
+  }
+
+  /*
+   * Disabled on teal is dimmer, not illegible. teal-500 as a border measured
+   * 1.74:1 against #004952 - under the 3:1 this project requires of a UI
+   * boundary - and teal-300 as text is 3.77:1, under the 4.5:1 it requires of
+   * body text. teal-200 reads at 6.73:1 and is still visibly quieter than the
+   * cream an enabled control uses, which is what "disabled" has to convey.
+   */
+  .tebra-facesheet-banner .tebra-action-outlined:disabled {
+    color: var(--tw-teal-200);
+    opacity: 0.7;
   }
 
   /* ------------------------------------------------------- hover card */

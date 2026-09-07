@@ -33,8 +33,16 @@ export function CareChecklistRail({ readiness }: CareChecklistRailProps) {
       </div>
       {verdictCopy ? (
         <>
+          {/* Same distinction the note inspector makes: `tone` reports
+              "blocked" for a merely pending item as readily as for a real
+              stop, and a note nobody has typed into yet must not wear the
+              clinical stop colour. `blockers` is reported separately. */}
           <div
-            class={`kiosk-checklist-verdict is-${verdict?.tone ?? "blocked"}`}
+            class={`kiosk-checklist-verdict is-${verdict?.tone ?? "blocked"}${
+              verdict?.tone === "blocked" && verdict.blockers === 0
+                ? " is-unfinished"
+                : ""
+            }`}
             role="status"
           >
             <strong>{verdictCopy.headline}</strong>

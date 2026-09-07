@@ -28,11 +28,11 @@
     min-width: 0;
     min-height: 88px;
     overflow: hidden;
-    color: var(--tw-text-primary);
-    background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-card);
-    box-shadow: var(--tw-shadow-elevation-1);
+    color: var(--tw-on-inverse);
+    background: var(--tw-teal-800);
+    border: 0;
+    border-radius: var(--tw-radius-panel);
+    box-shadow: none;
   }
 
   .cd2004-shell .kiosk-patient-identity {
@@ -40,14 +40,13 @@
     align-content: center;
     gap: 2px;
     min-width: 0;
-    padding: 12px 16px;
-    border-left: 4px solid var(--tw-teal-800);
-    border-right: 1px solid var(--tw-border-subtle);
+    padding: 12px 20px;
+    border-right: 1px solid rgb(255 255 255 / 16%);
   }
 
   .cd2004-shell .kiosk-patient-identity small,
   .cd2004-shell .kiosk-patient-facts dt {
-    color: var(--tw-text-secondary);
+    color: var(--tw-teal-200);
     font-size: var(--tw-fs-ws-label);
     font-weight: 700;
     line-height: var(--tw-lh-ws-label);
@@ -63,7 +62,7 @@
   }
 
   .cd2004-shell .kiosk-patient-identity > span {
-    color: var(--tw-text-secondary);
+    color: var(--tw-teal-200);
     font-size: var(--tw-fs-ws-meta);
     line-height: var(--tw-lh-ws-meta);
   }
@@ -81,15 +80,15 @@
     align-content: center;
     gap: 3px;
     min-width: 0;
-    padding: 10px 12px;
-    border-right: 1px solid var(--tw-border-subtle);
+    padding: 10px 14px;
+    border-right: 1px solid rgb(255 255 255 / 16%);
   }
 
   .cd2004-shell .kiosk-patient-facts dd {
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    color: var(--tw-text-primary);
+    color: var(--tw-on-inverse);
     font-size: var(--tw-fs-ws-base);
     font-weight: 700;
     font-variant-numeric: var(--tw-numeric-tabular);
@@ -108,9 +107,9 @@
     min-width: 44px;
     min-height: 44px;
     padding: 8px 14px;
-    color: var(--tw-teal-800);
-    background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-action-border);
+    color: var(--tw-on-inverse);
+    background: transparent;
+    border: 1px solid var(--tw-teal-300);
     border-radius: var(--tw-radius-action);
     font-size: var(--tw-fs-ws-dense);
     font-weight: 700;
@@ -122,7 +121,7 @@
   }
 
   .cd2004-shell .kiosk-shell-actions button:hover {
-    background: var(--tw-mint-50);
+    background: rgb(255 255 255 / 12%);
   }
 
   .cd2004-shell .kiosk-patient-mismatch {
@@ -317,6 +316,14 @@
 
   .cd2004-shell .kiosk-checklist-verdict.is-blocked {
     border-left-color: var(--tw-stop-border);
+  }
+
+  /* A note that is merely unfinished is documentation lifecycle, not danger.
+     See the same rule in workflow-panels.css for the full reasoning. */
+  .cd2004-shell .kiosk-checklist-verdict.is-blocked.is-unfinished {
+    color: var(--tw-note-incomplete-fg);
+    background: var(--tw-note-incomplete-bg);
+    border-left-color: var(--tw-note-incomplete-border);
   }
 
   .cd2004-shell .kiosk-checklist-verdict.is-review {
