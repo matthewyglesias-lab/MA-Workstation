@@ -1128,16 +1128,16 @@ test.describe('MA Workstation browser journeys', () => {
     });
     await page.goto('/');
 
-    const workQueue = page.locator('.cd2004-worklist-table');
+    const workQueue = page.locator('.cd2004-worklist-sheet');
     await expect(page.getByRole('heading', { name: 'Open Notes' })).toBeVisible();
     await expect(page.getByRole('tab', { name: /All work/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Needs review/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Today/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Drafts/ })).toBeVisible();
     await expect(workQueue.getByText('Chen, Avery', { exact: true })).toHaveCount(1);
-    await expect(workQueue.locator('tbody tr')).toHaveCount(3);
+    await expect(workQueue.locator('[data-worklist-row]')).toHaveCount(3);
     await page.getByRole('tab', { name: /Needs review/ }).click();
-    await expect(workQueue.locator('tbody tr')).toHaveCount(1);
+    await expect(workQueue.locator('[data-worklist-row]')).toHaveCount(1);
     await expect(workQueue.getByRole('button', { name: 'Review', exact: true })).toBeVisible();
     await expect(page.locator('.cd2004-activity-list')).toHaveCount(0);
   });
@@ -2573,7 +2573,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
     await openWorkflow(page, 'home');
-    const records = page.locator('.cd2004-worklist-table');
+    const records = page.locator('.cd2004-worklist-sheet');
     const savedDraftsTab = page.getByRole('tab', { name: /Drafts/ });
     await expect(savedDraftsTab).toContainText('1');
     await savedDraftsTab.click();

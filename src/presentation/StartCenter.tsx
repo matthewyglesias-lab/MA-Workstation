@@ -1,4 +1,4 @@
-import { NOTES, RECORD, SHELL, WORKLIST_EMPTY } from "./vocabulary";
+import { NOTES, RECORD, SHELL, WORKLIST_EMPTY, noteCount } from "./vocabulary";
 import { useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
 import {
@@ -122,6 +122,15 @@ function worklistEmptyHint(filter: WorklistFilter) {
   return WORKLIST_EMPTY.allHint;
 }
 
+/** Status is never colour alone: every tone renders a glyph and a word. */
+const TONE_GLYPH: Record<ClinicalTone, string> = {
+  stop: "×",
+  warning: "!",
+  ready: "✓",
+  info: "·",
+  neutral: "·",
+};
+
 export function StartCenter({
   needsReview,
   todayQueue,
@@ -140,8 +149,7 @@ export function StartCenter({
     (item) => !reviewIds.has(item.id),
   );
   // Injection records are a local record register. Only editable records
-  // belong on the current worklist; locked history is intentionally kept in
-  // Record List.
+  // belong on the current worklist; signed history stays in Open Notes.
   const savedDrafts = injectionRecords.filter(
     (record) => !isLockedRecord(record),
   );
@@ -183,7 +191,6 @@ export function StartCenter({
       </header>
 
       <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters">
-        <span class="cd2004-worklist-filter-label">VIEW:</span>
         {FILTERS.map((candidate) => (
           <button
             key={candidate.id}
@@ -199,72 +206,59 @@ export function StartCenter({
         ))}
       </div>
 
+      {/*
+        The same list grammar the patient chart uses, not a second table with
+        its own column headings. Tebra's product has one way of presenting a
+        list of work; two of them, on the two screens a medical assistant sees
+        most, is the seam a Tebra user would notice first.
+      */}
       <div class="cd2004-worklist-sheet">
-        <table class="cd2004-worklist-table">
-          <thead>
-            <tr>
-              <th>Time / priority</th>
-              <th>Patient / visit</th>
-              <th>Task / medication</th>
-              <th>State</th>
-              <th>
-                <span class="cd2004-visually-hidden">Action</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        {visibleRows.length ? (
+          <ul class="tebra-record-list">
             {visibleRows.map((row) => (
-              <tr key={row.id} class={`is-${row.tone ?? "neutral"}`}>
-                <td data-label="Time / priority">
-                  <span class="cd2004-worklist-source-icon" aria-hidden="true">
-                    <DesktopIcon
-                      name={
-                        row.source === "drafts"
-                          ? "administer"
-                          : row.tone === "warning" || row.tone === "stop"
-                            ? "alert"
-                            : "records"
-                      }
-                    />
-                  </span>
-                  <span class="cd2004-worklist-priority-copy">
-                    <strong>{row.priorityLabel}</strong>
-                    {row.timeLabel && <small>{row.timeLabel}</small>}
-                  </span>
-                </td>
-                <td data-label="Patient / visit">{row.patientLabel}</td>
-                <td data-label="Task / medication">{row.taskLabel}</td>
-                <td data-label="State">
-                  <span class={`cd2004-worklist-state is-${row.tone ?? "neutral"}`}>
+              <li key={row.id} class="tebra-record-row" data-worklist-row={row.source}>
+                <div class="tebra-record-copy">
+                  <strong class="tebra-record-title">{row.taskLabel}</strong>
+                  <p class="tebra-record-meta">
+                    <span>{row.patientLabel}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{row.priorityLabel}</span>
+                    {row.timeLabel ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>{row.timeLabel}</span>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+                <div class="tebra-record-state">
+                  <span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}>
+                    <span aria-hidden="true">{TONE_GLYPH[row.tone ?? "neutral"]}</span>
                     {row.stateLabel}
                   </span>
-                </td>
-                <td data-label="Action">
                   <button
                     type="button"
-                    class="cd2004-worklist-action"
+                    class="tebra-record-action"
+                    data-worklist-open={row.id}
                     disabled={!row.queueItem && !row.record}
                     onClick={() => openRow(row)}
                   >
                     {row.actionLabel}
                   </button>
-                </td>
-              </tr>
+                </div>
+              </li>
             ))}
-            {!visibleRows.length && (
-              <tr class="cd2004-worklist-empty">
-                <td colSpan={5}>
-                  <strong>{worklistEmptyText(filter)}</strong>
-                  <small>{worklistEmptyHint(filter)}</small>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </ul>
+        ) : (
+          <div class="tebra-record-empty">
+            <strong>{worklistEmptyText(filter)}</strong>
+            <small>{worklistEmptyHint(filter)}</small>
+          </div>
+        )}
       </div>
 
       <footer class="cd2004-worklist-footer">
-        <span>{visibleRows.length} local item{visibleRows.length === 1 ? "" : "s"} shown</span>
+        <span>{noteCount(visibleRows.length, "local item")} shown</span>
         <span>Signed history: {NOTES.openNotes}</span>
       </footer>
     </section>

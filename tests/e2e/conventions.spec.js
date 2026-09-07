@@ -503,7 +503,7 @@ test.describe('Phase 3b patient chart conventions', () => {
     ).toEqual([[200, 40], [200, 40], [200, 40], [200, 40]]);
 
     // 100px rows, a 73x38 Open button, and no global-ledger 44px row here.
-    const rows = list.locator('.tebra-patient-note-row');
+    const rows = list.locator('.tebra-record-row');
     await expect(rows).toHaveCount(2);
     const heights = await rows.evaluateAll((nodes) =>
       nodes.map((node) => Math.round(node.getBoundingClientRect().height))

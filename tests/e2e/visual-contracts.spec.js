@@ -14,7 +14,9 @@ const WORKFLOWS = {
       '.cd2004-worklist-header',
       '.cd2004-worklist-tabs',
       '.cd2004-worklist-sheet',
-      '.cd2004-worklist-table'
+      // The sheet holds either the record list or the empty state, so the
+      // footer is the structural landmark that exists in both.
+      '.cd2004-worklist-footer'
     ]
   },
   // Phase 2c intentionally keeps this exact visual snapshot focused on the

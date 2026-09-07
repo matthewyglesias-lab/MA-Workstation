@@ -463,7 +463,8 @@ Chromium 149 is interaction evidence only.
 | **2d — Visual closure** | **On PR #62; exact artifact green.** Eight reviewed Chromium 151 Linux baselines; `win32/` remains stale for a Windows maintainer. |
 | **3a — Global Open Notes** | **On PR #62.** Shared Injection/UDS table with date sort, lock, lifecycle, and whole-row open conventions. |
 | **3b — Patient conventions** | **This commit; require green CI.** Facesheet cards; separate modern patient Notes filters/list; patient search and hover card; page-level coral split `New Note`, backed actions only. |
-| **3c — Retire the desktop chrome** | **This commit.** Menu bar, status bar and transaction-code chip deleted; account menu and Toast added. |
+| **3c — Retire the desktop chrome** | **On PR #62.** Menu bar, status bar and transaction-code chip deleted; account menu and Toast added. |
+| **3d — One list grammar** | **This commit.** The Dashboard's 2004 worklist table becomes the same card list the patient chart uses. |
 | **3b/3c visual closure** | **Next, before Phase 4.** Promote the pinned Chromium 151 `*-actual.png` files as the eight Linux baselines, reviewed image by image, in their own commit — exactly as Phase 2d did. |
 | **4 — Kiosk** | Kiosk shell (`?kiosk=1`), 7-step injection stepper over existing `InjectionPanel` tabs, touch site picker, Care Checklist rail, sign-and-next card. |
 | **5 — Cleanup** | Delete dead MEDITECH CSS, update `README.md`. |

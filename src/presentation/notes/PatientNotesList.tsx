@@ -138,25 +138,25 @@ export function PatientNotesList({ rows, onOpen }: PatientNotesListProps) {
       </div>
 
       {visible.length ? (
-        <ul class="tebra-patient-notes-rows">
+        <ul class="tebra-record-list">
           {visible.map((row) => (
-            <li key={row.key} class="tebra-patient-note-row" data-note-type={row.noteType}>
-              <div class="tebra-patient-note-copy">
-                <strong class="tebra-patient-note-title">
+            <li key={row.key} class="tebra-record-row" data-note-type={row.noteType}>
+              <div class="tebra-record-copy">
+                <strong class="tebra-record-title">
                   {row.summaryLabel ?? row.typeLabel}
                 </strong>
-                <p class="tebra-patient-note-meta">
+                <p class="tebra-record-meta">
                   <span>{row.typeLabel}</span>
                   <span aria-hidden="true">·</span>
                   <span>{row.visit.label}</span>
                 </p>
               </div>
-              <div class="tebra-patient-note-state">
+              <div class="tebra-record-state">
                 {row.lock ? <LockIndicator lock={row.lock} /> : null}
                 <StatusChip status={row.status} />
                 <button
                   type="button"
-                  class="tebra-patient-note-open"
+                  class="tebra-record-action"
                   data-patient-note-open={row.recordId}
                   aria-label={openPatientNoteLabel(
                     row.typeLabel,
@@ -172,7 +172,7 @@ export function PatientNotesList({ rows, onOpen }: PatientNotesListProps) {
           ))}
         </ul>
       ) : (
-        <div class="tebra-patient-notes-empty">
+        <div class="tebra-record-empty">
           <strong>{PATIENT_NOTES.empty}</strong>
           <small>{PATIENT_NOTES.emptyHint}</small>
         </div>
