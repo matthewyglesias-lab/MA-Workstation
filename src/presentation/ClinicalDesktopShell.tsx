@@ -16,6 +16,11 @@ import "./tebra-workstation.css";
 import "./tebra-screen-contract.css";
 import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
 import {
+  InjectionRecordRepository,
+} from "../persistence/injection-records";
+import { browserSafeStorage } from "../persistence/storage";
+import { UdsRecordRepository } from "../persistence/uds-records";
+import {
   fieldsBeforeSigning,
   MODULE,
   NOTES,
@@ -23,6 +28,17 @@ import {
   RECORD,
   SHELL,
 } from "./vocabulary";
+import {
+  buildPatientChartIndex,
+  chartPatientKey,
+  scopeNotesToPatient,
+  type PatientChartIndex,
+} from "./patient-chart-model";
+import {
+  PatientChart,
+  type PatientChartView,
+} from "./facesheet/PatientChart";
+import { PatientSearch } from "./shell/PatientSearch";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
 import { AppFooter, PowerCommandMenu } from "./TebraChrome";
@@ -48,6 +64,7 @@ import {
   type WorkstationLookupTransaction,
 } from "./WorkstationLookupDialog";
 import {
+  requestWorkstationOpenNote,
   WORKSTATION_FIELD_LOOKUP_REQUEST,
   type WorkstationFieldLookupRequestDetail,
 } from "./workstation-events";
@@ -234,6 +251,7 @@ export function ClinicalDesktopShell({
   onCopyAllNotes,
   onQueueItemOpen,
   onRecordOpen,
+  onOpenInjectionRecord,
   onEscape,
   onWorkAreaReady,
   className = "",
@@ -249,6 +267,22 @@ export function ClinicalDesktopShell({
     useState<WorkstationLookupTransaction | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  /**
+   * Patient chart navigation. The chart is a destination like any section,
+   * not a mode layered over one: it replaces the work area's content and
+   * leaves the selected workflow untouched, so closing it returns to exactly
+   * the workflow that was open.
+   */
+  const [chartPatientKeyState, setChartPatientKeyState] = useState<string | null>(
+    null,
+  );
+  const [chartView, setChartView] = useState<PatientChartView>("facesheet");
+  const [chartIndex, setChartIndex] = useState<PatientChartIndex>(() => ({
+    patients: [],
+    rowsByPatient: new Map(),
+  }));
+  /** A UDS note chosen in the chart, waiting for its panel to mount. */
+  const pendingUdsNoteRef = useRef<string | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const workHostRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -298,6 +332,91 @@ export function ClinicalDesktopShell({
     if (activeWorkflow === undefined) setInternalWorkflow(workflow);
     onWorkflowChange?.(workflow);
     setInternalStatus(`${WORKFLOW_LABELS[workflow]} opened.`);
+  };
+
+  /**
+   * Reads every saved note into a per-patient index.
+   *
+   * Read-only, and read through the typed repositories rather than
+   * localStorage, exactly as `RecordsWindow` does - so the chart, the global
+   * worklist and the panels all see one set of records. A malformed store
+   * yields an empty index rather than throwing: a chart that cannot be built
+   * is not a reason for the workstation to stop.
+   */
+  const reloadChartIndex = useCallback(() => {
+    const storage = browserSafeStorage();
+    const injections = new InjectionRecordRepository(storage).list();
+    const uds = new UdsRecordRepository(storage).list();
+    setChartIndex(
+      buildPatientChartIndex(
+        injections.ok ? injections.value : [],
+        uds.ok ? uds.value : [],
+      ),
+    );
+  }, []);
+
+  useEffect(() => {
+    reloadChartIndex();
+  }, [reloadChartIndex, postState, selectedWorkflow]);
+
+  const chartPatient = chartPatientKeyState
+    ? (chartIndex.patients.find((entry) => entry.key === chartPatientKeyState) ?? null)
+    : null;
+  const chartRows = chartPatient
+    ? scopeNotesToPatient(chartIndex, chartPatient.key)
+    : [];
+  // The Care Checklist belongs to the open note, not to the patient. It is
+  // only shown on a chart when that chart is the patient the note is for.
+  const activePatientKey = chartPatientKey(patient.name ?? "", patient.dob ?? "");
+
+  const openChart = (key: string, view: PatientChartView = "facesheet") => {
+    if (!key) return;
+    reloadChartIndex();
+    setChartPatientKeyState(key);
+    setChartView(view);
+    setInternalStatus(`${PATIENT.facesheet} opened.`);
+  };
+
+  const closeChart = () => {
+    setChartPatientKeyState(null);
+    setInternalStatus(`${WORKFLOW_LABELS[selectedWorkflow]} opened.`);
+  };
+
+  /**
+   * Opening a note from the chart is the explicit crossing from browsing into
+   * a workflow. Injection resumes through the shell's own handler; UDS is
+   * owned by its panel, which holds the encounter a record restores into.
+   *
+   * The UDS request cannot be dispatched here. The panel is not mounted while
+   * the chart is open, so an event sent now would land before anything is
+   * listening and the note would simply never open. It is held until the
+   * effect below, which runs after the panel has mounted and registered.
+   */
+  const openChartNote = (recordId: string) => {
+    const row = chartRows.find((candidate) => candidate.recordId === recordId);
+    if (!row) return;
+    if (row.noteType === "injection") {
+      if (onOpenInjectionRecord?.(recordId) === false) return;
+      setChartPatientKeyState(null);
+      openWorkflow("administer");
+      return;
+    }
+    pendingUdsNoteRef.current = recordId;
+    setChartPatientKeyState(null);
+    openWorkflow("uds");
+  };
+
+  useEffect(() => {
+    const recordId = pendingUdsNoteRef.current;
+    if (!recordId || selectedWorkflow !== "uds" || chartPatientKeyState) return;
+    pendingUdsNoteRef.current = null;
+    requestWorkstationOpenNote({ noteType: "uds", recordId });
+  }, [chartPatientKeyState, selectedWorkflow]);
+
+  const startNoteFromChart = (workflow: WorkflowId) => {
+    setChartPatientKeyState(null);
+    openWorkflow(workflow);
+    if (workflow === "administer") onStartNewInjection?.();
   };
 
   const restorePreviousFocus = () => {
@@ -573,10 +692,17 @@ export function ClinicalDesktopShell({
       restorePreviousFocus();
       return;
     }
+    // The chart is a destination, so Escape leaves it the way Escape leaves
+    // any other local view: back to the workflow that was open, with nothing
+    // saved, discarded or started.
+    if (chartPatientKeyState) {
+      closeChart();
+      return;
+    }
     onEscape?.();
     restorePreviousFocus();
     setInternalStatus("Back: no draft was discarded.");
-  }, [onEscape, openMenu, showShortcutHelp]);
+  }, [chartPatientKeyState, onEscape, openMenu, selectedWorkflow, showShortcutHelp]);
 
   useEffect(() => {
     onWorkAreaReady?.(workHostRef.current);
@@ -875,8 +1001,21 @@ export function ClinicalDesktopShell({
     },
   };
 
-  const windowTitle =
-    selectedWorkflow === "home"
+  /**
+   * The chart is a full-width page, and no note is open on it. Neither the
+   * document split nor the per-note lifecycle footer belongs beside it: those
+   * act on an open note, and showing them over a chart is exactly the
+   * confusion between page actions and note actions that the redesign is
+   * trying to remove.
+   */
+  const chartOpen = chartPatient !== null;
+  const showsInjectionLayout = selectedWorkflow === "administer" && !chartOpen;
+  const showsSideInspector =
+    !chartOpen && selectedWorkflow !== "administer" && selectedWorkflow !== "home";
+
+  const windowTitle = chartPatient
+    ? chartPatient.name
+    : selectedWorkflow === "home"
       ? MODULE.dashboard
       : `${WORKFLOW_LABELS[selectedWorkflow]} note`;
   const transactionCode = WORKSTATION_TRANSACTION_CODE[selectedWorkflow];
@@ -925,6 +1064,7 @@ export function ClinicalDesktopShell({
       ref={shellRef}
       class={`cd2004-shell ${className}`.trim()}
       data-active-workflow={selectedWorkflow}
+      data-chart-view={chartPatient ? chartView : undefined}
       data-post-state={postState}
     >
       <a class="cd2004-skip-link" href="#cd2004-work-area">
@@ -1038,10 +1178,8 @@ export function ClinicalDesktopShell({
       <main
         class={[
           "cd2004-workspace",
-          selectedWorkflow === "administer" ? "has-central-preview" : "",
-          selectedWorkflow !== "administer" && selectedWorkflow !== "home"
-            ? "has-side-inspector"
-            : "",
+          showsInjectionLayout ? "has-central-preview" : "",
+          showsSideInspector ? "has-side-inspector" : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -1053,25 +1191,40 @@ export function ClinicalDesktopShell({
             selectedWorkflow={selectedWorkflow}
             summaries={workflowSummaries}
             patient={patient}
-            onWorkflowOpen={openWorkflow}
+            onWorkflowOpen={(workflow) => {
+              closeChart();
+              openWorkflow(workflow);
+            }}
             onOpenRecords={onOpenRecords}
+            search={
+              <PatientSearch
+                patients={chartIndex.patients}
+                onSelect={(selected) => openChart(selected.key)}
+              />
+            }
+            {...(activePatientKey
+              ? { onOpenChart: (view) => openChart(activePatientKey, view) }
+              : {})}
+            activeChartView={chartPatient ? chartView : null}
           />
-          {selectedWorkflow !== "administer" && selectedWorkflow !== "home" && inspectorPanel}
+          {showsSideInspector && inspectorPanel}
         </aside>
 
         <Panel
           pane="work"
           title={windowTitle}
-          icon={selectedWorkflow}
+          icon={chartPatient ? "patient" : selectedWorkflow}
           subtitle={
-            selectedWorkflow === "home" ? SHELL.localOnlyDetail : "Active encounter"
+            chartPatient || selectedWorkflow === "home"
+              ? SHELL.localOnlyDetail
+              : "Active encounter"
           }
           active={focusedPane === "work"}
           onActivate={setFocusedPane}
         >
           <div
             class={`cd2004-transaction-window ${
-              selectedWorkflow === "administer" ? "has-document-split" : ""
+              showsInjectionLayout ? "has-document-split" : ""
             }`}
           >
           <div
@@ -1082,7 +1235,7 @@ export function ClinicalDesktopShell({
           >
             <div
               class={`cd2004-workflow-body ${
-                selectedWorkflow === "administer" ? "is-transaction-scroll" : ""
+                showsInjectionLayout ? "is-transaction-scroll" : ""
               }`}
             >
               {postState === "posting" && (
@@ -1091,9 +1244,22 @@ export function ClinicalDesktopShell({
                   {RECORD.validatingAndSaving}
                 </div>
               )}
-              {workflowContent}
+              {chartPatient ? (
+                <PatientChart
+                  patient={chartPatient}
+                  rows={chartRows}
+                  readiness={readiness}
+                  checklistAppliesToPatient={chartPatient.key === activePatientKey}
+                  view={chartView}
+                  onViewChange={setChartView}
+                  onOpenNote={openChartNote}
+                  onNewNote={startNoteFromChart}
+                />
+              ) : (
+                workflowContent
+              )}
             </div>
-            {selectedWorkflow === "administer" && injectionRecordActions && (
+            {showsInjectionLayout && injectionRecordActions && (
               <InjectionRecordActions
                 actions={injectionRecordActions}
                 canComplete={canComplete}
@@ -1114,7 +1280,7 @@ export function ClinicalDesktopShell({
               />
             )}
           </div>
-          {selectedWorkflow === "administer" && (
+          {showsInjectionLayout && (
             <div class="cd2004-document-split">{inspectorPanel}</div>
           )}
           </div>

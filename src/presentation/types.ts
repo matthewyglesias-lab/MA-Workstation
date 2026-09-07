@@ -162,6 +162,12 @@ export interface ClinicalDesktopShellProps {
   onCopyAllNotes?: () => void;
   onQueueItemOpen?: (item: WorkQueueItem) => void;
   onRecordOpen?: (record: InjectionRecordRow) => void;
+  /**
+   * Opens a saved injection note by id, for the patient chart. Mirrors the
+   * handler `RecordsWindow` already takes, so both note surfaces resume a
+   * record through one path rather than two that can drift.
+   */
+  onOpenInjectionRecord?: (id: string) => boolean;
   onEscape?: () => void;
   onWorkAreaReady?: (element: HTMLDivElement | null) => void;
   className?: string;

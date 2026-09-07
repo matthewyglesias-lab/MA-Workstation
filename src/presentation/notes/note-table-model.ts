@@ -1,6 +1,6 @@
 import type { InjectionRecord } from "../../persistence/injection-records";
 import type { UdsRecord } from "../../persistence/uds-records";
-import { NOTES_TABLE, signedNoteLockLabel } from "../vocabulary";
+import { NOTES, NOTES_TABLE, signedNoteLockLabel } from "../vocabulary";
 
 export type NoteType = "injection" | "uds";
 export type NoteStatus = "incomplete" | "ready-to-sign" | "signed";
@@ -27,6 +27,13 @@ export interface NotesTableRow {
   typeLabel: string;
   patientLabel: string;
   patientDob?: string;
+  /**
+   * The record's own summary line - the medication or screen it documents.
+   * The global table has no column for it; the patient-scoped list titles its
+   * rows with it, because within one patient's chart the medication is the
+   * distinguishing fact and the patient name is the constant.
+   */
+  summaryLabel?: string;
   status: NoteStatus;
   visit: NoteVisit;
   lock: NoteLock | null;
@@ -68,12 +75,12 @@ const lockTimeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-const asObject = (value: unknown): Record<string, unknown> | null =>
+export const asObject = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
 
-const nonEmptyString = (value: unknown): string | undefined => {
+export const nonEmptyString = (value: unknown): string | undefined => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed || undefined;
@@ -242,7 +249,8 @@ export const injectionRecordToNotesTableRow = (
   const root = asObject(record);
   const snapshot = asObject(root?.snapshot);
   const fields = asObject(snapshot?.fields);
-  const fallback = nonEmptyString(root?.summary) ?? NOTES_TABLE.untitledInjection;
+  const summary = nonEmptyString(root?.summary);
+  const fallback = summary ?? NOTES_TABLE.untitledInjection;
   const patient = patientDetails(root?.patient, fallback);
   const recordId = nonEmptyString(root?.id) ?? "";
   const completed = root?.status === "completed";
@@ -254,6 +262,7 @@ export const injectionRecordToNotesTableRow = (
     typeLabel: NOTES_TABLE.typeInjection,
     patientLabel: patient.label,
     ...(patient.dob ? { patientDob: patient.dob } : {}),
+    ...(summary ? { summaryLabel: summary } : {}),
     status: completed ? "signed" : "incomplete",
     visit: noteVisit(fields?.adminDate, "date", root?.createdAt),
     lock: lockFor(record),
@@ -263,7 +272,8 @@ export const injectionRecordToNotesTableRow = (
 export const udsRecordToNotesTableRow = (record: UdsRecord): NotesTableRow => {
   const root = asObject(record);
   const snapshot = asObject(root?.snapshot);
-  const fallback = nonEmptyString(root?.summary) ?? NOTES_TABLE.untitledUds;
+  const summary = nonEmptyString(root?.summary);
+  const fallback = summary ?? NOTES_TABLE.untitledUds;
   const patient = patientDetails(root?.patient, fallback);
   const recordId = nonEmptyString(root?.id) ?? "";
   const completed = root?.status === "completed";
@@ -275,6 +285,7 @@ export const udsRecordToNotesTableRow = (record: UdsRecord): NotesTableRow => {
     typeLabel: NOTES_TABLE.typeUds,
     patientLabel: patient.label,
     ...(patient.dob ? { patientDob: patient.dob } : {}),
+    ...(summary ? { summaryLabel: summary } : {}),
     status: completed ? "signed" : "incomplete",
     visit: noteVisit(snapshot?.collectionDateTime, "datetime", root?.createdAt),
     lock: lockFor(record),
@@ -327,6 +338,18 @@ export const nextNoteSort = (current: NoteSort, key: NoteSortKey): NoteSort =>
   current.key === key
     ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
     : { key, direction: key === "visitDate" ? "desc" : "asc" };
+
+/** One word for a note's lifecycle state, shared by both note surfaces. */
+export const noteStatusLabel = (status: NoteStatus): string => {
+  switch (status) {
+    case "ready-to-sign":
+      return NOTES.statusReadyToSign;
+    case "signed":
+      return NOTES.statusSigned;
+    case "incomplete":
+      return NOTES.statusIncomplete;
+  }
+};
 
 export const noteLockLabel = (lock: NoteLock): string => {
   const staff = nonEmptyString(lock.staff);

@@ -73,11 +73,16 @@ else under `src/application/**` remains frozen.
 | `src/presentation/tebra-workstation.css` | Tebra shell composition; replaces `meditech-workstation.css`; measured geometry refined in Phase 2c. | 2, 2c |
 | `src/presentation/shell/AppHeader.tsx` | Persistent product identity and truthful local-record context. Patient search and actions remain Phase 3. | 2 |
 | `src/presentation/shell/SectionRail.tsx` | Left rail — current truthful workflow navigation and global Open Notes launch. Patient-chart sections remain Phase 3. | 2 |
-| `src/presentation/shell/ActionBar.tsx` | Planned page-level coral split `New Note` · `Print` · `More` · `Customize View`; distinct from per-note `RecordLifecycleActions`. | 3 |
-| `src/presentation/shell/PatientSearch.tsx` | "first 2–3 letters of the patient's name or date of birth (mm/dd/yyyy)". | 3 |
-| `src/presentation/facesheet/FacesheetBanner.tsx` | Patient hub header. | 3 |
-| `src/presentation/facesheet/PatientCardPopup.tsx` | Hover card on patient name. | 3 |
-| `src/presentation/facesheet/SummaryCard.tsx` | Card grammar for Last injection / Site rotation / Allergies / Recent notes. | 3 |
+| `src/presentation/shell/ActionBar.tsx` | **Phase 3b implemented.** Page-level coral split `New Note` · `Print` · `More` · `Customize View`; distinct from per-note `RecordLifecycleActions`. | 3b |
+| `src/presentation/shell/PatientSearch.tsx` | **Phase 3b implemented.** "first 2–3 letters of the patient's name or date of birth (mm/dd/yyyy)", scoped to notes saved in this browser and saying so. | 3b |
+| `src/presentation/facesheet/FacesheetBanner.tsx` | **Phase 3b implemented.** Patient hub header; carries the local-only disclosure. | 3b |
+| `src/presentation/facesheet/PatientCardPopup.tsx` | **Phase 3b implemented.** Hover card on patient name — name, DOB, record id, allergies, last visit, and nothing we do not hold. | 3b |
+| `src/presentation/facesheet/SummaryCard.tsx` | **Phase 3b implemented.** Card grammar: heading, ordering rule, body, optional link into the full section. | 3b |
+| `src/presentation/facesheet/Facesheet.tsx` | **Phase 3b, added to this manifest.** The five-card grid and its `FacesheetCardId` keys, which address layout and the Customize View preference. | 3b |
+| `src/presentation/facesheet/PatientChart.tsx` | **Phase 3b, added to this manifest.** Chart page hosting the banner, action bar, and the Facesheet/Notes tabs. | 3b |
+| `src/presentation/facesheet/facesheet-view-preference.ts` | **Phase 3b, added to this manifest.** Per-browser Customize View preference. Presentation-owned key through the shared `SafeStorage`; adds no field or key to the record repositories. | 3b |
+| `src/presentation/patient-chart-model.ts` | **Phase 3b, added to this manifest.** Patient identity/scoping, search matching, list filtering, and the Facesheet derivations. Pure and unit-tested. | 3b |
+| `src/presentation/notes/PatientNotesList.tsx` | **Phase 3b, added to this manifest.** The modern patient-scoped list of §4.1.1. Deliberately not a variant of `NotesTable`. | 3b |
 | `src/presentation/notes/NotesTable.tsx` | Open Notes table: sort, lock, status chips. | 3 |
 | `src/presentation/notes/note-table-model.ts` | Defensive Injection/UDS row projection, Visit Date precedence, lifecycle/lock truth, and deterministic sorting. | 3 |
 | `src/presentation/notes/StatusChip.tsx` | `Incomplete` · `Ready to sign` · `Signed`. | 3 |
@@ -110,7 +115,14 @@ else under `src/application/**` remains frozen.
 | `src/presentation/StartCenter.tsx` | → "Dashboard"; facesheet card grammar. | 1, 3 |
 | `src/presentation/RecordsWindow.tsx`, `UdsRecordsWindow.tsx` | → "Open Notes"; adopt `NotesTable`. | 1, 3 |
 | `src/presentation/RecordActionDialog.tsx`, `RecordLifecycleActions.tsx` | "Attest and lock" → "Sign"; Phase 2c styles the existing per-note lifecycle actions as a fixed modern footer through the screen contract. Component lifecycle logic is unchanged. | 1, 2c |
-| `src/presentation/NoteInspector.tsx` | Structurally unchanged in Phase 2c; its existing chrome is refined through `tebra-screen-contract.css`. Phase 3 supplies the patient Notes convention. | 3 |
+| `src/presentation/NoteInspector.tsx` | Structurally unchanged in Phase 2c; its existing chrome is refined through `tebra-screen-contract.css`. Phase 3b extracted its four inline Care Checklist state words into `CHECKLIST` so the inspector and the Facesheet card cannot drift. | 3b |
+| `src/presentation/tebra-workstation.css` | Phase 3b adds the chart page, Facesheet cards, patient Notes list, action bar and header search, plus their compact-width rules. Zero new `!important`. | 3b |
+| `src/presentation/shell/AppHeader.tsx` | Phase 3b adds the header search well (Tebra's 347px central slot). | 3b |
+| `src/presentation/shell/SectionRail.tsx` | Phase 3b adds the patient group (Facesheet · Notes), rendered only when a patient is in context. | 3b |
+| `src/presentation/ClinicalDesktopShell.tsx` | Phase 3b adds chart navigation: the chart replaces work-area content, leaves the selected workflow untouched, and suppresses the document split and per-note footer while open. | 3b |
+| `src/presentation/notes/note-table-model.ts` | Phase 3b adds `summaryLabel` (the patient list titles rows with it) and `noteStatusLabel`, shared by both note surfaces. | 3b |
+| `src/presentation/workflows/uds/UdsPanel.tsx` | Phase 3b adds a listener for `WORKSTATION_OPEN_NOTE_REQUEST`: the chart lists UDS notes but the panel owns restoring one. Encounter logic unchanged. | 3b |
+| `src/main.tsx` | Phase 3b passes `onOpenInjectionRecord`, the same handler `RecordsWindow` already receives. No coordinator or store changes. | 3b |
 | `src/presentation/WorkstationLock.tsx` | Restyle only. | 2 |
 | `src/presentation/workflows/StatusFlag.tsx` | New triad; **verify icon + word, never color alone.** | 2 |
 | `src/presentation/workflows/OutstandingRequirements.tsx` | → "Care Checklist". | 1 |
@@ -128,7 +140,8 @@ else under `src/application/**` remains frozen.
 | `tests/e2e/visual-snapshots.spec.js-snapshots/win32/**` (8 PNGs) | **Currently stale; cannot be regenerated in Linux CI.** Refresh on Windows or flag in the PR body. |
 | `tests/e2e/tebra-screen-contract.spec.js` | Phase 2c updates measured shell, coral/status, and 800×600 contracts. |
 | `tests/e2e/visual-contracts.spec.js` | Update Dashboard style and keyboard-focus expectations. |
-| `tests/e2e/conventions.spec.js` | Phase 3a global Open Notes columns, 44px rows, sorting, lock detail, lifecycle chips, row activation, non-mutation, and 800×600 containment. |
+| `tests/e2e/conventions.spec.js` | Phase 3a global Open Notes columns, 44px rows, sorting, lock detail, lifecycle chips, row activation, non-mutation, and 800×600 containment. Phase 3b adds patient search, Facesheet cards and their stated rules, the hover card, the 200×40/100px/73×38 patient list grammar, the single coral action group, Customize View persistence, read-only browsing, and 800×600 containment. |
+| `tests/unit/patient-chart-model.test.ts` | Phase 3b patient identity and grouping, search matching, list filtering, and the Facesheet derivations. |
 | `tests/e2e/workstation.spec.js` | Update changed visual expectations without relaxing clinical journeys. |
 | `tests/unit/ehr-refinement-contracts.test.ts` | Update if it asserts label strings. |
 | `tests/unit/note-table-model.test.ts` | Phase 3a defensive record projection, local-calendar-safe visit dates, deterministic sort, lifecycle, and lock truth. |

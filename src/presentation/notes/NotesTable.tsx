@@ -1,9 +1,10 @@
 import { useMemo, useState } from "preact/hooks";
-import { NOTES, NOTES_TABLE, openNoteRowLabel } from "../vocabulary";
+import { NOTES_TABLE, openNoteRowLabel } from "../vocabulary";
 import { LockIndicator } from "./LockIndicator";
 import {
   DEFAULT_NOTE_SORT,
   nextNoteSort,
+  noteStatusLabel,
   sortNotesTableRows,
   type NoteSort,
   type NoteSortKey,
@@ -23,13 +24,6 @@ const SORTABLE_COLUMNS: ReadonlyArray<{ key: NoteSortKey; label: string }> = [
   { key: "type", label: NOTES_TABLE.columnType },
   { key: "visitDate", label: NOTES_TABLE.columnVisitDate },
 ];
-
-const statusLabel = (status: NotesTableRow["status"]): string =>
-  status === "signed"
-    ? NOTES.statusSigned
-    : status === "ready-to-sign"
-      ? NOTES.statusReadyToSign
-      : NOTES.statusIncomplete;
 
 export function NotesTable({ rows, label, emptyMessage, onOpen }: NotesTableProps) {
   const [sort, setSort] = useState<NoteSort>(DEFAULT_NOTE_SORT);
@@ -78,7 +72,7 @@ export function NotesTable({ rows, label, emptyMessage, onOpen }: NotesTableProp
               aria-label={openNoteRowLabel(
                 row.patientLabel,
                 row.typeLabel,
-                statusLabel(row.status),
+                noteStatusLabel(row.status),
               )}
               onClick={() => onOpen(row.recordId)}
               onKeyDown={(event) => {

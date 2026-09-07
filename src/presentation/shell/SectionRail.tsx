@@ -1,3 +1,4 @@
+import type { ComponentChildren } from "preact";
 import { DesktopIcon } from "../DesktopIcon";
 import { getFunctionKeyCommand } from "../FunctionKeyProfile";
 import {
@@ -6,7 +7,7 @@ import {
   type WorkflowId,
   type WorkflowSummary,
 } from "../types";
-import { NAVIGATION, NOTES, PATIENT } from "../vocabulary";
+import { NAVIGATION, NOTES, PATIENT, PATIENT_NOTES } from "../vocabulary";
 
 interface SectionRailProps {
   selectedWorkflow: WorkflowId;
@@ -14,6 +15,26 @@ interface SectionRailProps {
   patient?: PatientContext;
   onWorkflowOpen: (workflow: WorkflowId) => void;
   onOpenRecords?: () => void;
+  /**
+   * Patient search.
+   *
+   * Tebra puts this in the product header, centred. Measured at every
+   * supported width, this module's header cannot hold it: the menu bar - an
+   * affordance Tebra does not have - occupies the centre, and below 1024px
+   * there is no room on either side of it. Putting it here keeps it reachable
+   * at 800x600 instead of vanishing exactly where the workstation is most
+   * constrained, and the rail is already where this app's patient context
+   * lives. A repository adaptation, not a Tebra measurement.
+   */
+  search?: ComponentChildren;
+  /**
+   * Opens the chart for the patient currently in context. Absent when no
+   * patient is identified, which is why the group below is conditional: a rail
+   * entry that leads nowhere is the most obvious tell there is.
+   */
+  onOpenChart?: (view: "facesheet" | "notes") => void;
+  /** Which chart page is showing, when the chart is the active destination. */
+  activeChartView?: "facesheet" | "notes" | null;
 }
 
 const RAIL_GROUPS: Array<{
@@ -49,6 +70,9 @@ export function SectionRail({
   patient = {},
   onWorkflowOpen,
   onOpenRecords,
+  search,
+  onOpenChart,
+  activeChartView = null,
 }: SectionRailProps) {
   const localEmrCommand = getFunctionKeyCommand("local-emr");
   const hasLocalChart = Boolean(
@@ -82,10 +106,53 @@ export function SectionRail({
         </span>
       </button>
 
+      {search ? <div class="tebra-rail-search">{search}</div> : null}
+
       <div class="meditech-rail-context tebra-section-rail-context" aria-label={NAVIGATION.localChart}>
         <strong>{hasLocalChart ? PATIENT.facesheet : PATIENT.noPatient}</strong>
         <span>{localChartDetail}</span>
       </div>
+
+      {onOpenChart ? (
+        <section
+          class="meditech-rail-group is-patient"
+          aria-labelledby="meditech-rail-patient"
+        >
+          <div class="meditech-function-heading" id="meditech-rail-patient">
+            {NAVIGATION.patientChart}
+          </div>
+          <button
+            type="button"
+            class={`cd2004-nav-item${activeChartView === "facesheet" ? " is-selected" : ""}`}
+            data-chart-nav="facesheet"
+            aria-current={activeChartView === "facesheet" ? "page" : undefined}
+            aria-label={NAVIGATION.openFacesheet}
+            onClick={() => onOpenChart("facesheet")}
+          >
+            <span>
+              <strong>{PATIENT.facesheet}</strong>
+            </span>
+            <span class="meditech-nav-icon" aria-hidden="true">
+              <DesktopIcon name="patient" />
+            </span>
+          </button>
+          <button
+            type="button"
+            class={`cd2004-nav-item${activeChartView === "notes" ? " is-selected" : ""}`}
+            data-chart-nav="notes"
+            aria-current={activeChartView === "notes" ? "page" : undefined}
+            aria-label={NAVIGATION.openPatientNotes}
+            onClick={() => onOpenChart("notes")}
+          >
+            <span>
+              <strong>{PATIENT_NOTES.title}</strong>
+            </span>
+            <span class="meditech-nav-icon" aria-hidden="true">
+              <DesktopIcon name="note" />
+            </span>
+          </button>
+        </section>
+      ) : null}
 
       <div class="meditech-function-list">
         {RAIL_GROUPS.map((group) => (

@@ -24,6 +24,7 @@
 import type { ReadinessVerdict } from "../application/readiness-projection";
 import type {
   WorkflowTransactionPhase,
+  WorkstationReadinessItem,
   WorkstationRecordLifecycle,
 } from "../application/workstation-projection";
 
@@ -257,12 +258,135 @@ export const PATIENT = {
   contextMismatch: "Patient context mismatch",
 } as const;
 
+/**
+ * Patient search. The affordance and its copy are Tebra's own: staff type the
+ * first two or three letters of a name, or a date of birth. Ours matches
+ * against notes saved in this browser and says so, because a search that looks
+ * like it reaches a practice-wide directory and does not is the worst kind of
+ * seam.
+ */
+export const PATIENT_SEARCH = {
+  label: "Search patients",
+  placeholder: "First 2-3 letters of the patient's name, or DOB as mm/dd/yyyy",
+  scopeHint: "Patients with notes saved in this browser.",
+  keepTyping: "Type at least two characters.",
+  noMatches: "No patients match.",
+  results: "Patient results",
+  clear: "Clear search",
+} as const;
+
+/**
+ * Hover card on a patient name. It carries only what this workstation holds -
+ * name, date of birth, record id, allergies, last visit. Tebra's card also
+ * shows insurance and contact detail; ours shows less, and an absent field is
+ * a smaller seam than an empty one.
+ */
+export const PATIENT_CARD = {
+  label: "Patient summary",
+  recordId: "Record id",
+  lastVisit: "Last visit",
+  noLastVisit: "No visit date recorded",
+  noRecordId: "Not recorded",
+} as const;
+
+/* --------------------------------------------------------------- facesheet */
+
+/**
+ * Facesheet summary cards. Each states its own ordering rule the way Tebra
+ * states theirs, so staff know what a card is showing them rather than
+ * guessing whether a short list means "recent" or "all".
+ */
+export const FACESHEET = {
+  title: PATIENT.facesheet,
+  summaryLabel: "Patient summary cards",
+  lastInjection: "Last injection",
+  lastInjectionRule: "Most recent administration saved in this browser.",
+  lastInjectionEmpty: "No injection is saved here for this patient.",
+  medicationLabel: "Medication",
+  siteLabel: "Site",
+  dateLabel: "Date",
+  siteRotation: "Site rotation",
+  siteRotationRule: "Last five sites by administration date.",
+  siteRotationEmpty: "No administration site is saved here for this patient.",
+  allergiesRule: "As recorded on this patient's most recent note.",
+  careChecklistRule: "Open items first, then satisfied.",
+  careChecklistEmpty: "Open a note for this patient to see the Care Checklist.",
+  careChecklistSatisfied: "Every checklist item is satisfied.",
+  recentNotes: "Recent notes",
+  recentNotesRule: "Up to the last five notes by visit date.",
+  recentNotesEmpty: "No notes are saved here for this patient.",
+  viewAllNotes: "View all notes",
+  openNote: "Open note",
+  siteEntry: (site: string, date: string): string => `${site} · ${date}`,
+} as const;
+
+/**
+ * The patient-scoped Notes list. This is Tebra's newer, roomier chart list -
+ * deliberately a different grammar from the global Open Notes table, which
+ * stays on the legacy sparse-worklist convention.
+ */
+export const PATIENT_NOTES = {
+  title: "Notes",
+  filtersLabel: "Filter this patient's notes",
+  filterType: "Note type",
+  filterStatus: "Status",
+  filterRecency: "Visit date",
+  filterSearch: "Search",
+  searchPlaceholder: "Medication, type, or date",
+  typeAll: "All note types",
+  statusAll: "All statuses",
+  recencyAll: "All visit dates",
+  recency30: "Last 30 days",
+  recency12: "Last 12 months",
+  open: "Open",
+  empty: "No notes match these filters.",
+  emptyHint: "Clear a filter to see this patient's other notes.",
+} as const;
+
+export const openPatientNoteLabel = (
+  type: string,
+  visit: string,
+  status: string,
+): string => `Open ${status.toLocaleLowerCase()} ${type} note from ${visit}`;
+
+/* -------------------------------------------------------------- action bar */
+
+/**
+ * Page-level actions, top right. These four keep Tebra's own control names
+ * verbatim - including their capitalisation - because a Tebra user reaches for
+ * "New Note" by sight. That is rule 1 winning over the sentence-case default
+ * for labels we observed in their product rather than wrote ourselves.
+ *
+ * This is NOT the per-note lifecycle footer. Save / Sign / Discard act on the
+ * open note and live with it; these act on the page.
+ */
+export const ACTION_BAR = {
+  label: "Page actions",
+  newNote: "New Note",
+  newNoteMenu: "Choose a note type",
+  print: "Print",
+  more: "More",
+  customizeView: "Customize View",
+  customizeViewMenu: "Choose which cards this Facesheet shows",
+  printUnavailable: "Printing is available from an open note.",
+  moreUnavailable: "No other actions are available here yet.",
+} as const;
+
 /* ----------------------------------------------------------------- checklist */
 
 /** Tebra's name for the outstanding-items list on a patient. */
 export const CHECKLIST = {
   title: "Care Checklist",
   view: "View Care Checklist",
+  /**
+   * Per-item state words. Extracted from NoteInspector so the Facesheet's
+   * Care Checklist card and the inspector's list cannot drift apart on what
+   * an item's state is called.
+   */
+  stateComplete: "Complete",
+  stateRequired: "Required",
+  stateReview: "Review",
+  statePending: "Pending",
   stopCount: (count: number) => `${count} stop${count === 1 ? "" : "s"}`,
   reviewCount: (count: number) => `${count} to review`,
   remainingFromFirst: (count: number, first: string) =>
@@ -314,6 +438,11 @@ export const NAVIGATION = {
   closeout: "Closeout",
   localChart: "Local chart",
   selectRecordHint: "Use F11 to select a note",
+  /** The patient-scoped group, shown only once a patient is in context. */
+  patientChart: "Patient",
+  openFacesheet: "Open the Facesheet",
+  openPatientNotes: "Open this patient's notes",
+  backToWork: "Back to clinical work",
 } as const;
 
 /* ------------------------------------------------------------------ verdict */
@@ -371,6 +500,22 @@ export function readinessVerdictCopy(verdict: ReadinessVerdict): ReadinessVerdic
  * required editing the projection. Keys stay internal and unchanged; only the
  * words moved.
  */
+/** One word for a single Care Checklist item's state. */
+export const readinessItemStateLabel = (
+  state: WorkstationReadinessItem["state"],
+): string => {
+  switch (state) {
+    case "complete":
+      return CHECKLIST.stateComplete;
+    case "stop":
+      return CHECKLIST.stateRequired;
+    case "warning":
+      return CHECKLIST.stateReview;
+    case "pending":
+      return CHECKLIST.statePending;
+  }
+};
+
 export const RECORD_LIFECYCLE_LABEL: Record<WorkstationRecordLifecycle, string> = {
   new: RECORD.newDraft,
   draft: "Draft saved",

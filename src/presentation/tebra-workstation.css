@@ -1738,6 +1738,751 @@
     color: var(--tw-stop-fg);
     background: var(--tw-stop-bg);
   }
+
+  /* ============================================================ Phase 3b
+     Patient chart: header search, Facesheet, patient Notes, action bar.
+
+     Measured against the authenticated product: 4px-radius elevation-1 cards,
+     36px coral split action, 38px/radius-24 outlined actions with a #b3c6c4
+     border, 200x40 filter fields, 100px chart-list rows. The 44px-row global
+     Open Notes table is a different convention and keeps its own rules in
+     clinical-desktop.css - these must not grow to cover it.
+     ==================================================================== */
+
+  /* --------------------------------------------------------- rail search */
+
+  .tebra-rail-search {
+    padding: 8px 10px 0;
+  }
+
+  .tebra-patient-search {
+    position: relative;
+  }
+
+  .tebra-patient-search-input {
+    width: 100%;
+    height: 33px;
+    padding: 0 10px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-ws);
+    font: var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
+    text-overflow: ellipsis;
+  }
+
+  .tebra-patient-search-input::placeholder {
+    color: var(--tw-text-muted);
+  }
+
+  .tebra-patient-search-input:focus-visible {
+    border-color: var(--tw-teal-800);
+    outline: none;
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  /*
+   * The rail is 158-192px wide, so the result list is allowed to exceed it
+   * rather than wrapping names to three lines. It opens over the section list
+   * beneath, which is inert while a search is being read.
+   */
+  .tebra-patient-search-results {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 100%;
+    width: max-content;
+    max-width: 300px;
+    max-height: 320px;
+    padding: 6px;
+    overflow: auto;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
+  }
+
+  .tebra-patient-search-scope,
+  .tebra-patient-search-empty {
+    margin: 0;
+    padding: 6px 8px;
+    color: var(--tw-text-secondary);
+    font: var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
+  }
+
+  .tebra-patient-search-scope {
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .tebra-patient-search-result {
+    display: grid;
+    gap: 1px;
+    width: 100%;
+    padding: 7px 8px;
+    color: var(--tw-text-primary);
+    background: transparent;
+    border: 0;
+    border-radius: var(--tw-radius-tight);
+    font: var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .tebra-patient-search-result small {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .tebra-patient-search-result:hover,
+  .tebra-patient-search-result:focus-visible {
+    background: var(--tw-mint-50);
+    outline: none;
+  }
+
+  .tebra-patient-search-result:focus-visible {
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  /* ----------------------------------------------------------- chart page */
+
+  .tebra-patient-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    padding: 32px;
+    background: var(--tw-surface-page);
+  }
+
+  .tebra-facesheet-banner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px;
+    background: var(--tw-surface-panel);
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
+  }
+
+  .tebra-facesheet-identity {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .tebra-facesheet-avatar {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    color: var(--tw-teal-800);
+    background: var(--tw-mint-100);
+    border-radius: var(--tw-radius-pill);
+  }
+
+  .tebra-facesheet-avatar svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .tebra-facesheet-name {
+    margin: 0;
+    font: 700 var(--tw-fs-title) / var(--tw-lh-title) var(--tw-font-sans);
+    letter-spacing: var(--tw-ls-title);
+  }
+
+  .tebra-facesheet-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 2px 0 0;
+    color: var(--tw-text-secondary);
+    font: var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+  }
+
+  .tebra-facesheet-banner-side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .tebra-facesheet-allergies,
+  .tebra-facesheet-scope {
+    margin: 0;
+    font: var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+  }
+
+  .tebra-facesheet-allergies strong {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .tebra-facesheet-scope {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  /* ------------------------------------------------------- hover card */
+
+  .tebra-patient-card-host {
+    position: relative;
+    display: inline-block;
+  }
+
+  .tebra-patient-card-trigger {
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    font: inherit;
+    text-align: left;
+    cursor: default;
+  }
+
+  .tebra-patient-card-trigger:focus-visible {
+    border-radius: var(--tw-radius-tight);
+    outline: none;
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  .tebra-patient-card {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 6px);
+    left: 0;
+    display: block;
+    width: max-content;
+    max-width: 320px;
+    padding: 12px;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-2px);
+  }
+
+  .tebra-patient-card-host:hover .tebra-patient-card,
+  .tebra-patient-card-trigger:focus-visible + .tebra-patient-card {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .tebra-patient-card-name {
+    display: block;
+    margin-bottom: 6px;
+    font: 700 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+  }
+
+  .tebra-patient-card dl {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+  }
+
+  .tebra-patient-card dl > div {
+    display: grid;
+    grid-template-columns: 84px 1fr;
+    gap: 8px;
+  }
+
+  .tebra-patient-card dt {
+    color: var(--tw-text-secondary);
+    font: var(--tw-fs-ws-label) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .tebra-patient-card dd {
+    margin: 0;
+    font: var(--tw-fs-ws-dense) / var(--tw-lh-ws-base) var(--tw-font-sans);
+  }
+
+  .tebra-patient-card-id {
+    font-family: var(--tw-font-mono);
+    overflow-wrap: anywhere;
+  }
+
+  /* ----------------------------------------------------------- chart tabs */
+
+  .tebra-patient-chart-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .tebra-patient-chart-tabs button {
+    height: 38px;
+    padding: 0 14px;
+    color: var(--tw-text-secondary);
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    font: 600 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    cursor: pointer;
+  }
+
+  .tebra-patient-chart-tabs button.is-selected {
+    color: var(--tw-teal-800);
+    border-bottom-color: var(--tw-teal-800);
+  }
+
+  .tebra-patient-chart-tabs button:focus-visible {
+    border-radius: var(--tw-radius-tight) var(--tw-radius-tight) 0 0;
+    outline: none;
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  /* ------------------------------------------------------ summary cards */
+
+  .tebra-facesheet-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  .tebra-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: var(--tw-surface-panel);
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
+  }
+
+  .tebra-summary-card-head h3 {
+    margin: 0;
+    font: 700 var(--tw-fs-lead) / var(--tw-lh-ws-base) var(--tw-font-sans);
+  }
+
+  .tebra-summary-card-rule {
+    margin: 2px 0 0;
+    color: var(--tw-text-secondary);
+    font: var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
+  }
+
+  .tebra-summary-card-body {
+    font: var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+  }
+
+  .tebra-summary-card-empty {
+    margin: 0;
+    color: var(--tw-text-secondary);
+  }
+
+  .tebra-card-link {
+    padding: 0;
+    color: var(--tw-teal-800);
+    background: transparent;
+    border: 0;
+    font: 600 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .tebra-card-link:focus-visible {
+    border-radius: var(--tw-radius-tight);
+    outline: none;
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  .tebra-summary-facts {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .tebra-summary-facts > div {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 8px;
+  }
+
+  .tebra-summary-facts dt {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .tebra-summary-facts dd {
+    margin: 0;
+  }
+
+  .tebra-summary-rotation,
+  .tebra-summary-checklist,
+  .tebra-summary-notes {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tebra-summary-rotation li {
+    font-variant-numeric: var(--tw-numeric-tabular);
+  }
+
+  .tebra-summary-checklist li {
+    display: grid;
+    grid-template-columns: 16px 1fr auto;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .tebra-summary-checklist-marker {
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .tebra-summary-checklist li.is-stop .tebra-summary-checklist-marker,
+  .tebra-summary-checklist li.is-stop small {
+    color: var(--tw-stop-fg);
+  }
+
+  .tebra-summary-checklist li.is-warning .tebra-summary-checklist-marker,
+  .tebra-summary-checklist li.is-warning small {
+    color: var(--tw-review-fg);
+  }
+
+  .tebra-summary-checklist li.is-complete .tebra-summary-checklist-marker,
+  .tebra-summary-checklist li.is-complete small {
+    color: var(--tw-ready-fg);
+  }
+
+  .tebra-summary-checklist li.is-pending .tebra-summary-checklist-marker,
+  .tebra-summary-checklist li.is-pending small {
+    color: var(--tw-text-secondary);
+  }
+
+  .tebra-summary-note-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    padding: 6px 8px;
+    color: inherit;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tw-radius-tight);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .tebra-summary-note-row:hover,
+  .tebra-summary-note-row:focus-visible {
+    background: var(--tw-mint-50);
+    border-color: var(--tw-border-subtle);
+    outline: none;
+  }
+
+  .tebra-summary-note-visit {
+    flex: 1;
+    color: var(--tw-text-secondary);
+    font-variant-numeric: var(--tw-numeric-tabular);
+  }
+
+  .tebra-summary-allergies {
+    margin: 0;
+  }
+
+  /* --------------------------------------------------- patient notes list */
+
+  .tebra-patient-notes {
+    display: grid;
+    gap: 16px;
+  }
+
+  .tebra-patient-notes-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px;
+    background: var(--tw-surface-panel);
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
+  }
+
+  .tebra-patient-notes-field {
+    display: grid;
+    gap: 4px;
+    width: 200px;
+  }
+
+  .tebra-patient-notes-field > span {
+    color: var(--tw-text-secondary);
+    font: 600 var(--tw-fs-ws-label) / var(--tw-lh-ws-label) var(--tw-font-sans);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .tebra-patient-notes-field select,
+  .tebra-patient-notes-field input {
+    width: 200px;
+    height: 40px;
+    padding: 0 10px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-action-border);
+    border-radius: var(--tw-radius-tight);
+    font: var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+  }
+
+  .tebra-patient-notes-field select:focus-visible,
+  .tebra-patient-notes-field input:focus-visible {
+    border-color: var(--tw-teal-800);
+    outline: none;
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  .tebra-patient-notes-rows {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tebra-patient-note-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 100px;
+    padding: 16px;
+    background: var(--tw-surface-panel);
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
+  }
+
+  .tebra-patient-note-copy {
+    min-width: 0;
+  }
+
+  .tebra-patient-note-title {
+    display: block;
+    font: 700 20px / 28px var(--tw-font-sans);
+  }
+
+  .tebra-patient-note-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 0;
+    color: var(--tw-text-secondary);
+    font: 14px / 20px var(--tw-font-sans);
+  }
+
+  .tebra-patient-note-state {
+    display: flex;
+    flex: none;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .tebra-patient-note-open {
+    width: 73px;
+    height: 38px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-action-border);
+    border-radius: var(--tw-radius-action);
+    font: 600 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    cursor: pointer;
+  }
+
+  .tebra-patient-note-open:hover {
+    background: rgb(0 73 82 / 8%);
+  }
+
+  .tebra-patient-note-open:focus-visible {
+    outline: none;
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  .tebra-patient-notes-empty {
+    display: grid;
+    gap: 4px;
+    padding: 24px 16px;
+    background: var(--tw-surface-panel);
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
+    text-align: center;
+  }
+
+  .tebra-patient-notes-empty small {
+    color: var(--tw-text-secondary);
+  }
+
+  /* ------------------------------------------------------------ action bar */
+
+  .tebra-action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .tebra-action-split {
+    display: flex;
+  }
+
+  /*
+   * One primary-action group, never two coral buttons. The disclosure is the
+   * same coral as the primary segment because they are one control; the
+   * outlined actions beside them deliberately are not.
+   */
+  .tebra-action-primary,
+  .tebra-action-split-disclosure {
+    height: 36px;
+    color: var(--tw-ink-900);
+    background: var(--tw-coral-500);
+    border: 2px solid var(--tw-coral-500);
+    font: 600 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    cursor: pointer;
+    transition:
+      background-color var(--tw-dur-base) var(--tw-ease),
+      box-shadow var(--tw-dur-base) var(--tw-ease);
+  }
+
+  .tebra-action-primary {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 0 14px;
+    border-right-width: 0;
+    border-radius: var(--tw-radius-tight) 0 0 var(--tw-radius-tight);
+  }
+
+  .tebra-action-primary svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .tebra-action-split-disclosure {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    border-radius: 0 var(--tw-radius-tight) var(--tw-radius-tight) 0;
+  }
+
+  .tebra-action-primary:hover,
+  .tebra-action-split-disclosure:hover {
+    background: var(--tw-coral-300);
+    border-color: var(--tw-coral-300);
+  }
+
+  .tebra-action-primary:active,
+  .tebra-action-split-disclosure:active {
+    background: var(--tw-coral-600);
+    border-color: var(--tw-coral-600);
+    box-shadow: 0 0 0 3px rgb(255 141 110 / 24%);
+  }
+
+  .tebra-action-primary:focus-visible,
+  .tebra-action-split-disclosure:focus-visible,
+  .tebra-action-outlined:focus-visible {
+    outline: none;
+    box-shadow: var(--tw-focus-ring);
+  }
+
+  .tebra-action-outlined {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    height: var(--tw-action-height);
+    padding: 0 16px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-action-border);
+    border-radius: var(--tw-radius-action);
+    font: 600 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    cursor: pointer;
+  }
+
+  .tebra-action-outlined svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .tebra-action-outlined:hover:not(:disabled) {
+    background: rgb(0 73 82 / 8%);
+  }
+
+  .tebra-action-outlined:disabled {
+    color: var(--tw-text-muted);
+    cursor: not-allowed;
+  }
+
+  .tebra-action-caret {
+    width: 0;
+    height: 0;
+    border-top: 5px solid currentcolor;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;
+  }
+
+  .tebra-action-menu {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .tebra-action-menu-list {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    right: 0;
+    width: 242px;
+    padding: 4px;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-tight);
+    box-shadow: var(--tw-shadow-elevation-1);
+  }
+
+  .tebra-action-menu-list button,
+  .tebra-action-menu-check {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    color: var(--tw-text-primary);
+    background: transparent;
+    border: 0;
+    border-radius: var(--tw-radius-tight);
+    font: var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .tebra-action-menu-list button:hover,
+  .tebra-action-menu-list button:focus-visible,
+  .tebra-action-menu-check:hover,
+  .tebra-action-menu-check:focus-within {
+    background: var(--tw-mint-50);
+    outline: none;
+  }
+
+  .tebra-action-menu-empty {
+    margin: 0;
+    padding: 8px 10px;
+    color: var(--tw-text-secondary);
+    font: var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
+  }
 }
 
 /* Three-column workflows at wide workstation widths. */
@@ -2224,6 +2969,69 @@
   .cd2004-worklist-table th,
   .cd2004-worklist-table td {
     padding-block: 7px;
+  }
+}
+
+/*
+ * Compact workstation widths. The chart keeps the authenticated product's
+ * 32px inset on desktop and drops to the repository's compact inset at the
+ * supported minimum, so the Facesheet and Notes list stay reachable at
+ * 800x600 without a horizontal scroll.
+ */
+@media screen and (max-width: 919px) {
+  .tebra-patient-chart {
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .tebra-facesheet-cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .tebra-facesheet-banner,
+  .tebra-summary-card,
+  .tebra-patient-notes-filters,
+  .tebra-patient-note-row {
+    padding: 12px;
+  }
+
+  .tebra-facesheet-banner-side {
+    align-items: flex-start;
+  }
+
+  .tebra-facesheet-name {
+    font-size: var(--tw-fs-lead);
+    line-height: var(--tw-lh-lead);
+  }
+
+  .tebra-patient-notes-field,
+  .tebra-patient-notes-field select,
+  .tebra-patient-notes-field input {
+    width: 100%;
+  }
+
+  .tebra-patient-notes-field {
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
+  .tebra-patient-notes-filters {
+    gap: 8px;
+  }
+
+  .tebra-patient-note-row {
+    flex-wrap: wrap;
+    min-height: 0;
+  }
+
+  .tebra-patient-note-title {
+    font-size: var(--tw-fs-body);
+    line-height: var(--tw-lh-ws-base);
+  }
+
+  .tebra-rail-search {
+    padding: 6px 8px 0;
   }
 }
 

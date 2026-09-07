@@ -1,6 +1,12 @@
 import { DesktopIcon } from "./DesktopIcon";
 import { summarizeReadinessVerdict } from "../application/readiness-projection";
-import { CHECKLIST, RECORD, SHELL, readinessVerdictCopy } from "./vocabulary";
+import {
+  CHECKLIST,
+  RECORD,
+  SHELL,
+  readinessItemStateLabel,
+  readinessVerdictCopy,
+} from "./vocabulary";
 import { noteDocumentLines, noteDocumentStats } from "./note-document";
 import type { NoteSection, PatientContext, ReadinessItem } from "./types";
 
@@ -120,13 +126,7 @@ export function NoteInspector({
                 {item.detail && <small>{item.detail}</small>}
               </span>
               <small class="cd2004-readiness-state">
-                {item.state === "complete"
-                  ? "Complete"
-                  : item.state === "stop"
-                    ? "Required"
-                    : item.state === "warning"
-                      ? "Review"
-                      : "Pending"}
+                {readinessItemStateLabel(item.state)}
               </small>
             </div>
           ))

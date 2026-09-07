@@ -1,6 +1,6 @@
 # Handoff — Tebra Injection Kiosk Redesign
 
-**Updated:** 2026-09-06 · Phase 3a global Open Notes conventions
+**Updated:** 2026-09-07 · Phase 3b patient conventions
 **Repo:** `matthewyglesias-lab/MA-Workstation`
 **Branch:** `claude/ma-workstation-tebra-redesign-nu1aeq` · **PR:** #62 (draft)
 
@@ -20,25 +20,30 @@ prompt refers to. Update this file at the end of each phase.
 > `docs/redesign/MANIFEST.md` (frozen paths, design tokens, convention spec, and
 > the restructure posture in §5b).
 >
-> PR #62 is complete through Phase 2d. Pinned Chromium 151 CI passed the full
-> code, browser, visual, and print artifact gate. Azure deployment alone is
-> blocked because the Static Web App already has its maximum number of staging
+> PR #62 is complete through Phase 3b. Azure deployment alone is blocked
+> because the Static Web App already has its maximum number of staging
 > environments; do not delete an environment or conflate that external capacity
 > error with a code failure. Leave the eight `win32/` images unchanged and
 > flagged stale for a Windows maintainer.
 >
-> The commit containing this handoff is **Phase 3a**: both saved-note dialogs
-> now share the global legacy sparse-table grammar, with exact visit-date
-> precedence, truthful lifecycle/lock detail, keyboard row opening, and
-> synthetic convention tests. Push it and require a green pinned-browser gate.
+> The commit containing this handoff is **Phase 3b**: the patient chart -
+> Facesheet cards, the distinct patient-scoped Notes list, patient search, the
+> hover card, and the page-level `ActionBar`. Browsing is read-only and only an
+> explicit New Note or Open crosses into a workflow.
 >
-> **Then take Phase 3b as a separate conventions change.** Build Facesheet and
-> the distinct patient-scoped Notes filter/list grammar, plus the page-level
-> `ActionBar`, split `New Note`, patient search, and patient hover card specified
-> in `MANIFEST.md` §4. Do not confuse that planned `ActionBar` with the existing
-> per-note `RecordLifecycleActions`. Patient browsing is read-only: scope by
-> normalized name plus exact DOB, and allow only explicit New Note/Open actions
-> to cross into a workflow.
+> **Your first job is the Phase 3b visual closure, not new work.** Phase 3b
+> changes the section rail and the work area, so all seven `.cd2004-shell`
+> baselines are stale by construction and CI's visual-snapshot tests are
+> expected to fail on the current head. Do exactly what Phase 2d did: read the
+> pinned Chromium 151 run's `*-actual.png` artifacts, review every image at full
+> resolution, and promote those exact files as the new Linux baselines in their
+> own commit. Do NOT regenerate them here - the local Chromium is 149 and
+> differs from the pinned renderer by roughly 3-5%, and do not loosen the
+> threshold to absorb that.
+>
+> **Then take Phase 4.** Kiosk shell (`?kiosk=1`), the 7-step injection stepper
+> over the existing `InjectionPanel` tabs, touch site picker, Care Checklist
+> rail, and sign-and-next card, per `MANIFEST.md` §2.1 and §9.
 >
 > The bar is *a module Tebra's own team built*: a Tebra user should notice no
 > seam in how anything works. The engine does not change — this is a
@@ -88,13 +93,13 @@ local ids, but both tree hashes were checked byte-for-byte before the ref moved.
 | `fb54d4a` local / `7eb8c9e` remote | **2c — Authenticated-product refinement** | Aligns measured shell/workflow geometry; repairs responsive clinical reachability, lifecycle/accessibility chrome, menu tracking, and immediate F12 dispatch; records the production-safe Tebra audit. Exact tree `f1daed58`. |
 | `069ac15` local / `4cdce08` remote | **2d — Visual setup** | Removes the retired green-banner pixel assertion from the functional draft-opening helper so all three responsive states reach their snapshot assertions. |
 | `13f7359` local / `353c117` remote | **2d — Visual closure** | Promotes the eight reviewed Chromium 151 Linux captures and records their provenance. `win32/` remains intentionally untouched. |
-| *this commit* | **3a — Global Open Notes** | Shared semantic five-column table for Injection and UDS; Visit Date sort, lifecycle chips, truthful signed lock, whole-row keyboard/mouse opening, exact 44px/mint grammar, synthetic tests. |
+| `b791b21` | **3a — Global Open Notes** | Shared semantic five-column table for Injection and UDS; Visit Date sort, lifecycle chips, truthful signed lock, whole-row keyboard/mouse opening, exact 44px/mint grammar, synthetic tests. |
+| *this commit* | **3b — Patient conventions** | Patient chart: Facesheet cards with stated ordering rules, the modern patient-scoped Notes list, patient search, hover card, and the page-level coral split `ActionBar`. Read-only browsing; `patient-chart-model.ts` is pure and unit-tested. |
 
-**Phase 2 is complete.** Run `34060740885` passed type/static/unit/build plus
-the full Chromium 151 browser, visual, and print artifact job. Its only red job
-was Azure deployment capacity. Phase 3a replaces the provisional saved-note
-rows without reopening the shell architecture; patient-scoped conventions are
-still Phase 3b.
+**Phase 3 is complete.** Phase 3a replaced the provisional saved-note rows
+without reopening the shell architecture; Phase 3b adds the patient-scoped
+conventions on top of it. What remains before Phase 4 is the visual closure
+described in section 5.
 
 ### Load-bearing facts about what landed
 
@@ -170,8 +175,8 @@ interchangeable component:
 | Tebra surface | Measured grammar | Workstation destination |
 | --- | --- | --- |
 | Global **Open Notes** | Legacy sparse table; observed header near `#d4e0dd` (repository token `#d2dcda`); 44px white rows; visible visit-date sort caret; dedicated lock column; the row opens the note. | **Phase 3a implemented:** `RecordsWindow.tsx` and `UdsRecordsWindow.tsx` share `NotesTable`. |
-| Patient chart **Notes** | Four 200×40 filters in a white radius-4, elevation-1 panel; 100px rows with 16px padding, about 20px bold title and 14px metadata; `Open` is 73×38. Observed chips: `Open` 59×32 on `#f0faf2`; `Signed` 69×32 on `#f0eee8`. | Add a patient-scoped Notes view. Do not restyle the global table into this modern list. |
-| Note creation | Coral 36px split `New Note`; adjacent menu about 242px wide with 36px rows. Opening an editor can itself create an `Incomplete` note. | Phase 3 page-level `ActionBar`; preserve repository persistence and confirmation contracts even where Tebra behaves differently. |
+| Patient chart **Notes** | Four 200×40 filters in a white radius-4, elevation-1 panel; 100px rows with 16px padding, about 20px bold title and 14px metadata; `Open` is 73×38. Observed chips: `Open` 59×32 on `#f0faf2`; `Signed` 69×32 on `#f0eee8`. | **Phase 3b implemented:** `notes/PatientNotesList.tsx`, a separate component from `NotesTable` by design. |
+| Note creation | Coral 36px split `New Note`; adjacent menu about 242px wide with 36px rows. Opening an editor can itself create an `Incomplete` note. | **Phase 3b implemented:** `shell/ActionBar.tsx`. The blank-note side effect is deliberately NOT copied - opening a chart writes nothing, and an e2e test asserts it. |
 
 Use the modern authenticated product as the source of truth for shell, cards,
 fields, and actions. The legacy Open Notes/editor surface contributes its
@@ -182,8 +187,34 @@ Phase 3a resolves signing staff/time from `attestation`; Injection Visit Date
 from `fields.adminDate`; UDS Visit Date from `collectionDateTime`; and only then
 falls back to `createdAt`. Persisted drafts are `Incomplete`; completed records
 are `Signed`; `Ready to sign` is reserved for explicit live readiness and is
-never inferred from populated fields. The page-level action bar, patient search,
-Facesheet, hover card, and modern patient Notes surface remain Phase 3b.
+never inferred from populated fields.
+
+### 4.2 Phase 3b outcome, and the deviations worth knowing
+
+The page-level action bar, patient search, Facesheet, hover card and modern
+patient Notes surface all landed. Three decisions are load-bearing:
+
+- **Patient search sits in the section rail, not the product header.** Tebra
+  centres it in the header. Measured at 1440 / 1366 / 1024 / 840 / 800, this
+  module's header cannot hold it: the absolutely-positioned menu bar - an
+  affordance Tebra does not have - owns the centre, leaving 326px of clear
+  space at 1440 but only 122px at 1024 and about 55px at the 800px floor.
+  Putting it in the header made it collide (the first e2e run failed on the
+  menu bar intercepting the click) and would have made it vanish exactly at the
+  supported minimum. The rail is 158-192px at every width and is already where
+  this app's patient context lives. A repository adaptation; revisit only if
+  the menu bar ever leaves the header.
+- **`chartPatientKey` collapses internal whitespace; `siteHistoryPatientKey`
+  does not.** It normalizes runs of whitespace before delegating, so
+  `"Baker,   Test"` and `"Baker, Test"` are one patient. Rotation lookups still
+  pass the name exactly as the note recorded it, so that store's own keying is
+  unchanged.
+- **The chart index keys on the record's real `patient.name`, never on
+  `NotesTableRow.patientLabel`.** That label falls back to the record summary,
+  which turned an unnamed draft into a browsable patient named after its
+  medication. `recordIdentity()` exists for exactly that reason.
+
+The last two were caught by the new unit test, not by review. Keep it.
 
 ---
 
@@ -235,6 +266,40 @@ PW_CHROMIUM=/path/to/chromium \
 ```
 
 ### Current local verification status
+
+**Phase 3b, on this exact tree, temporary Chromium 149:**
+
+- `npm run check` - passed (typecheck plus the ~50 clinical assertions).
+- Unit tests - **602/602 passed** across 39 files (Phase 3a was 580/580; the 22
+  new ones are `patient-chart-model.test.ts` plus four vocabulary guards).
+- `npm run build` - passed.
+- `conventions.spec.js` - **15/15 passed**: the 5 Phase 3a global-ledger cases
+  plus 10 Phase 3b cases covering search, Facesheet cards and their stated
+  rules, the hover card, the 200x40 / 100px / 73x38 patient-list grammar, the
+  single coral action group and its 242px menu, Customize View persistence
+  across a reload, read-only browsing, opening an injection note and a UDS
+  note, and 800x600 containment.
+- `tebra-screen-contract.spec.js`, `visual-contracts.spec.js`,
+  `workstation.spec.js`, `print-regression.spec.js` - **84/84 passed**. No
+  journey regressed from the shell changes, and Phase 3b touches no print
+  source.
+- Frozen-path diff - empty.
+- New `!important` declarations - **zero**.
+- **CSS delta: +801 lines** (12,156 -> 12,957), of which about 150 are the
+  compact-width block. Cumulative is now **+300 over the 12,657-line starting
+  point**, so the redesign is net UP on CSS for the first time. Read that
+  honestly rather than against the old cumulative reduction: Phase 3b adds five
+  components that had no predecessor to delete, so there was no MEDITECH rule
+  to remove at its source. The posture's other four clauses hold (no new
+  `!important`, no dead conditionals, no class derived from copy, all copy in
+  `vocabulary.ts`). If the net-down clause is to be met, Phase 5's deletion of
+  dead MEDITECH CSS is where it happens, and it should be sized against this
+  number.
+- **Visual snapshots are expected to FAIL on this head.** Phase 3b changes the
+  section rail and the work area, so all seven `.cd2004-shell` baselines are
+  stale by construction. They were not regenerated here - see below.
+
+**Prior (Phase 3a) status, retained for comparison:**
 
 - Phase 3a: `npm run check`, 580/580 unit tests, and the production build pass.
   The frozen-path diff is empty, no `!important` was added, and Phase 3a CSS is
@@ -320,6 +385,17 @@ be refreshed here — it remains flagged as stale in the PR body.
    Modifier classes come from state keys.
 6. **Do not leave dead conditionals.** Collapsing a distinction is fine; leaving
    a three-branch ternary whose branches are now identical is not.
+7. **A panel that is not mounted cannot hear an event.** Phase 3b's chart
+   replaces the work area, so `UdsPanel` is unmounted while a chart is open.
+   Dispatching `WORKSTATION_OPEN_NOTE_REQUEST` in the same handler that
+   navigates to UDS sent it before the listener existed and the note silently
+   never opened. The shell now holds the id in a ref and dispatches from an
+   effect keyed on the workflow and the chart state, after the panel has
+   mounted. Any future shell-to-panel request has the same hazard.
+8. **`.wfp-panel` renders encounter fields, not the record summary.** An e2e
+   assertion that a resumed record shows its `summary` string will fail even
+   when the restore worked. Assert a restored field value instead - the
+   existing UDS journeys use `input[placeholder="Last, First"]`.
 
 ---
 
@@ -349,16 +425,20 @@ be refreshed here — it remains flagged as stale in the PR body.
 
 ## 8. Last known CI status — verify before acting
 
-PR #62 remote head `353c117` passed typecheck, static checks, unit tests,
-production build, and the full pinned Chromium 151 browser/visual/print artifact
-job in run `34060740885`. `Build and Deploy` failed only because Azure Static
-Web Apps reported the maximum number of staging environments. No deployment
-started and its smoke test was therefore skipped. Do not delete an environment
-without separate authorization.
+PR #62 remote head `b791b21` (Phase 3a) passed `Type, static, unit, and
+production build` and the full pinned Chromium 151 `Test the exact production
+artifact` job. `Build and Deploy` failed only because Azure Static Web Apps
+reported the maximum number of staging environments. That cap is unchanged and
+has since got worse: five drafts are open against `main` (#56, #59, #60, #62,
+#63) against a Free-tier limit of three. No deployment started and its smoke
+test was therefore skipped. Do not delete an environment without separate
+authorization.
 
-Push the Phase 3a commit and inspect its exact-artifact job. Treat pinned
-Chromium 151 as visual/print authority; temporary Chromium 149 is interaction
-evidence only.
+Push the Phase 3b commit and inspect its exact-artifact job. Expect the seven
+`.cd2004-shell` visual-snapshot tests to fail and the rest of that job to pass;
+the failing run is what produces the `*-actual.png` files the closure commit
+promotes. Treat pinned Chromium 151 as visual/print authority; temporary
+Chromium 149 is interaction evidence only.
 
 ---
 
@@ -369,8 +449,9 @@ evidence only.
 | **2b — Shell** | **On PR #62.** App header, section rail, footer, dialogs, buttons, fields, loading skeleton, and deletion of the MEDITECH contract. |
 | **2c — Authenticated-product refinement** | **On PR #62.** Measured geometry, responsive/keyboard repairs, lifecycle footer, inspector, and UDS scroll ownership. |
 | **2d — Visual closure** | **On PR #62; exact artifact green.** Eight reviewed Chromium 151 Linux baselines; `win32/` remains stale for a Windows maintainer. |
-| **3a — Global Open Notes** | **This commit; require green CI.** Shared Injection/UDS table with date sort, lock, lifecycle, and whole-row open conventions. |
-| **3b — Patient conventions** | Facesheet cards; separate modern patient Notes filters/list; patient search and hover card; page-level coral split `New Note`, backed actions only. **Where first-party feel is won or lost.** |
+| **3a — Global Open Notes** | **On PR #62.** Shared Injection/UDS table with date sort, lock, lifecycle, and whole-row open conventions. |
+| **3b — Patient conventions** | **This commit; require green CI.** Facesheet cards; separate modern patient Notes filters/list; patient search and hover card; page-level coral split `New Note`, backed actions only. |
+| **3b visual closure** | **Next, before Phase 4.** Promote the pinned Chromium 151 `*-actual.png` files as the eight Linux baselines, reviewed image by image, in their own commit — exactly as Phase 2d did. |
 | **4 — Kiosk** | Kiosk shell (`?kiosk=1`), 7-step injection stepper over existing `InjectionPanel` tabs, touch site picker, Care Checklist rail, sign-and-next card. |
 | **5 — Cleanup** | Delete dead MEDITECH CSS, update `README.md`. |
 | **(unscheduled)** | The `cd2004-*` / `meditech-*` / `wfp-*` class rename. Mechanical, ~1000 usages, touches every e2e selector — **its own phase**, never mixed with design work. |

@@ -76,7 +76,9 @@ import {
 } from "../WorkflowLedgerTabs";
 import {
   WORKSTATION_DRAFT_SAVE_REQUEST,
+  WORKSTATION_OPEN_NOTE_REQUEST,
   type WorkstationDraftSaveRequestDetail,
+  type WorkstationOpenNoteRequestDetail,
 } from "../../workstation-events";
 
 type UdsTab = "specimen" | "results" | "review";
@@ -693,6 +695,22 @@ export function UdsPanel({
     window.addEventListener(WORKSTATION_DRAFT_SAVE_REQUEST, handleDraftSave);
     return () => window.removeEventListener(WORKSTATION_DRAFT_SAVE_REQUEST, handleDraftSave);
   }, [activeRecordId, encounter, evaluation.readiness, locked]);
+
+  // The patient chart lists UDS notes but cannot restore one: the encounter a
+  // record opens into lives here. It asks; this panel reads the record through
+  // its own repository and opens it exactly as its own notes window does.
+  useEffect(() => {
+    const handleOpenNote = (event: Event) => {
+      const detail = (event as CustomEvent<WorkstationOpenNoteRequestDetail>).detail;
+      if (detail?.noteType !== "uds" || !detail.recordId) return;
+      const result = repository.list();
+      if (!result.ok) return;
+      const record = result.value.find((candidate) => candidate.id === detail.recordId);
+      if (record) openUdsRecord(record);
+    };
+    window.addEventListener(WORKSTATION_OPEN_NOTE_REQUEST, handleOpenNote);
+    return () => window.removeEventListener(WORKSTATION_OPEN_NOTE_REQUEST, handleOpenNote);
+  });
 
   const discardLocalDraft = (): boolean => {
     if (!activeRecordId) return false;

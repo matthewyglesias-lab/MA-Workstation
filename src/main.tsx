@@ -790,6 +790,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         onCopyAllNotes={() => copyAllLegacyNotes(activeWorkflow)}
         onQueueItemOpen={queueOpen}
         onRecordOpen={openRecord}
+        onOpenInjectionRecord={openInjectionRecord}
         onEscape={() => {
           if (contextEditor) {
             setContextEditor(null);

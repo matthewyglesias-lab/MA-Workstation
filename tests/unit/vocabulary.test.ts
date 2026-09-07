@@ -5,12 +5,19 @@ import {
 } from "../../src/application/readiness-projection";
 import type { WorkstationReadinessItem } from "../../src/application/workstation-projection";
 import {
+  ACTION_BAR,
   CHECKLIST,
+  FACESHEET,
   MODULE,
   NAVIGATION,
   NOTES,
   OPEN_NOTES,
+  PATIENT,
+  PATIENT_CARD,
+  PATIENT_NOTES,
+  PATIENT_SEARCH,
   RECORD,
+  readinessItemStateLabel,
   readinessVerdictCopy,
   SHELL,
 } from "../../src/presentation/vocabulary";
@@ -110,6 +117,37 @@ describe("workstation vocabulary", () => {
     expect(CHECKLIST.reviewCount(2)).toBe("2 to review");
   });
 
+  it("states each Facesheet card's ordering rule, so a short list is not read as a bug", () => {
+    // Every card that lists a subset says which subset. A summary card that
+    // shows five of something without saying which five reads as truncation.
+    expect(FACESHEET.siteRotationRule).toMatch(/last five/i);
+    expect(FACESHEET.recentNotesRule).toMatch(/last five/i);
+    expect(FACESHEET.lastInjectionRule).toMatch(/most recent/i);
+    expect(FACESHEET.careChecklistRule).toMatch(/open items first/i);
+  });
+
+  it("keeps patient search honest about what it searches", () => {
+    // The affordance is Tebra's; the scope is ours, and saying so is the
+    // difference between a faithful control and a lie about reach.
+    expect(PATIENT_SEARCH.placeholder).toMatch(/2-3 letters/i);
+    expect(PATIENT_SEARCH.placeholder).toMatch(/mm\/dd\/yyyy/i);
+    expect(PATIENT_SEARCH.scopeHint).toMatch(/saved in this browser/i);
+  });
+
+  it("keeps Tebra's own control names on the page-level actions", () => {
+    expect(ACTION_BAR.newNote).toBe("New Note");
+    expect(ACTION_BAR.print).toBe("Print");
+    expect(ACTION_BAR.more).toBe("More");
+    expect(ACTION_BAR.customizeView).toBe("Customize View");
+  });
+
+  it("gives every Care Checklist state one word, shared by both surfaces", () => {
+    expect(readinessItemStateLabel("complete")).toBe(CHECKLIST.stateComplete);
+    expect(readinessItemStateLabel("stop")).toBe(CHECKLIST.stateRequired);
+    expect(readinessItemStateLabel("warning")).toBe(CHECKLIST.stateReview);
+    expect(readinessItemStateLabel("pending")).toBe(CHECKLIST.statePending);
+  });
+
   /*
    * The words below describe how this codebase is built, not what a medical
    * assistant is doing. Client/server-era naming is exactly what the redesign
@@ -127,6 +165,16 @@ describe("workstation vocabulary", () => {
       ...Object.values(SHELL),
       ...Object.values(NAVIGATION),
       ...Object.values(WORKFLOW_LABELS),
+      // Phase 3b surfaces. The patient chart is the screen that most reads
+      // like a real EHR chart, so it is the one where client/server-era
+      // vocabulary would be least noticed and do the most damage.
+      ...Object.values(PATIENT),
+      ...Object.values(PATIENT_SEARCH),
+      ...Object.values(PATIENT_CARD),
+      ...Object.values(PATIENT_NOTES),
+      ...Object.values(ACTION_BAR),
+      // FACESHEET carries one copy helper alongside its strings.
+      ...Object.values(FACESHEET).filter((value) => typeof value === "string"),
     ];
     for (const surface of surfaces) {
       expect(surface, `"${surface}" reads as internal vocabulary`).not.toMatch(internalSpeak);

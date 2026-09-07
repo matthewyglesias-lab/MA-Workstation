@@ -45,3 +45,30 @@ export function requestWorkstationDraftSave(
     ),
   );
 }
+
+export const WORKSTATION_OPEN_NOTE_REQUEST = "ipmg:workstation-open-note-request";
+
+export interface WorkstationOpenNoteRequestDetail {
+  /** Panel-owned note types only. Injection opens through the shell's own prop. */
+  noteType: "uds";
+  recordId: string;
+}
+
+/**
+ * The patient chart can open any note it lists, but not every note type is
+ * openable from the shell: UDS records are owned by `UdsPanel`, which holds
+ * the encounter state a record restores into. This typed request lets the
+ * chart ask that panel to open one without the shell importing it or
+ * duplicating its restore logic - the same arrangement `WORKSTATION_DRAFT_SAVE_REQUEST`
+ * already uses for F12.
+ */
+export function requestWorkstationOpenNote(
+  detail: WorkstationOpenNoteRequestDetail,
+) {
+  window.dispatchEvent(
+    new CustomEvent<WorkstationOpenNoteRequestDetail>(
+      WORKSTATION_OPEN_NOTE_REQUEST,
+      { detail },
+    ),
+  );
+}
