@@ -925,13 +925,20 @@
   color: #ffffff;
 }
 
+/*
+ * `border-radius: 0` used to live here, to strip the browser's rounded control
+ * geometry so the hand-painted beveled chrome could take over. That chrome was
+ * deleted in Phase 3c, and the declaration outlived it: at (0,1,1) it beat every
+ * component that named its own radius, so `.tebra-record-action` asking for
+ * var(--tw-radius-action) rendered square and the whole shell looked squared off
+ * no matter what the tokens said. Geometry belongs to the component now.
+ */
 .cd2004-shell button,
 .cd2004-shell input,
 .cd2004-shell select,
 .cd2004-shell textarea {
   font: inherit;
   min-height: 0;
-  border-radius: 0;
 }
 
 /* Native checkboxes/radios render with the current OS's modern rounded

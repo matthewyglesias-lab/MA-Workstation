@@ -1,6 +1,7 @@
 import { NOTES, RECORD, SHELL, WORKLIST_EMPTY, noteCount } from "./vocabulary";
 import { useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
+import { Illustration } from "./Illustration";
 import {
   type ClinicalTone,
   type InjectionRecordRow,
@@ -251,6 +252,7 @@ export function StartCenter({
           </ul>
         ) : (
           <div class="tebra-record-empty">
+            <Illustration name="worklist-clear" />
             <strong>{worklistEmptyText(filter)}</strong>
             <small>{worklistEmptyHint(filter)}</small>
           </div>

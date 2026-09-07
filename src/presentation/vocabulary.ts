@@ -429,6 +429,13 @@ export const SHELL = {
   /** Compact provenance marker in the note heading. */
   localBadge: "Local",
   localOnlyDetail: "Records stay in this browser",
+  /**
+   * What the work window is showing, when that is not already obvious from
+   * its title. Home and the patient chart say nothing here: the disclosure
+   * used to be repeated in this slot, one line above the same sentence on the
+   * page itself, on the two screens staff see most.
+   */
+  activeEncounter: "Active encounter",
   storageUnavailable: "Browser storage is unavailable",
   storageError: "Storage error",
 } as const;

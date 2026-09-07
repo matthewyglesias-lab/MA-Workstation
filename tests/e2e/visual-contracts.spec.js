@@ -330,7 +330,10 @@ function expectedContract(workflow, viewport) {
         usesGradient: false
       },
       activeWindow: {
-        borderRadius: '4px',
+        // Phase 4 moved the work panel onto Tebra's card radius. 4px is one of
+        // their real radii, but it is the one they spend on chips and inputs;
+        // the panel a whole screen of work sits in is a card, and reads as one.
+        borderRadius: '16px',
         borderTopWidth: '0px',
         borderRightWidth: '0px',
         titlebarColor: 'rgb(0, 58, 67)',

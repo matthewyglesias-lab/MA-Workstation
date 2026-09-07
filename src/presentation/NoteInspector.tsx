@@ -1,4 +1,5 @@
 import { DesktopIcon } from "./DesktopIcon";
+import { Illustration } from "./Illustration";
 import { summarizeReadinessVerdict } from "../application/readiness-projection";
 import {
   CHECKLIST,
@@ -94,7 +95,20 @@ export function NoteInspector({
           Scope is decided in `summarizeReadinessVerdict`; wording in
           `readinessVerdictCopy`. */}
       {verdict && verdictCopy && (
-        <div class={`cd2004-readiness-verdict is-${verdict.tone}`} role="status">
+        /* `tone` reports "blocked" for a pending item as readily as for a
+           real stop, so a note nobody has filled in yet arrives at the same
+           verdict as one with a contraindication. The projection reports
+           `blockers` separately; presentation is where the two are told apart,
+           exactly as it is where the words are chosen. No clinical rule
+           moves. */
+        <div
+          class={`cd2004-readiness-verdict is-${verdict.tone}${
+            verdict.tone === "blocked" && verdict.blockers === 0
+              ? " is-unfinished"
+              : ""
+          }`}
+          role="status"
+        >
           <strong>{verdictCopy.headline}</strong>
           <span>{verdictCopy.detail}</span>
         </div>
@@ -229,7 +243,7 @@ export function NoteInspector({
           ))
         ) : (
           <div class="cd2004-note-empty">
-            <DesktopIcon name="note" />
+            <Illustration name="note-waiting" />
             <strong>Note preview is waiting.</strong>
             <span>Document the encounter to build the local note preview.</span>
           </div>

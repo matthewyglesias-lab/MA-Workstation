@@ -62,7 +62,7 @@ test.describe('Tebra screen contract', () => {
     expect(home.navRadius).toBe('8px');
     expect(home.navFont).toMatch(/^"Inter Variable"/);
     // The measured shell uses a dark product header, a flush white rail, and
-    // an elevated radius-4 work panel. The
+    // an elevated work panel on Tebra's card radius. The
     // Notes-specific table/list grammar remains deliberately unasserted until
     // Phase 3 lands its dedicated components.
     expect(home.appHeaderBackground).toBe(HEADER_TEAL);
@@ -70,7 +70,7 @@ test.describe('Tebra screen contract', () => {
     expect(home.sectionRailBackground).toBe(WHITE);
     expect(home.sectionRailRadius).toBe('0px');
     expect(home.workWindowBackground).toBe(WHITE);
-    expect(home.workWindowRadius).toBe('4px');
+    expect(home.workWindowRadius).toBe('16px');
     expect(home.workTitlebarColor).toBe(TEAL_900);
     expect(home.workTitlebarGradient).toBe('none');
 

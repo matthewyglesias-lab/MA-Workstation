@@ -4,6 +4,7 @@ import {
   PATIENT_NOTES,
   openPatientNoteLabel,
 } from "../vocabulary";
+import { Illustration } from "../Illustration";
 import {
   DEFAULT_PATIENT_NOTES_FILTER,
   filterPatientNotes,
@@ -173,6 +174,7 @@ export function PatientNotesList({ rows, onOpen }: PatientNotesListProps) {
         </ul>
       ) : (
         <div class="tebra-record-empty">
+          <Illustration name="notes-empty" />
           <strong>{PATIENT_NOTES.empty}</strong>
           <small>{PATIENT_NOTES.emptyHint}</small>
         </div>

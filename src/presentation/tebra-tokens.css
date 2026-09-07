@@ -36,6 +36,18 @@
       monospace;
 
     /*
+     * Display tier.  Plus Jakarta Sans is already in the bundle - print sets
+     * the AVS handout titles in it - and it is the closer read on Tebra's
+     * marketing voice than Inter: rounder terminals, a taller x-height, and
+     * visibly warmer at headline sizes.  Inter keeps everything dense, where
+     * it is the better face: at 11-13px Jakarta's roundness costs legibility,
+     * which is exactly the size clinical data is set at.  So the split is by
+     * size, not by section - brand tier warm, workstation tier neutral.
+     */
+    --tw-font-display: "Plus Jakarta Sans Variable", "Plus Jakarta Sans",
+      "Inter Variable", Inter, "Helvetica Neue", Arial, sans-serif;
+
+    /*
      * Brand tier - Tebra's real marketing sizes.  Reserved for the surfaces a
      * touchscreen genuinely wants big: the facesheet banner, the primary
      * action, the site picker, the sign confirmation.

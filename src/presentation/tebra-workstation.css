@@ -485,15 +485,22 @@
     border-bottom: 1px solid var(--tw-border-subtle);
   }
 
+  /*
+   * No cell walls. The strip used to draw a full-height rule between every
+   * field and fill the first cell a different colour, which made four boxes
+   * out of what is one line of context about one patient. The uppercase
+   * micro-label already opens each pair, so the rules were doing separation
+   * work that the type does for free - and doing it in the heaviest way
+   * available. Space separates them now.
+   */
   .cd2004-patient-primary,
   .cd2004-patient-field {
     display: grid;
     align-content: center;
     min-width: 0;
-    padding: 9px 12px;
+    padding: 9px 18px 9px 0;
     background: transparent;
     border: 0;
-    border-right: 1px solid var(--tw-sand-300);
     box-shadow: none;
   }
 
@@ -501,7 +508,7 @@
     grid-template-columns: 30px minmax(0, 1fr);
     align-items: center;
     gap: 9px;
-    background: var(--tw-sand-150);
+    padding-left: 12px;
   }
 
   .cd2004-patient-primary > svg {
@@ -550,26 +557,28 @@
   .cd2004-patient-banner.has-active-chart .cd2004-patient-primary,
   .cd2004-patient-banner.has-active-chart .cd2004-patient-field {
     background-color: transparent;
-    border-right-color: var(--tw-sand-300);
     box-shadow: none;
   }
 
-  .cd2004-patient-banner.has-active-chart .cd2004-patient-primary {
-    background: var(--tw-sand-150);
-  }
-
+  /*
+   * Allergies keep their own colour - this is the one safety fact on the strip
+   * and it has to survive a glance. What it does not need is to bleed to the
+   * window edge behind a 3px bar: contained and rounded, it still reads first
+   * without turning the whole header amber.
+   */
   .meditech-patient-safety {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-content: center;
     gap: 1px 7px;
     min-width: 0;
-    min-height: 64px;
-    padding: 8px 12px;
+    min-height: 0;
+    margin: 8px 12px 8px 0;
+    padding: 8px 14px;
     color: var(--tw-review-fg);
     background: var(--tw-review-bg);
-    border: 0;
-    border-left: 3px solid var(--tw-review-border);
+    border: 1px solid var(--tw-review-border);
+    border-radius: var(--tw-radius-ctl);
   }
 
   .meditech-patient-safety:has(> button) {
@@ -930,8 +939,8 @@
   }
 
   .meditech-record-list .cd2004-nav-item .meditech-nav-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 17px;
+    height: 17px;
   }
 
   .meditech-record-list .cd2004-nav-item.is-selected .meditech-nav-icon {
@@ -955,7 +964,7 @@
     overflow: hidden;
     background: var(--tw-surface-panel);
     border: 0;
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-card);
     box-shadow: var(--tw-shadow-elevation-1);
   }
 
@@ -1159,7 +1168,9 @@
   .cd2004-worklist-header h1 {
     margin: 0;
     color: var(--tw-text-primary);
+    font-family: var(--tw-font-display);
     font-size: 32px;
+    font-weight: 700;
     line-height: 40px;
     letter-spacing: -0.02em;
     text-transform: none;
@@ -1539,7 +1550,7 @@
     overflow: auto;
     background: var(--tw-surface-panel);
     border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-ctl);
     box-shadow: var(--tw-shadow-elevation-1);
   }
 
@@ -1563,7 +1574,7 @@
     color: var(--tw-text-primary);
     background: transparent;
     border: 0;
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-ctl);
     font: var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
     text-align: left;
     cursor: pointer;
@@ -1603,7 +1614,7 @@
     justify-content: space-between;
     padding: 16px;
     background: var(--tw-surface-panel);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-card);
     box-shadow: var(--tw-shadow-elevation-1);
   }
 
@@ -1632,7 +1643,7 @@
 
   .tebra-facesheet-name {
     margin: 0;
-    font: 700 var(--tw-fs-title) / var(--tw-lh-title) var(--tw-font-sans);
+    font: 700 var(--tw-fs-title) / var(--tw-lh-title) var(--tw-font-display);
     letter-spacing: var(--tw-ls-title);
   }
 
@@ -1704,7 +1715,7 @@
     padding: 12px;
     background: var(--tw-surface-panel);
     border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-card);
     box-shadow: var(--tw-shadow-elevation-1);
     opacity: 0;
     pointer-events: none;
@@ -1762,7 +1773,7 @@
     color: var(--tw-review-fg);
     background: var(--tw-review-bg);
     border: 1px solid var(--tw-review-border);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-ctl);
     font: 600 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
   }
 
@@ -1817,13 +1828,13 @@
     gap: 8px;
     padding: 16px;
     background: var(--tw-surface-panel);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-card);
     box-shadow: var(--tw-shadow-elevation-1);
   }
 
   .tebra-summary-card-head h3 {
     margin: 0;
-    font: 700 var(--tw-fs-lead) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    font: 700 var(--tw-fs-lead) / var(--tw-lh-ws-base) var(--tw-font-display);
   }
 
   .tebra-summary-card-rule {
@@ -1935,7 +1946,7 @@
     color: inherit;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-ctl);
     font: inherit;
     text-align: left;
     cursor: pointer;
@@ -2015,7 +2026,7 @@
     gap: 16px;
     padding: 16px;
     background: var(--tw-surface-panel);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-ctl);
     box-shadow: var(--tw-shadow-elevation-1);
   }
 
@@ -2067,7 +2078,7 @@
     min-height: 100px;
     padding: 16px;
     background: var(--tw-surface-panel);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-card);
     box-shadow: var(--tw-shadow-elevation-1);
   }
 
@@ -2118,16 +2129,44 @@
 
   .tebra-record-empty {
     display: grid;
-    gap: 4px;
-    padding: 24px 16px;
+    justify-items: center;
+    gap: 6px;
+    padding: 36px 16px 40px;
     background: var(--tw-surface-panel);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-card);
     box-shadow: var(--tw-shadow-elevation-1);
     text-align: center;
   }
 
+  .tebra-record-empty strong {
+    font-size: var(--tw-fs-lead);
+  }
+
   .tebra-record-empty small {
+    max-width: 46ch;
     color: var(--tw-text-secondary);
+  }
+
+  /*
+   * The spot illustration in an empty state.
+   *
+   * Capped rather than fluid: an empty region is usually a wide one, and art
+   * that grows with the container turns a quiet all-clear into a billboard.
+   * Sized once here so every empty state in the shell agrees.
+   */
+  .tebra-illustration {
+    display: block;
+    width: 100%;
+    max-width: 184px;
+    height: auto;
+    margin-bottom: 6px;
+  }
+
+  /* Decoration cannot be the reason a short panel scrolls. */
+  @media (max-height: 700px) {
+    .tebra-illustration {
+      max-width: 128px;
+    }
   }
 
   /* ------------------------------------------------------------ action bar */
@@ -2167,7 +2206,7 @@
     align-items: center;
     padding: 0 14px;
     border-right-width: 0;
-    border-radius: var(--tw-radius-tight) 0 0 var(--tw-radius-tight);
+    border-radius: var(--tw-radius-action) 0 0 var(--tw-radius-action);
   }
 
   .tebra-action-primary svg {
@@ -2179,7 +2218,7 @@
     display: inline-grid;
     place-items: center;
     width: 32px;
-    border-radius: 0 var(--tw-radius-tight) var(--tw-radius-tight) 0;
+    border-radius: 0 var(--tw-radius-action) var(--tw-radius-action) 0;
   }
 
   .tebra-action-primary:hover,
@@ -2252,7 +2291,7 @@
     padding: 4px;
     background: var(--tw-surface-panel);
     border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-tight);
+    border-radius: var(--tw-radius-ctl);
     box-shadow: var(--tw-shadow-elevation-1);
   }
 

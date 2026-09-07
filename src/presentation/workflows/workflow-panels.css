@@ -2834,6 +2834,22 @@
 .cd2004-shell .cd2004-readiness-verdict.is-review { background: var(--cd-amber); }
 .cd2004-shell .cd2004-readiness-verdict.is-clear { background: var(--cd-green); }
 
+/*
+ * "Blocked" covers two situations that could not be less alike: a note holding
+ * a genuine stop item, and a note nobody has typed into yet. Both rendered in
+ * the same saturated clinical red, so opening a new injection greeted the
+ * assistant with the most severe colour the product owns, for the offence of
+ * being new - and that spends the red, so the one that matters stops landing.
+ * With no blockers this is documentation lifecycle, and the note-lifecycle
+ * tokens exist precisely to say "not finished" without saying "danger".
+ * A real blocker still renders red.
+ */
+.cd2004-shell .cd2004-readiness-verdict.is-blocked.is-unfinished {
+  color: var(--tw-note-incomplete-fg);
+  background: var(--tw-note-incomplete-bg);
+  border-bottom-color: var(--tw-note-incomplete-border);
+}
+
 /* --------------------------------------------------------------------------
    Injection visual refinement
 

@@ -389,11 +389,17 @@
     font: var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
   }
 
-  .cd2004-shell .cd2004-note-empty svg {
+  /*
+   * A 30px glyph read as a broken image in a panel this wide. The spot
+   * illustration is sized to the inspector instead, and capped so the sentence
+   * under it stays the first thing read.
+   */
+  .cd2004-shell .cd2004-note-empty .tebra-illustration {
     display: block;
-    width: 30px;
-    height: 30px;
-    color: var(--tw-teal-300);
+    width: 100%;
+    max-width: 152px;
+    height: auto;
+    margin-bottom: 2px;
   }
 
   .cd2004-shell .cd2004-note-empty strong {
@@ -420,9 +426,9 @@
       padding: 6px;
     }
 
-    .cd2004-shell .cd2004-note-empty svg {
-      width: 22px;
-      height: 22px;
+    .cd2004-shell .cd2004-note-empty .tebra-illustration {
+      max-width: 96px;
+      margin-bottom: 0;
     }
 
     .cd2004-shell .cd2004-note-empty span {

@@ -1076,8 +1076,8 @@ export function ClinicalDesktopShell({
           icon={chartPatient ? "patient" : selectedWorkflow}
           subtitle={
             chartPatient || selectedWorkflow === "home"
-              ? SHELL.localOnlyDetail
-              : "Active encounter"
+              ? undefined
+              : SHELL.activeEncounter
           }
           active={focusedPane === "work"}
           onActivate={setFocusedPane}
