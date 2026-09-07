@@ -12,6 +12,7 @@ import "./tebra-tokens.css";
 import "./clinical-desktop.css";
 import "./workflows/workflow-panels.css";
 import "./tebra-workstation.css";
+import "./kiosk/kiosk.css";
 import "./tebra-screen-contract.css";
 import {
   InjectionRecordRepository,
@@ -22,6 +23,7 @@ import { isUsableUdsRecord } from "./uds-record-safety";
 import { isUsableInjectionRecord } from "./workflows/injection/injection-presentation-extension";
 import {
   fieldsBeforeSigning,
+  KIOSK,
   MODULE,
   NOTES,
   PATIENT,
@@ -46,6 +48,9 @@ import { Toast } from "./Toast";
 import { AppHeader } from "./shell/AppHeader";
 import { AccountMenu, WorkspaceBadge } from "./shell/AccountMenu";
 import { SectionRail } from "./shell/SectionRail";
+import { KioskShell } from "./kiosk/KioskShell";
+import { useKioskMode } from "./use-kiosk-mode";
+import { requestClinicalPrint } from "./workflows/clinical-print";
 import {
   FUNCTION_KEY_PROFILE,
   resolveFunctionKeyCommand,
@@ -76,6 +81,7 @@ import {
   type DesktopPane,
   type InjectionRecordRow,
   type InjectionRecordActions as InjectionRecordActionsConfig,
+  type InjectionKioskStepId,
   type PatientContext,
   type WorkflowId,
 } from "./types";
@@ -292,6 +298,7 @@ export function ClinicalDesktopShell({
   onSaveDraft,
   onReviewComplete,
   injectionRecordActions,
+  injectionKioskContext,
   onStartNewInjection,
   onOpenRecords,
   onLookup,
@@ -320,6 +327,9 @@ export function ClinicalDesktopShell({
   const [fieldLookup, setFieldLookup] =
     useState<WorkstationLookupTransaction | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [injectionKioskStep, setInjectionKioskStep] =
+    useState<InjectionKioskStepId>("identify");
+  const kioskController = useKioskMode();
   /**
    * Patient chart navigation. The chart is a destination like any section,
    * not a mode layered over one: it replaces the work area's content and
@@ -344,6 +354,10 @@ export function ClinicalDesktopShell({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const saveDraftRef = useRef(onSaveDraft);
   const selectedWorkflow = activeWorkflow ?? internalWorkflow;
+  const kioskLaunchHandledRef = useRef(false);
+  const kioskInjectionPendingRef = useRef(
+    kioskController.enabled && selectedWorkflow !== "administer",
+  );
   const dashboardInjectionRecords = useMemo(
     () => safeInjectionWorklistRows(injectionRecords),
     [injectionRecords],
@@ -520,6 +534,110 @@ export function ClinicalDesktopShell({
     setInternalStatus(`${WORKFLOW_LABELS[destination]} opened.`);
     focusWorkflowContentNextFrame();
   };
+
+  const exitKioskMode = () => {
+    kioskLaunchHandledRef.current = false;
+    kioskInjectionPendingRef.current = false;
+    kioskController.setEnabled(false);
+    void kioskController.exitFullscreen();
+    setInternalStatus(KIOSK.modeClosed);
+  };
+
+  const enterKioskMode = () => {
+    kioskLaunchHandledRef.current = true;
+    if (selectedWorkflow !== "administer") {
+      kioskInjectionPendingRef.current = true;
+      if (!openWorkflow("administer")) {
+        kioskInjectionPendingRef.current = false;
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return;
+      }
+    }
+    if (chartPatientKeyState) closeChart("administer");
+    setInjectionKioskStep(
+      injectionRecordActions?.lifecycle === "locked" ? "sign" : "identify",
+    );
+    kioskController.setEnabled(true);
+    if (!kioskController.fullscreenSupported) {
+      setInternalStatus(KIOSK.fullScreenUnavailable);
+      return;
+    }
+    // This call stays in the account-menu click stack. Browsers may reject a
+    // Fullscreen API request once the originating user gesture has unwound.
+    void kioskController.requestFullscreen().then((opened) => {
+      setInternalStatus(
+        opened ? KIOSK.fullScreenEntered : KIOSK.fullScreenDidNotOpen,
+      );
+    });
+  };
+
+  const toggleKioskFullscreen = () => {
+    if (!kioskController.fullscreenSupported) {
+      setInternalStatus(KIOSK.fullScreenUnavailable);
+      return;
+    }
+    const operation = kioskController.fullscreen
+      ? kioskController.exitFullscreen()
+      : kioskController.requestFullscreen();
+    void operation.then((changed) => {
+      setInternalStatus(
+        changed
+          ? kioskController.fullscreen
+            ? KIOSK.fullScreenExited
+            : KIOSK.fullScreenEntered
+          : kioskController.fullscreen
+            ? KIOSK.fullScreenDidNotClose
+            : KIOSK.fullScreenDidNotOpen,
+      );
+    });
+  };
+
+  // Query-string and stored-preference launches enter the Injection workflow,
+  // but do not request full screen: that API is reserved for a real gesture.
+  useEffect(() => {
+    if (!kioskController.enabled) {
+      kioskLaunchHandledRef.current = false;
+      kioskInjectionPendingRef.current = false;
+      return;
+    }
+    if (kioskLaunchHandledRef.current) return;
+    kioskLaunchHandledRef.current = true;
+    if (selectedWorkflow !== "administer") {
+      kioskInjectionPendingRef.current = true;
+      if (!openWorkflow("administer")) {
+        kioskController.setEnabled(false);
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return;
+      }
+    }
+    if (chartPatientKeyState) closeChart("administer");
+    setInternalStatus(KIOSK.modeOpened);
+  }, [
+    chartPatientKeyState,
+    kioskController.enabled,
+    kioskController.setEnabled,
+    selectedWorkflow,
+  ]);
+
+  // Any successful navigation away restores the complete workstation. This
+  // also covers external workflow changes that bypass the section rail.
+  useEffect(() => {
+    if (!kioskController.enabled) return;
+    if (selectedWorkflow === "administer" && !chartPatientKeyState) {
+      kioskInjectionPendingRef.current = false;
+      return;
+    }
+    if (kioskInjectionPendingRef.current) return;
+    kioskController.setEnabled(false);
+    void kioskController.exitFullscreen();
+    setInternalStatus(KIOSK.modeClosed);
+  }, [
+    chartPatientKeyState,
+    kioskController.enabled,
+    kioskController.exitFullscreen,
+    kioskController.setEnabled,
+    selectedWorkflow,
+  ]);
 
   useEffect(() => {
     if (
@@ -1167,8 +1285,32 @@ export function ClinicalDesktopShell({
    */
   const chartOpen = chartPatient !== null;
   const showsInjectionLayout = selectedWorkflow === "administer" && !chartOpen;
+  const kioskVisible = kioskController.enabled && showsInjectionLayout;
+  const kioskLocked = injectionRecordActions?.lifecycle === "locked";
+  const showsDocumentSplit = showsInjectionLayout && !kioskVisible;
   const showsSideInspector =
     !chartOpen && selectedWorkflow !== "administer" && selectedWorkflow !== "home";
+
+  useEffect(() => {
+    if (!kioskVisible) return;
+    if (kioskLocked) {
+      if (injectionKioskStep !== "sign") setInjectionKioskStep("sign");
+      return;
+    }
+    if (
+      injectionKioskContext?.nonAdministration &&
+      (injectionKioskStep === "prepare" ||
+        injectionKioskStep === "site" ||
+        injectionKioskStep === "administer")
+    ) {
+      setInjectionKioskStep("response");
+    }
+  }, [
+    injectionKioskContext?.nonAdministration,
+    injectionKioskStep,
+    kioskLocked,
+    kioskVisible,
+  ]);
 
   const windowTitle = chartPatient
     ? chartPatient.name
@@ -1190,6 +1332,9 @@ export function ClinicalDesktopShell({
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
+    kioskMode: kioskVisible,
+    injectionKioskStep,
+    onInjectionKioskStepChange: setInjectionKioskStep,
   });
 
   const inspectorPanel = (
@@ -1222,6 +1367,8 @@ export function ClinicalDesktopShell({
       data-active-workflow={selectedWorkflow}
       data-chart-view={chartPatient ? chartView : undefined}
       data-post-state={postState}
+      data-kiosk-mode={kioskVisible ? "true" : undefined}
+      data-kiosk-step={kioskVisible ? injectionKioskStep : undefined}
     >
       <a class="cd2004-skip-link" href="#cd2004-work-area">
         {SHELL.skipToActiveNote}
@@ -1236,6 +1383,10 @@ export function ClinicalDesktopShell({
             {...(onOpenStaff ? { onOpenStaff } : {})}
             {...(onOpenLocation ? { onOpenLocation } : {})}
             onOpenShortcuts={openShortcutHelp}
+            kioskMode={kioskController.enabled}
+            onToggleKiosk={
+              kioskController.enabled ? exitKioskMode : enterKioskMode
+            }
           />
         }
       >
@@ -1249,7 +1400,7 @@ export function ClinicalDesktopShell({
           one fact it uniquely carried, that a note is open for someone else,
           moved into the chart header.
         */}
-        {!chartOpen && (
+        {!chartOpen && !kioskVisible && (
         <PatientBanner
           patient={patient}
           workflowPatient={workflowPatient}
@@ -1271,14 +1422,51 @@ export function ClinicalDesktopShell({
       <main
         class={[
           "cd2004-workspace",
-          showsInjectionLayout ? "has-central-preview" : "",
+          showsDocumentSplit ? "has-central-preview" : "",
           showsSideInspector ? "has-side-inspector" : "",
+          kioskVisible ? "is-kiosk" : "",
+          kioskVisible && kioskLocked ? "has-kiosk-completion" : "",
         ]
           .filter(Boolean)
           .join(" ")}
         id="cd2004-work-area"
         data-workflow={selectedWorkflow}
       >
+        {kioskVisible ? (
+          <KioskShell
+            patient={patient}
+            workflowPatient={workflowPatient}
+            patientMismatch={isMismatch}
+            context={injectionKioskContext}
+            readiness={readiness}
+            activeStep={injectionKioskStep}
+            locked={Boolean(kioskLocked)}
+            canComplete={canComplete}
+            fullscreen={kioskController.fullscreen}
+            fullscreenSupported={kioskController.fullscreenSupported}
+            onStepChange={setInjectionKioskStep}
+            onUseWorkflowPatient={
+              onUseWorkflowPatient
+                ? () => onUseWorkflowPatient("administer")
+                : undefined
+            }
+            onToggleFullscreen={toggleKioskFullscreen}
+            onExit={exitKioskMode}
+            onPrintHandout={() => {
+              const printed = requestClinicalPrint("injection-avs");
+              if (!printed.ok) setInternalStatus(KIOSK.handoutUnavailable);
+            }}
+            onStartNextPatient={() => {
+              const started = injectionRecordActions?.onStartNew();
+              if (started === false) {
+                setInternalStatus(RECORD.currentNoteStayedOpen);
+                return;
+              }
+              setInjectionKioskStep("identify");
+              setInternalStatus(KIOSK.nextPatientStarted);
+            }}
+          />
+        ) : (
         <aside class="meditech-context-rail tebra-context-rail">
           <SectionRail
             selectedWorkflow={selectedWorkflow}
@@ -1309,6 +1497,7 @@ export function ClinicalDesktopShell({
           />
           {showsSideInspector && inspectorPanel}
         </aside>
+        )}
 
         <Panel
           pane="work"
@@ -1324,7 +1513,7 @@ export function ClinicalDesktopShell({
         >
           <div
             class={`cd2004-transaction-window ${
-              showsInjectionLayout ? "has-document-split" : ""
+              showsDocumentSplit ? "has-document-split" : ""
             }`}
           >
           <div
@@ -1383,7 +1572,7 @@ export function ClinicalDesktopShell({
               />
             )}
           </div>
-          {showsInjectionLayout && (
+          {showsDocumentSplit && (
             <div class="cd2004-document-split">{inspectorPanel}</div>
           )}
           </div>
@@ -1517,6 +1706,9 @@ interface RenderWorkflowOptions {
   onQueueItemOpen?: ClinicalDesktopShellProps["onQueueItemOpen"];
   onRecordOpen?: ClinicalDesktopShellProps["onRecordOpen"];
   onStartNewInjection?: ClinicalDesktopShellProps["onStartNewInjection"];
+  kioskMode: boolean;
+  injectionKioskStep: InjectionKioskStepId;
+  onInjectionKioskStepChange: (step: InjectionKioskStepId) => void;
 }
 
 interface InjectionRecordActionsProps {
@@ -1683,6 +1875,9 @@ function renderWorkflowContent({
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
+  kioskMode,
+  injectionKioskStep,
+  onInjectionKioskStepChange,
 }: RenderWorkflowOptions): ComponentChildren {
   if (workflow === "home") {
     return (
@@ -1703,6 +1898,9 @@ function renderWorkflowContent({
       hostRef: workHostRef,
       patient,
       isPatientContextMismatched: isMismatch,
+      kioskMode,
+      injectionKioskStep,
+      onInjectionKioskStepChange,
     });
   }
 

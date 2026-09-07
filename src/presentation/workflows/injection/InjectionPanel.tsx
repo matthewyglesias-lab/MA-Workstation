@@ -95,7 +95,7 @@ import {
 } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
-import type { PatientContext } from "../../types";
+import type { InjectionKioskStepId, PatientContext } from "../../types";
 import { formatDobAsTyped } from "../../format-dob";
 import {
   canBuildInjectionPatientScreenDocument,
@@ -105,6 +105,10 @@ import {
   INJECTION_PATIENT_SCREENING_ENABLED,
   printInjectionPatientScreening,
 } from "./patient-screening-print";
+import {
+  defaultInjectionKioskStepForTab,
+  injectionKioskStepDefinition,
+} from "../../kiosk/InjectionStepper";
 
 // Four transaction pages match how staff actually complete the MAR: establish
 // order/timing, identify the physical product, administer and verify, review.
@@ -415,6 +419,11 @@ interface InjectionPanelProps {
     encounter: InjectionEncounter,
     evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
   ) => void;
+  /** Focused-shell navigation. It changes presentation only; tabs and fields
+   * remain the existing worksheet's and the engine still owns every gate. */
+  kioskMode?: boolean;
+  kioskStep?: InjectionKioskStepId;
+  onKioskStepChange?: (step: InjectionKioskStepId) => void;
 }
 
 const patientIsEmpty = (patient: InjectionEncounter["patient"]): boolean =>
@@ -1250,6 +1259,9 @@ export function InjectionPanel({
   onPendingAddendumChange,
   onDirtyChange,
   onWorkflowStateChange,
+  kioskMode = false,
+  kioskStep,
+  onKioskStepChange,
 }: InjectionPanelProps) {
   const editorDisabled = Boolean(locked || editorUnavailable);
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
@@ -1269,6 +1281,47 @@ export function InjectionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounter, evaluation]);
   const [tab, setTab] = useState<InjectionTab>("order");
+  const requestedKioskStepRef = useRef<InjectionKioskStepId | null>(null);
+
+  useEffect(() => {
+    if (!kioskMode || !kioskStep) return;
+    const target = injectionKioskStepDefinition(kioskStep);
+    requestedKioskStepRef.current = kioskStep;
+    // Two focus steps share Order and two share Administration. Clear a
+    // same-page request now; otherwise no tab state change would rerun the
+    // synchronization effect and the stale request could override a later
+    // in-worksheet navigation.
+    if (tab === target.tab) requestedKioskStepRef.current = null;
+    setTab(target.tab);
+    const frame = window.requestAnimationFrame(() => {
+      const candidate = target.action === "sign"
+        ? document.querySelector<HTMLElement>("[data-injection-finish]")
+        : target.field
+          ? document.querySelector<HTMLElement>(
+              `[data-field-path="${target.field}"] input:not(:disabled), ` +
+                `[data-field-path="${target.field}"] select:not(:disabled), ` +
+                `[data-field-path="${target.field}"] textarea:not(:disabled), ` +
+                `[data-field-path="${target.field}"] button:not(:disabled), ` +
+                `[data-field-path="${target.field}"][tabindex]`,
+            )
+          : null;
+      candidate?.scrollIntoView({ block: "center" });
+      candidate?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [kioskMode, kioskStep]);
+
+  useEffect(() => {
+    if (!kioskMode || !onKioskStepChange) return;
+    const requested = requestedKioskStepRef.current;
+    if (requested) {
+      if (injectionKioskStepDefinition(requested).tab !== tab) return;
+      requestedKioskStepRef.current = null;
+      onKioskStepChange(requested);
+      return;
+    }
+    onKioskStepChange(defaultInjectionKioskStepForTab(tab));
+  }, [kioskMode, onKioskStepChange, tab]);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [patientScreeningDialogOpen, setPatientScreeningDialogOpen] = useState(false);
   const [lateDoseDialogOpen, setLateDoseDialogOpen] = useState(false);
@@ -2326,7 +2379,12 @@ export function InjectionPanel({
     );
 
   return (
-    <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
+    <div
+      class="wfp-panel cd2004-print-exclude"
+      ref={previewRef}
+      tabIndex={-1}
+      data-kiosk-step={kioskMode ? kioskStep : undefined}
+    >
       <InjectionRequirementsContext.Provider value={requirements}>
         <InjectionIncompleteFieldsContext.Provider value={incompleteFields}>
           <div class="wfp-transaction-chrome">
@@ -2404,13 +2462,15 @@ export function InjectionPanel({
               )}
             </div>
 
-            <WorkflowLedgerTabs
-              tabs={injectionLedgerTabs}
-              activeTab={tab}
-              onChange={setTab}
-              ariaLabel="Injection transaction pages and state"
-              idPrefix="injection-ledger"
-            />
+            {!kioskMode && (
+              <WorkflowLedgerTabs
+                tabs={injectionLedgerTabs}
+                activeTab={tab}
+                onChange={setTab}
+                ariaLabel="Injection transaction pages and state"
+                idPrefix="injection-ledger"
+              />
+            )}
           </div>
 
       <div
@@ -2458,7 +2518,10 @@ export function InjectionPanel({
           class="wfp-tabpanel"
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "order")}
-          aria-labelledby={workflowLedgerTabId("injection-ledger", "order")}
+          aria-labelledby={
+            kioskMode ? undefined : workflowLedgerTabId("injection-ledger", "order")
+          }
+          aria-label={kioskMode ? INJECTION_TAB_LABELS.order : undefined}
         >
           <div class="wfp-section" role="group" aria-label="Patient & ordering provider">
             <h2 class="wfp-section-head">Patient &amp; ordering provider</h2>
@@ -3137,7 +3200,12 @@ export function InjectionPanel({
           class="wfp-tabpanel"
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "administration")}
-          aria-labelledby={workflowLedgerTabId("injection-ledger", "administration")}
+          aria-labelledby={
+            kioskMode
+              ? undefined
+              : workflowLedgerTabId("injection-ledger", "administration")
+          }
+          aria-label={kioskMode ? INJECTION_TAB_LABELS.administration : undefined}
         >
           <div class="wfp-section" role="group" aria-label="Actual administration location">
             <h2 class="wfp-section-head">
@@ -3390,7 +3458,10 @@ export function InjectionPanel({
           class="wfp-tabpanel"
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "product")}
-          aria-labelledby={workflowLedgerTabId("injection-ledger", "product")}
+          aria-labelledby={
+            kioskMode ? undefined : workflowLedgerTabId("injection-ledger", "product")
+          }
+          aria-label={kioskMode ? INJECTION_TAB_LABELS.product : undefined}
         >
           {!medication && (
             <div class="wfp-prerequisite-line" role="status">
@@ -3748,7 +3819,10 @@ export function InjectionPanel({
           class="wfp-tabpanel"
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "review")}
-          aria-labelledby={workflowLedgerTabId("injection-ledger", "review")}
+          aria-labelledby={
+            kioskMode ? undefined : workflowLedgerTabId("injection-ledger", "review")
+          }
+          aria-label={kioskMode ? INJECTION_TAB_LABELS.review : undefined}
         >
           {!nonAdministration && (
             <ScheduleRegister

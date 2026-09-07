@@ -41,6 +41,25 @@ export interface PatientContext {
   sourceWorkflow?: WorkflowId;
 }
 
+/** Display facts carried into the focused Injection shell. */
+export interface InjectionKioskContext {
+  priorDoseDate?: string;
+  priorSite?: string;
+  nextDoseDate?: string;
+  /** A documented held/escalated/provider plan makes administration steps N/A. */
+  nonAdministration?: boolean;
+}
+
+/** Presentation-only waypoints over the existing Injection worksheet. */
+export type InjectionKioskStepId =
+  | "identify"
+  | "verify-order"
+  | "prepare"
+  | "site"
+  | "administer"
+  | "response"
+  | "sign";
+
 /**
  * Result of opening a note from a patient-scoped surface. The explicit
  * mismatch result lets that surface explain why the durable record was
@@ -103,7 +122,7 @@ export interface InjectionRecordActions {
   canDiscard: boolean;
   /** Shows lifecycle integrity detail without exposing mutating actions. */
   unavailable?: boolean;
-  onStartNew: () => void;
+  onStartNew: () => boolean | void;
   onDiscard: () => void;
 }
 
@@ -125,6 +144,9 @@ export interface WorkflowRenderContext {
   hostRef: Ref<HTMLDivElement>;
   patient: PatientContext;
   isPatientContextMismatched: boolean;
+  kioskMode: boolean;
+  injectionKioskStep?: InjectionKioskStepId;
+  onInjectionKioskStepChange?: (step: InjectionKioskStepId) => void;
 }
 
 export interface ClinicalDesktopShellProps {
@@ -161,6 +183,7 @@ export interface ClinicalDesktopShellProps {
   onSaveDraft?: () => void;
   onReviewComplete?: () => void;
   injectionRecordActions?: InjectionRecordActions;
+  injectionKioskContext?: InjectionKioskContext;
   onStartNewInjection?: (patient?: PatientContext) => boolean | void;
   onOpenRecords?: () => void;
   /** A truthful, local contextual lookup (currently the local Record List). */

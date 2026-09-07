@@ -1,5 +1,5 @@
 import { DesktopIcon } from "../DesktopIcon";
-import { ACCOUNT, PATIENT, SHELL } from "../vocabulary";
+import { ACCOUNT, KIOSK, PATIENT, SHELL } from "../vocabulary";
 import { MenuButton } from "./MenuButton";
 
 interface AccountMenuProps {
@@ -8,6 +8,8 @@ interface AccountMenuProps {
   onOpenStaff?: () => void;
   onOpenLocation?: () => void;
   onOpenShortcuts?: () => void;
+  kioskMode?: boolean;
+  onToggleKiosk?: () => void;
 }
 
 /**
@@ -26,6 +28,8 @@ export function AccountMenu({
   onOpenStaff,
   onOpenLocation,
   onOpenShortcuts,
+  kioskMode = false,
+  onToggleKiosk,
 }: AccountMenuProps) {
   return (
     <MenuButton
@@ -83,6 +87,18 @@ export function AccountMenu({
             }}
           >
             {SHELL.shortcuts}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            data-account-action="kiosk"
+            disabled={!onToggleKiosk}
+            onClick={() => {
+              dismiss();
+              onToggleKiosk?.();
+            }}
+          >
+            {kioskMode ? KIOSK.exitMode : KIOSK.enterMode}
           </button>
           {/*
             The provenance line, in the menu that names the account. This app

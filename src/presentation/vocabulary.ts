@@ -452,6 +452,63 @@ export const CHECKLIST = {
     `${count} checklist items, starting with: ${first}`,
 } as const;
 
+/* --------------------------------------------------------------------- kiosk */
+
+/**
+ * The focused Injection workspace. These labels describe navigation and
+ * documentation progress only; none of them claims that an administration is
+ * clinically safe. The clinical engine remains the sole owner of every gate.
+ */
+export const KIOSK = {
+  modeName: "Injection focus",
+  enterMode: "Open Injection focus",
+  exitMode: "Return to full workspace",
+  modeOpened: "Injection focus opened.",
+  modeClosed: "Full workspace restored.",
+  fullScreen: "Enter full screen",
+  exitFullScreen: "Exit full screen",
+  fullScreenUnavailable: "Full screen is unavailable in this browser.",
+  fullScreenDidNotOpen:
+    "Full screen did not open. Injection focus remains available.",
+  fullScreenDidNotClose:
+    "Full screen did not close. Use the browser control to leave full screen.",
+  fullScreenEntered: "Full screen opened.",
+  fullScreenExited: "Full screen closed.",
+  currentPatient: "Current patient",
+  identifyPatient: "Identify the patient to begin",
+  lastInjection: "Last injection",
+  lastSite: "Last site",
+  nextDue: "Next due",
+  notAvailable: "Not available",
+  stepsTitle: "Injection steps",
+  stepsDetail: "Choose a step to move through this note.",
+  checklistDetail: "Documentation status for this note",
+  checklistEmpty: "Start the note to populate the Care Checklist.",
+  stepIdentify: "Identify",
+  stepVerifyOrder: "Verify order",
+  stepPrepare: "Prepare",
+  stepSite: "Site",
+  stepAdminister: "Administer",
+  stepResponse: "Response",
+  stepSign: "Sign",
+  stateComplete: "Complete",
+  stateReady: "Ready",
+  stateRequired: "Needs information",
+  stateReview: "Review",
+  statePending: "Not started",
+  stateSkipped: "Not needed",
+  mismatchDetail: (patient: string) =>
+    `This note belongs to ${patient || "another patient"}.`,
+  makeActive: "Make active",
+  signedTitle: "Injection note signed",
+  signedDetail: (patient: string) =>
+    `${patient || "This patient's"} note is read only and saved in this browser.`,
+  printHandout: "Print patient handout",
+  handoutUnavailable: "The patient handout is unavailable for this note.",
+  startNextPatient: "Start next patient",
+  nextPatientStarted: "A new injection note is ready for the next patient.",
+} as const;
+
 /* -------------------------------------------------------------------- shell */
 
 export const SHELL = {

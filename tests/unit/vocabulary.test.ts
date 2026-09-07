@@ -8,6 +8,7 @@ import {
   ACTION_BAR,
   CHECKLIST,
   FACESHEET,
+  KIOSK,
   MODULE,
   NAVIGATION,
   NOTES,
@@ -115,6 +116,8 @@ describe("workstation vocabulary", () => {
     expect(CHECKLIST.stopCount(1)).toBe("1 stop");
     expect(CHECKLIST.stopCount(2)).toBe("2 stops");
     expect(CHECKLIST.reviewCount(2)).toBe("2 to review");
+    expect(KIOSK.stepsTitle).toBe("Injection steps");
+    expect(KIOSK.stepSign).toBe(RECORD.sign);
   });
 
   it("states each Facesheet card's ordering rule, so a short list is not read as a bug", () => {
@@ -160,11 +163,15 @@ describe("workstation vocabulary", () => {
     const recordCopy = Object.values(RECORD).map((value) =>
       typeof value === "function" ? value("injection") : value,
     );
+    const kioskCopy = Object.values(KIOSK).map((value) =>
+      typeof value === "function" ? value("Synthetic Patient") : value,
+    );
     const surfaces = [
       ...Object.values(MODULE),
       ...Object.values(NOTES),
       ...Object.values(OPEN_NOTES),
       ...recordCopy,
+      ...kioskCopy,
       ...Object.values(SHELL),
       ...Object.values(NAVIGATION),
       ...Object.values(WORKFLOW_LABELS),

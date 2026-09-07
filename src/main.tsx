@@ -972,6 +972,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             injectionStorageConflict ||
             launch.status === 'invalid'
           }
+          kioskMode={context.kioskMode}
+          kioskStep={context.injectionKioskStep}
+          onKioskStepChange={context.onInjectionKioskStepChange}
           onPendingAddendumChange={rememberPendingInjectionAddendum}
           onDirtyChange={rememberInjectionDirty}
           onWorkflowStateChange={(encounter, evaluation) =>
@@ -1773,6 +1776,21 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
                   !injectionDraftProtectionAvailable,
                 onStartNew: startNewInjection,
                 onDiscard: () => setRecordAction('discard'),
+              }
+            : undefined
+        }
+        injectionKioskContext={
+          activeWorkflow === 'administer' && injectionEncounter
+            ? {
+                priorDoseDate: injectionEncounter.priorDoseDate,
+                priorSite: injectionEncounter.priorSite,
+                nextDoseDate:
+                  injectionEncounter.nextDoseDate ||
+                  typedInjectionState?.evaluation.output.expectedNextDoseDate,
+                nonAdministration: Boolean(
+                  injectionEncounter.disposition?.kind &&
+                    injectionEncounter.disposition.kind !== 'administered',
+                ),
               }
             : undefined
         }
