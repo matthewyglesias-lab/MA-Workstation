@@ -194,6 +194,20 @@ never inferred from populated fields.
 The page-level action bar, patient search, Facesheet, hover card and modern
 patient Notes surface all landed. Three decisions are load-bearing:
 
+- **The masthead is suppressed while a chart is open.** The strip is the open
+  note's context, and over a chart it repeated that chart's own header and
+  claimed "No patient selected" directly above a Facesheet. Clinic and staff
+  are already in the header's top right, so suppressing it removed duplication
+  rather than information. The one fact it uniquely carried - that a note is
+  open for a different patient - moved into the chart header as a review-toned
+  notice. The rail's context block and its patient group follow the browsed
+  chart for the same reason.
+- **The rail is a flex column, not a three-row grid.** Its children are now
+  conditional (search, and the patient group), and the old
+  `grid-template-rows: auto auto minmax(0, 1fr)` counted for three: the fourth
+  and fifth children landed in the wrong rows and the context block was drawn
+  over the group heading below it. Nothing places rail children explicitly, so
+  the switch is contained.
 - **Patient search sits in the section rail, not the product header.** Tebra
   centres it in the header. Measured at 1440 / 1366 / 1024 / 840 / 800, this
   module's header cannot hold it: the absolutely-positioned menu bar - an
@@ -273,16 +287,14 @@ PW_CHROMIUM=/path/to/chromium \
 - Unit tests - **602/602 passed** across 39 files (Phase 3a was 580/580; the 22
   new ones are `patient-chart-model.test.ts` plus four vocabulary guards).
 - `npm run build` - passed.
-- `conventions.spec.js` - **15/15 passed**: the 5 Phase 3a global-ledger cases
+- `conventions.spec.js` - **17/17 passed**: the 5 Phase 3a global-ledger cases
   plus 10 Phase 3b cases covering search, Facesheet cards and their stated
   rules, the hover card, the 200x40 / 100px / 73x38 patient-list grammar, the
   single coral action group and its 242px menu, Customize View persistence
   across a reload, read-only browsing, opening an injection note and a UDS
   note, and 800x600 containment.
-- `tebra-screen-contract.spec.js`, `visual-contracts.spec.js`,
-  `workstation.spec.js`, `print-regression.spec.js` - **84/84 passed**. No
-  journey regressed from the shell changes, and Phase 3b touches no print
-  source.
+- The five browser suites together - **101/101 passed**. No journey regressed
+  from the shell changes, and Phase 3b touches no print source.
 - Frozen-path diff - empty.
 - New `!important` declarations - **zero**.
 - **CSS delta: +801 lines** (12,156 -> 12,957), of which about 150 are the

@@ -28,6 +28,12 @@ interface SectionRailProps {
    */
   search?: ComponentChildren;
   /**
+   * The patient whose chart is currently being browsed, when one is. The rail
+   * follows it rather than the open note's patient, so it cannot say "No
+   * patient selected" beside that patient's own Facesheet.
+   */
+  browsedPatientName?: string;
+  /**
    * Opens the chart for the patient currently in context. Absent when no
    * patient is identified, which is why the group below is conditional: a rail
    * entry that leads nowhere is the most obvious tell there is.
@@ -71,20 +77,25 @@ export function SectionRail({
   onWorkflowOpen,
   onOpenRecords,
   search,
+  browsedPatientName,
   onOpenChart,
   activeChartView = null,
 }: SectionRailProps) {
   const localEmrCommand = getFunctionKeyCommand("local-emr");
+  const browsed = browsedPatientName?.trim();
   const hasLocalChart = Boolean(
-    patient.localRecordId?.trim() ||
+    browsed ||
+      patient.localRecordId?.trim() ||
       patient.visitLabel?.trim() ||
       patient.medicalRecordNumber?.trim(),
   );
-  const localChartDetail = hasLocalChart
-    ? [patient.name?.trim() || PATIENT.facesheet, patient.localRecordId?.trim()]
-        .filter(Boolean)
-        .join(" · ")
-    : NAVIGATION.selectRecordHint;
+  const localChartDetail = browsed
+    ? browsed
+    : hasLocalChart
+      ? [patient.name?.trim() || PATIENT.facesheet, patient.localRecordId?.trim()]
+          .filter(Boolean)
+          .join(" · ")
+      : NAVIGATION.selectRecordHint;
 
   return (
     <nav

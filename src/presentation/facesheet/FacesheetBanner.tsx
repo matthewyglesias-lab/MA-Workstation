@@ -1,6 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { DesktopIcon } from "../DesktopIcon";
-import { noteCount, PATIENT, PATIENT_CARD, SHELL } from "../vocabulary";
+import { FACESHEET, noteCount, PATIENT, PATIENT_CARD, SHELL } from "../vocabulary";
 import type { ChartPatient } from "../patient-chart-model";
 import { PatientCardPopup } from "./PatientCardPopup";
 
@@ -8,6 +8,12 @@ interface FacesheetBannerProps {
   patient: ChartPatient;
   /** Page-level actions, rendered top right. */
   actions?: ComponentChildren;
+  /**
+   * Set when a note is open for someone other than the patient being browsed.
+   * The shell's masthead is suppressed while a chart is open - it repeated
+   * this header and contradicted it - so this is where that fact now lives.
+   */
+  otherNotePatient?: string;
 }
 
 /**
@@ -18,7 +24,11 @@ interface FacesheetBannerProps {
  * a user is browsing, which may not be the patient with a note open - so it
  * states its own identity rather than borrowing the masthead's.
  */
-export function FacesheetBanner({ patient, actions }: FacesheetBannerProps) {
+export function FacesheetBanner({
+  patient,
+  actions,
+  otherNotePatient,
+}: FacesheetBannerProps) {
   return (
     <header class="tebra-facesheet-banner">
       <div class="tebra-facesheet-identity">
@@ -57,6 +67,13 @@ export function FacesheetBanner({ patient, actions }: FacesheetBannerProps) {
         <p class="tebra-facesheet-scope">{SHELL.localOnlyDetail}</p>
         {actions}
       </div>
+
+      {otherNotePatient ? (
+        <p class="tebra-facesheet-other-note" role="status">
+          <DesktopIcon name="alert" />
+          <span>{FACESHEET.otherNoteOpen(otherNotePatient)}</span>
+        </p>
+      ) : null}
     </header>
   );
 }

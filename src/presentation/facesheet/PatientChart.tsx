@@ -38,6 +38,8 @@ interface PatientChartProps {
   onOpenNote: (recordId: string) => void;
   onNewNote: (workflow: WorkflowId) => void;
   onPrint?: () => void;
+  /** Name of the patient an open note belongs to, when it is not this one. */
+  otherNotePatient?: string;
 }
 
 const VIEW_TABS: ReadonlyArray<[PatientChartView, string]> = [
@@ -66,6 +68,7 @@ export function PatientChart({
   onOpenNote,
   onNewNote,
   onPrint,
+  otherNotePatient,
 }: PatientChartProps) {
   const [visibleCards, setVisibleCards] = useState<FacesheetCardId[]>(() =>
     readFacesheetCards(),
@@ -107,6 +110,7 @@ export function PatientChart({
     <section class="tebra-patient-chart" data-patient-chart={patient.key}>
       <FacesheetBanner
         patient={patient}
+        {...(otherNotePatient ? { otherNotePatient } : {})}
         actions={
           <ActionBar
             onNewNote={onNewNote}

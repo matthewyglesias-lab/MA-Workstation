@@ -1156,6 +1156,16 @@ export function ClinicalDesktopShell({
           </MenuBarContext.Provider>
         </nav>
 
+        {/*
+          The masthead is the open note's context. While a chart is open it
+          said nothing this page does not say better a few pixels lower - and
+          said one thing that was plainly false, "No patient selected" above a
+          Facesheet. Clinic and staff are already in the header's top right, so
+          suppressing it here removes duplication rather than information. The
+          one fact it uniquely carried, that a note is open for someone else,
+          moved into the chart header.
+        */}
+        {!chartOpen && (
         <PatientBanner
           patient={patient}
           workflowPatient={workflowPatient}
@@ -1173,6 +1183,7 @@ export function ClinicalDesktopShell({
           onUseWorkflowPatient={onUseWorkflowPatient}
           onSelectLocalRecord={onOpenRecords}
         />
+        )}
       </AppHeader>
 
       <main
@@ -1202,8 +1213,12 @@ export function ClinicalDesktopShell({
                 onSelect={(selected) => openChart(selected.key)}
               />
             }
-            {...(activePatientKey
-              ? { onOpenChart: (view) => openChart(activePatientKey, view) }
+            {...(chartPatient ? { browsedPatientName: chartPatient.name } : {})}
+            {...(chartPatient || activePatientKey
+              ? {
+                  onOpenChart: (view: PatientChartView) =>
+                    openChart(chartPatient?.key ?? activePatientKey, view),
+                }
               : {})}
             activeChartView={chartPatient ? chartView : null}
           />
@@ -1254,6 +1269,9 @@ export function ClinicalDesktopShell({
                   onViewChange={setChartView}
                   onOpenNote={openChartNote}
                   onNewNote={startNoteFromChart}
+                  {...(activePatientKey && activePatientKey !== chartPatient.key
+                    ? { otherNotePatient: patient.name?.trim() ?? "" }
+                    : {})}
                 />
               ) : (
                 workflowContent

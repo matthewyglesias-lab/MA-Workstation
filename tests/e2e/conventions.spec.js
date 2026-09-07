@@ -366,6 +366,10 @@ async function bootWithPatientChart(page, viewport) {
       sessionStorage.setItem('conventionsSeeded', '1');
       localStorage.setItem(injectionKey, JSON.stringify(injections));
       localStorage.setItem(udsKey, JSON.stringify(udsRecords));
+      // Staff and clinic: the header's top right carries them, which is why
+      // suppressing the masthead over a chart loses no information.
+      localStorage.setItem('ipmgMedAssistStaff', 'Alex Rivera, MA');
+      localStorage.setItem('ipmgMedAssistClinicLocation_v1', 'San Bernardino');
     },
     {
       injectionKey: INJECTION_RECORDS_KEY,
@@ -670,6 +674,57 @@ test.describe('Phase 3b patient chart conventions', () => {
     await expect(panel.locator('.cd2004-record-actions-state strong')).toHaveText(
       'Signed'
     );
+  });
+
+  test('replaces the masthead rather than contradicting it', async ({ page }) => {
+    await bootWithPatientChart(page);
+
+    // Outside a chart the masthead is the open note's context, as always.
+    await expect(page.locator('.cd2004-patient-banner')).toBeVisible();
+
+    await openBakerChart(page);
+
+    // Inside one it is suppressed: it repeated the chart's own header and
+    // claimed "No patient selected" directly above a Facesheet.
+    await expect(page.locator('.cd2004-patient-banner')).toHaveCount(0);
+    await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
+    await expect(page.locator('.tebra-facesheet-banner')).toContainText('DOB 02/03/1992');
+
+    // Clinic and staff are not lost — the header's top right still carries them.
+    await expect(page.locator('.tebra-app-context')).toContainText('Alex Rivera, MA');
+
+    // The rail follows the browsed chart too, rather than claiming no patient
+    // is selected beside that patient's own Facesheet, and offers the chart's
+    // two pages as navigation.
+    const railContext = page.locator('.tebra-section-rail-context');
+    await expect(railContext).toContainText('Facesheet');
+    await expect(railContext).toContainText('Baker, Test');
+    await expect(railContext).not.toContainText('No patient selected');
+    await expect(page.locator('[data-chart-nav="facesheet"]')).toBeVisible();
+    await expect(page.locator('[data-chart-nav="notes"]')).toBeVisible();
+
+    // And it comes back on the way out.
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.cd2004-patient-banner')).toBeVisible();
+  });
+
+  test('says so when a note is open for a different patient', async ({ page }) => {
+    await bootWithPatientChart(page);
+
+    // Open Diaz's note, so the active note belongs to someone else...
+    const launcher = page.getByRole('button', { name: /Open saved notes \(F11\)/ });
+    await launcher.click();
+    await page
+      .getByRole('row', { name: /Diaz, Test/ })
+      .click();
+    await expect(page.locator('.cd2004-patient-primary')).toContainText('Diaz, Test');
+
+    // ...then browse Baker's chart. The mix-up must not go unsaid.
+    await openBakerChart(page);
+    const notice = page.locator('.tebra-facesheet-other-note');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText('Diaz, Test');
+    await expect(notice).toContainText('Nothing here changes it.');
   });
 
   test('holds the chart inside the supported minimum workstation', async ({ page }) => {

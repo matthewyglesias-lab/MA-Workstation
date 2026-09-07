@@ -707,9 +707,17 @@
 
   /* --------------------------------------------------------- section rail */
 
+  /*
+   * A column, not a fixed row template. The rail's children are conditional -
+   * patient search and the patient group appear only when there is something
+   * to point at - and a `grid-template-rows` counted for three children put
+   * the fourth and fifth in the wrong rows the moment they existed, stretching
+   * the context block over the group heading below it. Flex lets the scrolling
+   * function list take the slack whatever else is present.
+   */
   .cd2004-navigator.meditech-record-list.tebra-section-rail {
-    display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     align-items: stretch;
     min-width: 0;
     min-height: 0;
@@ -805,6 +813,7 @@
 
   .meditech-function-list {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
     padding: 8px 0;
@@ -1752,7 +1761,20 @@
   /* --------------------------------------------------------- rail search */
 
   .tebra-rail-search {
+    flex: none;
     padding: 8px 10px 0;
+  }
+
+  .meditech-rail-title.tebra-section-rail-title,
+  .meditech-rail-context.tebra-section-rail-context,
+  .cd2004-navigator > .meditech-rail-group.is-patient {
+    flex: none;
+  }
+
+  .cd2004-navigator > .meditech-rail-group.is-patient {
+    padding: 8px 0;
+    background: var(--tw-surface-panel);
+    border-bottom: 1px solid var(--tw-border-subtle);
   }
 
   .tebra-patient-search {
@@ -2010,6 +2032,26 @@
   .tebra-patient-card-id {
     font-family: var(--tw-font-mono);
     overflow-wrap: anywhere;
+  }
+
+  .tebra-facesheet-other-note {
+    display: flex;
+    flex-basis: 100%;
+    gap: 8px;
+    align-items: center;
+    margin: 0;
+    padding: 8px 12px;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border: 1px solid var(--tw-review-border);
+    border-radius: var(--tw-radius-tight);
+    font: 600 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+  }
+
+  .tebra-facesheet-other-note svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
   }
 
   /* ----------------------------------------------------------- chart tabs */

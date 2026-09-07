@@ -317,6 +317,13 @@ export const FACESHEET = {
   recentNotesEmpty: "No notes are saved here for this patient.",
   viewAllNotes: "View all notes",
   openNote: "Open note",
+  /**
+   * The one fact the masthead carried that the chart does not. Browsing one
+   * patient's chart while a note is open for another is exactly the mix-up a
+   * clinical screen must not allow to go unsaid.
+   */
+  otherNoteOpen: (name: string): string =>
+    `A note is open for ${name}. Nothing here changes it.`,
   siteEntry: (site: string, date: string): string => `${site} · ${date}`,
 } as const;
 
