@@ -433,6 +433,20 @@ export const SHELL = {
   storageError: "Storage error",
 } as const;
 
+/* ------------------------------------------------------------------ account */
+
+/**
+ * The header's account control. Tebra puts who-you-are and where-you-are top
+ * right, and account-level settings behind it; this module's staff sign-in and
+ * visit location are exactly that, and it is where they went when the desktop
+ * menu bar was retired.
+ */
+export const ACCOUNT = {
+  label: "Account and location",
+  staffSignIn: "Staff sign-in…",
+  visitLocation: "Visit location…",
+} as const;
+
 /* --------------------------------------------------------------- navigation */
 
 /**

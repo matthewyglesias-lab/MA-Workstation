@@ -448,7 +448,6 @@ test.describe('workstation visual snapshots', () => {
     const powerCommands = page.locator('.tebra-power-commands');
     const disclosure = powerCommands.locator(':scope > summary');
     const deck = powerCommands.locator('.meditech-command-deck');
-    const statusbar = page.locator('.cd2004-statusbar');
     const recordActions = page.locator('[data-injection-record-actions]');
     const transaction = page.locator('.cd2004-transaction-window.has-document-split');
     const inspector = page.locator('.cd2004-inspector-window');
@@ -456,12 +455,10 @@ test.describe('workstation visual snapshots', () => {
     await expect(disclosure).toBeVisible();
     await expect(deck).toBeHidden();
     const disclosureBox = await disclosure.boundingBox();
-    const statusBox = await statusbar.boundingBox();
     const recordBox = await recordActions.boundingBox();
     const inspectorBox = await inspector.boundingBox();
     const workWindowBox = await workWindow.boundingBox();
     expect(disclosureBox).not.toBeNull();
-    expect(statusBox).not.toBeNull();
     expect(recordBox).not.toBeNull();
     expect(inspectorBox).not.toBeNull();
     expect(workWindowBox).not.toBeNull();
@@ -470,7 +467,9 @@ test.describe('workstation visual snapshots', () => {
       .toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.width + 1);
     expect(disclosureBox.y + disclosureBox.height)
       .toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
-    expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
+    expect(recordBox.y + recordBox.height).toBeLessThanOrEqual(
+      VIEWPORTS.minimumDesktop.height + 1
+    );
     expect(inspectorBox.y + inspectorBox.height).toBeLessThanOrEqual(
       workWindowBox.y + workWindowBox.height + 1
     );

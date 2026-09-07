@@ -156,8 +156,6 @@ export interface ClinicalDesktopShellProps {
   onOpenStaff?: () => void;
   /** Opens the local visit-location dialog. */
   onOpenLocation?: () => void;
-  onOpenKnowledge?: () => void;
-  onOpenCloseout?: () => void;
   onCopyNoteSection?: (section: NoteSection) => void;
   onCopyAllNotes?: () => void;
   onQueueItemOpen?: (item: WorkQueueItem) => void;

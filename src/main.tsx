@@ -782,8 +782,6 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         onOpenLocation={() => setContextEditor('location')}
         onOpenRecords={() => setRecordsOpen(true)}
         onLookup={() => setRecordsOpen(true)}
-        onOpenKnowledge={() => openWorkflow('reference')}
-        onOpenCloseout={() => openWorkflow('log')}
         onCopyNoteSection={(section) =>
           copyLegacyNoteSection(activeWorkflow, section.id)
         }

@@ -1,8 +1,6 @@
 import type { ComponentChildren } from "preact";
-import { createContext } from "preact";
 import {
   useCallback,
-  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -14,7 +12,6 @@ import "./clinical-desktop.css";
 import "./workflows/workflow-panels.css";
 import "./tebra-workstation.css";
 import "./tebra-screen-contract.css";
-import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
 import {
   InjectionRecordRepository,
 } from "../persistence/injection-records";
@@ -41,12 +38,13 @@ import {
 import { PatientSearch } from "./shell/PatientSearch";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
-import { AppFooter, PowerCommandMenu } from "./TebraChrome";
+import { PowerCommandMenu } from "./TebraChrome";
+import { Toast } from "./Toast";
 import { AppHeader } from "./shell/AppHeader";
+import { AccountMenu, WorkspaceBadge } from "./shell/AccountMenu";
 import { SectionRail } from "./shell/SectionRail";
 import {
   FUNCTION_KEY_PROFILE,
-  getFunctionKeyCommand,
   resolveFunctionKeyCommand,
   type FunctionKeyActions,
 } from "./FunctionKeyProfile";
@@ -77,16 +75,6 @@ import {
   type PatientContext,
   type WorkflowId,
 } from "./types";
-
-/** Menu bar order, with the Alt access key for each. */
-const MENU_IDS: string[] = ["file", "chart", "workflows", "tools", "help"];
-const MENU_MNEMONICS: Record<string, string> = {
-  f: "file",
-  c: "chart",
-  w: "workflows",
-  t: "tools",
-  h: "help",
-};
 
 const WORKFLOW_SUMMARY_STATE_LABEL = {
   idle: NOTES.statusNotStarted,
@@ -245,8 +233,6 @@ export function ClinicalDesktopShell({
   onLookup,
   onOpenStaff,
   onOpenLocation,
-  onOpenKnowledge,
-  onOpenCloseout,
   onCopyNoteSection,
   onCopyAllNotes,
   onQueueItemOpen,
@@ -266,7 +252,6 @@ export function ClinicalDesktopShell({
   const [fieldLookup, setFieldLookup] =
     useState<WorkstationLookupTransaction | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
   /**
    * Patient chart navigation. The chart is a destination like any section,
    * not a mode layered over one: it replaces the work area's content and
@@ -288,10 +273,6 @@ export function ClinicalDesktopShell({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const saveDraftRef = useRef(onSaveDraft);
   const selectedWorkflow = activeWorkflow ?? internalWorkflow;
-  const helpCommand = getFunctionKeyCommand("help");
-  const fileCommand = getFunctionKeyCommand("file");
-  const lookupCommand = getFunctionKeyCommand("lookup");
-  const localEmrCommand = getFunctionKeyCommand("local-emr");
   const previousWorkflowRef = useRef<WorkflowId>(selectedWorkflow);
   const workflowScrollPositionsRef = useRef<
     Partial<Record<WorkflowId, number>>
@@ -313,11 +294,23 @@ export function ClinicalDesktopShell({
     dob: workflowPatient?.dob || patient.dob,
   };
   const isMismatch = contextsMismatch(patient, workflowPatient);
-  const effectiveStatus =
-    internalStatus ??
-    fieldPrompt ??
-    statusMessage ??
-    SHELL.readyToBegin;
+  /**
+   * Two different things used to share one status line.
+   *
+   * An *announcement* is something that just happened - a chart opened, a
+   * value filed. Ambient state is what is currently true: the focused field's
+   * prompt, and the record's own lifecycle label ("New draft"). The status bar
+   * could carry both, because it never moved. A toast cannot: a popup that
+   * reappears on every Tab, or that re-announces "New draft" each time the
+   * lifecycle re-reports it, is noise that teaches people to ignore it.
+   *
+   * So only shell announcements toast. Ambient state keeps its own polite live
+   * region - visually hidden, since sighted staff can already see the focused
+   * field and the lifecycle footer. Nothing that was announced before has
+   * stopped being announced.
+   */
+  const announcement = internalStatus ?? "";
+  const ambientPrompt = fieldPrompt ?? statusMessage ?? SHELL.readyToBegin;
   const hasOutstandingStops = readiness.some((item) => item.state === "stop");
 
   const openWorkflow = (workflow: WorkflowId) => {
@@ -673,20 +666,9 @@ export function ClinicalDesktopShell({
   );
 
   const safeBack = useCallback(() => {
-    // Menus own the first Escape. Nothing here navigates away from a draft or
-    // destroys local work; callers may only dismiss a local utility.
-    if (openMenu) {
-      const id = openMenu;
-      setOpenMenu(null);
-      globalThis.setTimeout(() => {
-        shellRef.current
-          ?.querySelector<HTMLElement>(
-            `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
-          )
-          ?.focus({ preventScroll: true });
-      }, 0);
-      return;
-    }
+    // Nothing here navigates away from a draft or destroys local work; callers
+    // may only dismiss a local utility. Menus are not handled here any more:
+    // each one stops Escape at its own host, so the key never reaches this.
     if (showShortcutHelp) {
       setShowShortcutHelp(false);
       restorePreviousFocus();
@@ -702,7 +684,7 @@ export function ClinicalDesktopShell({
     onEscape?.();
     restorePreviousFocus();
     setInternalStatus("Back: no draft was discarded.");
-  }, [chartPatientKeyState, onEscape, openMenu, selectedWorkflow, showShortcutHelp]);
+  }, [chartPatientKeyState, onEscape, selectedWorkflow, showShortcutHelp]);
 
   useEffect(() => {
     onWorkAreaReady?.(workHostRef.current);
@@ -726,7 +708,11 @@ export function ClinicalDesktopShell({
       const context = contextForFocusedControl(event.target);
       setFocusedControl(context);
       setFieldPrompt(context?.prompt ?? null);
-      if (context) setInternalStatus(null);
+      // Moving focus used to clear the last announcement, because the status
+      // bar had one line and the field prompt had to win it. The toast and the
+      // prompt live region no longer compete for that line, so an
+      // announcement now survives the focus move that follows the action which
+      // caused it — which is the whole point of a toast.
     };
     shell.addEventListener("focusin", handleFocus);
     return () => shell.removeEventListener("focusin", handleFocus);
@@ -751,12 +737,12 @@ export function ClinicalDesktopShell({
       );
   }, [openFieldLookup]);
 
-  useEffect(() => {
-    // Command feedback takes precedence long enough to be announced. A later
-    // workflow or persistence transition restores the authoritative legacy
-    // status, including storage-write failures.
-    setInternalStatus(null);
-  }, [postState, selectedWorkflow, statusMessage]);
+  // There used to be an effect clearing the announcement whenever the
+  // workflow, post state or legacy status changed, so the status bar could
+  // fall back to the authoritative ambient value. It is gone: the two are no
+  // longer sharing one line, and it was wiping every announcement about a
+  // transition at the exact moment that transition happened - "Injection
+  // opened." never survived opening Injection. The toast expires on its own.
 
   // The keyboard-reference dialog is a native <dialog> opened with showModal(),
   // so the platform supplies the focus trap, Escape handling, focus
@@ -876,25 +862,6 @@ export function ClinicalDesktopShell({
         return;
       }
 
-      // Alt+access key opens the matching menu, as a native menu bar does.
-      if (event.altKey && !event.ctrlKey && !event.metaKey) {
-        const target = MENU_MNEMONICS[key];
-        if (target) {
-          event.preventDefault();
-          setOpenMenu(target);
-          // The title already exists before the popup is rendered. Focus it
-          // synchronously so a fast follow-up arrow key moves from the menu
-          // the mnemonic actually opened, rather than whichever title still
-          // owned focus from the previous interaction.
-          shellRef.current
-            ?.querySelector<HTMLElement>(
-              `.cd2004-menu[data-menu="${target}"] .cd2004-menu-title`,
-            )
-            ?.focus({ preventScroll: true });
-          return;
-        }
-      }
-
       const command = resolveFunctionKeyCommand(event.key, event.shiftKey);
       if (!command) return;
       event.preventDefault();
@@ -954,53 +921,6 @@ export function ClinicalDesktopShell({
     showShortcutHelp,
   ]);
 
-  // Clicking anywhere outside the menu bar dismisses an open menu, without
-  // stealing focus - matching native menu behavior.
-  useEffect(() => {
-    if (!openMenu) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (target instanceof Node && !(target as Element).closest?.(".cd2004-menu")) {
-        setOpenMenu(null);
-      }
-    };
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    return () =>
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [openMenu]);
-
-  const menuBar: MenuBarContextValue = {
-    openMenu,
-    open: (id) => setOpenMenu(id),
-    close: (restoreFocus = false) => {
-      const id = openMenu;
-      setOpenMenu(null);
-      if (restoreFocus && id) {
-        globalThis.setTimeout(() => {
-          shellRef.current
-            ?.querySelector<HTMLElement>(
-              `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
-            )
-            ?.focus({ preventScroll: true });
-        }, 0);
-      }
-    },
-    moveMenu: (from, direction) => {
-      const index = MENU_IDS.indexOf(from);
-      if (index < 0) return;
-      const next =
-        MENU_IDS[(index + direction + MENU_IDS.length) % MENU_IDS.length]!;
-      setOpenMenu(next);
-      globalThis.setTimeout(() => {
-        shellRef.current
-          ?.querySelector<HTMLElement>(
-            `.cd2004-menu[data-menu="${next}"] .cd2004-menu-title`,
-          )
-          ?.focus({ preventScroll: true });
-      }, 0);
-    },
-  };
-
   /**
    * The chart is a full-width page, and no note is open on it. Neither the
    * document split nor the per-note lifecycle footer belongs beside it: those
@@ -1018,7 +938,6 @@ export function ClinicalDesktopShell({
     : selectedWorkflow === "home"
       ? MODULE.dashboard
       : `${WORKFLOW_LABELS[selectedWorkflow]} note`;
-  const transactionCode = WORKSTATION_TRANSACTION_CODE[selectedWorkflow];
 
   const workflowContent = renderWorkflowContent({
     workflow: selectedWorkflow,
@@ -1072,89 +991,17 @@ export function ClinicalDesktopShell({
       </a>
 
       <AppHeader
-        transactionCode={transactionCode}
-        staffLabel={staffLabel}
-        locationLabel={locationLabel}
+        badge={<WorkspaceBadge localStorageAvailable={localStorageAvailable} />}
+        account={
+          <AccountMenu
+            staffLabel={staffLabel}
+            locationLabel={locationLabel}
+            {...(onOpenStaff ? { onOpenStaff } : {})}
+            {...(onOpenLocation ? { onOpenLocation } : {})}
+            onOpenShortcuts={openShortcutHelp}
+          />
+        }
       >
-        <nav
-          class="cd2004-menu-bar"
-          role="menubar"
-          aria-label="Application menu"
-        >
-          <MenuBarContext.Provider value={menuBar}>
-          <DesktopMenu id="file" label="File" mnemonic="F">
-            <MenuCommand
-              label={RECORD.save}
-              shortcut={fileCommand.keyLabel}
-              disabled={!onSaveDraft}
-              onInvoke={requestDraftSave}
-            />
-            <MenuCommand
-              label={NOTES.openNotes}
-              shortcut={localEmrCommand.keyLabel}
-              disabled={!onOpenRecords}
-              onInvoke={onOpenRecords}
-            />
-          </DesktopMenu>
-          <DesktopMenu id="chart" label="Chart" mnemonic="C">
-            <MenuCommand
-              label={PATIENT.useThisPatient}
-              disabled={!isMismatch || !onUseWorkflowPatient}
-              onInvoke={() => onUseWorkflowPatient?.(selectedWorkflow)}
-            />
-            <MenuCommand
-              label={PATIENT.findPatient}
-              shortcut={lookupCommand.keyLabel}
-              disabled={!onLookup}
-              onInvoke={openContextualLookup}
-            />
-          </DesktopMenu>
-          <DesktopMenu id="workflows" label={SHELL.noteTypes} mnemonic="W">
-            {shortcutWorkflows.map((workflow, index) => (
-              <MenuCommand
-                key={workflow}
-                label={WORKFLOW_LABELS[workflow]}
-                shortcut={`Alt+${index + 1}`}
-                onInvoke={() => openWorkflow(workflow)}
-              />
-            ))}
-          </DesktopMenu>
-          <DesktopMenu id="tools" label="Tools" mnemonic="T">
-            <MenuCommand
-              label="Staff sign-in…"
-              disabled={!onOpenStaff}
-              onInvoke={onOpenStaff}
-            />
-            <MenuCommand
-              label="Visit location…"
-              disabled={!onOpenLocation}
-              onInvoke={onOpenLocation}
-            />
-            <MenuCommand
-              label={MODULE.reference}
-              disabled={!onOpenKnowledge}
-              onInvoke={onOpenKnowledge}
-            />
-            <MenuCommand
-              label={MODULE.dailyCloseout}
-              disabled={!onOpenCloseout}
-              onInvoke={onOpenCloseout}
-            />
-          </DesktopMenu>
-          <DesktopMenu id="help" label="Help" mnemonic="H">
-            <MenuCommand
-              label={SHELL.keyboardReference}
-              shortcut={helpCommand.keyLabel}
-              onInvoke={(returnFocus) => {
-                previousFocusRef.current =
-                  returnFocus ??
-                  (document.activeElement as HTMLElement | null);
-                setShowShortcutHelp(true);
-              }}
-            />
-          </DesktopMenu>
-          </MenuBarContext.Provider>
-        </nav>
 
         {/*
           The masthead is the open note's context. While a chart is open it
@@ -1178,8 +1025,6 @@ export function ClinicalDesktopShell({
                   workflowSummaries[selectedWorkflow]?.state ?? "idle"
                 ]
           }
-          staffLabel={staffLabel}
-          locationLabel={locationLabel}
           onUseWorkflowPatient={onUseWorkflowPatient}
           onSelectLocalRecord={onOpenRecords}
         />
@@ -1333,29 +1178,27 @@ export function ClinicalDesktopShell({
           file: {
             onInvoke: requestDraftSave,
             disabled: !onSaveDraft,
-            label: selectedWorkflow === "home" ? RECORD.save : `Save ${transactionCode}`,
+            label: RECORD.save,
           },
           back: { onInvoke: safeBack },
         } satisfies FunctionKeyActions}
       />
 
-      <AppFooter
-        message={effectiveStatus}
-        readOnly={postState === "posted"}
-        localStorageAvailable={localStorageAvailable}
-        readOnlyLabel={RECORD.readOnly}
-        editableLabel={RECORD.editable}
-        localLabel={SHELL.localBadge}
-        storageErrorLabel={SHELL.storageError}
-        localDetail={SHELL.localOnlyDetail}
-        storageErrorDetail={SHELL.storageUnavailable}
-      />
+      <Toast message={announcement} />
+
+      <p
+        class="cd2004-visually-hidden"
+        role="status"
+        aria-live="polite"
+        data-status-prompt
+      >
+        {ambientPrompt}
+      </p>
 
       {fieldLookup && (
         <WorkstationLookupDialog
           key={`${fieldLookup.fieldCode}:${fieldLookup.control.name}`}
           transaction={fieldLookup}
-          transactionCode={transactionCode}
           onChoose={chooseFieldLookupValue}
           onDismiss={dismissFieldLookup}
         />
@@ -1650,8 +1493,6 @@ interface PatientBannerProps {
   mismatch: boolean;
   selectedWorkflow: WorkflowId;
   workflowStateLabel: string;
-  staffLabel: string;
-  locationLabel: string;
   onUseWorkflowPatient?: (workflow: WorkflowId) => void;
   onSelectLocalRecord?: () => void;
 }
@@ -1662,8 +1503,6 @@ function PatientBanner({
   mismatch,
   selectedWorkflow,
   workflowStateLabel,
-  staffLabel,
-  locationLabel,
   onUseWorkflowPatient,
   onSelectLocalRecord,
 }: PatientBannerProps) {
@@ -1716,14 +1555,6 @@ function PatientBanner({
         <small>{PATIENT.visitRecord}</small>
         <strong>{recordLabel}</strong>
       </div>
-      <div class="cd2004-patient-field cd2004-banner-location" title={`Clinic: ${locationLabel}`}>
-        <small>{PATIENT.clinic}</small>
-        <strong>{locationLabel}</strong>
-      </div>
-      <div class="cd2004-patient-field cd2004-banner-staff" title={`Staff: ${staffLabel}`}>
-        <small>{PATIENT.staff}</small>
-        <strong>{staffLabel}</strong>
-      </div>
       <div class="meditech-patient-safety">
         <strong>{PATIENT.allergiesLabel}:</strong>
         <b>
@@ -1761,228 +1592,6 @@ function PatientBanner({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * Menu-tracking context. A real Windows menu bar behaves as one unit: once any
- * menu is open the bar is in "tracking mode", so simply *hovering* a sibling
- * switches to it without a second click. That requires the open state to live
- * above the individual menus, which is why it is threaded through context
- * rather than owned by each menu.
- */
-interface MenuBarContextValue {
-  openMenu: string | null;
-  open: (id: string) => void;
-  close: (restoreFocus?: boolean) => void;
-  moveMenu: (from: string, direction: -1 | 1) => void;
-}
-
-const MenuBarContext = createContext<MenuBarContextValue | null>(null);
-
-/** Provided by each menu so its items can dismiss it and restore focus. */
-const MenuContext = createContext<{ dismiss: (restoreFocus?: boolean) => void } | null>(
-  null,
-);
-
-/** Splits a label at its access key so the mnemonic can be underlined. */
-function renderMnemonic(label: string, mnemonic: string) {
-  const index = label.toLocaleLowerCase().indexOf(mnemonic.toLocaleLowerCase());
-  if (index < 0) return label;
-  return (
-    <>
-      {label.slice(0, index)}
-      <u>{label.slice(index, index + 1)}</u>
-      {label.slice(index + 1)}
-    </>
-  );
-}
-
-interface DesktopMenuProps {
-  id: string;
-  label: string;
-  mnemonic: string;
-  children: ComponentChildren;
-}
-
-function DesktopMenu({ id, label, mnemonic, children }: DesktopMenuProps) {
-  const bar = useContext(MenuBarContext);
-  const titleRef = useRef<HTMLButtonElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-  const isOpen = bar?.openMenu === id;
-  const isTracking = Boolean(bar?.openMenu);
-  // Set when hover-tracking opened this menu, so the click that necessarily
-  // follows the pointer landing here is absorbed rather than toggling it shut.
-  const openedByHoverRef = useRef(false);
-
-  useEffect(() => {
-    if (!isOpen) openedByHoverRef.current = false;
-  }, [isOpen]);
-
-  const dismiss = (restoreFocus = false) => {
-    bar?.close(false);
-    if (restoreFocus) titleRef.current?.focus({ preventScroll: true });
-  };
-
-  // Opening by keyboard puts focus on the first command, matching Windows.
-  useEffect(() => {
-    if (!isOpen) return;
-    const frame = globalThis.requestAnimationFrame(() => {
-      const active = document.activeElement;
-      if (active === titleRef.current) return;
-      if (popupRef.current?.contains(active)) return;
-    });
-    return () => globalThis.cancelAnimationFrame(frame);
-  }, [isOpen]);
-
-  const focusCommand = (offset: number, absolute?: "first" | "last") => {
-    const commands = Array.from(
-      popupRef.current?.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitem"]:not([disabled])',
-      ) ?? [],
-    );
-    if (commands.length === 0) return;
-    const current = commands.indexOf(document.activeElement as HTMLButtonElement);
-    const next =
-      absolute === "first"
-        ? 0
-        : absolute === "last"
-          ? commands.length - 1
-          : (current + offset + commands.length) % commands.length;
-    commands[next]?.focus({ preventScroll: true });
-  };
-
-  return (
-    <div class="cd2004-menu" data-menu={id}>
-      <button
-        ref={titleRef}
-        type="button"
-        role="menuitem"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        class="cd2004-menu-title"
-        onClick={() => {
-          if (openedByHoverRef.current) {
-            openedByHoverRef.current = false;
-            return;
-          }
-          if (isOpen) dismiss(true);
-          else bar?.open(id);
-        }}
-        onPointerMove={() => {
-          // Menu tracking follows actual pointer movement. `pointerenter` can
-          // be synthesized when opening a popup changes hit-testing beneath a
-          // stationary mouse; letting that event switch menus can immediately
-          // undo an Alt+mnemonic or arrow-key choice.
-          if (isTracking && !isOpen) {
-            openedByHoverRef.current = true;
-            bar?.open(id);
-          }
-        }}
-        onKeyDown={(event) => {
-          switch (event.key) {
-            case "ArrowDown":
-            case "Enter":
-            case " ":
-              event.preventDefault();
-              if (!isOpen) bar?.open(id);
-              globalThis.setTimeout(() => focusCommand(0, "first"), 0);
-              break;
-            case "ArrowUp":
-              event.preventDefault();
-              if (!isOpen) bar?.open(id);
-              globalThis.setTimeout(() => focusCommand(0, "last"), 0);
-              break;
-            case "ArrowRight":
-              event.preventDefault();
-              bar?.moveMenu(id, 1);
-              break;
-            case "ArrowLeft":
-              event.preventDefault();
-              bar?.moveMenu(id, -1);
-              break;
-            default:
-              break;
-          }
-        }}
-      >
-        {renderMnemonic(label, mnemonic)}
-      </button>
-      {isOpen && (
-        <div
-          ref={popupRef}
-          class="cd2004-menu-popup"
-          role="menu"
-          aria-label={label}
-          onKeyDown={(event) => {
-            switch (event.key) {
-              case "ArrowDown":
-                event.preventDefault();
-                focusCommand(1);
-                break;
-              case "ArrowUp":
-                event.preventDefault();
-                focusCommand(-1);
-                break;
-              case "Home":
-                event.preventDefault();
-                focusCommand(0, "first");
-                break;
-              case "End":
-                event.preventDefault();
-                focusCommand(0, "last");
-                break;
-              case "ArrowRight":
-                event.preventDefault();
-                bar?.moveMenu(id, 1);
-                break;
-              case "ArrowLeft":
-                event.preventDefault();
-                bar?.moveMenu(id, -1);
-                break;
-              default:
-                break;
-            }
-          }}
-        >
-          <MenuContext.Provider value={{ dismiss }}>{children}</MenuContext.Provider>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface MenuCommandProps {
-  label: string;
-  shortcut?: string;
-  disabled?: boolean;
-  onInvoke?: (returnFocus?: HTMLElement) => void;
-}
-
-function MenuCommand({
-  label,
-  shortcut,
-  disabled = false,
-  onInvoke,
-}: MenuCommandProps) {
-  const menu = useContext(MenuContext);
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={disabled}
-      onClick={(event) => {
-        const returnFocus =
-          event.currentTarget
-            .closest(".cd2004-menu")
-            ?.querySelector<HTMLElement>(".cd2004-menu-title") ?? undefined;
-        onInvoke?.(returnFocus);
-        menu?.dismiss(false);
-      }}
-    >
-      <span>{label}</span>
-      {shortcut && <kbd>{shortcut}</kbd>}
-    </button>
   );
 }
 

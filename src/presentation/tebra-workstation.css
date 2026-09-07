@@ -262,7 +262,7 @@
 
   .cd2004-app-titlebar.tebra-app-header-main {
     display: grid;
-    grid-template-columns: 40px minmax(138px, 190px) auto minmax(0, 1fr) auto;
+    grid-template-columns: 40px minmax(0, auto) minmax(0, 1fr);
     align-items: center;
     gap: 10px;
     height: var(--tw-header-height);
@@ -321,155 +321,149 @@
     white-space: nowrap;
   }
 
-  .tebra-app-workspace {
-    justify-self: start;
-    padding: 5px 8px;
-    overflow: hidden;
-    color: var(--tw-on-inverse);
-    background: rgb(255 255 255 / 12%);
-    border-radius: var(--tw-radius-pill);
-    font-family: var(--tw-font-mono);
-    font-size: var(--tw-fs-ws-label);
-    font-variant-numeric: var(--tw-numeric-tabular);
-    font-weight: 700;
-    line-height: var(--tw-lh-ws-label);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .cd2004-app-environment.tebra-app-context {
-    grid-column: 5;
-    display: grid;
-    justify-items: end;
+    grid-column: 3;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
     min-width: 0;
-    max-width: 280px;
     margin: 0;
     padding: 0;
     color: rgb(248 243 235 / 82%);
     font-size: var(--tw-fs-ws-meta);
     line-height: var(--tw-lh-ws-meta);
     letter-spacing: 0;
-    text-align: right;
   }
 
-  .tebra-app-context b {
+  /* --------------------------------------------- provenance and account */
+
+  .tebra-workspace-badge {
+    flex: none;
     padding: 3px 8px;
-    color: var(--tw-on-inverse);
-    background: rgb(255 255 255 / 12%);
     border-radius: var(--tw-radius-pill);
     font-size: var(--tw-fs-ws-label);
+    font-weight: 600;
     line-height: var(--tw-lh-ws-label);
     letter-spacing: var(--tw-ls-ws-label);
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
-  .tebra-app-context small {
-    max-width: 100%;
+  .tebra-workspace-badge.is-local {
+    color: var(--tw-on-inverse);
+    background: rgb(255 255 255 / 12%);
+  }
+
+  /*
+   * A browser that cannot save must not fail quietly: staff would keep
+   * documenting into a note that is not being kept. This is the one place that
+   * state is visible now the status bar is gone, so it is loud.
+   */
+  .tebra-workspace-badge.is-error {
+    color: var(--tw-stop-fg);
+    background: var(--tw-stop-bg);
+  }
+
+  .tebra-menu-quiet {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    max-width: 260px;
+    height: 32px;
+    padding: 0 8px;
+    color: var(--tw-on-inverse);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tw-radius-ws);
+    font: 600 var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
+    cursor: pointer;
+  }
+
+  .tebra-menu-quiet > span:not(.tebra-action-caret):not(.tebra-account-avatar) {
+    min-width: 0;
     overflow: hidden;
-    color: rgb(248 243 235 / 76%);
-    font-size: var(--tw-fs-ws-label);
-    font-weight: 500;
-    line-height: var(--tw-lh-ws-label);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .cd2004-menu-bar {
-    position: absolute;
-    z-index: 3;
-    top: 10px;
-    right: clamp(250px, 24vw, 340px);
-    left: clamp(300px, 29vw, 390px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-width: 0;
-    min-height: 44px;
-    padding: 0;
-    overflow: visible;
-    background: transparent;
-    border: 0;
-  }
-
-  .cd2004-menu {
-    position: relative;
-    min-width: 0;
-  }
-
-  .cd2004-menu-title {
-    min-width: 0;
-    min-height: 36px;
-    padding: 8px 10px;
-    color: rgb(248 243 235 / 82%);
-    background: transparent;
-    border: 0;
-    border-radius: var(--tw-radius-ctl);
-    cursor: pointer;
-    font-size: var(--tw-fs-ws-meta);
-    font-weight: 650;
-    line-height: var(--tw-lh-ws-dense);
-  }
-
-  .cd2004-menu-title:hover,
-  .cd2004-menu-title[aria-expanded="true"] {
-    color: var(--tw-on-inverse);
+  .tebra-menu-quiet:hover {
     background: rgb(255 255 255 / 12%);
   }
 
-  .cd2004-shell .cd2004-menu-bar button.cd2004-menu-title:focus-visible {
-    outline: 2px solid var(--tw-on-inverse);
-    outline-offset: 2px;
+  .tebra-menu-quiet:focus-visible {
+    border-color: var(--tw-on-inverse);
+    outline: none;
     box-shadow: 0 0 0 3px rgb(248 243 235 / 24%);
   }
 
-  .cd2004-menu-title u {
-    text-underline-offset: 3px;
-  }
-
-  .cd2004-menu-popup {
-    top: calc(100% + 7px);
-    left: 0;
+  .tebra-account-avatar {
     display: grid;
-    min-width: 240px;
-    padding: 6px;
-    overflow: hidden;
-    color: var(--tw-text-primary);
-    background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-card);
-    box-shadow: 0 14px 34px rgb(0 58 67 / 16%);
+    flex: none;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    background: rgb(255 255 255 / 16%);
+    border-radius: var(--tw-radius-pill);
   }
 
-  .cd2004-menu-popup button {
+  .tebra-account-avatar svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .tebra-account-identity {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 18px;
-    width: 100%;
-    min-height: 36px;
-    padding: 7px 9px;
+    gap: 1px;
+    margin: 0 0 4px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .tebra-account-identity strong {
     color: var(--tw-text-primary);
-    text-align: left;
-    background: transparent;
-    border: 0;
-    border-radius: var(--tw-radius-ws);
+    font-size: var(--tw-fs-ws-base);
   }
 
-  .cd2004-menu-popup button:hover:not(:disabled),
-  .cd2004-menu-popup button:focus-visible:not(:disabled) {
-    color: var(--tw-text-primary);
-    background: var(--tw-mint-150);
-  }
-
-  .cd2004-menu-popup button:disabled {
-    color: var(--tw-text-muted);
-    text-shadow: none;
-  }
-
-  .cd2004-menu-popup kbd {
+  .tebra-account-identity small,
+  .tebra-account-scope {
     color: var(--tw-text-secondary);
-    font-family: var(--tw-font-mono);
-    font-size: var(--tw-fs-ws-label);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .tebra-account-scope {
+    margin: 4px 0 0;
+    padding: 8px 10px 4px;
+    border-top: 1px solid var(--tw-border-subtle);
+  }
+
+  /* ------------------------------------------------------------------ toast */
+
+  /*
+   * Transient confirmation, not a permanent strip along the bottom edge. It
+   * sits above the power-command disclosure so the two never overlap.
+   */
+  .tebra-toast-region {
+    position: fixed;
+    z-index: 60;
+    bottom: 16px;
+    left: 50%;
+    display: grid;
+    justify-items: center;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  .tebra-toast {
+    max-width: min(560px, calc(100vw - 32px));
+    margin: 0;
+    padding: 10px 16px;
+    color: var(--tw-on-inverse);
+    background: var(--tw-surface-inverse);
+    border-radius: var(--tw-radius-ctl);
+    box-shadow: var(--tw-shadow-elevation-1);
+    font: 600 var(--tw-fs-ws-base) / var(--tw-lh-ws-base) var(--tw-font-sans);
+    text-align: center;
   }
 
   /* ------------------------------------------------------ patient context */
@@ -478,12 +472,10 @@
   .cd2004-patient-banner.has-mismatch {
     display: grid;
     grid-template-columns:
-      minmax(190px, 1.35fr)
-      minmax(82px, 0.55fr)
-      minmax(110px, 0.7fr)
-      minmax(116px, 0.78fr)
-      minmax(116px, 0.78fr)
-      minmax(240px, 1.55fr);
+      minmax(190px, 1.5fr)
+      minmax(82px, 0.6fr)
+      minmax(110px, 0.8fr)
+      minmax(240px, 1.7fr);
     min-width: 0;
     min-height: 64px;
     color: var(--tw-text-primary);
@@ -1693,61 +1685,6 @@
     white-space: nowrap;
   }
 
-  /* -------------------------------------------------------- status footer */
-
-  .cd2004-statusbar.tebra-app-footer {
-    display: flex;
-    flex: 0 0 32px;
-    align-items: center;
-    min-width: 0;
-    min-height: 32px;
-    color: var(--tw-text-secondary);
-    background: var(--tw-surface-panel);
-    border: 0;
-    border-top: 1px solid var(--tw-border-subtle);
-    box-shadow: none;
-    font-size: var(--tw-fs-ws-label);
-  }
-
-  .tebra-app-footer .cd2004-status-message,
-  .tebra-app-footer .cd2004-status-segment {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    height: 100%;
-    padding: 6px 12px;
-    overflow: hidden;
-    color: inherit;
-    background: transparent;
-    border: 0;
-    border-right: 1px solid var(--tw-border-subtle);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .tebra-app-footer .cd2004-status-message {
-    flex: 1 1 auto;
-  }
-
-  .tebra-app-footer .cd2004-status-segment {
-    flex: 0 0 auto;
-    gap: 6px;
-  }
-
-  .tebra-app-footer .cd2004-status-segment:last-child {
-    border-right: 0;
-  }
-
-  .tebra-app-footer .cd2004-status-segment.is-online {
-    color: var(--tw-ready-fg);
-    background: var(--tw-ready-bg);
-  }
-
-  .tebra-app-footer .cd2004-status-segment.is-error {
-    color: var(--tw-stop-fg);
-    background: var(--tw-stop-bg);
-  }
-
   /* ============================================================ Phase 3b
      Patient chart: header search, Facesheet, patient Notes, action bar.
 
@@ -2544,16 +2481,7 @@
   }
 
   .cd2004-app-titlebar.tebra-app-header-main {
-    grid-template-columns: 40px minmax(130px, 170px) auto minmax(0, 1fr) auto;
-  }
-
-  .cd2004-menu-bar {
-    right: 270px;
-    left: 310px;
-  }
-
-  .cd2004-app-environment.tebra-app-context {
-    max-width: 240px;
+    grid-template-columns: 40px minmax(0, auto) minmax(0, 1fr);
   }
 }
 
@@ -2596,49 +2524,28 @@
   .cd2004-patient-banner,
   .cd2004-patient-banner.has-mismatch {
     grid-template-columns:
-      minmax(190px, 1.35fr)
-      minmax(82px, 0.55fr)
-      minmax(110px, 0.7fr)
-      minmax(116px, 0.78fr)
-      minmax(116px, 0.78fr)
-      minmax(224px, 1.45fr);
+      minmax(190px, 1.5fr)
+      minmax(82px, 0.6fr)
+      minmax(110px, 0.8fr)
+      minmax(240px, 1.7fr);
   }
 }
 
 /* Compact laptop composition, including the protected 1000px width. */
 @media screen and (max-width: 1099px) {
   .cd2004-app-titlebar.tebra-app-header-main {
-    grid-template-columns: 40px minmax(126px, 154px) auto minmax(0, 1fr) minmax(180px, auto);
+    grid-template-columns: 40px minmax(0, auto) minmax(0, 1fr);
     padding-inline: 12px;
-  }
-
-  .cd2004-menu-bar {
-    right: 210px;
-    left: 280px;
-  }
-
-  .cd2004-menu-title {
-    padding-inline: 8px;
-  }
-
-  .cd2004-app-environment.tebra-app-context {
-    max-width: 190px;
   }
 
   .cd2004-patient-banner,
   .cd2004-patient-banner.has-mismatch {
     grid-template-columns:
-      minmax(190px, 1.4fr)
-      minmax(82px, 0.55fr)
-      minmax(110px, 0.72fr)
-      minmax(230px, 1.55fr);
+      minmax(190px, 1.5fr)
+      minmax(82px, 0.6fr)
+      minmax(110px, 0.8fr)
+      minmax(240px, 1.7fr);
   }
-
-  .cd2004-banner-location,
-  .cd2004-banner-staff {
-    display: none;
-  }
-
   .cd2004-workspace,
   .cd2004-workspace.has-central-preview,
   .cd2004-workspace.has-side-inspector {
@@ -2722,7 +2629,7 @@
   }
 
   .cd2004-app-titlebar.tebra-app-header-main {
-    grid-template-columns: 38px 124px auto minmax(0, 1fr) 178px;
+    grid-template-columns: 38px minmax(0, auto) minmax(0, 1fr);
     gap: 8px;
     height: 56px;
     padding: 7px 10px;
@@ -2733,20 +2640,13 @@
     height: 38px;
   }
 
-  .cd2004-menu-bar {
-    top: 6px;
-    right: 196px;
-    left: 246px;
-  }
-
-  .cd2004-menu-title {
-    min-height: 34px;
-    padding: 7px 6px;
-    font-size: var(--tw-fs-ws-label);
-  }
-
-  .tebra-app-context b {
+  .tebra-workspace-badge {
     padding-inline: 6px;
+  }
+
+  /* The account name gives way to its avatar first at compact widths. */
+  .tebra-menu-quiet {
+    max-width: 168px;
   }
 
   .cd2004-patient-banner,
@@ -2815,7 +2715,7 @@
   }
 
   .cd2004-app-titlebar.tebra-app-header-main {
-    grid-template-columns: 36px 116px auto minmax(0, 1fr) 170px;
+    grid-template-columns: 36px minmax(0, auto) minmax(0, 1fr);
     height: 54px;
   }
 
@@ -2828,16 +2728,6 @@
   .cd2004-app-logo.tebra-app-mark svg {
     width: 21px;
     height: 21px;
-  }
-
-  .cd2004-menu-bar {
-    top: 5px;
-    right: 187px;
-    left: 234px;
-  }
-
-  .cd2004-menu-title {
-    padding-inline: 5px;
   }
 
   .cd2004-patient-banner,
@@ -2990,13 +2880,7 @@
 
   .tebra-power-commands > summary {
     min-height: 28px;
-  }
-
-  .cd2004-statusbar.tebra-app-footer {
-    flex-basis: 29px;
-    min-height: 29px;
-  }
-}
+  }}
 
 @media screen and (max-height: 700px) and (min-width: 800px) {
   .meditech-record-list .cd2004-nav-item {
@@ -3110,12 +2994,10 @@
   }
 }
 
-@media screen and (forced-colors: active) {
-  .cd2004-window,
+@media screen and (forced-colors: active) {  .cd2004-window,
   .cd2004-navigator.meditech-record-list.tebra-section-rail,
   .meditech-workstation-gate-window,
-  .tebra-power-commands .meditech-command-deck,
-  .cd2004-menu-popup {
+  .tebra-power-commands .meditech-command-deck{
     border: 1px solid CanvasText;
     box-shadow: none;
   }
@@ -3133,8 +3015,6 @@
     border-color: Highlight;
   }
 
-  .tebra-app-footer .cd2004-status-segment.is-online,
-  .tebra-app-footer .cd2004-status-segment.is-error,
   .meditech-patient-safety,
   .cd2004-worklist-state {
     color: CanvasText;

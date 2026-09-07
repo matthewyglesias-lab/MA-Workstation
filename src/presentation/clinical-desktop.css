@@ -1102,93 +1102,10 @@ input[type="radio"]:disabled {
   color: var(--tw-white);
   font-size: 10px;
   letter-spacing: 0.12em;
-}
-
-.cd2004-menu-bar {
-  display: flex;
-  align-items: stretch;
-  min-width: 0;
-  min-height: 25px;
-  padding: 1px 4px 0;
-  overflow: visible;
-  background: var(--cd-face);
-  border-bottom: 1px solid #a6afb8;
-}
-
-.cd2004-menu {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.cd2004-menu-title {
-  min-width: 42px;
-  padding: 4px 8px 5px;
-  color: inherit;
-  background: transparent;
-  border: 0;
-  font: inherit;
-  cursor: default;
-  user-select: none;
-}
-
-/* Access-key underline, as a native menu bar shows. */
-.cd2004-menu-title u {
+}/* Access-key underline{
   text-decoration: underline;
   text-underline-offset: 1px;
-}
-
-.cd2004-menu-title[aria-expanded="true"],
-.cd2004-menu-title:hover {
-  color: #fff;
-  background: var(--cd-navy);
-}
-
-.cd2004-menu-popup {
-  position: absolute;
-  z-index: 100;
-  top: calc(100% - 1px);
-  left: 1px;
-  display: grid;
-  min-width: 224px;
-  padding: 3px;
-  color: var(--cd-ink);
-  background: var(--cd-face);
-  border: 1px solid var(--cd-border-dark);
-  box-shadow:
-    inset 1px 1px var(--cd-border-light),
-    inset -1px -1px var(--cd-border-mid);
-}
-
-.cd2004-menu-popup button {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  width: 100%;
-  min-height: 26px;
-  padding: 4px 8px 4px 24px;
-  text-align: left;
-  background: transparent;
-  border: 0;
-}
-
-.cd2004-menu-popup button:hover:not(:disabled),
-.cd2004-menu-popup button:focus-visible:not(:disabled) {
-  color: #fff;
-  background: var(--cd-navy);
-}
-
-.cd2004-menu-popup button:disabled {
-  color: #7c8490;
-  text-shadow: 1px 1px #fff;
-}
-
-.cd2004-menu-popup kbd {
-  align-self: center;
-  font: inherit;
-  color: inherit;
-}
-
-.cd2004-toolbar {
+}.cd2004-toolbar {
   display: flex;
   align-items: stretch;
   min-width: 0;
@@ -2824,16 +2741,10 @@ input[type="radio"]:disabled {
 .cd2004-post-error small {
   margin-top: 1px;
   font-size: 9px;
-}
-
-/*
+}/*
  * Segmented status bar. Replaces the taskbar/Start button - those emulated the
  * Windows shell, not an EHR application. Segments are sunken Win32-style panes:
- * the live status message takes the flexible first segment, fixed-content
- * segments sit to its right.
- */
-
-.cd2004-statusbar {
+ * the live status message takes the flexible first segment{
   position: relative;
   z-index: 20;
   flex: 0 0 auto;
@@ -2846,45 +2757,7 @@ input[type="radio"]:disabled {
   background: var(--cd-face);
   border-top: 1px solid #f8fafc;
   box-shadow: inset 0 1px #fff;
-}
-
-.cd2004-status-message,
-.cd2004-status-segment {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  padding: 0 6px;
-  overflow: hidden;
-  color: var(--tw-teal-600);
-  background: var(--cd-face);
-  border: 1px solid;
-  border-color: #7c8791 #f5f7f9 #f5f7f9 #7c8791;
-  font-size: 9px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cd2004-status-message {
-  flex: 1 1 auto;
-}
-
-.cd2004-status-segment {
-  flex: 0 1 auto;
-  max-width: 190px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.cd2004-status-segment.is-online {
-  color: var(--cd-green);
-}
-
-.cd2004-status-segment.is-error {
-  color: var(--cd-red);
-  background: var(--cd-red-soft);
-}
-
-/* Modal, lock, and shortcut surfaces use native top-layer dialog semantics. */
+}/* Modal, lock, and shortcut surfaces use native top-layer dialog semantics. */
 @media screen {
   .cd2004-modal-backdrop,
   .cd2004-lock-overlay {
@@ -3467,29 +3340,6 @@ input[type="radio"]:disabled {
     display: none;
   }
 
-  .cd2004-menu-bar {
-    min-height: 29px;
-  }
-
-  .cd2004-menu-title {
-    min-height: 28px;
-    padding: 6px 9px;
-  }
-
-  .cd2004-menu-popup {
-    position: fixed;
-    top: 58px;
-    right: 4px;
-    left: 4px;
-    max-height: calc(100dvh - 88px);
-    overflow: auto;
-  }
-
-  .cd2004-menu-popup button {
-    min-height: 40px;
-    padding: 8px 10px 8px 20px;
-  }
-
   .cd2004-toolbar {
     height: 45px;
     padding: 3px;
@@ -3529,9 +3379,7 @@ input[type="radio"]:disabled {
     padding: 5px 7px;
   }
 
-  .cd2004-patient-field:nth-of-type(3),
-  .cd2004-banner-location,
-  .cd2004-banner-staff {
+  .cd2004-patient-field:nth-of-type(3){
     display: none;
   }
 
@@ -3575,24 +3423,9 @@ input[type="radio"]:disabled {
     min-height: 150px;
   }
 
-
   /*
-   * Narrow: the live status message is the primary feedback channel, so it
-   * keeps the bar - the staff/location segments drop instead.
-   */
-  .cd2004-statusbar {
+   * Narrow: the live status message is the primary feedback channel{
     height: 20px;
-  }
-
-  .cd2004-status-segment {
-    display: none;
-  }
-
-  .cd2004-status-segment.is-online,
-  .cd2004-status-segment.is-error {
-    display: flex;
-    padding: 0 4px;
-    font-size: 8px;
   }
 
   /* Tab labels give way to icons; the title attribute still names each tab. */
@@ -3642,22 +3475,9 @@ input[type="radio"]:disabled {
 
   .cd2004-readiness-flags span {
     padding-inline: 3px;
-  }
-
-  .cd2004-status-segment.is-online,
-  .cd2004-status-segment.is-error {
-    max-width: 62px;
-    overflow: hidden;
-  }
-}
+  }}
 
 @media (max-width: 320px) {
-  .cd2004-menu-title {
-    min-width: 38px;
-    padding-inline: 6px;
-    font-size: 11px;
-  }
-
   .cd2004-toolbar-button {
     min-width: 40px;
   }
@@ -3722,14 +3542,12 @@ input[type="radio"]:disabled {
  * Print renderers remain responsible for their document layout. These rules only
  * remove the new workstation chrome and expose the active workflow content.
  */
-@media print {
-  .cd2004-print-exclude,
+@media print {  .cd2004-print-exclude,
   .cd2004-record-actions,
   .cd2004-window-titlebar,
   .cd2004-window-toolbar,
   .cd2004-window-footer,
   .cd2004-navigator,
-  .cd2004-statusbar,
   .cd2004-inspector-window,
   .cd2004-posting-strip,
   .cd2004-work-locked-banner {

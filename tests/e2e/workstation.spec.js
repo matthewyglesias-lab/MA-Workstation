@@ -106,14 +106,14 @@ test.describe('MA Workstation browser journeys', () => {
   }
 
   async function signInLocalStaff(page, staff = 'QA Staff, MA') {
-    await page.locator('.cd2004-menu[data-menu="tools"] .cd2004-menu-title').click();
-    await page.getByRole('menuitem', { name: 'Staff sign-in…', exact: true }).click();
+    await page.locator('.tebra-account-trigger').click();
+    await page.locator('[data-account-action="staff"]').click();
     const dialog = page.getByRole('dialog', { name: 'Staff Sign-In' });
     await expect(dialog).toBeVisible();
     await dialog.getByRole('textbox', { name: 'Name or initials' }).fill(staff);
     await dialog.getByRole('button', { name: 'Use for encounter', exact: true }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.locator('.cd2004-banner-staff')).toContainText(staff);
+    await expect(page.locator('.tebra-account-trigger')).toContainText(staff);
   }
 
   async function prepareRoutineInjection(page, options = {}) {
@@ -806,7 +806,6 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-shell')).toBeVisible();
     await expect(page.locator('.cd2004-app-title b')).toHaveText('IPMG');
     await expect(page.locator('.cd2004-app-title > span')).toHaveText('MA Workstation');
-    await expect(page.locator('.tebra-app-workspace')).toHaveText('WKL');
     await expect(page.locator('.cd2004-app-environment')).toContainText('Local only');
     await expect(page.locator('.cd2004-app-environment')).not.toContainText('LIVE');
     const chartBanner = page.locator('.cd2004-patient-banner');
@@ -943,11 +942,12 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('keeps module codes, field states, and blank-record commands honest', async ({ page }) => {
     await page.goto('/');
-    const transactionCode = page.locator('.tebra-app-workspace');
-    await expect(transactionCode).toHaveText('WKL');
+    // The MEDITECH transaction-code chip is gone from the header; it named the
+    // system's own screen identifier rather than anything a medical assistant
+    // does. The section rail says which module is open.
+    await expect(page.locator('.tebra-app-workspace')).toHaveCount(0);
 
     await openWorkflow(page, 'administer');
-    await expect(transactionCode).toHaveText('INJ');
     await expect(page.getByRole('heading', { name: 'Injection worksheet', level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Patient & ordering provider', level: 2 })).toBeVisible();
     const injectionReason = page.getByLabel('Encounter type', { exact: true });
@@ -965,7 +965,7 @@ test.describe('MA Workstation browser journeys', () => {
     // The ordering provider is a register, so its prompt names the register and
     // F9 genuinely applies. It must still say where the name comes from.
     await providerControl(orderingProvider).locator('select').focus();
-    await expect(page.locator('.cd2004-status-message')).toContainText(
+    await expect(page.locator('[data-status-prompt]')).toContainText(
       'named on the active order'
     );
     await expect(page.locator('[data-injection-record-actions]')).not.toContainText(
@@ -973,7 +973,6 @@ test.describe('MA Workstation browser journeys', () => {
     );
 
     await openWorkflow(page, 'uds');
-    await expect(transactionCode).toHaveText('UDS');
     const panel = page.locator('.wfp-panel');
     await expect(page.locator('.meditech-patient-safety')).toContainText(
       'UDS — Not started'
@@ -1023,7 +1022,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('PEND');
     await reason.focus();
-    await expect(page.locator('.cd2004-status-message')).toContainText(
+    await expect(page.locator('[data-status-prompt]')).toContainText(
       'INJ-REASON | Encounter type'
     );
     await expect(page.locator('.meditech-command-prompt')).toContainText('INJ-REASON');
@@ -1033,7 +1032,7 @@ test.describe('MA Workstation browser journeys', () => {
     ).toBeVisible();
 
     await f9.click();
-    const lookup = page.getByRole('dialog', { name: 'INJ FIELD LOOKUP · INJ-REASON' });
+    const lookup = page.getByRole('dialog', { name: 'Encounter type' });
     await expect(lookup).toBeVisible();
     const lookupBox = await lookup.locator('.cd2004-dialog-frame').boundingBox();
     expect(lookupBox).not.toBeNull();
@@ -1048,7 +1047,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await expect(reason).toHaveValue('prn');
     await expect(reason).toBeFocused();
-    await expect(page.locator('.cd2004-status-message')).toContainText(
+    await expect(page.locator('[data-toast]')).toContainText(
       'INJ-REASON filed as PRN / ordered.'
     );
     await expect(orderTab).toHaveClass(/is-stop/);
@@ -1074,7 +1073,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(235, 240, 239)');
     await lookup.getByRole('searchbox', { name: 'Find value' }).press('Enter');
     await expect(reason).toHaveValue('prn');
-    await expect(page.locator('.cd2004-status-message')).toContainText(
+    await expect(page.locator('[data-toast]')).toContainText(
       'INJ-REASON unchanged — PRN / ordered remains selected.'
     );
     await expect.poll(() => page.evaluate(() => window.__ipmgLookupChangeCount)).toBe(0);
@@ -1143,56 +1142,51 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-activity-list')).toHaveCount(0);
   });
 
-  test('keeps desktop menus single-open and restores focus on escape', async ({ page }) => {
+  test('puts the retired menu bar\'s commands in the header account menu', async ({ page }) => {
     await page.goto('/');
-    // Real ARIA menubar rather than <details>: open state is aria-expanded on
-    // each menu's title button, so the whole bar can act as one tracking unit.
-    const fileTitle = page.locator('.cd2004-menu[data-menu="file"] .cd2004-menu-title');
-    const chartTitle = page.locator('.cd2004-menu[data-menu="chart"] .cd2004-menu-title');
-    const openTitles = page.locator('.cd2004-menu-title[aria-expanded="true"]');
 
-    await fileTitle.click();
-    await expect(fileTitle).toHaveAttribute('aria-expanded', 'true');
-    await chartTitle.click();
-    await expect(chartTitle).toHaveAttribute('aria-expanded', 'true');
-    await expect(fileTitle).toHaveAttribute('aria-expanded', 'false');
-    await expect(openTitles).toHaveCount(1);
+    // The desktop menu bar is gone: a menu bar is an application affordance
+    // Tebra has no equivalent of, and every command it held now has a
+    // Tebra-native home. Nothing may reintroduce one.
+    await expect(page.locator('[role="menubar"]')).toHaveCount(0);
+    await expect(page.locator('.cd2004-menu-title')).toHaveCount(0);
 
+    const trigger = page.locator('.tebra-account-trigger');
+    await expect(trigger).toContainText('Not signed in');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    // The two commands that had nowhere else to go, plus the shortcut sheet.
+    await expect(page.locator('[data-account-action="staff"]')).toBeVisible();
+    await expect(page.locator('[data-account-action="location"]')).toBeVisible();
+    await expect(page.locator('[data-account-action="shortcuts"]')).toBeVisible();
+    // The provenance line travels with the account, not a status bar.
+    await expect(page.locator('.tebra-account-scope')).toContainText(
+      'Records stay in this browser'
+    );
+
+    // Escape dismisses and hands focus back to the trigger.
     await page.keyboard.press('Escape');
-    await expect(chartTitle).toHaveAttribute('aria-expanded', 'false');
-    await expect(chartTitle).toBeFocused();
-
-    await fileTitle.click();
-    await page.locator('.cd2004-app-title').click();
-    await expect(fileTitle).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toBeFocused();
   });
 
-  test('tracks the menu bar: hovering a sibling switches menus once open', async ({ page }) => {
+  test('confirms with a toast instead of a permanent status bar', async ({ page }) => {
     await page.goto('/');
-    const fileTitle = page.locator('.cd2004-menu[data-menu="file"] .cd2004-menu-title');
-    const chartTitle = page.locator('.cd2004-menu[data-menu="chart"] .cd2004-menu-title');
 
-    // Hovering alone does nothing while the bar is idle.
-    await chartTitle.hover();
-    await expect(chartTitle).toHaveAttribute('aria-expanded', 'false');
+    // A strip along the bottom edge is desktop chrome; PLAN 2.2 lists a Toast.
+    await expect(page.locator('.cd2004-statusbar')).toHaveCount(0);
 
-    // Once any menu is open the bar is in tracking mode, so hovering a
-    // sibling switches to it without a second click - native menu behavior.
-    await fileTitle.click();
-    await chartTitle.hover();
-    await expect(chartTitle).toHaveAttribute('aria-expanded', 'true');
-    await expect(fileTitle).toHaveAttribute('aria-expanded', 'false');
+    // Provenance and the storage state moved to the header badge, which must
+    // always be visible - a browser that cannot save must never fail quietly.
+    const badge = page.locator('[data-workspace-badge]');
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveAttribute('data-workspace-badge', 'local');
 
-    // Alt+access key opens a menu directly; arrows move along the bar.
-    await page.keyboard.press('Escape');
-    await page.keyboard.press('Alt+t');
-    await expect(
-      page.locator('.cd2004-menu[data-menu="tools"] .cd2004-menu-title')
-    ).toHaveAttribute('aria-expanded', 'true');
-    await page.keyboard.press('ArrowRight');
-    await expect(
-      page.locator('.cd2004-menu[data-menu="help"] .cd2004-menu-title')
-    ).toHaveAttribute('aria-expanded', 'true');
+    // An announcement toasts, then clears itself rather than going stale.
+    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    await expect(page.locator('[data-toast]')).toContainText('Injection opened.');
   });
 
   test('keeps the navigator fixed and adds document context only inside a clinical workflow', async ({ page }) => {
@@ -1388,7 +1382,7 @@ test.describe('MA Workstation browser journeys', () => {
       'uds'
     );
     await page.keyboard.press('F12');
-    await expect(page.locator('.cd2004-status-message')).toHaveText(
+    await expect(page.locator('[data-toast]')).toHaveText(
       'Draft saving is unavailable for this note type.'
     );
     expect(await page.evaluate(() =>
@@ -1554,11 +1548,8 @@ test.describe('MA Workstation browser journeys', () => {
     );
     expect(Math.max(...transitionSeconds)).toBeLessThanOrEqual(0.001);
 
-    const helpSummary = page.locator('.cd2004-menu[data-menu="help"] .cd2004-menu-title');
-    await helpSummary.click();
-    // Menu commands are menuitems now, not plain buttons - role="menuitem"
-    // overrides the implicit button role, which is the correct ARIA for a menu.
-    await page.getByRole('menuitem', { name: 'Keyboard Reference' }).click();
+    await page.locator('.tebra-account-trigger').click();
+    await page.locator('[data-account-action="shortcuts"]').click();
     const dialog = page.getByRole('dialog', { name: 'Keyboard Reference' });
     await expect(dialog).toBeVisible();
     // Opened with the native showModal(), so the platform puts it in the top
@@ -1578,7 +1569,7 @@ test.describe('MA Workstation browser journeys', () => {
     expect(animationSeconds).toBeLessThanOrEqual(0.001);
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
-    await expect(helpSummary).toBeFocused();
+    await expect(page.locator('.tebra-account-trigger')).toBeFocused();
     // ...and the shell chrome is reachable again once the dialog closes.
     expect(await page.evaluate(() => {
       const target = document.querySelector('.cd2004-shell > header button');
@@ -2520,9 +2511,9 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(startNew).toHaveAccessibleName('Start new injection');
     await expect(discard).toHaveAccessibleName('Discard draft…');
     await startNew.focus();
-    await expect(page.locator('.cd2004-status-message')).toContainText('Start new injection');
+    await expect(page.locator('[data-status-prompt]')).toContainText('Start new injection');
     await panel.locator('input[placeholder="Last, First"]').focus();
-    await expect(page.locator('.cd2004-status-message')).toContainText('Patient name');
+    await expect(page.locator('[data-status-prompt]')).toContainText('Patient name');
     await expect(save).toBeDisabled();
     await expect(finish).toBeDisabled();
     await expect(startNew).toBeEnabled();
