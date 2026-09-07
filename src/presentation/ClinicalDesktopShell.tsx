@@ -1120,7 +1120,9 @@ export function ClinicalDesktopShell({
   }, [selectedWorkflow]);
 
   useEffect(() => {
-    if (postState !== "posted") return;
+    // Focused mode owns its signed-note destination through the completion
+    // card; the ordinary shell still returns focus to its locked footer.
+    if (postState !== "posted" || kioskController.enabled) return;
 
     let settled = false;
     const timers: Array<ReturnType<typeof globalThis.setTimeout>> = [];
@@ -1168,7 +1170,7 @@ export function ClinicalDesktopShell({
       observer.disconnect();
       timers.forEach((timer) => globalThis.clearTimeout(timer));
     };
-  }, [postState]);
+  }, [kioskController.enabled, postState]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

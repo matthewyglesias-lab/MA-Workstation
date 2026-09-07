@@ -5,7 +5,8 @@ const { scheduleRegister } = require('./schedule-register');
 
 const KIOSK_STORAGE_KEY = 'ipmgMedAssistKioskMode_v1';
 
-const kioskStep = (page, id) => page.locator(`[data-kiosk-step="${id}"]`).first();
+const kioskStep = (page, id) =>
+  page.locator(`.kiosk-stepper button[data-kiosk-step="${id}"]`);
 
 async function signInLocalStaff(page, staff = 'Kiosk QA Staff, MA') {
   await page.locator('.tebra-account-trigger').click();
