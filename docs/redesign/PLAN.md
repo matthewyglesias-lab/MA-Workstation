@@ -43,12 +43,38 @@ stylesheets. These are their conventions, not our invention of them.
 
 ### 2.1 Information architecture
 
+**Amended in Phase 4. Read this before rebuilding anything from the table
+below.**
+
+The original premise here was that Tebra's clinical product defines one shape
+and that ours should adopt it exactly. That is wrong about Tebra. Tebra is a
+**product family** — EHR, Patient Experience, Billing & Payments, Practice
+Marketing, AI & Automation — sharing one design language across products whose
+information architectures differ sharply. Their non-EHR products are not
+chart-shaped at all: Patient Experience is organised as a sequence of
+touchpoints, and reads operations-first rather than clinical-first. So "be a
+Tebra product" and "copy Tebra EHR's information architecture" are not the same
+goal, and where they conflict the first one wins.
+
+What makes something read as first-party is the **design language** — the
+palette, the type tiers, the control grammar, the icon conventions, the way an
+empty state speaks — not the org chart of its navigation. A medical assistant's
+injection and UDS station is a different job from a physician's chart, and
+fitting the shape to that job is what a Tebra team would do, not what would
+give them away.
+
+So: the shape below is **where we landed and what we keep**, not a specification
+to conform to. It earns its place because it suits this station's work, and the
+Facesheet/rail/action-bar arrangement genuinely does. Any future phase weighing
+a change should ask whether it serves the assistant's job, not whether Tebra's
+EHR does it that way.
+
 Tebra's clinical product is organized around a **Facesheet** — a patient hub —
 with a **left section rail**, a **top action bar**, and a body of **summary
 cards**. Work arrives through **Open Notes**, a worklist of unsigned notes.
 Notes are created from a `+ New Note` control, worked, and **signed**.
 
-Our shell adopts that shape exactly:
+Our shell, as built:
 
 | Tebra | Ours |
 | --- | --- |
@@ -61,8 +87,10 @@ Our shell adopts that shape exactly:
 
 ### 2.2 Component inventory
 
-Build these, named as Tebra names them. A component Tebra doesn't have is a
-seam; a component Tebra has that we name differently is also a seam.
+Named as Tebra names them, so a component doing a job Tebra's design language
+already has a name for uses that name. This is a naming convention, not a
+requirement that every component correspond to one of theirs: a station that
+does a job their EHR does not do needs components their EHR does not have.
 
 `AppHeader` · `PatientSearch` · `FacesheetBanner` · `PatientCardPopup` ·
 `SectionRail` · `SummaryCard` · `ActionBar` · `NewNoteMenu` · `NotesTable` ·

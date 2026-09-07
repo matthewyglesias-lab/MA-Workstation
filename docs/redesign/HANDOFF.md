@@ -41,7 +41,7 @@ prompt refers to. Update this file at the end of each phase.
 > differs from the pinned renderer by roughly 3-5%, and do not loosen the
 > threshold to absorb that.
 >
-> **Then take Phase 4.** Kiosk shell (`?kiosk=1`), the 7-step injection stepper
+> **Then take Phase 5.** Kiosk shell (`?kiosk=1`), the 7-step injection stepper
 > over the existing `InjectionPanel` tabs, touch site picker, Care Checklist
 > rail, and sign-and-next card, per `MANIFEST.md` §2.1 and §9.
 >
@@ -98,7 +98,7 @@ local ids, but both tree hashes were checked byte-for-byte before the ref moved.
 
 **Phase 3 is complete.** Phase 3a replaced the provisional saved-note rows
 without reopening the shell architecture; Phase 3b adds the patient-scoped
-conventions on top of it. What remains before Phase 4 is the visual closure
+conventions on top of it. What remained before Phase 4 was the visual closure
 described in section 5.
 
 ### Load-bearing facts about what landed
@@ -439,6 +439,22 @@ be refreshed here — it remains flagged as stale in the PR body.
    assertion that a resumed record shows its `summary` string will fail even
    when the restore worked. Assert a restored field value instead - the
    existing UDS journeys use `input[placeholder="Last, First"]`.
+11. **A blanket reset can outrank every component that names a token.** Until
+   Phase 4, `clinical-desktop.css` carried
+   `.cd2004-shell button, input, select, textarea { border-radius: 0 }` - left
+   over from the hand-painted beveled chrome that Phase 3c deleted. At (0,1,1)
+   it beat `.tebra-record-action { border-radius: var(--tw-radius-action) }`, so
+   the shell rendered square no matter what the tokens said, and the tokens
+   looked wrong when the reset was at fault. If a token appears not to apply,
+   check the computed value in the browser and find the *matched rules* -
+   `CSS.getMatchedStylesForNode` over a CDP session names the offender in
+   seconds - before concluding the token is wrong.
+12. **`ReadinessVerdict.tone` is coarser than it looks.** It reports `"blocked"`
+   when `blockers || pending`, so a note nobody has typed into yet is
+   indistinguishable by tone from one holding a contraindication. Read
+   `verdict.blockers` when the presentation needs to tell them apart. Do not
+   "fix" this in `readiness-projection.ts`: it is frozen, and presentation is
+   the layer that chooses treatment, exactly as it chooses the words.
 
 ---
 
@@ -497,9 +513,10 @@ Chromium 149 is interaction evidence only.
 | **3c — Retire the desktop chrome** | **On PR #62.** Menu bar, status bar and transaction-code chip deleted; account menu and Toast added. |
 | **3d — One list grammar** | **This commit.** The Dashboard's 2004 worklist table becomes the same card list the patient chart uses. |
 | **3e — Visual closure** | **This commit.** Eight baselines regenerated on the pinned browser and reviewed; a clipped 800x600 control fixed; the toast excluded from captures. |
-| ~~3b/3c visual closure~~ | ~~Superseded by 3e.~~ **Next, before Phase 4.** Promote the pinned Chromium 151 `*-actual.png` files as the eight Linux baselines, reviewed image by image, in their own commit — exactly as Phase 2d did. |
-| **4 — Kiosk** | Kiosk shell (`?kiosk=1`), 7-step injection stepper over existing `InjectionPanel` tabs, touch site picker, Care Checklist rail, sign-and-next card. |
-| **5 — Cleanup** | Delete dead MEDITECH CSS, update `README.md`. |
+| ~~3b/3c visual closure~~ | ~~Superseded by 3e; done.~~ |
+| **4 — Product voice** | **This commit.** Contemporary duotone icon set; spot illustrations for empty states; Plus Jakarta Sans on the display tier; the square-control reset removed at its source so components own their geometry; masthead lightened; the readiness verdict stops rendering "not filled in yet" as a clinical stop. Information architecture deliberately unchanged — see `PLAN.md` 2.1, amended. |
+| **5 — Kiosk** | Kiosk shell (`?kiosk=1`), 7-step injection stepper over existing `InjectionPanel` tabs, touch site picker, Care Checklist rail, sign-and-next card. |
+| **6 — Cleanup** | Delete dead MEDITECH CSS, update `README.md`. |
 | **(unscheduled)** | The `cd2004-*` / `meditech-*` / `wfp-*` class rename. Mechanical, ~1000 usages, touches every e2e selector — **its own phase**, never mixed with design work. |
 
 Run the nine-question convention review in `MANIFEST.md` §5 screen by screen

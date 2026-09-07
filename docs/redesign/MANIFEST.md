@@ -87,15 +87,16 @@ else under `src/application/**` remains frozen.
 | `src/presentation/notes/note-table-model.ts` | Defensive Injection/UDS row projection, Visit Date precedence, lifecycle/lock truth, and deterministic sorting. | 3 |
 | `src/presentation/notes/StatusChip.tsx` | `Incomplete` · `Ready to sign` · `Signed`. | 3 |
 | `src/presentation/notes/LockIndicator.tsx` | Lock glyph + hover "Signed by … at …". | 3 |
-| `src/presentation/kiosk/KioskShell.tsx` | Kiosk chrome and sign-and-next loop. | 4 |
-| `src/presentation/kiosk/InjectionStepper.tsx` | 7-step rail over existing `InjectionPanel` tabs. | 4 |
-| `src/presentation/kiosk/CareChecklistRail.tsx` | Tebra presentation of `projectClinicalReadiness`. | 4 |
-| `src/presentation/kiosk/SignAndNextCard.tsx` | Post-sign → print handout / next patient. | 4 |
-| `src/presentation/kiosk/kiosk.css` | Kiosk-only layout. `@media screen`. | 4 |
-| `src/presentation/use-kiosk-mode.ts` | `?kiosk=1` + persisted preference + Fullscreen API. | 4 |
+| `src/presentation/kiosk/KioskShell.tsx` | Kiosk chrome and sign-and-next loop. | 5 |
+| `src/presentation/kiosk/InjectionStepper.tsx` | 7-step rail over existing `InjectionPanel` tabs. | 5 |
+| `src/presentation/kiosk/CareChecklistRail.tsx` | Tebra presentation of `projectClinicalReadiness`. | 5 |
+| `src/presentation/kiosk/SignAndNextCard.tsx` | Post-sign → print handout / next patient. | 5 |
+| `src/presentation/kiosk/kiosk.css` | Kiosk-only layout. `@media screen`. | 5 |
+| `src/presentation/use-kiosk-mode.ts` | `?kiosk=1` + persisted preference + Fullscreen API. | 5 |
+| `src/presentation/Illustration.tsx` | **Phase 4 implemented.** Warm spot illustrations for empty and placeholder states, in brand colour rather than `currentColor` - the opposite rule from `DesktopIcon`, because these are pictures occupying a region, not glyphs taking the colour of a control. Every value is a token with its literal as fallback, so one landing inside a print rule renders rather than collapsing. | 4 |
 | `tests/e2e/tebra-screen-contract.spec.js` | Replaces `meditech-screen-contract.spec.js`. | 2 |
 | `tests/e2e/conventions.spec.js` | Asserts §4 grammar: sort, chips, lock hover, row click. | 3 |
-| `tests/e2e/kiosk-flow.spec.js` | Identify → sign → next-patient loop. | 4 |
+| `tests/e2e/kiosk-flow.spec.js` | Identify → sign → next-patient loop. | 5 |
 
 ### 2.2 Modified files
 
@@ -104,7 +105,7 @@ else under `src/application/**` remains frozen.
 | `index.html` | Boot identity, then Phase 2 loading skeleton; Phase 2c synchronizes measured shell geometry. **Keep `media="print"` on the legacy stylesheet link.** | 0, 2, 2c |
 | `favicon.svg` | IPMG module mark in Tebra palette. Not a Tebra logo. | 0 |
 | `package.json` | **Add** `@fontsource-variable/inter` + `@fontsource-variable/jetbrains-mono`. **Keep `plus-jakarta-sans`** — it is print-load-bearing (see §3.1). | 0 |
-| `src/main.tsx` | Font imports; kiosk wiring (Phase 4). No coordinator or store changes. | 0, 4 |
+| `src/main.tsx` | Font imports; kiosk wiring (Phase 5). No coordinator or store changes. | 0, 5 |
 | `src/presentation/clinical-desktop.css` | Retarget screen surfaces to tokens and retain established print layout/isolation rules. **Keep the filename** (`check-app.js` asserts it). | 0, 2, 2c |
 | `src/presentation/workflows/workflow-panels.css` | Retarget to tokens; Phase 2c refines Injection and fixed transaction scroll ownership. **Keep the filename** (`check-app.js` asserts it). | 0, 2, 2c |
 | `src/presentation/meditech-workstation.css` | **Deleted**; replaced by `tebra-workstation.css`. | 2 |
@@ -112,6 +113,8 @@ else under `src/application/**` remains frozen.
 | `src/presentation/ClinicalDesktopShell.tsx` | Titlebar → `AppHeader`; nav → `SectionRail`; status bar → footer. Phase 2c also repairs synchronous mnemonic-menu focus. ARIA preserved. | 2, 2c |
 | `src/presentation/MeditechChrome.tsx` | **Deleted**; replaced by `TebraChrome.tsx`. | 2 |
 | `src/presentation/types.ts` | `WORKFLOW_LABELS` string values only. **Never touch `WorkflowId` union values.** | 1 |
+| `src/presentation/DesktopIcon.tsx` | **Phase 4 rebuilt.** 24 skeuomorphic 16px pictograms in a fixed yellow/blue/red palette replaced by a 24-unit duotone set: 1.5 stroke, round caps and joins, `currentColor` throughout. Names and call sites unchanged. | 4 |
+| `src/presentation/SiteIcon.tsx` | **Phase 4.** Same treatment; the `SITE_DOTS` coordinate table is untouched, so every marker stays where it was calibrated. | 4 |
 | `src/presentation/StartCenter.tsx` | → "Dashboard"; facesheet card grammar. | 1, 3 |
 | `src/presentation/RecordsWindow.tsx`, `UdsRecordsWindow.tsx` | → "Open Notes"; adopt `NotesTable`. | 1, 3 |
 | `src/presentation/RecordActionDialog.tsx`, `RecordLifecycleActions.tsx` | "Attest and lock" → "Sign"; Phase 2c styles the existing per-note lifecycle actions as a fixed modern footer through the screen contract. Component lifecycle logic is unchanged. | 1, 2c |
@@ -126,7 +129,7 @@ else under `src/application/**` remains frozen.
 | `src/presentation/WorkstationLock.tsx` | Restyle only. | 2 |
 | `src/presentation/workflows/StatusFlag.tsx` | New triad; **verify icon + word, never color alone.** | 2 |
 | `src/presentation/workflows/OutstandingRequirements.tsx` | → "Care Checklist". | 1 |
-| `src/presentation/workflows/injection/InjectionPanel.tsx` | Stepper integration. Field logic untouched. | 4 |
+| `src/presentation/workflows/injection/InjectionPanel.tsx` | Stepper integration. Field logic untouched. | 5 |
 | `src/presentation/workflows/uds/UdsPanel.tsx` | Phase 2c moves the existing preliminary-screening safety statement inside the clinical scroll owner; copy and logic unchanged. | 2c |
 | `scripts/check-app.js` | Only if a CSS path above is renamed — update that assertion, **relax nothing else**. | 2 |
 | `README.md` | Architecture + design-language section. | 5 |
@@ -392,6 +395,15 @@ The tokens make it look right. This section makes it *feel* first-party. It
 combines authenticated-product observations, legacy workflow observations, and
 explicit repository adaptations; each subsection names which source governs.
 
+**Amended in Phase 4.** "The modern authenticated product remains authoritative"
+below means authoritative for the **design language** — control grammar, list
+and card conventions, spacing, the measured geometry in these tables. It is not
+authoritative for *what this station is arranged around*. Tebra is a product
+family whose members differ sharply in information architecture while sharing
+one visual language; see `PLAN.md` 2.1, amended for the same reason. A future
+phase reading these tables should treat a measured spec as binding and the
+arrangement it sits inside as this repository's own decision.
+
 ### 4.1 Global Open Notes table
 
 This is the legacy global worklist grammar observed in production, not the
@@ -410,7 +422,7 @@ surrounding shell, cards, fields, and actions.
 | Lock column | Glyph when the record is signed; hover reveals `Signed by {staff} · {time}` from the existing attestation. |
 | Visit Date | The appointment date, or the note's creation date/time when there is no appointment. |
 | Status | `StatusChip` — see 4.2. |
-| Empty state | One line in voice, plus the primary action. Never a bare "No records." |
+| Empty state | A spot illustration (`Illustration`), one line in voice, and the primary action. Never a bare "No records." |
 
 For the existing record shapes, resolve Visit Date in presentation only:
 injection `fields.adminDate`, UDS `collectionDateTime`, then `createdAt` as the
@@ -425,7 +437,7 @@ it as a patient-scoped view; do not make the global Open Notes table imitate it.
 | Element | Measured spec |
 | --- | --- |
 | Page | 32px content padding. |
-| Filters | Exactly four 200×40 fields in one white panel; 4px radius (`--tw-radius-tight`) and elevation 1. |
+| Filters | Exactly four 200×40 fields in one white panel; elevation 1. Radius moved to `--tw-radius-ctl` (8px) in Phase 4 with the rest of the control grammar. |
 | Row | 100px high with 16px padding. |
 | Row title | Approximately 20px, bold. |
 | Metadata | 14px sans text. |
@@ -581,7 +593,7 @@ The current Phase 2b plus Phase 2c contract is:
 2. clinical-desktop.css           mixed — screen structural base plus established print rules (filename pinned)
 3. workflows/workflow-panels.css  @media screen — (filename pinned)
 4. tebra-workstation.css          @media screen — shell composition
-5. kiosk/kiosk.css                @media screen — kiosk layout (Phase 4; not present yet)
+5. kiosk/kiosk.css                @media screen — kiosk layout (Phase 5; not present yet)
 6. tebra-screen-contract.css      @media screen — final contract, loaded last
 --- print never joins the Tebra screen cascade ---
    clinical-desktop.css           @media print — established typed-sheet layout and shell isolation
