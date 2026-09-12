@@ -9,7 +9,7 @@ interface LegacyWorkflowHostProps {
 
 export function LegacyWorkflowHost({
   adapter,
-  label = "workflow",
+  label = "note type",
   onHostReady,
 }: LegacyWorkflowHostProps) {
   const hostRef = useRef<HTMLDivElement>(null);

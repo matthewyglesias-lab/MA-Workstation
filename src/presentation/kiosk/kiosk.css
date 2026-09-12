@@ -1,0 +1,797 @@
+/*
+ * Focused Injection workspace. This file is loaded between the workstation
+ * composition and the final screen contract, and every selector is explicitly
+ * kiosk-scoped. The ordinary workstation and every print surface remain
+ * pixel-inert when kiosk mode is off.
+ */
+
+@media screen {
+  .cd2004-shell[data-kiosk-mode="true"] {
+    --kiosk-rail-width: clamp(224px, 19vw, 272px);
+    background: var(--tw-surface-page);
+  }
+
+  .cd2004-shell .cd2004-workspace.is-kiosk {
+    grid-template-columns: var(--kiosk-rail-width) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+    background: var(--tw-surface-page);
+  }
+
+  .cd2004-shell .kiosk-patient-summary {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(420px, 2fr) auto;
+    align-items: stretch;
+    min-width: 0;
+    min-height: 88px;
+    overflow: hidden;
+    color: var(--tw-on-inverse);
+    background: var(--tw-teal-800);
+    border: 0;
+    border-radius: var(--tw-radius-panel);
+    box-shadow: none;
+  }
+
+  .cd2004-shell .kiosk-patient-identity {
+    display: grid;
+    align-content: center;
+    gap: 2px;
+    min-width: 0;
+    padding: 12px 20px;
+    border-right: 1px solid rgb(255 255 255 / 16%);
+  }
+
+  .cd2004-shell .kiosk-patient-identity small,
+  .cd2004-shell .kiosk-patient-facts dt {
+    color: var(--tw-teal-200);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 700;
+    line-height: var(--tw-lh-ws-label);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .cd2004-shell .kiosk-patient-identity strong {
+    overflow: hidden;
+    font: 700 var(--tw-fs-title) / var(--tw-lh-title) var(--tw-font-display);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell .kiosk-patient-identity > span {
+    color: var(--tw-teal-200);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+  }
+
+  .cd2004-shell .kiosk-patient-facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(92px, 1fr));
+    align-items: stretch;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .cd2004-shell .kiosk-patient-facts > div {
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    min-width: 0;
+    padding: 10px 14px;
+    border-right: 1px solid rgb(255 255 255 / 16%);
+  }
+
+  .cd2004-shell .kiosk-patient-facts dd {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--tw-on-inverse);
+    font-size: var(--tw-fs-ws-base);
+    font-weight: 700;
+    font-variant-numeric: var(--tw-numeric-tabular);
+    line-height: var(--tw-lh-ws-base);
+    text-overflow: ellipsis;
+  }
+
+  .cd2004-shell .kiosk-shell-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .cd2004-shell .kiosk-shell-actions button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 14px;
+    color: var(--tw-on-inverse);
+    background: transparent;
+    border: 1px solid var(--tw-teal-300);
+    border-radius: var(--tw-radius-action);
+    font-size: var(--tw-fs-ws-dense);
+    font-weight: 700;
+    line-height: var(--tw-lh-ws-dense);
+    cursor: pointer;
+    transition:
+      background-color var(--tw-dur-base) var(--tw-ease),
+      box-shadow var(--tw-dur-base) var(--tw-ease);
+  }
+
+  .cd2004-shell .kiosk-shell-actions button:hover {
+    background: rgb(255 255 255 / 12%);
+  }
+
+  .cd2004-shell .kiosk-patient-mismatch {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 14px;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border-top: 1px solid var(--tw-review-border);
+  }
+
+  .cd2004-shell .kiosk-patient-mismatch span,
+  .cd2004-shell .kiosk-patient-mismatch small {
+    display: block;
+  }
+
+  .cd2004-shell .kiosk-patient-mismatch button {
+    min-height: 44px;
+    padding: 8px 14px;
+    color: var(--tw-review-fg);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-review-border);
+    border-radius: var(--tw-radius-action);
+  }
+
+  .cd2004-shell .kiosk-journey-rail {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px;
+    overflow: auto;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card);
+    box-shadow: var(--tw-shadow-elevation-1);
+    scrollbar-width: thin;
+  }
+
+  .cd2004-shell .kiosk-rail-heading h2 {
+    margin: 0;
+    color: var(--tw-text-primary);
+    font: 700 var(--tw-fs-lead) / 1.25 var(--tw-font-display);
+  }
+
+  .cd2004-shell .kiosk-rail-heading p {
+    margin: 2px 0 0;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+  }
+
+  .cd2004-shell .kiosk-stepper ol {
+    position: relative;
+    display: grid;
+    gap: 4px;
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cd2004-shell .kiosk-stepper li {
+    position: relative;
+    min-width: 0;
+  }
+
+  .cd2004-shell .kiosk-stepper li:not(:last-child)::after {
+    position: absolute;
+    z-index: 0;
+    top: 42px;
+    bottom: -8px;
+    left: 17px;
+    width: 1px;
+    background: var(--tw-border-subtle);
+    content: "";
+  }
+
+  .cd2004-shell .kiosk-stepper button {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 54px;
+    padding: 6px 8px;
+    color: var(--tw-text-primary);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tw-radius-ctl);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background-color var(--tw-dur-fast) var(--tw-ease),
+      border-color var(--tw-dur-fast) var(--tw-ease),
+      box-shadow var(--tw-dur-fast) var(--tw-ease);
+  }
+
+  .cd2004-shell .kiosk-stepper button:hover:not(:disabled) {
+    background: var(--tw-mint-50);
+    border-color: var(--tw-border-subtle);
+  }
+
+  .cd2004-shell .kiosk-stepper button[aria-current="step"] {
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
+    box-shadow: inset 3px 0 var(--tw-teal-800);
+  }
+
+  .cd2004-shell .kiosk-stepper button:disabled {
+    color: var(--tw-text-muted);
+    cursor: not-allowed;
+  }
+
+  .cd2004-shell .kiosk-step-number {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-strong);
+    border-radius: 50%;
+    font-size: var(--tw-fs-ws-dense);
+    font-weight: 800;
+    font-variant-numeric: var(--tw-numeric-tabular);
+  }
+
+  .cd2004-shell .kiosk-step-copy {
+    display: grid;
+    min-width: 0;
+  }
+
+  .cd2004-shell .kiosk-step-copy strong {
+    font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
+  }
+
+  .cd2004-shell .kiosk-step-copy small {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    line-height: var(--tw-lh-ws-label);
+  }
+
+  .cd2004-shell .kiosk-step-copy svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .cd2004-shell .kiosk-stepper li[data-step-state="complete"] .kiosk-step-number,
+  .cd2004-shell .kiosk-stepper li[data-step-state="ready"] .kiosk-step-number {
+    color: var(--tw-ready-fg);
+    background: var(--tw-ready-bg);
+    border-color: var(--tw-ready-border);
+  }
+
+  .cd2004-shell .kiosk-stepper li[data-step-state="stop"] .kiosk-step-copy small {
+    color: var(--tw-stop-fg);
+  }
+
+  .cd2004-shell .kiosk-stepper li[data-step-state="warning"] .kiosk-step-copy small {
+    color: var(--tw-review-fg);
+  }
+
+  .cd2004-shell .kiosk-checklist {
+    padding-top: 12px;
+    border-top: 1px solid var(--tw-border-subtle);
+  }
+
+  .cd2004-shell .kiosk-checklist-verdict {
+    display: grid;
+    gap: 1px;
+    margin-top: 9px;
+    padding: 8px 10px;
+    color: var(--tw-text-primary);
+    background: var(--tw-mint-50);
+    border: 1px solid var(--tw-border-subtle);
+    border-left: 3px solid var(--tw-border-strong);
+    border-radius: var(--tw-radius-ctl);
+  }
+
+  .cd2004-shell .kiosk-checklist-verdict.is-blocked {
+    border-left-color: var(--tw-stop-border);
+  }
+
+  /* A note that is merely unfinished is documentation lifecycle, not danger.
+     See the same rule in workflow-panels.css for the full reasoning. */
+  .cd2004-shell .kiosk-checklist-verdict.is-blocked.is-unfinished {
+    color: var(--tw-note-incomplete-fg);
+    background: var(--tw-note-incomplete-bg);
+    border-left-color: var(--tw-note-incomplete-border);
+  }
+
+  .cd2004-shell .kiosk-checklist-verdict.is-review {
+    border-left-color: var(--tw-review-border);
+  }
+
+  .cd2004-shell .kiosk-checklist-verdict.is-clear {
+    border-left-color: var(--tw-ready-border);
+  }
+
+  .cd2004-shell .kiosk-checklist-verdict strong {
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
+  }
+
+  .cd2004-shell .kiosk-checklist-verdict span {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    line-height: var(--tw-lh-ws-label);
+  }
+
+  .cd2004-shell .kiosk-checklist ul {
+    display: grid;
+    gap: 5px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cd2004-shell .kiosk-checklist li {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 7px;
+    min-width: 0;
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--tw-mint-150);
+  }
+
+  .cd2004-shell .kiosk-checklist-icon {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-mint-50);
+    border-radius: 50%;
+  }
+
+  .cd2004-shell .kiosk-checklist-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .cd2004-shell .kiosk-checklist li > span:last-child {
+    display: grid;
+    min-width: 0;
+  }
+
+  .cd2004-shell .kiosk-checklist li strong {
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+  }
+
+  .cd2004-shell .kiosk-checklist li small {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    line-height: var(--tw-lh-ws-label);
+  }
+
+  .cd2004-shell .kiosk-checklist li p {
+    margin: 3px 0 0;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-label);
+    line-height: var(--tw-lh-ws-label);
+  }
+
+  .cd2004-shell .kiosk-checklist li[data-checklist-state="complete"] .kiosk-checklist-icon {
+    color: var(--tw-ready-fg);
+    background: var(--tw-ready-bg);
+  }
+
+  .cd2004-shell .kiosk-checklist li[data-checklist-state="warning"] .kiosk-checklist-icon {
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+  }
+
+  .cd2004-shell .kiosk-checklist li[data-checklist-state="stop"] .kiosk-checklist-icon {
+    color: var(--tw-stop-fg);
+    background: var(--tw-stop-bg);
+  }
+
+  .cd2004-shell .kiosk-checklist-empty {
+    margin: 9px 0 0;
+    padding: 10px;
+    color: var(--tw-text-secondary);
+    background: var(--tw-mint-50);
+    border-radius: var(--tw-radius-ctl);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+  }
+
+  .cd2004-shell .cd2004-workspace.is-kiosk > .cd2004-work-window {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    overflow: hidden;
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-subtle);
+    border-radius: var(--tw-radius-card);
+    box-shadow: var(--tw-shadow-elevation-1);
+  }
+
+  .cd2004-shell .cd2004-workspace.is-kiosk > .cd2004-work-window > .cd2004-window-titlebar {
+    display: none;
+  }
+
+  .cd2004-shell .cd2004-workspace.is-kiosk > .cd2004-work-window {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .cd2004-shell .cd2004-workspace.is-kiosk .cd2004-transaction-window {
+    padding: 0;
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-panel {
+    gap: 0;
+    padding: 0;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-summary-bar {
+    min-height: 52px;
+    padding: 7px 12px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-transaction-readout {
+    display: none;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-transaction-page {
+    padding: 18px 20px 28px;
+    scroll-padding: 20px;
+  }
+
+  /* Touch targets grow only in the focused shell. The underlying inputs,
+     option values, and event handlers stay exactly the workstation's. */
+  .cd2004-shell[data-kiosk-mode="true"] :is(
+      .wfp-panel input:not([type="checkbox"]):not([type="radio"]),
+      .wfp-panel select,
+      .wfp-panel textarea,
+      .wfp-panel button,
+      .cd2004-record-actions-buttons button,
+      .tebra-account-trigger,
+      .tebra-power-commands > summary
+    ) {
+    min-height: 44px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] .wfp-checkbox-row,
+  .cd2004-shell[data-kiosk-mode="true"] .wfp-option-row {
+    min-height: 44px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] .wfp-checkbox-row input,
+  .cd2004-shell[data-kiosk-mode="true"] .wfp-option-row input,
+  .cd2004-shell[data-kiosk-mode="true"] .wfp-site-tile input[type="radio"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* The standard worksheet keeps a compact four-column anatomical register.
+     Focus mode spends the available single-column width on touch-sized paired
+     tiles while preserving right/left adjacency. */
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-site-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-site-quadrant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-site-tile {
+    grid-template-columns: 20px 38px minmax(0, 1fr);
+    gap: 9px;
+    min-height: 64px;
+    padding: 8px 10px;
+    border-radius: var(--tw-radius-ctl);
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-site-tile-icon svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-site-tile-title {
+    font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] .cd2004-record-actions {
+    grid-template-columns: minmax(180px, 0.72fr) minmax(0, 1.28fr);
+    gap: 10px;
+    padding: 9px 12px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] .cd2004-record-actions-buttons button {
+    min-height: 48px;
+    padding-inline: 18px;
+  }
+
+  .cd2004-shell .cd2004-workspace.is-kiosk.has-kiosk-completion > .cd2004-work-window {
+    display: none;
+  }
+
+  .cd2004-shell .kiosk-sign-next {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    justify-self: center;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 18px;
+    width: min(640px, calc(100% - 32px));
+    padding: 28px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-ready-border);
+    border-radius: var(--tw-radius-panel);
+    box-shadow: 0 18px 48px rgb(0 58 67 / 14%);
+  }
+
+  .cd2004-shell .kiosk-sign-next-icon {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    color: var(--tw-ready-fg);
+    background: var(--tw-ready-bg);
+    border-radius: 50%;
+  }
+
+  .cd2004-shell .kiosk-sign-next-icon svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .cd2004-shell .kiosk-sign-next-copy {
+    min-width: 0;
+  }
+
+  .cd2004-shell .kiosk-sign-next-copy > p {
+    margin: 0 0 3px;
+    color: var(--tw-ready-fg);
+    font-size: var(--tw-fs-ws-label);
+    font-weight: 800;
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .cd2004-shell .kiosk-sign-next-copy h1 {
+    margin: 0;
+    font: 700 var(--tw-fs-display) / var(--tw-lh-display) var(--tw-font-display);
+    letter-spacing: var(--tw-ls-display);
+  }
+
+  .cd2004-shell .kiosk-sign-next-copy > span,
+  .cd2004-shell .kiosk-sign-next-copy > small {
+    display: block;
+    margin-top: 7px;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-body);
+    line-height: var(--tw-lh-body);
+  }
+
+  .cd2004-shell .kiosk-sign-next-copy > small {
+    margin-top: 3px;
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+  }
+
+  .cd2004-shell .kiosk-sign-next-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 6px;
+  }
+
+  .cd2004-shell .kiosk-sign-next-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 57px;
+    padding: 12px 22px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-action-border);
+    border-radius: var(--tw-radius-cta);
+    font-size: var(--tw-fs-body);
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+      background-color var(--tw-dur-base) var(--tw-ease),
+      box-shadow var(--tw-dur-base) var(--tw-ease);
+  }
+
+  .cd2004-shell .kiosk-sign-next-actions button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cd2004-shell .kiosk-sign-next-actions button.is-secondary:hover {
+    background: var(--tw-mint-50);
+  }
+
+  .cd2004-shell .kiosk-sign-next-actions button.is-primary {
+    background: var(--tw-coral-500);
+    border-color: var(--tw-coral-500);
+  }
+
+  .cd2004-shell .kiosk-sign-next-actions button.is-primary:hover {
+    background: var(--tw-coral-300);
+    border-color: var(--tw-coral-300);
+  }
+}
+
+@media screen and (max-width: 1099px) {
+  .cd2004-shell .cd2004-workspace.is-kiosk {
+    --kiosk-rail-width: 224px;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .cd2004-shell .kiosk-patient-summary {
+    grid-template-columns: minmax(210px, 0.9fr) minmax(330px, 1.7fr) auto;
+  }
+
+  .cd2004-shell .kiosk-patient-facts {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .cd2004-shell .kiosk-patient-facts > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .cd2004-shell .kiosk-shell-actions {
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .cd2004-shell .kiosk-shell-actions button {
+    width: 100%;
+    padding-inline: 10px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] [data-workflow="administer"] .wfp-transaction-page {
+    padding: 14px 14px 22px;
+  }
+
+  .cd2004-shell[data-kiosk-mode="true"] .cd2004-record-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media screen and (max-width: 839px) {
+  .cd2004-shell .cd2004-workspace.is-kiosk {
+    --kiosk-rail-width: 206px;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .cd2004-shell .kiosk-patient-summary {
+    grid-template-columns: minmax(190px, 0.8fr) minmax(310px, 1.7fr) auto;
+    min-height: 78px;
+    border-radius: var(--tw-radius-ctl);
+  }
+
+  .cd2004-shell .kiosk-patient-identity {
+    padding: 8px 10px;
+  }
+
+  .cd2004-shell .kiosk-patient-identity strong {
+    font-size: var(--tw-fs-lead);
+  }
+
+  .cd2004-shell .kiosk-patient-facts > div {
+    padding: 6px 8px;
+  }
+
+  .cd2004-shell .kiosk-shell-actions button {
+    overflow: hidden;
+    max-width: 132px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell .kiosk-journey-rail {
+    padding: 8px;
+    border-radius: var(--tw-radius-ctl);
+  }
+
+  .cd2004-shell .kiosk-stepper button {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 6px;
+    min-height: 50px;
+    padding: 5px;
+  }
+
+  .cd2004-shell .kiosk-step-number {
+    width: 30px;
+    height: 30px;
+  }
+
+  .cd2004-shell .kiosk-stepper li:not(:last-child)::after {
+    top: 38px;
+    left: 15px;
+  }
+
+  .cd2004-shell .kiosk-sign-next {
+    grid-template-columns: 52px minmax(0, 1fr);
+    width: calc(100% - 20px);
+    padding: 20px;
+  }
+
+  .cd2004-shell .kiosk-sign-next-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .cd2004-shell .kiosk-sign-next-copy h1 {
+    font-size: var(--tw-fs-title);
+  }
+}
+
+@media screen and (max-height: 680px) {
+  .cd2004-shell .kiosk-patient-summary {
+    min-height: 72px;
+  }
+
+  .cd2004-shell .kiosk-patient-identity,
+  .cd2004-shell .kiosk-patient-facts > div {
+    padding-block: 6px;
+  }
+
+  .cd2004-shell .kiosk-journey-rail {
+    gap: 8px;
+  }
+
+  .cd2004-shell .kiosk-stepper button {
+    min-height: 48px;
+  }
+}
+
+@media screen and (prefers-contrast: more) {
+  .cd2004-shell .kiosk-patient-summary,
+  .cd2004-shell .kiosk-journey-rail,
+  .cd2004-shell .cd2004-workspace.is-kiosk > .cd2004-work-window,
+  .cd2004-shell .kiosk-sign-next,
+  .cd2004-shell .kiosk-stepper button[aria-current="step"] {
+    border-width: 2px;
+  }
+
+  .cd2004-shell .kiosk-stepper button[aria-current="step"] {
+    outline: 2px solid var(--tw-teal-800);
+    outline-offset: -2px;
+  }
+}

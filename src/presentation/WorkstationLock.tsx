@@ -61,8 +61,8 @@ export interface WorkstationLockProps {
 }
 
 /**
- * Windows-2000-style "workstation locked" overlay. Native <dialog> supplies
- * the top layer, inerting of everything behind it, and focus trapping -
+ * Workstation lock overlay. Native <dialog> supplies the top layer, inerting
+ * of everything behind it, and focus trapping -
  * deliberately NOT using the shared ModalDialog wrapper, since that one is
  * built to be dismissed by Escape or a backdrop click and a lock screen must
  * not be. Unlocking requires re-typing the signed-in staff name (case/space

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { isValidIsoDate, localIsoDate } from "../../domain/dates";
+import { workstationViewportIsUnsupported } from "../WorkstationViewportBoundary";
 
 /**
  * Typed date entry, in place of `<input type="date">`.
@@ -24,9 +25,10 @@ import { isValidIsoDate, localIsoDate } from "../../domain/dates";
  *   N           → now (datetime mode; sets date and time together)
  *   0930, 09:30 → time component, 24-hour (datetime mode)
  *
- * Rejecting bad entry by reverting to the last good value is deliberate and
- * matches the terminal: an unparseable entry never silently clears a stored
- * clinical date.
+ * Ordinary field exit rejects bad entry by reverting to the last good value,
+ * matching the terminal. Save/navigation shortcuts instead leave invalid raw
+ * text in place and veto the command so it can be corrected; either way, an
+ * unparseable entry never silently clears a stored clinical date.
  */
 
 export type WorkstationDateMode = "date" | "datetime";
@@ -208,6 +210,87 @@ export interface WorkstationDateFieldProps {
   invalid?: boolean;
 }
 
+interface LiveWorkstationDateField {
+  input: HTMLInputElement | null;
+  value: string;
+  display: string;
+  mode: WorkstationDateMode;
+  onCommit: (value: string) => void;
+  normalize: (value: string) => void;
+}
+
+const liveWorkstationDateFields = new Set<{
+  current: LiveWorkstationDateField;
+}>();
+let workstationDateLifecycleInstalled = false;
+
+function publishLiveWorkstationDate(
+  field: LiveWorkstationDateField,
+): "clean" | "invalid" | "published" {
+  const input = field.input;
+  if (!input || !input.isConnected || input.disabled) return "clean";
+  const raw = input.value;
+  if (raw === field.display) return "clean";
+  const parsed = parseWorkstationDate(raw, field.mode);
+  if (parsed === null) return "invalid";
+  if (parsed !== field.value) field.onCommit(parsed);
+  field.normalize(parsed);
+  return "published";
+}
+
+/**
+ * Install before any effect-backed workflow persistence listener. Date fields
+ * intentionally keep raw keystrokes local until commit, so the lifecycle
+ * boundary has to publish them before a parent pagehide/visibility handler
+ * reads its encounter ref. The registry lets one early capture listener cover
+ * every migrated workflow without coupling this generic control to a record
+ * repository.
+ */
+function ensureWorkstationDateLifecycle(): void {
+  if (
+    workstationDateLifecycleInstalled ||
+    typeof window === "undefined" ||
+    typeof document === "undefined"
+  ) {
+    return;
+  }
+  workstationDateLifecycleInstalled = true;
+
+  const publishValidDates = () => {
+    for (const field of liveWorkstationDateFields) {
+      publishLiveWorkstationDate(field.current);
+    }
+  };
+  window.addEventListener("pagehide", publishValidDates, { capture: true });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) publishValidDates();
+  }, { capture: true });
+  window.addEventListener("beforeunload", (event) => {
+    let hasTransientEntry = false;
+    for (const field of liveWorkstationDateFields) {
+      const current = field.current;
+      const input = current.input;
+      if (
+        !input ||
+        !input.isConnected ||
+        input.disabled ||
+        input.value === current.display
+      ) {
+        continue;
+      }
+      // Publish a valid value so any later unload guard reads the exact fact.
+      // Keep an invalid value visible when navigation is cancelled instead of
+      // reverting it underneath the user.
+      hasTransientEntry = true;
+      publishLiveWorkstationDate(current);
+    }
+    if (hasTransientEntry) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  }, { capture: true });
+}
+
 export function WorkstationDateField({
   value,
   onCommit,
@@ -221,10 +304,36 @@ export function WorkstationDateField({
   const display = formatWorkstationDate(value, mode);
   const [draft, setDraft] = useState(display);
   const [rejected, setRejected] = useState(false);
+  const draftDirtyRef = useRef(false);
+  const liveFieldRef = useRef<LiveWorkstationDateField>({
+    input: null,
+    value,
+    display,
+    mode,
+    onCommit,
+    normalize: () => undefined,
+  });
+
+  ensureWorkstationDateLifecycle();
+  liveFieldRef.current.value = value;
+  liveFieldRef.current.display = display;
+  liveFieldRef.current.mode = mode;
+  liveFieldRef.current.onCommit = onCommit;
+  liveFieldRef.current.normalize = (parsed) => {
+    draftDirtyRef.current = false;
+    setRejected(false);
+    setDraft(formatWorkstationDate(parsed, mode));
+  };
+
+  useLayoutEffect(() => {
+    liveWorkstationDateFields.add(liveFieldRef);
+    return () => liveWorkstationDateFields.delete(liveFieldRef);
+  }, []);
 
   // The record can change underneath the field (a lookup, a "use current
   // date/time" command, a loaded draft). Re-sync unless the user is mid-entry.
   useEffect(() => {
+    if (draftDirtyRef.current) return;
     setDraft(display);
     setRejected(false);
   }, [display]);
@@ -232,20 +341,32 @@ export function WorkstationDateField({
   // Commit reads the control's live value rather than the `draft` state, which
   // is a render behind when `input` and `change` arrive in the same tick - as
   // they do for any programmatic fill.
-  const commit = (raw: string) => {
+  const commit = (
+    raw: string,
+    { preserveInvalid = false }: { preserveInvalid?: boolean } = {},
+  ): boolean => {
     const parsed = parseWorkstationDate(raw, mode);
     if (parsed === null) {
-      setDraft(display);
+      // A save or navigation shortcut must be allowed to veto the command
+      // without erasing the text the user still needs to correct. Ordinary
+      // field exit retains the terminal's historical reject-and-revert rule.
+      draftDirtyRef.current = preserveInvalid;
+      setDraft(preserveInvalid ? raw : display);
       setRejected(true);
-      return;
+      return false;
     }
+    draftDirtyRef.current = false;
     setRejected(false);
     if (parsed !== value) onCommit(parsed);
-    else setDraft(formatWorkstationDate(parsed, mode));
+    setDraft(formatWorkstationDate(parsed, mode));
+    return true;
   };
 
   return (
     <input
+      ref={(input) => {
+        liveFieldRef.current.input = input;
+      }}
       type="text"
       inputMode="numeric"
       autocomplete="off"
@@ -260,21 +381,62 @@ export function WorkstationDateField({
       aria-invalid={invalid || rejected || undefined}
       data-workstation-date={mode}
       onInput={(event) => {
+        draftDirtyRef.current = true;
         setDraft(event.currentTarget.value);
         if (rejected) setRejected(false);
       }}
-      onBlur={(event) => commit(event.currentTarget.value)}
+      onBlur={(event) => {
+        if (!workstationViewportIsUnsupported()) {
+          commit(event.currentTarget.value);
+        }
+      }}
       // A text input fires `change` when the value is committed, including for
       // programmatic fills that never blur. Commit is idempotent, so the extra
       // call a real blur produces is harmless.
-      onChange={(event) => commit(event.currentTarget.value)}
+      onChange={(event) => {
+        if (!workstationViewportIsUnsupported()) {
+          commit(event.currentTarget.value);
+        }
+      }}
       onKeyDown={(event) => {
-        if (event.key === "Enter") {
+        const saveShortcut =
+          (event.key === "F12" &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.altKey &&
+            !event.shiftKey) ||
+          ((event.ctrlKey || event.metaKey) &&
+            event.key.toLocaleLowerCase() === "s");
+        if (saveShortcut) {
+          // This target-phase handler runs before the shell's window listener.
+          // A bad transient value vetoes saving the previous clinical date.
+          if (
+            !commit(event.currentTarget.value, { preserveInvalid: true })
+          ) {
+            event.preventDefault();
+          }
+        } else if (event.key === "Enter") {
           event.preventDefault();
           commit(event.currentTarget.value);
         } else if (event.key === "Escape") {
+          draftDirtyRef.current = false;
           setDraft(display);
           setRejected(false);
+        } else if (
+          event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.shiftKey &&
+          /^[1-7]$/.test(event.key)
+        ) {
+          // The shell handles Alt+1-7 on this event's later window bubble and
+          // may unmount the workflow immediately. Blur would then be too late,
+          // so file the control's live value before the navigation handler.
+          if (
+            !commit(event.currentTarget.value, { preserveInvalid: true })
+          ) {
+            event.preventDefault();
+          }
         }
       }}
     />

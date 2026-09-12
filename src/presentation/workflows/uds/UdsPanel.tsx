@@ -1,3 +1,13 @@
+import {
+  CHECKLIST,
+  draftSavedAtCopy,
+  NOTES,
+  NOTES_TABLE,
+  RECORD,
+  signedAtCopy,
+  signedByCopy,
+  TRANSACTION_PHASE_LABEL,
+} from "../../vocabulary";
 import { createContext, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
@@ -36,9 +46,23 @@ import { formatDobAsTyped } from "../../format-dob";
 import { RecordActionDialog, type RecordActionKind } from "../../RecordActionDialog";
 import { RecordLifecycleActions } from "../../RecordLifecycleActions";
 import { UdsRecordsWindow } from "../../UdsRecordsWindow";
-import { UdsRecordRepository, type UdsAddendum, type UdsRecord } from "../../../persistence/uds-records";
+import {
+  UdsRecordRepository,
+  type UdsAddendum,
+  type UdsLocalAttestation,
+  type UdsRecord,
+} from "../../../persistence/uds-records";
 import { browserSafeStorage } from "../../../persistence/storage";
 import { ScheduleRegister, type ScheduleRegisterTone } from "../ScheduleRegister";
+import {
+  isUnambiguousUsableUdsRecordList,
+  isUsableUdsRecord,
+  runOwnedUdsRecordMutation,
+  UDS_RECORD_MUTATION_BUSY_MESSAGE,
+  UDS_RECORD_MUTATION_PENDING_MESSAGE,
+  UDS_RECORD_MUTATION_PROTECTION_MESSAGE,
+  type UdsRecordMutationAccess,
+} from "../../uds-record-safety";
 
 /** The report status carries the old readout's tone vocabulary; map it onto the
  *  register's four states rather than widening the register for one caller. */
@@ -68,7 +92,11 @@ import {
 } from "../WorkflowLedgerTabs";
 import {
   WORKSTATION_DRAFT_SAVE_REQUEST,
+  WORKSTATION_OPEN_NOTE_REQUEST,
+  WORKSTATION_UDS_LEAVE_BLOCKED_REQUEST,
   type WorkstationDraftSaveRequestDetail,
+  type WorkstationOpenNoteRequestDetail,
+  type WorkstationUdsLeaveBlockedRequestDetail,
 } from "../../workstation-events";
 
 type UdsTab = "specimen" | "results" | "review";
@@ -79,6 +107,23 @@ const currentLocalDateTime = (): string => {
   const now = new Date();
   const offset = now.getTimezoneOffset();
   return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 16);
+};
+
+/**
+ * Addenda retain their exact ISO timestamp in storage, while the locked note
+ * presents it in the same concise US date/time idiom as the legacy record
+ * workspace. Bad historical values must never surface as "Invalid Date".
+ */
+const formatSavedAddendumTimestamp = (value: string): string => {
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return NOTES_TABLE.dateUnavailable;
+  return timestamp.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 };
 
 const emptyUdsResults = (): UdsEncounter["results"] =>
@@ -143,11 +188,23 @@ const UDS_RESULT_FLAG: Record<UdsResultState, { flag: string; status: string; ab
     invalid: { flag: "INV", status: "Invalid", abnormal: true },
   };
 
-interface UdsPanelProps {
+export interface UdsPanelProps {
   initialEncounter: UdsEncounter;
+  /**
+   * Saved record that owns this panel instance. The shell retains it while
+   * the workflow is unmounted so remounting cannot turn an edit into a new,
+   * duplicate record or forget a completed record's locked lifecycle.
+   */
+  initialRecord?: UdsRecord;
   activePatient: PatientContext;
   staffSignInValue: string;
+  recordMutationAccess: UdsRecordMutationAccess;
+  recordStorageConflict: boolean;
   previewRef?: Ref<HTMLDivElement>;
+  onRecordsChange?: () => void;
+  onActiveRecordChange?: (record?: UdsRecord) => void;
+  onPendingAddendumChange?: (pending: boolean) => void;
+  onPendingPhotoChange?: (pending: boolean) => void;
   onWorkflowStateChange?: (
     encounter: UdsEncounter,
     evaluation: ClinicalEvaluation<UdsEvaluationOutput>,
@@ -411,17 +468,31 @@ function ClinicianLabSheet({
 
 export function UdsPanel({
   initialEncounter,
+  initialRecord,
   activePatient,
   staffSignInValue,
+  recordMutationAccess,
+  recordStorageConflict,
   previewRef,
+  onRecordsChange,
+  onActiveRecordChange,
+  onPendingAddendumChange,
+  onPendingPhotoChange,
   onWorkflowStateChange,
 }: UdsPanelProps) {
-  const [encounter, setEncounter] = useState<UdsEncounter>(initialEncounter);
+  const [encounter, setEncounter] = useState<UdsEncounter>(
+    () => initialRecord?.snapshot ?? initialEncounter,
+  );
+  const encounterRef = useRef(encounter);
+  encounterRef.current = encounter;
   // UDS field edits are evaluated from the typed encounter in the same render
   // cycle. The legacy DOM remains a print/report compatibility projection; it
   // is no longer the authority for readiness, field state, or attestation.
   const evaluation = useMemo(() => UdsEngine.evaluate(encounter, {}), [encounter]);
+  const evaluationReadinessRef = useRef(evaluation.readiness);
+  evaluationReadinessRef.current = evaluation.readiness;
   const [photoData, setPhotoData] = useState<string>("");
+  const [photoLoading, setPhotoLoading] = useState(false);
   const [tab, setTab] = useState<UdsTab>("specimen");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [normalQcReviewOpen, setNormalQcReviewOpen] = useState(false);
@@ -446,28 +517,123 @@ export function UdsPanel({
   // has no legacy engine to lean on, so both the persistence and the UI live
   // in this panel, the same way its own StatusFlag/OutstandingRequirements
   // dialog already do.
-  const repository = useMemo(() => new UdsRecordRepository(browserSafeStorage()), []);
-  const [activeRecordId, setActiveRecordId] = useState<string | undefined>(undefined);
-  const [locked, setLocked] = useState(false);
-  const [addenda, setAddenda] = useState<UdsAddendum[]>([]);
+  const recordStorage = useMemo(() => browserSafeStorage(), []);
+  const repository = useMemo(() => new UdsRecordRepository(recordStorage), [recordStorage]);
+  const recordMutationAccessRef = useRef<UdsRecordMutationAccess>(recordMutationAccess);
+  recordMutationAccessRef.current = recordMutationAccess;
+  const recordStorageConflictRef = useRef(recordStorageConflict);
+  recordStorageConflictRef.current = recordStorageConflict;
+  const [activeRecordId, setActiveRecordId] = useState<string | undefined>(
+    () => initialRecord?.id,
+  );
+  const [locked, setLocked] = useState(() => initialRecord?.status === "completed");
+  const [addenda, setAddenda] = useState<UdsAddendum[]>(
+    () => initialRecord?.addenda ?? [],
+  );
   const [attestation, setAttestation] = useState<
     { staff: string; timestamp: string; statementVersion: string } | undefined
-  >(undefined);
+  >(() => initialRecord?.attestation);
   const [addendumAuthor, setAddendumAuthor] = useState(staffSignInValue);
   const [addendumText, setAddendumText] = useState("");
+  const [addendumSaving, setAddendumSaving] = useState(false);
+  const addendumSavingRef = useRef(false);
   const [recordsOpen, setRecordsOpen] = useState(false);
   const [recordAction, setRecordAction] = useState<RecordActionKind | null>(null);
+  const [reviewedAttestation, setReviewedAttestation] =
+    useState<UdsLocalAttestation | undefined>();
   const [recordStatus, setRecordStatus] = useState<string | undefined>(undefined);
   const [recordStatusIsError, setRecordStatusIsError] = useState(false);
   const [recordsRefreshToken, setRecordsRefreshToken] = useState(0);
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
   const addendumTextRef = useRef<HTMLTextAreaElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoReaderRef = useRef<FileReader | null>(null);
+  const photoRemoveButtonRef = useRef<HTMLButtonElement>(null);
+  const lastDraftSavedStatusRef = useRef<string | null>(null);
+  const initializedFromRecordRef = useRef(Boolean(initialRecord));
+  const activeRecordIdRef = useRef(activeRecordId);
+  const lockedRef = useRef(locked);
+  const savedSnapshotRef = useRef<UdsEncounter | undefined>(initialRecord?.snapshot);
+  // Every mutation of an existing record is conditional on the exact durable
+  // record that this screen opened or most recently saved. Keeping the
+  // serialized value (rather than a live object reference) makes the baseline
+  // immutable even if a caller later reuses or mutates its record object.
+  const durableRecordBaselineRef = useRef<
+    { id: string; serialized: string } | undefined
+  >(
+    initialRecord
+      ? { id: initialRecord.id, serialized: JSON.stringify(initialRecord) }
+      : undefined,
+  );
+  const addendumPendingRef = useRef(false);
+  const photoDataRef = useRef(photoData);
+  const photoLoadingRef = useRef(photoLoading);
+  const onRecordsChangeRef = useRef(onRecordsChange);
+  const onActiveRecordChangeRef = useRef(onActiveRecordChange);
+  const onPendingAddendumChangeRef = useRef(onPendingAddendumChange);
+  const onPendingPhotoChangeRef = useRef(onPendingPhotoChange);
+  const onWorkflowStateChangeRef = useRef(onWorkflowStateChange);
+  activeRecordIdRef.current = activeRecordId;
+  lockedRef.current = locked;
+  photoDataRef.current = photoData;
+  photoLoadingRef.current = photoLoading;
+  onRecordsChangeRef.current = onRecordsChange;
+  onActiveRecordChangeRef.current = onActiveRecordChange;
+  onPendingAddendumChangeRef.current = onPendingAddendumChange;
+  onPendingPhotoChangeRef.current = onPendingPhotoChange;
+  onWorkflowStateChangeRef.current = onWorkflowStateChange;
+  addendumPendingRef.current = Boolean(addendumText.trim());
+  const recordMutationUnavailable =
+    recordStorageConflict || recordMutationAccess !== "owned";
+  const hasPendingPhoto = photoLoading || Boolean(photoData);
+  const hasPendingPhotoNow = () =>
+    photoLoadingRef.current || Boolean(photoDataRef.current);
+
+  const publishWorkflowState = (
+    source: UdsEncounter,
+    nextLocked = lockedRef.current,
+  ) => {
+    const nextEvaluation = UdsEngine.evaluate(source, {});
+    // State setters and effects are deferred. Navigation can be requested in
+    // the same browser task as the very first edit, so the synchronous save
+    // listener must see that edit as started immediately.
+    evaluationReadinessRef.current = nextEvaluation.readiness;
+    onWorkflowStateChangeRef.current?.(
+      source,
+      nextEvaluation,
+      { locked: nextLocked },
+    );
+  };
 
   useEffect(() => {
-    onWorkflowStateChange?.(encounter, evaluation, { locked });
+    onWorkflowStateChangeRef.current?.(encounter, evaluation, { locked });
     // Notification boundary only; callback identity follows the shell render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounter, evaluation, locked]);
+
+  useEffect(() => {
+    onPendingAddendumChangeRef.current?.(Boolean(addendumText.trim()));
+  }, [addendumText, onPendingAddendumChange]);
+
+  useEffect(() => {
+    // A staff handoff updates the default author for the next addendum, but
+    // never overwrites authorship while clarification text is in progress.
+    if (!addendumPendingRef.current) setAddendumAuthor(staffSignInValue);
+  }, [staffSignInValue]);
+
+  useEffect(() => {
+    onPendingPhotoChangeRef.current?.(hasPendingPhoto);
+  }, [hasPendingPhoto, onPendingPhotoChange]);
+
+  useEffect(() => {
+    if (!recordStorageConflict) return;
+    // A confirmation opened against the old durable record must not remain
+    // actionable after another tab replaces those bytes.
+    setRecordAction(null);
+    setReviewedAttestation(undefined);
+    setBulkAction(null);
+    setNormalQcReviewOpen(false);
+  }, [recordStorageConflict]);
 
   useEffect(() => {
     const navigate = (event: Event) => {
@@ -488,26 +654,49 @@ export function UdsPanel({
   }, []);
 
   useEffect(() => {
+    // An explicitly opened record remains authoritative even when its stored
+    // demographics are incomplete. Ambient patient context must not mutate a
+    // saved snapshot merely because the workflow remounted.
+    if (initializedFromRecordRef.current) return;
     if (!patientIsEmpty(encounter.patient)) return;
     if (!activePatient.name?.trim() && !activePatient.dob?.trim()) return;
     patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePatient.name, activePatient.dob]);
 
-  const patch = (partial: Partial<UdsEncounter>, nextPhotoData = photoData) => {
+  const patch = (
+    update:
+      | Partial<UdsEncounter>
+      | ((previous: UdsEncounter) => Partial<UdsEncounter>),
+    nextPhotoData = photoDataRef.current,
+  ) => {
+    // A save confirmation describes one exact snapshot. The first later edit
+    // retires that confirmation; the lifecycle detail below then reports the
+    // actual saved-vs-current comparison.
+    if (lastDraftSavedStatusRef.current) {
+      lastDraftSavedStatusRef.current = null;
+      setRecordStatus(undefined);
+    }
     setEncounter((previous) => {
+      const partial = typeof update === "function" ? update(previous) : update;
       const next = { ...previous, ...partial };
+      encounterRef.current = next;
       mirrorUdsEncounterToLegacyDom(next, nextPhotoData);
+      publishWorkflowState(next);
       return next;
     });
   };
 
   const patchPatient = (partial: Partial<UdsEncounter["patient"]>) => {
-    patch({ patient: { ...encounter.patient, ...partial } });
+    patch((previous) => ({
+      patient: { ...previous.patient, ...partial },
+    }));
   };
 
   const setPanelResult = (panel: UdsPanelKey, state: UdsResultState) => {
-    patch({ results: { ...encounter.results, [panel]: state } });
+    patch((previous) => ({
+      results: { ...previous.results, [panel]: state },
+    }));
   };
 
   // A 13-panel cup physically does not display the omitted analyte, and the
@@ -619,18 +808,169 @@ export function UdsPanel({
     }
   };
 
+  const clearSelectedPhoto = (focusInput = true) => {
+    const reader = photoReaderRef.current;
+    photoReaderRef.current = null;
+    if (reader?.readyState === FileReader.LOADING) reader.abort();
+    photoLoadingRef.current = false;
+    photoDataRef.current = "";
+    setPhotoLoading(false);
+    setPhotoData("");
+    mirrorUdsEncounterToLegacyDom(encounterRef.current, "");
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    // State updates are scheduled, while navigation checks run synchronously.
+    // Publish the cleared guard immediately so the explicit Remove action can
+    // be followed by a navigation action in the same browser task.
+    onPendingPhotoChangeRef.current?.(false);
+    if (
+      recordStatus === RECORD.photoReadFailed ||
+      recordStatus === RECORD.removePhotoBeforeLeaving ||
+      recordStatus === RECORD.removePhotoBeforeSigning
+    ) {
+      setRecordStatus(undefined);
+      setRecordStatusIsError(false);
+    }
+    if (focusInput) {
+      window.setTimeout(() => {
+        photoInputRef.current?.focus({ preventScroll: true });
+      }, 0);
+    }
+  };
+
   const onPhotoChange = (event: Event) => {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file) return;
+    if (!file) {
+      clearSelectedPhoto(false);
+      return;
+    }
+
+    const previousReader = photoReaderRef.current;
+    photoReaderRef.current = null;
+    if (previousReader?.readyState === FileReader.LOADING) previousReader.abort();
+
+    // FileReader completes asynchronously. Publish the guard before starting
+    // it so navigation or signing cannot slip through while bytes are read.
+    setPhotoData("");
+    setPhotoLoading(true);
+    photoDataRef.current = "";
+    photoLoadingRef.current = true;
+    mirrorUdsEncounterToLegacyDom(encounterRef.current, "");
+    onPendingPhotoChangeRef.current?.(true);
+
     const reader = new FileReader();
+    photoReaderRef.current = reader;
     reader.onload = () => {
+      if (photoReaderRef.current !== reader) return;
+      photoReaderRef.current = null;
       const dataUrl = String(reader.result ?? "");
+      if (!dataUrl.startsWith("data:")) {
+        photoDataRef.current = "";
+        photoLoadingRef.current = false;
+        setPhotoData("");
+        setPhotoLoading(false);
+        mirrorUdsEncounterToLegacyDom(encounterRef.current, "");
+        if (photoInputRef.current) photoInputRef.current.value = "";
+        onPendingPhotoChangeRef.current?.(false);
+        setRecordStatus(RECORD.photoReadFailed);
+        setRecordStatusIsError(true);
+        return;
+      }
+      photoDataRef.current = dataUrl;
+      photoLoadingRef.current = false;
       setPhotoData(dataUrl);
-      mirrorUdsEncounterToLegacyDom(encounter, dataUrl);
+      setPhotoLoading(false);
+      mirrorUdsEncounterToLegacyDom(encounterRef.current, dataUrl);
+      onPendingPhotoChangeRef.current?.(true);
+    };
+    reader.onerror = () => {
+      if (photoReaderRef.current !== reader) return;
+      photoReaderRef.current = null;
+      photoDataRef.current = "";
+      photoLoadingRef.current = false;
+      setPhotoData("");
+      setPhotoLoading(false);
+      mirrorUdsEncounterToLegacyDom(encounterRef.current, "");
+      if (photoInputRef.current) photoInputRef.current.value = "";
+      onPendingPhotoChangeRef.current?.(false);
+      setRecordStatus(RECORD.photoReadFailed);
+      setRecordStatusIsError(true);
+    };
+    reader.onabort = () => {
+      if (photoReaderRef.current !== reader) return;
+      photoReaderRef.current = null;
+      photoDataRef.current = "";
+      photoLoadingRef.current = false;
+      setPhotoData("");
+      setPhotoLoading(false);
+      mirrorUdsEncounterToLegacyDom(encounterRef.current, "");
+      onPendingPhotoChangeRef.current?.(false);
     };
     reader.readAsDataURL(file);
   };
+
+  useEffect(
+    () => () => {
+      const reader = photoReaderRef.current;
+      photoReaderRef.current = null;
+      if (reader?.readyState === FileReader.LOADING) reader.abort();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const confirmUnsafeUnload = (event: BeforeUnloadEvent) => {
+      const saved = savedSnapshotRef.current;
+      const clinicalDraftChanged = !lockedRef.current &&
+        (saved
+          ? JSON.stringify(saved) !== JSON.stringify(encounterRef.current)
+          : evaluationReadinessRef.current !== "idle");
+      if (
+        !clinicalDraftChanged &&
+        !addendumPendingRef.current &&
+        !photoLoadingRef.current &&
+        !photoDataRef.current
+      ) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", confirmUnsafeUnload);
+    return () => window.removeEventListener("beforeunload", confirmUnsafeUnload);
+  }, []);
+
+  const focusPhotoRemoval = () => {
+    setTab("specimen");
+    window.setTimeout(() => {
+      const target = photoRemoveButtonRef.current ?? photoInputRef.current;
+      target?.scrollIntoView({ block: "center" });
+      target?.focus({ preventScroll: true });
+    }, 0);
+  };
+
+  useEffect(() => {
+    const handleLeaveBlocked = (event: Event) => {
+      const detail = (event as CustomEvent<WorkstationUdsLeaveBlockedRequestDetail>)
+        .detail;
+      if (detail?.reason === "addendum") {
+        setRecordStatus(RECORD.finishAddendumBeforeLeaving);
+        setRecordStatusIsError(true);
+        addendumTextRef.current?.scrollIntoView({ block: "center" });
+        addendumTextRef.current?.focus({ preventScroll: true });
+        return;
+      }
+      if (detail?.reason === "photo") {
+        setRecordStatus(RECORD.removePhotoBeforeLeaving);
+        setRecordStatusIsError(true);
+        focusPhotoRemoval();
+      }
+    };
+    window.addEventListener(WORKSTATION_UDS_LEAVE_BLOCKED_REQUEST, handleLeaveBlocked);
+    return () =>
+      window.removeEventListener(
+        WORKSTATION_UDS_LEAVE_BLOCKED_REQUEST,
+        handleLeaveBlocked,
+      );
+  });
 
   // One-line synopsis stored on the record and reused in the attestation
   // review's "Device / panel summary" field - built from whatever encounter
@@ -656,127 +996,485 @@ export function UdsPanel({
     evaluation !== undefined &&
     evaluation.readiness !== "idle" &&
     evaluation.readiness !== "blocked" &&
-    staffSignInValue.trim().length > 0;
+    staffSignInValue.trim().length > 0 &&
+    !hasPendingPhoto;
 
-  const saveLocalDraft = () => {
-    const result = repository.saveDraft({
-      id: activeRecordId,
-      patient: encounter.patient,
-      summary: summaryFor(encounter),
-      snapshot: encounter,
+  const notifyRecordsChange = () => {
+    setRecordsRefreshToken((value) => value + 1);
+    onRecordsChangeRef.current?.();
+  };
+
+  const rememberDurableRecord = (record: UdsRecord | undefined) => {
+    durableRecordBaselineRef.current = record
+      ? { id: record.id, serialized: JSON.stringify(record) }
+      : undefined;
+  };
+
+  /**
+   * The repository's compatibility decoder is intentionally shallow. Before
+   * any mutating call, prove every visible record is safe and honor its read
+   * warnings; otherwise that call could rewrite a known-corrupt array.
+   *
+   * Existing records also use a stale-baseline guard: the exact same-id
+   * durable record must still match what this screen opened or last saved.
+   * Every caller that writes runs this check while the panel owns its
+   * session-held exclusive Web Lock, closing the old gap between preflight
+   * and the repository's whole-array read/modify/write.
+   * New unsaved records have no baseline yet and remain eligible for their
+   * first save.
+   */
+  const repositoryIsSafeToMutate = (): boolean => {
+    if (recordStorageConflictRef.current) {
+      lastDraftSavedStatusRef.current = null;
+      setRecordStatus(RECORD.udsRecordChangedElsewhere);
+      setRecordStatusIsError(true);
+      return false;
+    }
+    const access = runOwnedUdsRecordMutation(
+      recordMutationAccessRef.current,
+      () => true,
+    );
+    if (!access.ok) {
+      lastDraftSavedStatusRef.current = null;
+      setRecordStatus(access.message);
+      setRecordStatusIsError(recordMutationAccessRef.current !== "pending");
+      return false;
+    }
+    const listed = repository.list();
+    if (!listed.ok) {
+      setRecordStatus(listed.error.message);
+      setRecordStatusIsError(true);
+      return false;
+    }
+    if (
+      listed.warnings.length > 0 ||
+      !isUnambiguousUsableUdsRecordList(listed.value)
+    ) {
+      setRecordStatus(RECORD.udsStorageNeedsAttention);
+      setRecordStatusIsError(true);
+      return false;
+    }
+    const recordId = activeRecordIdRef.current;
+    if (!recordId) return true;
+    const baseline = durableRecordBaselineRef.current;
+    const durable = listed.value.find((record) => record.id === recordId);
+    if (
+      !baseline ||
+      baseline.id !== recordId ||
+      !durable ||
+      JSON.stringify(durable) !== baseline.serialized
+    ) {
+      lastDraftSavedStatusRef.current = null;
+      setRecordStatus(RECORD.udsRecordChangedElsewhere);
+      setRecordStatusIsError(true);
+      return false;
+    }
+    return true;
+  };
+
+  const runSafeRepositoryMutation = <T,>(mutation: () => T): T | undefined => {
+    const guarded = runOwnedUdsRecordMutation(recordMutationAccessRef.current, () => {
+      if (!repositoryIsSafeToMutate()) return undefined;
+      return mutation();
     });
+    if (!guarded.ok) {
+      lastDraftSavedStatusRef.current = null;
+      setRecordStatus(guarded.message);
+      setRecordStatusIsError(true);
+      return undefined;
+    }
+    return guarded.value;
+  };
+
+  const resetPerRecordUi = (reportOpen = false) => {
+    lastDraftSavedStatusRef.current = null;
+    setTab("specimen");
+    setRequirementsOpen(false);
+    setNormalQcReviewOpen(false);
+    setBulkAction(null);
+    setActiveResultPanel(undefined);
+    setInvalidationReceipt(null);
+    setReportPreviewOpen(reportOpen);
+    setReviewedAttestation(undefined);
+  };
+
+  const focusUdsEditorNextFrame = () => {
+    window.requestAnimationFrame(() => {
+      const panel = document.querySelector<HTMLElement>('.wfp-panel');
+      const target =
+        panel?.querySelector<HTMLElement>(
+          'input[placeholder="Last, First"]:not(:disabled)',
+        ) ??
+        panel?.querySelector<HTMLElement>(
+          'textarea[data-addendum-input]:not(:disabled)',
+        ) ??
+        panel?.querySelector<HTMLElement>(
+          'input[placeholder="Current staff name or initials"]:not(:disabled)',
+        );
+      target?.focus({ preventScroll: true });
+    });
+  };
+
+  useEffect(() => {
+    if (recordMutationUnavailable) return;
+    // A chart handoff can mount this panel while the page-level Web Lock is
+    // still pending. The shell's normal two-frame focus attempt then sees
+    // only disabled controls. Retry once ownership enables the editor so a
+    // signed note lands on its addendum field and a draft lands on its first
+    // editable patient field.
+    focusUdsEditorNextFrame();
+  }, [recordMutationUnavailable]);
+
+  const saveLocalDraft = (): boolean => {
+    const source = encounterRef.current;
+    const result = runSafeRepositoryMutation(() =>
+      repository.saveDraft({
+        id: activeRecordIdRef.current,
+        patient: source.patient,
+        summary: summaryFor(source),
+        snapshot: source,
+      }),
+    );
+    if (!result) return false;
     if (result.ok) {
+      activeRecordIdRef.current = result.value.id;
+      savedSnapshotRef.current = result.value.snapshot;
+      rememberDurableRecord(result.value);
       setActiveRecordId(result.value.id);
-      setRecordStatus(`Draft saved ${new Date(result.value.updatedAt).toLocaleTimeString()}.`);
+      onActiveRecordChangeRef.current?.(result.value);
+      publishWorkflowState(source);
+      const savedStatus = draftSavedAtCopy(
+        new Date(result.value.updatedAt).toLocaleTimeString(),
+      );
+      lastDraftSavedStatusRef.current = savedStatus;
+      setRecordStatus(savedStatus);
       setRecordStatusIsError(false);
-      setRecordsRefreshToken((value) => value + 1);
+      notifyRecordsChange();
+      return true;
     } else {
+      lastDraftSavedStatusRef.current = null;
       setRecordStatus(result.error.message);
       setRecordStatusIsError(true);
+      return false;
     }
   };
 
   useEffect(() => {
     const handleDraftSave = (event: Event) => {
       const detail = (event as CustomEvent<WorkstationDraftSaveRequestDetail>).detail;
-      if (detail?.workflow !== "uds" || locked || evaluation.readiness === "idle") return;
-      saveLocalDraft();
+      if (detail?.workflow !== "uds") return;
+      detail.handled = true;
+      detail.saved = lockedRef.current ||
+        (!activeRecordIdRef.current && evaluationReadinessRef.current === "idle") ||
+        saveLocalDraft();
     };
     window.addEventListener(WORKSTATION_DRAFT_SAVE_REQUEST, handleDraftSave);
     return () => window.removeEventListener(WORKSTATION_DRAFT_SAVE_REQUEST, handleDraftSave);
-  }, [activeRecordId, encounter, evaluation.readiness, locked]);
+  }, []);
+
+  useEffect(() => {
+    // Mobile operating systems and browser tab suspension can bypass a normal
+    // navigation prompt. File the current editable clinical snapshot at the
+    // last synchronous lifecycle boundary, through the same guarded save path
+    // as the visible Save command. Refs are deliberate here: an input event
+    // and pagehide can occur in the same task, before a component re-render.
+    const flushUnsavedClinicalDraft = () => {
+      if (lockedRef.current) return;
+      const saved = savedSnapshotRef.current;
+      const clinicalDraftChanged = saved
+        ? JSON.stringify(saved) !== JSON.stringify(encounterRef.current)
+        : evaluationReadinessRef.current !== "idle";
+      if (!clinicalDraftChanged) return;
+      saveLocalDraft();
+    };
+    const flushWhenHidden = () => {
+      if (document.hidden) flushUnsavedClinicalDraft();
+    };
+    window.addEventListener("pagehide", flushUnsavedClinicalDraft, {
+      capture: true,
+    });
+    document.addEventListener("visibilitychange", flushWhenHidden, {
+      capture: true,
+    });
+    return () => {
+      window.removeEventListener("pagehide", flushUnsavedClinicalDraft, true);
+      document.removeEventListener("visibilitychange", flushWhenHidden, true);
+    };
+    // The installed listeners intentionally use only synchronously maintained
+    // refs and the stable repository captured by the first render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The patient chart lists UDS notes but cannot restore one: the encounter a
+  // record opens into lives here. It asks; this panel reads the record through
+  // its own repository and opens it exactly as its own notes window does.
+  useEffect(() => {
+    const handleOpenNote = (event: Event) => {
+      const detail = (event as CustomEvent<WorkstationOpenNoteRequestDetail>).detail;
+      if (detail?.noteType !== "uds" || !detail.recordId) return;
+      const result = repository.list();
+      if (!result.ok) return;
+      const record = result.value.find((candidate) => candidate.id === detail.recordId);
+      if (record) openUdsRecord(record);
+    };
+    window.addEventListener(WORKSTATION_OPEN_NOTE_REQUEST, handleOpenNote);
+    return () => window.removeEventListener(WORKSTATION_OPEN_NOTE_REQUEST, handleOpenNote);
+  });
 
   const discardLocalDraft = (): boolean => {
-    if (!activeRecordId) return false;
-    const result = repository.discard(activeRecordId);
+    const recordId = activeRecordIdRef.current;
+    if (!recordId) return false;
+    const result = runSafeRepositoryMutation(() => repository.discard(recordId));
+    if (!result) return false;
     if (!result.ok) {
       setRecordStatus(result.error.message);
       setRecordStatusIsError(true);
       return false;
     }
-    setEncounter(emptyUdsEncounter());
+    const nextEncounter = emptyUdsEncounter();
+    encounterRef.current = nextEncounter;
+    activeRecordIdRef.current = undefined;
+    savedSnapshotRef.current = undefined;
+    rememberDurableRecord(undefined);
+    lockedRef.current = false;
+    addendumPendingRef.current = false;
+    setEncounter(nextEncounter);
+    clearSelectedPhoto(false);
+    mirrorUdsEncounterToLegacyDom(nextEncounter, "");
     setActiveRecordId(undefined);
     setLocked(false);
     setAddenda([]);
     setAttestation(undefined);
+    resetPerRecordUi();
+    onPendingAddendumChangeRef.current?.(false);
+    onActiveRecordChangeRef.current?.(undefined);
+    publishWorkflowState(nextEncounter, false);
     setRecordStatus(undefined);
     setRecordStatusIsError(false);
-    setRecordsRefreshToken((value) => value + 1);
+    notifyRecordsChange();
+    focusUdsEditorNextFrame();
     return true;
   };
 
   const attestAndLock = (): boolean => {
+    // The selected photo is deliberately report-only and is never persisted.
+    // Keep this independent of the disabled Sign button: a confirmation that
+    // was already open before photo selection must still fail closed.
+    if (hasPendingPhotoNow()) {
+      setRecordStatus(RECORD.removePhotoBeforeSigning);
+      setRecordStatusIsError(true);
+      setRecordAction(null);
+      setReviewedAttestation(undefined);
+      focusPhotoRemoval();
+      return false;
+    }
     const staff = staffSignInValue.trim();
-    if (!canAttest || !staff) return false;
-    const nextAttestation = {
-      staff,
-      timestamp: new Date().toISOString(),
-      statementVersion: "local-attestation-v1",
-    };
-    const result = repository.complete({
-      id: activeRecordId,
-      patient: encounter.patient,
-      summary: summaryFor(encounter),
-      snapshot: encounter,
-      attestation: nextAttestation,
-    });
+    // Persist the exact staff/time shown in the irreversible confirmation,
+    // rather than manufacturing a second signature time after acknowledgement.
+    const nextAttestation = reviewedAttestation;
+    if (!canAttest || !staff || !nextAttestation || nextAttestation.staff !== staff) {
+      return false;
+    }
+    const source = encounterRef.current;
+    const result = runSafeRepositoryMutation(() =>
+      repository.complete({
+        id: activeRecordIdRef.current,
+        patient: source.patient,
+        summary: summaryFor(source),
+        snapshot: source,
+        attestation: nextAttestation,
+      }),
+    );
+    if (!result) return false;
     if (!result.ok) {
       setRecordStatus(result.error.message);
       setRecordStatusIsError(true);
       return false;
     }
+    activeRecordIdRef.current = result.value.id;
+    savedSnapshotRef.current = result.value.snapshot;
+    rememberDurableRecord(result.value);
+    lockedRef.current = true;
     setActiveRecordId(result.value.id);
     setLocked(true);
     setAddenda(result.value.addenda);
     setAttestation(nextAttestation);
-    setRecordStatus(`Locked ${new Date().toLocaleTimeString()}.`);
+    setAddendumAuthor(nextAttestation.staff);
+    onActiveRecordChangeRef.current?.(result.value);
+    publishWorkflowState(source, true);
+    setRecordStatus(signedAtCopy(new Date().toLocaleTimeString()));
     setRecordStatusIsError(false);
-    setRecordsRefreshToken((value) => value + 1);
+    setReviewedAttestation(undefined);
+    notifyRecordsChange();
     return true;
   };
 
   // Leaving an editable record without saving would silently lose it -
   // mirrors Injection's "leaving an editable record is a save boundary".
-  const startNewUdsScreen = () => {
-    if (activeRecordId && !locked) saveLocalDraft();
-    setEncounter(emptyUdsEncounter());
-    setPhotoData("");
+  const startNewUdsScreen = (): boolean => {
+    if (addendumPendingRef.current) {
+      setRecordStatus(RECORD.finishAddendumBeforeLeaving);
+      setRecordStatusIsError(true);
+      if (!recordsOpen) addendumTextRef.current?.focus({ preventScroll: true });
+      return false;
+    }
+    if (hasPendingPhotoNow()) {
+      setRecordStatus(RECORD.removePhotoBeforeLeaving);
+      setRecordStatusIsError(true);
+      if (!recordsOpen) focusPhotoRemoval();
+      return false;
+    }
+    // Even an idle or locked current view can start a new editable note.
+    // Refuse that handoff when a sibling row makes the whole-store write
+    // boundary unsafe; otherwise the blank form would accept work it cannot
+    // later file.
+    if (!repositoryIsSafeToMutate()) return false;
+    if (
+      !lockedRef.current &&
+      (Boolean(activeRecordIdRef.current) ||
+        evaluationReadinessRef.current !== "idle") &&
+      !saveLocalDraft()
+    ) return false;
+    const nextEncounter = emptyUdsEncounter();
+    encounterRef.current = nextEncounter;
+    activeRecordIdRef.current = undefined;
+    savedSnapshotRef.current = undefined;
+    rememberDurableRecord(undefined);
+    lockedRef.current = false;
+    addendumPendingRef.current = false;
+    setEncounter(nextEncounter);
+    mirrorUdsEncounterToLegacyDom(nextEncounter, "");
+    if (photoInputRef.current) photoInputRef.current.value = "";
     setActiveRecordId(undefined);
     setLocked(false);
     setAddenda([]);
     setAttestation(undefined);
+    setAddendumAuthor(staffSignInValue);
+    resetPerRecordUi();
     setAddendumText("");
+    onPendingAddendumChangeRef.current?.(false);
+    onActiveRecordChangeRef.current?.(undefined);
+    publishWorkflowState(nextEncounter, false);
     setRecordStatus(undefined);
     setRecordStatusIsError(false);
+    focusUdsEditorNextFrame();
+    return true;
   };
 
-  const openUdsRecord = (record: UdsRecord) => {
+  const openUdsRecord = (record: UdsRecord): boolean => {
+    if (!isUsableUdsRecord(record)) {
+      setRecordStatus(RECORD.invalidUdsRecord);
+      setRecordStatusIsError(true);
+      return false;
+    }
+    const isActiveRecord = record.id === activeRecordIdRef.current;
+    const durableBaseline = durableRecordBaselineRef.current;
+    const durableCopyChanged = Boolean(
+      isActiveRecord &&
+        (!durableBaseline ||
+          durableBaseline.id !== record.id ||
+          JSON.stringify(record) !== durableBaseline.serialized),
+    );
+    // Clicking the unchanged record already on screen is a harmless no-op and
+    // must never replace current in-memory edits with the drawer's saved copy.
+    if (isActiveRecord && !durableCopyChanged) return true;
+    if (addendumPendingRef.current) {
+      setRecordStatus(RECORD.finishAddendumBeforeLeaving);
+      setRecordStatusIsError(true);
+      if (!recordsOpen) addendumTextRef.current?.focus({ preventScroll: true });
+      return false;
+    }
+    if (hasPendingPhotoNow()) {
+      setRecordStatus(RECORD.removePhotoBeforeLeaving);
+      setRecordStatusIsError(true);
+      if (!recordsOpen) focusPhotoRemoval();
+      return false;
+    }
+    const currentHasUnsavedChanges = Boolean(
+      savedSnapshotRef.current &&
+        JSON.stringify(encounterRef.current) !== JSON.stringify(savedSnapshotRef.current),
+    );
+    if (isActiveRecord && durableCopyChanged && currentHasUnsavedChanges) {
+      setRecordStatus(RECORD.udsRecordChangedElsewhere);
+      setRecordStatusIsError(true);
+      return false;
+    }
+    if (
+      !isActiveRecord &&
+      !lockedRef.current &&
+      (Boolean(activeRecordIdRef.current) ||
+        evaluationReadinessRef.current !== "idle") &&
+      !saveLocalDraft()
+    ) return false;
+    encounterRef.current = record.snapshot;
+    activeRecordIdRef.current = record.id;
+    savedSnapshotRef.current = record.snapshot;
+    rememberDurableRecord(record);
+    lockedRef.current = record.status === "completed";
+    addendumPendingRef.current = false;
     setEncounter(record.snapshot);
-    mirrorUdsEncounterToLegacyDom(record.snapshot, photoData);
+    photoDataRef.current = "";
+    photoLoadingRef.current = false;
+    setPhotoData("");
+    setPhotoLoading(false);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    mirrorUdsEncounterToLegacyDom(record.snapshot, "");
     setActiveRecordId(record.id);
     setLocked(record.status === "completed");
     setAddenda(record.addenda);
     setAttestation(record.attestation);
+    setAddendumAuthor(staffSignInValue);
+    resetPerRecordUi(
+      record.status === "completed" ||
+        UdsEngine.evaluate(record.snapshot, {}).output.testedCount > 0,
+    );
     setAddendumText("");
+    onPendingAddendumChangeRef.current?.(false);
+    onActiveRecordChangeRef.current?.(record);
+    publishWorkflowState(record.snapshot, record.status === "completed");
     setRecordStatus(undefined);
     setRecordStatusIsError(false);
+    focusUdsEditorNextFrame();
+    return true;
   };
 
   const saveAddendum = () => {
-    if (!activeRecordId || !addendumText.trim()) return;
-    const result = repository.addAddendum({
-      recordId: activeRecordId,
-      author: addendumAuthor,
-      text: addendumText,
-    });
+    const recordId = activeRecordIdRef.current;
+    if (!recordId || !addendumText.trim()) return;
+    if (addendumSavingRef.current) return;
+    addendumSavingRef.current = true;
+    setAddendumSaving(true);
+    const result = runSafeRepositoryMutation(() =>
+      repository.addAddendum({
+        recordId,
+        author: addendumAuthor,
+        text: addendumText,
+      }),
+    );
+    if (!result) {
+      addendumSavingRef.current = false;
+      setAddendumSaving(false);
+      return;
+    }
     if (result.ok) {
+      rememberDurableRecord(result.value);
       setAddenda(result.value.addenda);
+      addendumPendingRef.current = false;
       setAddendumText("");
-      setRecordsRefreshToken((value) => value + 1);
+      setAddendumAuthor(staffSignInValue);
+      onPendingAddendumChangeRef.current?.(false);
+      onActiveRecordChangeRef.current?.(result.value);
+      setRecordStatus(undefined);
+      setRecordStatusIsError(false);
+      notifyRecordsChange();
     } else {
       setRecordStatus(result.error.message);
       setRecordStatusIsError(true);
     }
+    window.setTimeout(() => {
+      addendumSavingRef.current = false;
+      setAddendumSaving(false);
+    }, 0);
   };
 
   const noteInput = udsEncounterToDocumentationInput(encounter);
@@ -834,6 +1532,16 @@ export function UdsPanel({
     tabForUdsField,
   );
   const transactionStatus = projectWorkflowTransactionStatus({ evaluation, locked });
+  const recordMutationAccessDetail =
+    recordStorageConflict
+      ? RECORD.udsRecordChangedElsewhere
+      : recordMutationAccess === "owned"
+      ? undefined
+      : recordMutationAccess === "busy"
+        ? UDS_RECORD_MUTATION_BUSY_MESSAGE
+        : recordMutationAccess === "pending"
+          ? UDS_RECORD_MUTATION_PENDING_MESSAGE
+          : UDS_RECORD_MUTATION_PROTECTION_MESSAGE;
   const qcStatus =
     encounter.control === "invalid"
       ? { value: "INVALID", tone: "stop" as const }
@@ -844,9 +1552,14 @@ export function UdsPanel({
           : { value: "PENDING", tone: "attention" as const };
   const recordLifecycle = projectRecordLifecycle({
     locked,
-    error: recordStatusIsError,
+    error: recordStatusIsError || recordStorageConflict,
     recordId: activeRecordId,
   });
+  const hasUnsavedClinicalChanges = Boolean(
+    !locked &&
+      savedSnapshotRef.current &&
+      JSON.stringify(savedSnapshotRef.current) !== JSON.stringify(encounter),
+  );
   // Same fix as canAttest: a preliminary positive, an unreadable panel, or a
   // medication-alignment flag pins readiness at "review" forever - those are
   // genuine findings, not something staff can edit away. Printing (like
@@ -921,8 +1634,12 @@ export function UdsPanel({
       <div class="wfp-transaction-chrome">
         <div class="wfp-summary-bar wfp-uds-context">
           <h1 class="wfp-workflow-title"><strong>Urine drug screen</strong></h1>
-          {locked ? (
-            <span class="wfp-status-flag is-idle">Read only</span>
+          {locked || recordMutationUnavailable ? (
+            <span class="wfp-status-flag is-idle">
+              {!recordStorageConflict && recordMutationAccess === "pending" && !locked
+                ? "Opening…"
+                : "Read only"}
+            </span>
           ) : (
             <StatusFlag
               idle={(evaluation?.readiness ?? "idle") === "idle"}
@@ -947,7 +1664,7 @@ export function UdsPanel({
             class="wfp-transaction-readout"
             aria-label={`Worksheet page ${UDS_TABS.indexOf(tab) + 1} of ${UDS_TABS.length}`}
           >
-            <b>{transactionStatus.label}</b>
+            <b>{TRANSACTION_PHASE_LABEL[transactionStatus.phase]}</b>
             <span>PG {UDS_TABS.indexOf(tab) + 1}/{UDS_TABS.length}</span>
           </span>
           <button
@@ -955,7 +1672,7 @@ export function UdsPanel({
             class="cd2004-link-button"
             onClick={() => setRecordsOpen(true)}
           >
-            UDS records…
+            {NOTES.openUdsNotes}…
           </button>
           {!locked && (
             <button
@@ -969,7 +1686,10 @@ export function UdsPanel({
                   },
                 })
               }
-              disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
+              disabled={
+                recordMutationUnavailable ||
+                (!activePatient.name?.trim() && !activePatient.dob?.trim())
+              }
               title={
                 activePatient.name?.trim() || activePatient.dob?.trim()
                   ? "Carry the selected local patient into this UDS record."
@@ -986,7 +1706,7 @@ export function UdsPanel({
               onClick={() => {
                 if (staffSignInValue) patch({ collector: staffSignInValue });
               }}
-              disabled={!staffSignInValue}
+              disabled={recordMutationUnavailable || !staffSignInValue}
               title={
                 staffSignInValue
                   ? "Carry the signed-in staff member into the collector field."
@@ -1005,7 +1725,9 @@ export function UdsPanel({
                 : "Add this incomplete UDS documentation to today's local activity log as needs review."
             }
             onClick={() => clickLegacyControl("addUdsLog")}
-            disabled={evaluation.readiness === "idle"}
+            disabled={
+              recordMutationUnavailable || evaluation.readiness === "idle"
+            }
           >
             {udsLogLabel}
           </button>
@@ -1026,12 +1748,16 @@ export function UdsPanel({
         aria-label="UDS clinical page"
         tabIndex={0}
       >
-      {invalidationReceipt && (
-        <div class="wfp-invalidation-receipt" role="status">
-          <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
-          <button type="button" class="cd2004-link-button" aria-label="Dismiss invalidation receipt" onClick={() => setInvalidationReceipt(null)}>×</button>
-        </div>
-      )}
+        <p class="wfp-field-hint">
+          UDS results are point-of-care preliminary screening only. Provider reviews results in
+          clinical context; outside lab order may be placed when clinically indicated.
+        </p>
+        {invalidationReceipt && (
+          <div class="wfp-invalidation-receipt" role="status">
+            <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
+            <button type="button" class="cd2004-link-button" aria-label="Dismiss invalidation receipt" onClick={() => setInvalidationReceipt(null)}>×</button>
+          </div>
+        )}
 
       <OutstandingRequirements<UdsTab>
         open={requirementsOpen}
@@ -1042,7 +1768,10 @@ export function UdsPanel({
         onNavigate={setTab}
       />
 
-      <fieldset disabled={locked} style="border:none;padding:0;margin:0;display:contents">
+      <fieldset
+        disabled={locked || recordMutationUnavailable}
+        style="border:none;padding:0;margin:0;display:contents"
+      >
 
       {tab === "specimen" && (
         <div
@@ -1272,7 +2001,34 @@ export function UdsPanel({
               </div>
 
               <Field label="Device photo" field="devicePhoto" hint="optional for report">
-                <input type="file" accept="image/*" onChange={onPhotoChange} />
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  aria-busy={photoLoading || undefined}
+                  onChange={onPhotoChange}
+                />
+                {hasPendingPhoto && (
+                  <div class="wfp-actions">
+                    <button
+                      ref={photoRemoveButtonRef}
+                      type="button"
+                      class="cd2004-command-button"
+                      data-uds-remove-photo
+                      aria-describedby="uds-photo-report-only-detail"
+                      onClick={() => clearSelectedPhoto()}
+                    >
+                      {RECORD.removeSelectedPhoto}
+                    </button>
+                    <span
+                      id="uds-photo-report-only-detail"
+                      class="wfp-field-hint"
+                      role="status"
+                    >
+                      {RECORD.photoReportOnlyDetail} {RECORD.removePhotoBeforeSigning}
+                    </span>
+                  </div>
+                )}
               </Field>
             </div>
           </div>
@@ -1520,6 +2276,7 @@ export function UdsPanel({
                 type="checkbox"
                 id="uds-sig-toggle"
                 checked={includeSignatureFields}
+                disabled={recordStorageConflict}
                 onChange={(event) => {
                   const checked = event.currentTarget.checked;
                   setIncludeSignatureFields(checked);
@@ -1528,33 +2285,47 @@ export function UdsPanel({
               />
               <label for="uds-sig-toggle">Include review / signature fields on this printed clinician report</label>
             </div>
-            <details
-              class="wfp-report-preview"
-              open={reportPreviewOpen}
-              onToggle={(event) => setReportPreviewOpen(event.currentTarget.open)}
-            >
-              <summary>
-                <span>REPORT PREVIEW</span>
-                <strong>
-                  {testedCount > 0
-                    ? `${testedCount}/${displayedPanels.length} PANELS ENTERED`
-                    : "WAITING FOR RESULTS"}
-                </strong>
-              </summary>
-              <ClinicianLabSheet
-                encounter={encounter}
-                omittedPanel={omittedPanel || undefined}
-                includeSignatureFields={includeSignatureFields}
-              />
-            </details>
+            {recordStorageConflict ? (
+              <p class="wfp-field-hint wfp-print-block-hint" role="alert">
+                {RECORD.udsRecordChangedElsewhere}
+              </p>
+            ) : (
+              <details
+                class="wfp-report-preview"
+                open={reportPreviewOpen}
+                onToggle={(event) => setReportPreviewOpen(event.currentTarget.open)}
+              >
+                <summary>
+                  <span>REPORT PREVIEW</span>
+                  <strong>
+                    {testedCount > 0
+                      ? `${testedCount}/${displayedPanels.length} PANELS ENTERED`
+                      : "WAITING FOR RESULTS"}
+                  </strong>
+                </summary>
+                <ClinicianLabSheet
+                  encounter={encounter}
+                  omittedPanel={omittedPanel || undefined}
+                  includeSignatureFields={includeSignatureFields}
+                />
+              </details>
+            )}
             <div class="wfp-actions">
               <button
                 type="button"
                 class="cd2004-command-button"
-                onClick={() => requestClinicalPrint("uds-clinician-report")}
-                disabled={!udsReadyForFinalOutput}
+                onClick={() => {
+                  if (!recordStorageConflictRef.current) {
+                    requestClinicalPrint("uds-clinician-report");
+                  }
+                }}
+                disabled={recordStorageConflict || !udsReadyForFinalOutput || photoLoading}
                 title={
-                  udsReadyForFinalOutput
+                  recordStorageConflict
+                    ? RECORD.udsRecordChangedElsewhere
+                    : photoLoading
+                    ? RECORD.waitForPhotoBeforePrinting
+                    : udsReadyForFinalOutput
                     ? "Print the finalized clinician result report."
                     : "Available once every outstanding requirement below is resolved."
                 }
@@ -1565,10 +2336,18 @@ export function UdsPanel({
               <button
                 type="button"
                 class="cd2004-link-button"
-                onClick={() => requestClinicalPrint("uds-patient-summary")}
-                disabled={!udsReadyForFinalOutput}
+                onClick={() => {
+                  if (!recordStorageConflictRef.current) {
+                    requestClinicalPrint("uds-patient-summary");
+                  }
+                }}
+                disabled={recordStorageConflict || !udsReadyForFinalOutput || photoLoading}
                 title={
-                  udsReadyForFinalOutput
+                  recordStorageConflict
+                    ? RECORD.udsRecordChangedElsewhere
+                    : photoLoading
+                    ? RECORD.waitForPhotoBeforePrinting
+                    : udsReadyForFinalOutput
                     ? "Print the finalized patient summary."
                     : "Available once every outstanding requirement below is resolved."
                 }
@@ -1580,12 +2359,25 @@ export function UdsPanel({
               <button
                 type="button"
                 class="cd2004-link-button"
-                onClick={() => navigator.clipboard?.writeText(noteText)}
-                disabled={!noteText}
+                onClick={() => {
+                  if (!recordStorageConflictRef.current) {
+                    navigator.clipboard?.writeText(noteText);
+                  }
+                }}
+                disabled={recordStorageConflict || !noteText}
                 // One note, in its final wording, at every stage of the
                 // screen. Printing a finalized result still waits on the
                 // requirements below; copying the documentation never did.
-                title="Copy this UDS note exactly as it reads here."
+                //
+                // The record-changed-elsewhere guard stays: copying out of a
+                // record another tab has already rewritten hands staff a note
+                // that no longer matches what is stored, which is the case
+                // `uds-record-integrity.spec.js` exists to hold.
+                title={
+                  recordStorageConflict
+                    ? RECORD.udsRecordChangedElsewhere
+                    : "Copy this UDS note exactly as it reads here."
+                }
               >
                 <DesktopIcon name="copy" />
                 Copy note
@@ -1599,7 +2391,7 @@ export function UdsPanel({
                     {" — "}
                     {stops.length === 1
                       ? firstStopMessage
-                      : `${stops.length} outstanding requirements, starting with: ${firstStopMessage}`}
+                      : CHECKLIST.remainingFromFirst(stops.length, firstStopMessage)}
                   </>
                 )}
                 .{" "}
@@ -1608,7 +2400,7 @@ export function UdsPanel({
                   class="cd2004-link-button"
                   onClick={() => setRequirementsOpen(true)}
                 >
-                  View outstanding requirements
+                  {CHECKLIST.view}
                 </button>
               </p>
             )}
@@ -1621,27 +2413,41 @@ export function UdsPanel({
           <h2 class="wfp-section-head">Addendum</h2>
           <div class="wfp-section-body">
             <p class="wfp-field-hint">
-              Read-only completed record. The original encounter snapshot is locked. Add a dated
-              addendum instead of changing the completed documentation.
+              Signed note. {RECORD.readOnlyDetail}
               {attestation && (
                 <>
                   {" "}
-                  Attested by {attestation.staff} at{" "}
-                  {new Date(attestation.timestamp).toLocaleString()}.
+                  {signedByCopy(
+                    attestation.staff,
+                    new Date(attestation.timestamp).toLocaleString(),
+                  )}
                 </>
               )}
             </p>
-            {addenda.map((entry) => (
-              <div class="wfp-preview" key={entry.id}>
-                <strong>{entry.author || "Staff"}</strong>
-                <br />
-                {entry.text}
-              </div>
-            ))}
+            {addenda.map((entry) => {
+              const displayedTimestamp = formatSavedAddendumTimestamp(entry.createdAt);
+              const timestampIsValid = displayedTimestamp !== NOTES_TABLE.dateUnavailable;
+              return (
+                <div
+                  class="wfp-preview"
+                  data-uds-saved-addendum={entry.id}
+                  key={entry.id}
+                >
+                  <strong>{entry.author || "Staff"}</strong>
+                  {" · "}
+                  <time dateTime={timestampIsValid ? entry.createdAt : undefined}>
+                    {displayedTimestamp}
+                  </time>
+                  <br />
+                  {entry.text}
+                </div>
+              );
+            })}
             <Field label="Addendum entered by" state="required">
               <input
                 value={addendumAuthor}
                 placeholder="Current staff name or initials"
+                disabled={recordMutationUnavailable}
                 onInput={(event) => setAddendumAuthor(event.currentTarget.value)}
               />
             </Field>
@@ -1651,7 +2457,13 @@ export function UdsPanel({
                 data-addendum-input
                 value={addendumText}
                 placeholder="Clarification, correction, or follow-up. The original completed record remains unchanged."
-                onInput={(event) => setAddendumText(event.currentTarget.value)}
+                disabled={recordMutationUnavailable}
+                onInput={(event) => {
+                  const next = event.currentTarget.value;
+                  addendumPendingRef.current = Boolean(next.trim());
+                  setAddendumText(next);
+                  onPendingAddendumChangeRef.current?.(Boolean(next.trim()));
+                }}
               />
             </Field>
             <div class="wfp-actions">
@@ -1659,7 +2471,12 @@ export function UdsPanel({
                 type="button"
                 class="cd2004-command-button"
                 onClick={saveAddendum}
-                disabled={!addendumText.trim()}
+                disabled={
+                  addendumSaving ||
+                  recordMutationUnavailable ||
+                  !addendumText.trim() ||
+                  !addendumAuthor.trim()
+                }
               >
                 Save addendum
               </button>
@@ -1671,16 +2488,21 @@ export function UdsPanel({
       </div>
 
       <RecordLifecycleActions
-        recordLabel="UDS RECORD"
-        ariaLabel="UDS record actions"
+        recordLabel="UDS note"
+        ariaLabel={RECORD.udsActions}
         lifecycle={recordLifecycle.state}
         detail={
+          recordMutationAccessDetail ??
           recordStatus ??
-          (locked
-            ? "This browser-local record is read-only. Corrections require a dated addendum."
-            : activeRecordId
-              ? "Draft saved in this browser. Attest and lock only when the screen is final."
-              : "Enter encounter details, then save a local draft.")
+          (hasPendingPhoto && !locked
+            ? RECORD.removePhotoBeforeSigning
+            : hasUnsavedClinicalChanges
+              ? RECORD.unsavedChanges
+              : locked
+                ? RECORD.readOnlyDetail
+                : activeRecordId
+                  ? RECORD.draftSavedDetail
+                  : RECORD.newDraftDetail)
         }
         buttons={
           <>
@@ -1688,6 +2510,7 @@ export function UdsPanel({
               <button
                 type="button"
                 class="is-addendum"
+                disabled={recordMutationUnavailable}
                 onClick={() => {
                   addendumTextRef.current?.scrollIntoView({ block: "center" });
                   addendumTextRef.current?.focus({ preventScroll: true });
@@ -1705,29 +2528,41 @@ export function UdsPanel({
                   type="button"
                   class="is-save"
                   onClick={saveLocalDraft}
-                  disabled={evaluation.readiness === "idle"}
-                  title="Save this editable UDS draft locally."
+                  disabled={
+                    recordMutationUnavailable ||
+                    (!activeRecordId && evaluation.readiness === "idle")
+                  }
+                  title={RECORD.saveUdsDraftDescription}
                 >
                   <span class="cd2004-action-glyph" aria-hidden="true">
                     <DesktopIcon name="save" />
                   </span>
-                  Save local draft
+                  {RECORD.save}
                 </button>
                 <button
                   type="button"
                   class="is-primary"
-                  disabled={!canAttest}
+                  disabled={recordMutationUnavailable || !canAttest}
                   title={
-                    canAttest
-                      ? "Review the local attestation before locking this browser-local record."
-                      : "Complete the required clinical fields and sign in staff before attesting and locking this record."
+                    hasPendingPhoto
+                      ? RECORD.removePhotoBeforeSigning
+                      : canAttest
+                      ? "Review the note before signing it."
+                      : RECORD.udsFieldsBeforeSigning
                   }
-                  onClick={() => setRecordAction("attest")}
+                  onClick={() => {
+                    setReviewedAttestation({
+                      staff: staffSignInValue.trim(),
+                      timestamp: new Date().toISOString(),
+                      statementVersion: "local-attestation-v1",
+                    });
+                    setRecordAction("attest");
+                  }}
                 >
                   <span class="cd2004-action-glyph" aria-hidden="true">
                     <DesktopIcon name="lock" />
                   </span>
-                  Attest &amp; lock local record
+                  {RECORD.sign}
                 </button>
               </>
             )}
@@ -1735,30 +2570,31 @@ export function UdsPanel({
             <button
               type="button"
               class="is-new"
-              title="Start a blank UDS screen. Any current editable work is saved as a local draft first."
+              title={RECORD.startUdsDescription}
               onClick={startNewUdsScreen}
+              disabled={recordMutationUnavailable}
             >
               <span class="cd2004-action-glyph" aria-hidden="true">
                 <DesktopIcon name="new" />
               </span>
-              Start new UDS screen
+              {RECORD.startNewUds}
             </button>
             {!locked && (
               <button
                 type="button"
                 class="is-danger"
-                disabled={!activeRecordId}
+                disabled={recordMutationUnavailable || !activeRecordId}
                 title={
                   activeRecordId
-                    ? "Discard this editable local draft. This cannot be undone."
-                    : "There is no editable local draft to discard."
+                    ? RECORD.discardDraftDescription
+                    : RECORD.noDraftToDiscard
                 }
                 onClick={() => setRecordAction("discard")}
               >
                 <span class="cd2004-action-glyph" aria-hidden="true">
                   <DesktopIcon name="discard" />
                 </span>
-                Discard local draft…
+                {RECORD.discardDraft}…
               </button>
             )}
           </>
@@ -1770,6 +2606,7 @@ export function UdsPanel({
         onClose={() => setRecordsOpen(false)}
         onRecordOpen={openUdsRecord}
         onCreate={startNewUdsScreen}
+        onHandoffComplete={focusUdsEditorNextFrame}
         refreshToken={recordsRefreshToken}
       />
 
@@ -1860,7 +2697,7 @@ export function UdsPanel({
       {recordAction && (
         <RecordActionDialog
           kind={recordAction}
-          recordNoun="UDS screen"
+          recordNoun="UDS"
           recordLabel={encounter.patient.name.trim() || "this UDS screen"}
           attestation={
             recordAction === "attest"
@@ -1870,8 +2707,9 @@ export function UdsPanel({
                   medication: summaryFor(encounter),
                   disposition: `Validity: ${encounter.validity}; medication alignment: ${encounter.medicationAlignment}`,
                   staff: staffSignInValue || "Not signed in",
-                  timestamp: new Date().toISOString(),
-                  statementVersion: "local-attestation-v1",
+                  timestamp: reviewedAttestation?.timestamp ?? "Not available",
+                  statementVersion:
+                    reviewedAttestation?.statementVersion ?? "local-attestation-v1",
                 }
               : undefined
           }
@@ -1880,14 +2718,13 @@ export function UdsPanel({
             disposition: "Validity / interpretation summary",
           }}
           onConfirm={recordAction === "attest" ? attestAndLock : discardLocalDraft}
-          onClose={() => setRecordAction(null)}
+          onClose={() => {
+            setRecordAction(null);
+            setReviewedAttestation(undefined);
+          }}
         />
       )}
 
-      <p class="wfp-field-hint">
-        UDS results are point-of-care preliminary screening only. Provider reviews results in
-        clinical context; outside lab order may be placed when clinically indicated.
-      </p>
     </div>
     </UdsRequirementsContext.Provider>
     </UdsIncompleteFieldsContext.Provider>

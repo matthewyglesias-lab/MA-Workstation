@@ -1,27 +1,58 @@
 import type { ComponentChildren } from "preact";
-import { createContext } from "preact";
 import {
   useCallback,
-  useContext,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "preact/hooks";
+// Tokens first: every later stylesheet resolves var(--tw-*) against this one.
+import "./tebra-tokens.css";
 import "./clinical-desktop.css";
 import "./workflows/workflow-panels.css";
-import "./meditech-workstation.css";
-import "./meditech-screen-contract.css";
-import { WORKSTATION_TRANSACTION_CODE } from "../application/workstation-projection";
+import "./tebra-workstation.css";
+import "./kiosk/kiosk.css";
+import "./tebra-screen-contract.css";
+import {
+  InjectionRecordRepository,
+} from "../persistence/injection-records";
+import { browserSafeStorage } from "../persistence/storage";
+import { UdsRecordRepository } from "../persistence/uds-records";
+import { isUsableUdsRecord } from "./uds-record-safety";
+import { isUsableInjectionRecord } from "./workflows/injection/injection-presentation-extension";
+import {
+  fieldsBeforeSigning,
+  KIOSK,
+  MODULE,
+  NOTES,
+  PATIENT,
+  RECORD,
+  SHELL,
+} from "./vocabulary";
+import {
+  buildPatientChartIndex,
+  chartPatientKey,
+  scopeNotesToPatient,
+  type PatientChartIndex,
+} from "./patient-chart-model";
+import {
+  PatientChart,
+  type PatientChartView,
+} from "./facesheet/PatientChart";
+import { PatientSearch } from "./shell/PatientSearch";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
-import {
-  MeditechCommandDeck,
-  MeditechRecordRail,
-} from "./MeditechChrome";
+import { PowerCommandMenu } from "./TebraChrome";
+import { Toast } from "./Toast";
+import { AppHeader } from "./shell/AppHeader";
+import { AccountMenu, WorkspaceBadge } from "./shell/AccountMenu";
+import { SectionRail } from "./shell/SectionRail";
+import { KioskShell } from "./kiosk/KioskShell";
+import { useKioskMode } from "./use-kiosk-mode";
+import { requestClinicalPrint } from "./workflows/clinical-print";
 import {
   FUNCTION_KEY_PROFILE,
-  getFunctionKeyCommand,
   resolveFunctionKeyCommand,
   type FunctionKeyActions,
 } from "./FunctionKeyProfile";
@@ -39,6 +70,7 @@ import {
   type WorkstationLookupTransaction,
 } from "./WorkstationLookupDialog";
 import {
+  requestWorkstationOpenNote,
   WORKSTATION_FIELD_LOOKUP_REQUEST,
   type WorkstationFieldLookupRequestDetail,
 } from "./workstation-events";
@@ -47,27 +79,19 @@ import {
   LOCKED_RECORD_ACTION_SELECTOR,
   type ClinicalDesktopShellProps,
   type DesktopPane,
+  type InjectionRecordRow,
   type InjectionRecordActions as InjectionRecordActionsConfig,
+  type InjectionKioskStepId,
   type PatientContext,
   type WorkflowId,
 } from "./types";
 
-/** Menu bar order, with the Alt access key for each. */
-const MENU_IDS: string[] = ["file", "chart", "workflows", "tools", "help"];
-const MENU_MNEMONICS: Record<string, string> = {
-  f: "file",
-  c: "chart",
-  w: "workflows",
-  t: "tools",
-  h: "help",
-};
-
 const WORKFLOW_SUMMARY_STATE_LABEL = {
-  idle: "Not started",
-  draft: "In progress",
-  ready: "Ready",
-  attention: "Needs review",
-  locked: "Locked local record",
+  idle: NOTES.statusNotStarted,
+  draft: NOTES.statusIncomplete,
+  ready: NOTES.statusReadyToSign,
+  attention: NOTES.statusNeedsReview,
+  locked: NOTES.statusSigned,
 } as const;
 
 const shortcutWorkflows: WorkflowId[] = [
@@ -79,6 +103,65 @@ const shortcutWorkflows: WorkflowId[] = [
   "reference",
   "log",
 ];
+
+const SAFE_CLINICAL_TONES = new Set([
+  "stop",
+  "warning",
+  "ready",
+  "info",
+  "neutral",
+]);
+
+/**
+ * The legacy shell snapshot is an untrusted display projection of localStorage.
+ * Cross-check every Dashboard row against the typed, fully validated record
+ * list before Preact sees its labels. This prevents malformed object-valued
+ * labels from throwing during render and quarantines the whole worklist when
+ * even one persisted row is ambiguous or unsafe.
+ */
+function safeInjectionWorklistRows(
+  rows: InjectionRecordRow[],
+): InjectionRecordRow[] {
+  const listed = new InjectionRecordRepository(browserSafeStorage()).list();
+  if (!listed.ok || listed.warnings.length) return [];
+
+  const idCounts = listed.value.reduce<Map<string, number>>((counts, record) => {
+    counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+    return counts;
+  }, new Map());
+  if (
+    !listed.value.every(
+      (record) => idCounts.get(record.id) === 1 && isUsableInjectionRecord(record),
+    )
+  ) {
+    return [];
+  }
+
+  const safeIds = new Set(listed.value.map((record) => record.id));
+  const seen = new Set<string>();
+  if (rows.length !== safeIds.size) return [];
+  for (const candidate of rows as unknown[]) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+      return [];
+    }
+    const row = candidate as Record<string, unknown>;
+    if (
+      typeof row.id !== "string" ||
+      !safeIds.has(row.id) ||
+      seen.has(row.id) ||
+      typeof row.patientLabel !== "string" ||
+      typeof row.medicationLabel !== "string" ||
+      typeof row.administeredLabel !== "string" ||
+      typeof row.statusLabel !== "string" ||
+      (row.tone !== undefined &&
+        (typeof row.tone !== "string" || !SAFE_CLINICAL_TONES.has(row.tone)))
+    ) {
+      return [];
+    }
+    seen.add(row.id);
+  }
+  return rows;
+}
 
 function normalizedPatientValue(value?: string) {
   return (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -186,15 +269,16 @@ function contextsMismatch(
 }
 
 export function ClinicalDesktopShell({
-  organizationName = "Integrated Psychiatric Medical Group",
+  organizationName = SHELL.organization,
   activeWorkflow,
   defaultActiveWorkflow = "home",
   onWorkflowChange,
+  onBeforeViewChange,
   patient = {},
   workflowPatient,
   onUseWorkflowPatient,
-  staffLabel = "Not signed in",
-  locationLabel = "Clinic not selected",
+  staffLabel = PATIENT.notSignedIn,
+  locationLabel = PATIENT.noLocation,
   localStorageAvailable = true,
   workflowSummaries = {},
   needsReview = [],
@@ -214,17 +298,21 @@ export function ClinicalDesktopShell({
   onSaveDraft,
   onReviewComplete,
   injectionRecordActions,
+  injectionKioskContext,
   onStartNewInjection,
   onOpenRecords,
   onLookup,
   onOpenStaff,
   onOpenLocation,
-  onOpenKnowledge,
-  onOpenCloseout,
   onCopyNoteSection,
   onCopyAllNotes,
   onQueueItemOpen,
   onRecordOpen,
+  onOpenInjectionRecord,
+  onOpenUdsRecord,
+  onStartNewUds,
+  onStartNewTransientNote,
+  externalWorkflowHandoffToken,
   onEscape,
   onWorkAreaReady,
   className = "",
@@ -239,15 +327,41 @@ export function ClinicalDesktopShell({
   const [fieldLookup, setFieldLookup] =
     useState<WorkstationLookupTransaction | null>(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [injectionKioskStep, setInjectionKioskStep] =
+    useState<InjectionKioskStepId>("identify");
+  const kioskController = useKioskMode();
+  /**
+   * Patient chart navigation. The chart is a destination like any section,
+   * not a mode layered over one: it replaces the work area's content and
+   * leaves the selected workflow untouched, so closing it returns to exactly
+   * the workflow that was open.
+   */
+  const [chartPatientKeyState, setChartPatientKeyState] = useState<string | null>(
+    null,
+  );
+  const [chartView, setChartView] = useState<PatientChartView>("facesheet");
+  const [chartIndex, setChartIndex] = useState<PatientChartIndex>(() => ({
+    patients: [],
+    rowsByPatient: new Map(),
+  }));
+  /** A UDS note chosen in the chart, waiting for its panel to mount. */
+  const pendingUdsNoteRef = useRef<string | null>(null);
+  /** Refreshes search only after a stale chart has been explicitly closed. */
+  const patientChartRefreshPendingRef = useRef(false);
+  const lastExternalHandoffTokenRef = useRef(externalWorkflowHandoffToken);
   const shellRef = useRef<HTMLDivElement>(null);
   const workHostRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const saveDraftRef = useRef(onSaveDraft);
   const selectedWorkflow = activeWorkflow ?? internalWorkflow;
-  const helpCommand = getFunctionKeyCommand("help");
-  const fileCommand = getFunctionKeyCommand("file");
-  const lookupCommand = getFunctionKeyCommand("lookup");
-  const localEmrCommand = getFunctionKeyCommand("local-emr");
+  const kioskLaunchHandledRef = useRef(false);
+  const kioskInjectionPendingRef = useRef(
+    kioskController.enabled && selectedWorkflow !== "administer",
+  );
+  const dashboardInjectionRecords = useMemo(
+    () => safeInjectionWorklistRows(injectionRecords),
+    [injectionRecords],
+  );
   const previousWorkflowRef = useRef<WorkflowId>(selectedWorkflow);
   const workflowScrollPositionsRef = useRef<
     Partial<Record<WorkflowId, number>>
@@ -269,14 +383,27 @@ export function ClinicalDesktopShell({
     dob: workflowPatient?.dob || patient.dob,
   };
   const isMismatch = contextsMismatch(patient, workflowPatient);
-  const effectiveStatus =
-    internalStatus ??
-    fieldPrompt ??
-    statusMessage ??
-    "Ready. Select a workflow to begin.";
+  /**
+   * Two different things used to share one status line.
+   *
+   * An *announcement* is something that just happened - a chart opened, a
+   * value filed. Ambient state is what is currently true: the focused field's
+   * prompt, and the record's own lifecycle label ("New draft"). The status bar
+   * could carry both, because it never moved. A toast cannot: a popup that
+   * reappears on every Tab, or that re-announces "New draft" each time the
+   * lifecycle re-reports it, is noise that teaches people to ignore it.
+   *
+   * So only shell announcements toast. Ambient state keeps its own polite live
+   * region - visually hidden, since sighted staff can already see the focused
+   * field and the lifecycle footer. Nothing that was announced before has
+   * stopped being announced.
+   */
+  const announcement = internalStatus ?? "";
+  const ambientPrompt = fieldPrompt ?? statusMessage ?? SHELL.readyToBegin;
   const hasOutstandingStops = readiness.some((item) => item.state === "stop");
 
-  const openWorkflow = (workflow: WorkflowId) => {
+  const openWorkflow = (workflow: WorkflowId): boolean => {
+    if (onWorkflowChange?.(workflow) === false) return false;
     const scrollBody = shellRef.current?.querySelector<HTMLElement>(
       ".cd2004-work-window .cd2004-window-body",
     );
@@ -286,13 +413,358 @@ export function ClinicalDesktopShell({
       capturedScrollWorkflowRef.current = selectedWorkflow;
     }
     if (activeWorkflow === undefined) setInternalWorkflow(workflow);
-    onWorkflowChange?.(workflow);
     setInternalStatus(`${WORKFLOW_LABELS[workflow]} opened.`);
+    return true;
+  };
+
+  /**
+   * Reads every saved note into a per-patient index.
+   *
+   * Read-only, and read through the typed repositories rather than
+   * localStorage, exactly as `RecordsWindow` does - so the chart, the global
+   * worklist and the panels all see one set of records. A malformed store
+   * yields an empty index rather than throwing: a chart that cannot be built
+   * is not a reason for the workstation to stop.
+   */
+  const reloadChartIndex = useCallback(() => {
+    const storage = browserSafeStorage();
+    const injections = new InjectionRecordRepository(storage).list();
+    const uds = new UdsRecordRepository(storage).list();
+    const rawUds = uds.ok ? uds.value : [];
+    const udsIdCounts = rawUds.reduce<Map<string, number>>((counts, record) => {
+      counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+      return counts;
+    }, new Map());
+    const unambiguousUds = rawUds.filter(
+      (record) =>
+        udsIdCounts.get(record.id) === 1 && isUsableUdsRecord(record),
+    );
+    const rawInjections =
+      injections.ok && !injections.warnings.length ? injections.value : [];
+    const injectionIdCounts = rawInjections.reduce<Map<string, number>>(
+      (counts, record) => {
+        counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+        return counts;
+      },
+      new Map(),
+    );
+    const unambiguousInjections = rawInjections.filter(
+      (record) =>
+        injectionIdCounts.get(record.id) === 1 &&
+        isUsableInjectionRecord(record),
+    );
+    setChartIndex(
+      buildPatientChartIndex(
+        unambiguousInjections,
+        unambiguousUds,
+      ),
+    );
+  }, []);
+
+  useEffect(() => {
+    reloadChartIndex();
+  }, [reloadChartIndex, postState, selectedWorkflow]);
+
+  const chartPatient = chartPatientKeyState
+    ? (chartIndex.patients.find((entry) => entry.key === chartPatientKeyState) ?? null)
+    : null;
+  const chartRows = chartPatient
+    ? scopeNotesToPatient(chartIndex, chartPatient.key)
+    : [];
+  // The Care Checklist belongs to the open note, not to the patient. It is
+  // only shown on a chart when that chart is the patient the note is for.
+  const activePatientKey = chartPatientKey(patient.name ?? "", patient.dob ?? "");
+
+  const openChart = (
+    key: string,
+    view: PatientChartView = "facesheet",
+  ): boolean => {
+    if (!key) return false;
+    if (!chartPatientKeyState && onBeforeViewChange?.() === false) return false;
+    reloadChartIndex();
+    setChartPatientKeyState(key);
+    setChartView(view);
+    setInternalStatus(`${PATIENT.facesheet} opened.`);
+    return true;
+  };
+
+  const focusWorkflowContentNextFrame = useCallback(() => {
+    // Two frames let the chart unmount and the selected workflow mount before
+    // choosing a target. This also runs after native <dialog> focus restore
+    // when invoked by the external-handoff token below.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const host = workHostRef.current;
+        if (!host) return;
+        const isVisible = (candidate: HTMLElement) =>
+          candidate.getClientRects().length > 0 &&
+          !candidate.closest('[hidden], [aria-hidden="true"], [inert]');
+        const preferredSelectors = [
+          'input[placeholder="Last, First"]:not(:disabled)',
+          'textarea[data-addendum-input]:not(:disabled)',
+        ];
+        const preferredTarget = preferredSelectors
+          .map((selector) => host.querySelector<HTMLElement>(selector))
+          .find((candidate): candidate is HTMLElement =>
+            Boolean(candidate && isVisible(candidate)),
+          );
+        const fieldCandidates = host.querySelectorAll<HTMLElement>(
+          'input:not([type="hidden"]):not(:disabled), ' +
+            'select:not(:disabled), textarea:not(:disabled)',
+        );
+        const actionCandidates = host.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])',
+        );
+        const target =
+          preferredTarget ??
+          Array.from(fieldCandidates).find(isVisible) ??
+          Array.from(actionCandidates).find(isVisible);
+        const fallback = host.querySelector<HTMLElement>('[tabindex="-1"]');
+        (target ?? fallback)?.focus({ preventScroll: true });
+      });
+    });
+  }, []);
+
+  const closeChart = (destination = selectedWorkflow) => {
+    if (patientChartRefreshPendingRef.current) {
+      patientChartRefreshPendingRef.current = false;
+      reloadChartIndex();
+    }
+    setChartPatientKeyState(null);
+    setInternalStatus(`${WORKFLOW_LABELS[destination]} opened.`);
+    focusWorkflowContentNextFrame();
+  };
+
+  const exitKioskMode = () => {
+    kioskLaunchHandledRef.current = false;
+    kioskInjectionPendingRef.current = false;
+    kioskController.setEnabled(false);
+    void kioskController.exitFullscreen();
+    setInternalStatus(KIOSK.modeClosed);
+  };
+
+  const enterKioskMode = () => {
+    kioskLaunchHandledRef.current = true;
+    if (selectedWorkflow !== "administer") {
+      kioskInjectionPendingRef.current = true;
+      if (!openWorkflow("administer")) {
+        kioskInjectionPendingRef.current = false;
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return;
+      }
+    }
+    if (chartPatientKeyState) closeChart("administer");
+    setInjectionKioskStep(
+      injectionRecordActions?.lifecycle === "locked" ? "sign" : "identify",
+    );
+    kioskController.setEnabled(true);
+    if (!kioskController.fullscreenSupported) {
+      setInternalStatus(KIOSK.fullScreenUnavailable);
+      return;
+    }
+    // This call stays in the account-menu click stack. Browsers may reject a
+    // Fullscreen API request once the originating user gesture has unwound.
+    void kioskController.requestFullscreen().then((opened) => {
+      setInternalStatus(
+        opened ? KIOSK.fullScreenEntered : KIOSK.fullScreenDidNotOpen,
+      );
+    });
+  };
+
+  const toggleKioskFullscreen = () => {
+    if (!kioskController.fullscreenSupported) {
+      setInternalStatus(KIOSK.fullScreenUnavailable);
+      return;
+    }
+    const operation = kioskController.fullscreen
+      ? kioskController.exitFullscreen()
+      : kioskController.requestFullscreen();
+    void operation.then((changed) => {
+      setInternalStatus(
+        changed
+          ? kioskController.fullscreen
+            ? KIOSK.fullScreenExited
+            : KIOSK.fullScreenEntered
+          : kioskController.fullscreen
+            ? KIOSK.fullScreenDidNotClose
+            : KIOSK.fullScreenDidNotOpen,
+      );
+    });
+  };
+
+  // Query-string and stored-preference launches enter the Injection workflow,
+  // but do not request full screen: that API is reserved for a real gesture.
+  useEffect(() => {
+    if (!kioskController.enabled) {
+      kioskLaunchHandledRef.current = false;
+      kioskInjectionPendingRef.current = false;
+      return;
+    }
+    if (kioskLaunchHandledRef.current) return;
+    kioskLaunchHandledRef.current = true;
+    if (selectedWorkflow !== "administer") {
+      kioskInjectionPendingRef.current = true;
+      if (!openWorkflow("administer")) {
+        kioskController.setEnabled(false);
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return;
+      }
+    }
+    if (chartPatientKeyState) closeChart("administer");
+    setInternalStatus(KIOSK.modeOpened);
+  }, [
+    chartPatientKeyState,
+    kioskController.enabled,
+    kioskController.setEnabled,
+    selectedWorkflow,
+  ]);
+
+  // Any successful navigation away restores the complete workstation. This
+  // also covers external workflow changes that bypass the section rail.
+  useEffect(() => {
+    if (!kioskController.enabled) return;
+    if (selectedWorkflow === "administer" && !chartPatientKeyState) {
+      kioskInjectionPendingRef.current = false;
+      return;
+    }
+    if (kioskInjectionPendingRef.current) return;
+    kioskController.setEnabled(false);
+    void kioskController.exitFullscreen();
+    setInternalStatus(KIOSK.modeClosed);
+  }, [
+    chartPatientKeyState,
+    kioskController.enabled,
+    kioskController.exitFullscreen,
+    kioskController.setEnabled,
+    selectedWorkflow,
+  ]);
+
+  useEffect(() => {
+    if (
+      externalWorkflowHandoffToken === undefined ||
+      externalWorkflowHandoffToken === lastExternalHandoffTokenRef.current
+    ) {
+      return;
+    }
+    lastExternalHandoffTokenRef.current = externalWorkflowHandoffToken;
+    setChartPatientKeyState(null);
+    focusWorkflowContentNextFrame();
+  }, [externalWorkflowHandoffToken, focusWorkflowContentNextFrame]);
+
+  /**
+   * Opening a note from the chart is the explicit crossing from browsing into
+   * a workflow. Injection resumes through the shell's own handler; UDS is
+   * owned by its panel, which holds the encounter a record restores into.
+   *
+   * The UDS request cannot be dispatched here. The panel is not mounted while
+   * the chart is open, so an event sent now would land before anything is
+   * listening and the note would simply never open. It is held until the
+   * effect below, which runs after the panel has mounted and registered.
+   */
+  const openChartNote = (recordKey: string) => {
+    const row = chartRows.find((candidate) => candidate.key === recordKey);
+    if (!row || !chartPatient) return;
+    const { recordId } = row;
+    const expectedPatient = {
+      name: chartPatient.name,
+      dob: chartPatient.dob,
+    };
+    if (row.noteType === "injection") {
+      if (onOpenInjectionRecord) {
+        const result = onOpenInjectionRecord(recordId, expectedPatient);
+        if (result === "patient-identity-mismatch") {
+          patientChartRefreshPendingRef.current = true;
+          setInternalStatus(RECORD.savedNotePatientChanged);
+          return;
+        }
+        if (result === false) {
+          setInternalStatus(RECORD.savedNoteCouldNotOpen);
+          return;
+        }
+        closeChart("administer");
+        return;
+      }
+      closeChart("administer");
+      openWorkflow("administer");
+      return;
+    }
+    if (onOpenUdsRecord) {
+      const result = onOpenUdsRecord(recordId, expectedPatient);
+      if (result === "patient-identity-mismatch") {
+        patientChartRefreshPendingRef.current = true;
+        setInternalStatus(RECORD.savedNotePatientChanged);
+        return;
+      }
+      if (result === false) {
+        setInternalStatus(RECORD.savedNoteCouldNotOpen);
+        return;
+      }
+      closeChart("uds");
+      return;
+    }
+    pendingUdsNoteRef.current = recordId;
+    closeChart("uds");
+    openWorkflow("uds");
+  };
+
+  useEffect(() => {
+    const recordId = pendingUdsNoteRef.current;
+    if (!recordId || selectedWorkflow !== "uds" || chartPatientKeyState) return;
+    pendingUdsNoteRef.current = null;
+    requestWorkstationOpenNote({ noteType: "uds", recordId });
+  }, [chartPatientKeyState, selectedWorkflow]);
+
+  const startNoteFromChart = (workflow: WorkflowId): boolean => {
+    if (workflow === "uds" && onStartNewUds && chartPatient) {
+      if (onStartNewUds(chartPatient) === false) {
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return false;
+      }
+      closeChart("uds");
+      return true;
+    }
+    if (
+      (workflow === "samples" || workflow === "forms") &&
+      onStartNewTransientNote &&
+      chartPatient
+    ) {
+      if (onStartNewTransientNote(workflow, chartPatient) === false) {
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return false;
+      }
+      closeChart(workflow);
+      return true;
+    }
+    if (workflow === "administer" && onStartNewInjection) {
+      // The callback owns both the guarded leave boundary and activating the
+      // new Injection. Do not switch the workflow first: on a veto the chart's
+      // return destination must remain exactly where staff left it.
+      if (onStartNewInjection(chartPatient ?? undefined) === false) {
+        setInternalStatus(RECORD.currentNoteStayedOpen);
+        return false;
+      }
+    } else if (!openWorkflow(workflow)) {
+      return false;
+    }
+    closeChart(workflow);
+    return true;
   };
 
   const restorePreviousFocus = () => {
-    globalThis.setTimeout(() => previousFocusRef.current?.focus(), 0);
+    const previous = previousFocusRef.current;
+    previousFocusRef.current = null;
+    globalThis.setTimeout(() => previous?.focus(), 0);
   };
+
+  // The global function-key listener is effect-backed, while a workflow can
+  // make Save available during the preceding render. Keep the callback
+  // current in a layout effect so F12 cannot land in that post-commit gap and
+  // invoke the prior render's unavailable handler.
+  useLayoutEffect(() => {
+    // A chart is read-only and covers the mounted editor. Never let F12 or
+    // Ctrl/Cmd+S mutate that hidden note while staff are browsing a patient.
+    saveDraftRef.current = chartPatientKeyState ? undefined : onSaveDraft;
+  }, [chartPatientKeyState, onSaveDraft]);
 
   const openShortcutHelp = useCallback(() => {
     previousFocusRef.current =
@@ -303,13 +775,14 @@ export function ClinicalDesktopShell({
   }, []);
 
   const requestDraftSave = useCallback(() => {
-    if (onSaveDraft) {
-      onSaveDraft();
-      setInternalStatus("Draft save requested.");
+    const saveDraft = saveDraftRef.current;
+    if (saveDraft) {
+      saveDraft();
+      setInternalStatus(SHELL.draftSaveRequested);
     } else {
-      setInternalStatus("Draft saving is unavailable in this workflow.");
+      setInternalStatus(SHELL.draftSaveUnavailable);
     }
-  }, [onSaveDraft]);
+  }, []);
 
   const focusWorksheetSection = useCallback((direction: 1 | -1) => {
     const worksheet = workHostRef.current;
@@ -435,7 +908,7 @@ export function ClinicalDesktopShell({
       setFocusedPane("work");
       setInternalStatus("Worksheet zone focused.");
     } else if (target.classList.contains("meditech-record-list")) {
-      setInternalStatus("Record List zone focused.");
+      setInternalStatus(`${NOTES.openNotes} zone focused.`);
     } else {
       setInternalStatus("Command zone focused.");
     }
@@ -474,16 +947,24 @@ export function ClinicalDesktopShell({
 
   const openContextualLookup = useCallback(() => {
     const active = document.activeElement as HTMLElement | null;
+    const activeContext = contextForFocusedControl(active);
+    const retainsWorksheetContext = Boolean(
+      active?.closest(".meditech-command-deck, .cd2004-lookup-dialog"),
+    );
+    // A focus event and the following function key can occur in the same
+    // browser task. Prefer the live focused control so a stale render cannot
+    // open the prior field's values (for example, after moving from Encounter
+    // type back to Patient name). Command/deck utilities deliberately retain
+    // the last worksheet field, as documented by handleFocus above.
     const select =
-      active?.closest<HTMLSelectElement>("select:not([disabled])") ??
-      active
-        ?.closest<HTMLElement>("[data-field-code]")
-        ?.querySelector<HTMLSelectElement>("select:not([disabled])") ??
-      focusedControl?.lookupSelect;
+      activeContext?.lookupSelect ??
+      (retainsWorksheetContext || !activeContext
+        ? focusedControl?.lookupSelect
+        : undefined);
     if (select && openFieldLookup(select)) return;
     if (onLookup) {
       onLookup();
-      setInternalStatus("Local Record List opened.");
+      setInternalStatus(`${NOTES.openNotes} opened.`);
       return;
     }
     setInternalStatus("No local lookup is available in this context.");
@@ -527,29 +1008,24 @@ export function ClinicalDesktopShell({
   );
 
   const safeBack = useCallback(() => {
-    // Menus own the first Escape. Nothing here navigates away from a draft or
-    // destroys local work; callers may only dismiss a local utility.
-    if (openMenu) {
-      const id = openMenu;
-      setOpenMenu(null);
-      globalThis.setTimeout(() => {
-        shellRef.current
-          ?.querySelector<HTMLElement>(
-            `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
-          )
-          ?.focus({ preventScroll: true });
-      }, 0);
-      return;
-    }
+    // Nothing here navigates away from a draft or destroys local work; callers
+    // may only dismiss a local utility. Menus are not handled here any more:
+    // each one stops Escape at its own host, so the key never reaches this.
     if (showShortcutHelp) {
       setShowShortcutHelp(false);
       restorePreviousFocus();
       return;
     }
+    // The chart is a destination, so Escape leaves it the way Escape leaves
+    // any other local view: back to the workflow that was open, with nothing
+    // saved, discarded or started.
+    if (chartPatientKeyState) {
+      closeChart();
+      return;
+    }
     onEscape?.();
-    restorePreviousFocus();
     setInternalStatus("Back: no draft was discarded.");
-  }, [onEscape, openMenu, showShortcutHelp]);
+  }, [chartPatientKeyState, onEscape, selectedWorkflow, showShortcutHelp]);
 
   useEffect(() => {
     onWorkAreaReady?.(workHostRef.current);
@@ -573,7 +1049,11 @@ export function ClinicalDesktopShell({
       const context = contextForFocusedControl(event.target);
       setFocusedControl(context);
       setFieldPrompt(context?.prompt ?? null);
-      if (context) setInternalStatus(null);
+      // Moving focus used to clear the last announcement, because the status
+      // bar had one line and the field prompt had to win it. The toast and the
+      // prompt live region no longer compete for that line, so an
+      // announcement now survives the focus move that follows the action which
+      // caused it — which is the whole point of a toast.
     };
     shell.addEventListener("focusin", handleFocus);
     return () => shell.removeEventListener("focusin", handleFocus);
@@ -598,12 +1078,12 @@ export function ClinicalDesktopShell({
       );
   }, [openFieldLookup]);
 
-  useEffect(() => {
-    // Command feedback takes precedence long enough to be announced. A later
-    // workflow or persistence transition restores the authoritative legacy
-    // status, including storage-write failures.
-    setInternalStatus(null);
-  }, [postState, selectedWorkflow, statusMessage]);
+  // There used to be an effect clearing the announcement whenever the
+  // workflow, post state or legacy status changed, so the status bar could
+  // fall back to the authoritative ambient value. It is gone: the two are no
+  // longer sharing one line, and it was wiping every announcement about a
+  // transition at the exact moment that transition happened - "Injection
+  // opened." never survived opening Injection. The toast expires on its own.
 
   // The keyboard-reference dialog is a native <dialog> opened with showModal(),
   // so the platform supplies the focus trap, Escape handling, focus
@@ -640,7 +1120,9 @@ export function ClinicalDesktopShell({
   }, [selectedWorkflow]);
 
   useEffect(() => {
-    if (postState !== "posted") return;
+    // Focused mode owns its signed-note destination through the completion
+    // card; the ordinary shell still returns focus to its locked footer.
+    if (postState !== "posted" || kioskController.enabled) return;
 
     let settled = false;
     const timers: Array<ReturnType<typeof globalThis.setTimeout>> = [];
@@ -688,7 +1170,7 @@ export function ClinicalDesktopShell({
       observer.disconnect();
       timers.forEach((timer) => globalThis.clearTimeout(timer));
     };
-  }, [postState]);
+  }, [kioskController.enabled, postState]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -716,29 +1198,26 @@ export function ClinicalDesktopShell({
         return;
       }
 
-      if (event.altKey && /^[1-7]$/.test(event.key)) {
+      if (
+        event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        /^[1-7]$/.test(event.key)
+      ) {
         event.preventDefault();
         const workflow = shortcutWorkflows[Number(event.key) - 1];
-        if (workflow) openWorkflow(workflow);
+        if (workflow && openWorkflow(workflow)) {
+          if (chartPatientKeyState) closeChart(workflow);
+          else if (workflow !== selectedWorkflow) focusWorkflowContentNextFrame();
+        }
         return;
       }
 
-      // Alt+access key opens the matching menu, as a native menu bar does.
-      if (event.altKey && !event.ctrlKey && !event.metaKey) {
-        const target = MENU_MNEMONICS[key];
-        if (target) {
-          event.preventDefault();
-          setOpenMenu(target);
-          globalThis.setTimeout(() => {
-            shellRef.current
-              ?.querySelector<HTMLElement>(
-                `.cd2004-menu[data-menu="${target}"] .cd2004-menu-title`,
-              )
-              ?.focus({ preventScroll: true });
-          }, 0);
-          return;
-        }
-      }
+      // Function-key commands are unmodified (Shift is part of the published
+      // profile for alternate commands). Do not steal browser/OS chords such
+      // as Ctrl+F11, Alt+F1, or Ctrl+Alt+3.
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
 
       const command = resolveFunctionKeyCommand(event.key, event.shiftKey);
       if (!command) return;
@@ -769,9 +1248,9 @@ export function ClinicalDesktopShell({
         case "local-emr":
           if (onOpenRecords) {
             onOpenRecords();
-            setInternalStatus("Local EMR / Record List opened.");
+            setInternalStatus(`${NOTES.openNotes} opened.`);
           } else {
-            setInternalStatus("Local Record List is unavailable.");
+            setInternalStatus(`${NOTES.openNotes} is unavailable.`);
           }
           return;
         case "file":
@@ -799,58 +1278,47 @@ export function ClinicalDesktopShell({
     showShortcutHelp,
   ]);
 
-  // Clicking anywhere outside the menu bar dismisses an open menu, without
-  // stealing focus - matching native menu behavior.
+  /**
+   * The chart is a full-width page, and no note is open on it. Neither the
+   * document split nor the per-note lifecycle footer belongs beside it: those
+   * act on an open note, and showing them over a chart is exactly the
+   * confusion between page actions and note actions that the redesign is
+   * trying to remove.
+   */
+  const chartOpen = chartPatient !== null;
+  const showsInjectionLayout = selectedWorkflow === "administer" && !chartOpen;
+  const kioskVisible = kioskController.enabled && showsInjectionLayout;
+  const kioskLocked = injectionRecordActions?.lifecycle === "locked";
+  const showsDocumentSplit = showsInjectionLayout && !kioskVisible;
+  const showsSideInspector =
+    !chartOpen && selectedWorkflow !== "administer" && selectedWorkflow !== "home";
+
   useEffect(() => {
-    if (!openMenu) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (target instanceof Node && !(target as Element).closest?.(".cd2004-menu")) {
-        setOpenMenu(null);
-      }
-    };
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    return () =>
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [openMenu]);
+    if (!kioskVisible) return;
+    if (kioskLocked) {
+      if (injectionKioskStep !== "sign") setInjectionKioskStep("sign");
+      return;
+    }
+    if (
+      injectionKioskContext?.nonAdministration &&
+      (injectionKioskStep === "prepare" ||
+        injectionKioskStep === "site" ||
+        injectionKioskStep === "administer")
+    ) {
+      setInjectionKioskStep("response");
+    }
+  }, [
+    injectionKioskContext?.nonAdministration,
+    injectionKioskStep,
+    kioskLocked,
+    kioskVisible,
+  ]);
 
-  const menuBar: MenuBarContextValue = {
-    openMenu,
-    open: (id) => setOpenMenu(id),
-    close: (restoreFocus = false) => {
-      const id = openMenu;
-      setOpenMenu(null);
-      if (restoreFocus && id) {
-        globalThis.setTimeout(() => {
-          shellRef.current
-            ?.querySelector<HTMLElement>(
-              `.cd2004-menu[data-menu="${id}"] .cd2004-menu-title`,
-            )
-            ?.focus({ preventScroll: true });
-        }, 0);
-      }
-    },
-    moveMenu: (from, direction) => {
-      const index = MENU_IDS.indexOf(from);
-      if (index < 0) return;
-      const next =
-        MENU_IDS[(index + direction + MENU_IDS.length) % MENU_IDS.length]!;
-      setOpenMenu(next);
-      globalThis.setTimeout(() => {
-        shellRef.current
-          ?.querySelector<HTMLElement>(
-            `.cd2004-menu[data-menu="${next}"] .cd2004-menu-title`,
-          )
-          ?.focus({ preventScroll: true });
-      }, 0);
-    },
-  };
-
-  const windowTitle =
-    selectedWorkflow === "home"
-      ? "Current Worklist"
-      : `${WORKFLOW_LABELS[selectedWorkflow]} Worksheet`;
-  const transactionCode = WORKSTATION_TRANSACTION_CODE[selectedWorkflow];
+  const windowTitle = chartPatient
+    ? chartPatient.name
+    : selectedWorkflow === "home"
+      ? MODULE.dashboard
+      : `${WORKFLOW_LABELS[selectedWorkflow]} note`;
 
   const workflowContent = renderWorkflowContent({
     workflow: selectedWorkflow,
@@ -860,14 +1328,15 @@ export function ClinicalDesktopShell({
     workflowSlots,
     legacyPanels,
     workHostRef,
-    summaries: workflowSummaries,
     needsReview,
     todayQueue,
-    injectionRecords,
-    onWorkflowOpen: openWorkflow,
+    injectionRecords: dashboardInjectionRecords,
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
+    kioskMode: kioskVisible,
+    injectionKioskStep,
+    onInjectionKioskStepChange: setInjectionKioskStep,
   });
 
   const inspectorPanel = (
@@ -898,108 +1367,42 @@ export function ClinicalDesktopShell({
       ref={shellRef}
       class={`cd2004-shell ${className}`.trim()}
       data-active-workflow={selectedWorkflow}
+      data-chart-view={chartPatient ? chartView : undefined}
       data-post-state={postState}
+      data-kiosk-mode={kioskVisible ? "true" : undefined}
+      data-kiosk-step={kioskVisible ? injectionKioskStep : undefined}
     >
       <a class="cd2004-skip-link" href="#cd2004-work-area">
-        Skip to active workflow
+        {SHELL.skipToActiveNote}
       </a>
 
-      <header class="cd2004-application-header cd2004-print-exclude">
-        <div class="cd2004-app-titlebar">
-          <span class="cd2004-app-logo" aria-hidden="true">
-            <DesktopIcon name="administer" />
-          </span>
-          <span class="cd2004-app-title">
-            <b>MA</b>
-            <span>CLINICAL WORKSTATION</span>
-            <small>{transactionCode}</small>
-          </span>
-          <span class="cd2004-app-environment">
-            <b>LOCAL / TRAINING</b>
-            <small>{staffLabel || "NO STAFF"} · {locationLabel || "NO FACILITY"}</small>
-          </span>
-        </div>
+      <AppHeader
+        badge={<WorkspaceBadge localStorageAvailable={localStorageAvailable} />}
+        account={
+          <AccountMenu
+            staffLabel={staffLabel}
+            locationLabel={locationLabel}
+            {...(onOpenStaff ? { onOpenStaff } : {})}
+            {...(onOpenLocation ? { onOpenLocation } : {})}
+            onOpenShortcuts={openShortcutHelp}
+            kioskMode={kioskController.enabled}
+            onToggleKiosk={
+              kioskController.enabled ? exitKioskMode : enterKioskMode
+            }
+          />
+        }
+      >
 
-        <nav
-          class="cd2004-menu-bar"
-          role="menubar"
-          aria-label="Application menu"
-        >
-          <MenuBarContext.Provider value={menuBar}>
-          <DesktopMenu id="file" label="File" mnemonic="F">
-            <MenuCommand
-              label="File local draft"
-              shortcut={fileCommand.keyLabel}
-              disabled={!onSaveDraft}
-              onInvoke={requestDraftSave}
-            />
-            <MenuCommand
-              label="Local EMR / Record List"
-              shortcut={localEmrCommand.keyLabel}
-              disabled={!onOpenRecords}
-              onInvoke={onOpenRecords}
-            />
-          </DesktopMenu>
-          <DesktopMenu id="chart" label="Chart" mnemonic="C">
-            <MenuCommand
-              label="Use local workflow patient"
-              disabled={!isMismatch || !onUseWorkflowPatient}
-              onInvoke={() => onUseWorkflowPatient?.(selectedWorkflow)}
-            />
-            <MenuCommand
-              label="Lookup local record"
-              shortcut={lookupCommand.keyLabel}
-              disabled={!onLookup}
-              onInvoke={openContextualLookup}
-            />
-          </DesktopMenu>
-          <DesktopMenu id="workflows" label="Workflows" mnemonic="W">
-            {shortcutWorkflows.map((workflow, index) => (
-              <MenuCommand
-                key={workflow}
-                label={WORKFLOW_LABELS[workflow]}
-                shortcut={`Alt+${index + 1}`}
-                onInvoke={() => openWorkflow(workflow)}
-              />
-            ))}
-          </DesktopMenu>
-          <DesktopMenu id="tools" label="Tools" mnemonic="T">
-            <MenuCommand
-              label="Staff sign-in…"
-              disabled={!onOpenStaff}
-              onInvoke={onOpenStaff}
-            />
-            <MenuCommand
-              label="Visit location…"
-              disabled={!onOpenLocation}
-              onInvoke={onOpenLocation}
-            />
-            <MenuCommand
-              label="Knowledge Base"
-              disabled={!onOpenKnowledge}
-              onInvoke={onOpenKnowledge}
-            />
-            <MenuCommand
-              label="Daily Closeout"
-              disabled={!onOpenCloseout}
-              onInvoke={onOpenCloseout}
-            />
-          </DesktopMenu>
-          <DesktopMenu id="help" label="Help" mnemonic="H">
-            <MenuCommand
-              label="Keyboard Reference"
-              shortcut={helpCommand.keyLabel}
-              onInvoke={(returnFocus) => {
-                previousFocusRef.current =
-                  returnFocus ??
-                  (document.activeElement as HTMLElement | null);
-                setShowShortcutHelp(true);
-              }}
-            />
-          </DesktopMenu>
-          </MenuBarContext.Provider>
-        </nav>
-
+        {/*
+          The masthead is the open note's context. While a chart is open it
+          said nothing this page does not say better a few pixels lower - and
+          said one thing that was plainly false, "No patient selected" above a
+          Facesheet. Clinic and staff are already in the header's top right, so
+          suppressing it here removes duplication rather than information. The
+          one fact it uniquely carried, that a note is open for someone else,
+          moved into the chart header.
+        */}
+        {!chartOpen && !kioskVisible && (
         <PatientBanner
           patient={patient}
           workflowPatient={workflowPatient}
@@ -1007,36 +1410,112 @@ export function ClinicalDesktopShell({
           selectedWorkflow={selectedWorkflow}
           workflowStateLabel={
             postState === "posted"
-              ? "Locked local record"
+              ? NOTES.statusSigned
               : WORKFLOW_SUMMARY_STATE_LABEL[
                   workflowSummaries[selectedWorkflow]?.state ?? "idle"
                 ]
           }
-          staffLabel={staffLabel}
-          locationLabel={locationLabel}
           onUseWorkflowPatient={onUseWorkflowPatient}
           onSelectLocalRecord={onOpenRecords}
         />
-      </header>
+        )}
+      </AppHeader>
 
       <main
-        class={`cd2004-workspace ${selectedWorkflow === "administer" ? "has-central-preview" : ""}`}
+        class={[
+          "cd2004-workspace",
+          showsDocumentSplit ? "has-central-preview" : "",
+          showsSideInspector ? "has-side-inspector" : "",
+          kioskVisible ? "is-kiosk" : "",
+          kioskVisible && kioskLocked ? "has-kiosk-completion" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         id="cd2004-work-area"
         data-workflow={selectedWorkflow}
       >
+        {kioskVisible ? (
+          <KioskShell
+            patient={patient}
+            workflowPatient={workflowPatient}
+            patientMismatch={isMismatch}
+            context={injectionKioskContext}
+            readiness={readiness}
+            activeStep={injectionKioskStep}
+            locked={Boolean(kioskLocked)}
+            canComplete={canComplete}
+            fullscreen={kioskController.fullscreen}
+            fullscreenSupported={kioskController.fullscreenSupported}
+            onStepChange={setInjectionKioskStep}
+            onUseWorkflowPatient={
+              onUseWorkflowPatient
+                ? () => onUseWorkflowPatient("administer")
+                : undefined
+            }
+            onToggleFullscreen={toggleKioskFullscreen}
+            onExit={exitKioskMode}
+            onPrintHandout={() => {
+              const printed = requestClinicalPrint("injection-avs");
+              if (!printed.ok) setInternalStatus(KIOSK.handoutUnavailable);
+            }}
+            onStartNextPatient={() => {
+              const started = injectionRecordActions?.onStartNew();
+              if (started === false) {
+                setInternalStatus(RECORD.currentNoteStayedOpen);
+                return;
+              }
+              setInjectionKioskStep("identify");
+              setInternalStatus(KIOSK.nextPatientStarted);
+            }}
+          />
+        ) : (
+        <aside class="meditech-context-rail tebra-context-rail">
+          <SectionRail
+            selectedWorkflow={selectedWorkflow}
+            summaries={workflowSummaries}
+            patient={patient}
+            onWorkflowOpen={(workflow) => {
+              // openWorkflow already publishes the correct destination status;
+              // only clear the chart layer after that guarded transition.
+              if (openWorkflow(workflow) && chartPatientKeyState) {
+                closeChart(workflow);
+              }
+            }}
+            onOpenRecords={onOpenRecords}
+            search={
+              <PatientSearch
+                patients={chartIndex.patients}
+                onSelect={(selected) => openChart(selected.key)}
+              />
+            }
+            {...(chartPatient ? { browsedPatientName: chartPatient.name } : {})}
+            {...(chartPatient || activePatientKey
+              ? {
+                  onOpenChart: (view: PatientChartView) =>
+                    openChart(chartPatient?.key ?? activePatientKey, view),
+                }
+              : {})}
+            activeChartView={chartPatient ? chartView : null}
+          />
+          {showsSideInspector && inspectorPanel}
+        </aside>
+        )}
+
         <Panel
           pane="work"
           title={windowTitle}
-          icon={selectedWorkflow}
+          icon={chartPatient ? "patient" : selectedWorkflow}
           subtitle={
-            selectedWorkflow === "home" ? "Local records only" : "Active encounter"
+            chartPatient || selectedWorkflow === "home"
+              ? undefined
+              : SHELL.activeEncounter
           }
           active={focusedPane === "work"}
           onActivate={setFocusedPane}
         >
           <div
             class={`cd2004-transaction-window ${
-              selectedWorkflow === "administer" ? "has-document-split" : ""
+              showsDocumentSplit ? "has-document-split" : ""
             }`}
           >
           <div
@@ -1047,18 +1526,34 @@ export function ClinicalDesktopShell({
           >
             <div
               class={`cd2004-workflow-body ${
-                selectedWorkflow === "administer" ? "is-transaction-scroll" : ""
+                showsInjectionLayout ? "is-transaction-scroll" : ""
               }`}
             >
               {postState === "posting" && (
                 <div class="cd2004-posting-strip" role="status">
                   <span aria-hidden="true" />
-                  Validating required fields and writing local record…
+                  {RECORD.validatingAndSaving}
                 </div>
               )}
-              {workflowContent}
+              {chartPatient ? (
+                <PatientChart
+                  patient={chartPatient}
+                  rows={chartRows}
+                  readiness={readiness}
+                  checklistAppliesToPatient={chartPatient.key === activePatientKey}
+                  view={chartView}
+                  onViewChange={setChartView}
+                  onOpenNote={openChartNote}
+                  onNewNote={startNoteFromChart}
+                  {...(activePatientKey && activePatientKey !== chartPatient.key
+                    ? { otherNotePatient: patient.name?.trim() ?? "" }
+                    : {})}
+                />
+              ) : (
+                workflowContent
+              )}
             </div>
-            {selectedWorkflow === "administer" && injectionRecordActions && (
+            {showsInjectionLayout && injectionRecordActions && (
               <InjectionRecordActions
                 actions={injectionRecordActions}
                 canComplete={canComplete}
@@ -1079,25 +1574,15 @@ export function ClinicalDesktopShell({
               />
             )}
           </div>
-          {selectedWorkflow === "administer" && (
+          {showsDocumentSplit && (
             <div class="cd2004-document-split">{inspectorPanel}</div>
           )}
           </div>
         </Panel>
 
-        <aside class="meditech-context-rail">
-          <MeditechRecordRail
-            selectedWorkflow={selectedWorkflow}
-            summaries={workflowSummaries}
-            patient={patient}
-            onWorkflowOpen={openWorkflow}
-            onOpenRecords={onOpenRecords}
-          />
-          {selectedWorkflow !== "administer" && selectedWorkflow !== "home" && inspectorPanel}
-        </aside>
       </main>
 
-      <MeditechCommandDeck
+      <PowerCommandMenu
         selectedWorkflow={selectedWorkflow}
         contextCode={focusedControl?.fieldCode}
         actions={{
@@ -1123,42 +1608,28 @@ export function ClinicalDesktopShell({
           },
           file: {
             onInvoke: requestDraftSave,
-            disabled: !onSaveDraft,
-            label: selectedWorkflow === "home" ? "File / save" : `Save ${transactionCode}`,
+            disabled: Boolean(chartPatientKeyState) || !onSaveDraft,
+            label: RECORD.save,
           },
           back: { onInvoke: safeBack },
         } satisfies FunctionKeyActions}
       />
 
-      {/*
-        Segmented status bar. Replaces the taskbar/Start button, which emulated
-        the Windows shell rather than an EHR application. `.cd2004-status-message`
-        keeps its live-region contract and exact strings.
-      */}
-      <footer class="cd2004-statusbar cd2004-print-exclude">
-        <div class="cd2004-status-message" aria-live="polite" aria-atomic="true">
-          {effectiveStatus}
-        </div>
-        <div class="cd2004-status-segment" title="Current record mode">
-          {postState === "posted" ? "READ ONLY" : "EDITABLE"}
-        </div>
-        <div
-          class={`cd2004-status-segment ${localStorageAvailable ? "is-online" : "is-error"}`}
-          title={
-            localStorageAvailable
-              ? "Records save only in this browser"
-              : "Browser storage is unavailable"
-          }
-        >
-          {localStorageAvailable ? "LOCAL" : "STORAGE ERROR"}
-        </div>
-      </footer>
+      <Toast message={announcement} />
+
+      <p
+        class="cd2004-visually-hidden"
+        role="status"
+        aria-live="polite"
+        data-status-prompt
+      >
+        {ambientPrompt}
+      </p>
 
       {fieldLookup && (
         <WorkstationLookupDialog
           key={`${fieldLookup.fieldCode}:${fieldLookup.control.name}`}
           transaction={fieldLookup}
-          transactionCode={transactionCode}
           onChoose={chooseFieldLookupValue}
           onDismiss={dismissFieldLookup}
         />
@@ -1231,14 +1702,15 @@ interface RenderWorkflowOptions {
   workflowSlots: NonNullable<ClinicalDesktopShellProps["workflowSlots"]>;
   legacyPanels: NonNullable<ClinicalDesktopShellProps["legacyPanels"]>;
   workHostRef: { current: HTMLDivElement | null };
-  summaries: NonNullable<ClinicalDesktopShellProps["workflowSummaries"]>;
   needsReview: NonNullable<ClinicalDesktopShellProps["needsReview"]>;
   todayQueue: NonNullable<ClinicalDesktopShellProps["todayQueue"]>;
   injectionRecords: NonNullable<ClinicalDesktopShellProps["injectionRecords"]>;
-  onWorkflowOpen: (workflow: WorkflowId) => void;
   onQueueItemOpen?: ClinicalDesktopShellProps["onQueueItemOpen"];
   onRecordOpen?: ClinicalDesktopShellProps["onRecordOpen"];
   onStartNewInjection?: ClinicalDesktopShellProps["onStartNewInjection"];
+  kioskMode: boolean;
+  injectionKioskStep: InjectionKioskStepId;
+  onInjectionKioskStepChange: (step: InjectionKioskStepId) => void;
 }
 
 interface InjectionRecordActionsProps {
@@ -1252,11 +1724,11 @@ interface InjectionRecordActionsProps {
 }
 
 const INJECTION_DEFAULT_DETAIL: Record<RecordLifecycle, string> = {
-  new: "Enter encounter details to begin a local draft.",
-  draft: "Draft saved in this browser. Finish only when the disposition is final.",
-  locked: "This browser-local record is read-only. Corrections require a dated addendum.",
-  saving: "Writing the latest encounter changes to this browser.",
-  error: "The local draft needs storage attention before you leave this encounter.",
+  new: RECORD.newDraftDetail,
+  draft: RECORD.draftSavedDetail,
+  locked: RECORD.readOnlyDetail,
+  saving: RECORD.savingDetail,
+  error: RECORD.storageAttentionDetail,
 };
 
 /**
@@ -1290,13 +1762,13 @@ function InjectionRecordActions({
 
   return (
     <RecordLifecycleActions
-      recordLabel="INJECTION RECORD"
-      ariaLabel="Injection record actions"
+      recordLabel={`${MODULE.injection} note`}
+      ariaLabel={RECORD.injectionActions}
       lifecycle={actions.lifecycle}
       detail={detail}
       rootTestAttribute="data-injection-record-actions"
       buttons={
-        <>
+        actions.unavailable ? null : <>
           {locked && (
             <button
               type="button"
@@ -1319,15 +1791,15 @@ function InjectionRecordActions({
                 disabled={saveDisabled}
                 title={
                   saveDisabled
-                    ? "Enter encounter details before saving a local draft."
-                    : "Save this editable injection draft locally (F12)."
+                    ? RECORD.enterBeforeSaving
+                    : RECORD.saveInjectionDraftDescription
                 }
                 onClick={onSaveDraft}
               >
                 <span class="cd2004-action-glyph" aria-hidden="true">
                   <DesktopIcon name="save" />
                 </span>
-                Save local draft <kbd>F12</kbd>
+                {RECORD.save} <kbd>F12</kbd>
               </button>
               <button
                 type="button"
@@ -1339,16 +1811,16 @@ function InjectionRecordActions({
                     ? actions.blockingDetail
                       ? actions.blockingDetail
                       : blockerCount
-                      ? `Complete ${blockerCount} required clinical ${blockerCount === 1 ? "field" : "fields"} before attesting and locking this local record.`
-                      : "Complete the required clinical fields before finishing and locking this record."
-                    : "Review the local attestation before locking this browser-local record."
+                      ? fieldsBeforeSigning(blockerCount)
+                      : RECORD.fieldsBeforeSigning
+                    : "Review the note before signing it."
                 }
                 onClick={onFinish}
               >
                 <span class="cd2004-action-glyph" aria-hidden="true">
                   <DesktopIcon name="lock" />
                 </span>
-                Attest &amp; lock local record
+                {RECORD.sign}
               </button>
             </>
           )}
@@ -1358,13 +1830,13 @@ function InjectionRecordActions({
             class="is-new"
             data-injection-new
             disabled={posting}
-            title="Start a blank injection. Any current editable work is saved as a local draft first."
+            title={RECORD.startInjectionDescription}
             onClick={actions.onStartNew}
           >
             <span class="cd2004-action-glyph" aria-hidden="true">
               <DesktopIcon name="new" />
             </span>
-            Start new injection
+            {RECORD.startNewInjection}
           </button>
           {!locked && (
             <button
@@ -1374,15 +1846,15 @@ function InjectionRecordActions({
               disabled={discardDisabled}
               title={
                 discardDisabled
-                  ? "There is no editable local draft to discard."
-                  : "Discard this editable local draft. This cannot be undone."
+                  ? RECORD.noDraftToDiscard
+                  : RECORD.discardDraftDescription
               }
               onClick={actions.onDiscard}
             >
               <span class="cd2004-action-glyph" aria-hidden="true">
                 <DesktopIcon name="discard" />
               </span>
-              Discard local draft…
+              {RECORD.discardDraft}…
             </button>
           )}
         </>
@@ -1399,23 +1871,22 @@ function renderWorkflowContent({
   workflowSlots,
   legacyPanels,
   workHostRef,
-  summaries,
   needsReview,
   todayQueue,
   injectionRecords,
-  onWorkflowOpen,
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
+  kioskMode,
+  injectionKioskStep,
+  onInjectionKioskStepChange,
 }: RenderWorkflowOptions): ComponentChildren {
   if (workflow === "home") {
     return (
       <StartCenter
-        summaries={summaries}
         needsReview={needsReview}
         todayQueue={todayQueue}
         injectionRecords={injectionRecords}
-        onWorkflowOpen={onWorkflowOpen}
         onQueueItemOpen={onQueueItemOpen}
         onRecordOpen={onRecordOpen}
         onStartNewInjection={onStartNewInjection}
@@ -1429,6 +1900,9 @@ function renderWorkflowContent({
       hostRef: workHostRef,
       patient,
       isPatientContextMismatched: isMismatch,
+      kioskMode,
+      injectionKioskStep,
+      onInjectionKioskStepChange,
     });
   }
 
@@ -1448,8 +1922,7 @@ function renderWorkflowContent({
     <div class="cd2004-workflow-placeholder">
       <DesktopIcon name={workflow} />
       <strong>{WORKFLOW_LABELS[workflow]}</strong>
-      <span>The application has not connected this workflow panel yet.</span>
-      <code>workflowSlots.{workflow}</code>
+      <span>{SHELL.notePanelUnavailable}</span>
     </div>
   );
 }
@@ -1460,8 +1933,6 @@ interface PatientBannerProps {
   mismatch: boolean;
   selectedWorkflow: WorkflowId;
   workflowStateLabel: string;
-  staffLabel: string;
-  locationLabel: string;
   onUseWorkflowPatient?: (workflow: WorkflowId) => void;
   onSelectLocalRecord?: () => void;
 }
@@ -1472,8 +1943,6 @@ function PatientBanner({
   mismatch,
   selectedWorkflow,
   workflowStateLabel,
-  staffLabel,
-  locationLabel,
   onUseWorkflowPatient,
   onSelectLocalRecord,
 }: PatientBannerProps) {
@@ -1487,15 +1956,14 @@ function PatientBanner({
   const hasIdentifiedPatient = Boolean(patient.name?.trim() && patient.dob?.trim());
   const hasActiveChart = hasLocalRecord || hasIdentifiedPatient;
   const patientNameLabel = hasActiveChart
-    ? patient.name?.trim() || "LOCAL CHART"
-    : "NO ACTIVE CHART";
+    ? patient.name?.trim() || PATIENT.facesheet
+    : PATIENT.noPatient;
   const dobLabel = hasActiveChart ? patient.dob || "—" : "—";
   const recordLabel = patient.visitLabel || patient.localRecordId || "Not selected";
-  const chartContextLabel = hasLocalRecord
-    ? "Local chart"
-    : hasIdentifiedPatient
-      ? "Patient context"
-      : "Chart context";
+  // The banner is the Facesheet in every state. The client/server shell drew a
+  // three-way distinction here ("Local chart" / "Patient context" / "Chart
+  // context") that named its own internals rather than anything staff act on.
+  const chartContextLabel = PATIENT.facesheet;
   const workflowContextLabel = `${WORKFLOW_LABELS[selectedWorkflow]} — ${workflowStateLabel}`;
   const medicationContextPrefix = patient.medicationLabel
     ? `MEDICATION: ${patient.medicationLabel} · `
@@ -1504,8 +1972,8 @@ function PatientBanner({
     selectedWorkflow === "home"
       ? patient.medicationLabel
         ? `MEDICATION: ${patient.medicationLabel}`
-        : `WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
-      : `${medicationContextPrefix}WORKFLOW: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · STATE: ${workflowStateLabel.toUpperCase()}`;
+        : `${SHELL.noteType.toUpperCase()}: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
+      : `${medicationContextPrefix}${SHELL.noteType.toUpperCase()}: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · ${SHELL.status.toUpperCase()}: ${workflowStateLabel.toUpperCase()}`;
   return (
     <div
       class={`cd2004-patient-banner ${
@@ -1520,29 +1988,21 @@ function PatientBanner({
         </span>
       </div>
       <div class="cd2004-patient-field" title={`DOB: ${dobLabel}`}>
-        <small>DOB</small>
+        <small>{PATIENT.dob}</small>
         <strong>{dobLabel}</strong>
       </div>
       <div class="cd2004-patient-field" title={`Local visit / record: ${recordLabel}`}>
-        <small>Local visit / record</small>
+        <small>{PATIENT.visitRecord}</small>
         <strong>{recordLabel}</strong>
       </div>
-      <div class="cd2004-patient-field cd2004-banner-location" title={`Clinic: ${locationLabel}`}>
-        <small>Clinic</small>
-        <strong>{locationLabel}</strong>
-      </div>
-      <div class="cd2004-patient-field cd2004-banner-staff" title={`Staff: ${staffLabel}`}>
-        <small>Staff</small>
-        <strong>{staffLabel}</strong>
-      </div>
       <div class="meditech-patient-safety">
-        <strong>Allergy/AdvReac:</strong>
+        <strong>{PATIENT.allergiesLabel}:</strong>
         <b>
           {hasActiveChart
-            ? patient.allergyStatus || "Not available in this local record"
+            ? patient.allergyStatus || PATIENT.allergiesUnavailable
             : selectedWorkflow === "home"
-              ? "No local record selected"
-              : `No local record selected · ${workflowContextLabel}`}
+              ? PATIENT.allergiesNoPatient
+              : `${PATIENT.allergiesNoPatient} · ${workflowContextLabel}`}
         </b>
         {hasActiveChart ? (
           <small title={workflowContextLabel}>
@@ -1550,14 +2010,14 @@ function PatientBanner({
           </small>
         ) : (
           <button type="button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>
-            Select local record
+            {NOTES.openNotes}
           </button>
         )}
       </div>
       {mismatch && (
         <div class="cd2004-context-mismatch" role="status">
           <span>
-            <strong>Patient context mismatch</strong>
+            <strong>{PATIENT.contextMismatch}</strong>
             <small>
               This {WORKFLOW_LABELS[selectedWorkflow]} draft belongs to{" "}
               {workflowPatient?.name || "another patient"}.
@@ -1572,226 +2032,6 @@ function PatientBanner({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * Menu-tracking context. A real Windows menu bar behaves as one unit: once any
- * menu is open the bar is in "tracking mode", so simply *hovering* a sibling
- * switches to it without a second click. That requires the open state to live
- * above the individual menus, which is why it is threaded through context
- * rather than owned by each menu.
- */
-interface MenuBarContextValue {
-  openMenu: string | null;
-  open: (id: string) => void;
-  close: (restoreFocus?: boolean) => void;
-  moveMenu: (from: string, direction: -1 | 1) => void;
-}
-
-const MenuBarContext = createContext<MenuBarContextValue | null>(null);
-
-/** Provided by each menu so its items can dismiss it and restore focus. */
-const MenuContext = createContext<{ dismiss: (restoreFocus?: boolean) => void } | null>(
-  null,
-);
-
-/** Splits a label at its access key so the mnemonic can be underlined. */
-function renderMnemonic(label: string, mnemonic: string) {
-  const index = label.toLocaleLowerCase().indexOf(mnemonic.toLocaleLowerCase());
-  if (index < 0) return label;
-  return (
-    <>
-      {label.slice(0, index)}
-      <u>{label.slice(index, index + 1)}</u>
-      {label.slice(index + 1)}
-    </>
-  );
-}
-
-interface DesktopMenuProps {
-  id: string;
-  label: string;
-  mnemonic: string;
-  children: ComponentChildren;
-}
-
-function DesktopMenu({ id, label, mnemonic, children }: DesktopMenuProps) {
-  const bar = useContext(MenuBarContext);
-  const titleRef = useRef<HTMLButtonElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-  const isOpen = bar?.openMenu === id;
-  const isTracking = Boolean(bar?.openMenu);
-  // Set when hover-tracking opened this menu, so the click that necessarily
-  // follows the pointer landing here is absorbed rather than toggling it shut.
-  const openedByHoverRef = useRef(false);
-
-  useEffect(() => {
-    if (!isOpen) openedByHoverRef.current = false;
-  }, [isOpen]);
-
-  const dismiss = (restoreFocus = false) => {
-    bar?.close(false);
-    if (restoreFocus) titleRef.current?.focus({ preventScroll: true });
-  };
-
-  // Opening by keyboard puts focus on the first command, matching Windows.
-  useEffect(() => {
-    if (!isOpen) return;
-    const frame = globalThis.requestAnimationFrame(() => {
-      const active = document.activeElement;
-      if (active === titleRef.current) return;
-      if (popupRef.current?.contains(active)) return;
-    });
-    return () => globalThis.cancelAnimationFrame(frame);
-  }, [isOpen]);
-
-  const focusCommand = (offset: number, absolute?: "first" | "last") => {
-    const commands = Array.from(
-      popupRef.current?.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitem"]:not([disabled])',
-      ) ?? [],
-    );
-    if (commands.length === 0) return;
-    const current = commands.indexOf(document.activeElement as HTMLButtonElement);
-    const next =
-      absolute === "first"
-        ? 0
-        : absolute === "last"
-          ? commands.length - 1
-          : (current + offset + commands.length) % commands.length;
-    commands[next]?.focus({ preventScroll: true });
-  };
-
-  return (
-    <div class="cd2004-menu" data-menu={id}>
-      <button
-        ref={titleRef}
-        type="button"
-        role="menuitem"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        class="cd2004-menu-title"
-        onClick={() => {
-          if (openedByHoverRef.current) {
-            openedByHoverRef.current = false;
-            return;
-          }
-          if (isOpen) dismiss(true);
-          else bar?.open(id);
-        }}
-        onPointerEnter={() => {
-          // Menu tracking: hovering a sibling while any menu is open switches
-          // to it, exactly as a native menu bar does.
-          if (isTracking && !isOpen) {
-            openedByHoverRef.current = true;
-            bar?.open(id);
-          }
-        }}
-        onKeyDown={(event) => {
-          switch (event.key) {
-            case "ArrowDown":
-            case "Enter":
-            case " ":
-              event.preventDefault();
-              if (!isOpen) bar?.open(id);
-              globalThis.setTimeout(() => focusCommand(0, "first"), 0);
-              break;
-            case "ArrowUp":
-              event.preventDefault();
-              if (!isOpen) bar?.open(id);
-              globalThis.setTimeout(() => focusCommand(0, "last"), 0);
-              break;
-            case "ArrowRight":
-              event.preventDefault();
-              bar?.moveMenu(id, 1);
-              break;
-            case "ArrowLeft":
-              event.preventDefault();
-              bar?.moveMenu(id, -1);
-              break;
-            default:
-              break;
-          }
-        }}
-      >
-        {renderMnemonic(label, mnemonic)}
-      </button>
-      {isOpen && (
-        <div
-          ref={popupRef}
-          class="cd2004-menu-popup"
-          role="menu"
-          aria-label={label}
-          onKeyDown={(event) => {
-            switch (event.key) {
-              case "ArrowDown":
-                event.preventDefault();
-                focusCommand(1);
-                break;
-              case "ArrowUp":
-                event.preventDefault();
-                focusCommand(-1);
-                break;
-              case "Home":
-                event.preventDefault();
-                focusCommand(0, "first");
-                break;
-              case "End":
-                event.preventDefault();
-                focusCommand(0, "last");
-                break;
-              case "ArrowRight":
-                event.preventDefault();
-                bar?.moveMenu(id, 1);
-                break;
-              case "ArrowLeft":
-                event.preventDefault();
-                bar?.moveMenu(id, -1);
-                break;
-              default:
-                break;
-            }
-          }}
-        >
-          <MenuContext.Provider value={{ dismiss }}>{children}</MenuContext.Provider>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface MenuCommandProps {
-  label: string;
-  shortcut?: string;
-  disabled?: boolean;
-  onInvoke?: (returnFocus?: HTMLElement) => void;
-}
-
-function MenuCommand({
-  label,
-  shortcut,
-  disabled = false,
-  onInvoke,
-}: MenuCommandProps) {
-  const menu = useContext(MenuContext);
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={disabled}
-      onClick={(event) => {
-        const returnFocus =
-          event.currentTarget
-            .closest(".cd2004-menu")
-            ?.querySelector<HTMLElement>(".cd2004-menu-title") ?? undefined;
-        onInvoke?.(returnFocus);
-        menu?.dismiss(false);
-      }}
-    >
-      <span>{label}</span>
-      {shortcut && <kbd>{shortcut}</kbd>}
-    </button>
   );
 }
 

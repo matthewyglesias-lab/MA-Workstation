@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
+  filteredNoteCount,
+  noteCount,
+  NOTES,
+  NOTES_TABLE,
+  OPEN_NOTES,
+  RECORD,
+} from "./vocabulary";
+import {
   InjectionRecordRepository,
   type InjectionRecord,
 } from "../persistence/injection-records";
@@ -7,10 +15,11 @@ import { browserSafeStorage } from "../persistence/storage";
 import {
   addendaCount,
   searchText,
-  stamp,
-  timeOf,
   trapDialogTabKey,
 } from "./records-drawer-shared";
+import { NotesTable } from "./notes/NotesTable";
+import { injectionRecordToNotesTableRow } from "./notes/note-table-model";
+import { isUsableInjectionRecord } from "./workflows/injection/injection-presentation-extension";
 
 /**
  * Injection record selection window.
@@ -27,8 +36,6 @@ import {
  */
 
 type RecordFilter = "all" | "draft" | "locked" | "addenda";
-type SortKey = "patient" | "medication" | "activity";
-type SortDirection = "asc" | "desc";
 
 interface LegacyRecordsBridge {
   open: (id: string) => boolean | void;
@@ -42,32 +49,11 @@ const bridge = (): LegacyRecordsBridge | undefined =>
   (window as unknown as { IPMGRecords?: LegacyRecordsBridge }).IPMGRecords;
 
 const FILTERS: Array<[RecordFilter, string]> = [
-  ["all", "All"],
-  ["draft", "Drafts"],
-  ["locked", "Locked"],
-  ["addenda", "Addenda"],
+  ["all", OPEN_NOTES.filterAll],
+  ["draft", NOTES.statusIncomplete],
+  ["locked", NOTES.statusSigned],
+  ["addenda", OPEN_NOTES.filterAddenda],
 ];
-
-const COLUMNS: Array<{ key: SortKey; label: string }> = [
-  { key: "patient", label: "Patient" },
-  { key: "medication", label: "Medication" },
-  { key: "activity", label: "Last activity" },
-];
-
-/** Same shape legacy's `drawerMessage()` produced. */
-const activityText = (record: InjectionRecord): string => {
-  const extra = addendaCount(record);
-  const suffix = extra ? ` / ${extra} addendum${extra === 1 ? "" : "s"}` : "";
-  return record.status === "completed"
-    ? `${record.attestation ? "Attested local lock" : "Legacy local lock"} ${stamp(record.completedAt || record.updatedAt)}${suffix}`
-    : `Draft updated ${stamp(record.updatedAt)}${suffix}`;
-};
-
-const patientOf = (record: InjectionRecord): string =>
-  record.patient?.name?.trim() || record.summary || "Untitled injection";
-
-const medicationOf = (record: InjectionRecord): string =>
-  record.summary || "No medication selected";
 
 interface RecordsWindowProps {
   open: boolean;
@@ -78,12 +64,22 @@ interface RecordsWindowProps {
    * let the previous blank worksheet mirror back over its restored values.
    */
   onRecordOpen?: (id: string) => boolean;
+  /** Starts a new injection only after the shell accepts the transition. */
+  onCreate?: () => boolean;
+  /**
+   * Runs only after the native dialog has actually closed following a
+   * successful Open/New handoff. At that point the background is no longer
+   * inert and browser focus restoration cannot overwrite the editor focus.
+   */
+  onHandoffComplete?: () => void;
 }
 
 export function RecordsWindow({
   open,
   onClose,
   onRecordOpen,
+  onCreate,
+  onHandoffComplete,
 }: RecordsWindowProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -93,15 +89,29 @@ export function RecordsWindow({
   const [records, setRecords] = useState<InjectionRecord[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecordFilter>("all");
-  // Newest first: the encounter you were just in is the one you usually want.
-  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({
-    key: "activity",
-    direction: "desc",
-  });
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   const reload = () => {
     const result = new InjectionRecordRepository(browserSafeStorage()).list();
-    setRecords(result.ok ? result.value : []);
+    if (!result.ok) {
+      setRecords([]);
+      setStorageError(result.error.message);
+      return;
+    }
+    const idCounts = result.value.reduce<Map<string, number>>((counts, record) => {
+      counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+      return counts;
+    }, new Map());
+    const usableRecords = result.value.filter(
+      (record) => idCounts.get(record.id) === 1 && isUsableInjectionRecord(record),
+    );
+    setRecords(usableRecords);
+    setStorageError(
+      result.warnings.length > 0 || usableRecords.length !== result.value.length
+        ? RECORD.injectionStorageNeedsAttention
+        : null,
+    );
   };
 
   useEffect(() => {
@@ -117,6 +127,7 @@ export function RecordsWindow({
     if (!dialog) return;
     if (open && !dialog.open) {
       reload();
+      setActionError(null);
       openerRef.current = document.activeElement as HTMLElement | null;
       dialog.showModal();
       // showModal() focuses the first autofocus element, but the search field
@@ -130,7 +141,7 @@ export function RecordsWindow({
 
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
-    const matches = records.filter((record) => {
+    return records.filter((record) => {
       const passesFilter =
         filter === "all"
           ? true
@@ -138,24 +149,8 @@ export function RecordsWindow({
             ? addendaCount(record) > 0
             : record.status === (filter === "locked" ? "completed" : "draft");
       return passesFilter && (!needle || searchText(record).includes(needle));
-    });
-    const direction = sort.direction === "asc" ? 1 : -1;
-    return matches.sort((a, b) => {
-      if (sort.key === "activity") {
-        return (timeOf(a.updatedAt) - timeOf(b.updatedAt)) * direction;
-      }
-      const read = sort.key === "patient" ? patientOf : medicationOf;
-      return read(a).localeCompare(read(b)) * direction;
-    });
-  }, [records, query, filter, sort]);
-
-  const toggleSort = (key: SortKey) =>
-    setSort((current) =>
-      current.key === key
-        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
-        : // Names read A-Z first; a date column is more useful newest-first.
-          { key, direction: key === "activity" ? "desc" : "asc" },
-    );
+    }).map(injectionRecordToNotesTableRow);
+  }, [records, query, filter]);
 
   const onKeyDown = (event: KeyboardEvent) => trapDialogTabKey(dialogRef.current, event);
 
@@ -172,19 +167,47 @@ export function RecordsWindow({
    * after everyone else has had their turn.
    */
   const handleDialogClose = () => {
+    setActionError(null);
     onClose();
     const opener = openerRef.current;
     const handedOff = handedOffRef.current;
     handedOffRef.current = false;
-    if (handedOff || !opener?.isConnected) return;
+    if (handedOff) {
+      requestAnimationFrame(() => onHandoffComplete?.());
+      return;
+    }
+    if (!opener?.isConnected) return;
     requestAnimationFrame(() => {
       if (opener.isConnected) opener.focus();
     });
   };
 
   const openRecord = (id: string) => {
+    const invoked = document.activeElement as HTMLElement | null;
     const opened = onRecordOpen ? onRecordOpen(id) : bridge()?.open(id);
-    if (opened === false) return;
+    if (opened === false) {
+      setActionError(RECORD.currentNoteStayedOpen);
+      requestAnimationFrame(() => {
+        if (invoked?.isConnected && dialogRef.current?.contains(invoked)) invoked.focus();
+      });
+      return;
+    }
+    setActionError(null);
+    handedOffRef.current = true;
+    onClose();
+  };
+
+  const createRecord = () => {
+    const invoked = document.activeElement as HTMLElement | null;
+    const created = onCreate ? onCreate() : bridge()?.create();
+    if (created === false) {
+      setActionError(RECORD.currentNoteStayedOpen);
+      requestAnimationFrame(() => {
+        if (invoked?.isConnected && dialogRef.current?.contains(invoked)) invoked.focus();
+      });
+      return;
+    }
+    setActionError(null);
     handedOffRef.current = true;
     onClose();
   };
@@ -200,21 +223,20 @@ export function RecordsWindow({
       class="records-drawer-layer"
       aria-labelledby="recordsDrawerTitle"
       onClose={handleDialogClose}
-      onCancel={handleDialogClose}
       onKeyDown={onKeyDown}
       onClick={(event) => {
         if (event.target === dialogRef.current) onClose();
       }}
     >
-      <section class="records-drawer" role="dialog" aria-labelledby="recordsDrawerTitle">
+      <section class="records-drawer">
         <div class="records-drawer-head">
           <div>
-            <h2 id="recordsDrawerTitle">Local EMR / Record List</h2>
+            <h2 id="recordsDrawerTitle">{NOTES.openNotes}</h2>
           </div>
           <button
             type="button"
             class="records-drawer-close"
-            aria-label="Close Local EMR / Record List"
+            aria-label={OPEN_NOTES.close}
             onClick={onClose}
           >
             X
@@ -223,12 +245,12 @@ export function RecordsWindow({
 
         <div class="records-drawer-search">
           <label class="records-sr-only" for="recordsDrawerSearch">
-            Search local injection records
+            {OPEN_NOTES.searchInjection}
           </label>
           <input
             id="recordsDrawerSearch"
             type="search"
-            placeholder="Patient, DOB, medication, NDC, or lot"
+            placeholder={OPEN_NOTES.searchInjectionPlaceholder}
             autocomplete="off"
             value={query}
             onInput={(event) => setQuery(event.currentTarget.value)}
@@ -241,7 +263,11 @@ export function RecordsWindow({
           </span>
         </div>
 
-        <div class="records-drawer-filters" role="group" aria-label="Filter local injection records">
+        <div
+          class="records-drawer-filters"
+          role="group"
+          aria-label={OPEN_NOTES.filterInjection}
+        >
           {FILTERS.map(([key, label]) => (
             <button
               key={key}
@@ -258,91 +284,43 @@ export function RecordsWindow({
 
         <div class="records-drawer-status" id="recordsDrawerStatus" role="status" aria-live="polite">
           {visible.length === records.length
-            ? `${records.length} local record${records.length === 1 ? "" : "s"}`
-            : `${visible.length} of ${records.length} local record${records.length === 1 ? "" : "s"}`}
+            ? noteCount(records.length)
+            : filteredNoteCount(visible.length, records.length)}
         </div>
 
-        <div class="records-drawer-results" id="recordsDrawerResults">
-          <div class="records-drawer-columns" role="row">
-            {COLUMNS.map((column) => {
-              const active = sort.key === column.key;
-              return (
-                <button
-                  key={column.key}
-                  type="button"
-                  role="columnheader"
-                  data-records-sort={column.key}
-                  class={`${active ? "is-sorted" : ""} ${active && sort.direction === "desc" ? "is-desc" : ""}`}
-                  aria-sort={
-                    active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"
-                  }
-                  onClick={() => toggleSort(column.key)}
-                >
-                  {column.label}
-                </button>
-              );
-            })}
-            <span class="records-drawer-action-heading" role="columnheader">
-              Action
-            </span>
-          </div>
+        {(actionError ?? storageError) && (
+          <p class="cd2004-system-message is-error records-drawer-action-error" role="alert">
+            {actionError ?? storageError}
+          </p>
+        )}
 
-          {!open ? null : visible.length ? (
-            visible.map((record) => {
-              const locked = record.status === "completed";
-              const attested = locked && Boolean(record.attestation);
-              const action = locked ? "View locked snapshot" : "Resume draft";
-              return (
-                <button
-                  key={record.id}
-                  type="button"
-                  class={`records-drawer-row ${locked ? "locked" : "draft"}`}
-                  data-records-open={record.id}
-                  aria-label={`${action} for ${patientOf(record)}`}
-                  onClick={() => openRecord(String(record.id))}
-                >
-                  <span class="records-drawer-row-top">
-                    <span class="records-drawer-row-title">{patientOf(record)}</span>
-                    <span class={`records-drawer-row-badge ${locked ? "locked" : "draft"}`}>
-                      {locked ? (attested ? "Locked" : "Legacy lock") : "Draft"}
-                    </span>
-                  </span>
-                  <span class="records-drawer-row-summary">{medicationOf(record)}</span>
-                  <span class="records-drawer-row-meta">{activityText(record)}</span>
-                  <span class="records-drawer-row-action" aria-hidden="true">
-                    {locked ? "View" : "Resume"}
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <div class="records-drawer-empty">
-              <b>No matching local injection records.</b>
-              <span>Try another patient, medication, traceability field, or filter.</span>
-            </div>
+        <div class="records-drawer-results" id="recordsDrawerResults">
+          {!open ? null : (
+            <NotesTable
+              rows={visible}
+              label={NOTES_TABLE.injectionLabel}
+              emptyMessage={OPEN_NOTES.noMatches}
+              onOpen={openRecord}
+            />
           )}
         </div>
 
         <div class="records-drawer-foot">
           <p>
-            Saved only in this browser. Locked records remain read-only. Starting a new
-            injection retains any current local draft.
+            {OPEN_NOTES.injectionFooter}
           </p>
           <div class="records-drawer-foot-actions">
             <button type="button" class="records-drawer-cancel" onClick={onClose}>
-              Close
+              {OPEN_NOTES.closeAction}
             </button>
             <button
               type="button"
               class="records-drawer-new"
               data-records-new
-              onClick={() => {
-                handedOffRef.current = true;
-                onClose();
-                bridge()?.create();
-              }}
+              onClick={createRecord}
+              disabled={Boolean(storageError)}
             >
-              Start new injection
+              {RECORD.startNewInjection}
             </button>
           </div>
         </div>

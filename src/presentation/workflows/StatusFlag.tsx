@@ -1,3 +1,5 @@
+import { CHECKLIST, NOTES } from "../vocabulary";
+
 export interface StatusFlagProps {
   idle: boolean;
   stopCount: number;
@@ -22,18 +24,25 @@ export function StatusFlag({ idle, stopCount, warningCount, onOpenRequirements }
         ? "is-warning"
         : "is-ready";
   const label = idle
-    ? "Not started"
+    ? NOTES.statusNotStarted
     : stopCount > 0
-      ? `${stopCount} stop${stopCount === 1 ? "" : "s"}`
+      ? CHECKLIST.stopCount(stopCount)
       : warningCount > 0
-        ? `${warningCount} to review`
-        : "Ready";
+        ? CHECKLIST.reviewCount(warningCount)
+        : NOTES.statusReadyToSign;
+  const icon = idle ? "○" : stopCount > 0 ? "×" : warningCount > 0 ? "!" : "✓";
   if (stopCount > 0 && onOpenRequirements) {
     return (
       <button type="button" class={`wfp-status-flag ${variant}`} onClick={onOpenRequirements}>
+        <span class="wfp-status-icon" aria-hidden="true">{icon}</span>
         {label}
       </button>
     );
   }
-  return <span class={`wfp-status-flag ${variant}`}>{label}</span>;
+  return (
+    <span class={`wfp-status-flag ${variant}`}>
+      <span class="wfp-status-icon" aria-hidden="true">{icon}</span>
+      {label}
+    </span>
+  );
 }

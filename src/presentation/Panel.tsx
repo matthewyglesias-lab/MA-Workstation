@@ -15,10 +15,9 @@ interface PanelProps {
 }
 
 /**
- * A fixed structural section of the desktop (nav rail, main work area, note
- * rail) styled like a classic terminal panel. Unlike the retired window
- * manager, panels cannot be minimized, maximized, closed, or reordered —
- * every panel a workflow needs is always in its place.
+ * A fixed structural region of the clinical workspace. Panels cannot be
+ * minimized, maximized, closed, or reordered: every region a workflow needs
+ * remains in its predictable place.
  */
 export function Panel({
   pane,

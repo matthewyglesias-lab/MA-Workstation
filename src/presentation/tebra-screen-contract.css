@@ -1,0 +1,758 @@
+/*
+ * Final on-screen visual contract for the workstation. Loaded after the shell,
+ * the shared workflow panels, and the composition pass, so component import
+ * order cannot create a second visual language. Patient-facing print documents
+ * deliberately remain outside this screen-only contract.
+ *
+ * Replaces meditech-screen-contract.css. That file did two different jobs at
+ * once: it forced a client/server visual language (square edges, raised
+ * bezels, a periwinkle palette, Courier data), and it carried a handful of
+ * genuine layout fixes whose comments record the bugs they closed. Only the
+ * first job is retired here. Every documented layout fix below is carried over
+ * unchanged, comment and all - deleting them would reopen bugs someone already
+ * paid to find.
+ *
+ * It also re-declared `--cd-chrome`, `--cd-face`, `--cd-paper`, `--cd-border-*`
+ * and `--cd-selection` on `.cd2004-shell`, overriding the shell's own palette
+ * from a later file. That is exactly the layering this redesign is removing, so
+ * the redeclarations are gone: clinical-desktop.css owns those names and points
+ * them at the Tebra tokens.
+ */
+
+@media screen {
+  /*
+   * Only the names the shell does not already define. Everything else now
+   * resolves to the token palette set at source in clinical-desktop.css.
+   */
+  .cd2004-shell {
+    --mt-screen-line-light: var(--tw-white);
+    --mt-screen-muted: var(--tw-text-secondary);
+    --mt-screen-selected: var(--tw-mint-150);
+    --mt-screen-patient: var(--tw-ready-bg);
+    --mt-screen-complete: var(--tw-ready-bg);
+    --mt-screen-review: var(--tw-review-bg);
+    --mt-screen-stop: var(--tw-stop-bg);
+    --mt-screen-chrome: var(--tw-mint-150);
+    --mt-screen-face: var(--tw-mint-100);
+    --mt-screen-paper: var(--tw-surface-panel);
+    --mt-screen-line: var(--tw-border-subtle);
+  }
+
+  /*
+   * Tebra uses two related control grammars. Chart navigation is a flat,
+   * full-width row; explicit actions are pills. Keeping those jobs separate
+   * matters here: a border around every rail row turns the chart back into a
+   * stack of desktop-era buttons even when the palette is otherwise right.
+   */
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-worklist-action,
+      .meditech-command-deck button,
+      .cd2004-record-actions-buttons button,
+      .cd2004-launcher-tile,
+      .wfp-field-lookup-button,
+      .wfp-site-tile,
+      .wfp-disposition-list .wfp-option-row
+    ) {
+    border-radius: var(--tw-radius-ws);
+  }
+
+  .cd2004-shell button.cd2004-worklist-new,
+  .cd2004-shell button.cd2004-worklist-action,
+  .cd2004-shell .meditech-command-deck button,
+  .cd2004-shell .cd2004-record-actions-buttons button,
+  .cd2004-shell .cd2004-launcher-tile {
+    background-image: none;
+    box-shadow: none;
+    border: 1px solid var(--tw-border-subtle);
+    transition: background-color var(--tw-dur-base) ease-in-out;
+  }
+
+  .cd2004-shell button.cd2004-worklist-new:hover,
+  .cd2004-shell button.cd2004-worklist-action:hover,
+  .cd2004-shell .meditech-command-deck button:hover,
+  .cd2004-shell .cd2004-record-actions-buttons button:hover,
+  .cd2004-shell .cd2004-launcher-tile:hover {
+    background-color: var(--tw-mint-50);
+  }
+
+  /* Tebra's secondary-active treatment, in place of a sunken bezel. */
+  .cd2004-shell button.cd2004-worklist-new:active,
+  .cd2004-shell button.cd2004-worklist-action:active,
+  .cd2004-shell .meditech-command-deck button:active,
+  .cd2004-shell .cd2004-record-actions-buttons button:active {
+    background-image: none;
+    background-color: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
+    color: var(--tw-text-primary);
+    box-shadow: none;
+  }
+
+  /* Modern chart actions: 38px pills, white outlined secondaries and one
+     coral primary. The workflow may contain several consequential actions,
+     but only Save/Sign (the explicitly marked primary) receives coral. */
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-worklist-action,
+      .cd2004-record-actions-buttons button
+    ) {
+    min-height: var(--tw-action-height);
+    padding: 6px 16px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-action-border);
+    border-radius: var(--tw-radius-action);
+    font: 600 var(--tw-fs-ws-dense) / var(--tw-lh-ws-dense) var(--tw-font-sans);
+  }
+
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-record-actions-buttons button.is-primary
+    ) {
+    color: var(--tw-teal-800);
+    background: var(--tw-coral-500);
+    border-color: var(--tw-coral-500);
+  }
+
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-record-actions-buttons button.is-primary
+    ):hover:not(:disabled) {
+    background: var(--tw-coral-300);
+    border-color: var(--tw-coral-300);
+  }
+
+  .cd2004-shell :is(
+      .cd2004-worklist-new,
+      .cd2004-record-actions-buttons button.is-primary
+    ):active:not(:disabled) {
+    color: var(--tw-teal-900);
+    background: var(--tw-coral-600);
+    border-color: var(--tw-coral-600);
+  }
+
+  .cd2004-shell .cd2004-record-actions-buttons button.is-danger {
+    color: var(--tw-stop-fg);
+    background: var(--tw-stop-bg);
+    border-color: var(--tw-stop-border);
+  }
+
+  .cd2004-shell .cd2004-record-actions-buttons button:disabled {
+    color: var(--tw-text-muted);
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-subtle);
+    cursor: not-allowed;
+  }
+
+  /* Lifecycle chrome follows the note editor's useful structure (a fixed
+     action footer) without copying its dated 11px controls. It remains a
+     sibling of the scrolling clinical page, so Save/Sign/New never disappear
+     when the worksheet is long. */
+  .cd2004-shell .cd2004-record-actions {
+    position: relative;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 8px 12px;
+    background: var(--tw-surface-panel);
+    border-top: 1px solid var(--tw-border-subtle);
+    box-shadow: 0 -2px 8px rgb(0 58 67 / 8%);
+  }
+
+  .cd2004-shell .cd2004-record-actions-state {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 2px 8px;
+    min-width: 0;
+    padding-left: 8px;
+    border-left: 3px solid var(--tw-border-strong);
+  }
+
+  .cd2004-shell .cd2004-record-actions-state > span {
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    font-weight: 700;
+    letter-spacing: var(--tw-ls-ws-label);
+    text-transform: uppercase;
+  }
+
+  .cd2004-shell .cd2004-record-actions-state > strong {
+    color: var(--tw-text-primary);
+    font-size: var(--tw-fs-ws-dense);
+    line-height: var(--tw-lh-ws-dense);
+  }
+
+  .cd2004-shell .cd2004-record-actions-state > small {
+    grid-column: 1 / -1;
+    min-width: 0;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+    line-height: var(--tw-lh-ws-meta);
+    overflow-wrap: anywhere;
+  }
+
+  .cd2004-shell .cd2004-record-actions.is-draft .cd2004-record-actions-state,
+  .cd2004-shell .cd2004-record-actions.is-saving .cd2004-record-actions-state {
+    border-left-color: var(--tw-review-border);
+  }
+
+  .cd2004-shell .cd2004-record-actions.is-locked .cd2004-record-actions-state {
+    border-left-color: var(--tw-ready-fg);
+  }
+
+  .cd2004-shell .cd2004-record-actions.is-error .cd2004-record-actions-state {
+    border-left-color: var(--tw-stop-fg);
+  }
+
+  .cd2004-shell .cd2004-record-actions-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .cd2004-shell .cd2004-record-actions-buttons button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell .cd2004-action-glyph {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+  }
+
+  .cd2004-shell .cd2004-action-glyph svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .cd2004-shell .cd2004-record-action-separator {
+    align-self: center;
+    width: 1px;
+    height: 24px;
+    margin-inline: 2px;
+    background: var(--tw-border-subtle);
+  }
+
+  @media (max-width: 919px),
+    (min-width: 920px) and (max-width: 1599px) and (max-height: 800px) {
+    .cd2004-shell .cd2004-record-actions {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+      padding: 6px 8px;
+    }
+
+    .cd2004-shell .cd2004-record-actions-state {
+      grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    .cd2004-shell .cd2004-record-actions-state > small {
+      grid-column: auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* The compact bar cannot grow with an arbitrary clinical/persistence
+       sentence without stealing the worksheet's scroll viewport. Keyboard
+       focus reveals that complete sentence in an anchored popover instead of
+       leaving the ellipsis discoverable only through a mouse-only title. */
+    .cd2004-shell .cd2004-record-actions-state > small:focus-visible {
+      position: absolute;
+      z-index: 6;
+      right: 8px;
+      bottom: calc(100% + 4px);
+      left: 8px;
+      max-height: min(160px, 40vh);
+      padding: 8px 10px;
+      overflow: auto;
+      color: var(--tw-text-primary);
+      background: var(--tw-surface-panel);
+      border: 1px solid var(--tw-border-strong);
+      border-radius: var(--tw-radius-tight);
+      box-shadow: var(--tw-shadow-elevation-1);
+      white-space: normal;
+      text-overflow: clip;
+    }
+
+    .cd2004-shell .cd2004-record-actions-buttons {
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .cd2004-shell .cd2004-record-actions-buttons button {
+      min-height: 36px;
+      padding: 5px 12px;
+    }
+
+    /* This row scrolls horizontally when actions outgrow a compact work pane.
+       Draw its keyboard ring inward so the scroller cannot clip the top and
+       bottom strokes while preserving the full 2px focus indicator. */
+    .cd2004-shell .cd2004-record-actions-buttons button:focus-visible {
+      outline-offset: -2px;
+    }
+  }
+
+  @media (min-width: 800px) and (max-width: 1599px) and (max-height: 800px) {
+    .cd2004-shell .cd2004-record-actions {
+      gap: 2px;
+      padding: 3px 8px;
+    }
+
+    .cd2004-shell .cd2004-record-actions-state {
+      min-height: 18px;
+    }
+
+    .cd2004-shell .cd2004-record-actions-buttons {
+      gap: 6px;
+    }
+
+    .cd2004-shell .cd2004-record-actions-buttons button {
+      padding-inline: 10px;
+    }
+  }
+
+  /* The document inspector previously left its direct icons at the SVG's
+     intrinsic size. In the stacked layout that turned a small note glyph (and
+     the copy glyph below it) into full-card illustrations that displaced the
+     readiness content. Give the header and toolbar their real control
+     geometry, then keep the empty state intentionally restrained. */
+  .cd2004-shell .cd2004-note-heading > svg {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--tw-teal-800);
+  }
+
+  .cd2004-shell .cd2004-note-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 34px;
+    padding: 4px 8px;
+    background: var(--tw-surface-panel);
+    border-bottom: 1px solid var(--tw-border-subtle);
+  }
+
+  .cd2004-shell .cd2004-note-mode {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--tw-text-secondary);
+    font: 700 var(--tw-fs-ws-label) / var(--tw-lh-ws-label) var(--tw-font-sans);
+    letter-spacing: var(--tw-ls-ws-label);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd2004-shell .cd2004-note-copy-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 4px 9px;
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-action-border);
+    border-radius: var(--tw-radius-action);
+    font: 600 var(--tw-fs-ws-label) / var(--tw-lh-ws-label) var(--tw-font-sans);
+  }
+
+  .cd2004-shell .cd2004-note-copy-all svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .cd2004-shell .cd2004-note-empty {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 4px;
+    min-height: 96px;
+    padding: 16px;
+    color: var(--tw-text-secondary);
+    text-align: center;
+    font: var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
+  }
+
+  /*
+   * A 30px glyph read as a broken image in a panel this wide. The spot
+   * illustration is sized to the inspector instead, and capped so the sentence
+   * under it stays the first thing read.
+   */
+  .cd2004-shell .cd2004-note-empty .tebra-illustration {
+    display: block;
+    width: 100%;
+    max-width: 152px;
+    height: auto;
+    margin-bottom: 2px;
+  }
+
+  .cd2004-shell .cd2004-note-empty strong {
+    color: var(--tw-text-primary);
+    font-weight: 700;
+  }
+
+  .cd2004-shell .cd2004-note-empty strong::before,
+  .cd2004-shell .cd2004-note-empty strong::after {
+    content: none;
+  }
+
+  .cd2004-shell .cd2004-note-empty span {
+    max-width: 28ch;
+    margin: 0;
+    color: var(--tw-text-secondary);
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  @media (min-width: 800px) and (max-width: 839px) and (min-height: 600px) {
+    .cd2004-shell .cd2004-note-empty {
+      gap: 2px;
+      min-height: 0;
+      padding: 6px;
+    }
+
+    .cd2004-shell .cd2004-note-empty .tebra-illustration {
+      max-width: 96px;
+      margin-bottom: 0;
+    }
+
+    .cd2004-shell .cd2004-note-empty span {
+      display: none;
+    }
+  }
+
+  .cd2004-shell .wfp-panel {
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-panel,
+  .cd2004-shell [data-workflow="administer"] .wfp-transaction-chrome {
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-shell .wfp-summary-bar,
+  .cd2004-shell .wfp-section-head {
+    background: var(--tw-surface-sunken);
+  }
+
+  .cd2004-shell .wfp-tabbar,
+  .cd2004-shell [data-workflow="administer"] .wfp-tabbar {
+    background: var(--tw-surface-sunken);
+    border-bottom-color: var(--tw-border-subtle);
+  }
+
+  .cd2004-shell .wfp-tab {
+    border-radius: var(--tw-radius-ws) var(--tw-radius-ws) 0 0;
+  }
+
+  .cd2004-shell .wfp-field-lookup-button {
+    min-height: var(--tw-btn-h-ws);
+    color: var(--tw-teal-800);
+    background: var(--tw-surface-panel);
+    border: 1px solid var(--tw-border-strong);
+    box-shadow: none;
+  }
+
+  .cd2004-shell .wfp-field-lookup-button:hover {
+    background: var(--tw-mint-50);
+  }
+
+  .cd2004-shell .wfp-field-lookup-button:active {
+    background: rgb(0 73 82 / 8%);
+    border-style: solid;
+    box-shadow: none;
+  }
+
+  /*
+   * Identifiers, results and lot numbers stay monospaced - they are read
+   * character by character and compared against a vial. Same intent as before;
+   * the face is now the token mono rather than Courier New.
+   */
+  .cd2004-shell .wfp-ledger-sequence,
+  .cd2004-shell .wfp-ledger-state,
+  .cd2004-shell .wfp-result-cycle b,
+  .cd2004-shell .wfp-result-flag {
+    font-family: var(--tw-font-mono);
+    font-variant-numeric: var(--tw-numeric-tabular);
+  }
+
+  .cd2004-shell .wfp-custom-device-register,
+  .cd2004-shell .wfp-panel-sequence,
+  .cd2004-shell .wfp-exception-register {
+    border-color: var(--tw-border-subtle);
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-shell .wfp-panel-sequence li,
+  .cd2004-shell .wfp-exception-line {
+    border-color: var(--tw-border-subtle);
+  }
+
+  .cd2004-shell .wfp-sequence-number,
+  .cd2004-shell .wfp-exception-head {
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-sunken);
+    border-color: var(--tw-border-subtle);
+  }
+
+  .cd2004-shell .wfp-exception-line {
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+  }
+
+  .cd2004-shell .wfp-exception-line:hover,
+  .cd2004-shell .wfp-exception-line:focus {
+    background: var(--tw-review-bg);
+    outline-color: var(--tw-review-border);
+  }
+
+  /* Injection site selection is a compact register. The illustration remains a
+     quick anatomical cue, not a dashboard tile.
+
+     Sites are anatomically paired and rendered in R, L order. An `auto-fill`
+     track count resolved to 5 in this column, which is the one arrangement that
+     splits a pair: R dorsogluteal ended the first row and L dorsogluteal was
+     orphaned alone on the second. Pin an even count so left and right always
+     sit side by side, whatever number of sites the product allows. */
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-quadrant-grid {
+    gap: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile {
+    display: grid;
+    grid-template-columns: 15px 24px minmax(0, 1fr);
+    align-items: center;
+    gap: 5px;
+    min-height: 34px;
+    padding: 4px 5px;
+    color: var(--tw-text-primary);
+    background: var(--tw-surface-panel);
+    border-color: var(--tw-border-subtle);
+    text-align: left;
+    /* The selection marker lives in this gutter. Reserved in both states and
+       transparent when unselected, so selecting a tile never overlays the
+       control or shifts the row by the marker's width. */
+    border-left: 3px solid transparent;
+  }
+
+  /* `relative`, not `static`. The checked dot is an absolutely positioned
+     `::after` inset inside the control, so a static radio hands it to the
+     nearest positioned ancestor - the tile - and the 13px dot painted as a
+     182x28 slab over the icon and the site name. Relative keeps the radio in
+     the grid flow and still contains its own dot. */
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile input[type="radio"] {
+    position: relative;
+    grid-column: 1;
+    margin: 0;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-icon {
+    grid-column: 2;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-title {
+    grid-column: 3;
+    font-size: var(--tw-fs-ws-label);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-badge {
+    grid-column: 2 / -1;
+    justify-self: start;
+    color: var(--tw-review-fg);
+    background: var(--tw-review-bg);
+    border-color: var(--tw-review-border);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile:hover {
+    background: var(--tw-mint-50);
+  }
+
+  /* An `inset` shadow paints inside the padding box, over whatever sits there,
+     which is what nibbled the left edge of the content. The reserved border
+     gutter carries the marker instead. */
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile.is-selected {
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
+    border-left-color: var(--tw-teal-800);
+  }
+
+  /* The final disposition is visually important but belongs to the same
+     control vocabulary as the rest of the worksheet. */
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list.wfp-option-list-inline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 3px;
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row {
+    min-height: 34px;
+    padding: 4px 6px;
+    border: 1px solid var(--tw-border-subtle);
+    border-left-width: 3px;
+    box-shadow: none;
+    background: var(--tw-surface-panel);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-ready {
+    border-left-color: var(--cd-green);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-warning {
+    border-left-color: var(--tw-review-fg);
+  }
+
+  /* These rows already reserve a 3px left border as their state marker, so the
+     `inset` shadows were a second bar drawn on top of it - and unlike a border,
+     an inset shadow paints inside the padding box, over the row's own content.
+     The border alone carries the marker. (The selector was also duplicated.) */
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-selected {
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
+    border-left-color: var(--tw-teal-800);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-ready.is-selected {
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-strong);
+    border-left-color: var(--cd-green);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-row.is-warning.is-selected {
+    background: var(--tw-review-bg);
+    border-left-color: var(--tw-review-fg);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-title {
+    gap: 5px;
+    font-size: var(--tw-fs-ws-meta);
+  }
+
+  .cd2004-shell [data-workflow="administer"] .wfp-disposition-list .wfp-option-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* UDS result states keep their clinical colours and the same control
+     structure as Injection, on the neutral panel surface. */
+  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle {
+    border-width: 1px;
+    border-style: solid;
+    box-shadow: none;
+  }
+
+  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-neg {
+    color: var(--tw-ready-fg);
+    background: var(--tw-surface-panel);
+    border-color: var(--tw-ready-border);
+    box-shadow: inset 3px 0 var(--tw-ready-fg);
+  }
+
+  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-pos {
+    background: var(--tw-stop-bg);
+  }
+
+  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-invalid {
+    background: var(--tw-review-bg);
+  }
+}
+
+/* Below the full desktop width four site tracks squeeze the longest site names
+   ("R ventrogluteal") past the point they stay on one line. Drop to two tracks
+   rather than three: an odd count would split the laterality pairs again, which
+   is the whole reason the count is pinned. */
+@media screen and (max-width: 1180px) {
+  .cd2004-shell [data-workflow="administer"] .wfp-site-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Lookup and record search.
+ *
+ * Unscoped, like the checkbox/radio rules in clinical-desktop.css and for the
+ * same reason: the record drawers render into a <dialog> that is a sibling of
+ * .cd2004-shell, not a descendant, so a shell-scoped selector misses them. */
+@media screen {
+  /*
+   * `type="search"` keeps its semantics; only Chromium's own clear button is
+   * stripped, because it duplicates the field's own affordance. The face is no
+   * longer forced to monospace - a patient name is read as a word, not
+   * character by character, and Tebra's search is ordinary field text.
+   */
+  input[type="search"] {
+    appearance: none;
+  }
+
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    display: none;
+    appearance: none;
+  }
+
+  input[type="search"]::placeholder {
+    color: var(--tw-text-muted);
+    font-style: normal;
+  }
+
+  /* legacy.css defines .records-sr-only but index.html loads that sheet
+     media="print", so on screen the class styles nothing and the drawer's
+     screen-reader label for this input has been rendering as visible body text
+     above the field. Hide it the standard way, on the screen side where it is
+     actually needed. */
+  .records-sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .records-drawer-search {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+
+  /*
+   * The magnifier glyph is restored. The previous contract hid it and printed
+   * a "FIND" text prompt in its place, which is a terminal idiom; a magnifier
+   * is what Tebra shows and what staff expect to look for.
+   */
+  .records-drawer-search > span {
+    display: inline-grid;
+    place-items: center;
+    color: var(--tw-text-secondary);
+  }
+}

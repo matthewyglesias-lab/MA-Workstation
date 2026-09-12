@@ -1,4 +1,5 @@
 import type { ComponentChildren, Ref } from "preact";
+import { MODULE } from "./vocabulary";
 import type {
   WorkstationReadinessItem,
   WorkstationRecordLifecycle,
@@ -39,6 +40,34 @@ export interface PatientContext {
   allergyStatus?: string;
   sourceWorkflow?: WorkflowId;
 }
+
+/** Display facts carried into the focused Injection shell. */
+export interface InjectionKioskContext {
+  priorDoseDate?: string;
+  priorSite?: string;
+  nextDoseDate?: string;
+  /** A documented held/escalated/provider plan makes administration steps N/A. */
+  nonAdministration?: boolean;
+}
+
+/** Presentation-only waypoints over the existing Injection worksheet. */
+export type InjectionKioskStepId =
+  | "identify"
+  | "verify-order"
+  | "prepare"
+  | "site"
+  | "administer"
+  | "response"
+  | "sign";
+
+/**
+ * Result of opening a note from a patient-scoped surface. The explicit
+ * mismatch result lets that surface explain why the durable record was
+ * rejected without changing the boolean contract used by global note lists.
+ */
+export type PatientScopedNoteOpenResult =
+  | boolean
+  | "patient-identity-mismatch";
 
 export interface WorkflowSummary {
   workflow: WorkflowId;
@@ -91,7 +120,9 @@ export interface InjectionRecordActions {
   /** First typed clinical blocker, when one exists. */
   blockingDetail?: string;
   canDiscard: boolean;
-  onStartNew: () => void;
+  /** Shows lifecycle integrity detail without exposing mutating actions. */
+  unavailable?: boolean;
+  onStartNew: () => boolean | void;
   onDiscard: () => void;
 }
 
@@ -113,13 +144,18 @@ export interface WorkflowRenderContext {
   hostRef: Ref<HTMLDivElement>;
   patient: PatientContext;
   isPatientContextMismatched: boolean;
+  kioskMode: boolean;
+  injectionKioskStep?: InjectionKioskStepId;
+  onInjectionKioskStepChange?: (step: InjectionKioskStepId) => void;
 }
 
 export interface ClinicalDesktopShellProps {
   organizationName?: string;
   activeWorkflow?: WorkflowId;
   defaultActiveWorkflow?: WorkflowId;
-  onWorkflowChange?: (workflow: WorkflowId) => void;
+  onWorkflowChange?: (workflow: WorkflowId) => boolean | void;
+  /** Files or vetoes the mounted editor before replacing it with a chart. */
+  onBeforeViewChange?: () => boolean;
   patient?: PatientContext;
   workflowPatient?: PatientContext;
   onUseWorkflowPatient?: (workflow: WorkflowId) => void;
@@ -147,7 +183,8 @@ export interface ClinicalDesktopShellProps {
   onSaveDraft?: () => void;
   onReviewComplete?: () => void;
   injectionRecordActions?: InjectionRecordActions;
-  onStartNewInjection?: () => void;
+  injectionKioskContext?: InjectionKioskContext;
+  onStartNewInjection?: (patient?: PatientContext) => boolean | void;
   onOpenRecords?: () => void;
   /** A truthful, local contextual lookup (currently the local Record List). */
   onLookup?: () => void;
@@ -155,12 +192,41 @@ export interface ClinicalDesktopShellProps {
   onOpenStaff?: () => void;
   /** Opens the local visit-location dialog. */
   onOpenLocation?: () => void;
-  onOpenKnowledge?: () => void;
-  onOpenCloseout?: () => void;
   onCopyNoteSection?: (section: NoteSection) => void;
   onCopyAllNotes?: () => void;
   onQueueItemOpen?: (item: WorkQueueItem) => void;
   onRecordOpen?: (record: InjectionRecordRow) => void;
+  /**
+   * Opens a saved injection note by id, for the patient chart. Mirrors the
+   * handler `RecordsWindow` already takes, so both note surfaces resume a
+   * record through one path rather than two that can drift.
+   */
+  onOpenInjectionRecord?: (
+    id: string,
+    expectedPatient?: PatientContext,
+  ) => PatientScopedNoteOpenResult;
+  /** Opens the exact browser-local UDS record, including its lifecycle. */
+  onOpenUdsRecord?: (
+    id: string,
+    expectedPatient?: PatientContext,
+  ) => PatientScopedNoteOpenResult;
+  /** Starts an explicitly blank UDS note for the selected chart patient. */
+  onStartNewUds?: (patient: PatientContext) => boolean;
+  /**
+   * Starts a transient Forms/Samples note for the selected chart patient.
+   * The owner may first require explicit confirmation before replacing a
+   * started in-memory note.
+   */
+  onStartNewTransientNote?: (
+    workflow: "samples" | "forms",
+    patient: PatientContext,
+  ) => boolean;
+  /**
+   * Increments after a sibling native dialog has fully closed following a
+   * successful workflow handoff. The shell then dismisses any chart covering
+   * the destination and focuses the newly mounted editor.
+   */
+  externalWorkflowHandoffToken?: number;
   onEscape?: () => void;
   onWorkAreaReady?: (element: HTMLDivElement | null) => void;
   className?: string;
@@ -177,15 +243,19 @@ export const WORKFLOW_ORDER: WorkflowId[] = [
   "tms",
 ];
 
+/**
+ * WorkflowId keys are internal and MUST NOT change - they address legacy panel
+ * selectors (`#panel-administer`) and persisted records. Only the labels move.
+ */
 export const WORKFLOW_LABELS: Record<WorkflowId, string> = {
-  home: "Start Center",
-  administer: "Injection",
-  uds: "UDS",
-  samples: "Samples",
-  forms: "Forms",
-  reference: "Knowledge",
-  log: "Daily Closeout",
-  tms: "Future / TMS",
+  home: MODULE.dashboard,
+  administer: MODULE.injection,
+  uds: MODULE.uds,
+  samples: MODULE.samples,
+  forms: MODULE.forms,
+  reference: MODULE.reference,
+  log: MODULE.dailyCloseout,
+  tms: MODULE.future,
 };
 
 /**
