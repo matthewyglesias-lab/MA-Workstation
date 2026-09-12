@@ -1582,14 +1582,13 @@ export function UdsPanel({
                 class="cd2004-link-button"
                 onClick={() => navigator.clipboard?.writeText(noteText)}
                 disabled={!noteText}
-                title={
-                  udsReadyForFinalOutput
-                    ? "Copy the completed UDS note."
-                    : "Copy the current incomplete UDS note as a draft."
-                }
+                // One note, in its final wording, at every stage of the
+                // screen. Printing a finalized result still waits on the
+                // requirements below; copying the documentation never did.
+                title="Copy this UDS note exactly as it reads here."
               >
                 <DesktopIcon name="copy" />
-                {udsReadyForFinalOutput ? "Copy Tebra UDS note" : "Copy draft Tebra note"}
+                Copy Tebra UDS note
               </button>
             </div>
             {!udsReadyForFinalOutput && (

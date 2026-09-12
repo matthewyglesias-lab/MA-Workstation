@@ -764,29 +764,36 @@ export function injectionEncounterToDocumentationInput(
   evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
 ): InjectionDocumentationInput | null {
   const dispositionKind = encounter.disposition.kind;
-  if (!dispositionKind) return null;
+  // An untouched worksheet has no note at all; everything past that point is
+  // written in the note's final form, growing field by field. There is no
+  // separate draft rendering that a finished encounter switches away from.
+  // "Untouched" is the evaluator's own idle reading rather than a second
+  // definition of a started encounter kept in step by hand.
+  if (evaluation.readiness === "idle") return null;
 
   const administered = dispositionKind === "administered";
   if (administered && !hasCurrentInjectionAdministrationReview(encounter)) return null;
   if (administered && !evaluation.output.administrationDocumented) return null;
 
-  const disposition = administered
-    ? { kind: "administered" as const, label: "Administered" }
-    : {
-        kind: (dispositionKind === "provider" ? "provider-directed" : dispositionKind) as
-          | "held"
-          | "escalated"
-          | "provider-directed",
-        label:
-          dispositionKind === "held"
-            ? "Held"
-            : dispositionKind === "escalated"
-              ? "Escalated"
-              : "Provider-directed plan",
-        notified: trimmed(encounter.disposition.provider) || undefined,
-        decisionTime: formatDateTime(encounter.disposition.time) || undefined,
-        direction: trimmed(encounter.disposition.outcome) || undefined,
-      };
+  const disposition = !dispositionKind
+    ? undefined
+    : administered
+      ? { kind: "administered" as const, label: "Administered" }
+      : {
+          kind: (dispositionKind === "provider" ? "provider-directed" : dispositionKind) as
+            | "held"
+            | "escalated"
+            | "provider-directed",
+          label:
+            dispositionKind === "held"
+              ? "Held"
+              : dispositionKind === "escalated"
+                ? "Escalated"
+                : "Provider-directed plan",
+          notified: trimmed(encounter.disposition.provider) || undefined,
+          decisionTime: formatDateTime(encounter.disposition.time) || undefined,
+          direction: trimmed(encounter.disposition.outcome) || undefined,
+        };
 
   const primary = primaryMedicationComponent(encounter, evaluation, administered);
   const medication = evaluation.output.medication;
@@ -823,12 +830,22 @@ export function injectionEncounterToDocumentationInput(
   const medicationLine = [primaryMedicationName, trimmed(encounter.dose)]
     .filter(Boolean)
     .join(" ");
-  const summary = administered
-    ? `Injection visit — ${medicationLine || "medication administration"}.`
-    : `Injection visit — ${medicationLine || "selected medication"}; medication not administered.`;
+  // With no disposition there is no visit outcome to state, so the shared
+  // formatter supplies the opening line instead of this adapter asserting one
+  // way or the other about administration.
+  const summary = !dispositionKind
+    ? undefined
+    : administered
+      ? `Injection visit — ${medicationLine || "medication administration"}.`
+      : `Injection visit — ${medicationLine || "selected medication"}; medication not administered.`;
 
-  const assessmentFacts = categorizedAssessmentFacts(encounter, medication);
-  if (encounter.acuteSafetyScreenConfirmed) {
+  // Attestation and verification chips start pre-checked, so before a
+  // disposition is recorded they are defaults nobody has confirmed. The note
+  // carries documented findings from the first keystroke, but never those.
+  const assessmentFacts = dispositionKind
+    ? categorizedAssessmentFacts(encounter, medication)
+    : emptyCategorizedAssessmentFacts();
+  if (dispositionKind && encounter.acuteSafetyScreenConfirmed) {
     assessmentFacts.clinicalReview.push("No acute concerns today confirmed.");
   }
   assessmentFacts.clinicalReview = unique(assessmentFacts.clinicalReview);
@@ -863,8 +880,11 @@ export function injectionEncounterToDocumentationInput(
         ? "Injection site assessed before administration; no local finding precluding use of the selected site."
         : undefined,
       orderPurpose: trimmed(details.purpose) || undefined,
-      allergyReviewed: Boolean(encounter.attestations.allergy),
-      allergiesReview: trimmed(encounter.allergies) || undefined,
+      // Both start populated (the chip is pre-checked, the field pre-filled
+      // "NKDA"), so neither is a documented review until a disposition says
+      // the encounter was worked through.
+      allergyReviewed: Boolean(dispositionKind && encounter.attestations.allergy),
+      allergiesReview: dispositionKind ? trimmed(encounter.allergies) || undefined : undefined,
       previousDoseDate: encounter.priorDoseDate ? formatIsoDate(encounter.priorDoseDate) : undefined,
       previousSite: trimmed(encounter.priorSite) || undefined,
       timingReview: encounter.priorDoseDate

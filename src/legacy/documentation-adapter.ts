@@ -684,7 +684,22 @@ export const readLegacyInjectionDocumentation = (
 ): InjectionDocumentationInput | null => {
   const disposition = dispositionFromDom(doc);
   const primary = primaryMedicationComponent(disposition, doc);
-  if (!primary && !disposition) return null;
+  // The note is written in its final form from the first documented field -
+  // there is no separate draft rendering to switch away from later. It stays
+  // absent only while the worksheet is genuinely untouched, which is the one
+  // state the note viewer has its own empty presentation for. "Started" is
+  // deliberately the typed engine's own reading of it (patient identity,
+  // encounter type, product, disposition) so the two paths agree on when a
+  // note exists; pre-filled defaults - today's administration date, the
+  // standing NKDA allergy line - are not documentation and open nothing.
+  const started = Boolean(
+    primary ||
+      disposition ||
+      value("ptName", doc) ||
+      value("ptDOB", doc) ||
+      selectedControlText("reasonChips", doc),
+  );
+  if (!started) return null;
 
   const initiationSnapshot = (() => {
     try {
@@ -724,6 +739,9 @@ export const readLegacyInjectionDocumentation = (
   ]
     .filter(Boolean)
     .join(" ");
+  // Before a disposition is recorded there is nothing to summarize beyond the
+  // product itself, so the shared formatter's own opening line is used rather
+  // than a second, encounter-state-specific wording.
   const summary =
     disposition?.kind === "administered"
       ? `Injection visit — ${medicationLine || "medication administration"}.`
@@ -731,13 +749,12 @@ export const readLegacyInjectionDocumentation = (
         ? `Injection visit — ${
             medicationLine || "selected medication"
           }; medication not administered.`
-        : `Injection documentation draft — ${
-            medicationLine || "selected medication"
-          }.`;
+        : undefined;
 
-  // A selected medication is only a draft until a disposition is recorded.
-  // Do not turn default chips (NKDA, rights, consent, technique) into
-  // affirmative chart facts while the encounter is still unfinished.
+  // Documented fields appear as they are entered; pre-checked defaults (NKDA,
+  // rights, consent, technique) do not. Until a disposition is recorded no one
+  // has said those steps happened, and a note may only carry what was
+  // documented.
   const documentedFacts = disposition
     ? injectionFactLines(doc)
     : {
@@ -1547,15 +1564,12 @@ export const installLegacyDocumentationAdapter = (): (() => void) => {
       this: unknown,
       ...args: unknown[]
     ) {
-      const prior = String(previous.apply(this, args) ?? "");
-      if (
-        workflow === "samples" &&
-        /No medication sample dispensing is documented by this draft\./i.test(
-          prior,
-        )
-      ) {
-        return prior;
-      }
+      // The classic runtime swaps its own sample note for a "documentation
+      // draft" placeholder until dispensing is complete. The dense note is
+      // generated the same way at every stage of the encounter and simply
+      // omits what has not been documented, so the placeholder is never used:
+      // staff read one note that fills in, not two that replace each other.
+      previous.apply(this, args);
       return workflow === "samples"
         ? refreshSamplesDocumentation()
         : refreshFormsDocumentation();

@@ -2873,8 +2873,10 @@ test.describe('MA Workstation browser journeys', () => {
     const udsRegister = scheduleRegister(panel, 'POINT-OF-CARE REPORT');
     await expect(registerVerdict(udsRegister)).toHaveText('INCOMPLETE');
     await expect(registerMarker(udsRegister)).toHaveText('STOP');
-    await expect(panel.getByRole('button', { name: 'Copy draft Tebra note' })).toBeEnabled();
-    await expect(page.locator('.cd2004-inspector').getByRole('button', { name: 'Copy draft note' }))
+    // One note, in its final wording, at every stage of the screen: copying
+    // an incomplete screen's documentation is never offered as a draft.
+    await expect(panel.getByRole('button', { name: 'Copy Tebra UDS note' })).toBeEnabled();
+    await expect(page.locator('.cd2004-inspector').getByRole('button', { name: 'Copy note' }))
       .toBeEnabled();
     await expect(panel.getByRole('button', { name: 'Print patient summary' })).toBeDisabled();
 
@@ -3044,8 +3046,10 @@ test.describe('MA Workstation browser journeys', () => {
     }
 
     await expect(inspector.locator('.cd2004-note-eod')).toHaveText('── END OF DOCUMENT ──');
-    await expect(inspector.locator('.cd2004-note-heading .cd2004-note-mark.is-draft'))
-      .toHaveText('DRAFT');
+    // An unfiled note carries no second state mark: it is the same note that
+    // will be filed, so the heading says only where it lives.
+    await expect(inspector.locator('.cd2004-note-heading .cd2004-note-mark'))
+      .toHaveText(['LOCAL']);
   });
 
   test('renders the UDS clinician view as a dense preliminary laboratory report', async ({ page }) => {
