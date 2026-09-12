@@ -58,6 +58,16 @@ export const arrows = (items?: string[]): string[] =>
 
 export const heading = (value: string): string => compactText(value).toUpperCase();
 
+/**
+ * Staff-entered values sometimes already end in punctuation ("Matthew Y."), so
+ * a period is added only when one is missing - a sentence in a generated note
+ * must never double up its full stop.
+ */
+export const endSentence = (value: string): string => {
+  const text = cleanText(value);
+  return !text || /[.!?]$/.test(text) ? text : `${text}.`;
+};
+
 export const block = (
   title: string,
   lines: Array<string | undefined>,

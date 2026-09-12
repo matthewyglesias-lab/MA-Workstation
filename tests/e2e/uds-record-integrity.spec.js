@@ -288,8 +288,11 @@ test.describe('UDS record-integrity boundaries', () => {
       const patientPrint = contenderPanel.getByRole('button', {
         name: 'Print patient summary'
       });
+      // Renamed on main: the panel writes one note in its final wording at
+      // every stage, so the control is no longer labelled per readiness.
       const tebraCopy = contenderPanel.getByRole('button', {
-        name: 'Copy Tebra UDS note'
+        name: 'Copy note',
+        exact: true
       });
       await expect(clinicianPrint).toBeEnabled();
       await expect(patientPrint).toBeEnabled();

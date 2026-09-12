@@ -14,7 +14,11 @@ import {
   type InjectionEncounter,
   type InjectionEvaluationOutput,
 } from "../../domain/injection";
-import { isValidIsoDate } from "../../domain/dates";
+import {
+  compactChartDate as formatCompactDate,
+  compactChartDateTime as formatCompactDateTime,
+  isValidIsoDate,
+} from "../../domain/dates";
 import type { InjectionMedication, MedicationVerificationKey } from "../../domain/injection-catalog";
 import {
   injectionClinicalPhaseForReason,
@@ -111,24 +115,6 @@ const lateDoseReviewDocumentationText = (
   return `Late-dose review documented: ${trimmed(details.lateDoseReviewNote)} (does not state provider approval).`;
 };
 
-// Compact military-style charting (RC6.1 note format): "8/7/26 1750" for a
-// date + separate HH:MM field, and "8/7/26" alone when only the date exists.
-// Used everywhere administration date/time appears in the generated note so
-// the CC headline, Date/time line, and any other reference stay consistent.
-const formatCompactDate = (raw?: string): string => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed(raw));
-  if (!match) return "";
-  return `${Number(match[2])}/${Number(match[3])}/${(match[1] ?? "").slice(2)}`;
-};
-
-const formatMilitaryTime = (raw?: string): string => {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(trimmed(raw));
-  if (!match) return "";
-  return `${(match[1] ?? "").padStart(2, "0")}${match[2]}`;
-};
-
-const formatCompactDateTime = (date?: string, time?: string): string =>
-  [formatCompactDate(date), formatMilitaryTime(time)].filter(Boolean).join(" ");
 
 const VOLUME_UNIT_LABELS: Record<string, string> = {
   mL: "mL (volume)",
@@ -764,29 +750,36 @@ export function injectionEncounterToDocumentationInput(
   evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
 ): InjectionDocumentationInput | null {
   const dispositionKind = encounter.disposition.kind;
-  if (!dispositionKind) return null;
+  // An untouched worksheet has no note at all; everything past that point is
+  // written in the note's final form, growing field by field. There is no
+  // separate draft rendering that a finished encounter switches away from.
+  // "Untouched" is the evaluator's own idle reading rather than a second
+  // definition of a started encounter kept in step by hand.
+  if (evaluation.readiness === "idle") return null;
 
   const administered = dispositionKind === "administered";
   if (administered && !hasCurrentInjectionAdministrationReview(encounter)) return null;
   if (administered && !evaluation.output.administrationDocumented) return null;
 
-  const disposition = administered
-    ? { kind: "administered" as const, label: "Administered" }
-    : {
-        kind: (dispositionKind === "provider" ? "provider-directed" : dispositionKind) as
-          | "held"
-          | "escalated"
-          | "provider-directed",
-        label:
-          dispositionKind === "held"
-            ? "Held"
-            : dispositionKind === "escalated"
-              ? "Escalated"
-              : "Provider-directed plan",
-        notified: trimmed(encounter.disposition.provider) || undefined,
-        decisionTime: formatDateTime(encounter.disposition.time) || undefined,
-        direction: trimmed(encounter.disposition.outcome) || undefined,
-      };
+  const disposition = !dispositionKind
+    ? undefined
+    : administered
+      ? { kind: "administered" as const, label: "Administered" }
+      : {
+          kind: (dispositionKind === "provider" ? "provider-directed" : dispositionKind) as
+            | "held"
+            | "escalated"
+            | "provider-directed",
+          label:
+            dispositionKind === "held"
+              ? "Held"
+              : dispositionKind === "escalated"
+                ? "Escalated"
+                : "Provider-directed plan",
+          notified: trimmed(encounter.disposition.provider) || undefined,
+          decisionTime: formatDateTime(encounter.disposition.time) || undefined,
+          direction: trimmed(encounter.disposition.outcome) || undefined,
+        };
 
   const primary = primaryMedicationComponent(encounter, evaluation, administered);
   const medication = evaluation.output.medication;
@@ -823,12 +816,22 @@ export function injectionEncounterToDocumentationInput(
   const medicationLine = [primaryMedicationName, trimmed(encounter.dose)]
     .filter(Boolean)
     .join(" ");
-  const summary = administered
-    ? `Injection visit — ${medicationLine || "medication administration"}.`
-    : `Injection visit — ${medicationLine || "selected medication"}; medication not administered.`;
+  // With no disposition there is no visit outcome to state, so the shared
+  // formatter supplies the opening line instead of this adapter asserting one
+  // way or the other about administration.
+  const summary = !dispositionKind
+    ? undefined
+    : administered
+      ? `Injection visit — ${medicationLine || "medication administration"}.`
+      : `Injection visit — ${medicationLine || "selected medication"}; medication not administered.`;
 
-  const assessmentFacts = categorizedAssessmentFacts(encounter, medication);
-  if (encounter.acuteSafetyScreenConfirmed) {
+  // Attestation and verification chips start pre-checked, so before a
+  // disposition is recorded they are defaults nobody has confirmed. The note
+  // carries documented findings from the first keystroke, but never those.
+  const assessmentFacts = dispositionKind
+    ? categorizedAssessmentFacts(encounter, medication)
+    : emptyCategorizedAssessmentFacts();
+  if (dispositionKind && encounter.acuteSafetyScreenConfirmed) {
     assessmentFacts.clinicalReview.push("No acute concerns today confirmed.");
   }
   assessmentFacts.clinicalReview = unique(assessmentFacts.clinicalReview);
@@ -863,8 +866,11 @@ export function injectionEncounterToDocumentationInput(
         ? "Injection site assessed before administration; no local finding precluding use of the selected site."
         : undefined,
       orderPurpose: trimmed(details.purpose) || undefined,
-      allergyReviewed: Boolean(encounter.attestations.allergy),
-      allergiesReview: trimmed(encounter.allergies) || undefined,
+      // Both start populated (the chip is pre-checked, the field pre-filled
+      // "NKDA"), so neither is a documented review until a disposition says
+      // the encounter was worked through.
+      allergyReviewed: Boolean(dispositionKind && encounter.attestations.allergy),
+      allergiesReview: dispositionKind ? trimmed(encounter.allergies) || undefined : undefined,
       previousDoseDate: encounter.priorDoseDate ? formatIsoDate(encounter.priorDoseDate) : undefined,
       previousSite: trimmed(encounter.priorSite) || undefined,
       timingReview: encounter.priorDoseDate

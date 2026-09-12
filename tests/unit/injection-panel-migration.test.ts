@@ -52,11 +52,39 @@ const routineInjection = (): InjectionEncounter => ({
 });
 
 describe("injectionEncounterToDocumentationInput", () => {
-  it("returns null when no clinical disposition has been chosen yet", () => {
+  it("returns null only while the encounter is untouched", () => {
+    const encounter = emptyInjectionEncounter();
+    const evaluation = InjectionEngine.evaluate(encounter, { today: "2026-01-30" });
+    expect(evaluation.readiness).toBe("idle");
+    expect(injectionEncounterToDocumentationInput(encounter, evaluation)).toBeNull();
+  });
+
+  it("writes the final note before a disposition, without asserting default attestations", () => {
     const encounter = routineInjection();
     encounter.disposition = { kind: "" };
     const evaluation = InjectionEngine.evaluate(encounter, { today: encounter.administrationDate });
-    expect(injectionEncounterToDocumentationInput(encounter, evaluation)).toBeNull();
+
+    const input = injectionEncounterToDocumentationInput(encounter, evaluation);
+    expect(input).not.toBeNull();
+    expect(input!.disposition).toBeUndefined();
+    // No draft wording, and no claim either way about administration: the
+    // shared formatter supplies the opening line for an encounter still
+    // being documented.
+    expect(input!.chiefComplaint?.summary).toBeUndefined();
+    expect(input!.components?.[0]).toMatchObject({ medication: "Haldol Dec.", dose: "100 mg" });
+
+    // Pre-checked chips and the pre-filled "NKDA" allergy field are defaults,
+    // not documented findings, until a disposition is recorded.
+    expect(input!.preAdministration?.verification).toBeUndefined();
+    expect(input!.preAdministration?.clinicalReview).toBeUndefined();
+    expect(input!.preAdministration?.allergyReviewed).toBe(false);
+    expect(input!.preAdministration?.allergiesReview).toBeUndefined();
+    expect(input!.noteFacts).toBeUndefined();
+
+    const note = DocumentationEngine.format("injection", input!, evaluation);
+    expect(note.cc).toContain("Haldol Dec. injection encounter.");
+    expect(note.cc).not.toMatch(/draft/i);
+    expect(note.plan).toContain("PRODUCT IDENTIFICATION");
   });
 
   it("returns null for an administered disposition the engine hasn't cleared (unresolved stops)", () => {

@@ -2365,16 +2365,22 @@ export function UdsPanel({
                   }
                 }}
                 disabled={recordStorageConflict || !noteText}
+                // One note, in its final wording, at every stage of the
+                // screen. Printing a finalized result still waits on the
+                // requirements below; copying the documentation never did.
+                //
+                // The record-changed-elsewhere guard stays: copying out of a
+                // record another tab has already rewritten hands staff a note
+                // that no longer matches what is stored, which is the case
+                // `uds-record-integrity.spec.js` exists to hold.
                 title={
                   recordStorageConflict
                     ? RECORD.udsRecordChangedElsewhere
-                    : udsReadyForFinalOutput
-                    ? "Copy the completed UDS note."
-                    : "Copy the current incomplete UDS note as a draft."
+                    : "Copy this UDS note exactly as it reads here."
                 }
               >
                 <DesktopIcon name="copy" />
-                {udsReadyForFinalOutput ? "Copy Tebra UDS note" : "Copy draft Tebra note"}
+                Copy note
               </button>
             </div>
             {!udsReadyForFinalOutput && (

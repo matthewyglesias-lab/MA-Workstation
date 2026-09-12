@@ -91,7 +91,8 @@ declare global {
     renderSampleHandout?: () => unknown;
     renderForms?: () => unknown;
     _note?: { cc?: string; as?: string; pl?: string };
-    _udsNote?: { cc?: string; as?: string; pl?: string };
+    /** `tebra` is the whole UDS note; `cc` holds only its opening line. */
+    _udsNote?: { cc?: string; as?: string; pl?: string; tebra?: string; headline?: string };
     IPMGRecords?: LegacyRecordsBridge;
   }
 }

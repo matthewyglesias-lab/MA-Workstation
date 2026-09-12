@@ -118,3 +118,28 @@ export const calculateSustennaDay8Window = (day1: string): SustennaDay8Window | 
     monthly: addCalendarDays(day1, 35),
   };
 };
+
+// Compact military-style charting: "8/7/26 1750" for a date plus a separate
+// HH:MM field, "8/7/26" when only the date exists. Shared by every generated
+// chart note so a date reads the same in an injection note, a UDS note, and
+// any headline that quotes one.
+export const compactChartDate = (raw?: string): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec((raw ?? "").trim());
+  if (!match) return "";
+  return `${Number(match[2])}/${Number(match[3])}/${(match[1] ?? "").slice(2)}`;
+};
+
+export const militaryTime = (raw?: string): string => {
+  const match = /^(\d{1,2}):(\d{2})$/.exec((raw ?? "").trim());
+  if (!match) return "";
+  return `${(match[1] ?? "").padStart(2, "0")}${match[2]}`;
+};
+
+export const compactChartDateTime = (date?: string, time?: string): string =>
+  [compactChartDate(date), militaryTime(time)].filter(Boolean).join(" ");
+
+/** The same, for a single local "YYYY-MM-DDTHH:MM" value. */
+export const compactChartLocalDateTime = (isoLocal?: string): string => {
+  const [date = "", time = ""] = (isoLocal ?? "").trim().split("T");
+  return compactChartDateTime(date, time);
+};

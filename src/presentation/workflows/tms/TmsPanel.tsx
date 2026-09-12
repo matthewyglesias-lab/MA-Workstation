@@ -17,7 +17,7 @@ const PLANNED_CAPABILITIES: ReadonlyArray<{ title: string; detail: string }> = [
   },
 ];
 
-const DRAFT_NOTE_PREVIEW =
+const PLANNED_NOTE_PREVIEW =
   "TMS session completed today per protocol. Patient tolerated treatment without acute complication. " +
   "No new safety concern reported during session. Treatment parameters documented in the TMS record. " +
   "Next session to continue as scheduled.";
@@ -58,10 +58,10 @@ export function TmsPanel() {
       </div>
 
       <div class="wfp-section">
-        <div class="wfp-section-head">Draft future note style</div>
+        <div class="wfp-section-head">Planned note style</div>
         <div class="wfp-section-body">
           <p class="wfp-field-hint">Placeholder only — refine after the protocol is confirmed.</p>
-          <div class="wfp-preview">{DRAFT_NOTE_PREVIEW}</div>
+          <div class="wfp-preview">{PLANNED_NOTE_PREVIEW}</div>
         </div>
       </div>
     </div>
