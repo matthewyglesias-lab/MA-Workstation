@@ -2874,8 +2874,9 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(registerVerdict(udsRegister)).toHaveText('INCOMPLETE');
     await expect(registerMarker(udsRegister)).toHaveText('STOP');
     // One note, in its final wording, at every stage of the screen: copying
-    // an incomplete screen's documentation is never offered as a draft.
-    await expect(panel.getByRole('button', { name: 'Copy Tebra UDS note' })).toBeEnabled();
+    // an incomplete screen's documentation is never offered as a draft, and
+    // the panel and the sidebar offer the same single note.
+    await expect(panel.getByRole('button', { name: 'Copy note', exact: true })).toBeEnabled();
     await expect(page.locator('.cd2004-inspector').getByRole('button', { name: 'Copy note' }))
       .toBeEnabled();
     await expect(panel.getByRole('button', { name: 'Print patient summary' })).toBeDisabled();

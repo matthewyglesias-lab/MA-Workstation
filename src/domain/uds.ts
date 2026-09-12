@@ -704,6 +704,16 @@ export const UdsEngine: ClinicalEngine<UdsEncounter, UdsEngineContext, UdsEvalua
   },
 };
 
+/**
+ * The caveat every interpretable point-of-care screen carries, in the report
+ * status and in the chart note alike. A CLIA-waived immunoassay is presumptive
+ * by definition, so the sentence is shared rather than reworded per surface -
+ * a note that softened it would document a stronger claim than the device
+ * supports.
+ */
+export const UDS_PRELIMINARY_CAVEAT =
+  "Point-of-care immunoassay result; confirm unexpected findings by definitive laboratory method.";
+
 /** Patient-facing/report readiness language derived from documented facts.
  * Point-of-care results remain preliminary in every interpretable state. */
 export function deriveUdsReportStatus(
@@ -722,8 +732,7 @@ export function deriveUdsReportStatus(
       encounter.lot.trim() ||
       anyResult,
   );
-  const preliminaryDetail =
-    "Point-of-care immunoassay result; confirm unexpected findings by definitive laboratory method.";
+  const preliminaryDetail = UDS_PRELIMINARY_CAVEAT;
 
   if (locked) {
     return {

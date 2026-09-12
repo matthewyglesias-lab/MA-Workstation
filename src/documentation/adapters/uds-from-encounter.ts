@@ -8,23 +8,12 @@ import {
   type UdsEncounter,
 } from "../../domain/uds";
 import type { UdsDocumentationInput } from "../types";
-import { isValidLocalDateTime } from "../../domain/dates";
+import {
+  compactChartLocalDateTime,
+  isValidLocalDateTime,
+} from "../../domain/dates";
 
 const trimmed = (value?: string): string => (value ?? "").trim();
-
-const unique = (items: string[]): string[] => [...new Set(items)];
-
-const formatDateTime = (isoLocal: string): string => {
-  if (!isoLocal || !isValidLocalDateTime(isoLocal)) return "";
-  const date = new Date(isoLocal);
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
 
 const formatMonth = (isoMonth: string): string => {
   const match = /^(\d{4})-(\d{2})$/.exec(trimmed(isoMonth));
@@ -54,14 +43,20 @@ export function udsEncounterToDocumentationInput(
 
   const verified = encounter.physicalReadingsVerified;
   const displayedPanels = displayedUdsPanels(encounter);
+  // Facts only: which analyte read what. The note's wording - what leads, what
+  // is grouped, which findings call for a person - is composed once in
+  // ../uds.ts, so this adapter and the legacy DOM reader cannot drift apart.
   const resultGroups = verified
     ? [
         {
           label: "Point-of-care panel results",
-          results: displayedPanels.map((panel) => ({
-            analyte: udsPanelName(panel),
-            result: UDS_RESULT_LABEL[encounter.results[panel] ?? "nt"],
-          })).filter((entry) => entry.result !== "Not tested"),
+          results: displayedPanels
+            .map((panel) => ({
+              analyte: udsPanelName(panel),
+              result: UDS_RESULT_LABEL[encounter.results[panel] ?? "nt"],
+              state: encounter.results[panel] ?? ("nt" as const),
+            }))
+            .filter((entry) => entry.state !== "nt"),
         },
       ]
     : [];
@@ -69,45 +64,14 @@ export function udsEncounterToDocumentationInput(
   const control = verified ? udsControlLabel(encounter.control) : "";
   const validity = verified ? encounter.validity : "";
 
-  const attention: string[] = [];
-  if (/invalid|not documented/i.test(control)) {
-    attention.push(`${control}; do not interpret the screening result.`);
-  }
-  displayedPanels.forEach((panel) => {
-    const state = encounter.results[panel] ?? "nt";
-    if (state === "pos") {
-      attention.push(`${udsPanelName(panel)} preliminary positive requires provider review.`);
-    }
-    if (state === "invalid") {
-      attention.push(`${udsPanelName(panel)} is invalid / unreadable and should not be interpreted.`);
-    }
-  });
-  if (validity === "needs review") {
-    attention.push("Validity markers require provider review.");
-  }
-  if (encounter.medicationAlignment === "not aligned" || encounter.medicationAlignment === "needs review") {
-    attention.push("Medication alignment requires clinician review.");
-  }
-
-  const plan: string[] = [];
-  if (verified) {
-    plan.push("Results documented as a point-of-care preliminary screening result.");
-  }
-  if (/invalid|not documented/i.test(control)) {
-    plan.push("Do not interpret; repeat collection or use outside laboratory confirmation per provider direction.");
-  } else if (displayedPanels.some((panel) => encounter.results[panel] === "invalid")) {
-    plan.push("Repeat affected invalid panel(s) or use outside laboratory confirmation per provider direction.");
-  } else if (displayedPanels.some((panel) => encounter.results[panel] === "pos")) {
-    plan.push("Route preliminary positive finding(s) for clinician review in clinical context.");
-  }
-
   const outsideLabPlan =
-    encounter.labPlan && encounter.labPlan !== "provider to decide" ? encounter.labPlan : "";
+    encounter.labPlan === "ordered" ||
+    encounter.labPlan === "recommended" ||
+    encounter.labPlan === "not needed"
+      ? encounter.labPlan
+      : undefined;
 
   return {
-    summary: "Point-of-care urine drug screen documentation.",
-    patient: trimmed(encounter.patient.name) || undefined,
-    dob: trimmed(encounter.patient.dob) || undefined,
     collection: {
       reason: encounter.reason
         ? encounter.reason === "other" && trimmed(encounter.reasonDetail)
@@ -116,7 +80,7 @@ export function udsEncounterToDocumentationInput(
         : undefined,
       collectedAt:
         verified && isValidLocalDateTime(encounter.collectionDateTime)
-          ? formatDateTime(encounter.collectionDateTime)
+          ? compactChartLocalDateTime(encounter.collectionDateTime)
           : undefined,
       collectedBy: trimmed(encounter.collector) || undefined,
       specimen: verified ? "Urine" : undefined,
@@ -128,18 +92,18 @@ export function udsEncounterToDocumentationInput(
     controlReview: verified
       ? {
           control: control || undefined,
+          controlState: encounter.control,
           validity: validity || undefined,
+          validityState: encounter.validity,
           integrity: ["Physical cup and displayed panel readings verified."],
         }
       : undefined,
     resultGroups: resultGroups.length && resultGroups[0]!.results.length ? resultGroups : undefined,
-    medicationAlignment:
+    medicationAlignmentState:
       encounter.medicationAlignment && encounter.medicationAlignment !== "no unexpected"
         ? encounter.medicationAlignment
         : undefined,
-    clinicianAttention: attention.length ? unique(attention) : undefined,
     patientContext: trimmed(encounter.comment ?? "") || undefined,
-    plan: plan.length ? unique(plan) : undefined,
-    outsideLabPlan: outsideLabPlan || undefined,
+    outsideLabPlanState: outsideLabPlan,
   };
 }

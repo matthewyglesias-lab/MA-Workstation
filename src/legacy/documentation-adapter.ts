@@ -9,6 +9,7 @@ import {
   type UdsDocumentationInput,
   type UdsResultGroup,
 } from "../documentation";
+import { compactChartLocalDateTime } from "../domain/dates";
 
 type LegacyFunction = ((...args: unknown[]) => unknown) & {
   __clinicalDocumentationAdapter?: boolean;
@@ -872,6 +873,57 @@ export const readLegacyInjectionDocumentation = (
   };
 };
 
+/**
+ * The legacy panel stores its QC and review answers as the same vocabulary the
+ * typed encounter uses, so the note gets states from here too rather than the
+ * formatter matching prose.
+ */
+const udsControlStateFromText = (
+  control: string,
+): "valid" | "invalid" | "not documented" | undefined => {
+  if (!control) return undefined;
+  if (/invalid|missing/i.test(control)) return "invalid";
+  if (/valid/i.test(control)) return "valid";
+  return "not documented";
+};
+
+const udsValidityStateFromText = (
+  validity: string,
+): "acceptable" | "needs review" | "not documented" | undefined => {
+  if (!validity) return undefined;
+  if (/needs review/i.test(validity)) return "needs review";
+  if (/acceptable/i.test(validity)) return "acceptable";
+  return "not documented";
+};
+
+const udsAlignmentState = (
+  raw: string,
+): UdsDocumentationInput["medicationAlignmentState"] => {
+  switch (raw) {
+    case "not aligned":
+    case "needs review":
+    case "patient explanation":
+    case "unavailable":
+      return raw;
+    default:
+      return undefined;
+  }
+};
+
+const udsOutsideLabState = (
+  raw: string,
+): UdsDocumentationInput["outsideLabPlanState"] => {
+  switch (raw) {
+    case "ordered":
+    case "recommended":
+      return raw;
+    case "not needed":
+      return "not needed";
+    default:
+      return undefined;
+  }
+};
+
 const udsReadingsVerified = (
   doc: Document,
   win: LegacyDocumentationWindow,
@@ -879,12 +931,22 @@ const udsReadingsVerified = (
   checked("udsReadingsVerified", doc) ||
   Boolean(win.__IPMG_RC538_UDS_PROFILE__?.readingsVerified);
 
-const udsResultForPanel = (panel: Element): string => {
-  if (panel.classList.contains("pos")) return "Preliminary positive";
-  if (panel.classList.contains("neg")) return "Negative";
-  if (panel.classList.contains("invalid")) return "Invalid / unreadable";
-  if (panel.classList.contains("nt")) return "Not tested / not documented";
-  return "";
+/** The cup's own class is the reading, so the note is given both its label
+ * and the state behind it rather than having to parse the label back. */
+const udsResultForPanel = (
+  panel: Element,
+): { result: string; state?: "neg" | "pos" | "invalid" | "nt" } => {
+  if (panel.classList.contains("pos")) {
+    return { result: "Preliminary positive", state: "pos" };
+  }
+  if (panel.classList.contains("neg")) return { result: "Negative", state: "neg" };
+  if (panel.classList.contains("invalid")) {
+    return { result: "Invalid / unreadable", state: "invalid" };
+  }
+  if (panel.classList.contains("nt")) {
+    return { result: "Not tested / not documented", state: "nt" };
+  }
+  return { result: "" };
 };
 
 const readUdsResultGroups = (doc: Document): UdsResultGroup[] => {
@@ -902,7 +964,7 @@ const readUdsResultGroups = (doc: Document): UdsResultGroup[] => {
             analyte:
               nodeText(".drug", panel) ||
               explicit((panel as HTMLElement).dataset.panel),
-            result: udsResultForPanel(panel),
+            ...udsResultForPanel(panel),
           }))
           .filter((result) => result.analyte && result.result);
         return { label, results };
@@ -915,20 +977,11 @@ const readUdsResultGroups = (doc: Document): UdsResultGroup[] => {
   ]
     .map((panel) => ({
       analyte: nodeText(".drug", panel) || explicit(panel.dataset.panel),
-      result: udsResultForPanel(panel),
+      ...udsResultForPanel(panel),
     }))
     .filter((result) => result.analyte && result.result);
   return results.length ? [{ label: "Screening panel", results }] : [];
 };
-
-const resultFacts = (groups: UdsResultGroup[]) =>
-  groups.flatMap((group) =>
-    group.results.map((result) => ({
-      group: group.label,
-      analyte: result.analyte,
-      result: result.result,
-    })),
-  );
 
 export const readLegacyUdsDocumentation = (
   doc: Document = document,
@@ -949,80 +1002,22 @@ export const readLegacyUdsDocumentation = (
   if (!started) return null;
 
   const groups = verified ? readUdsResultGroups(doc) : [];
-  const facts = resultFacts(groups);
   const control = verified
     ? selectedControlText("udsControlChips", doc)
     : "";
   const validity = verified ? selectedOptionText("udsValidity", doc) : "";
   const medicationAlignmentValue = rawValue("udsConsistent", doc);
-  const medicationAlignment =
-    medicationAlignmentValue &&
-    medicationAlignmentValue !== "no unexpected"
-      ? selectedOptionText("udsConsistent", doc)
-      : "";
-  const attention: string[] = [];
-  if (/invalid|not documented|missing/i.test(control)) {
-    attention.push(`${control}; do not interpret the screening result.`);
-  }
-  facts.forEach((fact) => {
-    if (/preliminary positive/i.test(fact.result)) {
-      attention.push(
-        `${fact.analyte} preliminary positive requires provider review.`,
-      );
-    }
-    if (/invalid/i.test(fact.result)) {
-      attention.push(
-        `${fact.analyte} is invalid / unreadable and should not be interpreted.`,
-      );
-    }
-  });
-  if (/needs review/i.test(validity)) {
-    attention.push("Validity markers require provider review.");
-  }
-  if (
-    medicationAlignmentValue === "not aligned" ||
-    medicationAlignmentValue === "needs review"
-  ) {
-    attention.push(`${medicationAlignment || "Medication alignment"} requires clinician review.`);
-  }
-
-  const plan: string[] = [];
-  if (verified) {
-    plan.push(
-      "Results documented as a point-of-care preliminary screening result.",
-    );
-  }
-  if (/invalid|not documented|missing/i.test(control)) {
-    plan.push(
-      "Do not interpret; repeat collection or use outside laboratory confirmation per provider direction.",
-    );
-  } else if (facts.some((fact) => /invalid/i.test(fact.result))) {
-    plan.push(
-      "Repeat affected invalid panel(s) or use outside laboratory confirmation per provider direction.",
-    );
-  } else if (
-    facts.some((fact) => /preliminary positive/i.test(fact.result))
-  ) {
-    plan.push(
-      "Route preliminary positive finding(s) for clinician review in clinical context.",
-    );
-  }
 
   const outsideLabValue = rawValue("udsLab", doc);
-  const outsideLabPlan =
-    outsideLabValue && outsideLabValue !== "provider to decide"
-      ? selectedOptionText("udsLab", doc)
-      : "";
 
+  // Facts only; ../documentation/uds.ts owns every sentence the note makes of
+  // them, so this legacy-DOM path and the typed panel adapter cannot drift.
   return {
-    summary: "Point-of-care urine drug screen documentation.",
-    patient: patient || undefined,
-    dob: value("udsDOB", doc) || undefined,
     collection: {
       reason: selectedControlText("udsReasonChips", doc) || undefined,
       collectedAt:
         verified && rawValue("udsDateTime", doc)
-          ? formatDateTime(rawValue("udsDateTime", doc))
+          ? compactChartLocalDateTime(rawValue("udsDateTime", doc))
           : undefined,
       collectedBy: value("udsCollector", doc) || undefined,
       specimen: verified ? "Urine" : undefined,
@@ -1039,16 +1034,16 @@ export const readLegacyUdsDocumentation = (
     controlReview: verified
       ? {
           control: control || undefined,
+          controlState: udsControlStateFromText(control),
           validity: validity || undefined,
+          validityState: udsValidityStateFromText(validity),
           integrity: ["Physical cup and displayed panel readings verified."],
         }
       : undefined,
     resultGroups: groups.length ? groups : undefined,
-    medicationAlignment: medicationAlignment || undefined,
-    clinicianAttention: attention.length ? unique(attention) : undefined,
+    medicationAlignmentState: udsAlignmentState(medicationAlignmentValue),
     patientContext: value("udsComment", doc) || undefined,
-    plan: plan.length ? unique(plan) : undefined,
-    outsideLabPlan: outsideLabPlan || undefined,
+    outsideLabPlanState: udsOutsideLabState(outsideLabValue),
   };
 };
 
@@ -1400,36 +1395,26 @@ const refreshUdsDocumentation = (
     return;
   }
 
-  const full = DocumentationEngine.format("uds", input);
-  const first = DocumentationEngine.format("uds", {
-    summary: input.summary,
-    patient: input.patient,
-    dob: input.dob,
-    collection: input.collection,
-  });
-  const body = DocumentationEngine.format("uds", {
-    controlReview: input.controlReview,
-    resultGroups: input.resultGroups,
-    medicationAlignment: input.medicationAlignment,
-    clinicianAttention: input.clinicianAttention,
-    patientContext: input.patientContext,
-  });
-  const footer = DocumentationEngine.format("uds", {
-    plan: input.plan,
-    outsideLabPlan: input.outsideLabPlan,
-  });
+  // One note, formatted once. The CC/Assessment/Plan split this used to
+  // synthesize - four engine passes over the same encounter - existed only to
+  // fill three sidebar sections; the UDS note is a single chart entry.
+  const note = DocumentationEngine.format("uds", input);
+  const headline = note.headline ?? "";
   noteWindow._udsNote = {
     ...(noteWindow._udsNote ?? {}),
-    cc: first.text,
-    as: body.text,
-    pl: footer.text,
-    tebra: full.text,
+    // `cc` stays populated because the classic activity-log action treats it
+    // as "is there a note yet", and `headline` is what that log row prints.
+    cc: headline,
+    as: "",
+    pl: "",
+    tebra: note.text,
+    headline,
   };
-  writePreview("udsOutCC", first.text, doc);
-  writePreview("udsOutAS", body.text, doc);
-  writePreview("udsOutPL", footer.text, doc);
+  writePreview("udsOutCC", headline, doc);
+  writePreview("udsOutAS", note.text, doc);
+  writePreview("udsOutPL", "", doc);
   const scan = element<HTMLElement>("udsScanPrev", doc);
-  if (scan) scan.textContent = input.summary ?? "";
+  if (scan) scan.textContent = headline;
 };
 
 const refreshSamplesDocumentation = (
