@@ -74,7 +74,7 @@ const PATIENT_FIELDS: Partial<
 
 const NOTE_TITLES: Partial<Record<WorkflowId, string>> = {
   administer: 'Injection documentation',
-  uds: 'UDS clinician handoff',
+  uds: 'UDS encounter note',
   samples: 'Sample dispensing note',
   forms: 'Forms handoff note',
 };
@@ -234,12 +234,20 @@ function noteSectionsFor(workflow: WorkflowId): NoteSection[] {
   }
 
   if (workflow === 'uds') {
+    // One block: the UDS note is a chart encounter note, not a three-part
+    // Tebra handoff, so it is neither split for the viewer nor copied in
+    // pieces. `tebra` is the whole note; `cc` carries only its opening line.
     const note = window._udsNote ?? {};
-    return [
-      { id: 'cc', label: 'First line', content: note.cc ?? '', sourceTarget: { workflow: 'uds', tab: 'specimen', field: 'reason' } as NoteSection['sourceTarget'] },
-      { id: 'assessment', label: 'Handoff body', content: note.as ?? '', sourceTarget: { workflow: 'uds', tab: 'results', field: 'results' } as NoteSection['sourceTarget'] },
-      { id: 'plan', label: 'Footer details', content: note.pl ?? '', sourceTarget: { workflow: 'uds', tab: 'review', field: 'medicationAlignment' } as NoteSection['sourceTarget'] },
-    ].filter((section) => section.content);
+    const content = note.tebra ?? '';
+    return content
+      ? [{
+          id: 'uds-note',
+          label: 'UDS note',
+          destination: 'Note',
+          content,
+          sourceTarget: { workflow: 'uds', tab: 'specimen', field: 'reason' } as NoteSection['sourceTarget'],
+        }]
+      : [];
   }
 
   if (workflow === 'samples') {

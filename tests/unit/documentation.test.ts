@@ -316,88 +316,143 @@ describe("dense SmartPhrase documentation", () => {
     );
   });
 
-  it("formats UDS collection, controls, grouped results, attention, context, and plan", () => {
+  it("writes the UDS screen as one chart encounter note", () => {
     const note = formatUdsDocumentation({
-      summary: "Point-of-care UDS completed for medication monitoring.",
-      patient: "A. Patient",
-      dob: "04/18/1987",
       collection: {
         reason: "Routine monitoring",
-        collectedAt: "Jul 30, 2026 at 8:48 AM",
+        collectedAt: "7/30/26 0848",
         collectedBy: "M. Yglesias, MA",
         specimen: "Urine",
         device: "Integrated 14-panel cup",
         lot: "UDS24071",
         expiration: "12/2027",
-        temperature: "Within device range",
+        temperature: "Acceptable",
       },
       controlReview: {
-        control: "Valid control line observed",
-        validity: "Interpretable office screen",
-        integrity: ["Device read within the manufacturer-specified time."],
+        control: "Valid control line",
+        controlState: "valid",
+        validity: "acceptable",
+        validityState: "acceptable",
+        integrity: ["Physical cup and displayed panel readings verified."],
       },
+      resultGroups: [
+        {
+          label: "Point-of-care panel results",
+          results: [
+            { analyte: "AMP", result: "Negative", state: "neg" },
+            { analyte: "MET", result: "Preliminary positive", state: "pos" },
+            { analyte: "OPI", result: "Negative", state: "neg" },
+          ],
+        },
+      ],
+      medicationAlignmentState: "not aligned",
+      patientContext: "Patient reports no non-prescribed stimulant use.",
+      outsideLabPlanState: "recommended",
+    });
+
+    // One block, in the chart's own voice: a line that stands alone, the
+    // objective record, then what happens next. No section headings, no
+    // bulleted worksheet transcription, and no patient identity - the chart
+    // this is pasted into already knows whose it is.
+    expect(note.text).toBe(
+      [
+        "POC urine drug screen — routine monitoring; Integrated 14-panel cup; +MET, all other tested panels negative; validity acceptable; provider review requested.",
+        "",
+        "Collection: Urine specimen collected 7/30/26 0848 by M. Yglesias, MA; temperature acceptable.",
+        "Device: Integrated 14-panel cup · Lot UDS24071 · Exp 12/2027.",
+        "Quality control: Valid control line; validity markers acceptable. Physical cup and displayed panel readings verified.",
+        "",
+        "Results (preliminary/presumptive): MET preliminary positive. Negative — AMP, OPI.",
+        "",
+        "Medication alignment: Result is not explained by the available medication list; clinician review requested.",
+        "Patient context: Patient reports no non-prescribed stimulant use.",
+        "",
+        "Plan: Point-of-care immunoassay result; confirm unexpected findings by definitive laboratory method. Preliminary positive finding(s) routed for provider review in clinical context. Outside laboratory confirmation recommended if clinically indicated.",
+      ].join("\n"),
+    );
+    expect(note.sections).toHaveLength(1);
+    expect(note.sections[0]?.id).toBe("uds-note");
+    expect(note.headline).toBe(
+      "POC urine drug screen — routine monitoring; Integrated 14-panel cup; +MET, all other tested panels negative; validity acceptable; provider review requested.",
+    );
+  });
+
+  it("names an unreadable panel and refuses to summarize a screen with no readings", () => {
+    const unreadable = formatUdsDocumentation({
+      collection: { reason: "Provider ordered", device: "14-panel cup" },
+      controlReview: {
+        control: "Valid control line",
+        controlState: "valid",
+        validityState: "needs review",
+      },
+      resultGroups: [
+        {
+          label: "Point-of-care panel results",
+          results: [
+            { analyte: "BZO", result: "Invalid / unreadable", state: "invalid" },
+            { analyte: "AMP", result: "Negative", state: "neg" },
+          ],
+        },
+      ],
+    });
+    expect(unreadable.headline).toBe(
+      "POC urine drug screen — provider ordered; 14-panel cup; BZO invalid / unreadable, all other tested panels negative; validity markers require review; repeat or confirmation needed.",
+    );
+    expect(unreadable.text).toContain(
+      "Results (preliminary/presumptive): BZO invalid / unreadable. Negative — AMP.",
+    );
+    expect(unreadable.text).toContain(
+      "Repeat the affected panel(s) or use outside laboratory confirmation per provider direction.",
+    );
+    expect(unreadable.text).toContain(
+      "Validity markers require provider review before interpretation.",
+    );
+
+    // Nothing about results, and no preliminary caveat, before a reading
+    // exists to caveat.
+    const waiting = formatUdsDocumentation({
+      collection: { reason: "Routine monitoring", device: "14-panel cup" },
+    });
+    expect(waiting.text).toBe(
+      [
+        "POC urine drug screen — routine monitoring; 14-panel cup; results not yet documented.",
+        "",
+        "Device: 14-panel cup.",
+      ].join("\n"),
+    );
+    expect(waiting.text).not.toMatch(/negative|immunoassay/i);
+  });
+
+  it("still reads a caller that predates result states, without inventing a reading", () => {
+    const note = formatUdsDocumentation({
+      summary: "Point-of-care UDS completed for medication monitoring.",
+      collection: { device: "Integrated 14-panel cup" },
       resultGroups: [
         {
           label: "Stimulants",
           results: [
             { analyte: "AMP", result: "Negative" },
             { analyte: "MET", result: "Preliminary positive" },
-          ],
-        },
-        {
-          label: "Opioids",
-          results: [
-            { analyte: "OPI", result: "Negative" },
-            { analyte: "BUP", result: "Not tested" },
+            { analyte: "ETG", result: "Sent to reference laboratory" },
           ],
         },
       ],
-      medicationAlignment:
-        "MET result not readily explained by medication information available to staff.",
       clinicianAttention: ["Preliminary MET positive requires provider review."],
-      patientContext: "Patient reports no non-prescribed stimulant use.",
-      plan: [
-        "Route result to ordering clinician for interpretation in clinical context.",
-      ],
-      outsideLabPlan: "Confirmation recommended if clinically indicated.",
+      plan: ["Route result to ordering clinician for interpretation in clinical context."],
     });
 
-    expect(note.text).toBe(
-      [
-        "Point-of-care UDS completed for medication monitoring.",
-        "",
-        "COLLECTION / DEVICE",
-        "Patient: A. Patient",
-        "DOB: 04/18/1987",
-        "Reason: Routine monitoring",
-        "Collected: Jul 30, 2026 at 8:48 AM",
-        "Collected by: M. Yglesias, MA",
-        "Specimen: Urine",
-        "Device: Integrated 14-panel cup",
-        "Lot: UDS24071",
-        "Expiration: 12/2027",
-        "Temperature: Within device range",
-        "",
-        "CONTROL / VALIDITY",
-        "Control: Valid control line observed",
-        "Validity: Interpretable office screen",
-        "• Device read within the manufacturer-specified time.",
-        "",
-        "RESULTS",
-        "• STIMULANTS — AMP: Negative · MET: Preliminary positive",
-        "• OPIOIDS — OPI: Negative · BUP: Not tested",
-        "",
-        "CLINICIAN ATTENTION",
-        "! Preliminary MET positive requires provider review.",
-        "",
-        "STAFF CONTEXT",
-        "Medication alignment: MET result not readily explained by medication information available to staff.",
-        "Patient / comment context: Patient reports no non-prescribed stimulant use.",
-        "",
-        "PLAN",
-        "→ Route result to ordering clinician for interpretation in clinical context.",
-        "Outside laboratory plan: Confirmation recommended if clinically indicated.",
-      ].join("\n"),
+    // An explicit summary stays the note's opening line, the canonical labels
+    // still group, and a reading this formatter cannot classify is reported
+    // exactly as the caller gave it rather than guessed at.
+    expect(note.headline).toBe("Point-of-care UDS completed for medication monitoring.");
+    expect(note.text).toContain(
+      "Results (preliminary/presumptive): MET preliminary positive. Negative — AMP. ETG: Sent to reference laboratory.",
+    );
+    expect(note.text).toContain(
+      "Clinician attention: Preliminary MET positive requires provider review.",
+    );
+    expect(note.text).toContain(
+      "Route result to ordering clinician for interpretation in clinical context.",
     );
   });
 
@@ -572,15 +627,15 @@ describe("dense SmartPhrase documentation", () => {
 
     expect(note.text).toBe(
       [
-        "COLLECTION / DEVICE",
-        "Device: 14-panel cup",
+        "POC urine drug screen — 14-panel cup; results not yet documented.",
         "",
-        "PLAN",
-        "→ Repeat collection per documented provider direction.",
+        "Device: 14-panel cup.",
+        "",
+        "Plan: Repeat collection per documented provider direction.",
       ].join("\n"),
     );
-    expect(note.text).not.toContain("CONTROL / VALIDITY");
-    expect(note.text).not.toContain("RESULTS");
+    expect(note.text).not.toContain("Quality control");
+    expect(note.text).not.toContain("Results (");
     expect(note.text).not.toContain("Control must be documented");
     expect(note.text).not.toContain("none documented");
     expect(note.text).not.toContain("negative");

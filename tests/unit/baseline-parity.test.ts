@@ -351,13 +351,14 @@ const exceptionalUdsEncounter = (): UdsEncounter => {
   };
 };
 
+// The documentation inputs mirror what the shipping producers emit: documented
+// facts and the readings themselves. Every sentence the note makes of them is
+// composed in src/documentation/uds.ts, so a scenario carries no prose of its
+// own beyond what a caller genuinely adds.
 const routineUdsDocumentation: UdsDocumentationInput = {
-  summary: "Point-of-care UDS completed for routine monitoring.",
-  patient: "PARITY, ROUTINE",
-  dob: "03/03/1991",
   collection: {
     reason: "Routine monitoring",
-    collectedAt: "Jul 30, 2026 at 9:00 AM",
+    collectedAt: "7/30/26 0900",
     collectedBy: "M. Staff, MA",
     specimen: "Urine",
     device: "SAFE life 14-Panel Cup",
@@ -367,7 +368,9 @@ const routineUdsDocumentation: UdsDocumentationInput = {
   },
   controlReview: {
     control: "Valid control line observed",
-    validity: "Acceptable validity markers",
+    controlState: "valid",
+    validity: "acceptable",
+    validityState: "acceptable",
     integrity: ["Physical cup and displayed panel readings verified."],
   },
   resultGroups: [
@@ -376,21 +379,16 @@ const routineUdsDocumentation: UdsDocumentationInput = {
       results: UDS_PANELS.map((panel) => ({
         analyte: panel,
         result: "Negative",
+        state: "neg" as const,
       })),
     },
   ],
-  medicationAlignment: "No unexpected findings noted by staff.",
-  plan: ["Route to ordering clinician for review in clinical context."],
-  outsideLabPlan: "Provider to decide.",
 };
 
 const exceptionalUdsDocumentation: UdsDocumentationInput = {
-  summary: "Point-of-care UDS requires device-profile and clinician review.",
-  patient: "PARITY, EXCEPTION",
-  dob: "04/04/1986",
   collection: {
     reason: "Provider ordered",
-    collectedAt: "Jul 30, 2026 at 10:20 AM",
+    collectedAt: "7/30/26 1020",
     collectedBy: "M. Staff, MA",
     specimen: "Urine",
     device: "SAFE life 13-Panel Cup",
@@ -400,7 +398,9 @@ const exceptionalUdsDocumentation: UdsDocumentationInput = {
   },
   controlReview: {
     control: "Valid control line observed",
-    validity: "Physical panel profile does not reconcile",
+    controlState: "valid",
+    validity: "needs review",
+    validityState: "needs review",
     integrity: [
       "PPX is identified as omitted from the physical cup but has an entered result.",
     ],
@@ -409,24 +409,23 @@ const exceptionalUdsDocumentation: UdsDocumentationInput = {
     {
       label: "Flagged panels",
       results: [
-        { analyte: "THC", result: "Preliminary positive" },
-        { analyte: "MET", result: "Invalid / unreadable" },
+        { analyte: "THC", result: "Preliminary positive", state: "pos" as const },
+        { analyte: "MET", result: "Invalid / unreadable", state: "invalid" as const },
+        // Deliberately stateless: a reading the formatter cannot classify must
+        // reach the chart exactly as the caller wrote it.
         { analyte: "PPX", result: "Entered but not present on device" },
       ],
     },
   ],
-  medicationAlignment: "Findings are not readily aligned to the available list.",
+  medicationAlignmentState: "not aligned",
+  // Only what the note cannot derive for itself; the positive, the unreadable
+  // panel, and the alignment flag are the formatter's own to state.
   clinicianAttention: [
-    "Preliminary THC positive requires clinician review.",
-    "MET is invalid and must not be interpreted.",
     "Correct the omitted-panel reconciliation before finalization.",
   ],
   patientContext: "No additional patient explanation documented by staff.",
-  plan: [
-    "Route screen to the ordering clinician for interpretation.",
-    "Do not finalize the 13-panel profile until PPX is marked Not tested.",
-  ],
-  outsideLabPlan: "Confirmation recommended if clinically indicated.",
+  plan: ["Do not finalize the 13-panel profile until PPX is marked Not tested."],
+  outsideLabPlanState: "recommended",
 };
 
 const routineSamplesEncounter = (): SamplesEncounter => ({

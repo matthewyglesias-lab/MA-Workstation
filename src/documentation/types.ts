@@ -22,6 +22,12 @@ export interface DocumentationResult {
    * section headings are deliberately not repeated in this string.
    */
   text: string;
+  /**
+   * The note's own opening line, when the workflow writes one. Exposed so a
+   * worklist or activity-log row can quote the note instead of composing a
+   * second summary of the same encounter that can drift from it.
+   */
+  headline?: string;
 }
 
 export interface DocumentationContribution {
@@ -233,13 +239,23 @@ export interface UdsCollection {
 
 export interface UdsControlReview {
   control?: string;
+  /** The QC reading itself; see UdsResult.state for why both are carried. */
+  controlState?: "valid" | "invalid" | "not documented";
   validity?: string;
+  validityState?: "acceptable" | "needs review" | "not documented";
   integrity?: string[];
 }
 
 export interface UdsResult {
   analyte: string;
   result: string;
+  /**
+   * The reading itself, so the note can group by finding without matching
+   * prose against `result`. Both producers (typed encounter and legacy DOM)
+   * already know it; absent only for historic callers, whose results the
+   * formatter then reports exactly as given, ungrouped.
+   */
+  state?: "neg" | "pos" | "invalid" | "nt";
 }
 
 export interface UdsResultGroup {
@@ -255,10 +271,24 @@ export interface UdsDocumentationInput {
   controlReview?: UdsControlReview;
   resultGroups?: UdsResultGroup[];
   medicationAlignment?: string;
+  medicationAlignmentState?:
+    | "no unexpected"
+    | "not aligned"
+    | "needs review"
+    | "patient explanation"
+    | "unavailable";
+  /**
+   * Extra findings from the caller. The standard ones (a preliminary positive,
+   * an unreadable panel, failed QC, an alignment flag) are derived by the
+   * formatter from the states above, so both the typed and legacy-DOM
+   * producers report facts and neither writes its own copy of the sentences.
+   */
   clinicianAttention?: string[];
   patientContext?: string;
+  /** Extra plan lines; the standard ones are derived, as with attention. */
   plan?: string[];
   outsideLabPlan?: string;
+  outsideLabPlanState?: "not needed" | "ordered" | "recommended";
 }
 
 export interface SamplePackage {

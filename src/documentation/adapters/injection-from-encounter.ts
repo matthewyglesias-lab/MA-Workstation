@@ -14,7 +14,11 @@ import {
   type InjectionEncounter,
   type InjectionEvaluationOutput,
 } from "../../domain/injection";
-import { isValidIsoDate } from "../../domain/dates";
+import {
+  compactChartDate as formatCompactDate,
+  compactChartDateTime as formatCompactDateTime,
+  isValidIsoDate,
+} from "../../domain/dates";
 import type { InjectionMedication, MedicationVerificationKey } from "../../domain/injection-catalog";
 import {
   injectionClinicalPhaseForReason,
@@ -111,24 +115,6 @@ const lateDoseReviewDocumentationText = (
   return `Late-dose review documented: ${trimmed(details.lateDoseReviewNote)} (does not state provider approval).`;
 };
 
-// Compact military-style charting (RC6.1 note format): "8/7/26 1750" for a
-// date + separate HH:MM field, and "8/7/26" alone when only the date exists.
-// Used everywhere administration date/time appears in the generated note so
-// the CC headline, Date/time line, and any other reference stay consistent.
-const formatCompactDate = (raw?: string): string => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed(raw));
-  if (!match) return "";
-  return `${Number(match[2])}/${Number(match[3])}/${(match[1] ?? "").slice(2)}`;
-};
-
-const formatMilitaryTime = (raw?: string): string => {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(trimmed(raw));
-  if (!match) return "";
-  return `${(match[1] ?? "").padStart(2, "0")}${match[2]}`;
-};
-
-const formatCompactDateTime = (date?: string, time?: string): string =>
-  [formatCompactDate(date), formatMilitaryTime(time)].filter(Boolean).join(" ");
 
 const VOLUME_UNIT_LABELS: Record<string, string> = {
   mL: "mL (volume)",

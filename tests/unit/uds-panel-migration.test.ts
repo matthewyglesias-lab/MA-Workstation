@@ -86,25 +86,34 @@ describe("udsEncounterToDocumentationInput", () => {
 
     const input = udsEncounterToDocumentationInput(encounter);
     expect(input).not.toBeNull();
-    expect(input!.patient).toBe("Draft, Patient");
-    expect(input!.dob).toBe("01/02/1990");
     expect(input!.collection?.reason).toBe("Routine monitoring");
     expect(input!.collection?.specimen).toBe("Urine");
     expect(input!.collection?.device).toBe("SAFE life 14-Panel Cup");
+    expect(input!.collection?.collectedAt).toBe("7/30/26 1030");
     expect(input!.controlReview?.control).toBe("Valid control line");
+    expect(input!.controlReview?.controlState).toBe("valid");
     expect(input!.resultGroups?.[0]?.results).toContainEqual({
       analyte: "Cannabinoids / THC",
       result: "Preliminary positive",
+      state: "pos",
     });
-    expect(input!.clinicianAttention).toContain(
-      "Cannabinoids / THC preliminary positive requires provider review.",
-    );
-    expect(input!.plan).toContain(
-      "Route preliminary positive finding(s) for clinician review in clinical context.",
-    );
+
+    // Facts, not sentences: the note's wording is composed once, in the
+    // formatter, so this adapter and the legacy DOM reader cannot disagree.
+    expect(input!.clinicianAttention).toBeUndefined();
+    expect(input!.plan).toBeUndefined();
+    expect(input!.summary).toBeUndefined();
+    // The chart already knows whose encounter this is.
+    expect(input!.patient).toBeUndefined();
+    expect(input!.dob).toBeUndefined();
 
     const note = DocumentationEngine.format("uds", input!);
-    expect(note.text).toBeTruthy();
+    expect(note.text).toContain(
+      "Results (preliminary/presumptive): Cannabinoids / THC preliminary positive.",
+    );
+    expect(note.text).toContain(
+      "Preliminary positive finding(s) routed for provider review in clinical context.",
+    );
   });
 
   it("omits verification-gated fields (results, control, validity, specimen) until readings are verified", () => {
@@ -122,30 +131,42 @@ describe("udsEncounterToDocumentationInput", () => {
     expect(input!.collection?.collectedAt).toBeUndefined();
   });
 
-  it("flags an invalid control line for clinician attention regardless of individual panel results", () => {
+  it("reports an invalid control line, and its note refuses to call the readings results", () => {
     const encounter: UdsEncounter = {
       ...baseEncounter(),
       physicalReadingsVerified: true,
       control: "invalid",
+      results: { THC: "neg" },
     };
     const input = udsEncounterToDocumentationInput(encounter);
-    expect(input!.clinicianAttention).toContain(
-      "Invalid / missing control; do not interpret the screening result.",
-    );
-    expect(input!.plan).toContain(
-      "Do not interpret; repeat collection or use outside laboratory confirmation per provider direction.",
+    expect(input!.controlReview?.controlState).toBe("invalid");
+
+    const note = DocumentationEngine.format("uds", input!);
+    expect(note.headline).toContain("invalid control line — result not interpretable");
+    expect(note.text).toContain("Readings (not interpretable — invalid control):");
+    expect(note.text).not.toContain("Results (preliminary/presumptive):");
+    expect(note.text).toContain(
+      "Do not interpret. Repeat collection or use outside laboratory confirmation per provider direction.",
     );
   });
 
   it("omits the outside-lab plan when it's still the default placeholder", () => {
     const deferred = udsEncounterToDocumentationInput(baseEncounter());
-    expect(deferred!.outsideLabPlan).toBeUndefined();
+    expect(deferred!.outsideLabPlanState).toBeUndefined();
+    expect(DocumentationEngine.format("uds", deferred!).text).not.toMatch(
+      /outside laboratory/i,
+    );
 
     const decided = udsEncounterToDocumentationInput({
       ...baseEncounter(),
       labPlan: "ordered",
     });
-    expect(decided!.outsideLabPlan).toBe("ordered");
+    expect(decided!.outsideLabPlanState).toBe("ordered");
+    // The panel stores "ordered"; the note says what that means, rather than
+    // pasting the picker's value into the chart.
+    expect(DocumentationEngine.format("uds", decided!).text).toContain(
+      "Outside laboratory confirmation ordered.",
+    );
   });
 });
 

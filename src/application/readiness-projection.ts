@@ -46,7 +46,9 @@ const STAGES: Partial<Record<WorkflowId, readonly ReadinessStage[]>> = {
     { id: "patient", label: "Patient & visit", sections: ["patient", "visit"] },
     { id: "collection", label: "Collection", sections: ["collection", "specimen"] },
     { id: "results", label: "Results", sections: ["results", "result"] },
-    { id: "review", label: "Review / handoff", sections: ["review", "handoff", "output"] },
+    // The UDS screen produces a chart encounter note and its printed reports,
+    // not a handoff message, so the stage is named for what it gates.
+    { id: "review", label: "Review / output", sections: ["review", "handoff", "output"] },
   ],
   samples: [
     { id: "patient", label: "Patient & visit", sections: ["patient", "visit"] },

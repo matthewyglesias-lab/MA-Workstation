@@ -1588,7 +1588,7 @@ export function UdsPanel({
                 title="Copy this UDS note exactly as it reads here."
               >
                 <DesktopIcon name="copy" />
-                Copy Tebra UDS note
+                Copy note
               </button>
             </div>
             {!udsReadyForFinalOutput && (
