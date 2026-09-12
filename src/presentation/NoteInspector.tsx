@@ -67,12 +67,14 @@ export function NoteInspector({
   onCopyAll,
 }: NoteInspectorProps) {
   const verdict = summarizeReadinessVerdict(readiness);
-  const documentIsDraft = verdict?.tone === "blocked";
   const stats = noteDocumentStats(sections.map((section) => section.content));
-  // The record is filed once the local record is locked. Until then it is a
-  // draft, whatever the readiness verdict says - a complete draft is still a
-  // draft, and labelling it otherwise would overstate the record's state.
-  const documentState = postState === "posted" ? "FILED" : "DRAFT";
+  // There is one note, written in its final form from the first documented
+  // field onward, so the only state worth marking is whether the local record
+  // has been filed. A second mark reading DRAFT said nothing the readiness
+  // verdict above does not already say, and said it on every note that was
+  // merely unfiled - including finished ones.
+  const filed = postState === "posted";
+  const patientIdentified = Boolean(patient?.name || patient?.dob);
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
@@ -135,9 +137,7 @@ export function NoteInspector({
         <strong>{title}</strong>
         <span class="cd2004-note-marks">
           <span class="cd2004-note-mark">LOCAL</span>
-          <span class={`cd2004-note-mark is-${documentState.toLowerCase()}`}>
-            {documentState}
-          </span>
+          {filed && <span class="cd2004-note-mark is-filed">FILED</span>}
         </span>
       </div>
 
@@ -174,13 +174,13 @@ export function NoteInspector({
           disabled={!sections.length}
           onClick={onCopyAll}
           title={
-            documentIsDraft
-              ? "Copy the current incomplete documentation as a draft."
-              : "Copy the completed local documentation."
+            sections.length
+              ? "Copy this note exactly as it reads here."
+              : "Document the encounter to build this note."
           }
         >
           <DesktopIcon name="copy" />
-          {documentIsDraft ? "Copy draft note" : "Copy note"}
+          Copy note
         </button>
       </div>
 
@@ -220,10 +220,23 @@ export function NoteInspector({
             </section>
           ))
         ) : (
+          /* The note is written in its final form from the first documented
+             field, so "nothing here yet" is a real state of the encounter
+             rather than a lesser version of the note. It says which one it is
+             - a chart with a patient but no documentation reads differently
+             from an unopened one - and never implies a draft stage. */
           <div class="cd2004-note-empty">
             <DesktopIcon name="note" />
-            <strong>Note preview is waiting.</strong>
-            <span>Document the encounter to build the local note preview.</span>
+            <strong>
+              {patientIdentified
+                ? "Nothing documented yet."
+                : "No encounter started."}
+            </strong>
+            <span>
+              {patientIdentified
+                ? "Each section appears here, in its final wording, as the encounter is documented."
+                : "Enter the patient and encounter details. The note builds here as you work."}
+            </span>
           </div>
         )}
         {/* A document that just stops leaves the reader unsure whether more of

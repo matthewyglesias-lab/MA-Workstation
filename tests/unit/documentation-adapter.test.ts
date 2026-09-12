@@ -7,9 +7,10 @@ import {
   readLegacyFormsDocumentation,
   readLegacySamplesDocumentation,
 } from "../../src/legacy/documentation-adapter";
+import { DocumentationEngine } from "../../src/documentation";
 
 describe("legacy dense-documentation adapter", () => {
-  it("keeps an unfinished injection draft neutral instead of asserting default attestations", () => {
+  it("writes an unfinished injection encounter in the final note wording, without asserting default attestations", () => {
     const doc = {
       getElementById: () => null,
       querySelector: (selector: string) =>
@@ -17,10 +18,26 @@ describe("legacy dense-documentation adapter", () => {
       querySelectorAll: () => [],
     } as unknown as Document;
     const input = readLegacyInjectionDocumentation(doc, {} as Window);
-    expect(input?.chiefComplaint?.summary).toMatch(/documentation draft/i);
+    expect(input).not.toBeNull();
+    // No separate draft wording: the shared formatter supplies the opening
+    // line for an encounter that has no disposition yet.
+    expect(input?.chiefComplaint?.summary).toBeUndefined();
     expect(input?.preAdministration?.allergiesReview).toBeUndefined();
     expect(input?.preAdministration?.reviewItems).toBeUndefined();
     expect(input?.preAdministration?.clinicianAttention).toBeUndefined();
+
+    const note = DocumentationEngine.format("injection", input!);
+    expect(note.cc).toContain("Invega Sustenna injection encounter.");
+    expect(note.text).not.toMatch(/draft/i);
+  });
+
+  it("leaves the injection note absent only while the worksheet is untouched", () => {
+    const doc = {
+      getElementById: () => null,
+      querySelector: () => null,
+      querySelectorAll: () => [],
+    } as unknown as Document;
+    expect(readLegacyInjectionDocumentation(doc, {} as Window)).toBeNull();
   });
 
   it("preserves the selected injection response without inventing negative findings", () => {

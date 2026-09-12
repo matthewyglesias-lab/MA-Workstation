@@ -10,7 +10,7 @@ const SAMPLES = [
   "",
   "\n",
   "Windows line one\r\nWindows line two",
-  "Injection documentation draft — Invega Sustenna.\n\nVisit: Scheduled\nEncounter date: Jul 30, 2026",
+  "Invega Sustenna injection encounter.\n\nVisit: Scheduled\nEncounter date: Jul 30, 2026",
   "PRE-ADMINISTRATION REVIEW\nPrevious dose date: Jul 2, 2026\nTiming review: Given 28 day(s) after the prior dose — within the labeled window (about 21–35 days).",
   "PRODUCT IDENTIFICATION\n→ Invega Sustenna\n  Dose: 156 mg\n  Lot: SAFETY-LOT\n\nFOLLOW-UP\nNext dose due: Aug 27, 2026\nOrdering provider: Syed, Hozair, MD",
   "Verification: Pt identity verified using two identifiers (full name & DOB).",
