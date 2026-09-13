@@ -157,8 +157,6 @@ export interface ClinicalDesktopShellProps {
   onOpenLocation?: () => void;
   onOpenKnowledge?: () => void;
   onOpenCloseout?: () => void;
-  onCopyNoteSection?: (section: NoteSection) => void;
-  onCopyAllNotes?: () => void;
   onQueueItemOpen?: (item: WorkQueueItem) => void;
   onRecordOpen?: (record: InjectionRecordRow) => void;
   onEscape?: () => void;

@@ -1,6 +1,7 @@
 import { createContext, Fragment, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { DesktopIcon } from "../../DesktopIcon";
+import { copyButtonLabel, useCopyFeedback } from "../../clipboard";
 import { ModalDialog } from "../../ModalDialog";
 import { SiteIcon } from "../../SiteIcon";
 import {
@@ -1747,6 +1748,10 @@ export function InjectionPanel({
   };
   const noteInput = evaluation ? injectionEncounterToDocumentationInput(encounter, evaluation) : null;
   const noteText = noteInput ? DocumentationEngine.format("injection", noteInput).text : "";
+  // Copying is how the note reaches the chart, so it reports what happened
+  // rather than failing silently when the browser withholds the clipboard.
+  const noteCopy = useCopyFeedback();
+  const copyNote = noteCopy.copy;
   const stops = evaluation?.stops ?? [];
   const administrationReviewCurrent = hasCurrentInjectionAdministrationReview(encounter);
   const administrationReviewEvaluation = useMemo(
@@ -3955,11 +3960,11 @@ export function InjectionPanel({
               <button
                 type="button"
                 class="cd2004-link-button"
-                onClick={() => navigator.clipboard?.writeText(noteText)}
+                onClick={() => copyNote(noteText)}
                 disabled={!noteText}
               >
                 <DesktopIcon name="copy" />
-                Copy note
+                {copyButtonLabel(noteCopy.state, "Copy note")}
               </button>
               <span class="wfp-actions-divider" aria-hidden="true" />
               <button
