@@ -1,7 +1,18 @@
 import { DesktopIcon } from "./DesktopIcon";
 import { summarizeReadinessVerdict } from "../application/readiness-projection";
+import { copyButtonLabel, copyFeedbackMessage, useCopyFeedback } from "./clipboard";
 import { noteDocumentLines, noteDocumentStats } from "./note-document";
 import type { NoteSection, PatientContext, ReadinessItem } from "./types";
+
+/**
+ * What "Copy note" puts on the clipboard when the document has more than one
+ * section: the same rule the documentation engine uses to join them, so the
+ * whole note reads as it does on screen.
+ */
+const DOCUMENT_DIVIDER = "\n\n────────────────────────────────\n\n";
+
+/** Identifies the toolbar command, so its confirmation stays its own. */
+const WHOLE_NOTE = "note";
 
 interface NoteInspectorProps {
   title: string;
@@ -11,8 +22,6 @@ interface NoteInspectorProps {
   patient?: PatientContext;
   postState: "idle" | "posting" | "posted" | "error";
   postMessage?: string;
-  onCopySection?: (section: NoteSection) => void;
-  onCopyAll?: () => void;
 }
 
 /**
@@ -63,8 +72,6 @@ export function NoteInspector({
   patient,
   postState,
   postMessage,
-  onCopySection,
-  onCopyAll,
 }: NoteInspectorProps) {
   const verdict = summarizeReadinessVerdict(readiness);
   const stats = noteDocumentStats(sections.map((section) => section.content));
@@ -75,6 +82,16 @@ export function NoteInspector({
   // merely unfiled - including finished ones.
   const filed = postState === "posted";
   const patientIdentified = Boolean(patient?.name || patient?.dob);
+  // The viewer copies the text it is displaying. It used to forward the click
+  // to a hidden control in the compatibility panel, which only ever carried
+  // selectors for the injection note - so the same button silently did
+  // nothing in UDS, Samples and Forms. The content is right here; copy it.
+  const { state: copyState, copy, stateFor } = useCopyFeedback();
+  const wholeNoteCopy = stateFor(WHOLE_NOTE);
+  const copyFeedback = copyFeedbackMessage(
+    copyState,
+    wholeNoteCopy || !copyState ? "Note" : "Section",
+  );
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
@@ -170,9 +187,14 @@ export function NoteInspector({
         </span>
         <button
           type="button"
-          class="cd2004-command-button cd2004-note-copy-all"
+          class={`cd2004-command-button cd2004-note-copy-all${wholeNoteCopy ? ` is-${wholeNoteCopy}` : ""}`}
           disabled={!sections.length}
-          onClick={onCopyAll}
+          onClick={() =>
+            copy(
+              sections.map((section) => section.content).join(DOCUMENT_DIVIDER),
+              WHOLE_NOTE,
+            )
+          }
           title={
             sections.length
               ? "Copy this note exactly as it reads here."
@@ -180,8 +202,14 @@ export function NoteInspector({
           }
         >
           <DesktopIcon name="copy" />
-          Copy note
+          {copyButtonLabel(wholeNoteCopy, "Copy note")}
         </button>
+      </div>
+
+      {/* Announced, not just drawn: the confirmation is the whole point of the
+          change, and an operator using a screen reader needs it too. */}
+      <div class="cd2004-note-copy-status" role="status" aria-live="polite">
+        {copyFeedback}
       </div>
 
       <div class="cd2004-note-sections">
@@ -211,9 +239,9 @@ export function NoteInspector({
                   class="cd2004-note-mark cd2004-note-copy"
                   aria-label={`Copy ${section.label} section`}
                   title={`Copy ${section.label} section`}
-                  onClick={() => onCopySection?.(section)}
+                  onClick={() => copy(section.content, section.id)}
                 >
-                  COPY
+                  {stateFor(section.id) === "copied" ? "COPIED" : "COPY"}
                 </button>
               </header>
               <NoteDocumentBody content={section.content} />

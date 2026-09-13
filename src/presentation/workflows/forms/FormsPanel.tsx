@@ -17,6 +17,7 @@ import { DocumentationEngine } from "../../../documentation";
 import { formatProviderLetterDraft } from "../../../documentation/forms";
 import { formsEncounterToDocumentationInput } from "../../../documentation/adapters/forms-from-encounter";
 import { DesktopIcon } from "../../DesktopIcon";
+import { copyButtonLabel, useCopyFeedback } from "../../clipboard";
 import { clickLegacyControl } from "../legacy-mirror";
 import { ProviderField } from "../ProviderField";
 import { resolveProviderDisplay } from "../../../domain/provider-register";
@@ -174,6 +175,12 @@ export function FormsPanel({
     formsEncounterToDocumentationInput(encounter),
   ).text;
   const letterDraft = formatProviderLetterDraft(encounter);
+  // Copying is how the note reaches the chart, so it reports what happened
+  // rather than failing silently when the browser withholds the clipboard.
+  const noteCopy = useCopyFeedback();
+  const copyNote = noteCopy.copy;
+  const letterCopy = useCopyFeedback();
+  const copyLetter = letterCopy.copy;
 
   // While the letter builder is walled off, its section-scoped stops/
   // warnings aren't actionable from this UI — exclude them from the visible
@@ -430,11 +437,11 @@ export function FormsPanel({
                 <button
                   type="button"
                   class="cd2004-link-button"
-                  onClick={() => navigator.clipboard?.writeText(noteText)}
+                  onClick={() => copyNote(noteText)}
                   disabled={!noteText}
                 >
                   <DesktopIcon name="copy" />
-                  Copy note
+                  {copyButtonLabel(noteCopy.state, "Copy note")}
                 </button>
               </div>
             </div>
@@ -608,9 +615,9 @@ export function FormsPanel({
                 <button
                   type="button"
                   class="cd2004-link-button"
-                  onClick={() => navigator.clipboard?.writeText(letterDraft.bodyText)}
+                  onClick={() => copyLetter(letterDraft.bodyText)}
                 >
-                  Copy letter text
+                  {copyButtonLabel(letterCopy.state, "Copy letter text")}
                 </button>
               </div>
               <span class="wfp-field-hint">

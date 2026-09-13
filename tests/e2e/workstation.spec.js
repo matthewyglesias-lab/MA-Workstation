@@ -3053,6 +3053,78 @@ test.describe('MA Workstation browser journeys', () => {
       .toHaveText(['LOCAL']);
   });
 
+  /**
+   * Every copy command in every workflow, against the real clipboard.
+   *
+   * The fidelity test above only ever ran on Injection, which is why three
+   * workflows shipped a section Copy button that silently did nothing: the
+   * viewer forwarded the click to a hidden compatibility control that only
+   * existed for the injection note. A copy that no-ops is worse than a missing
+   * button - staff paste whatever was on the clipboard before into a chart.
+   */
+  test('copies the note from every workflow, from both the section and the toolbar', async ({ page }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
+      origin: 'http://127.0.0.1:4173'
+    });
+    await page.goto('/');
+
+    // One patient, carried across workflows, is enough for each to build a note.
+    await openWorkflow(page, 'administer');
+    const injection = page.locator('.wfp-panel');
+    await injection.locator('input[placeholder="Last, First"]').fill('Clipboard, Audit');
+    await injection.locator('input[placeholder="MM/DD/YYYY"]').first().fill('01/02/1990');
+    await page.keyboard.press('Tab');
+
+    const inspector = page.locator('.cd2004-inspector');
+    const sentinel = async (value) => {
+      await page.evaluate((text) => navigator.clipboard.writeText(text), value);
+    };
+    const clipboard = () => page.evaluate(() => navigator.clipboard.readText());
+
+    for (const workflow of ['administer', 'uds', 'samples', 'forms']) {
+      await openWorkflow(page, workflow);
+      const sections = inspector.locator('.cd2004-note-section');
+      await expect(sections.first()).toBeVisible();
+      const count = await sections.count();
+      expect(count).toBeGreaterThan(0);
+
+      for (let index = 0; index < count; index += 1) {
+        const section = sections.nth(index);
+        const rendered = await section.evaluate((node) =>
+          [...node.querySelectorAll('.cd2004-note-line')]
+            .map((line) => line.textContent)
+            .join('\n')
+        );
+        await sentinel(`__stale_${workflow}_${index}__`);
+        await section.locator('.cd2004-note-copy').click();
+        await expect(section.locator('.cd2004-note-copy')).toHaveText('COPIED');
+        expect(
+          (await clipboard()).replace(/\r\n/g, '\n'),
+          `${workflow} section ${index} Copy must put its own text on the clipboard`
+        ).toBe(rendered);
+      }
+
+      // The toolbar command copies the whole document, joined the way the
+      // documentation engine joins its sections.
+      const whole = await inspector.evaluate((node) =>
+        [...node.querySelectorAll('.cd2004-note-section')]
+          .map((section) =>
+            [...section.querySelectorAll('.cd2004-note-line')]
+              .map((line) => line.textContent)
+              .join('\n')
+          )
+          .join('\n\n────────────────────────────────\n\n')
+      );
+      await sentinel(`__stale_${workflow}_all__`);
+      await inspector.locator('.cd2004-note-copy-all').click();
+      await expect(inspector.locator('.cd2004-note-copy-all')).toHaveText(/Copied/);
+      expect(
+        (await clipboard()).replace(/\r\n/g, '\n'),
+        `${workflow} Copy note must put the whole note on the clipboard`
+      ).toBe(whole);
+    }
+  });
+
   test('renders the UDS clinician view as a dense preliminary laboratory report', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'uds');

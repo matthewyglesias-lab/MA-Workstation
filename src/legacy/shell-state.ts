@@ -479,39 +479,3 @@ export function readLegacyShellSnapshot(runtime: LegacyRuntime): LegacyShellSnap
   };
 }
 
-export function copyLegacyNoteSection(
-  workflow: WorkflowId,
-  sectionId: string,
-): boolean {
-  const selectors: Partial<Record<WorkflowId, Record<string, string>>> = {
-    administer: {
-      cc: '[data-copy="cc"]',
-      assessment: '[data-copy="as"]',
-      plan: '[data-copy="pl"]',
-    },
-    uds: {
-      cc: '[data-udscopy="cc"]',
-      assessment: '[data-udscopy="as"]',
-      plan: '[data-udscopy="pl"]',
-    },
-  };
-  const selector = selectors[workflow]?.[sectionId];
-  if (!selector) return false;
-  document.querySelector<HTMLElement>(selector)?.click();
-  return true;
-}
-
-export function copyAllLegacyNotes(workflow: WorkflowId): boolean {
-  const selector: Partial<Record<WorkflowId, string>> = {
-    administer: '#copyAll',
-    uds: '#udsCopyAll',
-    samples: '#sampleCopy',
-    forms: '#formsCopy',
-  };
-  const control = selector[workflow]
-    ? document.querySelector<HTMLElement>(selector[workflow]!)
-    : null;
-  if (!control) return false;
-  control.click();
-  return true;
-}
