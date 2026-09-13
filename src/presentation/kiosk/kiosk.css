@@ -61,6 +61,31 @@
     white-space: nowrap;
   }
 
+  /*
+   * The same slot, holding an instruction instead of a name.
+   *
+   * The rule above is right for a name: one line, clipped with an ellipsis, so
+   * that a long legal name cannot reflow the banner the whole kiosk is measured
+   * against. It is wrong for the sentence that stands in for a name before
+   * anyone has been identified - at 24px that sentence is 325px wide in a 262px
+   * cell, and it read "Identify the patient to b" at 1440 and "Identify the
+   * patient" at 800.
+   *
+   * So the prompt is set at lead size and allowed to wrap. It fits on one line
+   * at full width and takes two in the narrow kiosk, where the identity cell
+   * already stands taller than its own content. It keeps the full-contrast
+   * cream rather than dropping to the quieter teal: with no patient on screen,
+   * this line is the most important thing on it.
+   */
+  .cd2004-shell .kiosk-patient-identity strong.is-unidentified {
+    overflow: visible;
+    font-size: var(--tw-fs-lead);
+    line-height: var(--tw-lh-lead);
+    text-overflow: clip;
+    text-wrap: balance;
+    white-space: normal;
+  }
+
   .cd2004-shell .kiosk-patient-identity > span {
     color: var(--tw-teal-200);
     font-size: var(--tw-fs-ws-meta);
@@ -717,11 +742,18 @@
     padding: 6px 8px;
   }
 
+  /*
+   * Cap the width of the shell actions so they cannot crowd the facts grid,
+   * but wrap the label rather than clip it. These buttons were ellipsised at
+   * this breakpoint, which rendered the kiosk exit as "Return to full w" - a
+   * control has to say what it does, and there is no width at which half a
+   * verb is the better trade. Two lines cost nothing here: the column already
+   * stands taller than the 44px touch targets inside it.
+   */
   .cd2004-shell .kiosk-shell-actions button {
-    overflow: hidden;
     max-width: 132px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    text-wrap: balance;
+    white-space: normal;
   }
 
   .cd2004-shell .kiosk-journey-rail {

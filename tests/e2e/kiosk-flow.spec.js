@@ -148,6 +148,56 @@ test.describe('Injection focus workspace', () => {
     ))).toBeLessThanOrEqual(0.01);
   });
 
+  test('states the waiting prompt and every shell action in full at both kiosk widths', async ({ page }) => {
+    /*
+     * `.kiosk-patient-summary` is `overflow: hidden`, and the cells inside it
+     * were clipping their own copy: the identity cell truncated the prompt
+     * that stands in for a patient name to "Identify the patient to b", and
+     * the shell actions ellipsised the exit control to "Return to full w".
+     *
+     * A name may truncate - a long legal name must not reflow the banner the
+     * rest of the kiosk is measured against - but a sentence and a control
+     * label may not. Nothing else pins this: the visual baselines cover the
+     * ordinary workstation only, so kiosk chrome has no pixel coverage at all.
+     * Measuring the overflow directly holds on any platform and needs no
+     * baseline to maintain.
+     */
+    for (const size of [{ width: 1440, height: 900 }, { width: 800, height: 600 }]) {
+      await page.setViewportSize(size);
+      await page.goto('/?kiosk=1');
+
+      const banner = page.locator('.kiosk-patient-summary');
+      await expect(banner).toBeVisible();
+
+      // No patient has been identified, so the prompt occupies the name slot.
+      const prompt = banner.locator('.kiosk-patient-identity strong');
+      await expect(prompt).toHaveText('Identify the patient to begin');
+      await expect(prompt).toHaveClass(/\bis-unidentified\b/);
+
+      const clipped = (locator) => locator.evaluate((node) =>
+        node.scrollWidth > node.clientWidth + 1
+      );
+
+      expect(await clipped(prompt), `prompt clipped at ${size.width}`).toBe(false);
+
+      const actions = banner.locator('.kiosk-shell-actions button');
+      const actionCount = await actions.count();
+      expect(actionCount).toBeGreaterThan(0);
+      for (let index = 0; index < actionCount; index += 1) {
+        const action = actions.nth(index);
+        const label = (await action.textContent()).trim();
+        expect(label).not.toBe('');
+        expect(await clipped(action), `"${label}" clipped at ${size.width}`).toBe(false);
+      }
+
+      // The banner clips its own overflow, so wrapping a label must not simply
+      // move the loss from the horizontal axis to the vertical one.
+      expect(await banner.evaluate((node) =>
+        node.scrollHeight > node.clientHeight + 1
+      ), `banner clipped vertically at ${size.width}`).toBe(false);
+    }
+  });
+
   test('moves a synthetic note from Identify through Sign and starts the next patient', async ({ page }) => {
     await page.goto('/?kiosk=1');
     await signInLocalStaff(page);

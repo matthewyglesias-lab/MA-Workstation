@@ -59,7 +59,16 @@ export function KioskShell({
   onPrintHandout,
   onStartNextPatient,
 }: KioskShellProps) {
-  const patientName = patient.name?.trim() || KIOSK.identifyPatient;
+  /*
+   * Whether a patient has been resolved, kept separate from the string that
+   * gets rendered. The name cell has to truncate - a long legal name must not
+   * be allowed to reflow the banner - but the waiting prompt that stands in for
+   * it is a sentence, and truncating that produced "Identify the patient to b".
+   * The two need different typography, and the distinction is drawn from the
+   * data here, never from inspecting the copy downstream.
+   */
+  const identifiedName = patient.name?.trim();
+  const patientName = identifiedName || KIOSK.identifyPatient;
   const patientDob = patient.dob?.trim() || KIOSK.notAvailable;
 
   return (
@@ -67,7 +76,9 @@ export function KioskShell({
       <section class="kiosk-patient-summary" aria-label={KIOSK.currentPatient}>
         <div class="kiosk-patient-identity">
           <small>{KIOSK.currentPatient}</small>
-          <strong>{patientName}</strong>
+          <strong class={identifiedName ? undefined : "is-unidentified"}>
+            {patientName}
+          </strong>
           <span>
             {PATIENT.dob}: <b>{patientDob}</b>
           </span>
