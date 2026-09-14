@@ -3495,6 +3495,31 @@
     height: 12px;
   }
 
+  /* A copy that worked and a copy the browser refused have to look different
+     from each other and from the resting state - the whole point of the
+     confirmation is that an operator can tell without pasting to find out. */
+  .cd2004-note-toolbar .cd2004-command-button.is-copied {
+    color: #0d3f22;
+    background: #cfe9d6;
+    border-color: #fff #4c8a63 #4c8a63 #fff;
+  }
+
+  .cd2004-note-toolbar .cd2004-command-button.is-blocked {
+    color: #5e1616;
+    background: #f0d2d2;
+    border-color: #fff #a35555 #a35555 #fff;
+  }
+
+  .cd2004-note-copy-status {
+    padding: 0 4px;
+    color: #27345f;
+    font: 700 8px/1.5 Tahoma, sans-serif;
+  }
+
+  .cd2004-note-copy-status:empty {
+    display: none;
+  }
+
   .cd2004-note-sections {
     flex: 1 1 auto;
     min-height: 0;

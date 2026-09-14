@@ -53,8 +53,6 @@ import type {
 import type { ClinicalEvaluation } from './domain/contracts';
 import type { UdsEncounter, UdsEvaluationOutput } from './domain/uds';
 import {
-  copyAllLegacyNotes,
-  copyLegacyNoteSection,
   readLegacyShellSnapshot,
   type LegacyShellSnapshot,
 } from './legacy/shell-state';
@@ -772,10 +770,6 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         onLookup={() => setRecordsOpen(true)}
         onOpenKnowledge={() => openWorkflow('reference')}
         onOpenCloseout={() => openWorkflow('log')}
-        onCopyNoteSection={(section) =>
-          copyLegacyNoteSection(activeWorkflow, section.id)
-        }
-        onCopyAllNotes={() => copyAllLegacyNotes(activeWorkflow)}
         onQueueItemOpen={queueOpen}
         onRecordOpen={openRecord}
         onEscape={() => {

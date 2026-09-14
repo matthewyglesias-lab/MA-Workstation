@@ -31,6 +31,7 @@ import { StatusFlag } from "../StatusFlag";
 import { mirrorUdsEncounterToLegacyDom, mirrorUdsSignatureToggle } from "./uds-legacy-mirror";
 import type { PatientContext } from "../../types";
 import { DesktopIcon } from "../../DesktopIcon";
+import { copyButtonLabel, useCopyFeedback } from "../../clipboard";
 import { ModalDialog } from "../../ModalDialog";
 import { formatDobAsTyped } from "../../format-dob";
 import { RecordActionDialog, type RecordActionKind } from "../../RecordActionDialog";
@@ -781,6 +782,10 @@ export function UdsPanel({
 
   const noteInput = udsEncounterToDocumentationInput(encounter);
   const noteText = noteInput ? DocumentationEngine.format("uds", noteInput).text : "";
+  // Copying is how the note reaches the chart, so it reports what happened
+  // rather than failing silently when the browser withholds the clipboard.
+  const noteCopy = useCopyFeedback();
+  const copyNote = noteCopy.copy;
 
   const profile = profileFor(encounter.device);
   const displayedPanels = displayedUdsPanels(encounter);
@@ -1580,7 +1585,7 @@ export function UdsPanel({
               <button
                 type="button"
                 class="cd2004-link-button"
-                onClick={() => navigator.clipboard?.writeText(noteText)}
+                onClick={() => copyNote(noteText)}
                 disabled={!noteText}
                 // One note, in its final wording, at every stage of the
                 // screen. Printing a finalized result still waits on the
@@ -1588,7 +1593,7 @@ export function UdsPanel({
                 title="Copy this UDS note exactly as it reads here."
               >
                 <DesktopIcon name="copy" />
-                Copy note
+                {copyButtonLabel(noteCopy.state, "Copy note")}
               </button>
             </div>
             {!udsReadyForFinalOutput && (

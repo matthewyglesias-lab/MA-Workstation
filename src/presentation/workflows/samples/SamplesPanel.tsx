@@ -21,6 +21,7 @@ import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { DocumentationEngine } from "../../../documentation";
 import { samplesEncounterToDocumentationInput } from "../../../documentation/adapters/samples-from-encounter";
 import { DesktopIcon } from "../../DesktopIcon";
+import { copyButtonLabel, useCopyFeedback } from "../../clipboard";
 import { clickLegacyControl } from "../legacy-mirror";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
 import { ProviderField } from "../ProviderField";
@@ -391,6 +392,10 @@ export function SamplesPanel({
 
   const noteInput = samplesEncounterToDocumentationInput(encounter, today);
   const noteText = noteInput ? DocumentationEngine.format("samples", noteInput).text : "";
+  // Copying is how the note reaches the chart, so it reports what happened
+  // rather than failing silently when the browser withholds the clipboard.
+  const noteCopy = useCopyFeedback();
+  const copyNote = noteCopy.copy;
 
   const rows = rowsFromEncounter(encounter);
   const primary = primaryPackage(encounter);
@@ -905,11 +910,11 @@ export function SamplesPanel({
                 <button
                   type="button"
                   class="cd2004-link-button"
-                  onClick={() => navigator.clipboard?.writeText(noteText)}
+                  onClick={() => copyNote(noteText)}
                   disabled={!noteText}
                 >
                   <DesktopIcon name="copy" />
-                  Copy note
+                  {copyButtonLabel(noteCopy.state, "Copy note")}
                 </button>
                 <span class="wfp-actions-divider" aria-hidden="true" />
                 <button
