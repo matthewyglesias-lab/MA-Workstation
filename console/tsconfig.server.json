@@ -1,8 +1,13 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false, "outDir": "dist/server", "rootDir": "src",
-    "module": "NodeNext", "moduleResolution": "NodeNext", "sourceMap": true
+    "noEmit": false,
+    "outDir": "dist/server",
+    "rootDir": "src",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "sourceMap": true
   },
-  "include": ["src/server", "src/shared"], "exclude": ["tests"]
+  "include": ["src/server", "src/shared"],
+  "exclude": ["tests"]
 }

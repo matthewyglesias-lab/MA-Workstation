@@ -1,7 +1,7 @@
 name: Clinic console foundation
 on:
   push:
-    branches: [main, 'feat/azure-sql-clinic-console']
+    branches: [main]
     paths: ['console/**', '.github/workflows/clinic-console-ci.yml']
   pull_request:
     paths: ['console/**', '.github/workflows/clinic-console-ci.yml']
@@ -22,7 +22,10 @@ jobs:
           cache: npm
           cache-dependency-path: console/package-lock.json
       - run: npm ci
+      - run: npm run format:check
       - run: npm run check
+      - name: Compile Azure infrastructure
+        run: az bicep build --file infra/main.bicep --outfile /tmp/clinic-console-infra.json
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
       - uses: actions/upload-artifact@v4

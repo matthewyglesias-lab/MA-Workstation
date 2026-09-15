@@ -4,13 +4,13 @@ Architectural durability is the highest priority. This is a modular monolith: on
 
 ## Ownership
 
-| System/module | Owns |
-| --- | --- |
-| Tebra | Clinical chart, signed notes, orders, diagnoses, medication list, official appointments |
-| Patient links | Internal identity, scoped Tebra identifier, identity verification provenance |
-| Work | Operational service lifecycle and explicit documentation handoff |
-| Inventory | Physical stock balances, reservations, immutable movement history |
-| Platform | Authentication, clinic scope, transactions, migrations, command receipts, audit, outbox |
+| System/module              | Owns                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Tebra                      | Clinical chart, signed notes, orders, diagnoses, medication list, official appointments                             |
+| Patient links              | Internal identity, scoped Tebra identifier, identity verification provenance                                        |
+| Work                       | Operational service lifecycle and explicit documentation handoff                                                    |
+| Inventory                  | Physical stock balances, reservations, immutable movement history                                                   |
+| Platform                   | Authentication, clinic scope, transactions, migrations, command receipts, audit, outbox                             |
 | Future clinical assistance | Versioned deterministic guidance using explicitly verified Tebra facts; never autonomous prescribing or chart truth |
 
 UI → `/api/v1` → validated command → domain policy → repository port → Azure SQL. The browser has no database credential. Clinic ID comes from server configuration; requests cannot choose their clinic. Composite foreign keys enforce same-clinic links. Each deployment is assigned one clinic. Before multi-clinic hosting, introduce explicit staff memberships and database row-level access controls rather than accepting a client-provided clinic ID.
@@ -29,11 +29,11 @@ Activity updates compare `expectedVersion` inside a transaction. A stale screen 
 
 SQL mode accepts only signed Entra v2 access tokens with the configured tenant, API audience, approved SPA `azp`, `access_as_user` scope and an allowed app role. The signature, expiry, not-before time and issuer are verified. Token claims are never accepted from unsigned headers. API roles:
 
-| Role | Permissions |
-| --- | --- |
-| Console.Reader | Read operational workspace |
-| Console.Operator | Link patients, create/update work, reserve/release/use stock |
-| Inventory.Manager | Register products/lots, receive/waste/adjust/reverse stock |
+| Role              | Permissions                                                  |
+| ----------------- | ------------------------------------------------------------ |
+| Console.Reader    | Read operational workspace                                   |
+| Console.Operator  | Link patients, create/update work, reserve/release/use stock |
+| Inventory.Manager | Register products/lots, receive/waste/adjust/reverse stock   |
 
 Roles are explicit and additive; manager does not imply clinical operator. All identities with any listed role can read the clinic workspace. Refine module-specific read permissions before expanding sensitive data scope.
 
