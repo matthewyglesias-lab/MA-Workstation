@@ -1,6 +1,8 @@
 # Synthetic Render acceptance
 
-Run only after SQL bootstrap, staff enrollment and deployment have completed. The target must contain synthetic evaluation data only. This script checks the running API through the application's configured runtime SQL identity. The test staff account needs both `Console.Operator` and `Inventory.Manager`.
+The live evaluation passed this script on 15 September 2026 with run `SMOKE-1789492168115-b8d02c44`: one synthetic patient/product/lot, three injection cases and seven movements were retained. A separate genuine Render restart also preserved the original session and exact synthetic records; logout then invalidated the original cookie. See the [deployment record](render-evaluation-status.md) for timestamps, digests, cleanup status and remaining acceptance checks.
+
+For a new run, first complete SQL bootstrap, dedicated test-account enrollment and deployment. The target must contain synthetic evaluation data only. This script checks the running API through the application's configured runtime SQL identity. The test staff account needs both `Console.Operator` and `Inventory.Manager`.
 
 From `console/`, using Node 22 or newer:
 
@@ -16,6 +18,6 @@ The run checks unauthenticated access, Origin and CSRF enforcement, session-cook
 
 Each run retains one clearly labeled `SMOKE-...` patient, product and lot, plus three injection cases: one administered/amended/refiled, one held and one cancelled. The lot ends with one synthetic unit on hand and none reserved. Nothing is deleted. A failed run may retain partial work, and an unconfirmed network response must not be assumed saved. Rerunning creates a distinct test set. The script attempts to revoke its session even after failure.
 
-Exit code `0` means the listed API checks passed; exit code `1` identifies the failed stage without printing sensitive responses. Service-restart persistence, access from another workstation, browser/print layout, failed-login lockout and live Render capacity require separate checks. Do not run lockout tests against a staff member's everyday account.
+Exit code `0` means the listed API checks passed; exit code `1` identifies the failed stage without printing sensitive responses. The script itself does not restart the service. Restart persistence passed separately for the recorded live evaluation; access from a second physical workstation, authenticated browser/print layout, failed-login lockout, sustained live capacity and backup/restore still require separate checks. Do not run lockout tests against a staff member's everyday account.
 
 To validate against a local demonstration API, start the existing console with `CONSOLE_MODE=demo`, `AUTH_MODE=pin`, a clinic UUID and loopback host/port. Set `CONSOLE_SMOKE_URL=http://127.0.0.1:3100`; use the documented local demo credentials through the prompt. Local success does not verify Azure SQL or Render.
