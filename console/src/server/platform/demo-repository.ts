@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+const randomUUID = () => globalThis.crypto.randomUUID();
 import type {
   Activity,
   ActivityInput,

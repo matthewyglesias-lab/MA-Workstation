@@ -28,6 +28,13 @@ jobs:
         run: az bicep build --file infra/main.bicep --outfile /tmp/clinic-console-infra.json
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
+      - run: npm run build:preview
+      - name: Test standalone preview without a server
+        run: CONSOLE_PREVIEW_PATH="$PWD/dist/preview/Clinic-Console-Interactive-Demo.html" npm run test:browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clinic-console-interactive-demo
+          path: console/dist/preview/Clinic-Console-Interactive-Demo.html
       - uses: actions/upload-artifact@v4
         if: always()
         with:

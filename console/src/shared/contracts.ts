@@ -149,7 +149,7 @@ export interface Overview {
   movements: Movement[];
 }
 export interface RuntimeInfo {
-  mode: "demo" | "sql";
+  mode: "demo" | "sql" | "preview";
   clinicTimezone: string;
   tenantId?: string;
   webClientId?: string;

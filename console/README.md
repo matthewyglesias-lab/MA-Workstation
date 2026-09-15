@@ -58,3 +58,23 @@ npx playwright test
 `npm run test:sql` targets only a disposable local SQL Server database named `console_test…`, with `SQL_AUTH=password`. It checks actual migrations, concurrent reservations, retry deduplication, transaction rollback, reversal uniqueness, clinic isolation, conflicting edits, handoff integrity and runtime-role permissions. GitHub Actions runs this suite against SQL Server 2022. It does not contact Azure SQL or production data.
 
 See [architecture](docs/architecture.md), [Azure setup](docs/azure-setup.md), and [build roadmap](docs/roadmap.md).
+
+## Try the standalone preview
+
+Run `npm ci` and `npm run build:preview` inside `console/`, then open
+`dist/preview/Clinic-Console-Interactive-Demo.html` in a modern desktop browser.
+This self-contained preview needs no server or sign-in. It includes fictional patients,
+work queues, inventory reservations, usage, and a simulated Tebra handoff.
+All edits live in browser memory and reset on reload. Do not enter real patient details.
+It does not connect to Azure SQL or Tebra. The production build excludes the preview
+adapter, and an API failure never switches the app into preview mode.
+
+To exercise the same end-to-end workflow against the downloaded file:
+
+```sh
+CONSOLE_PREVIEW_PATH="$PWD/dist/preview/Clinic-Console-Interactive-Demo.html" npm run test:browser
+```
+
+The existing Azure Static Web App preview is currently blocked by its staging
+environment quota. The new console's App Service and Azure SQL resources have not
+yet been provisioned; see [Azure setup](docs/azure-setup.md).

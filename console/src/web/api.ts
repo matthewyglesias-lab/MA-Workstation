@@ -4,9 +4,17 @@ import {
   BrowserCacheLocation,
 } from "@azure/msal-browser";
 import type { Actor, Overview, RuntimeInfo } from "../shared/contracts.js";
+let preview: typeof import("./preview.js").previewRequest | undefined;
 let config: RuntimeInfo;
 let msal: PublicClientApplication | undefined;
 export async function initialize() {
+  if (import.meta.env.VITE_CONSOLE_PREVIEW === "true") {
+    const module = await import("./preview.js");
+    await module.initializePreview();
+    preview = module.previewRequest;
+    config = { mode: "preview", clinicTimezone: "America/Los_Angeles" };
+    return config;
+  }
   const response = await fetch("/api/config", { cache: "no-store" });
   if (!response.ok) throw new Error("The console service is unavailable.");
   config = (await response.json()) as RuntimeInfo;
@@ -56,6 +64,7 @@ export async function request<T>(
   body?: unknown,
   key?: string,
 ): Promise<T> {
+  if (preview) return preview<T>(path, method, body, key);
   const headers: Record<string, string> = { ...(await authorization()) };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (key) headers["Idempotency-Key"] = key;

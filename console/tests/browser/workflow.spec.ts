@@ -1,12 +1,22 @@
+import { pathToFileURL } from "node:url";
 import { test, expect } from "@playwright/test";
 test("patient, inventory and explicit Tebra handoff work together", async ({
   page,
 }) => {
   const browserErrors: string[] = [];
   page.on("pageerror", (e) => browserErrors.push(e.message));
-  await page.goto("/");
+  const preview = process.env.CONSOLE_PREVIEW_PATH;
+  const externalRequests: string[] = [];
+  if (preview)
+    page.on("request", (req) => {
+      if (/^https?:/.test(req.url())) externalRequests.push(req.url());
+    });
+  await page.goto(preview ? pathToFileURL(preview).href : "/");
   await expect(
-    page.getByText("Demonstration workspace", { exact: true }),
+    page.getByText(
+      preview ? "Interactive preview" : "Demonstration workspace",
+      { exact: true },
+    ),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "A clear view of the day." }),
@@ -106,4 +116,15 @@ test("patient, inventory and explicit Tebra handoff work together", async ({
     ),
   ).toBe(true);
   expect(browserErrors).toEqual([]);
+  if (preview) {
+    expect(externalRequests).toEqual([]);
+    await page.reload();
+    await page.getByRole("button", { name: "Patients", exact: true }).click();
+    await expect(
+      page.getByRole("button", {
+        name: "Synthetic Browser Patient",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+  }
 });

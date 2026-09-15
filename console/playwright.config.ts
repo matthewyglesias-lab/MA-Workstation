@@ -13,16 +13,18 @@ export default defineConfig({
         }
       : {},
   },
-  webServer: {
-    command: "npm start",
-    url: "http://127.0.0.1:3100/api/health",
-    reuseExistingServer: !process.env.CI,
-    env: {
-      CONSOLE_MODE: "demo",
-      HOST: "127.0.0.1",
-      PORT: "3100",
-      CLINIC_ID: "11111111-1111-4111-8111-111111111111",
-      NODE_ENV: "test",
-    },
-  },
+  webServer: process.env.CONSOLE_PREVIEW_PATH
+    ? undefined
+    : {
+        command: "npm start",
+        url: "http://127.0.0.1:3100/api/health",
+        reuseExistingServer: !process.env.CI,
+        env: {
+          CONSOLE_MODE: "demo",
+          HOST: "127.0.0.1",
+          PORT: "3100",
+          CLINIC_ID: "11111111-1111-4111-8111-111111111111",
+          NODE_ENV: "test",
+        },
+      },
 });

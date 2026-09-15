@@ -216,11 +216,17 @@ function App() {
             )}
           </div>
         </header>
-        {config?.mode === "demo" && (
+        {(config?.mode === "demo" || config?.mode === "preview") && (
           <div class="demo-banner">
-            <strong>Demonstration workspace</strong>
+            <strong>
+              {config?.mode === "preview"
+                ? "Interactive preview"
+                : "Demonstration workspace"}
+            </strong>
             <span>
-              Synthetic data only · changes reset when the demo server restarts.
+              {config?.mode === "preview"
+                ? "Fictional data only · no Tebra or database connection · reload to reset. Do not enter real patient details."
+                : "Synthetic data only · changes reset when the demo server restarts."}
             </span>
           </div>
         )}
@@ -777,11 +783,13 @@ function App() {
           <footer class="workspace-footer">
             <span>
               <span class="connection-dot" />
-              {config?.mode === "demo"
-                ? "Local synthetic demo"
-                : actor
-                  ? "Connected workspace"
-                  : "Awaiting sign-in"}
+              {config?.mode === "preview"
+                ? "Synthetic browser preview"
+                : config?.mode === "demo"
+                  ? "Local synthetic demo"
+                  : actor
+                    ? "Connected workspace"
+                    : "Awaiting sign-in"}
             </span>
             <span>
               {lastLoaded
