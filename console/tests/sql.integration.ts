@@ -1,3 +1,9 @@
+import { verifyPinSql } from "./pin.sql.js";
+import { clinicDate } from "../src/server/platform/config.js";
+import type {
+  InjectionInput,
+  InjectionReviewInput,
+} from "../src/shared/injections.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import sql from "mssql";
@@ -210,6 +216,250 @@ try {
     repo.updateActivity(activity.id, { ...update, expectedVersion: 3 }, c()),
     /overwritten/,
   );
+  // Injection review, stock reservation, administration, and record history share one transaction.
+  const injectionLot = await repo.createLot(
+    {
+      productId: product.id,
+      lotNumber: "INJECTION-SQL",
+      expiresOn: "2035-01-01",
+      location: "Injection cabinet",
+      ownership: "clinic",
+      ownerPatientId: null,
+    },
+    c(),
+  );
+  await repo.postMovement(
+    input({ lotId: injectionLot.id, kind: "receive", quantity: 2 }),
+    c(),
+  );
+  const injectionInput: InjectionInput = {
+    patientId: patient.id,
+    productId: product.id,
+    doseSequence: 1,
+    tebraOrderReference: "SQL-INJECTION-ORDER",
+    orderingProvider: "Synthetic provider",
+    dose: 100,
+    doseUnit: "mg",
+    route: "IM",
+    site: "Left deltoid",
+    plannedOn: clinicDate("America/Los_Angeles"),
+    lastAdministrationAt: null,
+    timingCategory: "initiation",
+    timingPlan: "Verified synthetic provider plan",
+    nextDueOn: null,
+  };
+  const reviewInput: InjectionReviewInput = {
+    expectedVersion: 1,
+    lotId: injectionLot.id,
+    stockUnits: 1,
+    checks: {
+      identity: true,
+      order: true,
+      allergy: true,
+      medication: true,
+      timing: true,
+      consent: true,
+    },
+    allergyReview: "Reviewed synthetic chart",
+    clinicalReview: "Screened per synthetic order",
+    preparation: "Prepared per instructions",
+    siteAssessment: "Reviewed site",
+    vitals: {
+      status: "not_recorded",
+      bpSystolic: null,
+      bpDiastolic: null,
+      pulse: null,
+      temperatureC: null,
+      oxygenSaturation: null,
+      reason: "Test only",
+    },
+    observationPlan: "Synthetic order",
+  };
+  await assert.rejects(
+    other.createInjection(injectionInput, c()),
+    /linked record/,
+  );
+  const injection = await repo.createInjection(injectionInput, c());
+  await assert.rejects(
+    repo.createInjection(injectionInput, c()),
+    /matching record/,
+  );
+  const reviewRace = await Promise.allSettled(
+    Array.from({ length: 6 }, () =>
+      repo.reviewInjection(injection.id, reviewInput, c()),
+    ),
+  );
+  assert.equal(
+    reviewRace.filter((r) => r.status === "fulfilled").length,
+    1,
+    "Concurrent review reserved twice",
+  );
+  let injectionState = (await repo.listInjections(actor))[0]!;
+  assert.equal(injectionState.review!.productSnapshot.name, product.name);
+  await assert.rejects(
+    other.reviewInjection(injection.id, reviewInput, c()),
+    /not found/,
+  );
+  assert.equal((await other.listInjections(actor)).length, 0);
+  for (const kind of ["use", "release"] as const)
+    await assert.rejects(
+      repo.postMovement(
+        input({
+          lotId: injectionLot.id,
+          kind,
+          quantity: 1,
+          patientId: patient.id,
+        }),
+        c(),
+      ),
+      /reserved for a reviewed injection/,
+    );
+  await assert.rejects(
+    repo.postMovement(
+      input({
+        lotId: injectionLot.id,
+        kind: "reverse",
+        quantity: 0,
+        patientId: patient.id,
+        reversesId: injectionState.review!.reservationMovementId,
+      }),
+      c(),
+    ),
+    /cannot be reversed/,
+  );
+  // An invalid cross-clinic/unknown patient edit releases stock first internally, then must roll everything back.
+  await assert.rejects(
+    repo.updateInjection(
+      injection.id,
+      { ...injectionInput, patientId: randomUUID(), expectedVersion: 2 },
+      c(),
+    ),
+    /linked record/,
+  );
+  assert.equal((await repo.listInjections(actor))[0]!.status, "reviewed");
+  assert.equal(
+    (await repo.overview(actor)).lots.find((l) => l.id === injectionLot.id)!
+      .reserved,
+    1,
+  );
+  await pool
+    .request()
+    .input("clinic", sql.UniqueIdentifier, clinic)
+    .input("id", sql.UniqueIdentifier, injectionLot.id)
+    .query(
+      "UPDATE dbo.StockLots SET status='quarantined' WHERE clinicId=@clinic AND id=@id",
+    );
+  const administration = {
+    expectedVersion: 2,
+    administeredAt: new Date().toISOString(),
+    administeredByName: "SQL test staff",
+    tolerance: "Synthetic",
+    observation: "Synthetic",
+    delivery: "complete" as const,
+    actualDose: null,
+    issueAction: null,
+  };
+  await assert.rejects(
+    repo.administerInjection(injection.id, administration, c()),
+    /quarantined/,
+  );
+  await pool
+    .request()
+    .input("clinic", sql.UniqueIdentifier, clinic)
+    .input("id", sql.UniqueIdentifier, injectionLot.id)
+    .query(
+      "UPDATE dbo.StockLots SET status='active' WHERE clinicId=@clinic AND id=@id",
+    );
+  const administrationKey = c();
+  const administrations = await Promise.all(
+    Array.from({ length: 10 }, () =>
+      repo.administerInjection(injection.id, administration, administrationKey),
+    ),
+  );
+  assert.equal(
+    new Set(administrations.map((i) => i.administration!.id)).size,
+    1,
+    "Idempotent administration consumed twice",
+  );
+  injectionState = administrations[0]!;
+  assert.equal(
+    (await repo.overview(actor)).lots.find((l) => l.id === injectionLot.id)!
+      .onHand,
+    1,
+  );
+  await assert.rejects(
+    repo.updateInjection(
+      injection.id,
+      { ...injectionInput, expectedVersion: 3 },
+      c(),
+    ),
+    /cannot be edited/,
+  );
+  await assert.rejects(
+    repo.postMovement(
+      input({
+        lotId: injectionLot.id,
+        kind: "reverse",
+        quantity: 0,
+        patientId: patient.id,
+        reversesId: injectionState.administration!.stockMovementId,
+      }),
+      c(),
+    ),
+    /cannot be reversed/,
+  );
+  await repo.fileInjection(
+    injection.id,
+    { expectedVersion: 3, tebraReference: "Tebra SQL note" },
+    c(),
+  );
+  const amended = await repo.amendInjection(
+    injection.id,
+    {
+      expectedVersion: 4,
+      reason: "Test correction",
+      text: "Appended observation",
+    },
+    c(),
+  );
+  assert.deepEqual(amended.administration, injectionState.administration);
+  assert.equal(amended.handoff, "pending");
+  assert.equal(amended.filings.length, 1);
+  const secondDose = await repo.createInjection(
+    { ...injectionInput, doseSequence: 2, site: "Right deltoid" },
+    c(),
+  );
+  await repo.reviewInjection(secondDose.id, reviewInput, c());
+  const distinctRaces = await Promise.allSettled(
+    Array.from({ length: 6 }, () =>
+      repo.administerInjection(
+        secondDose.id,
+        { ...administration, administeredAt: new Date().toISOString() },
+        c(),
+      ),
+    ),
+  );
+  assert.equal(
+    distinctRaces.filter((r) => r.status === "fulfilled").length,
+    1,
+    "Stale concurrent administration consumed stock",
+  );
+  const finalLot = (await repo.overview(actor)).lots.find(
+    (l) => l.id === injectionLot.id,
+  )!;
+  assert.deepEqual([finalLot.onHand, finalLot.reserved], [0, 0]);
+  const history = await pool
+    .request()
+    .input("clinic", sql.UniqueIdentifier, clinic)
+    .query(
+      "SELECT (SELECT COUNT(*) FROM dbo.InjectionAdministrations WHERE clinicId=@clinic) administrations,(SELECT COUNT(*) FROM dbo.InjectionAmendments WHERE clinicId=@clinic) amendments,(SELECT COUNT(*) FROM dbo.InjectionFilings WHERE clinicId=@clinic) filings,(SELECT COUNT(*) FROM dbo.InjectionEvents WHERE clinicId=@clinic) events",
+    );
+  assert.deepEqual(history.recordset[0], {
+    administrations: 2,
+    amendments: 1,
+    filings: 1,
+    events: 8,
+  });
   const counts = await pool
     .request()
     .input("clinic", sql.UniqueIdentifier, clinic)
@@ -232,6 +482,17 @@ try {
   assert.equal(permissions.recordset[0].canUpdate, 0);
   assert.equal(permissions.recordset[0].canDelete, 0);
   assert.equal(permissions.recordset[0].canInsert, 1);
+  const injectionPermissions = await pool
+    .request()
+    .query(
+      "EXECUTE AS USER='console_role_test'; SELECT HAS_PERMS_BY_NAME('dbo.InjectionAdministrations','OBJECT','UPDATE') canUpdate,HAS_PERMS_BY_NAME('dbo.InjectionEvents','OBJECT','DELETE') canDelete,HAS_PERMS_BY_NAME('dbo.InjectionAmendments','OBJECT','INSERT') canAmend; REVERT;",
+    );
+  assert.deepEqual(injectionPermissions.recordset[0], {
+    canUpdate: 0,
+    canDelete: 0,
+    canAmend: 1,
+  });
+  await verifyPinSql(pool, clinic, otherClinic);
   console.log(
     "SQL integration passed: migrations, tenant isolation, concurrent reservations, idempotency, rollback, reversals, version conflicts, handoffs, audit/outbox consistency, immutable ledger role.",
   );

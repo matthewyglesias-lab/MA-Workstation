@@ -23,11 +23,13 @@ Every mutation requires an `Idempotency-Key` UUID. Azure SQL takes an applicatio
 
 Every stock operation locks its stock bucket before reading reservations or reversal history. Patient reservations are derived from the full movement ledger. The stock balance is a transactionally maintained projection, constrained to `0 <= reserved <= onHand`. A reconciliation check compares it with ledger sums. Corrections append reversal events; a filtered unique index prevents reversing the same entry twice. The restricted runtime role has no UPDATE/DELETE permission on ledger, audit or command receipts.
 
-Activity updates compare `expectedVersion` inside a transaction. A stale screen cannot overwrite a later update. Completion and Tebra filing are independent; filing is a human-confirmed handoff with a reference, not an integration success claim. Filed handoffs require a future amendment workflow for correction.
+Activity updates compare `expectedVersion` inside a transaction. A stale screen cannot overwrite a later update. Completion and Tebra filing are independent; filing is a human-confirmed handoff with a reference, not an integration success claim. Generic filed work items stay immutable. Injection addenda append a new event, preserve the original administration, and reopen Tebra filing.
 
 ## Identity and access
 
-SQL mode accepts only signed Entra v2 access tokens with the configured tenant, API audience, approved SPA `azp`, `access_as_user` scope and an allowed app role. The signature, expiry, not-before time and issuer are verified. Token claims are never accepted from unsigned headers. API roles:
+SQL mode uses explicit `AUTH_MODE=pin` or `AUTH_MODE=entra`. PIN mode verifies individual staff IDs and 6–12 digit PINs with scrypt, SQL-backed attempt limits, revocable opaque secure-cookie sessions, exact-origin checks, and CSRF tokens. Sessions expire after 15 minutes idle or eight hours absolute; the client locks and clears loaded records at five minutes idle. No runtime HTTP endpoint manages staff credentials; use the administrator CLI. See [PIN access](pin-access.md).
+
+Entra mode accepts only signed Entra v2 access tokens with the configured tenant, API audience, approved SPA `azp`, `access_as_user` scope and an allowed app role. The signature, expiry, not-before time and issuer are verified. Token claims are never accepted from unsigned headers. API roles:
 
 | Role              | Permissions                                                  |
 | ----------------- | ------------------------------------------------------------ |
@@ -37,7 +39,11 @@ SQL mode accepts only signed Entra v2 access tokens with the configured tenant, 
 
 Roles are explicit and additive; manager does not imply clinical operator. All identities with any listed role can read the clinic workspace. Refine module-specific read permissions before expanding sensitive data scope.
 
-MSAL handles sign-in; authentication state uses session storage, while patient/work/inventory records are not cached in browser storage. API responses are `no-store`. Logs contain request ID and error type only, not request bodies, patient search terms, tokens or SQL errors. Read access is recorded in AuditEvents. Production uses managed identity to SQL and a distinct migration identity.
+For Entra mode, MSAL handles sign-in; authentication state uses session storage, while patient/work/inventory records are not cached in browser storage. API responses are `no-store`. Logs contain request ID and error type only, not request bodies, patient search terms, tokens or SQL errors. Read access is recorded in AuditEvents. Production uses managed identity to SQL and a distinct migration identity.
+
+## Injection transaction boundary
+
+Injection order and review details use versioned JSON snapshots behind relational clinic/patient/product keys, a unique ordered-occurrence constraint, and a relational stock allocation. Every change appends an immutable case event. Administration freezes identity/order/product/lot/review evidence, consumes its own reserved package units once, and writes an immutable administration record in the same transaction. Held/cancelled cases release allocations; reviewed stock cannot be consumed by generic inventory commands. Stock mutations take a clinic-scoped lock before bucket locks to establish a consistent lock order in this initial implementation. Revisit this serialization if measured clinic throughput requires finer locking.
 
 ## Clinical migration strategy
 

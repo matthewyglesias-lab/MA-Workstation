@@ -1,3 +1,22 @@
+import type {
+  InjectionCase,
+  InjectionInput,
+  InjectionUpdate,
+  InjectionReviewInput,
+  InjectionAdministrationInput,
+  InjectionDispositionInput,
+  InjectionAmendmentInput,
+  InjectionFilingInput,
+} from "../../shared/injections.js";
+import {
+  createInjectionCase,
+  reviseInjection,
+  reviewInjectionCase,
+  administerInjectionCase,
+  disposeInjection,
+  amendInjectionCase,
+  fileInjectionCase,
+} from "../modules/injections.js";
 import { createHash, randomUUID } from "node:crypto";
 import sql from "mssql";
 import type {
@@ -270,86 +289,455 @@ export class SqlRepository implements Repository {
   }
   async postMovement(input: MovementInput, c: Command) {
     return this.command("stock.movement.posted", input, c, async (tx) => {
-      // Lock the stock bucket before inspecting reservations or reversal history.
-      // Every stock command takes this lock, including receives and corrections.
-      const lot = (
-        await this.request(tx)
-          .input("lot", sql.UniqueIdentifier, input.lotId)
-          .query(
-            `SELECT ${lotColumns} FROM dbo.StockLots WITH(UPDLOCK,HOLDLOCK) WHERE clinicId=@clinic AND id=@lot`,
-          )
-      ).recordset[0] as Lot | undefined;
-      invariant(lot, "not_found", "Stock lot not found.", 404);
-      const original = input.reversesId
-        ? ((
-            await this.request(tx)
-              .input("id", sql.UniqueIdentifier, input.reversesId)
-              .query(
-                `SELECT ${movementColumns} FROM dbo.StockMovements WHERE clinicId=@clinic AND id=@id`,
-              )
-          ).recordset[0] as Movement | undefined)
-        : undefined;
-      const reversed = input.reversesId
-        ? (
-            await this.request(tx)
-              .input("id", sql.UniqueIdentifier, input.reversesId)
-              .query(
-                "SELECT id FROM dbo.StockMovements WHERE clinicId=@clinic AND reversesId=@id",
-              )
-          ).recordset.length > 0
-        : false;
-      const patientReserved = input.patientId
-        ? ((
-            await this.request(tx)
-              .input("lot", sql.UniqueIdentifier, input.lotId)
-              .input("patient", sql.UniqueIdentifier, input.patientId)
-              .query(
-                "SELECT COALESCE(SUM(reservedDelta),0) balance FROM dbo.StockMovements WHERE clinicId=@clinic AND lotId=@lot AND patientId=@patient",
-              )
-          ).recordset[0].balance as number)
-        : 0;
-      const change = evaluateMovement(
-        input,
-        lot,
-        patientReserved,
-        c.actor,
-        clinicDate(this.timezone),
-        original,
-        reversed,
-      );
-      const value: Movement = {
-        ...input,
-        id: randomUUID(),
-        stockDelta: change.stockDelta,
-        reservedDelta: change.reservedDelta,
-        patientId: change.patientId,
-        actorId: c.actor.id,
-        createdAt: new Date().toISOString(),
-      };
-      await this.request(tx)
-        .input("lot", sql.UniqueIdentifier, lot.id)
-        .input("onHand", sql.Int, change.onHand)
-        .input("reserved", sql.Int, change.reserved)
-        .query(
-          "UPDATE dbo.StockLots SET onHand=@onHand,reserved=@reserved WHERE clinicId=@clinic AND id=@lot",
-        );
-      await this.request(tx)
-        .input("id", sql.UniqueIdentifier, value.id)
-        .input("lot", sql.UniqueIdentifier, lot.id)
-        .input("kind", sql.VarChar(20), input.kind)
-        .input("quantity", sql.Int, input.quantity)
-        .input("patient", sql.UniqueIdentifier, value.patientId)
-        .input("reason", sql.NVarChar(300), input.reason)
-        .input("reverses", sql.UniqueIdentifier, input.reversesId)
-        .input("stockDelta", sql.Int, value.stockDelta)
-        .input("reservedDelta", sql.Int, value.reservedDelta)
-        .input("actor", sql.NVarChar(100), c.actor.id)
-        .input("at", sql.DateTime2(3), new Date(value.createdAt))
-        .query(
-          "INSERT dbo.StockMovements(clinicId,id,lotId,kind,quantity,patientId,reason,reversesId,stockDelta,reservedDelta,actorId,createdAt) VALUES(@clinic,@id,@lot,@kind,@quantity,@patient,@reason,@reverses,@stockDelta,@reservedDelta,@actor,@at)",
-        );
-      return value;
+      await this.inventoryLock(tx);
+      return this.applyMovement(tx, input, c);
     });
+  }
+  private async applyMovement(
+    tx: sql.Transaction,
+    input: MovementInput,
+    c: Command,
+    injectionId?: string,
+    expectedProductId?: string,
+  ) {
+    // Lock the stock bucket before inspecting reservations or reversal history.
+    // Every stock command takes this lock, including receives and corrections.
+    const lot = (
+      await this.request(tx)
+        .input("lot", sql.UniqueIdentifier, input.lotId)
+        .query(
+          `SELECT ${lotColumns} FROM dbo.StockLots WITH(UPDLOCK,HOLDLOCK) WHERE clinicId=@clinic AND id=@lot`,
+        )
+    ).recordset[0] as Lot | undefined;
+    invariant(lot, "not_found", "Stock lot not found.", 404);
+    invariant(
+      !expectedProductId || lot.productId === expectedProductId,
+      "injection_product",
+      "The stock product no longer matches this injection.",
+    );
+    const original = input.reversesId
+      ? ((
+          await this.request(tx)
+            .input("id", sql.UniqueIdentifier, input.reversesId)
+            .query(
+              `SELECT ${movementColumns} FROM dbo.StockMovements WHERE clinicId=@clinic AND id=@id`,
+            )
+        ).recordset[0] as Movement | undefined)
+      : undefined;
+    const reversed = input.reversesId
+      ? (
+          await this.request(tx)
+            .input("id", sql.UniqueIdentifier, input.reversesId)
+            .query(
+              "SELECT id FROM dbo.StockMovements WHERE clinicId=@clinic AND reversesId=@id",
+            )
+        ).recordset.length > 0
+      : false;
+    const patientReserved = input.patientId
+      ? ((
+          await this.request(tx)
+            .input("lot", sql.UniqueIdentifier, input.lotId)
+            .input("patient", sql.UniqueIdentifier, input.patientId)
+            .query(
+              "SELECT COALESCE(SUM(reservedDelta),0) balance FROM dbo.StockMovements WHERE clinicId=@clinic AND lotId=@lot AND patientId=@patient",
+            )
+        ).recordset[0].balance as number)
+      : 0;
+    if (input.reversesId) {
+      const linked =
+        (
+          await this.request(tx)
+            .input("id", sql.UniqueIdentifier, input.reversesId)
+            .query(
+              "SELECT movementId FROM dbo.InjectionStockLinks WHERE clinicId=@clinic AND movementId=@id",
+            )
+        ).recordset.length > 0;
+      invariant(
+        !linked,
+        "injection_stock",
+        "Injection stock history cannot be reversed. Add an administration amendment; reconcile stock separately.",
+      );
+    }
+    const change = evaluateMovement(
+      input,
+      lot,
+      patientReserved,
+      c.actor,
+      clinicDate(this.timezone),
+      original,
+      reversed,
+    );
+    if (!injectionId && change.reservedDelta < 0) {
+      const protectedUnits = (
+        await this.request(tx)
+          .input("lot", sql.UniqueIdentifier, lot.id)
+          .input("patient", sql.UniqueIdentifier, change.patientId)
+          .query(
+            "SELECT COALESCE(SUM(stockUnits),0) units FROM dbo.InjectionCases WHERE clinicId=@clinic AND lotId=@lot AND patientId=@patient AND status='reviewed'",
+          )
+      ).recordset[0].units as number;
+      invariant(
+        patientReserved + change.reservedDelta >= protectedUnits,
+        "injection_reservation",
+        "This stock is reserved for a reviewed injection. Change that injection to release it.",
+      );
+    }
+    const value: Movement = {
+      ...input,
+      id: randomUUID(),
+      stockDelta: change.stockDelta,
+      reservedDelta: change.reservedDelta,
+      patientId: change.patientId,
+      actorId: c.actor.id,
+      createdAt: new Date().toISOString(),
+    };
+    await this.request(tx)
+      .input("lot", sql.UniqueIdentifier, lot.id)
+      .input("onHand", sql.Int, change.onHand)
+      .input("reserved", sql.Int, change.reserved)
+      .query(
+        "UPDATE dbo.StockLots SET onHand=@onHand,reserved=@reserved WHERE clinicId=@clinic AND id=@lot",
+      );
+    await this.request(tx)
+      .input("id", sql.UniqueIdentifier, value.id)
+      .input("lot", sql.UniqueIdentifier, lot.id)
+      .input("kind", sql.VarChar(20), input.kind)
+      .input("quantity", sql.Int, input.quantity)
+      .input("patient", sql.UniqueIdentifier, value.patientId)
+      .input("reason", sql.NVarChar(300), input.reason)
+      .input("reverses", sql.UniqueIdentifier, input.reversesId)
+      .input("stockDelta", sql.Int, value.stockDelta)
+      .input("reservedDelta", sql.Int, value.reservedDelta)
+      .input("actor", sql.NVarChar(100), c.actor.id)
+      .input("at", sql.DateTime2(3), new Date(value.createdAt))
+      .query(
+        "INSERT dbo.StockMovements(clinicId,id,lotId,kind,quantity,patientId,reason,reversesId,stockDelta,reservedDelta,actorId,createdAt) VALUES(@clinic,@id,@lot,@kind,@quantity,@patient,@reason,@reverses,@stockDelta,@reservedDelta,@actor,@at)",
+      );
+    if (injectionId)
+      await this.request(tx)
+        .input("movement", sql.UniqueIdentifier, value.id)
+        .input("injection", sql.UniqueIdentifier, injectionId)
+        .query(
+          "INSERT dbo.InjectionStockLinks(clinicId,movementId,injectionId) VALUES(@clinic,@movement,@injection)",
+        );
+    return value;
+  }
+  // One clinic-level stock lock keeps injection reservations and manual stock commands in the same order.
+  // Stock buckets still take row locks; independent clinics never share this lock.
+  private async inventoryLock(tx: sql.Transaction) {
+    await tx
+      .request()
+      .input("resource", sql.NVarChar(255), `inventory:${this.clinicId}`)
+      .query(
+        "DECLARE @r int; EXEC @r=sys.sp_getapplock @Resource=@resource,@LockMode='Exclusive',@LockOwner='Transaction',@LockTimeout=10000; IF @r<0 THROW 51000,'Inventory lock unavailable',1;",
+      );
+  }
+  async listInjections(actor: Actor): Promise<InjectionCase[]> {
+    await this.request()
+      .input("id", sql.UniqueIdentifier, randomUUID())
+      .input("actor", sql.NVarChar(100), actor.id)
+      .query(
+        "INSERT dbo.AuditEvents(clinicId,id,actorId,action) VALUES(@clinic,@id,@actor,'injection.list.read')",
+      );
+    return (
+      await this.request().query(
+        "SELECT TOP(250) payload FROM dbo.InjectionCases WHERE clinicId=@clinic ORDER BY CASE WHEN status IN ('draft','reviewed','held') THEN 0 ELSE 1 END,plannedOn,id",
+      )
+    ).recordset.map(
+      (r: { payload: string }) => JSON.parse(r.payload) as InjectionCase,
+    );
+  }
+  private async injection(
+    tx: sql.Transaction,
+    id: string,
+  ): Promise<InjectionCase> {
+    const row = (
+      await this.request(tx)
+        .input("id", sql.UniqueIdentifier, id)
+        .query(
+          "SELECT payload FROM dbo.InjectionCases WITH(UPDLOCK,HOLDLOCK) WHERE clinicId=@clinic AND id=@id",
+        )
+    ).recordset[0];
+    invariant(row, "not_found", "Injection not found.", 404);
+    return JSON.parse(row.payload) as InjectionCase;
+  }
+  private async saveInjection(
+    tx: sql.Transaction,
+    value: InjectionCase,
+    action: string,
+    c: Command,
+    create = false,
+  ) {
+    const request = this.request(tx)
+      .input("id", sql.UniqueIdentifier, value.id)
+      .input("patient", sql.UniqueIdentifier, value.patientId)
+      .input("product", sql.UniqueIdentifier, value.productId)
+      .input("orderRef", sql.NVarChar(200), value.tebraOrderReference)
+      .input("planned", sql.Date, value.plannedOn)
+      .input("sequence", sql.Int, value.doseSequence)
+      .input("status", sql.VarChar(20), value.status)
+      .input("version", sql.Int, value.version)
+      .input("lot", sql.UniqueIdentifier, value.review?.lotId ?? null)
+      .input(
+        "units",
+        sql.Int,
+        value.status === "reviewed" ? value.review!.stockUnits : 0,
+      )
+      .input("payload", sql.NVarChar(sql.MAX), JSON.stringify(value))
+      .input("at", sql.DateTime2(3), new Date(value.updatedAt));
+    await request.query(
+      create
+        ? "INSERT dbo.InjectionCases(clinicId,id,patientId,productId,tebraOrderReference,plannedOn,doseSequence,status,version,lotId,stockUnits,payload,updatedAt) VALUES(@clinic,@id,@patient,@product,@orderRef,@planned,@sequence,@status,@version,@lot,@units,@payload,@at)"
+        : "UPDATE dbo.InjectionCases SET patientId=@patient,productId=@product,tebraOrderReference=@orderRef,plannedOn=@planned,doseSequence=@sequence,status=@status,version=@version,lotId=@lot,stockUnits=@units,payload=@payload,updatedAt=@at WHERE clinicId=@clinic AND id=@id",
+    );
+    await this.request(tx)
+      .input("id", sql.UniqueIdentifier, randomUUID())
+      .input("injection", sql.UniqueIdentifier, value.id)
+      .input("version", sql.Int, value.version)
+      .input("action", sql.NVarChar(80), action)
+      .input("actor", sql.NVarChar(100), c.actor.id)
+      .input("payload", sql.NVarChar(sql.MAX), JSON.stringify(value))
+      .query(
+        "INSERT dbo.InjectionEvents(clinicId,id,injectionId,version,action,actorId,payload) VALUES(@clinic,@id,@injection,@version,@action,@actor,@payload)",
+      );
+    return value;
+  }
+  private async injectionCommand(
+    id: string,
+    action: string,
+    input: unknown,
+    c: Command,
+    work: (
+      tx: sql.Transaction,
+      current: InjectionCase,
+    ) => Promise<InjectionCase>,
+  ) {
+    return this.command(action, { id, input }, c, async (tx) => {
+      await this.inventoryLock(tx);
+      const current = await this.injection(tx, id);
+      const value = await work(tx, current);
+      return this.saveInjection(tx, value, action, c);
+    });
+  }
+  private injectionMovement(
+    tx: sql.Transaction,
+    current: InjectionCase,
+    c: Command,
+    kind: "reserve" | "release" | "use",
+    lotId: string,
+    quantity: number,
+  ) {
+    return this.applyMovement(
+      tx,
+      {
+        lotId,
+        kind,
+        quantity,
+        patientId: current.patientId,
+        reason: `Injection ${current.id}: ${kind}`,
+        reversesId: null,
+      },
+      c,
+      current.id,
+      current.productId,
+    );
+  }
+  async createInjection(input: InjectionInput, c: Command) {
+    return this.command("injection.created", input, c, (tx) =>
+      this.saveInjection(
+        tx,
+        createInjectionCase(input),
+        "injection.created",
+        c,
+        true,
+      ),
+    );
+  }
+  async updateInjection(id: string, input: InjectionUpdate, c: Command) {
+    return this.injectionCommand(
+      id,
+      "injection.updated",
+      input,
+      c,
+      async (tx, current) => {
+        const next = reviseInjection(current, input);
+        if (current.status === "reviewed" && current.review)
+          await this.injectionMovement(
+            tx,
+            current,
+            c,
+            "release",
+            current.review.lotId,
+            current.review.stockUnits,
+          );
+        return next;
+      },
+    );
+  }
+  async reviewInjection(id: string, input: InjectionReviewInput, c: Command) {
+    return this.injectionCommand(
+      id,
+      "injection.reviewed",
+      input,
+      c,
+      async (tx, current) => {
+        const patient = (
+          await this.request(tx)
+            .input("id", sql.UniqueIdentifier, current.patientId)
+            .query(
+              `SELECT ${patientColumns} FROM dbo.Patients WHERE clinicId=@clinic AND id=@id`,
+            )
+        ).recordset[0] as Patient | undefined;
+        const product = (
+          await this.request(tx)
+            .input("id", sql.UniqueIdentifier, current.productId)
+            .query(
+              "SELECT LOWER(CONVERT(varchar(36),id)) id,name,strength,unit,ndc FROM dbo.Products WHERE clinicId=@clinic AND id=@id",
+            )
+        ).recordset[0] as Product | undefined;
+        const lot = (
+          await this.request(tx)
+            .input("id", sql.UniqueIdentifier, input.lotId)
+            .query(
+              `SELECT ${lotColumns} FROM dbo.StockLots WITH(UPDLOCK,HOLDLOCK) WHERE clinicId=@clinic AND id=@id`,
+            )
+        ).recordset[0] as Lot | undefined;
+        invariant(
+          patient && product && lot,
+          "not_found",
+          "Patient, product, or lot not found.",
+          404,
+        );
+        const next = reviewInjectionCase(
+          current,
+          input,
+          c.actor,
+          patient,
+          product,
+          lot,
+          clinicDate(this.timezone),
+          "",
+        );
+        const movement = await this.injectionMovement(
+          tx,
+          current,
+          c,
+          "reserve",
+          lot.id,
+          input.stockUnits,
+        );
+        next.review!.reservationMovementId = movement.id;
+        return next;
+      },
+    );
+  }
+  async administerInjection(
+    id: string,
+    input: InjectionAdministrationInput,
+    c: Command,
+  ) {
+    return this.injectionCommand(
+      id,
+      "injection.administered",
+      input,
+      c,
+      async (tx, current) => {
+        const next = administerInjectionCase(
+          current,
+          input,
+          c.actor,
+          clinicDate(this.timezone),
+          "",
+        );
+        const movement = await this.injectionMovement(
+          tx,
+          current,
+          c,
+          "use",
+          current.review!.lotId,
+          current.review!.stockUnits,
+        );
+        next.administration!.stockMovementId = movement.id;
+        await this.request(tx)
+          .input("id", sql.UniqueIdentifier, next.administration!.id)
+          .input("injection", sql.UniqueIdentifier, id)
+          .input("movement", sql.UniqueIdentifier, movement.id)
+          .input(
+            "payload",
+            sql.NVarChar(sql.MAX),
+            JSON.stringify(next.administration),
+          )
+          .query(
+            "INSERT dbo.InjectionAdministrations(clinicId,id,injectionId,stockMovementId,payload) VALUES(@clinic,@id,@injection,@movement,@payload)",
+          );
+        return next;
+      },
+    );
+  }
+  async dispositionInjection(
+    id: string,
+    input: InjectionDispositionInput,
+    c: Command,
+  ) {
+    return this.injectionCommand(
+      id,
+      "injection.disposition",
+      input,
+      c,
+      async (tx, current) => {
+        const next = disposeInjection(current, input, c.actor);
+        if (current.status === "reviewed" && current.review)
+          await this.injectionMovement(
+            tx,
+            current,
+            c,
+            "release",
+            current.review.lotId,
+            current.review.stockUnits,
+          );
+        return next;
+      },
+    );
+  }
+  async amendInjection(id: string, input: InjectionAmendmentInput, c: Command) {
+    return this.injectionCommand(
+      id,
+      "injection.amended",
+      input,
+      c,
+      async (tx, current) => {
+        const next = amendInjectionCase(current, input, c.actor),
+          amendment = next.amendments.at(-1)!;
+        await this.request(tx)
+          .input("id", sql.UniqueIdentifier, amendment.id)
+          .input("injection", sql.UniqueIdentifier, id)
+          .input("payload", sql.NVarChar(sql.MAX), JSON.stringify(amendment))
+          .query(
+            "INSERT dbo.InjectionAmendments(clinicId,id,injectionId,payload) VALUES(@clinic,@id,@injection,@payload)",
+          );
+        return next;
+      },
+    );
+  }
+  async fileInjection(id: string, input: InjectionFilingInput, c: Command) {
+    return this.injectionCommand(
+      id,
+      "injection.filed",
+      input,
+      c,
+      async (tx, current) => {
+        const next = fileInjectionCase(current, input, c.actor),
+          filing = next.filings.at(-1)!;
+        await this.request(tx)
+          .input("id", sql.UniqueIdentifier, filing.id)
+          .input("injection", sql.UniqueIdentifier, id)
+          .input("payload", sql.NVarChar(sql.MAX), JSON.stringify(filing))
+          .query(
+            "INSERT dbo.InjectionFilings(clinicId,id,injectionId,payload) VALUES(@clinic,@id,@injection,@payload)",
+          );
+        return next;
+      },
+    );
   }
   async close() {
     await this.pool.close();

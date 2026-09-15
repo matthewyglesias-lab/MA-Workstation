@@ -2,6 +2,8 @@ import { z } from "zod";
 const id = z.string().uuid();
 export interface Config {
   mode: "demo" | "sql";
+  authMode?: "demo" | "pin" | "entra";
+  publicOrigin?: string;
   host: string;
   port: number;
   clinicId: string;
@@ -19,10 +21,29 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
       !["127.0.0.1", "::1", "localhost"].includes(host))
   )
     throw new Error("Demo mode is restricted to local development.");
+  const authMode =
+    mode === "sql"
+      ? z.enum(["pin", "entra"]).parse(env.AUTH_MODE)
+      : z.enum(["demo", "pin"]).parse(env.AUTH_MODE || "pin");
+  const publicOrigin = env.PUBLIC_ORIGIN;
+  if (mode === "sql" && authMode === "pin") {
+    if (!publicOrigin)
+      throw new Error("PUBLIC_ORIGIN is required for PIN access.");
+    const origin = new URL(publicOrigin);
+    if (
+      origin.protocol !== "https:" ||
+      origin.origin !== publicOrigin ||
+      origin.username ||
+      origin.password
+    )
+      throw new Error("PUBLIC_ORIGIN must be the exact HTTPS console origin.");
+  }
   const timezone = env.CLINIC_TIMEZONE || "America/Los_Angeles";
   new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format();
   return {
     mode,
+    authMode,
+    publicOrigin,
     host,
     port: z.coerce
       .number()
@@ -32,7 +53,7 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
       .parse(env.PORT || 3100),
     clinicId: id.parse(env.CLINIC_ID),
     timezone,
-    ...(mode === "sql"
+    ...(mode === "sql" && authMode === "entra"
       ? {
           tenantId: id.parse(env.ENTRA_TENANT_ID),
           apiClientId: id.parse(env.ENTRA_API_CLIENT_ID),

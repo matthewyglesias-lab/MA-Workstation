@@ -10,6 +10,8 @@ export type Editor = {
 };
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, string> = {
+    Injections:
+      "m16 3 5 5m-3-7-5 5m-2-1 8 8m-6-6-9 9v4h4l9-9m-9 4 3 3M4 20l-2 2",
     Today: "M3 5h18v16H3z M7 3v4m10-4v4M3 11h18",
     Patients:
       "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 4a4 4 0 0 1 0 8m6 9v-2a4 4 0 0 0-3-3.87 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0",

@@ -7,8 +7,12 @@ param name string
 param location string = resourceGroup().location
 param clinicId string
 param tenantId string = tenant().tenantId
-param apiClientId string
-param webClientId string
+@allowed(['pin', 'entra'])
+param authMode string = 'pin'
+param apiClientId string = ''
+param webClientId string = ''
+@description('Optional HTTPS origin for a custom domain; empty uses the actual App Service default hostname.')
+param publicOrigin string = ''
 param sqlAdminGroupObjectId string
 param sqlAdminGroupName string
 param clinicTimezone string = 'America/Los_Angeles'
@@ -113,26 +117,37 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
       scmMinTlsVersion: '1.2'
       http20Enabled: true
       healthCheckPath: '/api/health'
-      appSettings: [
-        { name: 'NODE_ENV', value: 'production' }
-        { name: 'CONSOLE_MODE', value: 'sql' }
-        { name: 'HOST', value: '0.0.0.0' }
-        { name: 'CLINIC_ID', value: clinicId }
-        { name: 'CLINIC_TIMEZONE', value: clinicTimezone }
-        { name: 'ENTRA_TENANT_ID', value: tenantId }
-        { name: 'ENTRA_API_CLIENT_ID', value: apiClientId }
-        { name: 'ENTRA_WEB_CLIENT_ID', value: webClientId }
-        { name: 'SQL_SERVER', value: sqlServer.properties.fullyQualifiedDomainName }
-        { name: 'SQL_DATABASE', value: database.name }
-        { name: 'SQL_AUTH', value: 'azure-active-directory-default' }
-        { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'false' }
-        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
-      ]
     }
   }
 }
+// Resolve the actual hostname after site creation; newer sites may have a generated suffix.
+resource appSettings 'Microsoft.Web/sites/config@2023-12-01' = {
+  parent: app
+  name: 'appsettings'
+  properties: {
+    NODE_ENV: 'production'
+    CONSOLE_MODE: 'sql'
+    AUTH_MODE: authMode
+    PUBLIC_ORIGIN: empty(publicOrigin) ? 'https://${app.properties.defaultHostName}' : publicOrigin
+    HOST: '0.0.0.0'
+    CLINIC_ID: clinicId
+    CLINIC_TIMEZONE: clinicTimezone
+    ENTRA_TENANT_ID: tenantId
+    ENTRA_API_CLIENT_ID: apiClientId
+    ENTRA_WEB_CLIENT_ID: webClientId
+    SQL_SERVER: sqlServer.properties.fullyQualifiedDomainName
+    SQL_DATABASE: database.name
+    SQL_AUTH: 'azure-active-directory-default'
+    SCM_DO_BUILD_DURING_DEPLOYMENT: 'false'
+    WEBSITE_RUN_FROM_PACKAGE: '1'
+  }
+}
 output appUrl string = 'https://${app.properties.defaultHostName}'
+output appName string = app.name
+output planName string = plan.name
+output integrationSubnetId string = network.properties.subnets[0].id
 output runtimeIdentityObjectId string = app.identity.principalId
 output sqlHost string = sqlServer.properties.fullyQualifiedDomainName
+output sqlServerName string = sqlServer.name
 output databaseName string = database.name
 output networkId string = network.id

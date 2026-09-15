@@ -45,7 +45,7 @@ export function validateClaims(
 }
 export function authenticator(config: Config) {
   const keys =
-    config.mode === "sql"
+    config.mode === "sql" && config.authMode !== "pin"
       ? createRemoteJWKSet(
           new URL(
             `https://login.microsoftonline.com/${config.tenantId}/discovery/v2.0/keys`,
@@ -53,7 +53,7 @@ export function authenticator(config: Config) {
         )
       : undefined;
   return async (authorization?: string): Promise<Actor> => {
-    if (config.mode === "demo")
+    if (config.mode === "demo" && config.authMode === "demo")
       return {
         id: "synthetic-demo-staff",
         roles: ["Console.Operator", "Inventory.Manager"],

@@ -33,13 +33,11 @@ export function EditorDialog({
     dialog.current?.showModal();
   }, []);
   const titles = {
-    patient: "Link a Tebra patient",
+    patient: "Link patient",
     activity: "Start a service activity",
-    product: "Add a stock product",
-    lot: "Add a stock lot",
-    movement: editor.original
-      ? "Correct a movement"
-      : "Record a stock movement",
+    product: "Add product",
+    lot: "Add stock lot",
+    movement: editor.original ? "Correct a movement" : "Update stock",
     handoff: "Update service & handoff",
   };
   const options = (selected?: string) => (
@@ -149,7 +147,6 @@ export function EditorDialog({
     >
       <div class="dialog-header">
         <div>
-          <p class="eyebrow">CLINIC WORKSPACE</p>
           <h2 id="dialog-title">{titles[editor.kind]}</h2>
         </div>
         <button
@@ -167,11 +164,8 @@ export function EditorDialog({
           <ErrorText error={error} />
           {editor.kind === "patient" && (
             <>
-              <p class="form-note">
-                Use the chart’s verified identity. The clinical record remains
-                in Tebra.
-              </p>
-              <Field label="Patient display name">
+              <p class="form-note">Enter the identity verified in Tebra.</p>
+              <Field label="Patient name">
                 <input
                   name="name"
                   required
@@ -248,8 +242,8 @@ export function EditorDialog({
                 </Field>
               </div>
               <p class="form-note">
-                Count whole units. Partial vials and dose-to-volume conversion
-                are not supported in this foundation build.
+                Count whole packages. Dose and partial-volume tracking are
+                separate.
               </p>
             </>
           )}
@@ -298,10 +292,7 @@ export function EditorDialog({
                   </select>
                 </Field>
               )}
-              <p class="form-note">
-                New lots start at zero. Record a receipt to add stock and
-                preserve its movement history.
-              </p>
+              <p class="form-note">Record a receipt after adding the lot.</p>
             </>
           )}
           {editor.kind === "movement" && (
@@ -392,7 +383,7 @@ export function EditorDialog({
                   )}
                 </>
               )}
-              <Field label="Reason / operational reference">
+              <Field label="Reason / reference">
                 <textarea name="reason" required maxLength={300} rows={3} />
               </Field>
               {kind === "use" && (

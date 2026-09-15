@@ -1,6 +1,6 @@
-# IPMG clinic console · Azure SQL foundation
+# IPMG clinic console · Injection workspace
 
-Version 0.1 is the first working slice of the clinic helper engine. **Tebra remains the authoritative clinical chart.** Patients here are verified identity links; operational activity, inventory, and documentation handoff surround that chart.
+Version 0.2 focuses the clinic helper engine on injections. **Tebra remains the authoritative clinical chart.** Patients here are verified identity links; operational activity, inventory, and documentation handoff surround that chart.
 
 The existing MA Workstation at the repository root is preserved. `console/` has an independent package, lockfile, build, API, migrations and CI. The existing Azure Static Web Apps deployment continues to build the root app. This console needs a backend and Azure SQL; it is not a static-only deployment.
 
@@ -15,7 +15,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://127.0.0.1:5175`. All sample identities and stock are synthetic. Changes last for the demo server session. Demo mode is explicit, refuses production and non-loopback binding, and never falls back from a failed SQL connection. Do not enter real patient data into demo mode.
+Open `http://127.0.0.1:5175`. Sign in as `demo` with PIN `123456`. All sample identities and stock are synthetic. Changes last for the demo server session. Demo mode is explicit, refuses production and non-loopback binding, and never falls back from a failed SQL connection. Do not enter real patient data into demo mode.
 
 For the built, same-origin app:
 
@@ -24,28 +24,28 @@ npm run build
 npm start
 ```
 
-Open `http://127.0.0.1:3100`. SQL mode serves the same frontend and authenticates API requests through Microsoft Entra ID.
+Open `http://127.0.0.1:3100`. SQL mode uses individual staff PINs verified on the server. Microsoft Entra access remains an optional configuration. See [PIN access](docs/pin-access.md) for individual staff enrollment, reset, and revocation.
 
 ## Implemented
 
-- Lightfully-inspired responsive console: Today, Patients, Work, Inventory and a capability overview.
-- Unique Tebra chart links with verified identity/date/actor; no automatic Tebra access or synchronization.
-- Patient-linked service activities for Injection, UDS, TMS, Samples and Forms. These are operational work items, not clinical orders or treatment engines.
-- Separate service progress and Tebra handoff states. Filing requires completed work plus a human-confirmed reference; filed records cannot be overwritten.
-- Product and lot registration; clinic, sample and patient-specific ownership.
-- Whole-unit receiving, reservations, releases, recorded stock use, waste, signed adjustments and reference-linked reversals.
-- Patient-specific reservation accounting; stock and allocation constraints; expired/quarantined lots cannot be reserved or used. Quarantine is represented in the model; staff quarantine controls are a next increment.
-- Azure SQL adapter with parameterized statements, clinic-scoped foreign keys, transactional stock locks, persisted idempotency receipts, optimistic activity versions, audit events and an outbox.
-- Entra access-token validation, API scope and explicit roles. Passwordless SQL authentication; restricted local SQL-password mode for tests only.
-- Versioned, checksum-verified, transactional database migrations with a separate runtime role that cannot rewrite ledger/audit history.
+- Letter-builder design: Mulish/Poppins/Lora, restrained navy/teal/coral, a persistent patient banner, concise forms, and focused Injections, Patients, Inventory navigation.
+- Individual staff PINs with slow salted hashes, SQL-persisted attempt limits and sessions, role checks, CSRF/origin validation, and automatic locking. Only the staff ID may be remembered in browser storage.
+- Verified Tebra identity links and provider-confirmed injection orders. Drafts, review, hold/resume, cancellation, paired dose sequences, actual administration time, partial/unknown delivery, and append-only addenda.
+- Medication-specific review prompts linked to current primary prescribing references. They do not calculate or authorize a regimen.
+- Screening, preparation, site assessment, vitals, and observation; no prechecked attestations or fabricated normal findings.
+- Transactional lot reservation and use, patient-owned stock, expiration checks, immutable movements, retry deduplication, version conflicts, and durable event history. Generic inventory commands cannot steal a reviewed injection's reservation.
+- Factual note preview/copy/print and English/Spanish visit summaries. Tebra filing is a separate staff confirmation and reference; an addendum reopens the filing task.
+- Azure SQL migrations, parameterized clinic-scoped persistence, audit events, and an outbox. The runtime database role cannot rewrite administration, stock, or audit history.
 
-## Boundaries of this first build
+## Current operating scope
 
-This is **not ready for live clinical operation**. Clinical rules from the existing workstation are not migrated yet. There is no medication recommendation, order validation, screening engine, note/AVS generation, Tebra upload, kiosk integration, notification dispatcher, automated replenishment or document storage in this build. `prepared` is an explicit staff-reported handoff status, not evidence that this app generated a note.
+**The code is ready for synthetic rehearsal; live Azure setup and acceptance remain pending.** See [deployment readiness](docs/deployment-readiness.md). A downloaded preview does not retain patient records or connect to Tebra.
 
-Inventory counts whole stock units. Vial entries count sealed vials only: partial vial use, dose conversion, transfers, returns, dispensing packs, expiry-by-month conventions and recall workflows must be added with their own contracts before those workflows are used. There is no claim of medical suitability based on stock availability. Received/use quantities never become clinical administration facts automatically.
+This release requires prospective same-day safety review. It does not support recording historical administrations that occurred before a review, automated prescribing, wrong-product/overdose incident processing, automatic Tebra upload, or automatic continuation of a legacy regimen. The original workstation remains available; [clinical migration review](docs/injection-clinical-review.md) records the parity gaps and why old fixed-day windows were not treated as clinical clearance.
 
-The initial read projection loads at most 250 rows per module and 30 recent movements in the history view, clearly disclosed in the UI. Pagination, server-side search, individual record retrieval and background refresh are required before larger datasets. No silent truncation should be used as a clinical or inventory decision source. Server stock commands always evaluate the full ledger, not these display limits.
+Each ordered injection component has a separate dose sequence, stock allocation, and administration record. Partial or unsuccessful delivery records the opened/used package and the provider follow-up plan. It never recommends a replacement dose. Inventory counts whole packages; multi-dose vial balances, fractional dispensing, transfers, recalls, and staff quarantine controls need their own workflow before use.
+
+The initial read projection loads at most 250 rows per module, disclosed in the UI. Pagination, server-side patient search, and complete record retrieval remain required before using larger datasets. Stock commands evaluate the complete ledger. Keep launch within the tested scope and reconcile actual patient links/lots before live use.
 
 ## Validation
 
@@ -63,8 +63,7 @@ See [architecture](docs/architecture.md), [Azure setup](docs/azure-setup.md), an
 
 Run `npm ci` and `npm run build:preview` inside `console/`, then open
 `dist/preview/Clinic-Console-Interactive-Demo.html` in a modern desktop browser.
-This self-contained preview needs no server or sign-in. It includes fictional patients,
-work queues, inventory reservations, usage, and a simulated Tebra handoff.
+This self-contained preview needs no server. Sign in as `demo`, PIN `123456`. It includes fictional patients, injection review/administration, inventory, note/AVS output, and simulated Tebra filing.
 All edits live in browser memory and reset on reload. Do not enter real patient details.
 It does not connect to Azure SQL or Tebra. The production build excludes the preview
 adapter, and an API failure never switches the app into preview mode.

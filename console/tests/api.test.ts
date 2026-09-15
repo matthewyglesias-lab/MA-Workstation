@@ -7,7 +7,11 @@ import { validateClaims } from "../src/server/platform/auth.js";
 import { validateActivityUpdate } from "../src/server/modules/work.js";
 import type { Activity } from "../src/shared/contracts.js";
 const clinicId = randomUUID();
-const config = readConfig({ CONSOLE_MODE: "demo", CLINIC_ID: clinicId });
+const config = readConfig({
+  CONSOLE_MODE: "demo",
+  AUTH_MODE: "demo",
+  CLINIC_ID: clinicId,
+});
 describe("API trust boundaries", () => {
   it("refuses implicit demo, production demo, and public demo binding", () => {
     expect(() => readConfig({ CLINIC_ID: clinicId })).toThrow();

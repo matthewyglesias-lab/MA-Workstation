@@ -1,6 +1,6 @@
 # Azure SQL deployment preparation
 
-This branch prepares Azure resources as code; it does not provision or deploy them. Actual subscription, resource group, Entra registrations and administrator group must be resolved before deployment. Review the Bicep what-if and resource costs for the selected region first.
+This branch prepares Azure resources as code; it does not provision or deploy them. See [deployment readiness](deployment-readiness.md) for the verified IPMG environment, proposed resources, current retail estimate, and private database bootstrap. Review the Bicep what-if and resource costs for the selected region first.
 
 ## Topology
 
@@ -8,7 +8,15 @@ The first Azure target is **Linux App Service serving the frontend and API from 
 
 `infra/main.bicep` provisions a Basic App Service plan, a Basic Azure SQL database (2 GB, initial-development sizing), Entra-only SQL authentication, a private SQL endpoint with private DNS, and App Service VNet integration. Public SQL networking is disabled. App Service has a system-assigned managed identity; no SQL password is supplied. Seven-day short-term backups are requested; this is initial sizing/retention, not a final clinic retention policy or a claim of tested recovery. Review capacity, availability and retention before production.
 
-## Identity preparation
+## Staff sign-in
+
+The default is `AUTH_MODE=pin`: individual named staff accounts with a server-verified PIN. `PUBLIC_ORIGIN` is set to the actual App Service origin by Bicep, including any generated hostname suffix. Staff PINs are enrolled through the separate administration CLI after database migrations; they are never shipped in the UI. See [PIN access](pin-access.md).
+
+Azure SQL still uses Entra managed identity regardless of the staff sign-in choice. The SQL administrator group, migration identity, and limited runtime identity remain separate. PIN mode does not require an API or SPA app registration.
+
+## Optional Entra staff sign-in
+
+Set Bicep `authMode=entra` only when this alternate sign-in mode is wanted, then complete the following registration steps:
 
 1. Create an Entra single-tenant **API** registration. Set requested access-token version to 2, expose `api://<api-client-id>/access_as_user`, and define user app roles `Console.Reader`, `Console.Operator`, and `Inventory.Manager`.
 2. Create a single-tenant **SPA** registration with the App Service origin as its SPA redirect URI, grant the API delegated scope, and consent as required by the tenant. Do not request Microsoft Graph patient data access or store a client secret in the SPA.
@@ -25,9 +33,9 @@ az deployment group what-if --resource-group <resource-group> --template-file co
 az deployment group create --resource-group <resource-group> --template-file console/infra/main.bicep --parameters @<parameters.json>
 ```
 
-Required parameters: `name`, `clinicId` (new permanent UUID), `apiClientId`, `webClientId`, `sqlAdminGroupObjectId`, `sqlAdminGroupName`. `tenantId`, `location` and clinic timezone have defaults.
+Required parameters: `name`, `clinicId` (new permanent UUID), `sqlAdminGroupObjectId`, `sqlAdminGroupName`. `authMode` defaults to `pin`; `apiClientId` and `webClientId` are required only for `entra`. `tenantId`, `location`, clinic timezone, and the default public origin have defaults.
 
-The private endpoint means a public GitHub runner cannot run migrations against this database. Use an authorized workstation/runner with VNet connectivity and private DNS resolution. Do not enable broad public SQL firewall access as a workaround.
+The private endpoint means a public GitHub runner cannot run migrations against this database. Use an authorized workstation/runner with VNet connectivity and private DNS resolution. The [deployment readiness guide](deployment-readiness.md) describes a temporary administrative App Service on the same plan with a separate identity. SQL public access stays disabled.
 
 From that migration environment, run `npm ci` in `console/`, set `SQL_SERVER`, `SQL_DATABASE`, `SQL_AUTH=azure-active-directory-default`, sign in as the migration identity, and run `npm run db:migrate`. The runtime identity must never run this command.
 
@@ -44,7 +52,7 @@ Confirm user identity resolution follows the tenant's Entra/SQL requirements. Do
 
 ## Package and deploy
 
-Build and test from `console/`: `npm ci`, `npm run check`, `npx playwright test`. Create a deployment archive containing `dist/`, `package.json`, `package-lock.json`, and production `node_modules/` installed on Linux with Node 22. The app starts using `npm start`; the current working directory must contain these files. Do not include `.env`, test artifacts or synthetic fixtures as database seeds.
+Build and test from `console/`: `npm ci`, `npm run check`, `npx playwright test`. Create a deployment archive containing `dist/`, `database/migrations/`, `package.json`, `package-lock.json`, and production `node_modules/` installed on Linux with Node 22. The app starts using `npm start`; the current working directory must contain these files. Compiled migrations and staff administration commands run only from the separate administrative environment, never during runtime app startup. Do not include `.env`, test artifacts or synthetic fixtures as database seeds.
 
 Deploy the archive to the newly provisioned App Service, after database initialization. Its Bicep settings select `CONSOLE_MODE=sql` and `NODE_ENV=production`. App Service supplies the listening port; the app binds to `HOST=0.0.0.0`. No automatic migration or demo fallback occurs on start.
 

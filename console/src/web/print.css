@@ -1,0 +1,82 @@
+#console-print-document {
+  display: none;
+}
+.note-preview {
+  width: 100%;
+  min-height: 300px;
+  padding: 18px;
+  font:
+    13px/1.6 "Clinic Mulish",
+    sans-serif;
+  resize: vertical;
+  color: var(--navy);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfcfc;
+}
+.document-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 12px;
+}
+.avs-language {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 12px;
+}
+.documents-section {
+  margin-top: 24px;
+}
+@media print {
+  body {
+    background: white !important;
+  }
+  @page {
+    size: Letter;
+    margin: 0.6in 0.65in;
+  }
+  body:has(#console-print-document) > * {
+    display: none !important;
+  }
+  body > #console-print-document {
+    display: block !important;
+    color: #203d4e;
+    background: white;
+    font-family: "Clinic Mulish", Arial, sans-serif;
+  }
+  #console-print-document header {
+    text-align: center;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #3c7083;
+    margin-bottom: 20px;
+  }
+  #console-print-document header p {
+    font-size: 10px;
+    letter-spacing: 2px;
+  }
+  #console-print-document h1 {
+    font:
+      26px/1.3 "Clinic Lora",
+      Georgia,
+      serif;
+    margin-top: 10px;
+  }
+  #console-print-document .print-lines {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+  #console-print-document footer {
+    text-align: center;
+    border-top: 1px solid #cbd8df;
+    margin-top: 24px;
+    padding-top: 10px;
+    font-size: 9px;
+    color: #526a79;
+  }
+}

@@ -139,6 +139,7 @@ export interface Movement extends MovementInput {
 export type Role = "Console.Reader" | "Console.Operator" | "Inventory.Manager";
 export interface Actor {
   id: string;
+  displayName?: string;
   roles: Role[];
 }
 export interface Overview {
@@ -150,6 +151,7 @@ export interface Overview {
 }
 export interface RuntimeInfo {
   mode: "demo" | "sql" | "preview";
+  authMode?: "pin" | "entra" | "demo";
   clinicTimezone: string;
   tenantId?: string;
   webClientId?: string;

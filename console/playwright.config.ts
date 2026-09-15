@@ -21,6 +21,8 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         env: {
           CONSOLE_MODE: "demo",
+          AUTH_MODE: "pin",
+          PUBLIC_ORIGIN: "http://127.0.0.1:3100",
           HOST: "127.0.0.1",
           PORT: "3100",
           CLINIC_ID: "11111111-1111-4111-8111-111111111111",

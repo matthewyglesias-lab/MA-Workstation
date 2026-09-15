@@ -1,15 +1,19 @@
 import { render } from "preact";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type {
-  Activity,
   Actor,
-  Lot,
-  Movement,
   Overview,
   Patient,
   RuntimeInfo,
 } from "../shared/contracts.js";
-import { getOverview, getSession, initialize, signIn, signOut } from "./api.js";
+import type { InjectionCase } from "../shared/injections.js";
+import {
+  getOverview,
+  getSession,
+  getInjections,
+  initialize,
+  signOut,
+} from "./api.js";
 import {
   Icon,
   Badge,
@@ -18,6 +22,9 @@ import {
   type Editor,
 } from "./components.js";
 import { EditorDialog } from "./EditorDialog.js";
+import { InjectionWorkspace } from "./InjectionWorkspace.js";
+import { SignInView } from "./SignInView.js";
+import "./fonts.css";
 import "./style.css";
 
 const empty: Overview = {
@@ -27,12 +34,14 @@ const empty: Overview = {
   lots: [],
   movements: [],
 };
-type Page = "Today" | "Patients" | "Work" | "Inventory" | "Manage";
+type Page = "Injections" | "Patients" | "Inventory";
+
 function App() {
   const [config, setConfig] = useState<RuntimeInfo>();
   const [actor, setActor] = useState<Actor>();
   const [data, setData] = useState<Overview>(empty);
-  const [page, setPage] = useState<Page>("Today");
+  const [injections, setInjections] = useState<InjectionCase[]>([]);
+  const [page, setPage] = useState<Page>("Injections");
   const [search, setSearch] = useState("");
   const [patientId, setPatientId] = useState<string>();
   const [editor, setEditor] = useState<Editor>();
@@ -40,31 +49,92 @@ function App() {
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState("");
   const [lastLoaded, setLastLoaded] = useState<Date>();
+  const sessionEpoch = useRef(0);
+  const lastInteraction = useRef(Date.now());
+
+  function clearSession() {
+    document.getElementById("console-print-document")?.remove();
+    sessionEpoch.current++;
+    setActor(undefined);
+    setData(empty);
+    setInjections([]);
+    setPatientId(undefined);
+    setEditor(undefined);
+    setSearch("");
+    setMessage("");
+    setError("");
+    setLastLoaded(undefined);
+    setBusy(false);
+  }
   async function refresh() {
+    const epoch = sessionEpoch.current;
     setBusy(true);
     try {
-      setData(await getOverview());
+      const [overview, cases] = await Promise.all([
+        getOverview(),
+        getInjections(),
+      ]);
+      if (epoch !== sessionEpoch.current) return;
+      setData(overview);
+      setInjections(cases);
       setLastLoaded(new Date());
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      if (epoch === sessionEpoch.current) setError((e as Error).message);
+      throw e;
     } finally {
-      setBusy(false);
+      if (epoch === sessionEpoch.current) setBusy(false);
     }
   }
+  async function loadSession() {
+    const epoch = sessionEpoch.current;
+    const session = await getSession();
+    if (epoch !== sessionEpoch.current) return;
+    lastInteraction.current = Date.now();
+    setActor(session.actor);
+    await refresh();
+  }
+  function lock() {
+    clearSession();
+    void signOut().catch(() => {});
+  }
   useEffect(() => {
+    window.addEventListener("console:locked", clearSession);
     void initialize()
       .then(async (c) => {
         setConfig(c);
-        const session = await getSession();
-        setActor(session.actor);
-        await refresh();
+        await loadSession();
       })
       .catch((e) => {
         setError(e.message);
         setBusy(false);
       });
+    return () => window.removeEventListener("console:locked", clearSession);
   }, []);
+  useEffect(() => {
+    if (!actor) return;
+    const expired = () => Date.now() - lastInteraction.current >= 5 * 60 * 1000;
+    const track = (event: Event) => {
+      if (expired()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        lock();
+      } else lastInteraction.current = Date.now();
+    };
+    const check = () => {
+      if (expired()) lock();
+    };
+    window.addEventListener("pointerdown", track, true);
+    window.addEventListener("keydown", track, true);
+    document.addEventListener("visibilitychange", check);
+    const timer = window.setInterval(check, 10000);
+    return () => {
+      window.removeEventListener("pointerdown", track, true);
+      window.removeEventListener("keydown", track, true);
+      document.removeEventListener("visibilitychange", check);
+      clearInterval(timer);
+    };
+  }, [actor]);
   const canOperate = !!actor?.roles.includes("Console.Operator");
   const canManage = !!actor?.roles.includes("Inventory.Manager");
   const selected = data.patients.find((p) => p.id === patientId);
@@ -74,14 +144,6 @@ function App() {
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
-  const activities = data.activities.filter(
-    (a) =>
-      (!selected || a.patientId === selected.id) &&
-      (!search ||
-        `${patient(a.patientId)?.displayName} ${a.service}`
-          .toLowerCase()
-          .includes(search.toLowerCase())),
-  );
   const today = config
     ? new Intl.DateTimeFormat("en-CA", {
         timeZone: config.clinicTimezone,
@@ -90,11 +152,6 @@ function App() {
         day: "2-digit",
       }).format()
     : "";
-  const expired = data.lots.filter((l) => l.onHand > 0 && l.expiresOn < today);
-  const waiting = data.activities.filter((a) => a.status !== "completed");
-  const pending = data.activities.filter(
-    (a) => a.status === "completed" && a.handoff !== "filed",
-  );
   function navigate(next: Page) {
     setPage(next);
     setSearch("");
@@ -105,28 +162,22 @@ function App() {
     setPage("Patients");
     setSearch("");
   }
-  const heroText = {
-    Today: [
-      "A clear view of the day.",
-      "Your patients, next steps, and clinical supplies—in one calm workspace.",
-    ],
-    Patients: [
-      "Every patient. One connected view.",
-      "Operational context linked to the authoritative Tebra chart.",
-    ],
-    Work: [
-      "Keep the next step moving.",
-      "Service progress and chart handoff, tracked separately.",
-    ],
-    Inventory: [
-      "Know what’s here. Know what’s next.",
-      "Traceable stock, patient reservations, and a history behind every change.",
-    ],
-    Manage: [
-      "A foundation that can grow.",
-      "Clear responsibilities and connected workflows for the whole clinic.",
-    ],
-  };
+  if (!config)
+    return (
+      <div class="startup">
+        <div class="brand-symbol">i</div>
+        <p>
+          {busy ? "Opening clinic console…" : "Unable to open clinic console"}
+        </p>
+        <ErrorText error={error} />
+        {!busy && (
+          <button class="button secondary" onClick={() => location.reload()}>
+            Try again
+          </button>
+        )}
+      </div>
+    );
+  if (!actor) return <SignInView config={config} onSignedIn={loadSession} />;
   return (
     <div class="app-shell">
       <aside class="sidebar">
@@ -135,52 +186,58 @@ function App() {
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            navigate("Today");
+            navigate("Injections");
           }}
         >
-          <span class="brand-icon">
-            <Icon name="leaf" size={24} />
+          <span class="brand-symbol">
+            i<span />
           </span>
           <span>
-            inland<span class="brand-sub">CLINIC CONSOLE</span>
+            INLAND PSYCHIATRIC<small>Clinic console</small>
           </span>
         </a>
-        <div class="workspace-label">YOUR WORKSPACE</div>
         <nav aria-label="Main navigation">
-          {(["Today", "Patients", "Work", "Inventory", "Manage"] as Page[]).map(
-            (p) => (
-              <button
-                class={`nav-item ${page === p ? "active" : ""}`}
-                aria-current={page === p ? "page" : undefined}
-                onClick={() => navigate(p)}
-              >
-                <Icon name={p} />
-                <span>{p}</span>
-                {p === "Work" && pending.length > 0 && (
-                  <span class="nav-count">{pending.length}</span>
-                )}
-              </button>
-            ),
-          )}
+          {(["Injections", "Patients", "Inventory"] as Page[]).map((p) => (
+            <button
+              key={p}
+              class={`nav-item ${page === p ? "active" : ""}`}
+              aria-current={page === p ? "page" : undefined}
+              onClick={() => navigate(p)}
+            >
+              <Icon name={p} />
+              <span>{p}</span>
+            </button>
+          ))}
         </nav>
         <div class="sidebar-bottom">
-          <span class="connection-dot" /> Alongside Tebra
-          <p>Clinical truth stays in the chart.</p>
-          <div class="staff-avatar">IP</div>
+          <div class="staff-avatar">
+            {(actor.displayName || "Clinic staff")
+              .split(" ")
+              .map((s) => s[0])
+              .slice(0, 2)
+              .join("")}
+          </div>
           <span class="staff-name">
-            Inland Psychiatric<small>Clinic workspace</small>
+            {actor.displayName || "Clinic staff"}
+            <small>
+              {canManage
+                ? "Inventory manager"
+                : canOperate
+                  ? "Clinic operator"
+                  : "View only"}
+            </small>
           </span>
         </div>
       </aside>
       <div class="main-shell">
         <header class="topbar">
           <span class="breadcrumb">
-            Workspace <span>/</span> {page}
+            Clinic <span>/</span> {page}
           </span>
           <div class="topbar-actions">
             <span class="date-label">
               {new Date().toLocaleDateString("en-US", {
-                timeZone: config?.clinicTimezone || "America/Los_Angeles",
+                timeZone: config.clinicTimezone,
                 weekday: "short",
                 month: "short",
                 day: "numeric",
@@ -190,611 +247,371 @@ function App() {
               class="icon-button"
               title="Refresh records"
               aria-label="Refresh records"
-              onClick={refresh}
+              onClick={() => void refresh().catch(() => {})}
               disabled={busy}
             >
               ↻
             </button>
-            {config?.mode === "sql" && (
-              <button
-                class="button secondary small"
-                onClick={() => {
-                  if (actor) {
-                    setData(empty);
-                    setActor(undefined);
-                    setPatientId(undefined);
-                    setEditor(undefined);
-                    setLastLoaded(undefined);
-                    void signOut().catch((e) => setError(e.message));
-                  } else {
-                    void signIn().catch((e) => setError(e.message));
-                  }
-                }}
-              >
-                {actor ? "Sign out" : "Sign in"}
-              </button>
-            )}
+            <button class="button secondary small" onClick={lock}>
+              Lock
+            </button>
           </div>
         </header>
-        {(config?.mode === "demo" || config?.mode === "preview") && (
+        {(config.mode === "demo" || config.mode === "preview") && (
           <div class="demo-banner">
-            <strong>
-              {config?.mode === "preview"
-                ? "Interactive preview"
-                : "Demonstration workspace"}
-            </strong>
+            <strong>Demo</strong>
             <span>
-              {config?.mode === "preview"
-                ? "Fictional data only · no Tebra or database connection · reload to reset. Do not enter real patient details."
-                : "Synthetic data only · changes reset when the demo server restarts."}
+              Fictional patients · changes reset · do not enter patient
+              information
             </span>
           </div>
         )}
         <main>
-          <div class="hero">
-            <div>
-              <p class="eyebrow">
-                {page === "Today"
-                  ? "A LITTLE CLARITY, EVERY DAY"
-                  : page.toUpperCase()}
-              </p>
-              <h1>{heroText[page][0]}</h1>
-              <p class="subtitle">{heroText[page][1]}</p>
-            </div>
-            {page !== "Manage" &&
-              (page === "Inventory" ? canManage : canOperate) && (
-                <button
-                  class="button primary"
-                  onClick={() =>
-                    setEditor({
-                      kind:
-                        page === "Inventory"
-                          ? "lot"
-                          : page === "Patients"
-                            ? "patient"
-                            : "activity",
-                      patient: selected,
-                    })
-                  }
-                >
-                  <Icon name="plus" size={18} />
-                  {page === "Inventory"
-                    ? "Add stock lot"
-                    : page === "Patients"
-                      ? "Link patient"
-                      : "New activity"}
-                </button>
-              )}
-          </div>
           <ErrorText error={error} />
           <div class="sr-only" role="status">
             {message}
           </div>
-          {busy && !lastLoaded && (
-            <div class="empty-state">Loading your workspace…</div>
-          )}
-          {selected && (
-            <section class="patient-banner">
-              <div class="avatar">{selected.displayName.slice(0, 1)}</div>
-              <div>
-                <h2>{selected.displayName}</h2>
-                <p>
-                  DOB {dateLabel(selected.dob)} <span>·</span> Tebra #
-                  {selected.tebraId}
-                </p>
-              </div>
-              <div class="patient-source">
-                <Badge tone="sage">Tebra-linked</Badge>
-                <small>
-                  Identity checked{" "}
-                  {new Date(selected.verifiedAt).toLocaleDateString()}
-                </small>
-              </div>
-              <button
-                class="icon-button"
-                aria-label="Close patient context"
-                onClick={() => setPatientId(undefined)}
-              >
-                <Icon name="close" />
-              </button>
-            </section>
-          )}
-          {page === "Today" && (
+          {busy && !lastLoaded ? (
+            <div class="empty-state">Loading records…</div>
+          ) : (
             <>
-              <div class="metric-grid">
-                <button
-                  class="metric lavender"
-                  onClick={() => navigate("Work")}
-                >
-                  <span>Active services</span>
-                  <strong>{waiting.length}</strong>
-                  <small>
-                    Ready for your next step <Icon name="arrow" size={16} />
-                  </small>
-                </button>
-                <button class="metric peach" onClick={() => navigate("Work")}>
-                  <span>Awaiting chart handoff</span>
-                  <strong>{pending.length}</strong>
-                  <small>
-                    Completed · not yet filed <Icon name="arrow" size={16} />
-                  </small>
-                </button>
-                <button
-                  class="metric butter"
-                  onClick={() => navigate("Inventory")}
-                >
-                  <span>Stock needing attention</span>
-                  <strong>{expired.length}</strong>
-                  <small>
-                    Expired lots with stock <Icon name="arrow" size={16} />
-                  </small>
-                </button>
-              </div>
-              <div class="today-grid">
-                <section class="panel">
-                  <div class="section-heading">
-                    <div>
-                      <h2>Care in motion</h2>
-                      <p>Open activities across the clinic</p>
-                    </div>
-                    <button
-                      class="text-button"
-                      onClick={() => navigate("Work")}
-                    >
-                      View work <Icon name="arrow" size={16} />
-                    </button>
-                  </div>
-                  {waiting.length ? (
-                    waiting.slice(0, 6).map((a) => (
-                      <button
-                        class="activity-row"
-                        onClick={() => {
-                          const p = patient(a.patientId);
-                          if (p) openPatient(p);
-                        }}
-                      >
-                        <span class="avatar lavender">
-                          {patient(a.patientId)?.displayName.slice(0, 1) || "?"}
-                        </span>
-                        <span class="row-title">
-                          {patient(a.patientId)?.displayName ||
-                            "Linked patient"}
-                          <small>
-                            {a.service} · {a.status.replace("_", " ")}
-                          </small>
-                        </span>
-                        <Badge>{a.service}</Badge>
-                        <Icon name="arrow" size={16} />
-                      </button>
-                    ))
-                  ) : (
-                    <div class="empty-state">
-                      No open activities. Start one when a patient needs a
-                      service.
-                    </div>
-                  )}
-                </section>
-                <aside class="insight-panel">
-                  <span class="insight-icon">
-                    <Icon name="leaf" size={28} />
-                  </span>
-                  <p class="eyebrow">CONNECTED, WITH CLARITY</p>
-                  <h2>
-                    A helpful engine.
-                    <br /> A trusted chart.
-                  </h2>
-                  <p>
-                    Prepare and track the work here. Confirm clinical
-                    information in Tebra and finish the documentation handoff
-                    there.
-                  </p>
-                  <div class="insight-rule" />
-                  <strong>One action at a time</strong>
-                  <p>
-                    Reservations protect patient supply. Inventory use and chart
-                    filing remain explicit, separate steps.
-                  </p>
-                </aside>
-              </div>
-            </>
-          )}
-          {(page === "Patients" || page === "Work") && (
-            <section class="panel">
-              <div class="section-heading">
-                <div>
-                  <h2>
-                    {selected
-                      ? "Patient activities"
-                      : page === "Patients"
-                        ? "Patient directory"
-                        : "Service worklist"}
-                  </h2>
-                  <p>
-                    {selected
-                      ? "Service progress and documentation handoff"
-                      : "Search the loaded workspace records"}
-                  </p>
-                </div>
-                <div class="search">
-                  <Icon name="search" size={18} />
-                  <input
-                    aria-label="Search patients and work"
-                    placeholder="Search name, chart ID…"
-                    value={search}
-                    onInput={(e) => setSearch(e.currentTarget.value)}
-                  />
-                </div>
-                {selected && canOperate && (
-                  <button
-                    class="button secondary small"
-                    onClick={() =>
-                      setEditor({ kind: "activity", patient: selected })
-                    }
-                  >
-                    Add activity
-                  </button>
-                )}
-              </div>
-              {page === "Patients" && !selected ? (
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Patient</th>
-                        <th>Date of birth</th>
-                        <th>Tebra chart</th>
-                        <th>Identity verified</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredPatients.map((p) => (
-                        <tr>
-                          <td>
-                            <button
-                              class="patient-link"
-                              onClick={() => openPatient(p)}
-                            >
-                              {p.displayName}
-                            </button>
-                          </td>
-                          <td>{dateLabel(p.dob)}</td>
-                          <td>#{p.tebraId}</td>
-                          <td>{new Date(p.verifiedAt).toLocaleDateString()}</td>
-                          <td>
-                            <button
-                              class="text-button"
-                              onClick={() => openPatient(p)}
-                            >
-                              Open <Icon name="arrow" size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!filteredPatients.length && (
-                    <div class="empty-state">
-                      No matching patients. Link a verified Tebra chart to
-                      begin.
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Patient / service</th>
-                        <th>Service progress</th>
-                        <th>Tebra handoff</th>
-                        <th>Next step</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activities.map((a) => (
-                        <tr>
-                          <td>
-                            <strong>
-                              {patient(a.patientId)?.displayName ||
-                                "Linked patient"}
-                            </strong>
-                            <small>{a.service}</small>
-                          </td>
-                          <td>
-                            <Badge
-                              tone={a.status === "completed" ? "sage" : ""}
-                            >
-                              {a.status.replace("_", " ")}
-                            </Badge>
-                          </td>
-                          <td>
-                            <Badge
-                              tone={
-                                a.handoff === "filed"
-                                  ? "sage"
-                                  : a.handoff === "prepared"
-                                    ? "peach"
-                                    : ""
-                              }
-                            >
-                              {a.handoff === "pending"
-                                ? "Not prepared"
-                                : a.handoff === "prepared"
-                                  ? "Prepared · not filed"
-                                  : "Filed in Tebra"}
-                            </Badge>
-                          </td>
-                          <td>
-                            {canOperate && a.handoff !== "filed" ? (
-                              <button
-                                class="button secondary small"
-                                onClick={() =>
-                                  setEditor({
-                                    kind: "handoff",
-                                    activity: a,
-                                    patient: patient(a.patientId),
-                                  })
-                                }
-                              >
-                                Update activity
-                              </button>
-                            ) : (
-                              <span class="muted">
-                                {a.tebraReference || "View only"}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!activities.length && (
-                    <div class="empty-state">No activities here yet.</div>
-                  )}
-                </div>
+              {page === "Injections" && (
+                <InjectionWorkspace
+                  data={data}
+                  records={injections}
+                  actor={actor}
+                  timezone={config.clinicTimezone}
+                  onRefresh={refresh}
+                  onLinkPatient={() => setEditor({ kind: "patient" })}
+                />
               )}
-            </section>
-          )}
-          {page === "Inventory" && (
-            <>
-              <section class="panel">
-                <div class="section-heading">
+              {page === "Patients" && (
+                <>
+                  <div class="page-heading">
+                    <div>
+                      <p class="eyebrow">CLINIC CONSOLE</p>
+                      <h1>Patients</h1>
+                    </div>
+                    {canOperate && (
+                      <button
+                        class="button coral"
+                        onClick={() => setEditor({ kind: "patient" })}
+                      >
+                        <Icon name="plus" size={17} />
+                        Link patient
+                      </button>
+                    )}
+                  </div>
+                  {selected ? (
+                    <>
+                      <section class="patient-banner">
+                        <div class="avatar">
+                          {selected.displayName.slice(0, 1)}
+                        </div>
+                        <div>
+                          <h2>{selected.displayName}</h2>
+                          <p>
+                            DOB {dateLabel(selected.dob)} <span>·</span> Tebra #
+                            {selected.tebraId}
+                          </p>
+                        </div>
+                        <button
+                          class="button secondary small"
+                          onClick={() => setPatientId(undefined)}
+                        >
+                          All patients
+                        </button>
+                      </section>
+                      <InjectionWorkspace
+                        key={selected.id}
+                        data={data}
+                        records={injections}
+                        actor={actor}
+                        timezone={config.clinicTimezone}
+                        patientId={selected.id}
+                        onRefresh={refresh}
+                        onLinkPatient={() => setEditor({ kind: "patient" })}
+                      />
+                    </>
+                  ) : (
+                    <section class="panel">
+                      <div class="section-heading">
+                        <h2>Patient directory</h2>
+                        <div class="search">
+                          <Icon name="search" size={18} />
+                          <input
+                            aria-label="Search patients"
+                            placeholder="Name, DOB, or chart ID"
+                            value={search}
+                            onInput={(e) => setSearch(e.currentTarget.value)}
+                          />
+                        </div>
+                      </div>
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Patient</th>
+                              <th>Date of birth</th>
+                              <th>Tebra chart</th>
+                              <th>Verified</th>
+                              <th />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredPatients.map((p) => (
+                              <tr key={p.id}>
+                                <td>
+                                  <button
+                                    class="patient-link"
+                                    onClick={() => openPatient(p)}
+                                  >
+                                    {p.displayName}
+                                  </button>
+                                </td>
+                                <td>{dateLabel(p.dob)}</td>
+                                <td>#{p.tebraId}</td>
+                                <td>
+                                  {new Date(p.verifiedAt).toLocaleDateString()}
+                                </td>
+                                <td>
+                                  <button
+                                    class="text-button"
+                                    onClick={() => openPatient(p)}
+                                  >
+                                    Open
+                                    <Icon name="arrow" size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {!filteredPatients.length && (
+                          <div class="empty-state">No patients found.</div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+                </>
+              )}
+              {page === "Inventory" && (
+                <div class="page-heading">
                   <div>
-                    <h2>Medication & supply stock</h2>
-                    <p>
-                      Whole stock units · quantities are not medication doses
-                    </p>
+                    <p class="eyebrow">CLINIC CONSOLE</p>
+                    <h1>Inventory</h1>
                   </div>
                   {canManage && (
                     <button
-                      class="button secondary small"
-                      onClick={() => setEditor({ kind: "product" })}
+                      class="button coral"
+                      onClick={() => setEditor({ kind: "lot" })}
                     >
-                      <Icon name="plus" size={16} /> Add product
+                      <Icon name="plus" size={17} />
+                      Add stock lot
                     </button>
                   )}
                 </div>
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Product / lot</th>
-                        <th>Supply source</th>
-                        <th>Expiration</th>
-                        <th>On hand</th>
-                        <th>Reserved</th>
-                        <th>Available</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.lots.map((l) => {
-                        const p = data.products.find(
-                          (p) => p.id === l.productId,
-                        );
-                        return (
+              )}
+              {page === "Inventory" && (
+                <>
+                  <section class="panel">
+                    <div class="section-heading">
+                      <div>
+                        <h2>Stock</h2>
+                        <p>
+                          Whole units · reserve, receive, and reconcile stock
+                        </p>
+                      </div>
+                      {canManage && (
+                        <button
+                          class="button secondary small"
+                          onClick={() => setEditor({ kind: "product" })}
+                        >
+                          <Icon name="plus" size={16} /> Add product
+                        </button>
+                      )}
+                    </div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
                           <tr>
-                            <td>
-                              <strong>{p?.name || "Product"}</strong>
-                              <small>
-                                {p?.strength} · lot {l.lotNumber}
-                              </small>
-                              <small>{l.location}</small>
-                            </td>
-                            <td>
-                              <Badge>{l.ownership}</Badge>
-                              {l.ownerPatientId && (
-                                <small>
-                                  {patient(l.ownerPatientId)?.displayName ||
-                                    "Linked owner"}
-                                </small>
-                              )}
-                            </td>
-                            <td>
-                              <span
-                                class={l.expiresOn < today ? "danger-text" : ""}
-                              >
-                                {dateLabel(l.expiresOn)}
-                              </span>
-                              {l.expiresOn < today && (
-                                <small class="danger-text">Expired</small>
-                              )}
-                            </td>
-                            <td class="number">{l.onHand}</td>
-                            <td class="number">{l.reserved}</td>
-                            <td class="number">
-                              <strong>{l.onHand - l.reserved}</strong>
-                              <small>{p?.unit}s</small>
-                            </td>
-                            <td>
-                              {(canManage || canOperate) && (
-                                <button
-                                  class="button secondary small"
-                                  onClick={() =>
-                                    setEditor({ kind: "movement", lot: l })
-                                  }
-                                >
-                                  Record movement
-                                </button>
-                              )}
-                            </td>
+                            <th>Product / lot</th>
+                            <th>Supply source</th>
+                            <th>Expiration</th>
+                            <th>On hand</th>
+                            <th>Reserved</th>
+                            <th>Available</th>
+                            <th />
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  {!data.lots.length && (
-                    <div class="empty-state">
-                      Add a product and stock lot, then record its receipt.
+                        </thead>
+                        <tbody>
+                          {data.lots.map((l) => {
+                            const p = data.products.find(
+                              (p) => p.id === l.productId,
+                            );
+                            return (
+                              <tr>
+                                <td>
+                                  <strong>{p?.name || "Product"}</strong>
+                                  <small>
+                                    {p?.strength} · lot {l.lotNumber}
+                                  </small>
+                                  <small>{l.location}</small>
+                                </td>
+                                <td>
+                                  <Badge>{l.ownership}</Badge>
+                                  {l.ownerPatientId && (
+                                    <small>
+                                      {patient(l.ownerPatientId)?.displayName ||
+                                        "Linked owner"}
+                                    </small>
+                                  )}
+                                </td>
+                                <td>
+                                  <span
+                                    class={
+                                      l.expiresOn < today ? "danger-text" : ""
+                                    }
+                                  >
+                                    {dateLabel(l.expiresOn)}
+                                  </span>
+                                  {l.expiresOn < today && (
+                                    <small class="danger-text">Expired</small>
+                                  )}
+                                </td>
+                                <td class="number">{l.onHand}</td>
+                                <td class="number">{l.reserved}</td>
+                                <td class="number">
+                                  <strong>{l.onHand - l.reserved}</strong>
+                                  <small>{p?.unit}s</small>
+                                </td>
+                                <td>
+                                  {(canManage || canOperate) && (
+                                    <button
+                                      class="button secondary small"
+                                      onClick={() =>
+                                        setEditor({ kind: "movement", lot: l })
+                                      }
+                                    >
+                                      Update stock
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      {!data.lots.length && (
+                        <div class="empty-state">
+                          Add a product and stock lot, then record its receipt.
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </section>
-              <section class="panel history">
-                <div class="section-heading">
-                  <div>
-                    <h2>Movement history</h2>
-                    <p>
-                      Original entries remain intact. Corrections create a
-                      linked reversal.
-                    </p>
-                  </div>
-                  <Badge>Auditable</Badge>
-                </div>
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Movement</th>
-                        <th>Lot / patient</th>
-                        <th>Stock change</th>
-                        <th>Reserved change</th>
-                        <th>Reason</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.movements.slice(0, 30).map((m) => (
-                        <tr>
-                          <td>
-                            <strong>
-                              {m.kind === "use" ? "Recorded use" : m.kind}
-                            </strong>
-                            <small>
-                              {new Date(m.createdAt).toLocaleString("en-US", {
-                                timeZone: config?.clinicTimezone,
-                              })}
-                            </small>
-                          </td>
-                          <td>
-                            {data.lots.find((l) => l.id === m.lotId)?.lotNumber}
-                            <small>
-                              {m.patientId
-                                ? patient(m.patientId)?.displayName ||
-                                  "Linked patient"
-                                : "Clinic stock"}
-                            </small>
-                          </td>
-                          <td class="number">
-                            {m.stockDelta > 0 ? "+" : ""}
-                            {m.stockDelta}
-                          </td>
-                          <td class="number">
-                            {m.reservedDelta > 0 ? "+" : ""}
-                            {m.reservedDelta}
-                          </td>
-                          <td>{m.reason}</td>
-                          <td>
-                            {canManage &&
-                              m.kind !== "reverse" &&
-                              !data.movements.some(
-                                (r) => r.reversesId === m.id,
-                              ) && (
-                                <button
-                                  class="text-button"
-                                  onClick={() =>
-                                    setEditor({
-                                      kind: "movement",
-                                      lot: data.lots.find(
-                                        (l) => l.id === m.lotId,
-                                      ),
-                                      original: m,
-                                    })
-                                  }
-                                >
-                                  Correct
-                                </button>
-                              )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!data.movements.length && (
-                    <div class="empty-state">
-                      Stock changes will appear here.
+                  </section>
+                  <section class="panel history">
+                    <div class="section-heading">
+                      <div>
+                        <h2>Movement history</h2>
+                        <p>Receipts, reservations, use, and corrections.</p>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </section>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Movement</th>
+                            <th>Lot / patient</th>
+                            <th>Stock change</th>
+                            <th>Reserved change</th>
+                            <th>Reason</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.movements.slice(0, 30).map((m) => (
+                            <tr>
+                              <td>
+                                <strong>
+                                  {m.kind === "use" ? "Used" : m.kind}
+                                </strong>
+                                <small>
+                                  {new Date(m.createdAt).toLocaleString(
+                                    "en-US",
+                                    {
+                                      timeZone: config?.clinicTimezone,
+                                    },
+                                  )}
+                                </small>
+                              </td>
+                              <td>
+                                {
+                                  data.lots.find((l) => l.id === m.lotId)
+                                    ?.lotNumber
+                                }
+                                <small>
+                                  {m.patientId
+                                    ? patient(m.patientId)?.displayName ||
+                                      "Linked patient"
+                                    : "Clinic stock"}
+                                </small>
+                              </td>
+                              <td class="number">
+                                {m.stockDelta > 0 ? "+" : ""}
+                                {m.stockDelta}
+                              </td>
+                              <td class="number">
+                                {m.reservedDelta > 0 ? "+" : ""}
+                                {m.reservedDelta}
+                              </td>
+                              <td>{m.reason}</td>
+                              <td>
+                                {canManage &&
+                                  m.kind !== "reverse" &&
+                                  !data.movements.some(
+                                    (r) => r.reversesId === m.id,
+                                  ) && (
+                                    <button
+                                      class="text-button"
+                                      onClick={() =>
+                                        setEditor({
+                                          kind: "movement",
+                                          lot: data.lots.find(
+                                            (l) => l.id === m.lotId,
+                                          ),
+                                          original: m,
+                                        })
+                                      }
+                                    >
+                                      Correct
+                                    </button>
+                                  )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {!data.movements.length && (
+                        <div class="empty-state">
+                          Stock changes will appear here.
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                </>
+              )}
             </>
-          )}
-          {page === "Manage" && (
-            <div class="manage-grid">
-              <section class="panel manage-card">
-                <Icon name="Patients" size={28} />
-                <h2>Tebra remains authoritative</h2>
-                <p>
-                  This console stores verified identity links and operational
-                  work. It does not synchronize with Tebra or replace orders,
-                  diagnoses, medication lists, or signed chart notes.
-                </p>
-                <Badge tone="sage">Explicit handoff</Badge>
-              </section>
-              <section class="panel manage-card">
-                <Icon name="Inventory" size={28} />
-                <h2>Inventory foundations</h2>
-                <p>
-                  Receipts, patient reservations, releases, use, waste,
-                  adjustments, and reversals share one movement history.
-                  Patient-owned supply stays with its owner.
-                </p>
-                <button
-                  class="text-button"
-                  onClick={() => navigate("Inventory")}
-                >
-                  Manage inventory <Icon name="arrow" size={16} />
-                </button>
-              </section>
-              <section class="panel manage-card">
-                <Icon name="Work" size={28} />
-                <h2>First build · foundation</h2>
-                <p>
-                  Clinical decision support, note generation, kiosk integration,
-                  transfers, partial-vial tracking, and automated notifications
-                  are planned extensions. This build does not perform those
-                  actions.
-                </p>
-                <Badge>Version 0.1</Badge>
-              </section>
-            </div>
           )}
           <footer class="workspace-footer">
             <span>
               <span class="connection-dot" />
-              {config?.mode === "preview"
-                ? "Synthetic browser preview"
-                : config?.mode === "demo"
-                  ? "Local synthetic demo"
-                  : actor
-                    ? "Connected workspace"
-                    : "Awaiting sign-in"}
+              {config.mode === "sql" ? "Connected" : "Demo"} · Tebra is the
+              clinical record
             </span>
             <span>
               {lastLoaded
-                ? `Loaded ${lastLoaded.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · refresh for staff updates`
-                : "No records loaded"}{" "}
+                ? `Updated ${lastLoaded.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                : ""}{" "}
               · First 250 records per module
             </span>
           </footer>
@@ -808,7 +625,7 @@ function App() {
           onClose={() => setEditor(undefined)}
           onSaved={async () => {
             setEditor(undefined);
-            setMessage("Saved successfully.");
+            setMessage("Saved.");
             await refresh();
           }}
         />
@@ -816,5 +633,4 @@ function App() {
     </div>
   );
 }
-
 render(<App />, document.getElementById("app")!);
