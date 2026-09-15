@@ -54,6 +54,8 @@ const submitLabels: Record<InjectionAction, string> = {
   amend: "Save addendum",
   file: "Confirm filed",
 };
+const unusedRouteSiteConfirmation =
+  "Route/site confirmation: No route or site was used.";
 export function InjectionDialog({
   action,
   record,
@@ -83,6 +85,7 @@ export function InjectionDialog({
   const [timing, setTiming] = useState(record?.timingCategory || "unknown");
   const [vitalsStatus, setVitalsStatus] = useState("recorded");
   const [delivery, setDelivery] = useState("");
+  const [noRouteSiteUsed, setNoRouteSiteUsed] = useState(false);
   const [replacePriorTime, setReplacePriorTime] = useState(false);
   const [unknownDose, setUnknownDose] = useState(false);
   const [atNow, setAtNow] = useState(true);
@@ -97,6 +100,11 @@ export function InjectionDialog({
   }>();
   const chosenPatient = data.patients.find((p) => p.id === patient);
   const chosenProduct = data.products.find((p) => p.id === product);
+  const confirmedUnusedRouteSite =
+    delivery === "not_delivered" && noRouteSiteUsed;
+  const routeSiteConfirmationPrefix = confirmedUnusedRouteSite
+    ? `${unusedRouteSiteConfirmation}\n\n`
+    : "";
   const medicationReference = getInjectionReference(chosenProduct?.name || "");
   const today = clinicDay(timezone);
   const lotOptions = data.lots
@@ -243,9 +251,25 @@ export function InjectionDialog({
           assessment,
         };
       } else if (action === "administer") {
+        if (
+          !confirmedUnusedRouteSite &&
+          (!val("actualRoute") || !val("actualSite"))
+        )
+          throw new Error("Confirm the actual route and site used.");
+        const issueAction =
+          delivery === "complete"
+            ? null
+            : `${routeSiteConfirmationPrefix}${val("issueAction")}`;
+        if (delivery !== "complete" && !val("issueAction"))
+          throw new Error("Record the issue and provider-directed action.");
+        if (issueAction && issueAction.length > 2000)
+          throw new Error(
+            `Keep the issue and provider-directed action within ${2000 - routeSiteConfirmationPrefix.length} characters to include the route/site confirmation.`,
+          );
         const fingerprint = JSON.stringify([
           Array.from(form.entries()),
           delivery,
+          confirmedUnusedRouteSite,
           unknownDose,
           atNow,
           record!.version,
@@ -276,8 +300,12 @@ export function InjectionDialog({
           tolerance: val("tolerance"),
           observation: val("observation"),
           delivery,
-          actualSite: val("actualSite"),
-          actualRoute: val("actualRoute"),
+          ...(!confirmedUnusedRouteSite
+            ? {
+                actualSite: val("actualSite"),
+                actualRoute: val("actualRoute"),
+              }
+            : {}),
           actualDose:
             delivery === "complete"
               ? null
@@ -286,7 +314,7 @@ export function InjectionDialog({
                 : unknownDose
                   ? null
                   : num("actualDose"),
-          issueAction: delivery === "complete" ? null : val("issueAction"),
+          issueAction,
           followUp: {
             instructions: val("followUpInstructions") || null,
             educationProvided,
@@ -963,7 +991,10 @@ export function InjectionDialog({
                 <select
                   required
                   value={delivery}
-                  onChange={(e) => setDelivery(e.currentTarget.value)}
+                  onChange={(e) => {
+                    setDelivery(e.currentTarget.value);
+                    setNoRouteSiteUsed(false);
+                  }}
                 >
                   <option value="">Select the actual outcome</option>
                   <option value="complete">Full ordered dose delivered</option>
@@ -1006,7 +1037,7 @@ export function InjectionDialog({
                     <textarea
                       name="issueAction"
                       required
-                      maxLength={2000}
+                      maxLength={2000 - routeSiteConfirmationPrefix.length}
                       rows={3}
                       placeholder="What occurred, provider notification, and instructions received"
                     />
@@ -1018,24 +1049,46 @@ export function InjectionDialog({
                   </div>
                 </>
               )}
-              <div class="form-grid">
-                <Field label="Actual route">
-                  <select name="actualRoute" required defaultValue="">
-                    <option value="">Confirm actual route</option>
-                    <option value="IM">IM</option>
-                    <option value="SC">SC</option>
-                  </select>
-                </Field>
-                <Field label="Actual site and laterality">
-                  <input
-                    name="actualSite"
-                    required
-                    maxLength={100}
-                    list="actual-injection-sites"
-                    placeholder="Record the site actually used"
-                  />
-                </Field>
-              </div>
+              {delivery === "not_delivered" && (
+                <div>
+                  <label class="checkbox">
+                    <input
+                      name="noRouteSiteUsed"
+                      type="checkbox"
+                      checked={noRouteSiteUsed}
+                      onChange={(e) =>
+                        setNoRouteSiteUsed(e.currentTarget.checked)
+                      }
+                    />
+                    No route or site was used
+                  </label>
+                  <p class="field-help">
+                    Select only if the package was opened but no route or
+                    injection site was used. This confirmation is saved with the
+                    issue and provider action.
+                  </p>
+                </div>
+              )}
+              {!confirmedUnusedRouteSite && (
+                <div class="form-grid">
+                  <Field label="Actual route">
+                    <select name="actualRoute" required defaultValue="">
+                      <option value="">Confirm actual route</option>
+                      <option value="IM">IM</option>
+                      <option value="SC">SC</option>
+                    </select>
+                  </Field>
+                  <Field label="Actual site and laterality">
+                    <input
+                      name="actualSite"
+                      required
+                      maxLength={100}
+                      list="actual-injection-sites"
+                      placeholder="Record the site actually used"
+                    />
+                  </Field>
+                </div>
+              )}
               <datalist id="actual-injection-sites">
                 <option value={record.site} />
               </datalist>
@@ -1098,8 +1151,8 @@ export function InjectionDialog({
               <label class="checkbox confirmation">
                 <input type="checkbox" required />
                 <span>
-                  I confirm the actual delivery, time, site, and patient
-                  response above.
+                  I confirm the actual delivery, time, route/site use, and
+                  patient response above.
                 </span>
               </label>
               <p class="field-help">

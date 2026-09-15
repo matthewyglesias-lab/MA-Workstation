@@ -31,10 +31,16 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   });
   await page.getByRole("button", { name: "Patients", exact: true }).click();
   await page.getByRole("button", { name: "Link patient", exact: true }).click();
-  await page.getByLabel("Patient name").fill("Synthetic Browser Patient");
-  await page.getByLabel("Date of birth").fill("1991-03-15");
-  await page.getByLabel("Tebra chart ID").fill("BROWSER-TEST");
-  await page.getByLabel("I verified this identity").check();
+  await page
+    .getByLabel("Patient name", { exact: true })
+    .fill("Synthetic Browser Patient");
+  await page.getByLabel("Date of birth", { exact: true }).fill("1991-03-15");
+  await page.getByLabel("Tebra chart ID", { exact: true }).fill("BROWSER-TEST");
+  await page
+    .getByLabel("I verified this identity and chart ID in Tebra.", {
+      exact: true,
+    })
+    .check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await page
@@ -44,20 +50,32 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
     .getByRole("button", { name: "New injection", exact: true })
     .first()
     .click();
-  await page.getByLabel("Ordering provider").fill("Synthetic provider");
-  await page.getByLabel("Tebra order reference").fill("BROWSER-ORDER");
-  await page.getByLabel("Product / formulation").selectOption({ index: 1 });
-  await page.getByLabel("Ordered dose").fill("100");
+  await page
+    .getByLabel("Ordering provider", { exact: true })
+    .fill("Synthetic provider");
+  await page
+    .getByLabel("Tebra order reference", { exact: true })
+    .fill("BROWSER-ORDER");
+  await page
+    .getByLabel("Product / formulation", { exact: true })
+    .selectOption({ index: 1 });
+  await page.getByLabel("Ordered dose", { exact: true }).fill("100");
   await page.getByLabel("Dose unit", { exact: true }).selectOption("mg");
   await page.getByLabel("Route", { exact: true }).selectOption("IM");
-  await page.getByLabel("Planned injection site").fill("Left deltoid");
-  await page.getByLabel("Timing category").selectOption("initiation");
-  await page.getByLabel("Treatment phase").selectOption("initiation");
   await page
-    .getByLabel("Indication per order")
+    .getByLabel("Planned injection site", { exact: true })
+    .fill("Left deltoid");
+  await page
+    .getByLabel("Timing category", { exact: true })
+    .selectOption("initiation");
+  await page
+    .getByLabel("Treatment phase", { exact: true })
+    .selectOption("initiation");
+  await page
+    .getByLabel("Indication per order", { exact: true })
     .fill("Synthetic browser scenario; no patient care");
   await page
-    .getByLabel("Provider-confirmed timing plan")
+    .getByLabel("Provider-confirmed timing plan", { exact: true })
     .fill("Synthetic provider-confirmed initiation order.");
   await page.getByRole("button", { name: "Save order", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
@@ -74,7 +92,7 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   ])
     await page.locator(`input[name="${name}"]`).check();
   await page
-    .getByLabel("Allergies / reactions reviewed")
+    .getByLabel("Allergies / reactions reviewed", { exact: true })
     .fill("Synthetic allergy review: none reported.");
   await page
     .getByLabel("Medication-specific review", { exact: true })
@@ -93,7 +111,9 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await page
     .getByLabel("Previous treatment response — details", { exact: true })
     .fill("No prior administration in this synthetic initiation scenario.");
-  await page.getByLabel("Provider consulted").fill("Synthetic provider");
+  await page
+    .getByLabel("Provider consulted", { exact: true })
+    .fill("Synthetic provider");
   await page
     .getByLabel("Provider confirmation time (America/Los_Angeles)", {
       exact: true,
@@ -108,18 +128,20 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
     .getByLabel("Provider decision", { exact: true })
     .selectOption("proceed_as_ordered");
   await page
-    .getByLabel("Communication / order reference")
+    .getByLabel("Communication / order reference", { exact: true })
     .fill("BROWSER-ORDER");
   await page
-    .getByLabel("Instructions received")
+    .getByLabel("Instructions received", { exact: true })
     .fill("Synthetic provider-confirmed initiation order; no patient care.");
-  await page.getByLabel("Pulse / min").fill("72");
-  await page.getByLabel("Available stock lot").selectOption({ index: 1 });
+  await page.getByLabel("Pulse / min", { exact: true }).fill("72");
   await page
-    .getByLabel("Preparation / product checks")
+    .getByLabel("Available stock lot", { exact: true })
+    .selectOption({ index: 1 });
+  await page
+    .getByLabel("Preparation / product checks", { exact: true })
     .fill("Synthetic package and preparation verified.");
   await page
-    .getByLabel("Site assessment")
+    .getByLabel("Site assessment", { exact: true })
     .fill("Synthetic assessment complete.");
   await page
     .getByLabel("Observation plan", { exact: true })
@@ -135,37 +157,57 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await page
     .getByRole("button", { name: "Record administration", exact: true })
     .click();
-  await page.getByLabel("Delivery", { exact: true }).selectOption("complete");
-  await page.getByLabel("Actual route", { exact: true }).selectOption("IM");
-  await page.getByLabel("Actual site and laterality").fill("Left deltoid");
   await page
-    .getByLabel("Tolerance / patient response")
+    .getByLabel("Delivery", { exact: true })
+    .selectOption("not_delivered");
+  await page.getByLabel("No route or site was used", { exact: true }).check();
+  await expect(page.getByLabel("Actual route", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByLabel("Actual site and laterality", { exact: true }),
+  ).toHaveCount(0);
+  await page.getByLabel("Delivery", { exact: true }).selectOption("complete");
+  await expect(
+    page.getByLabel("No route or site was used", { exact: true }),
+  ).toHaveCount(0);
+  await page.getByLabel("Actual route", { exact: true }).selectOption("IM");
+  await page
+    .getByLabel("Actual site and laterality", { exact: true })
+    .fill("Left deltoid");
+  await page
+    .getByLabel("Tolerance / patient response", { exact: true })
     .fill("Synthetic observed response.");
   await page
-    .getByLabel("Observation and follow-up")
+    .getByLabel("Observation and follow-up", { exact: true })
     .fill("Synthetic observation completed.");
   await page
     .getByLabel("Observation outcome", { exact: true })
     .selectOption("completed");
-  await page.getByLabel("Actual observation (minutes)").fill("15");
+  await page
+    .getByLabel("Actual observation (minutes)", { exact: true })
+    .fill("15");
   await page
     .getByLabel("Observation details", { exact: true })
     .fill("Synthetic observation scenario completed.");
   await page
-    .getByLabel("Patient-specific follow-up instructions")
+    .getByLabel("Patient-specific follow-up instructions", { exact: true })
     .fill(
       "Synthetic follow-up plan: contact the test clinic for the next date.",
     );
-  await page.getByLabel("I confirm the actual delivery").check();
+  await page
+    .getByLabel(
+      "I confirm the actual delivery, time, route/site use, and patient response above.",
+      { exact: true },
+    )
+    .check();
   await page
     .getByRole("button", { name: "Save administration", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("button", { name: "Plain text", exact: true }).click();
-  await expect(page.getByLabel("Injection note")).toHaveValue(
+  await expect(page.getByLabel("Injection note", { exact: true })).toHaveValue(
     /Actual dose: 100 mg/,
   );
-  await expect(page.getByLabel("Injection note")).toHaveValue(
+  await expect(page.getByLabel("Injection note", { exact: true })).toHaveValue(
     /No prior administration in this synthetic initiation scenario/,
   );
   await page.screenshot({
@@ -176,7 +218,7 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
     .getByRole("button", { name: "Confirm filed in Tebra", exact: true })
     .click();
   await page
-    .getByLabel("Tebra encounter / document reference")
+    .getByLabel("Tebra encounter / document reference", { exact: true })
     .fill("BROWSER-FILED");
   await page.getByRole("dialog").locator('input[type="checkbox"]').check();
   await page
@@ -185,7 +227,9 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(page.getByText("BROWSER-FILED", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add addendum", exact: true }).click();
-  await page.getByLabel("Reason for addendum").fill("Synthetic correction");
+  await page
+    .getByLabel("Reason for addendum", { exact: true })
+    .fill("Synthetic correction");
   await page
     .getByLabel("Addendum", { exact: true })
     .fill("Synthetic clarification preserves the original record.");
@@ -229,7 +273,9 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   ).toBe(true);
   await page.getByRole("button", { name: "Lock", exact: true }).click();
   await expect(page.getByLabel("PIN", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Injection note")).toHaveCount(0);
+  await expect(page.getByLabel("Injection note", { exact: true })).toHaveCount(
+    0,
+  );
   await expect(
     page.getByText("Synthetic Browser Patient", { exact: true }),
   ).toHaveCount(0);
