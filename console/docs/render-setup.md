@@ -1,12 +1,12 @@
 # Render + Azure SQL
 
-Evaluation target: **one $7/month Render web service + Azure SQL's recurring free offer**. Both resources are live. The user saved the runtime secret directly in Render; SQL bootstrap, restricted permissions, full synthetic API acceptance, and original-session/record persistence across an actual service restart passed. The temporary smoke account is disabled and its former PIN is rejected. Matthew's personal hidden-PIN enrollment, removal of its exact temporary Cloud Shell firewall rule, and remaining browser/print, second-workstation, load and recovery checks are still open. See [verified deployment status and remaining steps](render-evaluation-status.md).
+The approved **$7/month Render service and Azure SQL free-offer database are live with 4–12 digit PIN access**. All three approved named staff accounts are individually verified, and temporary administrator access and enrollment credential artifacts have been removed. Authenticated browser/print workflow, second-workstation, sustained-load and backup/restore checks remain open. See the [verified deployment record](render-evaluation-status.md) for the current release, completed synthetic workflow/restart checks and final cleanup evidence.
 
 **Use synthetic data only on this low-cost profile.** Render requires a HIPAA-enabled Scale or Enterprise workspace before an application processes patient PHI, even when the database is hosted in Azure. Current Scale pricing is $499/month plus compute, with an additional 20% usage fee for HIPAA-enabled workspaces. A BAA and completed workspace enablement are required. This corrects the earlier $7 clinic-hosting estimate: the affordable Render profile is for evaluation, not live patient work. The approved $7 web service is created; no workspace upgrade or BAA acceptance has been performed. See Render's [HIPAA requirements](https://render.com/docs/hipaa-compliance) and [workspace pricing](https://render.com/docs/new-workspace-plans).
 
 ## Deploy the application
 
-Use the repository-root `render.yaml` from `feat/azure-sql-clinic-console`. It builds only `console/`, serves the frontend and API at the same HTTPS origin, pins Node 22, and selects `0.5c-512mb` (one instance) in Ohio, near the proposed Central US SQL database. The original workstation and letter builder keep their existing deployments.
+Use the repository-root `render.yaml` from `feat/azure-sql-clinic-console`. It builds only `console/`, serves the frontend and API at the same HTTPS origin, pins Node 22, and selects `0.5c-512mb` (one instance) in Ohio, near the existing Central US SQL database. The original workstation and letter builder keep their existing deployments.
 
 No Render database, persistent disk, paid workspace upgrade, or preview replica is specified. Auto-deploy is off while the source is on the draft PR branch. After launch, use the reviewed release branch; the separate legacy Static Web App staging-quota failure needs resolution/scoping before `checksPass` can be used for automatic deployment.
 
@@ -20,7 +20,7 @@ No Render database, persistent disk, paid workspace upgrade, or preview replica 
 | Health check   | `/api/health`                                                   |
 | Compute        | `0.5c-512mb`, one instance                                      |
 | Region         | Ohio                                                            |
-| Staff sign-in  | Individual PIN                                                  |
+| Staff sign-in  | Individual staff code and 4–12 digit PIN                        |
 
 Render supplies `PORT` and `RENDER_EXTERNAL_URL`. The latter is the exact allowed HTTPS origin unless a custom `PUBLIC_ORIGIN` is explicitly set. This value never comes from request headers.
 
@@ -51,7 +51,7 @@ The API conservatively ignores forwarding headers. Until Render's actual proxy c
 
 `/api/health` does not query SQL, so host probes do not keep it awake. Connection establishment allows up to 60 seconds for SQL to resume. An unconfirmed save must be retried with its retained idempotency key.
 
-SQL's 100,000 monthly free vCore-seconds can be exhausted; it then pauses until next month. Paid Render hosting does not remove that limit. Runtime credential transfer and hosted API/restart acceptance are complete. Temporary smoke-account cleanup is verified. Personal staff enrollment, removal of its exact temporary Cloud Shell firewall rule, authenticated browser/print and second-workstation review, sustained load, and backup/restore verification remain pending. Reconcile actual stock and Tebra identifiers before clinic use. Tebra remains the clinical record.
+SQL's 100,000 monthly free vCore-seconds can be exhausted; it then pauses until next month. Paid Render hosting does not remove that limit. Staff activation, hosted API/restart checks and temporary-access cleanup are complete; the [deployment record](render-evaluation-status.md) contains the evidence and release details. Authenticated browser/print workflow and second-workstation review, sustained load, and backup/restore verification remain pending. Reconcile actual stock and Tebra identifiers before clinic use. Tebra remains the clinical record.
 
 ## References
 
