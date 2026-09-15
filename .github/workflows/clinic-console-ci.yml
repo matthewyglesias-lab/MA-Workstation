@@ -1,0 +1,76 @@
+name: Clinic console foundation
+on:
+  push:
+    branches: [main]
+    paths:
+      ["console/**", "render.yaml", ".github/workflows/clinic-console-ci.yml"]
+  pull_request:
+    paths:
+      ["console/**", "render.yaml", ".github/workflows/clinic-console-ci.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: console/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run check
+      - name: Compile Azure infrastructure
+        run: |
+          az bicep build --file infra/main.bicep --outfile /tmp/clinic-console-infra.json
+          az bicep build --file infra/sql-for-render.bicep --outfile /tmp/clinic-console-render-sql.json
+      - name: Check PIN burst memory for the 512 MiB host
+        run: node --max-old-space-size=192 scripts/check-pin-memory.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - run: npm run build:preview
+      - name: Test standalone preview without a server
+        run: CONSOLE_PREVIEW_PATH="$PWD/dist/preview/Clinic-Console-Interactive-Demo.html" npm run test:browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clinic-console-interactive-demo
+          path: console/dist/preview/Clinic-Console-Interactive-Demo.html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clinic-console-browser
+          path: console/test-results/
+  sql:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: Synthetic_CI_Only_2026!
+        ports: ["1433:1433"]
+    defaults:
+      run:
+        working-directory: console
+    env:
+      SQL_SERVER: 127.0.0.1
+      SQL_DATABASE: console_test
+      SQL_AUTH: password
+      SQL_USER: sa
+      SQL_PASSWORD: Synthetic_CI_Only_2026!
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: console/package-lock.json
+      - run: npm ci
+      - run: npm run test:sql

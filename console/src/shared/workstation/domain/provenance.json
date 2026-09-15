@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "matthewyglesias-lab/MA-Workstation",
+  "sourceCommit": "8f5b63b01307b4a0b5d7bce6013ba9f4161e7237",
+  "adaptation": "Relative ESM imports gain .js; Prettier formatting only. Clinical behavior is unchanged.",
+  "syncCommand": "node console/scripts/sync-workstation-engine.mjs",
+  "checkCommand": "node console/scripts/sync-workstation-engine.mjs --check",
+  "files": [
+    {
+      "sourcePath": "src/domain/contracts.ts",
+      "destinationPath": "console/src/shared/workstation/domain/contracts.ts",
+      "sourceSha256": "c7fa1251aaf16442df2212b7e6e49193f6fa4efaf14824c5aaf320fcb56712b3",
+      "vendoredSha256": "70083cedc2d948da6b02f52fcba40d9ff322c22bf5b8ec79de6701d23dd253ab"
+    },
+    {
+      "sourcePath": "src/domain/dates.ts",
+      "destinationPath": "console/src/shared/workstation/domain/dates.ts",
+      "sourceSha256": "ff5e0cf0041f40a5d2cfd8e63b79a26798a7ea367915e97b0dee04778b362750",
+      "vendoredSha256": "687245455b11197856fa37c9f58d9689f54419328203962b3d271dd24996c273"
+    },
+    {
+      "sourcePath": "src/domain/injection.ts",
+      "destinationPath": "console/src/shared/workstation/domain/injection.ts",
+      "sourceSha256": "2077eeb026852814687e05df1f256ea709be4abad2e3818781a9586075292190",
+      "vendoredSha256": "d44f9f0f3abb1beb470134ea15e4af01632384691bc1883ca7667f3ba20f3f57"
+    },
+    {
+      "sourcePath": "src/domain/injection-catalog.ts",
+      "destinationPath": "console/src/shared/workstation/domain/injection-catalog.ts",
+      "sourceSha256": "e61bc3570f9bb0db27f87a07e8a96c9d020520c9028e13edcd7d1c4e971237bd",
+      "vendoredSha256": "bac496603c5b0d06cdf32d8e48966f0dc2589be01f832981729ce7eb4643a51e"
+    },
+    {
+      "sourcePath": "src/domain/injection-clinical-reference.ts",
+      "destinationPath": "console/src/shared/workstation/domain/injection-clinical-reference.ts",
+      "sourceSha256": "4692fcf3f91ef54ad2f31d09ab6c04051b2b5e9cff6e8463b87852b0d6924c79",
+      "vendoredSha256": "845d3f6c4e6afd426f246cdf2e1481c72a762960c64d82ab76de65ebfd8bb04d"
+    },
+    {
+      "sourcePath": "src/domain/injection-needle.ts",
+      "destinationPath": "console/src/shared/workstation/domain/injection-needle.ts",
+      "sourceSha256": "f2f714dc471b3b2a58990d0c9f86ba1badc2a253b45c3668ddf113cecb608aab",
+      "vendoredSha256": "68914bc05bfc0f92df30d82d903ad57e578c685556dbc97829d326b223f965b6"
+    },
+    {
+      "sourcePath": "src/domain/injection-ndc.ts",
+      "destinationPath": "console/src/shared/workstation/domain/injection-ndc.ts",
+      "sourceSha256": "1c9ec2a47397b43a21f66eb23151fac6c8bfdbec65ae4da13ba4791920f587df",
+      "vendoredSha256": "df22fb6e36106ee6e2b27f05bb1517ce670926ec847bf0a5178bf3ed3c6ff916"
+    },
+    {
+      "sourcePath": "src/domain/injection-patient-screening.ts",
+      "destinationPath": "console/src/shared/workstation/domain/injection-patient-screening.ts",
+      "sourceSha256": "a7d6e711575d994c44cd318be1e623c79eb3ee98c5da909d22bcdcd24c29d6f7",
+      "vendoredSha256": "72062bdcdd6174796312841a78b2d4fad56f5001ba7eca1e3e0551c3a62559ad"
+    }
+  ]
+}
