@@ -686,12 +686,15 @@ export function InjectionDialog({
         ref={formElement}
         onSubmit={submit}
         onChange={readForm}
-        onInput={() => {
+        onInput={(event) => {
           setDirty(true);
           setDiscard(false);
-          // Checkbox input fires before its change event. Defer the form-wide
-          // snapshot so controlled clinical confirmations can update first.
-          queueMicrotask(readForm);
+          // Checkbox input fires before its change event. Let the checkbox's
+          // controlled state update there; the form change handler snapshots
+          // the complete form immediately afterward.
+          const target = event.target as HTMLInputElement;
+          if (["checkbox", "radio"].includes(target.type)) return;
+          readForm();
         }}
       >
         <div class="dialog-body">

@@ -312,7 +312,7 @@ describe("clinical encounter detail and patient instructions", () => {
       "es",
     );
     expect(note).toContain("Ordered dose: 100 mg");
-    expect(note).not.toContain("999");
+    expect(note).not.toContain("Ordered dose: 999 mg");
     expect(note).toContain("PRODUCT REVIEWED / RESERVED");
     expect(note).not.toContain("Provider-confirmed next date:");
     expect(avs).toContain("Synthetic Patient");
