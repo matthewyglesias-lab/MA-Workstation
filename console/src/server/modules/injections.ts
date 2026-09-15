@@ -18,6 +18,25 @@ import {
   hasCurrentInjectionReview,
   reviewIssues,
 } from "../../shared/injection-readiness.js";
+import {
+  workstationState,
+  workstationOralComponentIssue,
+  WORKSTATION_ENGINE_VERSION,
+  type WorkstationState,
+} from "../../shared/workstation-contracts.js";
+import {
+  evaluateWorkstationInjection,
+  buildWorkstationEncounter,
+  resolveWorkstationMedication,
+  workstationStateForRecord,
+  expectedPairedProduct,
+  pairedProtocols,
+  canonicalWorkstationSite,
+  workstationLocalDate,
+} from "../../shared/workstation-bridge.js";
+import { injectionMuscleKey } from "../../shared/workstation/domain/injection-catalog.js";
+import { injectionAdministrationReviewFingerprint } from "../../shared/workstation/domain/injection.js";
+import { workstationPolicyReviewFingerprint } from "../../shared/workstation-clinical-policy.js";
 import { invariant } from "../platform/errors.js";
 const id = () => globalThis.crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -110,9 +129,247 @@ export function reviseInjection(
   // This command replaces the order; omitted optional facts must not survive
   // from a prior medication or timing plan and appear newly verified.
   if (changes.clinicalContext === undefined) delete revised.clinicalContext;
+  if (changes.workstation === undefined) delete revised.workstation;
   if (changes.lastAdministrationOn === undefined)
     delete revised.lastAdministrationOn;
   return revised;
+}
+const PAIR_COMPLETION_STOPS = new Set([
+  "initiation.second.given",
+  "administration.second-time",
+]);
+function retrospectiveRecording(
+  order: InjectionInput,
+  state: WorkstationState | undefined,
+  today: string,
+): boolean {
+  if (state?.recordingMode !== "retrospective") return false;
+  invariant(
+    order.plannedOn < today,
+    "retrospective_date",
+    "Retrospective recording applies only to an actual injection from a past clinic date.",
+    400,
+  );
+  invariant(
+    state.retrospectiveReason?.trim() &&
+      state.stockNotPreviouslyRecorded === true,
+    "retrospective_context",
+    "Explain the retrospective entry and confirm its package has not already been recorded as used.",
+    400,
+  );
+  return true;
+}
+const POST_ADMINISTRATION_STOPS = new Set([
+  "disposition.required",
+  "administration.staff",
+  "administration.time",
+  "response.required",
+  ...PAIR_COMPLETION_STOPS,
+]);
+function freezePairedCase(value: InjectionCase): InjectionCase {
+  const snapshot = structuredClone(value);
+  if (snapshot.review) delete snapshot.review.pairedCaseSnapshot;
+  if (snapshot.administration) {
+    delete snapshot.administration.pairedCaseSnapshot;
+    delete snapshot.administration.reviewSnapshot.pairedCaseSnapshot;
+  }
+  if (snapshot.disposition?.reviewSnapshot)
+    delete snapshot.disposition.reviewSnapshot.pairedCaseSnapshot;
+  return snapshot;
+}
+function clinicalStateSignature(state: WorkstationState): string {
+  const { response: _, details, ...clinical } = state;
+  const preDetails = Object.fromEntries(
+    Object.entries(details).filter(
+      ([key]) =>
+        key.startsWith("lateDose") ||
+        ["nextDose", "clinicalReferenceVersion", "ndcSelection"].includes(key),
+    ),
+  );
+  const canonical = (value: unknown): unknown =>
+    Array.isArray(value)
+      ? value.map(canonical)
+      : value && typeof value === "object"
+        ? Object.fromEntries(
+            Object.entries(value)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([k, v]) => [k, canonical(v)]),
+          )
+        : value;
+  return JSON.stringify(canonical({ ...clinical, details: preDetails }));
+}
+function bindProviderAuthorization(
+  record: InjectionCase,
+  state: WorkstationState,
+  timezone: string,
+) {
+  if (state.details.lateDoseReview !== "provider-authorized") return;
+  const communication = record.review?.assessment?.providerCommunication;
+  invariant(
+    communication?.decision === "proceed_as_ordered" &&
+      Number.isFinite(Date.parse(communication.contactedAt)) &&
+      Date.parse(communication.contactedAt) <= Date.now(),
+    "provider_authorization_unbound",
+    "Bind the timing authorization to a valid documented provider communication to proceed.",
+    400,
+  );
+  const localContact = `${workstationLocalDate(communication.contactedAt, timezone)}T${new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(communication.contactedAt))}`;
+  const submittedTime = state.details.lateDoseReviewTime?.trim();
+  const matchesTime =
+    submittedTime === communication.contactedAt ||
+    submittedTime === localContact;
+  invariant(
+    state.details.lateDoseReviewProvider?.trim() ===
+      communication.provider.trim() &&
+      state.details.lateDoseReviewNote?.trim() ===
+        communication.instructions.trim() &&
+      matchesTime,
+    "provider_authorization_mismatch",
+    "The timing review must match the documented provider, contact time, and exact instructions.",
+    400,
+  );
+  const encounter = buildWorkstationEncounter(
+    record,
+    undefined,
+    undefined,
+    timezone,
+  );
+  invariant(
+    state.details.lateDoseReviewFingerprint ===
+      workstationPolicyReviewFingerprint(encounter, {
+        indication: record.clinicalContext?.indication,
+        priorDose: record.clinicalContext?.priorDose,
+        priorProduct: record.clinicalContext?.priorProduct,
+        priorMaintenanceDoses: state.priorMaintenanceDoses,
+      }),
+    "provider_authorization_stale",
+    "The timing authorization no longer matches the medication, dates, dose, or verified history. Review the current facts again.",
+    400,
+  );
+  state.details.lateDoseReviewProvider = communication.provider;
+  state.details.lateDoseReviewTime = communication.contactedAt;
+  state.details.lateDoseReviewNote = communication.instructions;
+}
+function assertWorkstationFacts(
+  record: InjectionCase,
+  state: WorkstationState,
+  pair?: InjectionCase,
+  retrospective = false,
+  allowDraftPair = false,
+  timezone = "America/Los_Angeles",
+) {
+  if (!retrospective) {
+    const issue = workstationOralComponentIssue(
+      state,
+      record.plannedOn,
+      timezone,
+    );
+    invariant(
+      !issue,
+      "oral_protocol_mismatch",
+      issue || "Verify the oral component.",
+      400,
+    );
+  }
+  if (!retrospective && state.initiation.oralStatus) {
+    invariant(
+      state.oral && state.oral.status === state.initiation.oralStatus,
+      "oral_fact_required",
+      "Record the oral medication, exact dose, status, and verification source.",
+      400,
+    );
+    invariant(
+      state.oral.status !== "administered" ||
+        (state.oral.administeredAt &&
+          Date.parse(state.oral.administeredAt) <= Date.now()),
+      "oral_time_required",
+      "Record the actual oral administration time; it cannot be in the future.",
+      400,
+    );
+    invariant(
+      !state.oral.startOn ||
+        !state.oral.endOn ||
+        state.oral.startOn <= state.oral.endOn,
+      "oral_continuation_dates",
+      "Oral continuation end cannot precede its start.",
+      400,
+    );
+  }
+  if (pairedProtocols.has(state.initiation.protocol)) {
+    // Historical missing components remain unconfirmed; any supplied linkage
+    // still has to identify the correct patient, day and independent product.
+    if (retrospective && !state.pairedCaseId) return;
+    invariant(
+      state.pairedCaseId && pair && pair.id === state.pairedCaseId,
+      "paired_case_required",
+      "Link the separately stocked injection component before reviewing this paired protocol.",
+      400,
+    );
+    invariant(
+      pair.id !== record.id &&
+        pair.patientId === record.patientId &&
+        pair.plannedOn === record.plannedOn,
+      "paired_case_mismatch",
+      "The linked component must be a separate injection for this patient on this clinic date.",
+      400,
+    );
+    const review = pair.administration?.reviewSnapshot ?? pair.review;
+    invariant(
+      ((allowDraftPair || retrospective) && pair.status === "draft") ||
+        (review &&
+          (pair.status === "reviewed" || pair.status === "administered")),
+      "paired_case_unreviewed",
+      "Complete the linked component's independent medication and stock review first.",
+      400,
+    );
+    if (pair.status === "reviewed")
+      invariant(
+        hasCurrentInjectionReview(review),
+        "paired_review_outdated",
+        "The linked component needs a current clinical engine review before this injection can proceed.",
+        400,
+      );
+    const primary =
+      record.administration?.reviewSnapshot.productSnapshot ??
+      record.review?.productSnapshot;
+    if (review)
+      invariant(
+        resolveWorkstationMedication(review.productSnapshot.name) ===
+          expectedPairedProduct(
+            state.initiation.protocol,
+            resolveWorkstationMedication(primary?.name ?? ""),
+          ),
+        "paired_product",
+        "The linked component's product does not match this initiation protocol.",
+        400,
+      );
+    invariant(
+      injectionMuscleKey(
+        canonicalWorkstationSite(pair.administration?.actualSite ?? pair.site),
+      ) !==
+        injectionMuscleKey(
+          canonicalWorkstationSite(
+            record.administration?.actualSite ?? record.site,
+          ),
+        ),
+      "paired_site",
+      "Record separate injection muscles for paired components.",
+      400,
+    );
+    invariant(
+      !workstationStateForRecord(pair)?.pairedCaseId ||
+        workstationStateForRecord(pair)?.pairedCaseId === record.id,
+      "paired_case_reused",
+      "The linked component is already assigned to a different injection.",
+      400,
+    );
+  } else
+    invariant(
+      !state.pairedCaseId,
+      "paired_protocol_required",
+      "Choose the paired initiation protocol before linking a component.",
+      400,
+    );
 }
 export function reviewInjectionCase(
   current: InjectionCase,
@@ -123,6 +380,8 @@ export function reviewInjectionCase(
   lot: Lot,
   today: string,
   movementId: string,
+  timezone = "America/Los_Angeles",
+  pairedCase?: InjectionCase,
 ): InjectionCase {
   assertInjectionVersion(current, input.expectedVersion);
   invariant(
@@ -130,8 +389,12 @@ export function reviewInjectionCase(
     "injection_state",
     "Review a draft injection first.",
   );
+  const suppliedState = input.workstation
+    ? workstationState.parse(input.workstation)
+    : undefined;
+  const retrospective = retrospectiveRecording(current, suppliedState, today);
   invariant(
-    current.plannedOn === today,
+    current.plannedOn === today || retrospective,
     "review_date",
     "Review must be performed on the planned administration date.",
   );
@@ -149,7 +412,7 @@ export function reviewInjectionCase(
     "Choose injectable stock.",
   );
   invariant(
-    current.timingCategory !== "unknown",
+    current.timingCategory !== "unknown" || retrospective,
     "timing_unresolved",
     "Resolve timing with the ordering provider before review.",
   );
@@ -161,8 +424,18 @@ export function reviewInjectionCase(
   );
   const assessment = injectionAssessment.parse(input.assessment);
   const findings = reviewIssues(current, assessment, product.name);
-  if (findings.length) {
-    const finding = findings[0]!;
+  const reviewBlockingFindings = retrospective
+    ? findings.filter((finding) =>
+        [
+          "assessment_required",
+          "screening_incomplete",
+          "screening_detail",
+          "future_provider_communication",
+        ].includes(finding.code),
+      )
+    : findings;
+  if (reviewBlockingFindings.length) {
+    const finding = reviewBlockingFindings[0]!;
     invariant(false, finding.code, finding.message, 400);
   }
   const canonicalChecks = getInjectionReviewChecks(product.name);
@@ -175,13 +448,20 @@ export function reviewInjectionCase(
     })),
   };
   const { expectedVersion: _, ...review } = input;
-  return {
+  const state = suppliedState;
+  const candidate: InjectionCase = {
     ...advance(current),
     status: "reviewed",
     review: {
       ...review,
       assessment: stampedAssessment,
       guidanceVersion: expectedInjectionGuidanceVersion(product.name),
+      ...(state
+        ? { workstation: state, engineVersion: WORKSTATION_ENGINE_VERSION }
+        : {}),
+      ...(pairedCase
+        ? { pairedCaseSnapshot: freezePairedCase(pairedCase) }
+        : {}),
       reviewedAt: now(),
       reviewedBy: actor.id,
       patientSnapshot: structuredClone(patient),
@@ -196,6 +476,74 @@ export function reviewInjectionCase(
       reservationMovementId: movementId,
     },
   };
+  if (resolveWorkstationMedication(product.name) || state) {
+    invariant(
+      state,
+      "workstation_review_required",
+      "Complete the full medication engine review before reserving this injection.",
+      400,
+    );
+    bindProviderAuthorization(candidate, state, timezone);
+    assertWorkstationFacts(
+      candidate,
+      state,
+      pairedCase,
+      retrospective,
+      true,
+      timezone,
+    );
+    const evaluation = evaluateWorkstationInjection(
+      candidate,
+      patient,
+      product,
+      timezone,
+      pairedCase,
+    );
+    const findings = evaluation.stops.filter(
+      (finding) =>
+        !POST_ADMINISTRATION_STOPS.has(finding.code) &&
+        !(
+          pairedCase?.status === "draft" &&
+          [
+            "initiation.second.order",
+            "initiation.second.ndc",
+            "initiation.second.lot",
+            "initiation.second.expiration",
+          ].includes(finding.code)
+        ),
+    );
+    if (
+      evaluation.output.medication?.clinicalReference?.administration
+        .requiresHabitusAssessment &&
+      evaluation.output.needle.resolution.unresolved
+    )
+      findings.push({
+        code: "needle.unresolved",
+        message:
+          evaluation.output.needle.resolution.unresolvedReason ||
+          "Complete the product-specific body habitus assessment.",
+        severity: "stop",
+      });
+    candidate.review!.engineFindings = [
+      ...reviewIssues(current, assessment, product.name),
+      ...evaluation.stops.filter(
+        (finding) => !POST_ADMINISTRATION_STOPS.has(finding.code),
+      ),
+    ].map(({ code, message }) => ({ code, message }));
+    if (pairedCase?.status === "draft")
+      candidate.review!.engineFindings.push({
+        code: "workstation.paired-review-pending",
+        message:
+          "The linked component still requires its own clinical and stock review. Administration is blocked until that review is complete.",
+      });
+    invariant(
+      retrospective || !findings.length,
+      "workstation_review_blocked",
+      findings.map((finding) => finding.message).join(" "),
+      400,
+    );
+  }
+  return candidate;
 }
 export function administerInjectionCase(
   current: InjectionCase,
@@ -203,6 +551,8 @@ export function administerInjectionCase(
   actor: Actor,
   today: string,
   stockMovementId: string,
+  timezone = "America/Los_Angeles",
+  pairedCase?: InjectionCase,
 ): InjectionCase {
   assertInjectionVersion(current, input.expectedVersion);
   invariant(
@@ -215,12 +565,24 @@ export function administerInjectionCase(
     "review_outdated",
     "This saved review predates the current clinical screening. Edit and review the injection again before administration.",
   );
+  const retrospective = retrospectiveRecording(
+    current,
+    current.review.workstation,
+    today,
+  );
   invariant(
-    current.plannedOn === today,
+    current.plannedOn === today || retrospective,
     "review_date",
     "This review is from another day. Edit and review the injection again.",
   );
   const at = Date.parse(input.administeredAt);
+  invariant(
+    workstationLocalDate(input.administeredAt, timezone) ===
+      (retrospective ? current.plannedOn : today),
+    "administration_date",
+    "The actual administration must be on the reviewed clinic date.",
+    400,
+  );
   invariant(
     Number.isFinite(at) && at <= Date.now(),
     "future_administration",
@@ -228,7 +590,7 @@ export function administerInjectionCase(
     400,
   );
   invariant(
-    at >= Date.parse(current.review.reviewedAt),
+    retrospective || at >= Date.parse(current.review.reviewedAt),
     "administration_before_review",
     "Administration time must follow the completed review.",
     400,
@@ -281,11 +643,56 @@ export function administerInjectionCase(
   const { expectedVersion: _, ...administration } = input;
   // Parse only the order fields; freeze everything used to document this administration.
   const orderSnapshot = snapshotOrder(current);
-  return {
+  const requiresEngine =
+    !!resolveWorkstationMedication(current.review.productSnapshot.name) ||
+    !!current.review.workstation;
+  const state = input.workstation
+    ? workstationState.parse(input.workstation)
+    : current.review.workstation;
+  if (requiresEngine) {
+    invariant(
+      state &&
+        current.review.workstation &&
+        current.review.engineVersion === WORKSTATION_ENGINE_VERSION,
+      "workstation_review_outdated",
+      "This injection needs a new full medication engine review.",
+    );
+    invariant(
+      clinicalStateSignature(state) ===
+        clinicalStateSignature(current.review.workstation),
+      "workstation_review_changed",
+      "Pre-administration engine facts changed. Edit and review the injection again.",
+      400,
+    );
+    assertWorkstationFacts(
+      current,
+      state,
+      pairedCase,
+      retrospective,
+      false,
+      timezone,
+    );
+  }
+  const pendingPair =
+    !!state &&
+    pairedProtocols.has(state.initiation.protocol) &&
+    (!pairedCase?.administration ||
+      pairedCase.administration.delivery !== "complete");
+  invariant(
+    !pendingPair || retrospective || input.followUp?.instructions?.trim(),
+    "paired_component_plan",
+    "Record follow-up instructions for the pending or incomplete linked injection component.",
+    400,
+  );
+  const candidate: InjectionCase = {
     ...advance(current),
     status: "administered",
     administration: {
       ...administration,
+      ...(state ? { workstation: state } : {}),
+      ...(pairedCase
+        ? { pairedCaseSnapshot: freezePairedCase(pairedCase) }
+        : {}),
       actualDose:
         input.delivery === "complete"
           ? (input.actualDose ?? current.dose)
@@ -298,6 +705,45 @@ export function administerInjectionCase(
       reviewSnapshot: structuredClone(current.review),
     },
   };
+  if (requiresEngine) {
+    const evaluation = evaluateWorkstationInjection(
+      candidate,
+      undefined,
+      undefined,
+      timezone,
+      pairedCase,
+    );
+    const findings = evaluation.stops.filter(
+      (finding) => !PAIR_COMPLETION_STOPS.has(finding.code),
+    );
+    // Clinical discrepancies after a real partial/failed/error delivery must be
+    // preserved as facts. The prospective reviewed facts remain immutable.
+    if (input.delivery === "complete" && !retrospective)
+      invariant(
+        !findings.length,
+        "workstation_administration_blocked",
+        findings.map((finding) => finding.message).join(" "),
+        400,
+      );
+    candidate.administration!.engineFindings = evaluation.stops.map(
+      ({ code, message }) => ({ code, message }),
+    );
+    if (pendingPair)
+      candidate.administration!.engineFindings.push({
+        code: "workstation.pair-pending",
+        message:
+          "The linked injection component was not recorded as completely administered at the time of this entry. This record does not document a completed paired regimen.",
+      });
+    const encounter = buildWorkstationEncounter(
+      candidate,
+      undefined,
+      undefined,
+      timezone,
+    );
+    candidate.administration!.engineReviewFingerprint =
+      injectionAdministrationReviewFingerprint(encounter);
+  }
+  return candidate;
 }
 export function disposeInjection(
   current: InjectionCase,

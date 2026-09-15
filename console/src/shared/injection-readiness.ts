@@ -1,3 +1,5 @@
+import { resolveWorkstationMedication } from "./workstation-bridge.js";
+import { WORKSTATION_ENGINE_VERSION } from "./workstation-contracts.js";
 import {
   getInjectionGuidance,
   INJECTION_GUIDANCE_VERSION,
@@ -21,7 +23,10 @@ export function hasCurrentInjectionReview(
   return (
     !!review?.assessment &&
     review.guidanceVersion ===
-      expectedInjectionGuidanceVersion(review.productSnapshot.name)
+      expectedInjectionGuidanceVersion(review.productSnapshot.name) &&
+    (!resolveWorkstationMedication(review.productSnapshot.name) ||
+      (!!review.workstation &&
+        review.engineVersion === WORKSTATION_ENGINE_VERSION))
   );
 }
 

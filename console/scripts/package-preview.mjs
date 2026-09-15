@@ -17,6 +17,14 @@ html = html.replace(
   /<link[^>]*rel="stylesheet"[^>]*>/,
   () => `<style>${style}</style>`,
 );
+const icon = assets.find((name) => /^favicon-[\w-]+\.svg$/.test(name));
+if (!icon) throw new Error("Expected the console SVG favicon.");
+const iconSvg = await readFile(new URL(`assets/${icon}`, root), "utf8");
+html = html.replace(
+  /(<link[^>]*rel="icon"[^>]*href=")[^"]+("[^>]*>)/,
+  (_, prefix, suffix) =>
+    `${prefix}data:image/svg+xml,${encodeURIComponent(iconSvg)}${suffix}`,
+);
 await writeFile(new URL("Clinic-Console-Interactive-Demo.html", root), html);
 console.log(
   "Standalone demo: dist/preview/Clinic-Console-Interactive-Demo.html",

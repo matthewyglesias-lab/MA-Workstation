@@ -1,3 +1,4 @@
+import { emptyWorkstationState } from "../src/shared/workstation-contracts.js";
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../src/server/app.js";
@@ -53,7 +54,12 @@ async function fixture(productName = "Synthetic injection kit") {
     command(),
   );
   const product = await repo.createProduct(
-    { name: productName, strength: "100 mg", unit: "kit", ndc: null },
+    {
+      name: productName,
+      strength: productName === "Invega Sustenna" ? "156 mg" : "100 mg",
+      unit: "kit",
+      ndc: productName === "Invega Sustenna" ? "00000-0000-00" : null,
+    },
     command(),
   );
   const lot = await repo.createLot(
@@ -84,16 +90,29 @@ async function fixture(productName = "Synthetic injection kit") {
     doseSequence: 1,
     tebraOrderReference: "SYNTHETIC-ORDER",
     orderingProvider: "Synthetic provider",
-    dose: 100,
+    dose: productName === "Invega Sustenna" ? 156 : 100,
     doseUnit: "mg" as const,
     route: "IM" as const,
     site: "Left deltoid",
     plannedOn: clinicDate("UTC"),
-    lastAdministrationAt: null,
+    lastAdministrationAt:
+      productName === "Invega Sustenna"
+        ? new Date(Date.now() - 28 * 86400000).toISOString()
+        : null,
     timingCategory: "scheduled" as const,
     timingPlan: "Verified ordered maintenance schedule",
-    nextDueOn: null,
-    clinicalContext: context(),
+    nextDueOn:
+      productName === "Invega Sustenna"
+        ? new Date(Date.now() + 28 * 86400000).toISOString().slice(0, 10)
+        : null,
+    clinicalContext:
+      productName === "Invega Sustenna"
+        ? {
+            ...context(),
+            historySource: "Synthetic prior MAR",
+            schedule: { every: 4, unit: "weeks" as const },
+          }
+        : context(),
   };
   const current = await repo.createInjection(order, command());
   const review: InjectionReviewInput = {
@@ -132,6 +151,30 @@ async function fixture(productName = "Synthetic injection kit") {
       education: [],
     },
   };
+  if (productName === "Invega Sustenna") {
+    review.assessment.weightKg = 72;
+    review.workstation = {
+      ...emptyWorkstationState(),
+      intervalKey: "q4wk",
+      reason: "scheduled",
+      acuteSafetyScreenConfirmed: true,
+      attestations: {
+        id2: true,
+        rights: true,
+        allergy: true,
+        consent: true,
+        screen: true,
+        hygiene: true,
+      },
+      verifications: {
+        resuspend: true,
+        suppliedNeedle: true,
+        visualInspection: true,
+        paliperidoneTolerability: true,
+        invegaInit: true,
+      },
+    };
+  }
   const app = await buildApp(
     readConfig({
       CONSOLE_MODE: "demo",
@@ -582,7 +625,8 @@ describe("structured injection review at the API boundary", () => {
     async (productName, legacyKind) => {
       const f = await fixture(productName);
       try {
-        expect((await f.postReview(f.review)).statusCode).toBe(200);
+        const initialReview = await f.postReview(f.review);
+        expect(initialReview.statusCode, initialReview.body).toBe(200);
         // Simulate a reviewed payload loaded from a database written by an earlier release.
         // No production write API allows callers to alter the stored guidance stamp.
         const stored = (
@@ -606,7 +650,9 @@ describe("structured injection review at the API boundary", () => {
           tolerance: "Synthetic observation",
           observation: "Synthetic follow-up",
           delivery: "complete",
-          actualDose: 100,
+          actualDose: f.order.dose,
+          actualRoute: f.order.route,
+          actualSite: f.order.site,
           issueAction: null,
         };
         const request = (expectedVersion: number) =>

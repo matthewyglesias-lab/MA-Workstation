@@ -1,3 +1,4 @@
+import { workstationStateForRecord } from "../../shared/workstation-bridge.js";
 import type {
   InjectionCase,
   InjectionInput,
@@ -343,6 +344,33 @@ export class DemoRepository implements Repository {
       return this.saveInjection(next);
     });
   }
+  private pairedInjection(
+    current: InjectionCase,
+    pairedId?: string,
+  ): InjectionCase | undefined {
+    if (!pairedId) return undefined;
+    invariant(
+      pairedId !== current.id,
+      "paired_self",
+      "An injection cannot be its own paired component.",
+      400,
+    );
+    const pair = this.injection(pairedId);
+    const reused = this.injections.some(
+      (value) =>
+        value.id !== current.id &&
+        value.id !== pairedId &&
+        workstationStateForRecord(value)?.pairedCaseId === pairedId &&
+        value.status !== "cancelled",
+    );
+    invariant(
+      !reused,
+      "paired_case_reused",
+      "The selected component is already linked to another injection.",
+      400,
+    );
+    return pair;
+  }
   async reviewInjection(id: string, input: InjectionReviewInput, c: Command) {
     return this.run("injection.reviewed", { id, ...input }, c, () => {
       const current = this.injection(id);
@@ -366,6 +394,8 @@ export class DemoRepository implements Repository {
         lot,
         clinicDate(this.timezone),
         "",
+        this.timezone,
+        this.pairedInjection(current, input.workstation?.pairedCaseId),
       );
       const movement = this.injectionMovement(
         current,
@@ -391,6 +421,11 @@ export class DemoRepository implements Repository {
         c.actor,
         clinicDate(this.timezone),
         "",
+        this.timezone,
+        this.pairedInjection(
+          current,
+          current.review?.workstation?.pairedCaseId,
+        ),
       );
       const movement = this.injectionMovement(
         current,
@@ -468,7 +503,7 @@ export async function seededDemo(timezone: string) {
       name: "Demonstration injection kit",
       strength: "Training stock only",
       unit: "kit",
-      ndc: null,
+      ndc: "00000-0000-00", // Synthetic package identifier; no real medication.
     },
     command(),
   );

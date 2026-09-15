@@ -1,5 +1,7 @@
 # Injection workflow upgrade
 
+This page records the initial guidance-and-documentation release. The subsequent [original Workstation clinical engine integration](workstation-engine-upgrade.md) expands its clinical evaluation, original Tebra note and AVS, paired-component handling, and retrospective documentation. The release details and limitations below describe the initial release.
+
 Deployed 2026-09-15 at **20:00:10 UTC**, revision `dfeab33205b4958d6b67412e30c2ef6f3db5115a`. The production build, typecheck, formatting, and **93 automated tests across 11 files** passed locally and in the exact-revision CI run; both SQL integration and console verification jobs passed, including automated API and standalone-preview browser checks. Hosted health, public configuration, unauthenticated-access, and sign-in-screen checks passed; authenticated live workflow and physical print review remain open. See [the evaluation deployment record](render-evaluation-status.md) for evidence and limits, and [the clinical review](injection-clinical-review.md) for the clinical requirements. The verified Tebra chart and provider order remain authoritative.
 
 ## What the workflow now records

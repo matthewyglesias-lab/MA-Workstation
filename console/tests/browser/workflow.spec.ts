@@ -13,6 +13,14 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
       if (/^https?:/.test(r.url())) external.push(r.url());
     });
   await page.goto(preview ? pathToFileURL(preview).href : "/");
+  const favicon = page.locator('head link[rel="icon"][type="image/svg+xml"]');
+  await expect(favicon).toHaveCount(1);
+  await expect(favicon).toHaveAttribute(
+    "href",
+    /^(?:data:image\/svg\+xml[;,]|\/assets\/[^?#]+\.svg(?:\?|$))/,
+  );
+  if (preview)
+    await expect(favicon).toHaveAttribute("href", /^data:image\/svg\+xml[;,]/);
   await expect(page.getByLabel("PIN", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Patients", exact: true }),
@@ -72,11 +80,36 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
     .getByLabel("Treatment phase", { exact: true })
     .selectOption("initiation");
   await page
+    .getByLabel("Injection visit purpose", { exact: true })
+    .selectOption("initiation");
+  await page
+    .getByLabel("Ordered interval unit", { exact: true })
+    .selectOption("weeks");
+  await page.getByLabel("Repeat every", { exact: true }).fill("4");
+  await page
+    .getByLabel("Initiation / restart instructions", { exact: true })
+    .fill("Synthetic provider-confirmed initiation; repeat every four weeks.");
+  await page
     .getByLabel("Indication per order", { exact: true })
     .fill("Synthetic browser scenario; no patient care");
   await page
     .getByLabel("Provider-confirmed timing plan", { exact: true })
     .fill("Synthetic provider-confirmed initiation order.");
+  await page
+    .getByLabel("Next due date per order (optional)", { exact: true })
+    .fill(
+      clinicLocalInput(
+        new Date(Date.now() + 28 * 86400000).toISOString(),
+        "America/Los_Angeles",
+      ).slice(0, 10),
+    );
+  await page.getByText("Return date source", { exact: true }).click();
+  await page
+    .getByLabel("Return date authority", { exact: true })
+    .selectOption("active-order");
+  await page
+    .getByLabel("Return date order reference / reason", { exact: true })
+    .fill("BROWSER-ORDER: synthetic four-week return date.");
   await page.getByRole("button", { name: "Save order", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await page
@@ -146,6 +179,20 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await page
     .getByLabel("Observation plan", { exact: true })
     .fill("Synthetic provider observation plan.");
+  for (const label of [
+    "Aseptic preparation and administration technique confirmed.",
+    "No unresolved acute safety concern after today’s screening.",
+  ]) {
+    const confirmation = page.getByLabel(label, { exact: true });
+    await expect(confirmation).not.toBeChecked();
+    await confirmation.check();
+  }
+  await page
+    .getByLabel(
+      "Provider instructions and regimen verified in the clinical record.",
+      { exact: true },
+    )
+    .check();
   await page
     .getByRole("button", {
       name: "Complete review & reserve stock",
@@ -173,9 +220,17 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await page
     .getByLabel("Actual site and laterality", { exact: true })
     .fill("Left deltoid");
+  const response = page.getByLabel("Response observed", { exact: true });
+  await expect(response).toHaveValue("");
+  await response.selectOption("custom");
   await page
     .getByLabel("Tolerance / patient response", { exact: true })
     .fill("Synthetic observed response.");
+  await page
+    .getByLabel("Every finding and action in this response wording occurred.", {
+      exact: true,
+    })
+    .check();
   await page
     .getByLabel("Observation and follow-up", { exact: true })
     .fill("Synthetic observation completed.");
@@ -203,9 +258,14 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
     .getByRole("button", { name: "Save administration", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
+  for (const name of ["Copy CC", "Copy Assessment", "Copy Plan"]) {
+    const copyField = page.getByRole("button", { name, exact: true });
+    await expect(copyField).toBeVisible();
+    await expect(copyField).toBeEnabled();
+  }
   await page.getByRole("button", { name: "Plain text", exact: true }).click();
   await expect(page.getByLabel("Injection note", { exact: true })).toHaveValue(
-    /Actual dose: 100 mg/,
+    /Administration: Demonstration injection kit 100 mg IM administered to L deltoid using aseptic technique\./,
   );
   await expect(page.getByLabel("Injection note", { exact: true })).toHaveValue(
     /No prior administration in this synthetic initiation scenario/,
@@ -244,8 +304,31 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
     window.print = () => {};
   });
   await page.getByRole("button", { name: "Patient AVS", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Formatted preview", exact: true })
+    .click();
+  const avs = page
+    .getByLabel("Patient visit summary preview", { exact: true })
+    .locator(".lightfully-avs");
+  await expect(avs).toBeVisible();
+  await expect(avs).toHaveAttribute("lang", "en");
+  await expect(avs).toContainText("Synthetic Browser Patient");
+  await expect(avs).toContainText("Your treatment today");
+  await expect(avs).toContainText("DEMO-2609");
+  await expect(
+    avs.getByRole("list", { name: "Treatment timeline", exact: true }),
+  ).toBeVisible();
+  await expect(avs.locator(".lightfully-avs-step-given")).toContainText(
+    "Demonstration injection kit",
+  );
+  await expect(avs.locator(".lightfully-avs-step-given")).toContainText(
+    "100 mg",
+  );
   await page.getByRole("button", { name: "Print AVS", exact: true }).click();
   await expect(page.locator("#console-print-document")).toBeAttached();
+  await expect(
+    page.locator("#console-print-document .lightfully-avs"),
+  ).toHaveCount(1);
   await page.emulateMedia({ media: "print" });
   await expect(page.locator("#console-print-document")).toBeVisible();
   await expect(page.locator(".app-shell")).not.toBeVisible();
@@ -255,6 +338,7 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   });
   await page.emulateMedia({ media: "screen" });
   await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+  await expect(page.locator("#console-print-document")).toHaveCount(0);
   await page.getByRole("button", { name: "Inventory", exact: true }).click();
   await page.screenshot({
     path: "test-results/console-inventory.png",

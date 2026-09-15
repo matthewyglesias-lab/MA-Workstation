@@ -1,3 +1,4 @@
+import { workstationStateForRecord } from "../../shared/workstation-bridge.js";
 import type {
   InjectionCase,
   InjectionInput,
@@ -461,6 +462,44 @@ export class SqlRepository implements Repository {
     invariant(row, "not_found", "Injection not found.", 404);
     return JSON.parse(row.payload) as InjectionCase;
   }
+  private async pairedInjection(
+    tx: sql.Transaction,
+    current: InjectionCase,
+    pairedId?: string,
+  ): Promise<InjectionCase | undefined> {
+    if (!pairedId) return undefined;
+    invariant(
+      pairedId !== current.id,
+      "paired_self",
+      "An injection cannot be its own paired component.",
+      400,
+    );
+    const pair = await this.injection(tx, pairedId);
+    // Serialize linkage validation with the independently stored component.
+    const rows = (
+      await this.request(tx)
+        .input("patient", sql.UniqueIdentifier, current.patientId)
+        .input("day", sql.Date, current.plannedOn)
+        .query(
+          "SELECT payload FROM dbo.InjectionCases WITH(UPDLOCK,HOLDLOCK) WHERE clinicId=@clinic AND patientId=@patient AND plannedOn=@day AND status<>'cancelled'",
+        )
+    ).recordset as Array<{ payload: string }>;
+    const reused = rows
+      .map((row) => JSON.parse(row.payload) as InjectionCase)
+      .some(
+        (value) =>
+          value.id !== current.id &&
+          value.id !== pairedId &&
+          workstationStateForRecord(value)?.pairedCaseId === pairedId,
+      );
+    invariant(
+      !reused,
+      "paired_case_reused",
+      "The selected component is already linked to another injection.",
+      400,
+    );
+    return pair;
+  }
   private async saveInjection(
     tx: sql.Transaction,
     value: InjectionCase,
@@ -617,6 +656,12 @@ export class SqlRepository implements Repository {
           lot,
           clinicDate(this.timezone),
           "",
+          this.timezone,
+          await this.pairedInjection(
+            tx,
+            current,
+            input.workstation?.pairedCaseId,
+          ),
         );
         const movement = await this.injectionMovement(
           tx,
@@ -648,6 +693,12 @@ export class SqlRepository implements Repository {
           c.actor,
           clinicDate(this.timezone),
           "",
+          this.timezone,
+          await this.pairedInjection(
+            tx,
+            current,
+            current.review?.workstation?.pairedCaseId,
+          ),
         );
         const movement = await this.injectionMovement(
           tx,

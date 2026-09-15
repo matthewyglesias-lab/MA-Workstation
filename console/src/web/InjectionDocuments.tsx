@@ -1,13 +1,21 @@
-import { render } from "preact";
-import { useState } from "preact/hooks";
+import { render, type ComponentChildren } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { Lot, Patient, Product } from "../shared/contracts.js";
 import type { InjectionCase } from "../shared/injections.js";
 import {
   buildInjectionAvs,
-  buildInjectionNote,
   documentText,
   type InjectionDocument,
 } from "../shared/injection-documentation.js";
+import {
+  getWorkstationAvsModel,
+  getWorkstationNote,
+} from "../shared/workstation-documentation.js";
+import { workstationStateForRecord } from "../shared/workstation-bridge.js";
+import {
+  LightfullyInjectionAvs,
+  lightfullyAvsText,
+} from "./LightfullyInjectionAvs.js";
 import "./print.css";
 
 function DocumentBody({ document: doc }: { document: InjectionDocument }) {
@@ -43,7 +51,8 @@ function DocumentBody({ document: doc }: { document: InjectionDocument }) {
     </article>
   );
 }
-function printDocument(doc: InjectionDocument) {
+function printDocument(content: ComponentChildren) {
+  window.dispatchEvent(new Event("console:print-replaced"));
   const old = document.getElementById("console-print-document");
   if (old) {
     render(null, old);
@@ -52,41 +61,83 @@ function printDocument(doc: InjectionDocument) {
   const node = document.createElement("section");
   node.id = "console-print-document";
   document.body.append(node);
-  render(<DocumentBody document={doc} />, node);
+  render(content, node);
   const clean = () => {
     render(null, node);
     node.remove();
     window.removeEventListener("afterprint", clean);
     window.removeEventListener("console:locked", clean);
+    window.removeEventListener("console:print-replaced", clean);
   };
   window.addEventListener("afterprint", clean, { once: true });
   window.addEventListener("console:locked", clean, { once: true });
+  window.addEventListener("console:print-replaced", clean, { once: true });
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       if (node.isConnected) window.print();
     }),
   );
+  return clean;
 }
 export function InjectionDocuments({
   record,
   patient,
   product,
   timezone,
+  cases = [],
 }: {
   record: InjectionCase;
   patient: Patient;
   product: Product;
   lot?: Lot;
   timezone: string;
+  cases?: InjectionCase[];
 }) {
   const [message, setMessage] = useState("");
   const [language, setLanguage] = useState<"en" | "es">("en");
   const [view, setView] = useState<"note" | "avs">("note");
   const [plainText, setPlainText] = useState(false);
-  const note = buildInjectionNote(record, patient, product, timezone);
-  const avs = buildInjectionAvs(record, patient, product, timezone, language);
-  const shown = view === "note" ? note : avs;
-  const text = documentText(shown);
+  const printCleanup = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => () => printCleanup.current?.(), [record.id]);
+  const pairedId = workstationStateForRecord(record)?.pairedCaseId;
+  const pairedCase = cases.find((candidate) => candidate.id === pairedId);
+  const note = getWorkstationNote(
+    record,
+    patient,
+    product,
+    timezone,
+    pairedCase,
+  );
+  const avs = getWorkstationAvsModel(
+    record,
+    patient,
+    product,
+    timezone,
+    pairedCase,
+  );
+  const spanishAvs = buildInjectionAvs(
+    record,
+    patient,
+    product,
+    timezone,
+    "es",
+  );
+  const text =
+    view === "note"
+      ? note.text
+      : language === "en"
+        ? lightfullyAvsText(avs)
+        : documentText(spanishAvs);
+  const content = () =>
+    view === "note" ? (
+      <article class="encounter-document" lang="en">
+        <pre class="workstation-note">{note.text}</pre>
+      </article>
+    ) : language === "en" ? (
+      <LightfullyInjectionAvs model={avs} />
+    ) : (
+      <DocumentBody document={spanishAvs} />
+    );
   const finalized = Boolean(record.administration || record.disposition);
   const currentFiling = record.filings.some(
     (filing) => filing.amendmentCount === record.amendments.length,
@@ -178,6 +229,46 @@ export function InjectionDocuments({
             original language. Review them with the patient.
           </p>
         )}
+      {view === "avs" && language === "es" && (
+        <p class="document-review-notice">
+          Spanish visit summary. Its format and content differ from the original
+          Workstation English AVS.
+        </p>
+      )}
+      {view === "note" && (
+        <div
+          class="document-field-actions"
+          role="group"
+          aria-label="Copy individual Tebra fields"
+        >
+          {(
+            [
+              ["CC", note.cc],
+              ["Assessment", note.assessment],
+              ["Plan", note.plan],
+            ] as const
+          ).map(([label, value]) => (
+            <button
+              type="button"
+              key={label}
+              disabled={!value}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(value);
+                  setMessage(
+                    `${label} copied. Record filing after saving the complete note in Tebra.`,
+                  );
+                } catch {
+                  setPlainText(true);
+                  setMessage("Select the document text above and copy it.");
+                }
+              }}
+            >
+              Copy {label}
+            </button>
+          ))}
+        </div>
+      )}
       {plainText ? (
         <textarea
           class="note-preview"
@@ -196,7 +287,7 @@ export function InjectionDocuments({
               : "Patient visit summary preview"
           }
         >
-          <DocumentBody document={shown} />
+          {content()}
         </div>
       )}
       <div class="document-actions">
@@ -222,7 +313,10 @@ export function InjectionDocuments({
         <button
           type="button"
           class="button secondary"
-          onClick={() => printDocument(shown)}
+          onClick={() => {
+            printCleanup.current?.();
+            printCleanup.current = printDocument(content());
+          }}
         >
           {view === "note" ? "Print note" : "Print AVS"}
         </button>

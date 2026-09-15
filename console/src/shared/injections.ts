@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workstationState } from "./workstation-contracts.js";
 import { date, uuid, type Patient, type Product } from "./contracts.js";
 const text = (max: number) => z.string().trim().min(1).max(max);
 const instant = z.iso.datetime({ offset: true });
@@ -61,6 +62,7 @@ export const injectionInput = z
     timingPlan: text(1000),
     nextDueOn: date.nullable(),
     clinicalContext: injectionClinicalContext.optional(),
+    workstation: workstationState.optional(),
   })
   .strict();
 export type InjectionInput = z.infer<typeof injectionInput>;
@@ -179,6 +181,7 @@ export const injectionReview = z
     vitals: injectionVitals,
     observationPlan: text(1000),
     assessment: injectionAssessment,
+    workstation: workstationState.optional(),
   })
   .strict();
 export type InjectionReviewInput = z.infer<typeof injectionReview>;
@@ -237,6 +240,7 @@ export const injectionAdministration = z
     actualSite: text(100).optional(),
     actualRoute: z.enum(["IM", "SC"]).optional(),
     followUp: injectionFollowUp.optional(),
+    workstation: workstationState.optional(),
   })
   .strict();
 export type InjectionAdministrationInput = z.infer<
@@ -265,6 +269,9 @@ export interface InjectionReview extends Omit<
   // Historical snapshots remain readable; new review requests require assessment.
   assessment?: InjectionAssessment;
   guidanceVersion?: string;
+  engineVersion?: string;
+  engineFindings?: Array<{ code: string; message: string }>;
+  pairedCaseSnapshot?: InjectionCase;
   reviewedAt: string;
   reviewedBy: string;
   patientSnapshot: Patient;
@@ -283,6 +290,9 @@ export interface InjectionAdministration extends Omit<
   "expectedVersion"
 > {
   id: string;
+  pairedCaseSnapshot?: InjectionCase;
+  engineReviewFingerprint?: string;
+  engineFindings?: Array<{ code: string; message: string }>;
   recordedAt: string;
   actorId: string;
   stockMovementId: string;

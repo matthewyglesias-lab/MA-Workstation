@@ -8,19 +8,25 @@ export function InjectionAssessmentFields({
   record,
   productName,
   timezone,
+  requireProviderReview = false,
+  retrospective = false,
 }: {
   record: InjectionCase;
   productName: string;
   timezone: string;
+  requireProviderReview?: boolean;
+  retrospective?: boolean;
 }) {
   const checks = getInjectionReviewChecks(productName);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [contact, setContact] = useState(false);
   const phase = record.clinicalContext?.phase;
   const requiredContact =
-    record.timingCategory !== "scheduled" ||
-    (!!phase && phase !== "maintenance") ||
-    Object.values(answers).includes("concern");
+    !retrospective &&
+    (requireProviderReview ||
+      record.timingCategory !== "scheduled" ||
+      (!!phase && phase !== "maintenance") ||
+      Object.values(answers).includes("concern"));
   const showContact = requiredContact || contact;
   const answered = Object.values(answers).filter(Boolean).length;
   return (
@@ -33,8 +39,9 @@ export function InjectionAssessmentFields({
           </Badge>
         </div>
         <p class="field-help">
-          Record today’s findings. A concern stays visible after the provider
-          gives a plan.
+          {retrospective
+            ? "Record findings established in the source for the past event. Use Not established / not applicable and explain when the source does not establish an answer."
+            : "Record today’s findings. A concern stays visible after the provider gives a plan."}
         </p>
         <div class="screening-questions">
           {checks.map((check) => (
@@ -60,13 +67,17 @@ export function InjectionAssessmentFields({
                 >
                   <option value="">Select finding</option>
                   <option value="no_concern">
-                    Reviewed — no concern identified
+                    {retrospective
+                      ? "Source reviewed — no concern documented"
+                      : "Reviewed — no concern identified"}
                   </option>
                   <option value="concern">
                     Concern identified — provider review
                   </option>
                   <option value="not_applicable">
-                    Not applicable — document why
+                    {retrospective
+                      ? "Not established / not applicable — explain"
+                      : "Not applicable — document why"}
                   </option>
                 </select>
               </Field>
@@ -82,7 +93,9 @@ export function InjectionAssessmentFields({
                     answers[check.id] === "concern"
                       ? "Finding, source, and concern raised"
                       : answers[check.id] === "not_applicable"
-                        ? "Reason this check does not apply"
+                        ? retrospective
+                          ? "Source limitation or reason this check does not apply"
+                          : "Reason this check does not apply"
                         : "Relevant details, if any"
                   }
                 />
@@ -95,7 +108,7 @@ export function InjectionAssessmentFields({
         <h3>Provider communication</h3>
         {requiredContact ? (
           <div class="clinical-callout">
-            Document the provider’s instructions for this timing pathway or
+            Document the provider’s instructions for the timing, regimen, or
             clinical concern before completing review.
           </div>
         ) : (
@@ -162,8 +175,9 @@ export function InjectionAssessmentFields({
               />
             </Field>
             <p class="field-help">
-              If the decision is to hold or clarify, close this review and use
-              Hold to record the concern and release stock.
+              {retrospective
+                ? "Record the actual communication and its time. A later review does not establish that clearance occurred before the injection."
+                : "If the decision is to hold or clarify, close this review and use Hold to record the concern and release stock."}
             </p>
           </>
         )}
@@ -230,8 +244,10 @@ export function InjectionPreparationGuide({
 
 export function InjectionFollowUpFields({
   productName,
+  requireInstructions = false,
 }: {
   productName: string;
+  requireInstructions?: boolean;
 }) {
   const guide = getInjectionGuidance(productName);
   const [observation, setObservation] = useState("");
@@ -302,11 +318,22 @@ export function InjectionFollowUpFields({
       <Field label="Patient-specific follow-up instructions">
         <textarea
           name="followUpInstructions"
+          required={requireInstructions}
           rows={3}
           maxLength={2000}
-          placeholder="Provider-directed next steps, coordination, and when to contact the clinic"
+          placeholder={
+            requireInstructions
+              ? "Document the pending injection component, responsible clinician, and provider-directed timing or next steps"
+              : "Provider-directed next steps, coordination, and when to contact the clinic"
+          }
         />
       </Field>
+      {requireInstructions && (
+        <p class="field-help">
+          The linked component has not been recorded as complete. These
+          instructions must explain the remaining plan.
+        </p>
+      )}
     </section>
   );
 }

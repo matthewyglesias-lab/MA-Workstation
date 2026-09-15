@@ -6,6 +6,21 @@ import type {
   InjectionAssessment,
 } from "../shared/injections.js";
 import { request } from "./api.js";
+import {
+  emptyWorkstationState,
+  type WorkstationState,
+} from "../shared/workstation-contracts.js";
+import {
+  buildWorkstationEncounter,
+  workstationStateForRecord,
+} from "../shared/workstation-bridge.js";
+import {
+  evaluateWorkstationClinical,
+  workstationSchedule,
+} from "../shared/workstation-clinical-policy.js";
+import { injectionResponseNote } from "../shared/workstation/domain/injection.js";
+import { WorkstationEngineFields } from "./WorkstationEngineFields.js";
+import { WorkstationEngineSummary } from "./WorkstationEngineSummary.js";
 import { getInjectionReference } from "../shared/injection-catalog.js";
 import { getInjectionGuidance } from "../shared/injection-guidance.js";
 import {
@@ -60,6 +75,7 @@ export function InjectionDialog({
   action,
   record,
   patientId,
+  cases = [],
   data,
   actor,
   timezone,
@@ -69,6 +85,7 @@ export function InjectionDialog({
   action: InjectionAction;
   record?: InjectionCase;
   patientId?: string;
+  cases?: InjectionCase[];
   data: Overview;
   actor: Actor;
   timezone: string;
@@ -76,6 +93,29 @@ export function InjectionDialog({
   onSaved: (record: InjectionCase) => Promise<void>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const formElement = useRef<HTMLFormElement>(null);
+  const [workstation, setWorkstation] = useState<WorkstationState>(() => {
+    const state = structuredClone(
+      record
+        ? workstationStateForRecord(record) || emptyWorkstationState()
+        : emptyWorkstationState(),
+    );
+    if (["edit", "review"].includes(action)) {
+      state.attestations = {};
+      state.verifications = {};
+      state.acuteSafetyScreenConfirmed = false;
+      state.activeSafetyConcerns = [];
+      state.response = { kind: "" };
+      state.initiation.planVerified = false;
+      state.initiation.oralStatus = "";
+      state.oral = undefined;
+      state.details = { nextDose: state.details.nextDose };
+      state.habitus = undefined;
+      state.technique = "";
+    }
+    return state;
+  });
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [patient, setPatient] = useState(record?.patientId || patientId || "");
@@ -88,7 +128,9 @@ export function InjectionDialog({
   const [noRouteSiteUsed, setNoRouteSiteUsed] = useState(false);
   const [replacePriorTime, setReplacePriorTime] = useState(false);
   const [unknownDose, setUnknownDose] = useState(false);
-  const [atNow, setAtNow] = useState(true);
+  const [atNow, setAtNow] = useState(
+    workstation.recordingMode !== "retrospective",
+  );
   const [lotId, setLotId] = useState("");
   const [stockUnits, setStockUnits] = useState(1);
   const [dirty, setDirty] = useState(false);
@@ -118,9 +160,247 @@ export function InjectionDialog({
     )
     .sort((a, b) => a.expiresOn.localeCompare(b.expiresOn));
   const selectedLot = data.lots.find((l) => l.id === lotId);
+  function readForm() {
+    if (!formElement.current) return;
+    const values = Object.fromEntries(
+      Array.from(new FormData(formElement.current).entries()).map(
+        ([key, value]) => [key, String(value)],
+      ),
+    );
+    setFormValues(values);
+  }
   useEffect(() => {
     dialog.current?.showModal();
+    readForm();
   }, []);
+  const isOrder = action === "create" || action === "edit";
+  const fv = (key: string, fallback = "") => formValues[key] ?? fallback;
+  const checked = (key: string) => formValues[key] === "on";
+  const previewState: WorkstationState = {
+    ...workstation,
+    ...(action === "review"
+      ? {
+          technique: fv("needle"),
+          attestations:
+            workstation.recordingMode === "retrospective"
+              ? workstation.attestations
+              : {
+                  ...workstation.attestations,
+                  id2: checked("identity"),
+                  rights: checked("order"),
+                  allergy: checked("allergy"),
+                  consent: checked("consent"),
+                  screen: getInjectionReviewChecks(
+                    chosenProduct?.name || "",
+                  ).every((check) => !!fv(`screen-${check.id}`)),
+                },
+          details: {
+            ...workstation.details,
+            ...(workstation.details.lateDoseReview === "provider-authorized"
+              ? {
+                  lateDoseReviewProvider: fv("consultProvider"),
+                  lateDoseReviewTime: fv("consultAt"),
+                  lateDoseReviewNote: fv("consultInstructions"),
+                }
+              : {}),
+          },
+        }
+      : {}),
+  };
+  const previewRecord: InjectionCase = {
+    id: "preview",
+    status: "draft",
+    version: 1,
+    review: null,
+    administration: null,
+    disposition: null,
+    amendments: [],
+    filings: [],
+    handoff: "pending",
+    createdAt: "",
+    updatedAt: "",
+    patientId: patient,
+    productId: product,
+    tebraOrderReference: "",
+    orderingProvider: "",
+    dose: 0,
+    doseUnit: "mg",
+    route: "IM",
+    site: "",
+    plannedOn: today,
+    lastAdministrationAt: null,
+    lastAdministrationOn: null,
+    timingCategory: "unknown",
+    timingPlan: "",
+    nextDueOn: null,
+    doseSequence: 1,
+    ...record,
+    ...(isOrder
+      ? {
+          patientId: patient,
+          productId: product,
+          orderingProvider: fv("provider", record?.orderingProvider),
+          dose: Number(fv("dose", String(record?.dose || 0))),
+          doseUnit: (doseUnit || "mg") as InjectionInput["doseUnit"],
+          route: (route || "IM") as InjectionInput["route"],
+          site: fv("site", record?.site),
+          plannedOn: fv("planned", record?.plannedOn || today),
+          timingCategory: timing as InjectionInput["timingCategory"],
+          lastAdministrationOn:
+            fv("lastDate", record?.lastAdministrationOn || "") || null,
+          lastAdministrationAt:
+            record?.lastAdministrationAt && !replacePriorTime
+              ? record.lastAdministrationAt
+              : null,
+          nextDueOn: fv("nextDue", record?.nextDueOn || "") || null,
+          clinicalContext: {
+            phase: fv(
+              "phase",
+              record?.clinicalContext?.phase || "maintenance",
+            ) as NonNullable<InjectionInput["clinicalContext"]>["phase"],
+            indication: fv("indication") || null,
+            schedule:
+              !medicationReference && fv("scheduleUnit")
+                ? {
+                    every: Number(fv("scheduleEvery")),
+                    unit: fv("scheduleUnit") as "days" | "weeks" | "months",
+                  }
+                : null,
+            historySource: fv("historySource") || null,
+            priorProduct: fv("priorProduct") || null,
+            priorDose: fv("priorDose") || null,
+            linkedPlan: fv("linkedPlan") || null,
+          },
+        }
+      : {}),
+    workstation: previewState,
+  };
+  if (isOrder) {
+    previewRecord.review = null;
+    previewRecord.administration = null;
+    previewRecord.disposition = null;
+    previewRecord.status = "draft";
+  }
+  if (action === "review" && chosenPatient && chosenProduct) {
+    const n = (key: string) => (fv(key) ? Number(fv(key)) : null);
+    previewRecord.review = {
+      lotId,
+      stockUnits,
+      workstation: previewState,
+      checks: {
+        identity: true,
+        order: true,
+        allergy: true,
+        medication: true,
+        timing: true,
+        consent: true,
+      },
+      allergyReview: fv("allergyReview"),
+      clinicalReview: fv("clinicalReview"),
+      preparation: fv("preparation"),
+      siteAssessment: fv("siteAssessment"),
+      observationPlan: fv("observationPlan"),
+      vitals: {
+        status: vitalsStatus as "recorded" | "not_recorded",
+        bpSystolic: n("systolic"),
+        bpDiastolic: n("diastolic"),
+        pulse: n("pulse"),
+        temperatureC: n("temp"),
+        oxygenSaturation: n("oxygen"),
+        reason: fv("vitalsReason") || null,
+      },
+      assessment: {
+        screening: [],
+        weightKg: n("weightKg"),
+        needle: fv("needle") || null,
+        providerCommunication: null,
+        education: [],
+      },
+      reviewedAt: "",
+      reviewedBy: "",
+      patientSnapshot: chosenPatient,
+      productSnapshot: chosenProduct,
+      lotSnapshot: {
+        lotNumber: selectedLot?.lotNumber || "",
+        expiresOn: selectedLot?.expiresOn || "",
+        location: selectedLot?.location || "",
+        ownership: selectedLot?.ownership || "clinic",
+        ownerPatientId: selectedLot?.ownerPatientId || null,
+      },
+      reservationMovementId: "",
+    };
+  } else if (previewRecord.review)
+    previewRecord.review = {
+      ...previewRecord.review,
+      workstation: previewState,
+    };
+  const pairedCase = cases.find(
+    (candidate) => candidate.id === previewState.pairedCaseId,
+  );
+  const engineEncounter = buildWorkstationEncounter(
+    previewRecord,
+    chosenPatient,
+    chosenProduct,
+    timezone,
+    pairedCase,
+  );
+  if (action === "administer") engineEncounter.response = previewState.response;
+  const engineContext = {
+    today,
+    indication: previewRecord.clinicalContext?.indication || undefined,
+    priorMaintenanceDoses: previewState.priorMaintenanceDoses,
+    priorDose: previewRecord.clinicalContext?.priorDose,
+    priorProduct: previewRecord.clinicalContext?.priorProduct,
+  };
+  const engineEvaluation = evaluateWorkstationClinical(
+    engineEncounter,
+    engineContext,
+  );
+  function updateWorkstation(next: WorkstationState) {
+    if (isOrder && next.reason !== workstation.reason) {
+      const phaseInput = formElement.current?.elements.namedItem(
+        "phase",
+      ) as HTMLSelectElement | null;
+      if (phaseInput)
+        phaseInput.value =
+          next.reason === "reinit"
+            ? "restart"
+            : next.reason === "loading"
+              ? "day_1"
+              : next.reason === "initiation"
+                ? "initiation"
+                : "maintenance";
+      setTiming(
+        next.reason === "reinit"
+          ? "late_or_missed"
+          : ["initiation", "loading"].includes(next.reason)
+            ? "initiation"
+            : "scheduled",
+      );
+    }
+    if (
+      ["sustenna-day1", "sustenna-day8"].includes(next.initiation.protocol) &&
+      workstation.initiation.protocol !== next.initiation.protocol
+    ) {
+      const phaseInput = formElement.current?.elements.namedItem(
+        "phase",
+      ) as HTMLSelectElement | null;
+      if (phaseInput)
+        phaseInput.value =
+          next.initiation.protocol === "sustenna-day8" ? "day_8" : "day_1";
+      next.reason = "loading";
+    }
+    setWorkstation(next);
+    setDirty(true);
+    readForm();
+  }
+  function useReturnDate(value: string) {
+    const input = formElement.current?.elements.namedItem(
+      "nextDue",
+    ) as HTMLInputElement | null;
+    if (input) input.value = value;
+    readForm();
+  }
   function close() {
     if (saving) return;
     if (dirty) setDiscard(true);
@@ -160,17 +440,21 @@ export function InjectionDialog({
           timingPlan: val("timingPlan"),
           nextDueOn: val("nextDue") || null,
           doseSequence: Number(val("sequence")),
+          workstation: previewState,
           clinicalContext: {
             phase: val("phase") as NonNullable<
               InjectionInput["clinicalContext"]
             >["phase"],
             indication: val("indication") || null,
-            schedule: val("scheduleUnit")
-              ? {
-                  every: Number(val("scheduleEvery")),
-                  unit: val("scheduleUnit") as "days" | "weeks" | "months",
-                }
-              : null,
+            schedule:
+              engineEncounter.medicationKey !== "other"
+                ? workstationSchedule(engineEncounter)
+                : val("scheduleUnit")
+                  ? {
+                      every: Number(val("scheduleEvery")),
+                      unit: val("scheduleUnit") as "days" | "weeks" | "months",
+                    }
+                  : null,
             historySource: val("historySource") || null,
             priorProduct: val("priorProduct") || null,
             priorDose: val("priorDose") || null,
@@ -216,6 +500,15 @@ export function InjectionDialog({
           record!,
           assessment,
           chosenProduct?.name || "",
+        ).filter(
+          (issue) =>
+            previewState.recordingMode !== "retrospective" ||
+            [
+              "assessment_required",
+              "screening_incomplete",
+              "screening_detail",
+              "future_provider_communication",
+            ].includes(issue.code),
         );
         if (issues.length)
           throw new Error(issues.map((issue) => issue.message).join(" "));
@@ -249,6 +542,7 @@ export function InjectionDialog({
           preparation: val("preparation"),
           siteAssessment: val("siteAssessment"),
           assessment,
+          workstation: previewState,
         };
       } else if (action === "administer") {
         if (
@@ -273,6 +567,7 @@ export function InjectionDialog({
           unknownDose,
           atNow,
           record!.version,
+          previewState,
         ]);
         if (
           !administrationInstant.current ||
@@ -297,7 +592,8 @@ export function InjectionDialog({
             ? administrationInstant.current.value
             : clinicInputToIso(val("adminAt"), timezone),
           administeredByName: val("staff"),
-          tolerance: val("tolerance"),
+          tolerance: injectionResponseNote(previewState.response),
+          workstation: previewState,
           observation: val("observation"),
           delivery,
           ...(!confirmedUnusedRouteSite
@@ -364,7 +660,7 @@ export function InjectionDialog({
   return (
     <dialog
       ref={dialog}
-      class={`editor-dialog injection-dialog ${["create", "edit", "review"].includes(action) ? "wide" : ""}`}
+      class={`editor-dialog injection-dialog ${["create", "edit", "review", "administer"].includes(action) ? "wide" : ""}`}
       aria-labelledby="injection-dialog-title"
       onCancel={(e) => {
         e.preventDefault();
@@ -387,10 +683,13 @@ export function InjectionDialog({
         </button>
       </div>
       <form
+        ref={formElement}
         onSubmit={submit}
+        onChange={readForm}
         onInput={() => {
           setDirty(true);
           setDiscard(false);
+          readForm();
         }}
       >
         <div class="dialog-body">
@@ -526,6 +825,7 @@ export function InjectionDialog({
                       max="1000000"
                       step="any"
                       required
+                      list="workstation-reference-doses"
                       defaultValue={record?.dose}
                     />
                   </Field>
@@ -565,6 +865,13 @@ export function InjectionDialog({
                     />
                   </Field>
                 </div>
+                <datalist id="workstation-reference-doses">
+                  {engineEvaluation.output.medication?.doses.map((dose) => (
+                    <option key={dose} value={parseFloat(dose)}>
+                      {dose}
+                    </option>
+                  ))}
+                </datalist>
                 <Field label="Planned injection site">
                   <input
                     name="site"
@@ -576,21 +883,23 @@ export function InjectionDialog({
                   />
                 </Field>
                 <datalist id="injection-sites">
-                  {(route === "IM"
-                    ? [
-                        "Left deltoid",
-                        "Right deltoid",
-                        "Left ventrogluteal",
-                        "Right ventrogluteal",
-                        "Left dorsogluteal",
-                        "Right dorsogluteal",
-                      ]
-                    : [
-                        "Left abdomen",
-                        "Right abdomen",
-                        "Left upper arm",
-                        "Right upper arm",
-                      ]
+                  {(engineEvaluation.output.allowedSites.length
+                    ? engineEvaluation.output.allowedSites
+                    : route === "IM"
+                      ? [
+                          "Left deltoid",
+                          "Right deltoid",
+                          "Left ventrogluteal",
+                          "Right ventrogluteal",
+                          "Left dorsogluteal",
+                          "Right dorsogluteal",
+                        ]
+                      : [
+                          "Left abdomen",
+                          "Right abdomen",
+                          "Left upper arm",
+                          "Right upper arm",
+                        ]
                   ).map((s) => (
                     <option key={s} value={s} />
                   ))}
@@ -681,50 +990,78 @@ export function InjectionDialog({
                   plan.
                 </p>
               </section>
-              <InjectionOrderContext record={record} />
+              <InjectionOrderContext
+                record={record}
+                hideSchedule={engineEncounter.medicationKey !== "other"}
+                medicationKey={engineEncounter.medicationKey}
+              />
+              <WorkstationEngineFields
+                stage="order"
+                value={previewState}
+                encounter={engineEncounter}
+                evaluation={engineEvaluation}
+                onChange={updateWorkstation}
+                onReturnDate={useReturnDate}
+                cases={cases}
+                record={previewRecord}
+                timezone={timezone}
+              />
+              <WorkstationEngineSummary
+                stage="order"
+                encounter={engineEncounter}
+                evaluation={engineEvaluation}
+              />
             </>
           )}
           {action === "review" && record && (
             <>
-              {record.plannedOn !== today && (
-                <div class="error">
-                  Safety review must be completed on the planned clinic date.
-                  Edit the order before proceeding.
-                </div>
-              )}
-              {record.timingCategory === "unknown" && (
-                <div class="error">
-                  Confirm the timing category and provider plan in the order
-                  first.
-                </div>
-              )}
+              {record.plannedOn !== today &&
+                workstation.recordingMode !== "retrospective" && (
+                  <div class="error">
+                    Safety review must be completed on the planned clinic date.
+                    Edit the order before proceeding.
+                  </div>
+                )}
+              {record.timingCategory === "unknown" &&
+                workstation.recordingMode !== "retrospective" && (
+                  <div class="error">
+                    Confirm the timing category and provider plan in the order
+                    first.
+                  </div>
+                )}
               <section class="form-section">
                 <h3>Confirm in Tebra</h3>
                 <div class="checklist">
                   <label>
                     <input type="checkbox" name="identity" required />
                     <span>
-                      Patient name and DOB match the chart and patient.
+                      {workstation.recordingMode === "retrospective"
+                        ? "Patient name and DOB match the source clinical record being entered."
+                        : "Patient name and DOB match the chart and patient."}
                     </span>
                   </label>
                   <label>
                     <input type="checkbox" name="order" required />
                     <span>
-                      Current provider order matches the medication, dose,
-                      route, and site.
+                      {workstation.recordingMode === "retrospective"
+                        ? "I reviewed the historical order and source medication, dose, route, and site."
+                        : "Current provider order matches the medication, dose, route, and site."}
                     </span>
                   </label>
                   <label>
                     <input type="checkbox" name="timing" required />
                     <span>
-                      Last dose, timing plan, and any initiation or missed-dose
-                      instructions are confirmed.
+                      {workstation.recordingMode === "retrospective"
+                        ? "I reviewed the available administration history and timing documentation."
+                        : "Last dose, timing plan, and any initiation or missed-dose instructions are confirmed."}
                     </span>
                   </label>
                   <label>
                     <input type="checkbox" name="consent" required />
                     <span>
-                      Required consent and patient education are complete.
+                      {workstation.recordingMode === "retrospective"
+                        ? "I reviewed the available consent and education documentation without inferring missing actions."
+                        : "Required consent and patient education are complete."}
                     </span>
                   </label>
                 </div>
@@ -765,8 +1102,9 @@ export function InjectionDialog({
                 </Field>
                 <label class="checkbox">
                   <input name="allergy" type="checkbox" required />
-                  Allergy review is complete; concerns are resolved with the
-                  provider.
+                  {workstation.recordingMode === "retrospective"
+                    ? "I reviewed the documented allergy information available for this historical administration."
+                    : "Allergy review is complete; concerns are resolved with the provider."}
                 </label>
                 <Field label="Medication-specific review">
                   <textarea
@@ -785,6 +1123,20 @@ export function InjectionDialog({
               <InjectionAssessmentFields
                 record={record}
                 productName={chosenProduct?.name || ""}
+                timezone={timezone}
+                requireProviderReview={engineEvaluation.stops.some(
+                  (issue) => issue.field === "details.lateDoseReview",
+                )}
+                retrospective={previewState.recordingMode === "retrospective"}
+              />
+              <WorkstationEngineFields
+                stage="review"
+                value={previewState}
+                encounter={engineEncounter}
+                evaluation={engineEvaluation}
+                onChange={updateWorkstation}
+                cases={cases}
+                record={record}
                 timezone={timezone}
               />
               <section class="form-section">
@@ -869,6 +1221,18 @@ export function InjectionDialog({
                 <InjectionPreparationGuide
                   productName={chosenProduct?.name || ""}
                 />
+                {workstation.recordingMode === "retrospective" && (
+                  <div class="clinical-callout">
+                    <strong>Use the exact historical lot.</strong>
+                    <p>
+                      This flow can record only stock that is still active,
+                      unexpired, available, and eligible for this patient today.
+                      If the historical lot is now expired, missing, or
+                      otherwise unavailable, this administration cannot be
+                      entered through this flow. Do not select a different lot.
+                    </p>
+                  </div>
+                )}
                 <div class="form-grid stock-fields">
                   <Field label="Whole packages to use">
                     <input
@@ -923,14 +1287,16 @@ export function InjectionDialog({
                 )}
                 {!lotOptions.length && (
                   <p class="danger-text">
-                    No eligible stock is available. Check Inventory before
-                    continuing.
+                    {workstation.recordingMode === "retrospective"
+                      ? "No eligible stock is available. This historical administration cannot be recorded through this flow without its exact eligible lot."
+                      : "No eligible stock is available. Check Inventory before continuing."}
                   </p>
                 )}
                 <label class="checkbox">
-                  <input type="checkbox" name="medication" required />I verified
-                  formulation, strength, lot, expiration, storage, and patient
-                  ownership.
+                  <input type="checkbox" name="medication" required />
+                  {workstation.recordingMode === "retrospective"
+                    ? "I reconciled the historical package documentation with the inventory entry and noted any unavailable details."
+                    : "I verified formulation, strength, lot, expiration, storage, and patient ownership."}
                 </label>
                 <Field label="Preparation / product checks">
                   <textarea
@@ -972,6 +1338,11 @@ export function InjectionDialog({
                   separately.
                 </p>
               </section>
+              <WorkstationEngineSummary
+                stage="review"
+                encounter={engineEncounter}
+                evaluation={engineEvaluation}
+              />
             </>
           )}
           {action === "administer" && record && (
@@ -1123,19 +1494,30 @@ export function InjectionDialog({
                         type="datetime-local"
                         step="1"
                         required
-                        defaultValue={clinicLocalInput(
-                          new Date().toISOString(),
-                          timezone,
-                        )}
+                        defaultValue={
+                          workstation.recordingMode === "retrospective"
+                            ? ""
+                            : clinicLocalInput(
+                                new Date().toISOString(),
+                                timezone,
+                              )
+                        }
                       />
                     </Field>
                   )}
                   <small class="field-help">{timezone}</small>
                 </div>
               </div>
-              <Field label="Tolerance / patient response">
-                <textarea name="tolerance" required maxLength={1000} rows={2} />
-              </Field>
+              <WorkstationEngineFields
+                stage="administer"
+                value={previewState}
+                encounter={engineEncounter}
+                evaluation={engineEvaluation}
+                onChange={updateWorkstation}
+                cases={cases}
+                record={record}
+                timezone={timezone}
+              />
               <Field label="Observation and follow-up">
                 <textarea
                   name="observation"
@@ -1147,6 +1529,10 @@ export function InjectionDialog({
               </Field>
               <InjectionFollowUpFields
                 productName={chosenProduct?.name || ""}
+                requireInstructions={
+                  !!previewState.pairedCaseId &&
+                  pairedCase?.administration?.delivery !== "complete"
+                }
               />
               <label class="checkbox confirmation">
                 <input type="checkbox" required />
@@ -1234,8 +1620,10 @@ export function InjectionDialog({
             disabled={
               saving ||
               (action === "review" &&
-                (record?.plannedOn !== today ||
-                  record?.timingCategory === "unknown"))
+                ((record?.plannedOn !== today &&
+                  workstation.recordingMode !== "retrospective") ||
+                  (record?.timingCategory === "unknown" &&
+                    workstation.recordingMode !== "retrospective")))
             }
           >
             {saving ? "Saving…" : submitLabels[action]}

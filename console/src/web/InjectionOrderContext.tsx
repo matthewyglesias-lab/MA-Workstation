@@ -2,7 +2,15 @@ import { useState } from "preact/hooks";
 import type { InjectionCase } from "../shared/injections.js";
 import { Field } from "./components.js";
 
-export function InjectionOrderContext({ record }: { record?: InjectionCase }) {
+export function InjectionOrderContext({
+  record,
+  hideSchedule = false,
+  medicationKey,
+}: {
+  record?: InjectionCase;
+  hideSchedule?: boolean;
+  medicationKey?: string;
+}) {
   const context = record?.clinicalContext;
   const [scheduleUnit, setScheduleUnit] = useState(
     context?.schedule?.unit || "",
@@ -23,45 +31,64 @@ export function InjectionOrderContext({ record }: { record?: InjectionCase }) {
           </select>
         </Field>
         <Field label="Indication per order">
-          <input
-            name="indication"
-            maxLength={500}
-            defaultValue={context?.indication || ""}
-            placeholder="Record if available in the verified order"
-          />
-        </Field>
-      </div>
-      <div class="form-grid">
-        <Field label="Ordered interval unit">
-          <select
-            name="scheduleUnit"
-            value={scheduleUnit}
-            onChange={(e) => setScheduleUnit(e.currentTarget.value)}
-          >
-            <option value="">Use the provider’s dated plan</option>
-            <option value="days">Days</option>
-            <option value="weeks">Weeks</option>
-            <option value="months">Calendar months</option>
-          </select>
-        </Field>
-        {scheduleUnit && (
-          <Field label="Repeat every">
-            <input
-              name="scheduleEvery"
-              type="number"
-              min="1"
-              max="365"
-              step="1"
+          {medicationKey === "uzedy" ? (
+            <select
+              name="indication"
               required
-              defaultValue={context?.schedule?.every}
+              defaultValue={context?.indication || ""}
+            >
+              <option value="">Select the indication in the order</option>
+              <option value="schizophrenia">Schizophrenia</option>
+              <option value="bipolar_i">Bipolar I maintenance</option>
+              <option value="provider_directed">
+                Other provider-directed indication
+              </option>
+            </select>
+          ) : (
+            <input
+              name="indication"
+              maxLength={500}
+              defaultValue={context?.indication || ""}
+              placeholder="Record if available in the verified order"
             />
-          </Field>
-        )}
+          )}
+        </Field>
       </div>
-      <p class="field-help">
-        Record the interval exactly as ordered. Calendar months and a fixed
-        number of weeks are different.
-      </p>
+      {!hideSchedule && (
+        <>
+          <div class="form-grid">
+            <Field label="Ordered interval unit">
+              <select
+                name="scheduleUnit"
+                value={scheduleUnit}
+                onChange={(e) => setScheduleUnit(e.currentTarget.value)}
+              >
+                <option value="">Use the provider’s dated plan</option>
+                <option value="days">Days</option>
+                <option value="weeks">Weeks</option>
+                <option value="months">Calendar months</option>
+              </select>
+            </Field>
+            {scheduleUnit && (
+              <Field label="Repeat every">
+                <input
+                  name="scheduleEvery"
+                  type="number"
+                  min="1"
+                  max="365"
+                  step="1"
+                  required
+                  defaultValue={context?.schedule?.every}
+                />
+              </Field>
+            )}
+          </div>
+          <p class="field-help">
+            Record the interval exactly as ordered. Calendar months and a fixed
+            number of weeks are different.
+          </p>
+        </>
+      )}
       <div class="form-grid">
         <Field label="Previous product / formulation">
           <input

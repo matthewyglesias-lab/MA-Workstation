@@ -10,6 +10,17 @@ import { Badge, Icon, dateLabel } from "./components.js";
 import { InjectionDialog, type InjectionAction } from "./InjectionDialog.js";
 import { InjectionDocuments } from "./InjectionDocuments.js";
 import {
+  buildWorkstationEncounter,
+  evaluateWorkstationInjection,
+  hasCurrentWorkstationReview,
+  pairedProtocols,
+  resolveWorkstationMedication,
+  workstationStateForRecord,
+} from "../shared/workstation-bridge.js";
+import { WorkstationEngineSummary } from "./WorkstationEngineSummary.js";
+import { WorkstationPatientScreening } from "./WorkstationPatientScreening.js";
+import { injectionInitiationConfig } from "../shared/workstation/domain/injection.js";
+import {
   InjectionAssessmentSummary,
   InjectionClinicalSummary,
   InjectionGuidancePanel,
@@ -24,13 +35,36 @@ export const statusLabel = {
   cancelled: "Cancelled",
 };
 import { clinicDay, momentLabel } from "./injection-time.js";
-export function injectionStatus(record: {
-  status: InjectionCase["status"];
-  administration?: Pick<InjectionAdministration, "delivery"> | null;
-  review?: InjectionReview | null;
-}) {
-  if (record.status === "reviewed" && !hasCurrentInjectionReview(record.review))
+function currentClinicalReview(record: { review?: InjectionReview | null }) {
+  return (
+    hasCurrentInjectionReview(record.review) &&
+    (!resolveWorkstationMedication(
+      record.review?.productSnapshot?.name || "",
+    ) ||
+      hasCurrentWorkstationReview(record as InjectionCase))
+  );
+}
+export function injectionStatus(
+  record: {
+    status: InjectionCase["status"];
+    administration?: Pick<InjectionAdministration, "delivery"> | null;
+    review?: InjectionReview | null;
+  },
+  cases?: InjectionCase[],
+) {
+  if (record.status === "reviewed" && !currentClinicalReview(record))
     return "Review update needed";
+  if (
+    record.status === "reviewed" &&
+    record.review?.workstation?.recordingMode === "retrospective"
+  )
+    return "Ready to document";
+  if (
+    record.status === "reviewed" &&
+    cases &&
+    !pairedReviewReady(record as InjectionCase, cases)
+  )
+    return "Linked review pending";
   return record.administration?.delivery === "partial"
     ? "Partial dose"
     : record.administration?.delivery === "not_delivered"
@@ -38,6 +72,21 @@ export function injectionStatus(record: {
       : record.administration?.delivery === "error"
         ? "Administration error"
         : statusLabel[record.status];
+}
+function pairedReviewReady(record: InjectionCase, cases: InjectionCase[]) {
+  const state = workstationStateForRecord(record);
+  if (
+    !state ||
+    state.recordingMode === "retrospective" ||
+    !pairedProtocols.has(state.initiation.protocol)
+  )
+    return true;
+  const pair = cases.find((item) => item.id === state.pairedCaseId);
+  return (
+    !!pair &&
+    (pair.status === "administered" ||
+      (pair.status === "reviewed" && currentClinicalReview(pair)))
+  );
 }
 const timingLabels = {
   scheduled: "Scheduled dose",
@@ -92,8 +141,11 @@ export function InjectionWorkspace({
   const ready = scoped.filter(
     (r) =>
       r.status === "reviewed" &&
-      r.plannedOn === today &&
-      hasCurrentInjectionReview(r.review),
+      (r.plannedOn === today ||
+        (r.plannedOn < today &&
+          workstationStateForRecord(r)?.recordingMode === "retrospective")) &&
+      currentClinicalReview(r) &&
+      pairedReviewReady(r, loadedRecords),
   ).length;
   const active = scoped.filter((r) =>
     ["draft", "reviewed", "held"].includes(r.status),
@@ -109,8 +161,12 @@ export function InjectionWorkspace({
                 r.handoff !== "filed"
               : filter === "ready"
                 ? r.status === "reviewed" &&
-                  r.plannedOn === today &&
-                  hasCurrentInjectionReview(r.review)
+                  (r.plannedOn === today ||
+                    (r.plannedOn < today &&
+                      workstationStateForRecord(r)?.recordingMode ===
+                        "retrospective")) &&
+                  currentClinicalReview(r) &&
+                  pairedReviewReady(r, loadedRecords)
                 : r.plannedOn === today)) &&
         `${patient(r.patientId)?.displayName} ${patient(r.patientId)?.tebraId} ${product(r.productId)?.name}`
           .toLowerCase()
@@ -133,7 +189,40 @@ export function InjectionWorkspace({
   const frozenPatient = displayedReview?.patientSnapshot || selectedPatient;
   const frozenProduct = displayedReview?.productSnapshot || selectedProduct;
   const reviewStale =
-    record?.status === "reviewed" && !hasCurrentInjectionReview(record.review);
+    record?.status === "reviewed" && !currentClinicalReview(record);
+  const engineState = record ? workstationStateForRecord(record) : undefined;
+  const pairedCase = loadedRecords.find(
+    (item) => item.id === engineState?.pairedCaseId,
+  );
+  const engineEncounter =
+    record && frozenPatient && frozenProduct
+      ? buildWorkstationEncounter(
+          record,
+          frozenPatient,
+          frozenProduct,
+          timezone,
+          pairedCase,
+        )
+      : undefined;
+  const engineEvaluation =
+    record && frozenPatient && frozenProduct
+      ? evaluateWorkstationInjection(
+          record,
+          frozenPatient,
+          frozenProduct,
+          timezone,
+          pairedCase,
+        )
+      : undefined;
+  const retrospective = engineState?.recordingMode === "retrospective";
+  const pairedReviewPending =
+    !!record && !pairedReviewReady(record, loadedRecords);
+  const protocol = engineEncounter?.initiation?.protocol
+    ? injectionInitiationConfig(
+        engineEncounter.initiation.protocol,
+        engineEncounter.medicationKey,
+      )
+    : null;
   const editable =
     record && ["draft", "reviewed", "held"].includes(record.status);
   return (
@@ -267,7 +356,7 @@ export function InjectionWorkspace({
                                   : ""
                           }
                         >
-                          {injectionStatus(r)}
+                          {injectionStatus(r, loadedRecords)}
                         </Badge>
                       </td>
                       <td>
@@ -343,7 +432,9 @@ export function InjectionWorkspace({
             >
               ← All injections
             </button>
-            {patientId && <Badge>{injectionStatus(record)}</Badge>}
+            {patientId && (
+              <Badge>{injectionStatus(record, loadedRecords)}</Badge>
+            )}
             <span class="muted">
               Updated {momentLabel(record.updatedAt, timezone)}
             </span>
@@ -372,7 +463,7 @@ export function InjectionWorkspace({
                           : ""
                   }
                 >
-                  {injectionStatus(record)}
+                  {injectionStatus(record, loadedRecords)}
                 </Badge>
                 <small>{dateLabel(record.plannedOn)}</small>
               </div>
@@ -437,14 +528,100 @@ export function InjectionWorkspace({
               </p>
             </div>
           )}
-          {record.status === "reviewed" && record.plannedOn !== today && (
-            <div class="error" role="alert">
-              This review is from another clinic date. Update the order and
-              repeat the safety review before administration.
+          {record.status === "reviewed" && pairedReviewPending && (
+            <div class="clinical-callout" role="status">
+              <strong>Linked review pending</strong>
+              <p>
+                Complete the linked component’s independent medication and stock
+                review before recording administration.
+              </p>
             </div>
           )}
+          {record.status === "reviewed" &&
+            record.plannedOn !== today &&
+            !retrospective && (
+              <div class="error" role="alert">
+                This review is from another clinic date. Update the order and
+                repeat the safety review before administration.
+              </div>
+            )}
           <div class="case-layout">
             <div class="case-main">
+              {engineEncounter && engineEvaluation && (
+                <>
+                  <WorkstationEngineSummary
+                    encounter={engineEncounter}
+                    evaluation={engineEvaluation}
+                    stage={
+                      record.administration
+                        ? "administer"
+                        : record.status === "draft"
+                          ? "order"
+                          : "review"
+                    }
+                  />
+                  <WorkstationPatientScreening encounter={engineEncounter} />
+                  {protocol?.kind === "dual" && (
+                    <section class="panel" aria-label="Treatment components">
+                      <div class="section-heading">
+                        <h2>Treatment components</h2>
+                        <Badge
+                          tone={
+                            pairedCase?.administration?.delivery === "complete"
+                              ? "teal"
+                              : "amber"
+                          }
+                        >
+                          {pairedCase?.administration?.delivery === "complete"
+                            ? "Linked administration recorded"
+                            : "Linked component pending"}
+                        </Badge>
+                      </div>
+                      <p>
+                        <strong>{protocol.secondaryProduct}</strong>
+                      </p>
+                      <p>{protocol.secondaryGuide}</p>
+                      {pairedCase ? (
+                        <>
+                          <p>
+                            {pairedCase.dose} {pairedCase.doseUnit} ·{" "}
+                            {pairedCase.site} ·{" "}
+                            {injectionStatus(pairedCase, loadedRecords)}
+                          </p>
+                          <button
+                            class="button secondary"
+                            onClick={() => setSelectedId(pairedCase.id)}
+                          >
+                            Open linked injection
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p>
+                            Create its separate order and stock reservation,
+                            then select that record in this injection’s protocol
+                            review.
+                          </p>
+                          {canOperate && (
+                            <button
+                              class="button secondary"
+                              onClick={() => setAction("create")}
+                            >
+                              Add separate injection component
+                            </button>
+                          )}
+                        </>
+                      )}
+                      <p class="field-help">
+                        To include both administrations on this injection’s
+                        final note, record the linked component before saving
+                        this one. Each entry retains its actual administration
+                        time.
+                      </p>
+                    </section>
+                  )}
+                </>
+              )}
               <section class="panel">
                 <div class="section-heading">
                   <h2>Order</h2>
@@ -645,7 +822,7 @@ export function InjectionWorkspace({
                           : "butter"
                       }
                     >
-                      {injectionStatus(record)}
+                      {injectionStatus(record, loadedRecords)}
                     </Badge>
                   </div>
                   <dl class="clinical-facts">
@@ -773,6 +950,7 @@ export function InjectionWorkspace({
                     product={frozenProduct}
                     lot={lot}
                     timezone={timezone}
+                    cases={loadedRecords}
                   />
                 )}
               {!!record.amendments.length && (
@@ -814,12 +992,20 @@ export function InjectionWorkspace({
                     <p>
                       {reviewStale
                         ? "The saved review needs the current clinical checklist."
-                        : "Confirm actual administration, tolerance, and observation."}
+                        : pairedReviewPending
+                          ? "Complete the linked component’s independent safety and stock review."
+                          : retrospective
+                            ? "Document the past event and its actual time. This review is recorded after the event."
+                            : "Confirm actual administration, tolerance, and observation."}
                     </p>
                     {canOperate && (
                       <button
                         class="button primary"
-                        disabled={!reviewStale && record.plannedOn !== today}
+                        disabled={
+                          !reviewStale &&
+                          (pairedReviewPending ||
+                            (record.plannedOn !== today && !retrospective))
+                        }
                         onClick={() =>
                           setAction(reviewStale ? "edit" : "administer")
                         }
@@ -941,7 +1127,7 @@ export function InjectionWorkspace({
                 records={loadedRecords}
                 products={data.products}
                 timezone={timezone}
-                statusLabel={injectionStatus}
+                statusLabel={(item) => injectionStatus(item, loadedRecords)}
                 onSelect={(id) => {
                   setSelectedId(id);
                   setNotice("");
@@ -976,9 +1162,12 @@ export function InjectionWorkspace({
         <InjectionDialog
           key={`${action}-${record?.id || "new"}`}
           action={action}
-          record={record}
-          patientId={patientId}
+          record={action === "create" ? undefined : record}
+          patientId={
+            patientId || (action === "create" ? record?.patientId : undefined)
+          }
           data={data}
+          cases={loadedRecords}
           actor={actor}
           timezone={timezone}
           onClose={() => setAction(undefined)}
