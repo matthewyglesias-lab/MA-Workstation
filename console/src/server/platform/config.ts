@@ -25,7 +25,9 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
     mode === "sql"
       ? z.enum(["pin", "entra"]).parse(env.AUTH_MODE)
       : z.enum(["demo", "pin"]).parse(env.AUTH_MODE || "pin");
-  const publicOrigin = env.PUBLIC_ORIGIN;
+  const publicOrigin =
+    env.PUBLIC_ORIGIN ||
+    (env.RENDER === "true" ? env.RENDER_EXTERNAL_URL : undefined);
   if (mode === "sql" && authMode === "pin") {
     if (!publicOrigin)
       throw new Error("PUBLIC_ORIGIN is required for PIN access.");

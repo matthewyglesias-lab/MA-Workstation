@@ -2,9 +2,11 @@ name: Clinic console foundation
 on:
   push:
     branches: [main]
-    paths: ['console/**', '.github/workflows/clinic-console-ci.yml']
+    paths:
+      ["console/**", "render.yaml", ".github/workflows/clinic-console-ci.yml"]
   pull_request:
-    paths: ['console/**', '.github/workflows/clinic-console-ci.yml']
+    paths:
+      ["console/**", "render.yaml", ".github/workflows/clinic-console-ci.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,7 +27,11 @@ jobs:
       - run: npm run format:check
       - run: npm run check
       - name: Compile Azure infrastructure
-        run: az bicep build --file infra/main.bicep --outfile /tmp/clinic-console-infra.json
+        run: |
+          az bicep build --file infra/main.bicep --outfile /tmp/clinic-console-infra.json
+          az bicep build --file infra/sql-for-render.bicep --outfile /tmp/clinic-console-render-sql.json
+      - name: Check PIN burst memory for the 512 MiB host
+        run: node --max-old-space-size=192 scripts/check-pin-memory.mjs
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
       - run: npm run build:preview
@@ -48,7 +54,7 @@ jobs:
         env:
           ACCEPT_EULA: Y
           MSSQL_SA_PASSWORD: Synthetic_CI_Only_2026!
-        ports: ['1433:1433']
+        ports: ["1433:1433"]
     defaults:
       run:
         working-directory: console

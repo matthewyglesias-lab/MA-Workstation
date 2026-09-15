@@ -2,6 +2,8 @@
 
 Status checked 15 September 2026. **Prepared, not deployed.** The new console has no live Azure SQL environment yet. A synthetic preview can verify the screens but cannot preserve clinic records.
 
+**Hosting decision updated:** the user requested Render with Azure SQL's free offer. The $7 web service is prepared for synthetic evaluation only. Render's patient-PHI requirements include a HIPAA-enabled Scale or Enterprise workspace; current Scale pricing is $499/month plus compute and a 20% usage surcharge. No upgrade has been authorized or performed. Follow [Render setup](render-setup.md) for the verified vendor requirements and `infra/sql-for-render.bicep` for the evaluation database. The App Service/private-network proposal below is retained as an alternative; do not provision those resources for Render.
+
 ## Confirmed environment
 
 The authenticated Azure portal is in the IPMG directory (`inlandpsych.com`), with **Azure subscription 1** selected. All resources currently lists four Static Web Apps: MA-Workstation, ipmg-letter-builder, IPMG-CALL-LOG, and IPMG-Intakes. No existing SQL server, App Service plan, or virtual network is visible in that subscription. Subscription and tenant GUIDs were verified in the portal and should be placed in deployment parameters outside git.

@@ -25,14 +25,33 @@ export const WINDOW_MS = 15 * 60_000;
 export const STAFF_ATTEMPTS = 5;
 export const IP_ATTEMPTS = 20;
 const hashOptions = { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 };
+// Each scrypt calculation needs about 128 MiB of native memory. Bound both
+// active work and waiting work so a sign-in burst fits the 512 MiB host.
+let deriving = false;
+const derivationQueue: Array<() => void> = [];
 export const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
-function derive(pin: string, salt: Buffer): Promise<Buffer> {
-  return new Promise((resolve, reject) =>
-    scrypt(pin, salt, 32, hashOptions, (error, result) =>
-      error ? reject(error) : resolve(result),
-    ),
-  );
+async function derive(pin: string, salt: Buffer): Promise<Buffer> {
+  if (deriving) {
+    invariant(
+      derivationQueue.length < 4,
+      "sign_in_busy",
+      "Sign-in is busy. Try again in a moment.",
+      429,
+    );
+    await new Promise<void>((resolve) => derivationQueue.push(resolve));
+  } else deriving = true;
+  try {
+    return await new Promise<Buffer>((resolve, reject) =>
+      scrypt(pin, salt, 32, hashOptions, (error, result) =>
+        error ? reject(error) : resolve(result),
+      ),
+    );
+  } finally {
+    const next = derivationQueue.shift();
+    if (next) next();
+    else deriving = false;
+  }
 }
 export async function hashPin(pin: string): Promise<string> {
   const salt = randomBytes(16);

@@ -1,5 +1,7 @@
 # Azure SQL deployment preparation
 
+For the requested **Render + Azure SQL free offer** evaluation, use [Render setup](render-setup.md). Its $7 profile is for synthetic data; live patient PHI requires a separately approved HIPAA-enabled Render workspace. The App Service architecture below is an alternative.
+
 This branch prepares Azure resources as code; it does not provision or deploy them. See [deployment readiness](deployment-readiness.md) for the verified IPMG environment, proposed resources, current retail estimate, and private database bootstrap. Review the Bicep what-if and resource costs for the selected region first.
 
 ## Topology

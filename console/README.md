@@ -80,4 +80,6 @@ yet been provisioned; see [Azure setup](docs/azure-setup.md).
 
 ## Azure SQL free offer
 
-The infrastructure applies the recurring Azure SQL free offer at database creation: 32 GB, General Purpose serverless, and automatic pause when the monthly allowance is exhausted. SQL overage billing is disabled. App Service and private networking are separately billed (approximately $20.94/month before traffic and tax). This free allowance can interrupt access and carries no SLA; see [deployment readiness](docs/deployment-readiness.md) before live use.
+The requested Render configuration is prepared for **synthetic evaluation ($7/month web service) + Azure SQL's free offer**. Patient PHI on Render requires a HIPAA-enabled Scale or Enterprise workspace; current Scale pricing is $499/month plus compute and a 20% usage surcharge. The low-cost profile is not a live clinic deployment. The root `render.yaml` and [Render setup](docs/render-setup.md) contain the configuration and vendor references. Use `infra/sql-for-render.bicep`; the earlier `infra/main.bicep` provisions separately billed Azure app hosting and private networking as an alternative.
+
+Both database templates apply the recurring free offer at creation: 32 GB, General Purpose serverless and automatic pause at the monthly limit. SQL overage billing is disabled. The free allowance can interrupt access and has no SLA. Render provisioning, SQL bootstrap, staff enrollment and live verification remain pending.
