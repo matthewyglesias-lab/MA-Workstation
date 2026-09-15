@@ -2,7 +2,7 @@
  * Shared behavior for the two native-<dialog> record-list windows
  * (RecordsWindow for Injection, UdsRecordsWindow for UDS): the Tab-key
  * focus wraparound native <dialog> doesn't supply in Chromium, plus the
- * row-formatting helpers both windows need for their activity columns.
+ * filter/search helpers shared by both windows.
  */
 
 /**
@@ -38,23 +38,6 @@ export function trapDialogTabKey(dialog: HTMLDialogElement | null, event: Keyboa
     first.focus();
   }
 }
-
-export const timeOf = (value: unknown): number => {
-  const parsed = Date.parse(String(value ?? ""));
-  return Number.isNaN(parsed) ? 0 : parsed;
-};
-
-/** Matches legacy's `stamp()` output: "Aug 2, 9:41 AM". */
-export const stamp = (value: unknown): string => {
-  const at = timeOf(value);
-  if (!at) return "—";
-  return new Date(at).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
 
 export const addendaCount = (record: { addenda?: unknown[] }): number =>
   Array.isArray(record.addenda) ? record.addenda.length : 0;

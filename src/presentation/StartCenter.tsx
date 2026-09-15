@@ -1,47 +1,20 @@
+import { NOTES, RECORD, SHELL, WORKLIST_EMPTY, noteCount } from "./vocabulary";
 import { useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
+import { Illustration } from "./Illustration";
 import {
-  WORKFLOW_LABELS,
   type ClinicalTone,
   type InjectionRecordRow,
-  type WorkflowId,
-  type WorkflowSummary,
   type WorkQueueItem,
 } from "./types";
-
-// The module tiles a real EHR home screen opens work from - everything a
-// shift touches except Start Center itself. Order follows the same
-// clinical-first, administrative-last sequence as the workflow nav strip.
-const LAUNCHER_WORKFLOWS: readonly WorkflowId[] = [
-  "administer",
-  "uds",
-  "samples",
-  "forms",
-  "reference",
-  "log",
-  "tms",
-];
-
-const LAUNCHER_HINT: Partial<Record<WorkflowId, string>> = {
-  administer: "Start or resume a medication administration record.",
-  uds: "Document a point-of-care urine drug screen.",
-  samples: "Log dispensed sample packages.",
-  forms: "Build a letter, form, or handoff document.",
-  reference: "Look up clinical and formulary reference material.",
-  log: "Review and close out today's local activity log.",
-  tms: "Open the future / TMS workspace.",
-};
 
 type WorklistFilter = "all" | "review" | "today" | "drafts";
 type WorklistSource = "review" | "today" | "drafts";
 
 export interface StartCenterProps {
-  /** Retained for callers that also summarize the module rail. */
-  summaries: Partial<Record<WorkflowId, WorkflowSummary>>;
   needsReview: WorkQueueItem[];
   todayQueue: WorkQueueItem[];
   injectionRecords: InjectionRecordRow[];
-  onWorkflowOpen: (workflow: WorkflowId) => void;
   onQueueItemOpen?: (item: WorkQueueItem) => void;
   onRecordOpen?: (record: InjectionRecordRow) => void;
   /**
@@ -66,10 +39,10 @@ interface WorklistRow {
 }
 
 const FILTERS: Array<{ id: WorklistFilter; label: string }> = [
-  { id: "all", label: "All Work" },
-  { id: "review", label: "Needs Review" },
+  { id: "all", label: "All work" },
+  { id: "review", label: "Needs review" },
   { id: "today", label: "Today" },
-  { id: "drafts", label: "Saved Drafts" },
+  { id: "drafts", label: "Drafts" },
 ];
 
 function uniqueQueueRows(rows: WorkQueueItem[]) {
@@ -137,25 +110,32 @@ function rowMatchesFilter(row: WorklistRow, filter: WorklistFilter) {
 }
 
 function worklistEmptyText(filter: WorklistFilter) {
-  if (filter === "review") return "No local work is awaiting review.";
-  if (filter === "today") return "No other local work is recorded for today.";
-  if (filter === "drafts") return "No saved local injection drafts are available.";
-  return "No local work or saved drafts are available.";
+  if (filter === "review") return WORKLIST_EMPTY.review;
+  if (filter === "today") return WORKLIST_EMPTY.today;
+  if (filter === "drafts") return WORKLIST_EMPTY.drafts;
+  return WORKLIST_EMPTY.all;
 }
 
 function worklistEmptyHint(filter: WorklistFilter) {
-  if (filter === "drafts") return "Use Start new injection to create an editable local record.";
-  if (filter === "review") return "Items appear here only when a saved local record needs review.";
-  if (filter === "today") return "Completed history remains available from Record List (F11).";
-  return "Start a new injection, or open Record List (F11) for local history.";
+  if (filter === "drafts") return WORKLIST_EMPTY.draftsHint;
+  if (filter === "review") return WORKLIST_EMPTY.reviewHint;
+  if (filter === "today") return WORKLIST_EMPTY.todayHint;
+  return WORKLIST_EMPTY.allHint;
 }
 
+/** Status is never colour alone: every tone renders a glyph and a word. */
+const TONE_GLYPH: Record<ClinicalTone, string> = {
+  stop: "×",
+  warning: "!",
+  ready: "✓",
+  info: "·",
+  neutral: "·",
+};
+
 export function StartCenter({
-  summaries,
   needsReview,
   todayQueue,
   injectionRecords,
-  onWorkflowOpen,
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
@@ -170,8 +150,7 @@ export function StartCenter({
     (item) => !reviewIds.has(item.id),
   );
   // Injection records are a local record register. Only editable records
-  // belong on the current worklist; locked history is intentionally kept in
-  // Record List.
+  // belong on the current worklist; signed history stays in Open Notes.
   const savedDrafts = injectionRecords.filter(
     (record) => !isLockedRecord(record),
   );
@@ -191,45 +170,10 @@ export function StartCenter({
 
   return (
     <section class="cd2004-start-center" aria-labelledby="currentWorklistTitle">
-      <nav class="cd2004-launcher" aria-label="Start a clinical workflow">
-        <span class="cd2004-launcher-head">Clinical Modules</span>
-        <div class="cd2004-launcher-grid">
-          {LAUNCHER_WORKFLOWS.map((workflow) => {
-            const summary = summaries[workflow];
-            const count = summary?.count ?? 0;
-            return (
-              <button
-                key={workflow}
-                type="button"
-                class={`cd2004-launcher-tile ${summary?.state ? `is-${summary.state}` : ""}`}
-                title={LAUNCHER_HINT[workflow]}
-                aria-label={
-                  summary?.detail
-                    ? `${WORKFLOW_LABELS[workflow]} — ${summary.detail}`
-                    : WORKFLOW_LABELS[workflow]
-                }
-                onClick={() => onWorkflowOpen(workflow)}
-              >
-                <span class="cd2004-launcher-icon" aria-hidden="true">
-                  <DesktopIcon name={workflow} />
-                </span>
-                <span class="cd2004-launcher-label">{WORKFLOW_LABELS[workflow]}</span>
-                {count > 0 && (
-                  <span class="cd2004-launcher-badge" aria-label={`${count} items`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
       <header class="cd2004-worklist-header">
         <div>
-          <h1 id="currentWorklistTitle" aria-label="Current Worklist">
-            Local records only
-          </h1>
+          <h1 id="currentWorklistTitle">{NOTES.openNotes}</h1>
+          <p>{SHELL.localOnlyDetail}</p>
         </div>
         <button
           type="button"
@@ -237,18 +181,17 @@ export function StartCenter({
           disabled={!onStartNewInjection}
           title={
             onStartNewInjection
-              ? "Start a clean local injection record."
-              : "Starting a new local injection record is not available in this view."
+              ? "Start a clean injection note."
+              : "Starting an injection note is unavailable in this view."
           }
           onClick={() => onStartNewInjection?.()}
         >
           <DesktopIcon name="new" />
-          Start new injection
+          {RECORD.startNewInjection}
         </button>
       </header>
 
       <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters">
-        <span class="cd2004-worklist-filter-label">VIEW:</span>
         {FILTERS.map((candidate) => (
           <button
             key={candidate.id}
@@ -264,73 +207,61 @@ export function StartCenter({
         ))}
       </div>
 
+      {/*
+        The same list grammar the patient chart uses, not a second table with
+        its own column headings. Tebra's product has one way of presenting a
+        list of work; two of them, on the two screens a medical assistant sees
+        most, is the seam a Tebra user would notice first.
+      */}
       <div class="cd2004-worklist-sheet">
-        <table class="cd2004-worklist-table">
-          <thead>
-            <tr>
-              <th>Time / priority</th>
-              <th>Patient / visit</th>
-              <th>Task / medication</th>
-              <th>State</th>
-              <th>
-                <span class="cd2004-visually-hidden">Action</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        {visibleRows.length ? (
+          <ul class="tebra-record-list">
             {visibleRows.map((row) => (
-              <tr key={row.id} class={`is-${row.tone ?? "neutral"}`}>
-                <td data-label="Time / priority">
-                  <span class="cd2004-worklist-source-icon" aria-hidden="true">
-                    <DesktopIcon
-                      name={
-                        row.source === "drafts"
-                          ? "administer"
-                          : row.tone === "warning" || row.tone === "stop"
-                            ? "alert"
-                            : "records"
-                      }
-                    />
-                  </span>
-                  <span class="cd2004-worklist-priority-copy">
-                    <strong>{row.priorityLabel}</strong>
-                    {row.timeLabel && <small>{row.timeLabel}</small>}
-                  </span>
-                </td>
-                <td data-label="Patient / visit">{row.patientLabel}</td>
-                <td data-label="Task / medication">{row.taskLabel}</td>
-                <td data-label="State">
-                  <span class={`cd2004-worklist-state is-${row.tone ?? "neutral"}`}>
+              <li key={row.id} class="tebra-record-row" data-worklist-row={row.source}>
+                <div class="tebra-record-copy">
+                  <strong class="tebra-record-title">{row.taskLabel}</strong>
+                  <p class="tebra-record-meta">
+                    <span>{row.patientLabel}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{row.priorityLabel}</span>
+                    {row.timeLabel ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>{row.timeLabel}</span>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+                <div class="tebra-record-state">
+                  <span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}>
+                    <span aria-hidden="true">{TONE_GLYPH[row.tone ?? "neutral"]}</span>
                     {row.stateLabel}
                   </span>
-                </td>
-                <td data-label="Action">
                   <button
                     type="button"
-                    class="cd2004-worklist-action"
+                    class="tebra-record-action"
+                    data-worklist-open={row.id}
                     disabled={!row.queueItem && !row.record}
                     onClick={() => openRow(row)}
                   >
                     {row.actionLabel}
                   </button>
-                </td>
-              </tr>
+                </div>
+              </li>
             ))}
-            {!visibleRows.length && (
-              <tr class="cd2004-worklist-empty">
-                <td colSpan={5}>
-                  <strong>{worklistEmptyText(filter)}</strong>
-                  <small>{worklistEmptyHint(filter)}</small>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </ul>
+        ) : (
+          <div class="tebra-record-empty">
+            <Illustration name="worklist-clear" />
+            <strong>{worklistEmptyText(filter)}</strong>
+            <small>{worklistEmptyHint(filter)}</small>
+          </div>
+        )}
       </div>
 
       <footer class="cd2004-worklist-footer">
-        <span>{visibleRows.length} local item{visibleRows.length === 1 ? "" : "s"} shown</span>
-        <span>Locked local history: Record List</span>
+        <span>{noteCount(visibleRows.length, "local item")} shown</span>
+        <span>Signed history: {NOTES.openNotes}</span>
       </footer>
     </section>
   );

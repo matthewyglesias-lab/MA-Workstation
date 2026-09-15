@@ -32,13 +32,11 @@ async function openInjectionTab(page, tabName) {
 const malformedInjectionRecords = [
   {
     name: 'malformed JSON',
-    value: '{bad json',
-    expectedDetail: /malformed JSON/i
+    value: '{bad json'
   },
   {
     name: 'non-array JSON',
-    value: JSON.stringify({ records: [] }),
-    expectedDetail: /expected list format/i
+    value: JSON.stringify({ records: [] })
   },
   {
     name: 'array containing an invalid record',
@@ -49,13 +47,12 @@ const malformedInjectionRecords = [
         status: 'draft',
         patient: { name: 'Do not overwrite' }
       }
-    ]),
-    expectedDetail: /invalid entry/i
+    ])
   }
 ];
 
 for (const fixture of malformedInjectionRecords) {
-  test(`autosave leaves ${fixture.name} injection-record storage byte-for-byte unchanged`, async ({
+  test(`quarantine leaves ${fixture.name} injection-record storage byte-for-byte unchanged`, async ({
     page
   }) => {
     const key = 'ipmgMedAssistInjectionRecordsV1';
@@ -66,19 +63,19 @@ for (const fixture of malformedInjectionRecords) {
     await page.goto('/');
     await openWorkflow(page, 'administer');
     const panel = await openInjectionTab(page, 'Order');
-    await panel.locator('input[placeholder="Last, First"]').fill(`QA, ${fixture.name}`);
+    const patientName = panel.locator('input[placeholder="Last, First"]');
 
-    await expect(page.locator('#injRecordStatus')).toHaveText('Save failed');
-    await expect(page.locator('#injRecordWorkspace .inj-record-status')).toHaveText(
-      fixture.expectedDetail
+    // Unsafe storage is now quarantined before an edit can begin, a stronger
+    // contract than waiting for autosave to fail after staff type into a note.
+    await expect(patientName).toBeDisabled();
+    await expect(panel).toContainText('Protection unavailable');
+    await expect(page.locator('[data-injection-record-actions]')).toContainText(
+      'Saved Injection data could not be verified. It was left unchanged; ' +
+        'reload or recover browser storage before continuing.'
     );
-    await expect.poll(() =>
-      page.evaluate(storageKey => localStorage.getItem(storageKey), key)
-    ).toBe(fixture.value);
-    await expect(page.locator('#ptName')).toHaveValue(`QA, ${fixture.name}`);
-    await expect(page.locator('#panel-administer')).not.toHaveClass(
-      /record-readonly/
-    );
+    expect(await page.evaluate(storageKey => localStorage.getItem(storageKey), key))
+      .toBe(fixture.value);
+    await expect(page.locator('#ptName')).toHaveValue('');
   });
 }
 

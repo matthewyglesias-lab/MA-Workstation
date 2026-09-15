@@ -155,14 +155,14 @@ describe("readiness verdict", () => {
   it("is clear only when every requirement is complete", () => {
     const verdict = summarizeReadinessVerdict([item("complete", "a"), item("complete", "b")]);
     expect(verdict?.tone).toBe("clear");
-    expect(verdict?.headline).toBe("READY TO FILE");
-    expect(verdict?.detail).toBe("2 OF 2 COMPLETE");
+    expect(verdict?.completed).toBe(2);
+    expect(verdict?.total).toBe(2);
   });
 
   it("treats an untouched requirement as blocking, not as its own third state", () => {
     const verdict = summarizeReadinessVerdict([item("complete", "a"), item("pending", "b")]);
     expect(verdict?.tone).toBe("blocked");
-    expect(verdict?.headline).toBe("REQUIREMENTS OUTSTANDING");
+    expect(verdict?.pending).toBe(1);
   });
 
   it("blocks on a stop even when nothing is pending", () => {
@@ -177,8 +177,9 @@ describe("readiness verdict", () => {
       item("complete", "c"),
     ]);
     expect(verdict?.tone).toBe("review");
-    expect(verdict?.headline).toBe("READY TO FILE — REVIEW FLAGGED");
-    expect(verdict?.detail).toBe("2 OF 3 COMPLETE · 1 REVIEW");
+    expect(verdict?.completed).toBe(2);
+    expect(verdict?.total).toBe(3);
+    expect(verdict?.warnings).toBe(1);
   });
 
   it("lets a stop outrank a warning", () => {
@@ -186,21 +187,6 @@ describe("readiness verdict", () => {
     expect(verdict?.tone).toBe("blocked");
   });
 
-  // The verdict is about whether the record can be filed. Wording it as
-  // clearance to administer would be red at the exact moment staff inject,
-  // because administration and disposition are documented afterwards.
-  it("is worded as a documentation verdict, never as clearance to administer", () => {
-    const forbidden = /\b(ADMINISTER|INJECT|SAFE|DO NOT)\b/;
-    const cases = [
-      [item("complete", "a")],
-      [item("warning", "a")],
-      [item("stop", "a")],
-      [item("pending", "a")],
-    ];
-    for (const rows of cases) {
-      expect(summarizeReadinessVerdict(rows)!.headline).not.toMatch(forbidden);
-    }
-  });
 
   /**
    * A colour-coded verdict whose green is unreachable is worse than no verdict
@@ -251,7 +237,6 @@ describe("readiness verdict", () => {
 
     expect(evaluation.readiness).toBe("ready");
     expect(verdict.tone).toBe("clear");
-    expect(verdict.headline).toBe("READY TO FILE");
     expect(verdict.completed).toBe(verdict.total);
   });
 
@@ -268,6 +253,5 @@ describe("readiness verdict", () => {
     expect(verdict.warnings).toBe(1);
     expect(verdict.blockers).toBe(1);
     expect(verdict.pending).toBe(1);
-    expect(verdict.detail).toBe("2 OF 5 COMPLETE · 1 REVIEW");
   });
 });

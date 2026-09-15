@@ -1,5 +1,6 @@
 import type { ClinicalIssue } from "../../domain/contracts";
 import { ModalDialog } from "../ModalDialog";
+import { CHECKLIST } from "../vocabulary";
 
 interface OutstandingRequirementsProps<Tab extends string> {
   /** Whether the floating window is currently shown. */
@@ -18,9 +19,8 @@ interface OutstandingRequirementsProps<Tab extends string> {
 
 /**
  * The list of what is still blocking completion, with each row a direct jump
- * to the tab that owns the field. A floating window - titlebar, close box,
- * centred over the worksheet - mirrors how MEDITECH pops a transaction's
- * outstanding items rather than burying them in the worksheet flow.
+ * to the tab that owns the field. A focused dialog keeps that checklist near
+ * the worksheet without burying it in the form flow.
  *
  * Without this a panel reports only a count - "5 stops" - and staff have to
  * open every tab and compare against a mental list of what the engine wants.
@@ -63,10 +63,10 @@ export function OutstandingRequirements<Tab extends string>({
     >
       <div class="cd2004-dialog-frame">
         <div class="cd2004-dialog-titlebar">
-          <span id="cd2004-outstanding-requirements-title">Outstanding requirements</span>
+          <span id="cd2004-outstanding-requirements-title">{CHECKLIST.title}</span>
           <button
             type="button"
-            aria-label="Close outstanding requirements"
+            aria-label={`Close ${CHECKLIST.title}`}
             onClick={onClose}
           >
             X

@@ -342,9 +342,22 @@ async function expectTwoPageAvsToBeBalanced(page) {
     .toBeLessThan(0.46);
 }
 
-async function expectTimelineToConnect(page) {
-  const geometry = await page.locator('#avsSheet .avs2-spine').evaluateAll(spines =>
+async function expectTimelineToConnect(page, { syntheticActionTitle = '' } = {}) {
+  const geometry = await page.locator('#avsSheet .avs2-spine').evaluateAll((spines, title) =>
     spines.map(spine => {
+      // The maximum-depth case extends rendered output rather than changing
+      // clinical state. Insert and measure that synthetic row in one browser
+      // task so a queued compatibility render cannot replace the fixture
+      // between the row-count and rail-geometry assertions.
+      if (title) {
+        const source = spine.querySelector('.avs2-step:not(:last-child)');
+        const due = spine.querySelector('.avs2-step:last-child');
+        if (!source || !due) throw new Error('Expected treatment rows are missing');
+        const extra = source.cloneNode(true);
+        extra.className = 'avs2-step avs2-step-action';
+        extra.querySelector('.avs2-step-title').textContent = title;
+        spine.insertBefore(extra, due);
+      }
       const rails = [...spine.querySelectorAll('.avs2-rail')];
       const nodes = [...spine.querySelectorAll('.avs2-node')];
       const railRects = rails.map(rail => rail.getBoundingClientRect());
@@ -375,10 +388,14 @@ async function expectTimelineToConnect(page) {
           segments[segments.length - 1].bottom - centers[centers.length - 1].y
         )
       };
-    })
+    }),
+    syntheticActionTitle
   );
 
   for (const result of geometry) {
+    if (syntheticActionTitle) {
+      expect(result.count, 'maximum-depth fixture did not render four treatment steps').toBe(4);
+    }
     expect(result.count).toBeGreaterThanOrEqual(2);
     expect(result.horizontalDrift, 'timeline nodes drift off the shared rail').toBeLessThanOrEqual(0.5);
     expect(result.maxGap, 'timeline rail contains a visible vertical gap').toBeLessThanOrEqual(1);
@@ -1057,18 +1074,10 @@ test.describe('unchanged clinical print surfaces', () => {
       renderName: 'renderAVS',
       rootId: 'avsSheet'
     });
-    await page.locator('#avsSheet .avs2-spine').evaluate(spine => {
-      const source = spine.querySelector('.avs2-step:not(:last-child)');
-      const due = spine.querySelector('.avs2-step:last-child');
-      if (!source || !due) throw new Error('Expected treatment rows are missing');
-      const extra = source.cloneNode(true);
-      extra.className = 'avs2-step avs2-step-action';
-      extra.querySelector('.avs2-step-title').textContent =
-        'Clinician-reviewed continuation step with deliberately extended explanatory copy';
-      spine.insertBefore(extra, due);
+    await expectTimelineToConnect(page, {
+      syntheticActionTitle:
+        'Clinician-reviewed continuation step with deliberately extended explanatory copy'
     });
-    await expect(page.locator('#avsSheet .avs2-spine > .avs2-step')).toHaveCount(4);
-    await expectTimelineToConnect(page);
   });
 
   test('isolates the UDS clinician report without print clipping', async ({ page }) => {

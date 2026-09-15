@@ -20,12 +20,10 @@ export interface WorkstationLookupTransaction {
 
 export function WorkstationLookupDialog({
   transaction,
-  transactionCode,
   onChoose,
   onDismiss,
 }: {
   transaction: WorkstationLookupTransaction;
-  transactionCode: string;
   onChoose: (option: WorkstationLookupOption) => void;
   onDismiss: () => void;
 }) {
@@ -69,8 +67,14 @@ export function WorkstationLookupDialog({
     >
       <section class="cd2004-dialog-frame" data-field-lookup-dialog>
         <header class="cd2004-dialog-titlebar">
+          {/*
+            Titled by the field, not by its code. "INJ FIELD LOOKUP ·
+            INJ-REASON" named a screen and an internal identifier; "Encounter
+            type" names what the person is choosing. The code still appears in
+            the context line below for staff who work by it.
+          */}
           <strong id={titleId}>
-            {transactionCode} FIELD LOOKUP · {transaction.fieldCode}
+            {transaction.fieldLabel || transaction.fieldCode}
           </strong>
           <button type="button" aria-label="Close field lookup" onClick={onDismiss}>
             ×
@@ -78,7 +82,7 @@ export function WorkstationLookupDialog({
         </header>
 
         <div class="cd2004-lookup-context">
-          <strong>{transaction.fieldLabel}</strong>
+          <strong>{transaction.fieldCode}</strong>
           <span>{transaction.prompt || "Select one of the available local values."}</span>
         </div>
 

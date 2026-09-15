@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import {
+  discardDraftPrompt,
+  noteReviewPrompt,
+  PATIENT,
+  RECORD,
+} from "./vocabulary";
 
 export type RecordActionKind = "attest" | "discard";
 
@@ -48,9 +54,9 @@ export function RecordActionDialog({
   const [error, setError] = useState<string | null>(null);
   const isAttestation = kind === "attest";
   const title = isAttestation
-    ? "Attest & lock local record"
-    : "Discard Local Draft";
-  const confirmLabel = isAttestation ? "Attest & lock local record" : "Discard draft";
+    ? RECORD.sign
+    : RECORD.discardDraft;
+  const confirmLabel = isAttestation ? RECORD.sign : RECORD.discardDraft;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -74,16 +80,10 @@ export function RecordActionDialog({
         return;
       }
       setError(
-        isAttestation
-          ? "The local record could not be locked. It is still editable; review the required fields and browser-local storage, then try again."
-          : "The local draft could not be discarded. It remains available for review.",
+        isAttestation ? RECORD.signFailedRetry : RECORD.discardFailed,
       );
     } catch {
-      setError(
-        isAttestation
-          ? "The local record could not be locked. It is still editable; no lock was recorded."
-          : "The local draft could not be discarded. It remains available for review.",
-      );
+      setError(isAttestation ? RECORD.signFailed : RECORD.discardFailed);
     } finally {
       setSubmitting(false);
     }
@@ -106,7 +106,7 @@ export function RecordActionDialog({
       <div class="cd2004-dialog-frame">
         <div class="cd2004-dialog-titlebar">
           <span id="cd2004-record-action-title">{title}</span>
-          <button type="button" aria-label="Close confirmation" onClick={onClose}>
+          <button type="button" aria-label={RECORD.closeConfirmation} onClick={onClose}>
             X
           </button>
         </div>
@@ -114,16 +114,15 @@ export function RecordActionDialog({
           {isAttestation ? (
             <>
               <p>
-                Review and attest this browser-local {recordNoun} record for{" "}
-                <strong>{recordLabel}</strong>.
+                {noteReviewPrompt(recordNoun)} <strong>{recordLabel}</strong> before signing.
               </p>
-              <dl class="cd2004-attestation-review" aria-label="Local record review">
+              <dl class="cd2004-attestation-review" aria-label={RECORD.noteReview}>
                 <div>
                   <dt>Patient</dt>
                   <dd>{attestation?.patient || "Not entered"}</dd>
                 </div>
                 <div>
-                  <dt>Local visit / record</dt>
+                  <dt>{PATIENT.visitRecord}</dt>
                   <dd>{attestation?.localRecord || "Not assigned"}</dd>
                 </div>
                 <div>
@@ -136,15 +135,15 @@ export function RecordActionDialog({
                 </div>
                 <div>
                   <dt>Documenting staff</dt>
-                  <dd>{attestation?.staff || "Not signed in"}</dd>
+                  <dd>{attestation?.staff || PATIENT.notSignedIn}</dd>
                 </div>
                 <div>
-                  <dt>Local timestamp</dt>
+                  <dt>{RECORD.signatureTime}</dt>
                   <dd>{attestation?.timestamp || "Not available"}</dd>
                 </div>
               </dl>
               <p class="cd2004-record-action-warning">
-                This creates a browser-local attestation and locks the original record. A locked record is read-only; use a dated addendum for later clarification.
+                {RECORD.signReadOnlyDetail}
               </p>
               <label class="cd2004-attestation-acknowledgement">
                 <input
@@ -153,22 +152,19 @@ export function RecordActionDialog({
                   onChange={(event) => setAcknowledged(event.currentTarget.checked)}
                 />
                 <span>
-                  I attest that I reviewed this local record before locking it.
-                  {attestation?.statementVersion && (
-                    <small>Statement {attestation.statementVersion}</small>
-                  )}
+                  {RECORD.signAcknowledgement}
                 </span>
               </label>
             </>
           ) : (
             <>
               <p>
-                Discard the editable local {recordNoun} draft for <strong>{recordLabel}</strong>?
+                {discardDraftPrompt(recordNoun)} <strong>{recordLabel}</strong>?
               </p>
               <p class="cd2004-record-action-warning">
-                This removes the saved browser-local draft and clears the worksheet. It cannot be undone.
+                {RECORD.discardWarning}
               </p>
-              <small>Locked records cannot be discarded.</small>
+              <small>{RECORD.signedCannotDiscard}</small>
             </>
           )}
           {error && <p class="cd2004-record-action-error" role="alert">{error}</p>}
@@ -181,7 +177,7 @@ export function RecordActionDialog({
             disabled={submitting}
             onClick={onClose}
           >
-            {isAttestation ? "Back to editing" : "Keep editing"}
+            {isAttestation ? RECORD.backToEditing : RECORD.keepEditing}
           </button>
           <button
             type="button"
@@ -189,7 +185,11 @@ export function RecordActionDialog({
             disabled={submitting || (isAttestation && !acknowledged)}
             onClick={confirm}
           >
-            {submitting ? "Validating local record…" : confirmLabel}
+            {submitting
+              ? isAttestation
+                ? RECORD.signing
+                : RECORD.discarding
+              : confirmLabel}
           </button>
         </div>
       </div>

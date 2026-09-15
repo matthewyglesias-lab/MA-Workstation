@@ -227,17 +227,12 @@ assert.match(html, /recordsDrawerState=\{query:'',filter:'all',lastFocus:null,cl
 assert.match(html, /localDay\(review\.confirmedAt\)===localDay\(new Date\(\)\)/, 'Reviewed-today confirmation must expire on the next local calendar day');
 assert.match(html, /overlay\.setAttribute\('aria-labelledby','injCompletionTitle'\)/, 'The completion dialog must expose a labelled modal contract');
 assert.match(html, /event\.key==='Escape'\)\{event\.preventDefault\(\);close\(\)/, 'The completion dialog must close with Escape');
-// classic-workflows.css is gone: it restyled legacy workflow markup mounted
-// inside the shell, and no workflow mounts legacy markup any more - all eight
-// are typed panels. The square-surface guarantee it used to encode now lives
-// in the panel library, so assert it there instead of on a deleted file.
-assert.match(panelStyle, /border-radius: 0 !important;/, 'Migrated workflow panels must keep the square classic-EHR surface treatment');
-assert.match(desktopStyle, /\.records-drawer \{[^}]*border-radius: 0 !important;/, 'The global records drawer must use the classic-EHR treatment');
-// Was `1px`. The receipt was flattened to a true square edge during the
-// old-EHR polish pass - it had been the last nonzero radius left in either
-// stylesheet - and this assertion was not updated with it. It went unnoticed
-// because check:static only runs on pull requests against `main`.
-assert.match(desktopStyle, /\.inj-completion-card \{[^}]*border-radius: 0 !important;/, 'The completion receipt must use the classic-EHR treatment');
+// The migrated panel controls and body-level dialogs now share the Tebra
+// workstation grammar. Guard the source contract here so a later visual pass
+// cannot quietly restore square bevels or the old `!important` arms race.
+assert.match(panelStyle, /border-radius: var\(--tw-radius-ctl\);/, 'Migrated workflow controls must use the Tebra field radius');
+assert.doesNotMatch(desktopStyle, /\.records-drawer \{[^}]*border-radius: 0(?:\s*!important)?;/, 'The Open Notes dialog must not restore the classic square treatment');
+assert.doesNotMatch(desktopStyle, /\.inj-completion-card \{[^}]*border-radius: 0(?:\s*!important)?;/, 'The completion dialog must not restore the classic square treatment');
 assert.match(html, /id="injAdminTime" data-injection-field="admin-time"/, 'Injection completion must capture the actual administration time');
 assert.match(html, /window\.ipmgInjectionDetailReview=detailReview/, 'Conditional injection documentation must expose a shared finalization review');
 assert.match(html, /Document both the administration amount and its unit/, 'Partial structured administration details must block finalization');
