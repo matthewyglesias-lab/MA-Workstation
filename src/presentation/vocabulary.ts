@@ -188,6 +188,11 @@ export const RECORD = {
     "The current note stayed open. Close this window and resolve the current note before switching notes.",
   invalidUdsRecord:
     "This saved UDS note cannot be opened because its stored data is incomplete or invalid.",
+  // Said on the copy command itself. A disabled button with no explanation is
+  // the same dead end as the silent no-op: the operator cannot tell whether
+  // the command missed or was never going to run.
+  noteCopyWithheld:
+    "This note cannot be copied while what is on screen may differ from the saved record. Reload to work from the saved version, or start a new note.",
   udsRecordChangedElsewhere:
     "This UDS note changed in another browser tab. Your current version stayed open and was not written. Reload this page to use the saved version; the browser will warn first if this version has unsaved changes.",
   savedNoteCouldNotOpen:

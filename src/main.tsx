@@ -107,8 +107,6 @@ import {
   type UdsRecordMutationAccess,
 } from './presentation/uds-record-safety';
 import {
-  copyAllLegacyNotes,
-  copyLegacyNoteSection,
   readLegacyShellSnapshot,
   type LegacyShellSnapshot,
 } from './legacy/shell-state';
@@ -1804,17 +1802,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         onOpenLocation={() => setContextEditor('location')}
         onOpenRecords={() => setRecordsOpen(true)}
         onLookup={() => setRecordsOpen(true)}
-        onCopyNoteSection={
+        noteCopyUnsafe={
           (activeWorkflow === 'administer' && !injectionDraftProtectionAvailable) ||
           (activeWorkflow === 'uds' && udsActiveRecordStorageConflict)
-            ? undefined
-            : (section) => copyLegacyNoteSection(activeWorkflow, section.id)
-        }
-        onCopyAllNotes={
-          (activeWorkflow === 'administer' && !injectionDraftProtectionAvailable) ||
-          (activeWorkflow === 'uds' && udsActiveRecordStorageConflict)
-            ? undefined
-            : () => copyAllLegacyNotes(activeWorkflow)
         }
         onQueueItemOpen={queueOpen}
         onRecordOpen={openRecord}

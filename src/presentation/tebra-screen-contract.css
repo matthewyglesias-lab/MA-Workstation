@@ -377,6 +377,53 @@
     height: 14px;
   }
 
+  /*
+   * What the copy command did, on the command itself.
+   *
+   * Ported from `meditech-workstation.css`, which added these states while
+   * this branch was retiring that stylesheet. Same three states, taken from
+   * tokens instead of the beveled hex it used, so the confirmation reads in
+   * this shell rather than arriving unstyled. Without them the whole point of
+   * the change - that an operator can tell a copy landed without pasting to
+   * find out - renders as nothing at all.
+   *
+   * A refused copy takes the clinical stop colour deliberately. This branch
+   * spends that red carefully, and reserves it for a real failure: the note
+   * did not reach the clipboard and the next paste will be whatever was there
+   * before.
+   */
+  .cd2004-shell .cd2004-note-copy-all.is-copied {
+    color: var(--tw-note-ready-fg);
+    background: var(--tw-note-ready-bg);
+    border-color: var(--tw-note-ready-border);
+  }
+
+  .cd2004-shell .cd2004-note-copy-all.is-blocked {
+    color: var(--tw-stop-fg);
+    background: var(--tw-stop-bg);
+    border-color: var(--tw-stop-border);
+  }
+
+  /* Withheld before the attempt, not refused after one - so it reads as an
+     unavailable control rather than a failure, matching every other disabled
+     command in the shell. */
+  .cd2004-shell .cd2004-note-copy-all:disabled {
+    color: var(--tw-text-muted);
+    background: var(--tw-mint-150);
+    border-color: var(--tw-border-subtle);
+    cursor: not-allowed;
+  }
+
+  .cd2004-shell .cd2004-note-copy-status {
+    padding: 4px 8px 0;
+    color: var(--tw-text-secondary);
+    font: 600 var(--tw-fs-ws-meta) / var(--tw-lh-ws-meta) var(--tw-font-sans);
+  }
+
+  .cd2004-shell .cd2004-note-copy-status:empty {
+    display: none;
+  }
+
   .cd2004-shell .cd2004-note-empty {
     display: grid;
     align-content: center;

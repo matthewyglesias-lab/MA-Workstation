@@ -192,8 +192,14 @@ export interface ClinicalDesktopShellProps {
   onOpenStaff?: () => void;
   /** Opens the local visit-location dialog. */
   onOpenLocation?: () => void;
-  onCopyNoteSection?: (section: NoteSection) => void;
-  onCopyAllNotes?: () => void;
+  /*
+   * Withhold the note viewer's copy commands because what is on screen may not
+   * be what durable storage holds - the injection encounter read came back
+   * invalid, or another document changed the UDS record under us. Distinct
+   * from a copy the *browser* refuses, which `clipboard.ts` reports as
+   * "blocked"; this one is a clinical judgement made before the attempt.
+   */
+  noteCopyUnsafe?: boolean;
   onQueueItemOpen?: (item: WorkQueueItem) => void;
   onRecordOpen?: (record: InjectionRecordRow) => void;
   /**

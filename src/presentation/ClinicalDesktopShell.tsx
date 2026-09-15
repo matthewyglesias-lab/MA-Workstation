@@ -304,8 +304,7 @@ export function ClinicalDesktopShell({
   onLookup,
   onOpenStaff,
   onOpenLocation,
-  onCopyNoteSection,
-  onCopyAllNotes,
+  noteCopyUnsafe,
   onQueueItemOpen,
   onRecordOpen,
   onOpenInjectionRecord,
@@ -1354,10 +1353,9 @@ export function ClinicalDesktopShell({
         readiness={readiness}
         sections={noteSections}
         patient={documentPatient}
+        copyUnsafe={noteCopyUnsafe}
         postState={postState}
         postMessage={postMessage}
-        onCopySection={onCopyNoteSection}
-        onCopyAll={onCopyAllNotes}
       />
     </Panel>
   );
