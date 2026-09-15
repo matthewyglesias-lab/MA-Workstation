@@ -7,10 +7,10 @@ import { clinicDate } from './config.js';
 import { DomainError, invariant } from './errors.js';
 import type { Command, Repository } from './repository.js';
 
-const patientColumns = 'id,tebraId,displayName,CONVERT(char(10),dob,23) dob,CONVERT(varchar(30),verifiedAt,126)+\'Z\' verifiedAt,verifiedBy';
-const activityColumns = 'id,patientId,service,status,handoff,tebraReference,version,CONVERT(varchar(30),createdAt,126)+\'Z\' createdAt,CONVERT(varchar(30),updatedAt,126)+\'Z\' updatedAt';
-const lotColumns = 'id,productId,lotNumber,CONVERT(char(10),expiresOn,23) expiresOn,location,ownership,ownerPatientId,status,onHand,reserved';
-const movementColumns = 'id,lotId,kind,quantity,patientId,reason,reversesId,stockDelta,reservedDelta,actorId,CONVERT(varchar(30),createdAt,126)+\'Z\' createdAt';
+const patientColumns = 'LOWER(CONVERT(varchar(36),id)) id,tebraId,displayName,CONVERT(char(10),dob,23) dob,CONVERT(varchar(30),verifiedAt,126)+\'Z\' verifiedAt,verifiedBy';
+const activityColumns = 'LOWER(CONVERT(varchar(36),id)) id,LOWER(CONVERT(varchar(36),patientId)) patientId,service,status,handoff,tebraReference,version,CONVERT(varchar(30),createdAt,126)+\'Z\' createdAt,CONVERT(varchar(30),updatedAt,126)+\'Z\' updatedAt';
+const lotColumns = 'LOWER(CONVERT(varchar(36),id)) id,LOWER(CONVERT(varchar(36),productId)) productId,lotNumber,CONVERT(char(10),expiresOn,23) expiresOn,location,ownership,LOWER(CONVERT(varchar(36),ownerPatientId)) ownerPatientId,status,onHand,reserved';
+const movementColumns = 'LOWER(CONVERT(varchar(36),id)) id,LOWER(CONVERT(varchar(36),lotId)) lotId,kind,quantity,LOWER(CONVERT(varchar(36),patientId)) patientId,reason,LOWER(CONVERT(varchar(36),reversesId)) reversesId,stockDelta,reservedDelta,actorId,CONVERT(varchar(30),createdAt,126)+\'Z\' createdAt';
 
 export class SqlRepository implements Repository {
   constructor(private pool: sql.ConnectionPool, private clinicId: string, private timezone: string) {}
@@ -48,7 +48,7 @@ export class SqlRepository implements Repository {
     const result = await this.request().query(`
       SELECT TOP(250) ${patientColumns} FROM dbo.Patients WHERE clinicId=@clinic ORDER BY displayName,id;
       SELECT TOP(250) ${activityColumns} FROM dbo.Activities WHERE clinicId=@clinic ORDER BY createdAt DESC,id;
-      SELECT TOP(250) id,name,strength,unit,ndc FROM dbo.Products WHERE clinicId=@clinic ORDER BY name,id;
+      SELECT TOP(250) LOWER(CONVERT(varchar(36),id)) id,name,strength,unit,ndc FROM dbo.Products WHERE clinicId=@clinic ORDER BY name,id;
       SELECT TOP(250) ${lotColumns} FROM dbo.StockLots WHERE clinicId=@clinic ORDER BY expiresOn,id;
       SELECT TOP(250) ${movementColumns} FROM dbo.StockMovements WHERE clinicId=@clinic ORDER BY createdAt DESC,id;
     `);

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const uuid = z.string().uuid();
+export const uuid = z.string().uuid().toLowerCase();
 const text = (max: number) => z.string().trim().min(1).max(max);
 export const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const parsed = new Date(`${value}T00:00:00Z`);

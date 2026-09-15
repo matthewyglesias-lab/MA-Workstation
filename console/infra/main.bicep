@@ -34,7 +34,7 @@ resource network 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   }
 }
 resource dns 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: 'privatelink.database.windows.net'
+  name: 'privatelink${environment().suffixes.sqlServerHostname}'
   location: 'global'
 }
 resource dnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {

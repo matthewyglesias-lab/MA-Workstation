@@ -1,5 +1,5 @@
-import { render, type ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { render, cloneElement, isValidElement, type ComponentChildren } from 'preact';
+import { useEffect, useRef, useState, useId } from 'preact/hooks';
 import type { Activity, Actor, Lot, Movement, Overview, Patient, RuntimeInfo } from '../shared/contracts.js';
 import { getOverview, getSession, initialize, request, signIn } from './api.js';
 import './style.css';
@@ -12,7 +12,7 @@ function Icon({ name, size = 20 }: { name: string; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={paths[name] || paths.Work}/></svg>;
 }
 function Badge({ children, tone = '' }: { children: ComponentChildren; tone?: string }) { return <span class={`badge ${tone}`}>{children}</span>; }
-function Field({ label, children }: { label: string; children: ComponentChildren }) { return <label class="field"><span>{label}</span>{children}</label>; }
+function Field({ label, children }: { label: string; children: ComponentChildren }) { const id=useId(); return <div class="field"><label for={id}>{label}</label>{isValidElement(children) ? cloneElement(children, { id }) : children}</div>; }
 function dateLabel(value: string) { return new Date(`${value}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 function ErrorText({ error }: { error: string }) { return error ? <div role="alert" class="error">{error}</div> : null; }
 

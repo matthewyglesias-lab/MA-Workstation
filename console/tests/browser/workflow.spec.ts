@@ -3,7 +3,7 @@ test('patient, inventory and explicit Tebra handoff work together',async({page})
   const browserErrors:string[]=[];page.on('pageerror',e=>browserErrors.push(e.message));
   await page.goto('/'); await expect(page.getByText('Demonstration workspace',{exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'A clear view of the day.'})).toBeVisible();
-  await expect(page.getByText('Alex Morgan (demo)',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:/Alex Morgan \(demo\)/})).toBeVisible();
   await page.screenshot({path:'test-results/console-today.png',fullPage:true});
   await page.getByRole('button',{name:'Patients',exact:true}).click();
   await page.getByRole('button',{name:'Link patient',exact:true}).click();
