@@ -1788,6 +1788,244 @@ td .button {
     font-size: 29px;
   }
 }
+.screening-questions {
+  margin: 16px -4px 0;
+}
+.screening-question {
+  padding: 18px 4px 3px;
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 1fr);
+  gap: 0 22px;
+}
+.screening-question .screening-prompt {
+  grid-row: span 2;
+}
+.screening-prompt strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.screening-prompt p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 7px 0 14px;
+}
+.screening-question.has-concern {
+  border-left: 3px solid var(--coral);
+  padding-left: 12px;
+}
+.provider-review > .clinical-callout {
+  margin-bottom: 18px;
+}
+.preparation-guide {
+  background: #f3f7f7;
+  border-radius: 9px;
+  padding: 16px;
+  margin: 0 0 20px;
+}
+.preparation-guide summary {
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 13px;
+}
+.preparation-guide .route-reference {
+  color: var(--teal);
+  font-size: 12px;
+  margin-top: 14px;
+}
+.guide-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.guide-columns h4 {
+  font-size: 12px;
+  margin: 12px 0 8px;
+}
+.guide-columns ul {
+  padding-left: 18px;
+  font-size: 12px;
+}
+.guide-columns li {
+  margin: 0 0 9px;
+  line-height: 1.6;
+}
+.delivery-reference {
+  border-top: 1px solid var(--border);
+  padding-top: 13px;
+  font-size: 12px;
+}
+.preparation-guide > a {
+  font-size: 11px;
+}
+.education-checklist {
+  border: 0;
+  padding: 0;
+  margin: 10px 0 20px;
+}
+.education-checklist legend {
+  font-weight: 650;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.education-checklist .field-help {
+  margin-bottom: 14px;
+}
+.education-checklist .checkbox {
+  margin-bottom: 12px;
+}
+.prior-time-preserved {
+  border-left: 2px solid var(--teal);
+  padding-left: 12px;
+  margin-bottom: 18px;
+  font-size: 12px;
+}
+.prior-time-preserved .checkbox {
+  margin-bottom: 0;
+}
+.clinical-summary {
+  overflow-wrap: anywhere;
+}
+.clinical-summary .clinical-facts {
+  margin-bottom: 0;
+}
+.clinical-summary-subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 12px;
+}
+.clinical-summary-subheading h3 {
+  font-size: 14px;
+}
+.clinical-summary-screening {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+}
+.clinical-summary-screening li {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+  font-size: 12px;
+}
+.clinical-summary-screening li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+.clinical-summary-screening li > div span {
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.clinical-summary-screening li p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+.clinical-summary-screening li.has-concern {
+  border-left: 3px solid var(--coral);
+  padding-left: 12px;
+}
+.clinical-summary-version,
+.clinical-summary-legacy {
+  font-size: 10px;
+  margin: 16px 0;
+}
+.clinical-summary-comparison small,
+.clinical-summary-communication small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.clinical-timeline {
+  overflow-wrap: anywhere;
+}
+.clinical-timeline ol {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+}
+.clinical-timeline li {
+  border-left: 2px solid var(--border);
+  padding: 0 0 18px 15px;
+  margin-left: 5px;
+}
+.clinical-timeline li.is-current {
+  border-left-color: var(--teal);
+}
+.clinical-timeline li > div > span {
+  display: block;
+  font-size: 10px;
+  color: var(--teal);
+  margin-top: 3px;
+}
+.clinical-timeline li p {
+  font-size: 11px;
+  margin: 5px 0;
+}
+.clinical-timeline-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+.clinical-timeline small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.clinical-timeline strong {
+  font-size: 12px;
+}
+.guidance-panel {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.guidance-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin: 10px 0;
+}
+.guidance-panel ul {
+  padding-left: 18px;
+}
+.guidance-panel li {
+  margin-bottom: 8px;
+}
+.guidance-panel p {
+  margin: 10px 0;
+}
+.guidance-panel-source {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 15px;
+}
+.guidance-panel-source small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+  font-size: 10px;
+}
+.guidance-panel-source p {
+  font-size: 10px;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .screening-question {
+    display: block;
+  }
+  .guide-columns {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .structured-screening .section-heading {
+    align-items: flex-start;
+  }
+  .clinical-summary-screening li > div {
+    flex-direction: column;
+    gap: 3px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

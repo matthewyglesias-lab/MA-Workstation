@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { pathToFileURL } from "node:url";
+import { clinicLocalInput } from "../../src/web/injection-time.js";
 test("PIN, injection, stock, documentation, Tebra handoff and lock work together", async ({
   page,
 }) => {
@@ -51,6 +52,10 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await page.getByLabel("Route", { exact: true }).selectOption("IM");
   await page.getByLabel("Planned injection site").fill("Left deltoid");
   await page.getByLabel("Timing category").selectOption("initiation");
+  await page.getByLabel("Treatment phase").selectOption("initiation");
+  await page
+    .getByLabel("Indication per order")
+    .fill("Synthetic browser scenario; no patient care");
   await page
     .getByLabel("Provider-confirmed timing plan")
     .fill("Synthetic provider-confirmed initiation order.");
@@ -74,6 +79,40 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await page
     .getByLabel("Medication-specific review", { exact: true })
     .fill("Synthetic product review and ordered initiation verified.");
+  for (const label of [
+    "Changes since the last visit",
+    "Current symptoms and readiness",
+  ]) {
+    const finding = page.getByLabel(`${label} — finding`, { exact: true });
+    await expect(finding).toHaveValue("");
+    await finding.selectOption("no_concern");
+  }
+  await page
+    .getByLabel("Previous treatment response — finding", { exact: true })
+    .selectOption("not_applicable");
+  await page
+    .getByLabel("Previous treatment response — details", { exact: true })
+    .fill("No prior administration in this synthetic initiation scenario.");
+  await page.getByLabel("Provider consulted").fill("Synthetic provider");
+  await page
+    .getByLabel("Provider confirmation time (America/Los_Angeles)", {
+      exact: true,
+    })
+    .fill(
+      clinicLocalInput(
+        new Date(Date.now() - 60_000).toISOString(),
+        "America/Los_Angeles",
+      ),
+    );
+  await page
+    .getByLabel("Provider decision", { exact: true })
+    .selectOption("proceed_as_ordered");
+  await page
+    .getByLabel("Communication / order reference")
+    .fill("BROWSER-ORDER");
+  await page
+    .getByLabel("Instructions received")
+    .fill("Synthetic provider-confirmed initiation order; no patient care.");
   await page.getByLabel("Pulse / min").fill("72");
   await page.getByLabel("Available stock lot").selectOption({ index: 1 });
   await page
@@ -96,19 +135,38 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await page
     .getByRole("button", { name: "Record administration", exact: true })
     .click();
+  await page.getByLabel("Delivery", { exact: true }).selectOption("complete");
+  await page.getByLabel("Actual route", { exact: true }).selectOption("IM");
+  await page.getByLabel("Actual site and laterality").fill("Left deltoid");
   await page
     .getByLabel("Tolerance / patient response")
     .fill("Synthetic observed response.");
   await page
     .getByLabel("Observation and follow-up")
     .fill("Synthetic observation completed.");
+  await page
+    .getByLabel("Observation outcome", { exact: true })
+    .selectOption("completed");
+  await page.getByLabel("Actual observation (minutes)").fill("15");
+  await page
+    .getByLabel("Observation details", { exact: true })
+    .fill("Synthetic observation scenario completed.");
+  await page
+    .getByLabel("Patient-specific follow-up instructions")
+    .fill(
+      "Synthetic follow-up plan: contact the test clinic for the next date.",
+    );
   await page.getByLabel("I confirm the actual delivery").check();
   await page
     .getByRole("button", { name: "Save administration", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
+  await page.getByRole("button", { name: "Plain text", exact: true }).click();
   await expect(page.getByLabel("Injection note")).toHaveValue(
     /Actual dose: 100 mg/,
+  );
+  await expect(page.getByLabel("Injection note")).toHaveValue(
+    /No prior administration in this synthetic initiation scenario/,
   );
   await page.screenshot({
     path: "test-results/console-injection-detail.png",
@@ -141,6 +199,7 @@ test("PIN, injection, stock, documentation, Tebra handoff and lock work together
   await page.evaluate(() => {
     window.print = () => {};
   });
+  await page.getByRole("button", { name: "Patient AVS", exact: true }).click();
   await page.getByRole("button", { name: "Print AVS", exact: true }).click();
   await expect(page.locator("#console-print-document")).toBeAttached();
   await page.emulateMedia({ media: "print" });

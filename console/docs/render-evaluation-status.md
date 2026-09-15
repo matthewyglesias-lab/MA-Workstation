@@ -18,7 +18,7 @@ This is the synthetic evaluation deployment for [PR #67](https://github.com/matt
 | Azure resource group                     | `rg-ipmg-clinic-console`; Central US                                                        |
 | SQL server                               | `ipmg-clinic-console-sql.database.windows.net`                                              |
 | SQL database                             | `clinic-console`; online; free offer applied; 32 GB; paid overages disabled                 |
-| SQL administrator                        | The user's verified Microsoft Entra account; Entra-only authentication               |
+| SQL administrator                        | The user's verified Microsoft Entra account; Entra-only authentication                      |
 | Runtime application                      | `IPMG Clinic Console Render Runtime`; single tenant; no API permissions                     |
 | Runtime application/client ID            | `88c516fe-2d78-4faf-bf37-ef8850269ef7`                                                      |
 | Runtime enterprise application object ID | `9dba966b-b0b9-4663-ba60-feb904fb567e`                                                      |

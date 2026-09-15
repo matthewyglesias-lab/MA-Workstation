@@ -1,6 +1,8 @@
 import type { Actor, Lot, Patient, Product } from "../../shared/contracts.js";
 import {
   injectionInput,
+  injectionAssessment,
+  injectionFollowUp,
   type InjectionAdministrationInput,
   type InjectionAmendmentInput,
   type InjectionCase,
@@ -10,6 +12,12 @@ import {
   type InjectionReviewInput,
   type InjectionUpdate,
 } from "../../shared/injections.js";
+import {
+  expectedInjectionGuidanceVersion,
+  getInjectionReviewChecks,
+  hasCurrentInjectionReview,
+  reviewIssues,
+} from "../../shared/injection-readiness.js";
 import { invariant } from "../platform/errors.js";
 const id = () => globalThis.crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -52,6 +60,15 @@ function validateOrder(input: InjectionInput) {
     400,
   );
 }
+function snapshotOrder(current: InjectionCase): InjectionInput {
+  return injectionInput.parse(
+    Object.fromEntries(
+      Object.keys(injectionInput.shape)
+        .filter((key) => current[key as keyof InjectionInput] !== undefined)
+        .map((key) => [key, current[key as keyof InjectionInput]]),
+    ),
+  );
+}
 export function createInjectionCase(input: InjectionInput): InjectionCase {
   validateOrder(input);
   const at = now();
@@ -82,7 +99,7 @@ export function reviseInjection(
   );
   const { expectedVersion: _, ...changes } = input;
   validateOrder(changes);
-  return {
+  const revised: InjectionCase = {
     ...advance(current),
     ...changes,
     status: "draft",
@@ -90,6 +107,12 @@ export function reviseInjection(
     disposition: null,
     handoff: "pending",
   };
+  // This command replaces the order; omitted optional facts must not survive
+  // from a prior medication or timing plan and appear newly verified.
+  if (changes.clinicalContext === undefined) delete revised.clinicalContext;
+  if (changes.lastAdministrationOn === undefined)
+    delete revised.lastAdministrationOn;
+  return revised;
 }
 export function reviewInjectionCase(
   current: InjectionCase,
@@ -130,12 +153,35 @@ export function reviewInjectionCase(
     "timing_unresolved",
     "Resolve timing with the ordering provider before review.",
   );
+  invariant(
+    input.assessment,
+    "assessment_required",
+    "Complete the structured clinical screening before review.",
+    400,
+  );
+  const assessment = injectionAssessment.parse(input.assessment);
+  const findings = reviewIssues(current, assessment, product.name);
+  if (findings.length) {
+    const finding = findings[0]!;
+    invariant(false, finding.code, finding.message, 400);
+  }
+  const canonicalChecks = getInjectionReviewChecks(product.name);
+  // Client labels are presentation only; freeze the server's versioned wording.
+  const stampedAssessment = {
+    ...assessment,
+    screening: canonicalChecks.map((check) => ({
+      ...assessment.screening.find((answer) => answer.id === check.id)!,
+      label: check.label,
+    })),
+  };
   const { expectedVersion: _, ...review } = input;
   return {
     ...advance(current),
     status: "reviewed",
     review: {
       ...review,
+      assessment: stampedAssessment,
+      guidanceVersion: expectedInjectionGuidanceVersion(product.name),
       reviewedAt: now(),
       reviewedBy: actor.id,
       patientSnapshot: structuredClone(patient),
@@ -163,6 +209,11 @@ export function administerInjectionCase(
     current.status === "reviewed" && current.review,
     "injection_state",
     "Complete the injection review before administration.",
+  );
+  invariant(
+    hasCurrentInjectionReview(current.review),
+    "review_outdated",
+    "This saved review predates the current clinical screening. Edit and review the injection again before administration.",
   );
   invariant(
     current.plannedOn === today,
@@ -204,24 +255,32 @@ export function administerInjectionCase(
       400,
     );
     invariant(
-      input.delivery === "not_delivered"
-        ? input.actualDose === 0
-        : input.actualDose === null ||
+      input.delivery === "error"
+        ? input.actualDose === null ||
+            (Number.isFinite(input.actualDose) &&
+              input.actualDose >= 0 &&
+              input.actualDose <= 1000000)
+        : input.delivery === "not_delivered"
+          ? input.actualDose === 0
+          : input.actualDose === null ||
             (input.actualDose > 0 && input.actualDose < current.dose),
       "actual_dose",
-      "Record the delivered amount: zero for no delivery, or less than the ordered dose for partial delivery.",
+      "Record the delivered amount: zero for no delivery, less than the ordered dose for partial delivery, or the actual amount if known for an administration error.",
       400,
     );
   }
+  invariant(
+    !input.actualRoute ||
+      input.actualRoute === current.route ||
+      input.delivery === "error",
+    "actual_route",
+    "An actual route different from the order must be recorded as an administration error with the issue and provider follow-up.",
+    400,
+  );
+  if (input.followUp) injectionFollowUp.parse(input.followUp);
   const { expectedVersion: _, ...administration } = input;
   // Parse only the order fields; freeze everything used to document this administration.
-  const orderSnapshot = injectionInput.parse(
-    Object.fromEntries(
-      Object.keys(injectionInput.shape)
-        .filter((key) => current[key as keyof InjectionInput] !== undefined)
-        .map((key) => [key, current[key as keyof InjectionInput]]),
-    ),
-  );
+  const orderSnapshot = snapshotOrder(current);
   return {
     ...advance(current),
     status: "administered",
@@ -262,6 +321,7 @@ export function disposeInjection(
       actorId: actor.id,
       at: now(),
       reviewSnapshot: structuredClone(current.review),
+      orderSnapshot: snapshotOrder(current),
     },
   };
 }

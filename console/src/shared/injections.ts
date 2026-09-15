@@ -3,6 +3,41 @@ import { date, uuid, type Patient, type Product } from "./contracts.js";
 const text = (max: number) => z.string().trim().min(1).max(max);
 const instant = z.iso.datetime({ offset: true });
 const version = z.number().int().positive();
+const uniqueTextList = (maxItems: number, maxLength: number) =>
+  z
+    .array(text(maxLength))
+    .max(maxItems)
+    .refine(
+      (values) =>
+        new Set(values.map((value) => value.toLowerCase())).size ===
+        values.length,
+      "Remove duplicate entries.",
+    );
+export const injectionClinicalContext = z
+  .object({
+    phase: z.enum([
+      "maintenance",
+      "initiation",
+      "day_1",
+      "day_8",
+      "restart",
+      "switching",
+    ]),
+    indication: text(500).nullable(),
+    schedule: z
+      .object({
+        every: z.number().int().positive().max(365),
+        unit: z.enum(["days", "weeks", "months"]),
+      })
+      .strict()
+      .nullable(),
+    historySource: text(1000).nullable(),
+    priorProduct: text(200).nullable(),
+    priorDose: text(200).nullable(),
+    linkedPlan: text(1000).nullable(),
+  })
+  .strict();
+export type InjectionClinicalContext = z.infer<typeof injectionClinicalContext>;
 export const injectionInput = z
   .object({
     patientId: uuid,
@@ -25,6 +60,7 @@ export const injectionInput = z
     ]),
     timingPlan: text(1000),
     nextDueOn: date.nullable(),
+    clinicalContext: injectionClinicalContext.optional(),
   })
   .strict();
 export type InjectionInput = z.infer<typeof injectionInput>;
@@ -71,6 +107,56 @@ export const injectionVitals = z
           "Give a reason for unrecorded vitals and leave measurements blank.",
       });
   });
+export const injectionAssessment = z
+  .object({
+    screening: z
+      .array(
+        z
+          .object({
+            id: text(80).regex(/^[a-z][a-z0-9_-]*$/),
+            label: text(240),
+            result: z.enum(["no_concern", "concern", "not_applicable"]),
+            detail: text(1000).nullable(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(30)
+      .superRefine((checks, ctx) => {
+        const ids = new Set<string>();
+        checks.forEach((check, index) => {
+          if (ids.has(check.id))
+            ctx.addIssue({
+              code: "custom",
+              path: [index, "id"],
+              message: "Answer each screening item once.",
+            });
+          ids.add(check.id);
+          if (check.result !== "no_concern" && !check.detail)
+            ctx.addIssue({
+              code: "custom",
+              path: [index, "detail"],
+              message:
+                "Describe the concern or explain why the item does not apply.",
+            });
+        });
+      }),
+    weightKg: z.number().positive().max(1000).nullable(),
+    needle: text(300).nullable(),
+    providerCommunication: z
+      .object({
+        provider: text(160),
+        contactedAt: instant,
+        decision: z.enum(["proceed_as_ordered", "hold", "clarify"]),
+        instructions: text(2000),
+        reference: text(200),
+      })
+      .strict()
+      .nullable(),
+    education: uniqueTextList(20, 500),
+  })
+  .strict();
+export type InjectionAssessment = z.infer<typeof injectionAssessment>;
 export const injectionReview = z
   .object({
     expectedVersion: version,
@@ -92,9 +178,52 @@ export const injectionReview = z
     siteAssessment: text(1000),
     vitals: injectionVitals,
     observationPlan: text(1000),
+    assessment: injectionAssessment,
   })
   .strict();
 export type InjectionReviewInput = z.infer<typeof injectionReview>;
+export const injectionFollowUp = z
+  .object({
+    instructions: text(2000).nullable(),
+    educationProvided: uniqueTextList(20, 500),
+    observationMinutes: z.number().int().min(0).max(1440).nullable(),
+    observationOutcome: z
+      .enum(["completed", "declined", "not_required", "transferred"])
+      .nullable(),
+    observationNote: text(2000).nullable(),
+  })
+  .strict()
+  .superRefine((followUp, ctx) => {
+    if (followUp.observationMinutes !== null && !followUp.observationOutcome)
+      ctx.addIssue({
+        code: "custom",
+        path: ["observationOutcome"],
+        message: "Record the observation outcome when entering its duration.",
+      });
+    if (
+      ["declined", "not_required", "transferred"].includes(
+        followUp.observationOutcome || "",
+      ) &&
+      !followUp.observationNote
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["observationNote"],
+        message: "Explain the observation outcome and follow-up.",
+      });
+    if (
+      followUp.observationOutcome === "not_required" &&
+      followUp.observationMinutes !== null &&
+      followUp.observationMinutes !== 0
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["observationMinutes"],
+        message:
+          "An observation marked not required cannot also have a recorded observation duration.",
+      });
+  });
+export type InjectionFollowUp = z.infer<typeof injectionFollowUp>;
 export const injectionAdministration = z
   .object({
     expectedVersion: version,
@@ -102,9 +231,12 @@ export const injectionAdministration = z
     administeredByName: text(160),
     tolerance: text(1000),
     observation: text(2000),
-    delivery: z.enum(["complete", "partial", "not_delivered"]),
+    delivery: z.enum(["complete", "partial", "not_delivered", "error"]),
     actualDose: z.number().min(0).max(1000000).nullable(),
     issueAction: text(2000).nullable(),
+    actualSite: text(100).optional(),
+    actualRoute: z.enum(["IM", "SC"]).optional(),
+    followUp: injectionFollowUp.optional(),
   })
   .strict();
 export type InjectionAdministrationInput = z.infer<
@@ -128,8 +260,11 @@ export const injectionFiling = z
 export type InjectionFilingInput = z.infer<typeof injectionFiling>;
 export interface InjectionReview extends Omit<
   InjectionReviewInput,
-  "expectedVersion"
+  "expectedVersion" | "assessment"
 > {
+  // Historical snapshots remain readable; new review requests require assessment.
+  assessment?: InjectionAssessment;
+  guidanceVersion?: string;
   reviewedAt: string;
   reviewedBy: string;
   patientSnapshot: Patient;
@@ -181,6 +316,7 @@ export interface InjectionCase extends InjectionInput {
     actorId: string;
     at: string;
     reviewSnapshot: InjectionReview | null;
+    orderSnapshot?: InjectionInput;
   } | null;
   amendments: InjectionAmendment[];
   filings: InjectionFiling[];

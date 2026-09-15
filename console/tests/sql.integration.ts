@@ -4,6 +4,7 @@ import type {
   InjectionInput,
   InjectionReviewInput,
 } from "../src/shared/injections.js";
+import { getInjectionReviewChecks } from "../src/shared/injection-readiness.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import sql from "mssql";
@@ -247,6 +248,15 @@ try {
     timingCategory: "initiation",
     timingPlan: "Verified synthetic provider plan",
     nextDueOn: null,
+    clinicalContext: {
+      phase: "initiation",
+      indication: "Synthetic local SQL test; no patient care",
+      schedule: null,
+      historySource: null,
+      priorProduct: null,
+      priorDose: null,
+      linkedPlan: "SQL-INJECTION-ORDER",
+    },
   };
   const reviewInput: InjectionReviewInput = {
     expectedVersion: 1,
@@ -274,6 +284,27 @@ try {
       reason: "Test only",
     },
     observationPlan: "Synthetic order",
+    assessment: {
+      screening: getInjectionReviewChecks(product.name).map(
+        ({ id, label }) => ({
+          id,
+          label,
+          result: "no_concern",
+          detail: "Synthetic local SQL test; no patient assessment",
+        }),
+      ),
+      weightKg: null,
+      needle: null,
+      providerCommunication: {
+        provider: "Synthetic SQL provider",
+        contactedAt: new Date().toISOString(),
+        decision: "proceed_as_ordered",
+        instructions:
+          "Synthetic initiation plan for local SQL verification only",
+        reference: "SQL-INJECTION-ORDER",
+      },
+      education: [],
+    },
   };
   await assert.rejects(
     other.createInjection(injectionInput, c()),

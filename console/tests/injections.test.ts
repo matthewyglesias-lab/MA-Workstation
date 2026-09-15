@@ -9,6 +9,7 @@ import {
   type InjectionReviewInput,
   type InjectionAdministrationInput,
 } from "../src/shared/injections.js";
+import { getInjectionReviewChecks } from "../src/shared/injection-readiness.js";
 const actor: Actor = {
   id: "injection-test-staff",
   roles: ["Console.Operator", "Inventory.Manager"],
@@ -92,6 +93,21 @@ async function fixture(quantity = 4) {
       reason: "Training only",
     },
     observationPlan: "Per test order",
+    assessment: {
+      screening: getInjectionReviewChecks(product.name).map(
+        ({ id, label }) => ({ id, label, result: "no_concern", detail: null }),
+      ),
+      weightKg: null,
+      needle: null,
+      providerCommunication: {
+        provider: "Synthetic provider",
+        contactedAt: new Date(Date.now() - 60000).toISOString(),
+        decision: "proceed_as_ordered",
+        instructions: "Proceed with the verified synthetic initiation order.",
+        reference: "TEST-ORDER",
+      },
+      education: [],
+    },
   };
   const administration = (
     expectedVersion = 2,

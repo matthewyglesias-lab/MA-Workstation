@@ -315,6 +315,15 @@ async function main() {
     timingCategory: "initiation",
     timingPlan: "Synthetic evaluation only; no clinical order",
     nextDueOn: null,
+    clinicalContext: {
+      phase: "initiation",
+      indication: "Synthetic evaluation only; no patient care",
+      schedule: null,
+      historySource: null,
+      priorProduct: null,
+      priorDose: null,
+      linkedPlan: `${run}-NOT-IN-TEBRA`,
+    },
   };
   const reviewBody = (version) => ({
     expectedVersion: version,
@@ -342,6 +351,30 @@ async function main() {
       reason: "No real patient; synthetic evaluation",
     },
     observationPlan: "No real patient; synthetic evaluation",
+    assessment: {
+      // Canonical general checks from shared/injection-readiness.ts. This
+      // standalone runner intentionally does not require a local app build.
+      screening: [
+        ["interval_changes", "Changes since the last visit"],
+        ["previous_response", "Previous treatment response"],
+        ["current_symptoms", "Current symptoms and readiness"],
+      ].map(([id, label]) => ({
+        id,
+        label,
+        result: "no_concern",
+        detail: "Synthetic evaluation only; no patient assessment",
+      })),
+      weightKg: null,
+      needle: null,
+      providerCommunication: {
+        provider: "Synthetic evaluation provider",
+        contactedAt: new Date().toISOString(),
+        decision: "proceed_as_ordered",
+        instructions: "Synthetic initiation plan only; no clinical order",
+        reference: `${run}-NOT-IN-TEBRA`,
+      },
+      education: [],
+    },
   });
   const created = await command("/injections", order, { expected: 201 });
   const reviewed = await command(

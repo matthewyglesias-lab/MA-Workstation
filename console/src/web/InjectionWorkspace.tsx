@@ -1,9 +1,20 @@
 import { useState } from "preact/hooks";
 import type { Actor, Overview } from "../shared/contracts.js";
-import type { InjectionCase } from "../shared/injections.js";
+import type {
+  InjectionAdministration,
+  InjectionCase,
+  InjectionReview,
+} from "../shared/injections.js";
+import { hasCurrentInjectionReview } from "../shared/injection-readiness.js";
 import { Badge, Icon, dateLabel } from "./components.js";
 import { InjectionDialog, type InjectionAction } from "./InjectionDialog.js";
 import { InjectionDocuments } from "./InjectionDocuments.js";
+import {
+  InjectionAssessmentSummary,
+  InjectionClinicalSummary,
+  InjectionGuidancePanel,
+  InjectionPatientTimeline,
+} from "./InjectionClinicalSummary.js";
 
 export const statusLabel = {
   draft: "Needs review",
@@ -13,12 +24,20 @@ export const statusLabel = {
   cancelled: "Cancelled",
 };
 import { clinicDay, momentLabel } from "./injection-time.js";
-export function injectionStatus(record: InjectionCase) {
+export function injectionStatus(record: {
+  status: InjectionCase["status"];
+  administration?: Pick<InjectionAdministration, "delivery"> | null;
+  review?: InjectionReview | null;
+}) {
+  if (record.status === "reviewed" && !hasCurrentInjectionReview(record.review))
+    return "Review update needed";
   return record.administration?.delivery === "partial"
     ? "Partial dose"
     : record.administration?.delivery === "not_delivered"
       ? "Not delivered"
-      : statusLabel[record.status];
+      : record.administration?.delivery === "error"
+        ? "Administration error"
+        : statusLabel[record.status];
 }
 const timingLabels = {
   scheduled: "Scheduled dose",
@@ -52,14 +71,17 @@ export function InjectionWorkspace({
   const [latestSaved, setLatestSaved] = useState<InjectionCase>();
   const canOperate = actor.roles.includes("Console.Operator");
   const today = clinicDay(timezone);
-  const scoped = records.filter((r) => !patientId || r.patientId === patientId);
-  const serverRecord = scoped.find((r) => r.id === selectedId);
-  const record =
+  const savedServerRecord = records.find((item) => item.id === latestSaved?.id);
+  const loadedRecords =
     latestSaved &&
-    latestSaved.id === selectedId &&
-    (!serverRecord || latestSaved.version >= serverRecord.version)
-      ? latestSaved
-      : serverRecord;
+    (!savedServerRecord || latestSaved.version >= savedServerRecord.version)
+      ? [...records.filter((item) => item.id !== latestSaved.id), latestSaved]
+      : records;
+  const scoped = loadedRecords.filter(
+    (r) => !patientId || r.patientId === patientId,
+  );
+  const serverRecord = scoped.find((r) => r.id === selectedId);
+  const record = serverRecord;
   const patient = (id: string) => data.patients.find((p) => p.id === id);
   const product = (id: string) => data.products.find((p) => p.id === id);
   const awaiting = scoped.filter(
@@ -68,7 +90,10 @@ export function InjectionWorkspace({
       r.handoff !== "filed",
   ).length;
   const ready = scoped.filter(
-    (r) => r.status === "reviewed" && r.plannedOn === today,
+    (r) =>
+      r.status === "reviewed" &&
+      r.plannedOn === today &&
+      hasCurrentInjectionReview(r.review),
   ).length;
   const active = scoped.filter((r) =>
     ["draft", "reviewed", "held"].includes(r.status),
@@ -83,7 +108,9 @@ export function InjectionWorkspace({
               ? ["administered", "held", "cancelled"].includes(r.status) &&
                 r.handoff !== "filed"
               : filter === "ready"
-                ? r.status === "reviewed" && r.plannedOn === today
+                ? r.status === "reviewed" &&
+                  r.plannedOn === today &&
+                  hasCurrentInjectionReview(r.review)
                 : r.plannedOn === today)) &&
         `${patient(r.patientId)?.displayName} ${patient(r.patientId)?.tebraId} ${product(r.productId)?.name}`
           .toLowerCase()
@@ -96,17 +123,17 @@ export function InjectionWorkspace({
     );
   const selectedPatient = record && patient(record.patientId);
   const selectedProduct = record && product(record.productId);
-  const lot = record?.review
-    ? data.lots.find((l) => l.id === record.review!.lotId)
+  const displayedReview =
+    record?.administration?.reviewSnapshot ||
+    record?.review ||
+    record?.disposition?.reviewSnapshot;
+  const lot = displayedReview
+    ? data.lots.find((l) => l.id === displayedReview.lotId)
     : undefined;
-  const frozenPatient =
-    record?.administration?.reviewSnapshot.patientSnapshot ||
-    record?.review?.patientSnapshot ||
-    selectedPatient;
-  const frozenProduct =
-    record?.administration?.reviewSnapshot.productSnapshot ||
-    record?.review?.productSnapshot ||
-    selectedProduct;
+  const frozenPatient = displayedReview?.patientSnapshot || selectedPatient;
+  const frozenProduct = displayedReview?.productSnapshot || selectedProduct;
+  const reviewStale =
+    record?.status === "reviewed" && !hasCurrentInjectionReview(record.review);
   const editable =
     record && ["draft", "reviewed", "held"].includes(record.status);
   return (
@@ -230,7 +257,9 @@ export function InjectionWorkspace({
                         <Badge
                           tone={
                             r.status === "reviewed"
-                              ? "teal"
+                              ? hasCurrentInjectionReview(r.review)
+                                ? "teal"
+                                : "butter"
                               : r.status === "administered"
                                 ? "sage"
                                 : r.status === "held"
@@ -333,7 +362,9 @@ export function InjectionWorkspace({
                 <Badge
                   tone={
                     record.status === "reviewed"
-                      ? "teal"
+                      ? reviewStale
+                        ? "butter"
+                        : "teal"
                       : record.status === "administered"
                         ? "sage"
                         : record.status === "held"
@@ -352,13 +383,17 @@ export function InjectionWorkspace({
               (label, index) => {
                 const complete =
                   index === 0 ||
-                  (index === 1 && !!(record.review || record.administration)) ||
+                  (index === 1 &&
+                    !reviewStale &&
+                    !!(record.review || record.administration)) ||
                   (index === 2 && !!record.administration) ||
                   (index === 3 && record.handoff === "filed");
                 const nextIndex =
                   record.status === "cancelled"
                     ? 3
-                    : record.status === "draft" || record.status === "held"
+                    : record.status === "draft" ||
+                        record.status === "held" ||
+                        reviewStale
                       ? 1
                       : record.status === "reviewed"
                         ? 2
@@ -391,6 +426,15 @@ export function InjectionWorkspace({
               </strong>
               <p>{record.disposition.reason}</p>
               <small>{momentLabel(record.disposition.at, timezone)}</small>
+            </div>
+          )}
+          {reviewStale && (
+            <div class="clinical-callout" role="alert">
+              <strong>Review update needed</strong>
+              <p>
+                Save the order and complete the current checklist before
+                administration.
+              </p>
             </div>
           )}
           {record.status === "reviewed" && record.plannedOn !== today && (
@@ -467,12 +511,30 @@ export function InjectionWorkspace({
                   <p>{record.timingPlan}</p>
                 </div>
               </section>
+              <InjectionClinicalSummary record={record} timezone={timezone} />
               <section class="panel">
                 <div class="section-heading">
                   <h2>Safety review</h2>
-                  {record.review && <Badge tone="sage">Reviewed</Badge>}
+                  {displayedReview && (
+                    <Badge
+                      tone={
+                        record.status === "held" ||
+                        record.status === "cancelled" ||
+                        reviewStale
+                          ? "butter"
+                          : "sage"
+                      }
+                    >
+                      {reviewStale
+                        ? "Review update needed"
+                        : record.status === "held" ||
+                            record.status === "cancelled"
+                          ? "Prior review"
+                          : "Reviewed"}
+                    </Badge>
+                  )}
                 </div>
-                {record.review ? (
+                {displayedReview ? (
                   <>
                     <div class="review-checks">
                       {[
@@ -492,55 +554,60 @@ export function InjectionWorkspace({
                     <dl class="clinical-facts">
                       <div>
                         <dt>Allergy review</dt>
-                        <dd>{record.review.allergyReview}</dd>
+                        <dd>{displayedReview.allergyReview}</dd>
                       </div>
                       <div>
                         <dt>Observation plan</dt>
-                        <dd>{record.review.observationPlan}</dd>
+                        <dd>{displayedReview.observationPlan}</dd>
                       </div>
                     </dl>
                     <div class="detail-note">
                       <span>Vitals</span>
                       <p>
-                        {record.review.vitals.status === "not_recorded"
-                          ? `Not recorded: ${record.review.vitals.reason}`
+                        {displayedReview.vitals.status === "not_recorded"
+                          ? `Not recorded: ${displayedReview.vitals.reason}`
                           : [
-                              record.review.vitals.bpSystolic !== null
-                                ? `BP ${record.review.vitals.bpSystolic}/${record.review.vitals.bpDiastolic}`
+                              displayedReview.vitals.bpSystolic !== null
+                                ? `BP ${displayedReview.vitals.bpSystolic}/${displayedReview.vitals.bpDiastolic}`
                                 : null,
-                              record.review.vitals.pulse !== null
-                                ? `Pulse ${record.review.vitals.pulse}`
+                              displayedReview.vitals.pulse !== null
+                                ? `Pulse ${displayedReview.vitals.pulse}`
                                 : null,
-                              record.review.vitals.temperatureC !== null
-                                ? `${record.review.vitals.temperatureC} °C`
+                              displayedReview.vitals.temperatureC !== null
+                                ? `${displayedReview.vitals.temperatureC} °C`
                                 : null,
-                              record.review.vitals.oxygenSaturation !== null
-                                ? `SpO₂ ${record.review.vitals.oxygenSaturation}%`
+                              displayedReview.vitals.oxygenSaturation !== null
+                                ? `SpO₂ ${displayedReview.vitals.oxygenSaturation}%`
                                 : null,
                             ]
                               .filter(Boolean)
                               .join(" · ")}
                       </p>
                     </div>
+                    <InjectionAssessmentSummary
+                      review={displayedReview}
+                      timezone={timezone}
+                    />
                     <details class="review-detail">
                       <summary>Screening & preparation details</summary>
                       <dl class="clinical-facts">
                         <div>
                           <dt>Medication-specific review</dt>
-                          <dd>{record.review.clinicalReview}</dd>
+                          <dd>{displayedReview.clinicalReview}</dd>
                         </div>
                         <div>
                           <dt>Preparation</dt>
-                          <dd>{record.review.preparation}</dd>
+                          <dd>{displayedReview.preparation}</dd>
                         </div>
                         <div>
                           <dt>Site assessment</dt>
-                          <dd>{record.review.siteAssessment}</dd>
+                          <dd>{displayedReview.siteAssessment}</dd>
                         </div>
                       </dl>
                     </details>
                     <small class="review-timestamp">
-                      Reviewed {momentLabel(record.review.reviewedAt, timezone)}
+                      Reviewed{" "}
+                      {momentLabel(displayedReview.reviewedAt, timezone)}
                     </small>
                   </>
                 ) : (
@@ -567,7 +634,9 @@ export function InjectionWorkspace({
                     <h2>
                       {record.administration.delivery === "not_delivered"
                         ? "Administration attempt"
-                        : "Administration"}
+                        : record.administration.delivery === "error"
+                          ? "Administration event"
+                          : "Administration"}
                     </h2>
                     <Badge
                       tone={
@@ -584,7 +653,9 @@ export function InjectionWorkspace({
                       <dt>
                         {record.administration.delivery === "not_delivered"
                           ? "Attempted"
-                          : "Administered"}
+                          : record.administration.delivery === "error"
+                            ? "Event occurred"
+                            : "Administered"}
                       </dt>
                       <dd>
                         {momentLabel(
@@ -604,11 +675,28 @@ export function InjectionWorkspace({
                     <div>
                       <dt>Delivered dose</dt>
                       <dd>
-                        {record.administration.delivery === "complete"
-                          ? `${record.dose} ${record.doseUnit}`
-                          : record.administration.actualDose === null
-                            ? "Unknown"
-                            : `${record.administration.actualDose} ${record.doseUnit}`}
+                        {record.administration.actualDose === null
+                          ? "Unknown"
+                          : `${record.administration.actualDose} ${record.doseUnit}`}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Actual route / site</dt>
+                      <dd>
+                        {record.administration.actualRoute ||
+                          "Route not recorded separately"}
+                        {" · "}
+                        {record.administration.actualSite ||
+                          "Site not recorded separately"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Recorded in console</dt>
+                      <dd>
+                        {momentLabel(
+                          record.administration.recordedAt,
+                          timezone,
+                        )}
                       </dd>
                     </div>
                     {record.administration.issueAction && (
@@ -625,7 +713,53 @@ export function InjectionWorkspace({
                       <dt>Observation</dt>
                       <dd>{record.administration.observation}</dd>
                     </div>
+                    {record.administration.followUp?.observationOutcome && (
+                      <div>
+                        <dt>Observation outcome</dt>
+                        <dd>
+                          {
+                            {
+                              completed: "Completed",
+                              declined: "Declined",
+                              not_required: "Not required per recorded plan",
+                              transferred: "Transferred for further care",
+                            }[record.administration.followUp.observationOutcome]
+                          }
+                          {record.administration.followUp.observationMinutes !==
+                          null
+                            ? ` · ${record.administration.followUp.observationMinutes} min`
+                            : ""}
+                        </dd>
+                      </div>
+                    )}
+                    {record.administration.followUp?.observationNote && (
+                      <div>
+                        <dt>Observation follow-up</dt>
+                        <dd>
+                          {record.administration.followUp.observationNote}
+                        </dd>
+                      </div>
+                    )}
+                    {record.administration.followUp?.instructions && (
+                      <div>
+                        <dt>Patient instructions</dt>
+                        <dd>{record.administration.followUp.instructions}</dd>
+                      </div>
+                    )}
                   </dl>
+                  {!!record.administration.followUp?.educationProvided
+                    .length && (
+                    <div class="detail-note">
+                      <span>Education provided</span>
+                      <ul>
+                        {record.administration.followUp.educationProvided.map(
+                          (item) => (
+                            <li key={item}>{item}</li>
+                          ),
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 </section>
               )}
               {(record.administration ||
@@ -678,15 +812,21 @@ export function InjectionWorkspace({
                 ) : record.status === "reviewed" ? (
                   <>
                     <p>
-                      Confirm actual administration, tolerance, and observation.
+                      {reviewStale
+                        ? "The saved review needs the current clinical checklist."
+                        : "Confirm actual administration, tolerance, and observation."}
                     </p>
                     {canOperate && (
                       <button
                         class="button primary"
-                        disabled={record.plannedOn !== today}
-                        onClick={() => setAction("administer")}
+                        disabled={!reviewStale && record.plannedOn !== today}
+                        onClick={() =>
+                          setAction(reviewStale ? "edit" : "administer")
+                        }
                       >
-                        Record administration
+                        {reviewStale
+                          ? "Review updated checklist"
+                          : "Record administration"}
                       </button>
                     )}
                   </>
@@ -796,6 +936,18 @@ export function InjectionWorkspace({
                   </p>
                 )}
               </section>
+              <InjectionPatientTimeline
+                record={record}
+                records={loadedRecords}
+                products={data.products}
+                timezone={timezone}
+                statusLabel={injectionStatus}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  setNotice("");
+                }}
+              />
+              <InjectionGuidancePanel productName={frozenProduct?.name || ""} />
               {!!record.filings.length && (
                 <section class="panel">
                   <div class="section-heading">

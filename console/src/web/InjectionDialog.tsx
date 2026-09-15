@@ -1,8 +1,23 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Actor, Overview } from "../shared/contracts.js";
-import type { InjectionCase, InjectionInput } from "../shared/injections.js";
+import type {
+  InjectionCase,
+  InjectionInput,
+  InjectionAssessment,
+} from "../shared/injections.js";
 import { request } from "./api.js";
 import { getInjectionReference } from "../shared/injection-catalog.js";
+import { getInjectionGuidance } from "../shared/injection-guidance.js";
+import {
+  getInjectionReviewChecks,
+  reviewIssues,
+} from "../shared/injection-readiness.js";
+import {
+  InjectionAssessmentFields,
+  InjectionPreparationGuide,
+  InjectionFollowUpFields,
+} from "./InjectionAssessmentFields.js";
+import { InjectionOrderContext } from "./InjectionOrderContext.js";
 import { Badge, ErrorText, Field, Icon, dateLabel } from "./components.js";
 import {
   clinicDay,
@@ -67,7 +82,8 @@ export function InjectionDialog({
   const [doseUnit, setDoseUnit] = useState(record?.doseUnit || "");
   const [timing, setTiming] = useState(record?.timingCategory || "unknown");
   const [vitalsStatus, setVitalsStatus] = useState("recorded");
-  const [delivery, setDelivery] = useState("complete");
+  const [delivery, setDelivery] = useState("");
+  const [replacePriorTime, setReplacePriorTime] = useState(false);
   const [unknownDose, setUnknownDose] = useState(false);
   const [atNow, setAtNow] = useState(true);
   const [lotId, setLotId] = useState("");
@@ -114,6 +130,8 @@ export function InjectionDialog({
       method = "POST";
     try {
       if (action === "create" || action === "edit") {
+        const preservePriorTime =
+          !!record?.lastAdministrationAt && !replacePriorTime;
         const input: InjectionInput = {
           patientId: patient,
           productId: product,
@@ -124,12 +142,32 @@ export function InjectionDialog({
           route: route as InjectionInput["route"],
           site: val("site"),
           plannedOn: val("planned"),
-          lastAdministrationAt: null,
-          lastAdministrationOn: val("lastDate") || null,
+          lastAdministrationAt: preservePriorTime
+            ? record!.lastAdministrationAt
+            : null,
+          lastAdministrationOn: preservePriorTime
+            ? null
+            : val("lastDate") || null,
           timingCategory: timing as InjectionInput["timingCategory"],
           timingPlan: val("timingPlan"),
           nextDueOn: val("nextDue") || null,
           doseSequence: Number(val("sequence")),
+          clinicalContext: {
+            phase: val("phase") as NonNullable<
+              InjectionInput["clinicalContext"]
+            >["phase"],
+            indication: val("indication") || null,
+            schedule: val("scheduleUnit")
+              ? {
+                  every: Number(val("scheduleEvery")),
+                  unit: val("scheduleUnit") as "days" | "weeks" | "months",
+                }
+              : null,
+            historySource: val("historySource") || null,
+            priorProduct: val("priorProduct") || null,
+            priorDose: val("priorDose") || null,
+            linkedPlan: val("linkedPlan") || null,
+          },
         };
         body =
           action === "edit"
@@ -141,6 +179,38 @@ export function InjectionDialog({
           throw new Error(
             "Select an available, unexpired stock lot for this patient.",
           );
+        const assessment: InjectionAssessment = {
+          screening: getInjectionReviewChecks(chosenProduct?.name || "").map(
+            (check) => ({
+              id: check.id,
+              label: check.label,
+              result: val(
+                `screen-${check.id}`,
+              ) as InjectionAssessment["screening"][number]["result"],
+              detail: val(`screen-detail-${check.id}`) || null,
+            }),
+          ),
+          weightKg: num("weightKg"),
+          needle: val("needle") || null,
+          providerCommunication: val("includeProviderCommunication")
+            ? {
+                provider: val("consultProvider"),
+                contactedAt: clinicInputToIso(val("consultAt"), timezone),
+                decision: val("consultDecision") as
+                  "proceed_as_ordered" | "hold" | "clarify",
+                instructions: val("consultInstructions"),
+                reference: val("consultReference"),
+              }
+            : null,
+          education: [],
+        };
+        const issues = reviewIssues(
+          record!,
+          assessment,
+          chosenProduct?.name || "",
+        );
+        if (issues.length)
+          throw new Error(issues.map((issue) => issue.message).join(" "));
         path += "/review";
         body = {
           expectedVersion: record!.version,
@@ -170,6 +240,7 @@ export function InjectionDialog({
           clinicalReview: val("clinicalReview"),
           preparation: val("preparation"),
           siteAssessment: val("siteAssessment"),
+          assessment,
         };
       } else if (action === "administer") {
         const fingerprint = JSON.stringify([
@@ -188,6 +259,14 @@ export function InjectionDialog({
             value: new Date().toISOString(),
           };
         path += "/administer";
+        const counseling =
+          getInjectionGuidance(chosenProduct?.name || "")?.counseling || [];
+        const educationProvided = form
+          .getAll("educationProvided")
+          .map((value) => counseling[Number(value)])
+          .filter((value): value is string => !!value);
+        if (val("otherEducation"))
+          educationProvided.push(val("otherEducation"));
         body = {
           expectedVersion: record!.version,
           administeredAt: atNow
@@ -197,6 +276,8 @@ export function InjectionDialog({
           tolerance: val("tolerance"),
           observation: val("observation"),
           delivery,
+          actualSite: val("actualSite"),
+          actualRoute: val("actualRoute"),
           actualDose:
             delivery === "complete"
               ? null
@@ -206,6 +287,13 @@ export function InjectionDialog({
                   ? null
                   : num("actualDose"),
           issueAction: delivery === "complete" ? null : val("issueAction"),
+          followUp: {
+            instructions: val("followUpInstructions") || null,
+            educationProvided,
+            observationMinutes: num("observationMinutes"),
+            observationOutcome: val("observationOutcome") || null,
+            observationNote: val("observationNote") || null,
+          },
         };
       } else if (action === "hold" || action === "cancel") {
         path += "/disposition";
@@ -508,6 +596,9 @@ export function InjectionDialog({
                     <input
                       name="lastDate"
                       type="date"
+                      disabled={
+                        !!record?.lastAdministrationAt && !replacePriorTime
+                      }
                       defaultValue={
                         record?.lastAdministrationOn ||
                         (record?.lastAdministrationAt
@@ -520,6 +611,25 @@ export function InjectionDialog({
                     />
                   </Field>
                 </div>
+                {record?.lastAdministrationAt && (
+                  <div class="prior-time-preserved">
+                    <p>
+                      Verified prior time:{" "}
+                      {momentLabel(record.lastAdministrationAt, timezone)}
+                    </p>
+                    <label class="checkbox">
+                      <input
+                        type="checkbox"
+                        checked={replacePriorTime}
+                        onChange={(e) =>
+                          setReplacePriorTime(e.currentTarget.checked)
+                        }
+                      />
+                      Replace the known timestamp with date-only or unknown
+                      history.
+                    </label>
+                  </div>
+                )}
                 <Field label="Provider-confirmed timing plan">
                   <textarea
                     name="timingPlan"
@@ -543,6 +653,7 @@ export function InjectionDialog({
                   plan.
                 </p>
               </section>
+              <InjectionOrderContext record={record} />
             </>
           )}
           {action === "review" && record && (
@@ -643,8 +754,23 @@ export function InjectionDialog({
                   unresolved concerns.
                 </p>
               </section>
+              <InjectionAssessmentFields
+                record={record}
+                productName={chosenProduct?.name || ""}
+                timezone={timezone}
+              />
               <section class="form-section">
                 <h3>Vitals</h3>
+                <Field label="Measured weight (kg)">
+                  <input
+                    name="weightKg"
+                    type="number"
+                    min="0.1"
+                    max="1000"
+                    step="0.1"
+                    placeholder="Current measured weight, if obtained"
+                  />
+                </Field>
                 <Field label="Vital signs">
                   <select
                     value={vitalsStatus}
@@ -712,6 +838,9 @@ export function InjectionDialog({
               </section>
               <section class="form-section">
                 <h3>Stock & preparation</h3>
+                <InjectionPreparationGuide
+                  productName={chosenProduct?.name || ""}
+                />
                 <div class="form-grid stock-fields">
                   <Field label="Whole packages to use">
                     <input
@@ -792,6 +921,13 @@ export function InjectionDialog({
                     placeholder="Site, laterality, and skin assessment"
                   />
                 </Field>
+                <Field label="Needle selected / equipment">
+                  <input
+                    name="needle"
+                    maxLength={300}
+                    placeholder="Gauge, length, supplied needle, and relevant selection details"
+                  />
+                </Field>
                 <Field label="Observation plan">
                   <textarea
                     name="observationPlan"
@@ -825,17 +961,22 @@ export function InjectionDialog({
               </div>
               <Field label="Delivery">
                 <select
+                  required
                   value={delivery}
                   onChange={(e) => setDelivery(e.currentTarget.value)}
                 >
+                  <option value="">Select the actual outcome</option>
                   <option value="complete">Full ordered dose delivered</option>
                   <option value="partial">Partial dose delivered</option>
                   <option value="not_delivered">
                     Attempted — no dose delivered
                   </option>
+                  <option value="error">
+                    Dose / route / site error occurred
+                  </option>
                 </select>
               </Field>
-              {delivery === "partial" && (
+              {(delivery === "partial" || delivery === "error") && (
                 <>
                   <label class="checkbox">
                     <input
@@ -851,15 +992,15 @@ export function InjectionDialog({
                         name="actualDose"
                         required
                         type="number"
-                        min="0.000001"
-                        max={record.dose}
+                        min={delivery === "error" ? "0" : "0.000001"}
+                        max={delivery === "error" ? 1000000 : record.dose}
                         step="any"
                       />
                     </Field>
                   )}
                 </>
               )}
-              {delivery !== "complete" && (
+              {delivery && delivery !== "complete" && (
                 <>
                   <Field label="Issue and provider-directed action">
                     <textarea
@@ -877,6 +1018,27 @@ export function InjectionDialog({
                   </div>
                 </>
               )}
+              <div class="form-grid">
+                <Field label="Actual route">
+                  <select name="actualRoute" required defaultValue="">
+                    <option value="">Confirm actual route</option>
+                    <option value="IM">IM</option>
+                    <option value="SC">SC</option>
+                  </select>
+                </Field>
+                <Field label="Actual site and laterality">
+                  <input
+                    name="actualSite"
+                    required
+                    maxLength={100}
+                    list="actual-injection-sites"
+                    placeholder="Record the site actually used"
+                  />
+                </Field>
+              </div>
+              <datalist id="actual-injection-sites">
+                <option value={record.site} />
+              </datalist>
               <div class="form-grid">
                 <Field
                   label={
@@ -930,6 +1092,9 @@ export function InjectionDialog({
                   placeholder="Observation performed, outcome, and instructions given"
                 />
               </Field>
+              <InjectionFollowUpFields
+                productName={chosenProduct?.name || ""}
+              />
               <label class="checkbox confirmation">
                 <input type="checkbox" required />
                 <span>
