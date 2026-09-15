@@ -217,10 +217,9 @@ export function administerInjectionCase(
   // Parse only the order fields; freeze everything used to document this administration.
   const orderSnapshot = injectionInput.parse(
     Object.fromEntries(
-      Object.keys(injectionInput.shape).map((key) => [
-        key,
-        current[key as keyof InjectionInput],
-      ]),
+      Object.keys(injectionInput.shape)
+        .filter((key) => current[key as keyof InjectionInput] !== undefined)
+        .map((key) => [key, current[key as keyof InjectionInput]]),
     ),
   );
   return {

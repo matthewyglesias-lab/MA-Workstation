@@ -150,6 +150,9 @@ describe("injection workflow", () => {
     );
     expect(new Set(responses.map((r) => r.administration!.id)).size).toBe(1);
     const administered = responses[0]!;
+    expect(JSON.parse(JSON.stringify(administered))).toStrictEqual(
+      administered,
+    );
     expect(administered.administration!.actualDose).toBe(100);
     const stock = (await f.repo.overview(actor)).lots[0]!;
     expect([stock.onHand, stock.reserved]).toEqual([3, 0]);
