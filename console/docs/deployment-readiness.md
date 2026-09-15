@@ -8,32 +8,35 @@ The authenticated Azure portal is in the IPMG directory (`inlandpsych.com`), wit
 
 The existing workstation is in resource group `ipmg-ma_workstation`, Central US, on the Free Static Web Apps plan. Its production deployment is ready; it remains the original app. Its three preview environments belong to already merged PRs #21, #29, and #57. They were inspected and left unchanged. This is why PR #67's old-app deployment fails with the staging-environment limit. Reclaiming one slot can restore the original app's PR preview, but does not deploy this console's API or SQL database.
 
-At commit `845a139596cfd0a228539258ea684fa8d19c49b3`, the [console foundation workflow passed](https://github.com/matthewyglesias-lab/MA-Workstation/actions/runs/34941421889). That result precedes the injection and PIN changes; their final revision needs its own passing checks. The [old-app workflow](https://github.com/matthewyglesias-lab/MA-Workstation/actions/runs/34941421932) passed build, browser, visual, and print tests, then failed only at Azure deployment.
+The injection/PIN revision `abf075641517920d00b56f5bcd6a0438092e3969` passed the real SQL Server integration job, including migrations, concurrent inventory changes, injection lifecycle, immutable snapshots, and persistent PIN security in [run 34944709617](https://github.com/matthewyglesias-lab/MA-Workstation/actions/runs/34944709617). This SQL test is not an Azure deployment. The [old-app workflow](https://github.com/matthewyglesias-lab/MA-Workstation/actions/runs/34941421932) passed build, browser, visual, and print tests, then failed only at Azure deployment.
 
 ## Proposed resources and cost
 
 Use a separate resource group **`rg-ipmg-clinic-console`** in **Central US**, matching the existing app deployments. Proposed name prefix **`ipmg-clinic-console`** is subject to Azure global name availability. Keeping US data residency is an explicit property of this proposal; it does not establish the clinic's complete data-retention policy.
 
-| Resource               | Initial configuration                                | Approximate monthly USD |
-| ---------------------- | ---------------------------------------------------- | ----------------------: |
-| Linux App Service plan | B1, one instance; Node 22 frontend and API           |                  $13.14 |
-| Azure SQL Database     | Single Basic, 5 DTU, 2 GB                            |                   $4.90 |
-| SQL private endpoint   | One endpoint                                         |                   $7.30 |
-| Private DNS            | One private zone                                     |                   $0.50 |
-| **Base total**         | **730 compute hours; SQL normalized to 730/24 days** |              **$25.84** |
+| Resource               | Initial configuration                           | Approximate monthly USD |
+| ---------------------- | ----------------------------------------------- | ----------------------: |
+| Linux App Service plan | B1, one instance; Node 22 frontend and API      |                  $13.14 |
+| Azure SQL Database     | Free offer, GP serverless, 32 GB                |                   $0.00 |
+| SQL private endpoint   | One endpoint                                    |                   $7.30 |
+| Private DNS            | One private zone                                |                   $0.50 |
+| **Base total**         | **730 hosting hours; SQL pauses at free limit** |              **$20.94** |
 
-These are Microsoft public retail rates retrieved 15 September 2026, before tax, traffic, extra retention, monitoring, or subscription-specific discounts. SQL and App Service are separate recurring charges. Private Link additionally charges $0.01/GB at the initial ingress/egress tier; private DNS queries are $0.40 per million. No paid resources have been created.
+These are Microsoft public retail rates retrieved 15 September 2026, before tax, traffic, extra retention, monitoring, or subscription-specific discounts. The database uses the recurring free offer with overage billing disabled. App Service and private networking remain separate recurring charges. Private Link additionally charges $0.01/GB at the initial ingress/egress tier; private DNS queries are $0.40 per million. No paid resources have been created.
 
 Rates and reproducible source queries:
 
 - Linux B1: $0.018/hour, Central US. [Microsoft Retail Prices API](https://prices.azure.com/api/retail/prices?%24filter=productName%20eq%20%27Azure%20App%20Service%20Basic%20Plan%20-%20Linux%27%20and%20armRegionName%20eq%20%27centralus%27%20and%20skuName%20eq%20%27B1%27).
-- SQL Single Basic: $0.161/day, Central US. [Microsoft Retail Prices API](https://prices.azure.com/api/retail/prices?%24filter=productName%20eq%20%27SQL%20Database%20Single%20Basic%27%20and%20armRegionName%20eq%20%27centralus%27%20and%20skuName%20eq%20%27B%27).
 - Private endpoint: $0.01/hour, Global meter. [Microsoft Retail Prices API](https://prices.azure.com/api/retail/prices?%24filter=productName%20eq%20%27Virtual%20Network%20Private%20Link%27%20and%20armRegionName%20eq%20%27Global%27%20and%20skuName%20eq%20%27Standard%27).
 - Private DNS: $0.50/zone at the first tier. [Microsoft Retail Prices API](https://prices.azure.com/api/retail/prices?%24filter=serviceName%20eq%20%27Azure%20DNS%27%20and%20skuName%20eq%20%27Private%27%20and%20armRegionName%20eq%20%27Zone%201%27).
 
 B1 supports the outbound VNet integration used here, without a separate integration fee. The SQL endpoint remains private. This does not make the web app itself private; its HTTPS record API requires the configured staff authentication. [Microsoft VNet integration documentation](https://learn.microsoft.com/en-us/azure/app-service/overview-vnet-integration).
 
-Basic is an initial small-clinic pilot size, with a hard 2 GB limit and limited compute. The template requests seven days of locally redundant backups. That provides point-in-time recovery in the configured period, but not regional disaster recovery. Before relying on the console operationally, perform a restore and decide whether to use geo-redundant backup storage and longer retention on a higher SQL tier. [Microsoft SQL resource limits](https://learn.microsoft.com/en-us/azure/azure-sql/database/resource-limits-dtu-single-databases?view=azuresql), [Microsoft backup documentation](https://learn.microsoft.com/en-us/azure/azure-sql/database/automated-backups-overview?view=azuresql).
+The user requested the **Azure SQL free offer**. The template applies `useFreeLimit=true` and `freeLimitExhaustionBehavior=AutoPause` when creating the new database: General Purpose serverless Gen5, 0.5 minimum / 2 maximum vCores, 32 GB storage, 60-minute idle auto-pause, local backup redundancy and seven-day retention. Do not replace this with Basic or enable paid overages without a new user decision. [Microsoft free offer](https://learn.microsoft.com/en-us/azure/azure-sql/database/free-offer?view=azuresql), [ARM properties](https://learn.microsoft.com/en-us/azure/templates/microsoft.sql/2023-08-01/servers/databases).
+
+The monthly allowance is 100,000 vCore-seconds plus 32 GB each for data and backup. At the free limit the database becomes unavailable until the next calendar month; this is deliberately the no-overage choice. The free amount has no SLA and Microsoft recommends it primarily for development/proof of concept. As an illustration, 100,000 vCore-seconds is about 55.6 hours at 0.5 vCore before accounting for memory billing, idle delays or higher demand. It must not be described as guaranteed all-month clinic availability. [Microsoft free-offer FAQ](https://learn.microsoft.com/en-us/azure/azure-sql/database/free-offer-faq?view=azuresql).
+
+The application pool has a zero minimum and releases idle connections after 30 seconds; `/api/health` does not query SQL. Keep database explorers closed when unused and do not add SQL keepalive jobs. First access after an idle pause may need a retry while SQL resumes. Saves retain idempotency keys and must never be assumed successful after an unavailable response. Monitor **Free amount remaining** and establish the clinic's downtime procedure before live use. A restore into the free offer is not supported; plan recovery into a separate eligible paid database and verify it before relying on the console. Seven-day local backups do not provide regional disaster recovery.
 
 ## Concrete provisioning sequence
 

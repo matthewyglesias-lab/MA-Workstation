@@ -77,3 +77,7 @@ CONSOLE_PREVIEW_PATH="$PWD/dist/preview/Clinic-Console-Interactive-Demo.html" np
 The existing Azure Static Web App preview is currently blocked by its staging
 environment quota. The new console's App Service and Azure SQL resources have not
 yet been provisioned; see [Azure setup](docs/azure-setup.md).
+
+## Azure SQL free offer
+
+The infrastructure applies the recurring Azure SQL free offer at database creation: 32 GB, General Purpose serverless, and automatic pause when the monthly allowance is exhausted. SQL overage billing is disabled. App Service and private networking are separately billed (approximately $20.94/month before traffic and tax). This free allowance can interrupt access and carries no SLA; see [deployment readiness](docs/deployment-readiness.md) before live use.

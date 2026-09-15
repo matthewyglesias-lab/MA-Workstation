@@ -68,8 +68,16 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01' = {
   parent: sqlServer
   name: 'clinic-console'
   location: location
-  sku: { name: 'Basic', tier: 'Basic', capacity: 5 }
-  properties: { maxSizeBytes: 2147483648, requestedBackupStorageRedundancy: 'Local' }
+  sku: { name: 'GP_S_Gen5', tier: 'GeneralPurpose', family: 'Gen5', capacity: 2 }
+  properties: {
+    // Apply the recurring free offer at creation. Never silently enable overage billing.
+    useFreeLimit: true
+    freeLimitExhaustionBehavior: 'AutoPause'
+    minCapacity: json('0.5')
+    autoPauseDelay: 60
+    maxSizeBytes: 34359738368
+    requestedBackupStorageRedundancy: 'Local'
+  }
 }
 resource backupRetention 'Microsoft.Sql/servers/databases/backupShortTermRetentionPolicies@2023-08-01' = {
   parent: database
