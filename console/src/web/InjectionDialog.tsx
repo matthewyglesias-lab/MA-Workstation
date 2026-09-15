@@ -689,7 +689,9 @@ export function InjectionDialog({
         onInput={() => {
           setDirty(true);
           setDiscard(false);
-          readForm();
+          // Checkbox input fires before its change event. Defer the form-wide
+          // snapshot so controlled clinical confirmations can update first.
+          queueMicrotask(readForm);
         }}
       >
         <div class="dialog-body">
