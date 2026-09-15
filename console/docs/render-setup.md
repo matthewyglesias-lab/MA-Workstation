@@ -1,8 +1,8 @@
 # Render + Azure SQL
 
-Prepared evaluation target: **one $7/month Render web service + Azure SQL's recurring free offer**. Not yet deployed.
+Evaluation target: **one $7/month Render web service + Azure SQL's recurring free offer**. Both resources have been created. The Render build passed, but activation is blocked on completing identity credentials and database bootstrap. See [verified deployment status and remaining steps](render-evaluation-status.md).
 
-**Use synthetic data only on this low-cost profile.** Render requires a HIPAA-enabled Scale or Enterprise workspace before an application processes patient PHI, even when the database is hosted in Azure. Current Scale pricing is $499/month plus compute, with an additional 20% usage fee for HIPAA-enabled workspaces. A BAA and completed workspace enablement are required. This corrects the earlier $7 clinic-hosting estimate: the affordable Render profile is for evaluation, not live patient work. No workspace upgrade, BAA acceptance or paid resource has been performed. See Render's [HIPAA requirements](https://render.com/docs/hipaa-compliance) and [workspace pricing](https://render.com/docs/new-workspace-plans).
+**Use synthetic data only on this low-cost profile.** Render requires a HIPAA-enabled Scale or Enterprise workspace before an application processes patient PHI, even when the database is hosted in Azure. Current Scale pricing is $499/month plus compute, with an additional 20% usage fee for HIPAA-enabled workspaces. A BAA and completed workspace enablement are required. This corrects the earlier $7 clinic-hosting estimate: the affordable Render profile is for evaluation, not live patient work. The approved $7 web service is created; no workspace upgrade or BAA acceptance has been performed. See Render's [HIPAA requirements](https://render.com/docs/hipaa-compliance) and [workspace pricing](https://render.com/docs/new-workspace-plans).
 
 ## Deploy the application
 
@@ -36,10 +36,10 @@ Render connects through SQL's **public TLS endpoint**. Obtain the actual service
 
 ## Entra identity and first bootstrap
 
-1. Create a single-tenant Entra app named **IPMG Clinic Console Render Runtime**, with no redirect URI and no Microsoft Graph/API permission grants. Its application/client ID goes into Render. Its enterprise application's object ID is used for the SQL user; these are different IDs.
+1. Create a single-tenant Entra app named **IPMG Clinic Console Render Runtime**, with no redirect URI and no Microsoft Graph/API permission grants. Verify the application/client ID and the matching enterprise application's object ID. Use the **application/client ID** both for Render's `SQL_CLIENT_ID` and to derive the SQL user's binary SID when using `CREATE USER ... WITH SID=..., TYPE=E`. The enterprise application's object ID identifies the directory service principal; it is not the SID input for this syntax.
 2. Keep the app secret only in Render's secret environment settings and the administrator's approved credential store. Record and manage its expiry. Never place it in git, a build command, browser code, chat or a shared document. The runtime uses the SQL driver's supported `azure-active-directory-service-principal-secret` authentication; an Azure App Service managed identity is unavailable on Render.
 3. From an administrator's Entra-authenticated workstation, add a temporary exact workstation IP to SQL's firewall. Use default Azure credential mode on that workstation and run `npm run db:migrate`. Keep the runtime credential separate.
-4. Insert the permanent clinic ID. Create a SQL contained user for the verified **enterprise application object ID** using SID/TYPE syntax, and grant only `console_runtime`. The SID example in [deployment readiness](deployment-readiness.md) applies with that object ID. The runtime must never be SQL administrator or `db_owner`.
+4. Insert the permanent clinic ID. Create a SQL contained user using the verified **application/client ID** converted to `binary(16)` as its SID, with `TYPE=E`, and grant only `console_runtime`. The SID example in [deployment readiness](deployment-readiness.md) applies with this client ID. Microsoft documents this exact service-principal example for Azure SQL Database in [CREATE USER, example K](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-user-transact-sql?view=azuresqldb-current#k-create-a-contained-database-user-from-a-microsoft-entra-principal-without-validation). The distinct `FROM EXTERNAL PROVIDER WITH OBJECT_ID='...'` syntax uses the enterprise application's object ID and performs directory validation; do not substitute that object ID into the SID/TYPE recipe. Verify a SQL connection using the runtime identity before deployment. It must never be SQL administrator or `db_owner`.
 5. Enroll named staff using `npm run staff:manage` and its hidden PIN prompt from the administrator's workstation. Remove its temporary SQL firewall rule after bootstrap. Do not place administrator credentials in Render or run migrations with the runtime identity.
 6. Enter the runtime environment values for an empty evaluation database, deploy the verified commit and run a synthetic smoke test. Verify saved synthetic patient/injection records survive reload and service restart, and reopen them from a second workstation. Exercise locks, reservation/consumption, duplicate retry, amendments and separate Tebra filing. Do not connect a database containing real patient data to the low-cost evaluation workspace.
 
@@ -51,7 +51,7 @@ The API conservatively ignores forwarding headers. Until Render's actual proxy c
 
 `/api/health` does not query SQL, so host probes do not keep it awake. Connection establishment allows up to 60 seconds for SQL to resume. An unconfirmed save must be retried with its retained idempotency key.
 
-SQL's 100,000 monthly free vCore-seconds can be exhausted; it then pauses until next month. Paid Render hosting does not remove that limit. Live provisioning, identity setup, staff enrollment, recovery verification and deployed acceptance checks remain pending. Reconcile actual stock and Tebra identifiers before clinic use. Tebra remains the clinical record.
+SQL's 100,000 monthly free vCore-seconds can be exhausted; it then pauses until next month. Paid Render hosting does not remove that limit. Runtime credentials, database bootstrap, staff enrollment, recovery verification and deployed acceptance checks remain pending. Reconcile actual stock and Tebra identifiers before clinic use. Tebra remains the clinical record.
 
 ## References
 

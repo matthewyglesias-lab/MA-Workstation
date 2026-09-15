@@ -1,18 +1,18 @@
 # Injection console deployment readiness
 
-Status checked 15 September 2026. **Prepared, not deployed.** The new console has no live Azure SQL environment yet. A synthetic preview can verify the screens but cannot preserve clinic records.
+Status checked 15 September 2026. **Resources created; activation incomplete.** The approved Render service has built successfully and the Azure SQL free-offer database is online. Runtime credentials, database bootstrap, staff enrollment, and hosted acceptance checks remain pending. See the [current Render deployment record](render-evaluation-status.md) for verified resources, access settings, and the exact continuation steps.
 
-**Hosting decision updated:** the user requested Render with Azure SQL's free offer. The $7 web service is prepared for synthetic evaluation only. Render's patient-PHI requirements include a HIPAA-enabled Scale or Enterprise workspace; current Scale pricing is $499/month plus compute and a 20% usage surcharge. No upgrade has been authorized or performed. Follow [Render setup](render-setup.md) for the verified vendor requirements and `infra/sql-for-render.bicep` for the evaluation database. The App Service/private-network proposal below is retained as an alternative; do not provision those resources for Render.
+**Hosting decision updated:** the user approved Render with Azure SQL's free offer. The $7 web service is created for synthetic evaluation only. Render's patient-PHI requirements include a HIPAA-enabled Scale or Enterprise workspace; current Scale pricing is $499/month plus compute and a 20% usage surcharge. No upgrade has been authorized or performed. Follow [Render setup](render-setup.md) for the verified vendor requirements and `infra/sql-for-render.bicep` for the evaluation database. The App Service/private-network proposal below is retained as an alternative; do not provision those resources for Render.
 
 ## Confirmed environment
 
-The authenticated Azure portal is in the IPMG directory (`inlandpsych.com`), with **Azure subscription 1** selected. All resources currently lists four Static Web Apps: MA-Workstation, ipmg-letter-builder, IPMG-CALL-LOG, and IPMG-Intakes. No existing SQL server, App Service plan, or virtual network is visible in that subscription. Subscription and tenant GUIDs were verified in the portal and should be placed in deployment parameters outside git.
+The authenticated Azure portal is in the IPMG directory (`inlandpsych.com`), with **Azure subscription 1** selected. Initial inspection found four Static Web Apps: MA-Workstation, ipmg-letter-builder, IPMG-CALL-LOG, and IPMG-Intakes. The approved evaluation deployment subsequently added resource group `rg-ipmg-clinic-console`, SQL server `ipmg-clinic-console-sql`, and database `clinic-console`. No App Service plan or private networking was created for Render.
 
 The existing workstation is in resource group `ipmg-ma_workstation`, Central US, on the Free Static Web Apps plan. Its production deployment is ready; it remains the original app. Its three preview environments belong to already merged PRs #21, #29, and #57. They were inspected and left unchanged. This is why PR #67's old-app deployment fails with the staging-environment limit. Reclaiming one slot can restore the original app's PR preview, but does not deploy this console's API or SQL database.
 
 The injection/PIN revision `abf075641517920d00b56f5bcd6a0438092e3969` passed the real SQL Server integration job, including migrations, concurrent inventory changes, injection lifecycle, immutable snapshots, and persistent PIN security in [run 34944709617](https://github.com/matthewyglesias-lab/MA-Workstation/actions/runs/34944709617). This SQL test is not an Azure deployment. The [old-app workflow](https://github.com/matthewyglesias-lab/MA-Workstation/actions/runs/34941421932) passed build, browser, visual, and print tests, then failed only at Azure deployment.
 
-## Proposed resources and cost
+## Retained App Service alternative: resources and cost
 
 Use a separate resource group **`rg-ipmg-clinic-console`** in **Central US**, matching the existing app deployments. Proposed name prefix **`ipmg-clinic-console`** is subject to Azure global name availability. Keeping US data residency is an explicit property of this proposal; it does not establish the clinic's complete data-retention policy.
 
@@ -24,7 +24,7 @@ Use a separate resource group **`rg-ipmg-clinic-console`** in **Central US**, ma
 | Private DNS            | One private zone                                |                   $0.50 |
 | **Base total**         | **730 hosting hours; SQL pauses at free limit** |              **$20.94** |
 
-These are Microsoft public retail rates retrieved 15 September 2026, before tax, traffic, extra retention, monitoring, or subscription-specific discounts. The database uses the recurring free offer with overage billing disabled. App Service and private networking remain separate recurring charges. Private Link additionally charges $0.01/GB at the initial ingress/egress tier; private DNS queries are $0.40 per million. No paid resources have been created.
+These are Microsoft public retail rates retrieved 15 September 2026, before tax, traffic, extra retention, monitoring, or subscription-specific discounts. The database uses the recurring free offer with overage billing disabled. App Service and private networking remain separate recurring charges. Private Link additionally charges $0.01/GB at the initial ingress/egress tier; private DNS queries are $0.40 per million. None of this alternative's App Service or private-network resources has been created; the approved paid resource is the $7 Render service.
 
 Rates and reproducible source queries:
 
@@ -40,9 +40,9 @@ The monthly allowance is 100,000 vCore-seconds plus 32 GB each for data and back
 
 The application pool has a zero minimum and releases idle connections after 30 seconds; `/api/health` does not query SQL. Keep database explorers closed when unused and do not add SQL keepalive jobs. First access after an idle pause may need a retry while SQL resumes. Saves retain idempotency keys and must never be assumed successful after an unavailable response. Monitor **Free amount remaining** and establish the clinic's downtime procedure before live use. A restore into the free offer is not supported; plan recovery into a separate eligible paid database and verify it before relying on the console. Seven-day local backups do not provide regional disaster recovery.
 
-## Concrete provisioning sequence
+## Retained App Service alternative: provisioning sequence
 
-The remaining launch prerequisites are acceptance of the new recurring cost, confirmed deployment and SQL-administrator permissions, a permanent clinic UUID, and individual staff PIN enrollment. The existing authenticated portal resolves the account; no password, deployment token, or patient data belongs in git.
+The following steps apply only if the App Service alternative is separately selected. The Render evaluation already has cost approval, a verified SQL administrator, and a permanent clinic UUID. Continue that deployment using the [Render status record](render-evaluation-status.md), not the alternative commands below. No password, deployment token, or patient data belongs in git.
 
 1. Select the verified IPMG subscription. Confirm permission to create the proposed resource group/resources and to manage the dedicated SQL administrator group. Create or select an **IPMG Clinic Console SQL Administrators** Entra security group containing the authorized database administrators. This is database administration; staff PIN accounts do not require Entra application registrations.
 2. Prepare a private parameter file for `infra/main.bicep`: `name=ipmg-clinic-console`, `location=centralus`, the permanent `clinicId`, and the actual SQL admin group's name/object ID. `authMode=pin` is the default. `publicOrigin` can stay empty: Bicep obtains the actual generated App Service hostname. Entra client IDs are only required for `authMode=entra`.
@@ -77,20 +77,29 @@ cd /home/site/wwwroot
 node dist/server/server/platform/migrate.js
 ```
 
-6. In the application database, insert the configured clinic, and create a contained database user for the **verified runtime managed-identity object ID**, granting only `console_runtime`. Use the SID/TYPE syntax shown below if the SQL server has no Graph directory-reading permissions. This avoids adding broad directory privileges simply to resolve the runtime user. The operator must verify the object ID because this syntax performs no directory validation. [Microsoft managed identity guidance](https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-azure-ad-user-assigned-managed-identity?view=azuresql).
+6. Resolve the runtime system-assigned managed identity's **application/client ID** from its verified `runtimeIdentityObjectId` deployment output. The object ID identifies the enterprise application for this lookup; the returned `appId` is the client ID required by SQL's SID/TYPE syntax. Confirm the returned object ID matches the deployment output and the identity belongs to the runtime app.
+
+```sh
+az ad sp show --id '<runtimeIdentityObjectId-from-deployment>' \
+  --query '{objectId:id,clientId:appId,displayName:displayName}' --output json
+```
+
+In the application database, insert the configured clinic, then create a contained database user with the verified **runtime client ID** converted to a binary SID, granting only `console_runtime`. `CREATE USER ... WITH SID=..., TYPE=E` performs no directory validation and needs no directory-reading grant to the SQL server. Microsoft documents client IDs for service principals, including managed identities, in [CREATE USER, example K](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-user-transact-sql?view=azuresqldb-current#k-create-a-contained-database-user-from-a-microsoft-entra-principal-without-validation). The separate `FROM EXTERNAL PROVIDER WITH OBJECT_ID='...'` syntax uses the enterprise application's object ID and validates it in the directory. Do not use that object ID as the SID input below. The same client-ID SID recipe applies to the Render runtime's app registration.
 
 ```sql
 -- Run as the migration identity in the application database.
 INSERT dbo.Clinics(id,name,timezone)
 VALUES('<permanent-clinic-uuid>',N'IPMG San Bernardino',N'America/Los_Angeles');
 
--- Replace this with the runtimeIdentityObjectId from the deployment output.
-DECLARE @runtimeObjectId uniqueidentifier = '<runtime-managed-identity-object-id>';
-DECLARE @runtimeSid varchar(34) = CONVERT(varchar(34),CONVERT(binary(16),@runtimeObjectId),1);
+-- Use appId from the verified enterprise application, not runtimeIdentityObjectId.
+DECLARE @runtimeClientId uniqueidentifier = '<runtime-application-client-id>';
+DECLARE @runtimeSid varchar(34) = CONVERT(varchar(34),CONVERT(binary(16),@runtimeClientId),1);
 DECLARE @createUser nvarchar(max) = N'CREATE USER [console-app] WITH SID=' + @runtimeSid + N', TYPE=E;';
 EXEC sys.sp_executesql @createUser;
 ALTER ROLE console_runtime ADD MEMBER [console-app];
 ```
+
+Verify a SQL connection using the runtime identity with `SQL_DATABASE=clinic-console`; creation of the user alone does not validate its SID or prove the runtime can connect. Confirm that the runtime has only `console_runtime` and cannot provision staff, alter the schema, or modify ledger history.
 
 7. Provision one named staff identity per person with the staff administration CLI, entering each PIN through its hidden interactive prompt. A shared clinic PIN would discard staff attribution and is not the launch configuration. On a development/migration checkout use `npm run staff:manage`; in the production-only package use `node dist/server/server/platform/manage-staff.js` in the interactive SSH terminal. See [PIN access](pin-access.md). Staff credentials are not placed in a frontend bundle or environment file.
 8. Exit administrative sessions, remove the migration identity from the SQL admin group, stop and delete the temporary migration app, and verify its identity is removed. Do not delete the shared App Service plan, SQL server, or database. Repeat this isolated setup for future schema/PIN administration until a permanent controlled migration runner is configured. Removing group membership alone does not revoke already-issued cached tokens immediately; remove the temporary execution environment as well.
