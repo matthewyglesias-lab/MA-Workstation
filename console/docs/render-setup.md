@@ -1,6 +1,6 @@
 # Render + Azure SQL
 
-Evaluation target: **one $7/month Render web service + Azure SQL's recurring free offer**. Both resources have been created. The Render build passed, but activation is blocked on completing identity credentials and database bootstrap. See [verified deployment status and remaining steps](render-evaluation-status.md).
+Evaluation target: **one $7/month Render web service + Azure SQL's recurring free offer**. Both resources have been created. The Render build and SQL bootstrap passed, and runtime database permissions were verified. Activation still needs the direct secret transfer, staff enrollment, and hosted acceptance checks. See [verified deployment status and remaining steps](render-evaluation-status.md).
 
 **Use synthetic data only on this low-cost profile.** Render requires a HIPAA-enabled Scale or Enterprise workspace before an application processes patient PHI, even when the database is hosted in Azure. Current Scale pricing is $499/month plus compute, with an additional 20% usage fee for HIPAA-enabled workspaces. A BAA and completed workspace enablement are required. This corrects the earlier $7 clinic-hosting estimate: the affordable Render profile is for evaluation, not live patient work. The approved $7 web service is created; no workspace upgrade or BAA acceptance has been performed. See Render's [HIPAA requirements](https://render.com/docs/hipaa-compliance) and [workspace pricing](https://render.com/docs/new-workspace-plans).
 
@@ -51,7 +51,7 @@ The API conservatively ignores forwarding headers. Until Render's actual proxy c
 
 `/api/health` does not query SQL, so host probes do not keep it awake. Connection establishment allows up to 60 seconds for SQL to resume. An unconfirmed save must be retried with its retained idempotency key.
 
-SQL's 100,000 monthly free vCore-seconds can be exhausted; it then pauses until next month. Paid Render hosting does not remove that limit. Runtime credentials, database bootstrap, staff enrollment, recovery verification and deployed acceptance checks remain pending. Reconcile actual stock and Tebra identifiers before clinic use. Tebra remains the clinical record.
+SQL's 100,000 monthly free vCore-seconds can be exhausted; it then pauses until next month. Paid Render hosting does not remove that limit. Runtime credential transfer, staff enrollment, recovery verification and deployed acceptance checks remain pending. Reconcile actual stock and Tebra identifiers before clinic use. Tebra remains the clinical record.
 
 ## References
 

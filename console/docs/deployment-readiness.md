@@ -1,6 +1,6 @@
 # Injection console deployment readiness
 
-Status checked 15 September 2026. **Resources created; activation incomplete.** The approved Render service has built successfully and the Azure SQL free-offer database is online. Runtime credentials, database bootstrap, staff enrollment, and hosted acceptance checks remain pending. See the [current Render deployment record](render-evaluation-status.md) for verified resources, access settings, and the exact continuation steps.
+Status checked 15 September 2026. **Resources created; activation incomplete.** The approved Render service has built successfully, the Azure SQL bootstrap is applied, and restricted database permissions have passed live checks. Runtime credential transfer, staff enrollment, and hosted acceptance checks remain pending. See the [current Render deployment record](render-evaluation-status.md) for verified resources, access settings, and the exact continuation steps.
 
 **Hosting decision updated:** the user approved Render with Azure SQL's free offer. The $7 web service is created for synthetic evaluation only. Render's patient-PHI requirements include a HIPAA-enabled Scale or Enterprise workspace; current Scale pricing is $499/month plus compute and a 20% usage surcharge. No upgrade has been authorized or performed. Follow [Render setup](render-setup.md) for the verified vendor requirements and `infra/sql-for-render.bicep` for the evaluation database. The App Service/private-network proposal below is retained as an alternative; do not provision those resources for Render.
 
