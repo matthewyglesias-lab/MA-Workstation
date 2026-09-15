@@ -16,6 +16,7 @@ import {
   csrfFor,
   digest,
   hashPin,
+  pinLoginInput,
   readSessionCookie,
   sessionCookie,
   validateNewPin,
@@ -24,16 +25,18 @@ import {
 } from "../src/server/platform/pin-auth.js";
 
 let encoded = "";
+let fourDigitEncoded = "";
 beforeAll(async () => {
   encoded = await hashPin("482951");
+  fourDigitEncoded = await hashPin("0738");
 });
-function fixture(now = () => Date.now()) {
-  const store = new MemoryPinStore(encoded, now);
-  store.staff.set("matthew", {
+function fixture(now = () => Date.now(), pinHash = encoded) {
+  const store = new MemoryPinStore(pinHash, now);
+  store.staff.set("test-operator", {
     id: randomUUID(),
-    code: "matthew",
-    displayName: "Matthew",
-    pinHash: encoded,
+    code: "test-operator",
+    displayName: "Test Operator",
+    pinHash,
     roles: ["Console.Operator"],
     version: 1,
     disabled: false,
@@ -49,7 +52,7 @@ const config: Config = {
   port: 3100,
   timezone: "America/Los_Angeles",
 };
-const login = { staffCode: "matthew", pin: "482951" };
+const login = { staffCode: "test-operator", pin: "482951" };
 
 describe("individual PIN credentials", () => {
   it("salts slow hashes, verifies exactly, and rejects predictable provisioned PINs", async () => {
@@ -64,10 +67,26 @@ describe("individual PIN credentials", () => {
       "12345",
       "abcdef",
       "121212",
+      "1111",
+      "1234",
+      "4321",
       "1234567890123",
     ])
       expect(() => validateNewPin(value)).toThrow();
     expect(() => validateNewPin("482951")).not.toThrow();
+  });
+  it("accepts 4–12 digits as exact strings and preserves leading zeros in hashes", async () => {
+    for (const pin of ["0738", "07384", "482951", "073849516284"]) {
+      expect(() => validateNewPin(pin)).not.toThrow();
+      expect(pinLoginInput.parse({ ...login, pin }).pin).toBe(pin);
+    }
+    for (const pin of ["", "738", "0738495162847", "07a8", " 0738", 738]) {
+      expect(pinLoginInput.safeParse({ ...login, pin }).success).toBe(false);
+      if (typeof pin === "string") expect(() => validateNewPin(pin)).toThrow();
+    }
+    expect(await verifyPin("0738", fourDigitEncoded)).toBe(true);
+    expect(await verifyPin("738", fourDigitEncoded)).toBe(false);
+    expect(await verifyPin("0739", fourDigitEncoded)).toBe(false);
   });
   it("requires explicit SQL auth mode and HTTPS origin, rejects demo bypass", () => {
     const env = { CONSOLE_MODE: "sql", CLINIC_ID: config.clinicId };
@@ -95,21 +114,32 @@ describe("individual PIN credentials", () => {
     const store = fixture(() => now);
     const attempts = await Promise.allSettled(
       Array.from({ length: 8 }, (_, i) =>
-        store.login("matthew", "000000", `ip-${i}`, digest(`attempt-${i}`)),
+        store.login(
+          "test-operator",
+          "000000",
+          `ip-${i}`,
+          digest(`attempt-${i}`),
+        ),
       ),
     );
     expect(attempts.every((result) => result.status === "rejected")).toBe(true);
-    expect(store.attempts.get(`staff:${digest("matthew")}`)?.attempts).toBe(
-      STAFF_ATTEMPTS,
-    );
+    expect(
+      store.attempts.get(`staff:${digest("test-operator")}`)?.attempts,
+    ).toBe(STAFF_ATTEMPTS);
     await expect(
-      store.login("matthew", "482951", "another-ip", digest("blocked")),
+      store.login("test-operator", "482951", "another-ip", digest("blocked")),
     ).rejects.toThrow("Unable to sign in");
     now += WINDOW_MS + 1;
     expect(
-      (await store.login("matthew", "482951", "another-ip", digest("allowed")))
-        .displayName,
-    ).toBe("Matthew");
+      (
+        await store.login(
+          "test-operator",
+          "482951",
+          "another-ip",
+          digest("allowed"),
+        )
+      ).displayName,
+    ).toBe("Test Operator");
   }, 15000);
   it("limits IP-wide attempts and does not prolong lockout for blocked traffic", () => {
     let bucket: AttemptBucket | undefined;
@@ -129,27 +159,27 @@ describe("individual PIN credentials", () => {
     let now = 1_000_000;
     const store = fixture(() => now);
     const token = digest("session");
-    await store.login("matthew", "482951", "ip", token);
+    await store.login("test-operator", "482951", "ip", token);
     expect(await store.session(token)).toBeTruthy();
-    store.staff.get("matthew")!.roles = ["Console.Reader"];
+    store.staff.get("test-operator")!.roles = ["Console.Reader"];
     expect((await store.session(token))?.roles).toEqual(["Console.Reader"]);
     now += IDLE_MS;
     expect(await store.session(token)).toBeNull();
-    await store.login("matthew", "482951", "ip", token);
+    await store.login("test-operator", "482951", "ip", token);
     for (let elapsed = 0; elapsed < ABSOLUTE_MS; elapsed += IDLE_MS / 2) {
       now += IDLE_MS / 2;
       const session = await store.session(token);
       if (elapsed + IDLE_MS / 2 >= ABSOLUTE_MS) expect(session).toBeNull();
       else expect(session).toBeTruthy();
     }
-    await store.login("matthew", "482951", "ip", token);
-    store.staff.get("matthew")!.version++;
+    await store.login("test-operator", "482951", "ip", token);
+    store.staff.get("test-operator")!.version++;
     expect(await store.session(token)).toBeNull();
-    await store.login("matthew", "482951", "ip", token);
-    store.staff.get("matthew")!.disabled = true;
+    await store.login("test-operator", "482951", "ip", token);
+    store.staff.get("test-operator")!.disabled = true;
     expect(await store.session(token)).toBeNull();
     await expect(
-      store.login("matthew", "482951", "ip", digest("disabled")),
+      store.login("test-operator", "482951", "ip", digest("disabled")),
     ).rejects.toThrow("Unable to sign in");
   }, 15000);
   it("uses secure cookie attributes and rejects ambiguous cookies or mismatched CSRF", () => {
@@ -178,8 +208,136 @@ describe("individual PIN credentials", () => {
 });
 
 describe("PIN API boundary", () => {
-  it("gates patient reads, requires origin/CSRF on writes, and invalidates logout", async () => {
-    const store = fixture();
+  it.each([
+    [6, "482951"],
+    [4, "0738"],
+  ] as const)(
+    "gates patient reads, requires origin/CSRF on writes, and invalidates logout for %i-digit PINs",
+    async (_length, pin) => {
+      const store = fixture(
+        undefined,
+        pin.length === 4 ? fourDigitEncoded : encoded,
+      );
+      const credentials = { ...login, pin };
+      const app = await buildApp(
+        config,
+        new DemoRepository(),
+        undefined,
+        new PinAuthentication(store, config),
+      );
+      try {
+        expect((await app.inject({ url: "/api/v1/overview" })).statusCode).toBe(
+          401,
+        );
+        expect(
+          (
+            await app.inject({
+              method: "POST",
+              url: "/api/auth/pin",
+              payload: credentials,
+            })
+          ).statusCode,
+        ).toBe(403);
+        expect(
+          (
+            await app.inject({
+              method: "POST",
+              url: "/api/auth/pin",
+              payload: credentials,
+              headers: { origin: "https://evil.example" },
+            })
+          ).statusCode,
+        ).toBe(403);
+        const result = await app.inject({
+          method: "POST",
+          url: "/api/auth/pin",
+          payload: credentials,
+          headers: { origin: config.publicOrigin! },
+        });
+        expect(result.statusCode).toBe(200);
+        const setCookie = String(result.headers["set-cookie"]);
+        expect(setCookie).toContain("Secure");
+        const cookie = setCookie.split(";")[0]!;
+        const csrf = result.json().csrfToken;
+        expect(result.json().actor.displayName).toBe("Test Operator");
+        const session = await app.inject({
+          url: "/api/v1/session",
+          headers: { cookie },
+        });
+        expect(session.statusCode).toBe(200);
+        expect(session.json().csrfToken).toBe(csrf);
+        const payload = {
+          tebraId: "SYN-001",
+          displayName: "Synthetic Patient",
+          dob: "1990-01-01",
+          verifiedInTebra: true,
+        };
+        const headers = {
+          cookie,
+          origin: config.publicOrigin!,
+          "idempotency-key": randomUUID(),
+        };
+        expect(
+          (
+            await app.inject({
+              method: "POST",
+              url: "/api/v1/patients",
+              headers,
+              payload,
+            })
+          ).statusCode,
+        ).toBe(403);
+        expect(
+          (
+            await app.inject({
+              method: "POST",
+              url: "/api/v1/patients",
+              headers: {
+                ...headers,
+                "x-csrf-token": csrf,
+                origin: "https://evil.example",
+              },
+              payload,
+            })
+          ).statusCode,
+        ).toBe(403);
+        expect(
+          (
+            await app.inject({
+              method: "POST",
+              url: "/api/v1/patients",
+              headers: { ...headers, "x-csrf-token": csrf },
+              payload,
+            })
+          ).statusCode,
+        ).toBe(201);
+        expect(
+          (
+            await app.inject({
+              method: "POST",
+              url: "/api/auth/logout",
+              headers,
+            })
+          ).statusCode,
+        ).toBe(403);
+        const logout = await app.inject({
+          method: "POST",
+          url: "/api/auth/logout",
+          headers: { ...headers, "x-csrf-token": csrf },
+        });
+        expect(logout.statusCode).toBe(200);
+        expect(String(logout.headers["set-cookie"])).toContain("Max-Age=0");
+        expect(
+          (await app.inject({ url: "/api/v1/overview", headers: { cookie } }))
+            .statusCode,
+        ).toBe(401);
+      } finally {
+        await app.close();
+      }
+    },
+  );
+  it("rejects an incorrect four-digit PIN and invalid lengths without creating a session", async () => {
+    const store = fixture(undefined, fourDigitEncoded);
     const app = await buildApp(
       config,
       new DemoRepository(),
@@ -187,106 +345,25 @@ describe("PIN API boundary", () => {
       new PinAuthentication(store, config),
     );
     try {
-      expect((await app.inject({ url: "/api/v1/overview" })).statusCode).toBe(
-        401,
-      );
-      expect(
-        (
-          await app.inject({
-            method: "POST",
-            url: "/api/auth/pin",
-            payload: login,
-          })
-        ).statusCode,
-      ).toBe(403);
-      expect(
-        (
-          await app.inject({
-            method: "POST",
-            url: "/api/auth/pin",
-            payload: login,
-            headers: { origin: "https://evil.example" },
-          })
-        ).statusCode,
-      ).toBe(403);
-      const result = await app.inject({
+      for (const pin of ["738", "0738495162847", 738]) {
+        const result = await app.inject({
+          method: "POST",
+          url: "/api/auth/pin",
+          payload: { ...login, pin },
+          headers: { origin: config.publicOrigin! },
+        });
+        expect(result.statusCode).toBe(400);
+        expect(result.headers["set-cookie"]).toBeUndefined();
+      }
+      const wrongPin = await app.inject({
         method: "POST",
         url: "/api/auth/pin",
-        payload: login,
+        payload: { ...login, pin: "0739" },
         headers: { origin: config.publicOrigin! },
       });
-      expect(result.statusCode).toBe(200);
-      const setCookie = String(result.headers["set-cookie"]);
-      expect(setCookie).toContain("Secure");
-      const cookie = setCookie.split(";")[0]!;
-      const csrf = result.json().csrfToken;
-      expect(result.json().actor.displayName).toBe("Matthew");
-      const session = await app.inject({
-        url: "/api/v1/session",
-        headers: { cookie },
-      });
-      expect(session.statusCode).toBe(200);
-      expect(session.json().csrfToken).toBe(csrf);
-      const payload = {
-        tebraId: "SYN-001",
-        displayName: "Synthetic Patient",
-        dob: "1990-01-01",
-        verifiedInTebra: true,
-      };
-      const headers = {
-        cookie,
-        origin: config.publicOrigin!,
-        "idempotency-key": randomUUID(),
-      };
-      expect(
-        (
-          await app.inject({
-            method: "POST",
-            url: "/api/v1/patients",
-            headers,
-            payload,
-          })
-        ).statusCode,
-      ).toBe(403);
-      expect(
-        (
-          await app.inject({
-            method: "POST",
-            url: "/api/v1/patients",
-            headers: {
-              ...headers,
-              "x-csrf-token": csrf,
-              origin: "https://evil.example",
-            },
-            payload,
-          })
-        ).statusCode,
-      ).toBe(403);
-      expect(
-        (
-          await app.inject({
-            method: "POST",
-            url: "/api/v1/patients",
-            headers: { ...headers, "x-csrf-token": csrf },
-            payload,
-          })
-        ).statusCode,
-      ).toBe(201);
-      expect(
-        (await app.inject({ method: "POST", url: "/api/auth/logout", headers }))
-          .statusCode,
-      ).toBe(403);
-      const logout = await app.inject({
-        method: "POST",
-        url: "/api/auth/logout",
-        headers: { ...headers, "x-csrf-token": csrf },
-      });
-      expect(logout.statusCode).toBe(200);
-      expect(String(logout.headers["set-cookie"])).toContain("Max-Age=0");
-      expect(
-        (await app.inject({ url: "/api/v1/overview", headers: { cookie } }))
-          .statusCode,
-      ).toBe(401);
+      expect(wrongPin.statusCode).toBe(401);
+      expect(wrongPin.headers["set-cookie"]).toBeUndefined();
+      expect(wrongPin.json().message).toContain("Unable to sign in");
     } finally {
       await app.close();
     }

@@ -86,8 +86,8 @@ export function SignInView({
                   inputMode="numeric"
                   autoComplete="current-password"
                   autoFocus={!changeStaff}
-                  pattern="[0-9]{6,12}"
-                  minLength={6}
+                  pattern="[0-9]{4,12}"
+                  minLength={4}
                   maxLength={12}
                   required
                   value={pin}

@@ -13,7 +13,7 @@ export const pinLoginInput = z
       .max(40)
       .regex(/^[a-zA-Z0-9._-]+$/)
       .transform((v) => v.toLowerCase()),
-    pin: z.string().regex(/^\d{6,12}$/, "Enter your 6–12 digit PIN."),
+    pin: z.string().regex(/^\d{4,12}$/, "Enter your 4–12 digit PIN."),
   })
   .strict();
 export const staffRoles = z
@@ -70,7 +70,7 @@ export async function verifyPin(
   return timingSafeEqual(actual, Buffer.from(match[2]!, "hex"));
 }
 export function validateNewPin(pin: string) {
-  invariant(/^\d{6,12}$/.test(pin), "pin_policy", "Use 6–12 digits.", 400);
+  invariant(/^\d{4,12}$/.test(pin), "pin_policy", "Use 4–12 digits.", 400);
   invariant(
     !/^(\d)\1+$/.test(pin) &&
       !"01234567890123456789".includes(pin) &&

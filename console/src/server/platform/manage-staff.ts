@@ -100,7 +100,7 @@ async function main() {
   }
   let pinHash = "";
   if (action === "create" || action === "reset") {
-    let pin = await hiddenPin("New PIN (6–12 digits; hidden): ");
+    let pin = await hiddenPin("New PIN (4–12 digits; hidden): ");
     validateNewPin(pin);
     let repeated = await hiddenPin("Repeat PIN: ");
     if (pin !== repeated)

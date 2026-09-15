@@ -1,6 +1,6 @@
 # Staff PIN access
 
-Each staff member signs in with their own staff code and 6–12 digit PIN. The browser can remember the staff code; it must never save a PIN or session token in web storage. A returning staff member enters only their PIN. **Change staff** returns to code entry. Roles and audit identity belong to the individual account.
+Each staff member signs in with their own staff code and 4–12 digit PIN. Leading zeros are preserved, and existing longer PINs continue to work. The browser can remember the staff code; it must never save a PIN or session token in web storage. A returning staff member enters only their PIN. **Change staff** returns to code entry. Roles and audit identity belong to the individual account.
 
 ## Azure configuration
 

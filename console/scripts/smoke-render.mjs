@@ -197,7 +197,7 @@ async function main() {
   let pin = process.env.CONSOLE_SMOKE_PIN || (await hiddenPin());
   delete process.env.CONSOLE_SMOKE_PIN;
   expect(
-    /^[a-zA-Z0-9._-]{2,40}$/.test(staffCode.trim()) && /^\d{6,12}$/.test(pin),
+    /^[a-zA-Z0-9._-]{2,40}$/.test(staffCode.trim()) && /^\d{4,12}$/.test(pin),
     "Staff code or PIN format is invalid.",
   );
   const login = await request("/api/auth/pin", {

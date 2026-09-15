@@ -27,7 +27,7 @@ Activity updates compare `expectedVersion` inside a transaction. A stale screen 
 
 ## Identity and access
 
-SQL mode uses explicit `AUTH_MODE=pin` or `AUTH_MODE=entra`. PIN mode verifies individual staff IDs and 6–12 digit PINs with scrypt, SQL-backed attempt limits, revocable opaque secure-cookie sessions, exact-origin checks, and CSRF tokens. Sessions expire after 15 minutes idle or eight hours absolute; the client locks and clears loaded records at five minutes idle. No runtime HTTP endpoint manages staff credentials; use the administrator CLI. See [PIN access](pin-access.md).
+SQL mode uses explicit `AUTH_MODE=pin` or `AUTH_MODE=entra`. PIN mode verifies individual staff IDs and 4–12 digit PINs with scrypt, SQL-backed attempt limits, revocable opaque secure-cookie sessions, exact-origin checks, and CSRF tokens. Sessions expire after 15 minutes idle or eight hours absolute; the client locks and clears loaded records at five minutes idle. No runtime HTTP endpoint manages staff credentials; use the administrator CLI. See [PIN access](pin-access.md).
 
 Entra mode accepts only signed Entra v2 access tokens with the configured tenant, API audience, approved SPA `azp`, `access_as_user` scope and an allowed app role. The signature, expiry, not-before time and issuer are verified. Token claims are never accepted from unsigned headers. API roles:
 
