@@ -405,7 +405,18 @@
           transition: none;
         }
       }
-    </style>
+    
+      /* Lightfully startup parity: no old teal flash before the module loads. */
+      #boot-splash { color: #28283f; background: #efecf6; grid-template-rows: 72px 64px minmax(0, 1fr) 38px 32px; }
+      #boot-splash .boot-header { color: #28283f; background: #fffefa; border-bottom: 1px solid #dcd6e5; }
+      #boot-splash .boot-brand-mark { color: #8d503c; background: #fae6da; border-color: #fae6da; }
+      #boot-splash .boot-search, #boot-splash .boot-header-action { background: #f4f0f8; border-color: #dcd6e5; border-radius: 8px; }
+      #boot-splash .boot-patient, #boot-splash .boot-rail { background: #fffefa; border-color: #dcd6e5; }
+      #boot-splash .boot-patient-block:first-child { background: #fffefa; }
+      #boot-splash .boot-patient-block::before, #boot-splash .boot-patient-block::after, #boot-splash .boot-rail-title { background: #dcd6e5; }
+      @media (max-width: 949px) { #boot-splash { grid-template-rows: 64px 64px minmax(0, 1fr) 38px 32px; } }
+    
+</style>
   </head>
   <body>
     <div

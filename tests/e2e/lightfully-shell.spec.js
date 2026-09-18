@@ -21,6 +21,13 @@ test.describe('Lightfully standalone shell', () => {
         expect(box.x + box.width).toBeLessThanOrEqual(size.width);
         expect(box.y + box.height).toBeLessThanOrEqual(size.height);
       }
+      await expect(page.locator('.cd2004-worklist-tabs')).toBeInViewport();
+      const worklistVisibleHeight = await page.locator('.cd2004-worklist-sheet').evaluate(node => {
+        const r = node.getBoundingClientRect();
+        const host = node.closest('.lf-start-center').getBoundingClientRect();
+        return Math.max(0, Math.min(r.bottom, host.bottom, innerHeight) - Math.max(r.top, host.top, 0));
+      });
+      expect(worklistVisibleHeight).toBeGreaterThanOrEqual(40);
       await expect(page).toHaveScreenshot(`lightfully-home-${size.width}x${size.height}.png`, { animations: 'disabled' });
       await page.keyboard.press('Control+k');
       const search = page.getByRole('combobox', { name: 'Search commands' });

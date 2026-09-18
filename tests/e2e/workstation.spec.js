@@ -869,7 +869,7 @@ test.describe('MA Workstation browser journeys', () => {
         horizontalOverflow: node.scrollWidth - node.clientWidth
       };
     });
-    expect(drawerVisual.borderRadius).toBe(16);
+    expect(drawerVisual.borderRadius).toBe(12);
     expect(drawerVisual.searchRadius).toBe(8);
     expect(drawerVisual.fontFamily).toContain('Inter Variable');
     expect(drawerVisual.headerBackground).toBe('none');

@@ -301,3 +301,20 @@
   .lf-workstation .wfp-panel .wfp-section-body { padding: 10px 11px; }
   .lf-workstation .wfp-panel .wfp-summary-bar { padding: 3px 6px; gap: 4px; }
 }
+
+/* Short-screen worklist priority: keep real work above decorative copy. */
+@media screen and (max-height: 800px) {
+  .lf-workstation .lf-start-center { gap: 12px; }
+  .lf-welcome { padding-top: 0; padding-bottom: 0; }
+  .lf-welcome h1 { font-size: 25px; margin: 3px 0; }
+  .lf-welcome p, .lf-quick-copy > small, .lf-quick-copy > span, .lf-quick-arrow { display: none; }
+  .lf-quick-tools { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+  .lf-workstation .lf-quick-tool { min-height: 64px; padding: 10px; gap: 8px; align-items: center; }
+  .lf-quick-copy > strong { font-size: 12px; line-height: 17px; }
+  .lf-quick-icon { width: 26px; height: 29px; }
+  .lf-workstation .lf-summary-item { min-height: 43px; padding-block: 4px; }
+  .lf-summary-number { font-size: 24px; line-height: 30px; }
+  .lf-summary-item small { display: none; }
+  .lf-start-center .cd2004-worklist-header { padding-block: 10px; }
+  .lf-start-center .cd2004-worklist-header p { display: none; }
+}
