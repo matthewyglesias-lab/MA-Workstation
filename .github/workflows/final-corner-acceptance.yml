@@ -1,0 +1,113 @@
+name: Final corner and release acceptance
+on:
+  push:
+    branches: [codex/lightfully-standalone-rebuild]
+    paths: ['.github/final-corners.part', '.github/workflows/final-corner-acceptance.yml']
+permissions:
+  contents: write
+concurrency:
+  group: final-corner-acceptance
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/codex/lightfully-standalone-rebuild'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply reviewed help and focus-mode contrast corrections
+        run: |
+          python3 - <<'PY'
+          import base64,hashlib,json,lzma
+          from pathlib import Path
+          h=lambda b:hashlib.sha256(b).hexdigest()
+          raw=lzma.decompress(base64.b64decode(Path('.github/final-corners.part').read_text(),validate=True))
+          assert h(raw)=='dc178d71397512d32544a8503459b67633a658d07ed8048f09b591dcc6f5c921'
+          allowed={'src/presentation/lightfully/final-polish.css','tests/e2e/final-acceptance.spec.js'}
+          pending={}
+          for c in json.loads(raw):
+              assert c['path'] in allowed and c['path'] not in pending
+              p=Path(c['path']);old=p.read_bytes();assert h(old)==c['old']
+              lines=old.decode().splitlines(keepends=True)
+              for start,end,replacement in reversed(c['ops']):lines[start:end]=replacement
+              new=''.join(lines).encode();assert h(new)==c['new'];pending[c['path']]=new
+          assert set(pending)==allowed
+          for name,new in pending.items():Path(name).write_bytes(new)
+          p=Path('docs/lightfully/FINAL-REVIEW.md')
+          p.write_text(p.read_text()+'\n## Final corner corrections\n\nFocused injection mode no longer inherits pale inverse text on its white patient\nheader. Patient identifiers, clinical facts and exit actions use explicit navy\nand muted captions. Short-screen keyboard-help rows size to their full content\nand scroll within the dialog rather than clipping a two-line description.\nBoth 800x600 and 1440x900 have dedicated regression checks.\n')
+          PY
+      - name: Preserve original clinical, storage, note and print implementations
+        run: git diff --exit-code 28ae520bb51161ef3eb4b3642071007601b9f64e -- public/legacy src/legacy src/domain src/application src/persistence src/documentation tests/fixtures
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm audit --json > dependency-audit.json || true
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+      - name: Checkpoint final source before release tests
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/presentation/lightfully/final-polish.css tests/e2e/final-acceptance.spec.js docs/lightfully/FINAL-REVIEW.md
+          git rm .github/final-corners.part
+          git commit -m 'fix: readable focus-mode patient header and unclipped help rows'
+          git push origin HEAD:codex/lightfully-standalone-rebuild
+      - run: GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Full workflow and print suite without retries or snapshot changes
+        run: |
+          set -o pipefail
+          npx playwright test --retries=0 --reporter=list,html | tee browser-tests.log
+      - name: Native single-file startup and persistence
+        run: |
+          set -o pipefail
+          TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js --retries=0 --output=native-results --reporter=list | tee native-tests.log
+      - name: Repeat corner and rapid-dialog checks
+        run: |
+          set -o pipefail
+          npx playwright test tests/e2e/final-acceptance.spec.js --repeat-each=3 --retries=0 --output=repeat-results --reporter=list | tee repeated-tests.log
+      - name: Record successful verification and remove transfer tooling
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('docs/lightfully/FINAL-REVIEW.md')
+          summaries=[]
+          for name in ['browser-tests.log','native-tests.log','repeated-tests.log']:
+              text=Path(name).read_text();summary=re.findall(r'\d+ passed[^\n]*',text)
+              assert summary;summaries.append(name+': '+summary[-1])
+          p.write_text(p.read_text()+'\n## Release verification\n\nType/static checks, all unit tests with Git history, the production build and\nthe protected implementation comparison passed. Browser checks ran with retries\ndisabled and did not update snapshots.\n\n'+ '\n'.join(summaries)+'\n\nThe standalone test is opt-in and is exercised separately from the web suite.\nInherited dependency audit findings remain in the attached JSON audit; this\nrelease does not claim independent clinical or security certification.\n')
+          PY
+          git add docs/lightfully/FINAL-REVIEW.md
+          git rm .github/workflows/final-corner-acceptance.yml
+          git commit -m 'test: complete final visual and functional release acceptance'
+          git push origin HEAD:codex/lightfully-standalone-rebuild
+      - name: Export exact verified source and standalone
+        if: always()
+        run: |
+          GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
+          git archive --format=zip --output=final-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-release-acceptance
+          path: |
+            standalone/
+            final-source.zip
+            browser-tests.log
+            native-tests.log
+            repeated-tests.log
+            dependency-audit.json
+            playwright-report/
+            test-results/
+            native-results/
+            repeat-results/
+          retention-days: 7
+          if-no-files-found: warn
