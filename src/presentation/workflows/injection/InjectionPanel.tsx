@@ -4,6 +4,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { DesktopIcon } from "../../DesktopIcon";
 import { copyButtonLabel, useCopyFeedback } from "../../clipboard";
 import { ModalDialog } from "../../ModalDialog";
+import { DialogHeading } from "../../lightfully/DialogHeading";
 import { SiteIcon } from "../../SiteIcon";
 import {
   INJECTION_ATTESTATION_OPTIONS,
@@ -758,10 +759,7 @@ function OperatorGuidance({
     <section class="wfp-operator-guidance" aria-label="Operator guidance" data-operator-guidance>
       <div class="wfp-operator-guidance-head">
         <strong>Clinical guidance</strong>
-        <span>{INJECTION_TAB_LABELS[tab]} — {medication.label}</span>
-        {presentedOutput?.clinicalReferenceVersion && (
-          <small>Reference {presentedOutput.clinicalReferenceVersion}</small>
-        )}
+        <span>{medication.label}</span>
       </div>
       {(primaryItem || intervalReviewWarning) && (
         <div class="wfp-operator-guidance-list">
@@ -785,13 +783,16 @@ function OperatorGuidance({
           type="button"
           class="wfp-operator-guidance-action"
           onClick={() => onNavigate(blockerTab)}
+          title={firstStop.message}
+          aria-label={`Next: ${firstStop.message}`}
         >
-          <span>Next: {firstStop.message}</span><span class="lf-guidance-destination">{INJECTION_TAB_LABELS[blockerTab]} <span aria-hidden="true">→</span></span>
+          <span>Review next item <span aria-hidden="true">→</span></span><span class="lf-sr-only">{INJECTION_TAB_LABELS[blockerTab]}</span>
         </button>
       )}
       <details class="wfp-reference">
         <summary>Reference — product, schedule, and technique</summary>
         <div class="wfp-reference-body">
+          {presentedOutput?.clinicalReferenceVersion && <p class="lf-reference-version">Reference version {presentedOutput.clinicalReferenceVersion}</p>}
           <dl class="wfp-report-meta">
             <dt>Medication</dt>
             <dd>{medication.name} ({medication.generic})</dd>
@@ -960,7 +961,7 @@ function NeedleTechniquePanel({
     <div class="wfp-section wfp-needle-section" role="group" aria-label="Needle and technique">
       <h2 class="wfp-section-head">
         Needle &amp; technique
-        {referenceVersion && <span class="wfp-needle-ref">REF {referenceVersion}</span>}
+        {referenceVersion && <span class="wfp-needle-ref" title="Clinical reference version">Reference {referenceVersion}</span>}
       </h2>
       <div class="wfp-section-body">
         <div class="wfp-needle-inputs">
@@ -2486,11 +2487,12 @@ export function InjectionPanel({
       >
       {invalidationReceipt && (
         <div class="wfp-invalidation-receipt" role="status">
-          <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
+          <strong>Review updated details</strong><span>{invalidationReceipt}</span>
           <button type="button" class="cd2004-link-button" aria-label="Dismiss invalidation receipt" onClick={() => setInvalidationReceipt(null)}>×</button>
         </div>
       )}
 
+      {tab !== "order" && (
       <OperatorGuidance
         tab={tab}
         medication={medication}
@@ -2501,6 +2503,7 @@ export function InjectionPanel({
         nonAdministration={nonAdministration}
         onNavigate={setTab}
       />
+      )}
 
       {/* A locked record is read-only, so there is nothing to act on. */}
       {!editorDisabled && (
@@ -2674,6 +2677,16 @@ export function InjectionPanel({
                   </select>
                 </Field>
               </div>
+      <OperatorGuidance
+        tab={tab}
+        medication={medication}
+        evaluation={evaluation}
+        allowedSites={allowedSites}
+        recommendedSite={recommendedSite}
+        suggestedNextDose={suggestedNextDose}
+        nonAdministration={nonAdministration}
+        onNavigate={setTab}
+      />
               <Field
                 label="Needle / technique"
                 field="technique"
@@ -4246,16 +4259,7 @@ export function InjectionPanel({
           onDismiss={() => setPatientScreeningDialogOpen(false)}
         >
           <div class="cd2004-dialog-frame">
-            <div class="cd2004-dialog-titlebar">
-              <span id="patient-screening-print-title">Print patient screening</span>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setPatientScreeningDialogOpen(false)}
-              >
-                X
-              </button>
-            </div>
+            <DialogHeading id="patient-screening-print-title" title={"Print patient screening"} onClose={() => setPatientScreeningDialogOpen(false)} />
             <div class="cd2004-dialog-body">
               <p>
                 This paper form does not store patient answers or signatures electronically and does not change injection readiness.
@@ -4296,12 +4300,7 @@ export function InjectionPanel({
           onDismiss={() => setLateDoseDialogOpen(false)}
         >
           <div class="cd2004-dialog-frame">
-            <div class="cd2004-dialog-titlebar">
-              <span id="late-dose-review-title">Late-dose review</span>
-              <button type="button" aria-label="Close" onClick={() => setLateDoseDialogOpen(false)}>
-                X
-              </button>
-            </div>
+            <DialogHeading id="late-dose-review-title" title={"Late-dose review"} onClose={() => setLateDoseDialogOpen(false)} />
             <div class="cd2004-dialog-body">
               <p>{lateDoseWarningMessage}</p>
               <p class="wfp-field-hint">
@@ -4386,18 +4385,7 @@ export function InjectionPanel({
           onDismiss={() => setNextDoseOverrideOpen(false)}
         >
           <div class="cd2004-dialog-frame">
-            <div class="cd2004-dialog-titlebar">
-              <span id="next-dose-override-title">
-                {manualReturnDate ? "Record ordered return date" : "Override calculated return target"}
-              </span>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setNextDoseOverrideOpen(false)}
-              >
-                X
-              </button>
-            </div>
+            <DialogHeading id="next-dose-override-title" title={manualReturnDate ? "Record ordered return date" : "Override calculated return target"} onClose={() => setNextDoseOverrideOpen(false)} />
             <div class="cd2004-dialog-body">
               <p>
                 {manualReturnDate ? (

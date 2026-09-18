@@ -61,7 +61,7 @@ test.describe('Lightfully screen contract', () => {
     expect(home.retiredLauncherCount).toBe(0);
     // Chart rows use the repository's 8px product-control adaptation; the
     // measured rail itself stays square and flush to the workspace edge.
-    expect(home.navRadius).toBe('7px');
+    expect(home.navRadius).toBe('9px');
     expect(home.navFont).toMatch(/^"Inter Variable"/);
     // The measured shell uses a warm-white header and rail, and
     // a lavender workspace. The
@@ -108,7 +108,7 @@ test.describe('Lightfully screen contract', () => {
       if (contract.lookup) {
         expect(contract.lookup.backgroundImage).toBe('none');
         expect(contract.lookup.boxShadow).toBe('none');
-        expect(contract.lookup.borderRadius).toBe('8px');
+        expect(contract.lookup.borderRadius).toBe('0px 9px 9px 0px');
       }
     }
   });

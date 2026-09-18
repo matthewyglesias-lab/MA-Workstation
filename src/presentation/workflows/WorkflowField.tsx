@@ -196,7 +196,9 @@ export function WorkflowField({
   const pending = presentation.state === "pending-context";
   const state = registerState(presentation.state, incomplete);
   const changed = presentation.changed || presentation.source === "OVR";
-  const detail = presentation.detail || hint;
+  const rawDetail = presentation.detail || hint;
+  // A hint containing only “Required” repeats the asterisk; no clinical hint is suppressed.
+  const detail = rawDetail && /^required\.?$/i.test(rawDetail.trim()) ? undefined : rawDetail;
   const detailId = detail ? `${generatedId}-detail` : undefined;
   const labelledChildren = labelControls(children, {
     labelledBy: labelId,
@@ -233,10 +235,11 @@ export function WorkflowField({
     >
       <div class="wfp-field-label">
         <span class="wfp-field-caption" id={labelId}>{label}</span>
-        {required && <abbr class="wfp-req" title="Required">*</abbr>}
-        {optional && <span class="wfp-opt">optional</span>}
-        {pending && <span class="wfp-pending">pending context</span>}
+        {required && <abbr class="wfp-req" title="Required" aria-hidden="true">*</abbr>}
+        {optional && <span class="wfp-opt lf-sr-only">Optional</span>}
+        {pending && <span class="wfp-pending lf-sr-only">Pending context</span>}
         <RegisterMarkers
+          fieldLabel={label}
           source={presentation.source}
           state={state}
           changed={changed}
@@ -260,7 +263,7 @@ export function WorkflowField({
               requestWorkstationFieldLookup(select);
             }}
           >
-            …
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
           </button>
         </div>
       ) : (

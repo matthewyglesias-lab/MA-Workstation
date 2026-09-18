@@ -112,7 +112,7 @@ describe("workstation vocabulary", () => {
     expect(SHELL.shortcuts).toBe("Keyboard shortcuts");
     expect(NAVIGATION.clinicalWork).toBe("Clinical work");
     expect(OPEN_NOTES.udsTitle).toBe("Open Notes · UDS");
-    expect(CHECKLIST.title).toBe("Care Checklist");
+    expect(CHECKLIST.title).toBe("Items to complete");
     expect(CHECKLIST.stopCount(1)).toBe("1 stop");
     expect(CHECKLIST.stopCount(2)).toBe("2 stops");
     expect(CHECKLIST.reviewCount(2)).toBe("2 to review");

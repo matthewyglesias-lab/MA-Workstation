@@ -24,9 +24,8 @@ export const workflowLedgerPanelId = (idPrefix: string, tab: string) =>
   `${idPrefix}-panel-${tab}`;
 
 /**
- * A single control serves as both worksheet navigation and transaction ledger.
- * This avoids a duplicate modern stepper while giving each MEDITECH-style page
- * a concise, evaluator-derived state stamp.
+ * Direct, non-sequential section navigation. Quiet counts are accompanied by
+ * full evaluator-derived accessible state descriptions; no signing gate changes.
  */
 export function WorkflowLedgerTabs<Tab extends string>({
   tabs,
@@ -101,12 +100,11 @@ export function WorkflowLedgerTabs<Tab extends string>({
               }
             }}
           >
-            <span class="wfp-ledger-sequence" aria-hidden="true">
-              {String(index + 1).padStart(2, "0")}
-            </span>
             <span class="wfp-ledger-label">{tab.label}</span>
-            <span id={stateId} class={`wfp-ledger-state is-${tab.state}`}>
-              {stateLabel}
+            <span id={stateId} class={`wfp-ledger-state is-${tab.state}`} title={stateLabel}>
+              <span class="lf-sr-only">{stateLabel}</span>
+              {tab.stopCount ? <span class="lf-tab-count" aria-hidden="true">{tab.stopCount}</span> :
+                tab.state === "complete" || tab.state === "locked" ? <span class="lf-tab-complete" aria-hidden="true">✓</span> : null}
             </span>
           </button>
         );

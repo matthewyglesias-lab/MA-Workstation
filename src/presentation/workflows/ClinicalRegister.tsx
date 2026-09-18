@@ -4,12 +4,8 @@ import type { WorkflowFieldSource } from "../../application/workstation-projecti
 export type ClinicalFieldSource = WorkflowFieldSource;
 export type ClinicalFieldState = "REQ" | "OK" | "OPT" | "PEND" | "REV" | "STOP" | "N/A";
 
-/**
- * ENTRY is the default source - staff typed it here - so it appeared on very
- * nearly every field and said nothing. Every other source is a real provenance
- * claim worth a chip: the value came off the chart, the sign-in session, a local
- * record, the product label, a calculation, an override, or a locked record.
- */
+/** Staff-entered values need no extra label. Carried/calculated provenance
+ * remains available in a keyboard-accessible disclosure beside the caption. */
 const SILENT_SOURCE: ReadonlySet<ClinicalFieldSource> = new Set(["ENTRY"]);
 const SOURCE_LABEL: Record<string, string> = {
   CHART: "From chart", STAFF: "Signed-in staff", SESSION: "Session", LOCAL: "Local record",
@@ -25,52 +21,33 @@ const readableSummary = (value: string): string => {
 // arbitrary clinical text, medication names, or values.
 const readableHeading = (label: string): string => label.replace(/^[A-Z][A-Z /&–-]+(?= —|:|$)/, text => text[0] + text.slice(1).toLowerCase());
 
-/**
- * REQ duplicates the caption's red asterisk, OPT duplicates its italic
- * "optional", and OK / PEND / N/A only restate what the field already looks
- * like. Two chips on every field was more decoration than a real terminal ever
- * carried, and it competed with the data. STOP and REV survive: a hard blocker
- * and a review flag are worth calling out beside the field itself.
- */
-const SILENT_STATE: ReadonlySet<ClinicalFieldState> = new Set([
-  "REQ",
-  "OPT",
-  "OK",
-  "PEND",
-  "N/A",
-]);
-
 export function RegisterMarkers({
-  source = "ENTRY",
-  state,
-  changed = false,
-  changeDetail,
+  source = "ENTRY", state, changed = false, changeDetail, fieldLabel = "Field",
 }: {
-  source?: ClinicalFieldSource;
-  state: ClinicalFieldState;
-  changed?: boolean;
-  changeDetail?: string;
+  source?: ClinicalFieldSource; state: ClinicalFieldState; changed?: boolean;
+  changeDetail?: string; fieldLabel?: string;
 }) {
   const showSource = !SILENT_SOURCE.has(source);
-  const showState = !SILENT_STATE.has(state);
-  // Nothing informative to say: render no wrapper at all, so the caption row
-  // does not reserve a gap for an empty marker group.
-  if (!showSource && !showState && !changed) return null;
-
-  return (
-    <span
-      class="wfp-register-markers"
-      aria-label={`Source ${source}; state ${state}${changed ? "; changed from carried or calculated value" : ""}`}
-    >
-      {showSource && <span class="wfp-register-source" title={`Source: ${source}`}>{SOURCE_LABEL[source] ?? source}</span>}
-      {changed && (
-        <span class="wfp-register-change" title={changeDetail ?? "Changed from carried or calculated value"}>
-          Changed
-        </span>
-      )}
-      {showState && <span class={`wfp-register-state is-${state.toLowerCase()}`}>{state === "STOP" ? "Required" : state === "REV" ? "Review" : state}</span>}
+  const sourceLabel = SOURCE_LABEL[source] ?? source;
+  // Required state belongs to aria-required/aria-invalid and one caption asterisk,
+  // not a second “Required” stamp. All provenance remains available on demand.
+  if (!showSource && !changed && state !== "REV") return null;
+  return <details class="wfp-register-markers lf-field-provenance" onKeyDown={event => {
+    if (event.key === "Escape" && event.currentTarget.open) {
+      event.preventDefault(); event.stopPropagation(); event.currentTarget.open = false;
+      event.currentTarget.querySelector("summary")?.focus();
+    }
+  }}>
+    <summary aria-label={`${fieldLabel}: field information`} title={`${fieldLabel}: ${changed ? "value edited; " : ""}${sourceLabel}`}>
+      {changed ? <span class="lf-edited-label">Edited</span> : state === "REV" ? <span class="lf-edited-label">Review</span> :
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v5"/><circle cx="10" cy="6" r=".6" fill="currentColor"/></svg>}
+    </summary>
+    <span class="lf-provenance-content">
+      {showSource && <span class="wfp-register-source">{sourceLabel}</span>}
+      {changed && <span class="wfp-register-change">{changeDetail ?? "Changed from the carried or calculated value."}</span>}
+      {state === "REV" && <span class="wfp-register-state is-rev">Review this value before completion.</span>}
     </span>
-  );
+  </details>;
 }
 
 export function WorkflowSummaryFact({
@@ -110,7 +87,7 @@ export function TransactionLine({
   return (
     <div class={`wfp-transaction ${open ? "is-open" : ""}`}>
       <button type="button" class="wfp-transaction-line" aria-expanded={open} onClick={onToggle}>
-        <span aria-hidden="true">{open ? "−" : "+"}</span>
+        <span class="lf-disclosure-chevron" aria-hidden="true">{open ? "⌄" : "›"}</span>
         <strong>{readableHeading(label)}</strong>
         <span class={`wfp-transaction-state ${documented ? "is-documented" : ""}`}>
           {documented ? "Documented" : "Not recorded"}

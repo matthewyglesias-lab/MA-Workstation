@@ -1,3 +1,4 @@
+import { DialogHeading } from "../lightfully/DialogHeading";
 import type { ClinicalIssue } from "../../domain/contracts";
 import { ModalDialog } from "../ModalDialog";
 import { CHECKLIST } from "../vocabulary";
@@ -39,9 +40,17 @@ export function OutstandingRequirements<Tab extends string>({
 }: OutstandingRequirementsProps<Tab>) {
   if (!open || !stops.length) return null;
 
-  const navigate = (tab: Tab) => {
+  const navigate = (tab: Tab, field?: string) => {
     onNavigate(tab);
     onClose();
+    // The native dialog first restores its trigger; then move to the actual
+    // visible answer after the target section has rendered. Never fill a value.
+    if (field) requestAnimationFrame(() => requestAnimationFrame(() => {
+      const candidates = document.querySelectorAll<HTMLElement>(".wfp-panel [data-field-path]");
+      const target = Array.from(candidates).find(node => node.dataset.fieldPath === field && node.getClientRects().length > 0);
+      const control = target?.querySelector<HTMLElement>("input:not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not(:disabled)");
+      if (control) { control.scrollIntoView({ block: "center", behavior: "auto" }); control.focus({ preventScroll: true }); }
+    }));
   };
 
   // The engine pushes stops in whatever order it happens to evaluate them,
@@ -62,33 +71,24 @@ export function OutstandingRequirements<Tab extends string>({
       onDismiss={onClose}
     >
       <div class="cd2004-dialog-frame">
-        <div class="cd2004-dialog-titlebar">
-          <span id="cd2004-outstanding-requirements-title">{CHECKLIST.title}</span>
-          <button
-            type="button"
-            aria-label={`Close ${CHECKLIST.title}`}
-            onClick={onClose}
-          >
-            X
-          </button>
-        </div>
-        <div class="cd2004-dialog-body">
-          <div class="wfp-issue-list">
-            {orderedStops.map((stop) => {
-              const stopTab = tabForField(stop.field);
-              return (
-                <button
-                  key={`${stop.code}-${stop.field ?? ""}`}
-                  type="button"
-                  class="wfp-issue-row"
-                  onClick={() => navigate(stopTab)}
-                >
-                  <span class="wfp-issue-tab">{tabLabels[stopTab]}</span>
+        <DialogHeading id="cd2004-outstanding-requirements-title" title={CHECKLIST.title}
+          description="Choose an item to return to its section. Required checks remain in place before you finish."
+          closeLabel={`Close ${CHECKLIST.title}`} onClose={onClose} />
+        <div class="cd2004-dialog-body lf-requirements-body">
+          {tabOrder.map(tab => {
+            const items = orderedStops.filter(stop => tabForField(stop.field) === tab);
+            if (!items.length) return null;
+            return <section class="lf-requirements-group" key={tab} aria-label={tabLabels[tab]}>
+              <h3>{tabLabels[tab]}<span>{items.length}</span></h3>
+              <div class="wfp-issue-list">
+                {items.map(stop => <button key={`${stop.code}-${stop.field ?? ""}`} type="button" class="wfp-issue-row" onClick={() => navigate(tab, stop.field)}>
+                  <span class="wfp-issue-tab lf-sr-only">{tabLabels[tab]}</span>
                   <span class="wfp-issue-message">{stop.message}</span>
-                </button>
-              );
-            })}
-          </div>
+                  <span class="lf-issue-arrow" aria-hidden="true">→</span>
+                </button>)}
+              </div>
+            </section>;
+          })}
         </div>
       </div>
     </ModalDialog>

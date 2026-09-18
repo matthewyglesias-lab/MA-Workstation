@@ -16,6 +16,7 @@ import "./kiosk/kiosk.css";
 import "./tebra-screen-contract.css";
 import "./lightfully/lightfully-shell.css";
 import "./lightfully/lightfully-components.css";
+import "./lightfully/contemporary.css";
 import { worklistDate } from "./lightfully/worklist-display";
 import { ServiceChooser, ServiceHeader, isDocumentService } from "./lightfully/ServiceWorkspace";
 import { WorkspaceTools, type WorkspaceCommand } from "./lightfully/WorkspaceTools";
@@ -948,7 +949,7 @@ export function ClinicalDesktopShell({
       prompt: field?.dataset.fieldPrompt,
       options,
     });
-    setInternalStatus("Local field value table opened.");
+    setInternalStatus("Choose a value from the available options.");
     return true;
   }, []);
 
@@ -989,12 +990,12 @@ export function ClinicalDesktopShell({
   const chooseFieldLookupValue = useCallback(
     (option: WorkstationLookupOption) => {
       if (!fieldLookup) return;
-      const { control, fieldCode } = fieldLookup;
+      const { control, fieldCode, fieldLabel } = fieldLookup;
       if (control.value === option.value) {
         setFieldLookup(null);
         globalThis.setTimeout(() => {
           control.focus({ preventScroll: true });
-          setInternalStatus(`${fieldCode} unchanged — ${option.label} remains selected.`);
+          setInternalStatus(`${fieldLabel || fieldCode} unchanged — ${option.label} remains selected.`);
         }, 0);
         return;
       }
@@ -1008,7 +1009,7 @@ export function ClinicalDesktopShell({
       setFieldLookup(null);
       globalThis.setTimeout(() => {
         control.focus({ preventScroll: true });
-        setInternalStatus(`${fieldCode} filed as ${option.label}.`);
+        setInternalStatus(`${fieldLabel || fieldCode}: ${option.label} selected.`);
       }, 0);
     },
     [fieldLookup],
@@ -1794,9 +1795,9 @@ function InjectionRecordActions({
   const detail = locked
     ? actions.detail ?? INJECTION_DEFAULT_DETAIL[actions.lifecycle]
     : actions.blockingDetail
-      ? `First blocker: ${actions.blockingDetail}`
+      ? `Next step: ${actions.blockingDetail}`
       : blockerCount
-        ? `First blocker: ${blockerCount} required ${
+        ? `Next step: ${blockerCount} required ${
             blockerCount === 1 ? "field needs" : "fields need"
           } attention.`
         : actions.detail ?? INJECTION_DEFAULT_DETAIL[actions.lifecycle];

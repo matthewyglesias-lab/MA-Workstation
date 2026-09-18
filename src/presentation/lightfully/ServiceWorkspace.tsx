@@ -1,5 +1,6 @@
 import { useRef } from "preact/hooks";
 import { DesktopIcon } from "../DesktopIcon";
+import { DialogHeading } from "./DialogHeading";
 import { ModalDialog } from "../ModalDialog";
 import { WORKFLOW_LABELS, type WorkflowId, type WorkflowSummary } from "../types";
 
@@ -19,7 +20,7 @@ export function ServiceChooser({ onDismiss, onOpen }: {
 }) {
   const pending = useRef(false);
   return <ModalDialog class="lf-service-dialog cd2004-print-exclude" labelledBy="lf-service-title" onDismiss={onDismiss}>
-    <header class="lf-dialog-heading"><div><span class="lf-eyebrow">DOCUMENTATION</span><h2 id="lf-service-title">Document a service</h2><p>Choose the work you’re doing. Existing entries stay protected.</p></div><button type="button" class="lf-icon-button" aria-label="Close service selection" onClick={onDismiss}>×</button></header>
+    <DialogHeading id="lf-service-title" title="Document a service" description="Choose the service you need. Existing work stays protected when you switch." closeLabel="Close service selection" onClose={onDismiss} />
     <div class="lf-service-options">
       {SERVICES.map(service => <button type="button" class="lf-service-option cd2004-nav-item" title={WORKFLOW_LABELS[service.id]} data-service-open={service.id} onClick={() => {
         if (pending.current) return;
@@ -37,7 +38,7 @@ export function ServiceHeader({ workflow, previewOpen, onPreview, onChangeServic
 }) {
   const service = SERVICES.find(item => item.id === workflow);
   return <header class="lf-service-header">
-    <div class="lf-service-heading"><span class="lf-eyebrow">CLINICAL DOCUMENTATION</span><h1>{service?.label ?? WORKFLOW_LABELS[workflow]}</h1></div>
+    <div class="lf-service-heading"><h1>{service?.label ?? WORKFLOW_LABELS[workflow]}</h1><p class="lf-form-legend"><span aria-hidden="true">*</span> Required when applicable. Other fields are optional.</p></div>
     <div class="lf-service-header-actions"><button type="button" class="lf-text-button" onClick={onChangeService} aria-haspopup="dialog">Change service <span aria-hidden="true">⌄</span></button><div class="lf-view-switch" role="group" aria-label="Workspace view"><button type="button" aria-pressed={!previewOpen} onClick={() => { if(previewOpen) onPreview(); }}>Details</button><button type="button" aria-pressed={previewOpen} aria-controls="lf-document-preview" onClick={onPreview}><DesktopIcon name="note"/>Preview</button></div></div>
   </header>;
 }

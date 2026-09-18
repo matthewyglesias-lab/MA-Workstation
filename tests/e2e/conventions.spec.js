@@ -523,7 +523,7 @@ test.describe('Phase 3b patient chart conventions', () => {
       'Last injection',
       'Site rotation',
       'Allergies',
-      'Care Checklist',
+      'Items to complete',
       'Recent notes'
     ]);
 

@@ -1,3 +1,4 @@
+import { DialogHeading } from "./lightfully/DialogHeading";
 import { useEffect, useRef, useState } from 'preact/hooks';
 
 export interface ClinicOption {
@@ -74,14 +75,7 @@ export function ContextDialog({
       }}
     >
       <div class="cd2004-dialog-frame">
-        <div class="cd2004-dialog-titlebar">
-          <span id="cd2004-context-title">
-            {kind === 'staff' ? 'Staff Sign-In' : 'Visit Location'}
-          </span>
-          <button type="button" aria-label="Close" onClick={onClose}>
-            X
-          </button>
-        </div>
+        <DialogHeading id="cd2004-context-title" title={kind === 'staff' ? 'Staff sign-in' : 'Visit location'} onClose={onClose} />
         <form onSubmit={submit}>
           <div class="cd2004-dialog-body">
             {kind === 'staff' ? (

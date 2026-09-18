@@ -1,3 +1,4 @@
+import { DialogHeading } from "./lightfully/DialogHeading";
 import { useMemo, useRef, useState } from "preact/hooks";
 import { ModalDialog } from "./ModalDialog";
 
@@ -66,34 +67,17 @@ export function WorkstationLookupDialog({
       onDismiss={onDismiss}
     >
       <section class="cd2004-dialog-frame" data-field-lookup-dialog>
-        <header class="cd2004-dialog-titlebar">
-          {/*
-            Titled by the field, not by its code. "INJ FIELD LOOKUP ·
-            INJ-REASON" named a screen and an internal identifier; "Encounter
-            type" names what the person is choosing. The code still appears in
-            the context line below for staff who work by it.
-          */}
-          <strong id={titleId}>
-            {transaction.fieldLabel || transaction.fieldCode}
-          </strong>
-          <button type="button" aria-label="Close field lookup" onClick={onDismiss}>
-            ×
-          </button>
-        </header>
-
-        <div class="cd2004-lookup-context">
-          <strong>{transaction.fieldCode}</strong>
-          <span>{transaction.prompt || "Select one of the available local values."}</span>
-        </div>
+        <DialogHeading id={titleId} title={transaction.fieldLabel || transaction.fieldCode} description="Search the available options, then choose a value." closeLabel="Close field lookup" onClose={onDismiss} />
+        <div class="cd2004-lookup-context lf-sr-only"><strong>{transaction.fieldCode}</strong><span>{transaction.prompt}</span></div>
 
         <div class="cd2004-dialog-body cd2004-lookup-body">
           <label class="cd2004-dialog-field">
-            Find value
+            Search options
             <input
               autoFocus
               type="search"
               value={query}
-              placeholder="Type to filter the local value table"
+              placeholder="Search available options"
               onInput={(event) => setQuery(event.currentTarget.value)}
               onKeyDown={(event) => {
                 if (event.key === "ArrowDown") {
@@ -113,11 +97,6 @@ export function WorkstationLookupDialog({
             role="listbox"
             aria-label={`Available values for ${transaction.fieldLabel}`}
           >
-            <div class="cd2004-lookup-columns" aria-hidden="true">
-              <span>#</span>
-              <span>Local value</span>
-              <span>State</span>
-            </div>
             {options.map((option, index) => (
               <button
                 key={option.value}
@@ -142,24 +121,23 @@ export function WorkstationLookupDialog({
                   }
                 }}
               >
-                <span>{String(option.ordinal ?? index + 1).padStart(2, "0")}</span>
                 <span>
                   <strong>{option.label}</strong>
                   {option.description && <small>{option.description}</small>}
                 </span>
-                <span>{option.selected ? "CURRENT" : ""}</span>
+                <span class="lf-lookup-selected">{option.selected ? "Selected" : ""}</span>
               </button>
             ))}
             {!options.length && (
               <div class="cd2004-lookup-empty" role="status">
-                NO MATCHING LOCAL VALUES
+                No matching options. Try another search.
               </div>
             )}
           </div>
         </div>
 
         <footer class="cd2004-dialog-actions cd2004-lookup-actions">
-          <span>↑↓ MOVE · ENTER SELECT · ESC RETURN</span>
+          <span>Use ↑↓ to move, Enter to select, or Escape to close.</span>
           <span />
           <button type="button" onClick={onDismiss}>
             Cancel

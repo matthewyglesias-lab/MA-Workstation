@@ -440,8 +440,8 @@ export const ACTION_BAR = {
 
 /** Tebra's name for the outstanding-items list on a patient. */
 export const CHECKLIST = {
-  title: "Care Checklist",
-  view: "View Care Checklist",
+  title: "Items to complete",
+  view: "View items to complete",
   /**
    * Per-item state words. Extracted from NoteInspector so the Facesheet's
    * Care Checklist card and the inspector's list cannot drift apart on what

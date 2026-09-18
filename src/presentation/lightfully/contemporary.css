@@ -1,0 +1,259 @@
+/** Contemporary clinical workspace.
+ * Layout vocabulary: quiet navigation / clear identity / one task / one action dock.
+ * This stylesheet only describes screens. Never import it into a print document.
+ * Required state, provenance, native dialogs and clinical warnings remain semantic.
+ */
+@media screen {
+ :root {
+  --lf-ink:#294255; --lf-muted:#586f7c; --lf-paper:#fff; --lf-soft:#f7f8fa;
+  --lf-line:#e0e6e9; --lf-lavender:#f7f5f8; --lf-leaf:#3c7083;
+  --lf-control-border:#bdcbd3; --lf-control-height:42px; --lf-radius:9px;
+  --lf-content-width:1040px; --lf-space:24px;
+  --lf-heading-font:Georgia,"Times New Roman",serif;
+ }
+ /* Screen-reader descriptions do not turn back into badges under legacy CSS. */
+ body:has(#lf-workstation) .lf-sr-only {
+  position:absolute!important;width:1px!important;height:1px!important;padding:0!important;
+  margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;
+  clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important;
+ }
+ #lf-workstation {--cd-chrome:#f7f8fa;--cd-chrome-light:#fff;--cd-chrome-dark:#edf0f3;--cd-border-mid:var(--lf-line);}
+ .lf-workstation#lf-workstation {grid-template-columns:200px minmax(0,1fr);}
+ #lf-workstation .lf-section-rail {padding:0 14px;}
+ #lf-workstation .lf-sidebar-brand {padding:25px 7px 28px;gap:11px;}
+ #lf-workstation .lf-brand-symbol {border-radius:12px;background:#fff0ea;width:36px;height:38px;}
+ #lf-workstation .lf-sidebar-brand b {font-weight:600;letter-spacing:.08em;}
+ #lf-workstation .lf-document-action {min-height:44px;border-radius:9px;font-weight:500;font-size:12px;}
+ #lf-workstation .lf-primary-navigation {gap:5px;padding-top:24px;}
+ #lf-workstation .lf-section-rail .cd2004-nav-item {min-height:43px;font-size:12px;border-radius:9px;}
+ #lf-workstation .lf-current-service {border-radius:9px;min-height:43px;font-weight:500;}
+ #lf-workstation .lf-current-service small {display:none;}
+ #lf-workstation .lf-patient-navigation {padding-top:17px;border-color:#e1e6e9;}
+ #lf-workstation .lf-section-rail .cd2004-nav-item kbd {display:none;}
+ #lf-workstation .lf-tools-navigation {margin-top:18px;}
+ #lf-workstation .tebra-app-header-main {height:52px;min-height:52px;padding-inline:30px;}
+ #lf-workstation .lf-header-search input {border-color:transparent!important;background:#f5f7f8!important;border-radius:8px!important;}
+ #lf-workstation .lf-command-trigger {border-color:transparent;font-weight:400;}
+ #lf-workstation .lf-command-trigger kbd {border:0;background:transparent;font-size:9px;}
+ #lf-workstation .cd2004-patient-banner {min-height:70px;padding:12px 30px;gap:20px;}
+ #lf-workstation .cd2004-patient-primary {gap:11px;}
+ #lf-workstation .cd2004-patient-banner small {font-size:10px;font-weight:400;color:var(--lf-muted);}
+ #lf-workstation .cd2004-patient-primary strong {font-size:14px;font-weight:600;}
+ #lf-workstation .meditech-patient-safety {padding:7px 12px;min-height:42px;}
+ #lf-workstation .meditech-patient-safety[data-allergy-tone=documented-negative] {background:#f6f8f9;border-color:transparent;}
+ #lf-workstation .lf-service-header {padding:21px 30px 19px;background:#fff;border-bottom:0;}
+ #lf-workstation .lf-service-heading h1 {font:400 31px/1.15 var(--lf-heading-font);margin:0;letter-spacing:-.6px;}
+ #lf-workstation .lf-form-legend {font:400 11px/18px var(--tw-font-sans);color:var(--lf-muted);margin:8px 0 0;}
+ #lf-workstation .lf-form-legend > span {color:#a84f47;font-weight:600;}
+ #lf-workstation .lf-view-switch {background:#f4f5f7;border-color:transparent;border-radius:9px;padding:4px;}
+ #lf-workstation .lf-view-switch button {font-size:12px;border-radius:6px;min-height:32px;}
+ #lf-workstation .lf-view-switch button[aria-pressed=true] {box-shadow:0 1px 4px rgb(41 66 85 / 9%);}
+ #lf-workstation .lf-service-header-actions {gap:17px;}
+ #lf-workstation .lf-text-button {font-size:12px;font-weight:400;}
+ /* Tabs are locations, not a bank of validation stamps. */
+ #lf-workstation .wfp-transaction-chrome {padding-inline:30px;background:#fff;border:0;border-bottom:1px solid var(--lf-line);}
+ #lf-workstation .wfp-panel .wfp-summary-bar {min-height:35px;padding:3px 0 8px;gap:12px;}
+ #lf-workstation .wfp-summary-fact {font-weight:400;}
+ #lf-workstation .wfp-status-flag {border-color:transparent;box-shadow:none;border-radius:6px;padding:4px 6px;font-size:11px;background:transparent;}
+ #lf-workstation button.wfp-status-flag {text-decoration:underline;text-decoration-color:currentColor;text-underline-offset:4px;}
+ #lf-workstation .wfp-status-flag.is-stop {color:#9b3e37;background:#fff5f2;}
+ #lf-workstation .wfp-status-icon {font-size:13px;font-weight:500;}
+ #lf-workstation .wfp-summary-print-avs {min-height:29px;border:0;background:transparent;font-weight:400;padding:3px 0 3px 8px;}
+ #lf-workstation .wfp-panel .wfp-tabbar {gap:28px;}
+ #lf-workstation .wfp-panel .wfp-tab {min-height:46px;gap:8px;font-size:13px;font-weight:400;padding-inline:1px;border-bottom-width:2px;}
+ #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] {font-weight:600;color:var(--lf-ink);background:transparent;}
+ #lf-workstation .wfp-ledger-state {background:transparent!important;border:0!important;padding:0!important;min-width:0;display:inline-flex;align-items:center;}
+ #lf-workstation .lf-tab-count {display:inline-grid;place-items:center;min-width:19px;height:19px;border-radius:50%;background:#eff2f5;color:#5c7180;font:400 10px/19px var(--tw-font-sans);}
+ #lf-workstation .lf-tab-complete {color:#2f705f;font-size:12px;}
+ #lf-workstation .wfp-panel .wfp-transaction-page {background:#fff;padding:24px 30px;}
+ #lf-workstation .wfp-panel .wfp-section {padding:24px 0 28px;border:0;border-bottom:1px solid #e5eaed;background:transparent;box-shadow:none;}
+ #lf-workstation .wfp-panel .wfp-section:first-child {padding-top:3px;}
+ #lf-workstation .wfp-panel .wfp-section:last-child {border-bottom:0;}
+ #lf-workstation .wfp-panel .wfp-section-head {font:600 16px/24px var(--tw-font-sans);letter-spacing:-.15px;text-transform:none;padding:0 0 17px;margin:0;border:0;background:transparent;}
+ #lf-workstation .wfp-section-body {gap:20px;}
+ #lf-workstation .wfp-section-body > .wfp-operator-guidance {width:100%;margin:0;}
+ #lf-workstation .wfp-row {gap:22px;margin-bottom:21px;}
+ #lf-workstation .wfp-field {position:relative;min-width:0;}
+ #lf-workstation .wfp-field-label {position:relative;display:flex;align-items:center;min-height:21px;gap:4px;margin-bottom:7px;padding:0;}
+ #lf-workstation .wfp-field-caption {font:500 12px/20px var(--tw-font-sans);color:#445e6d;letter-spacing:0;text-transform:none;}
+ #lf-workstation .wfp-req {display:inline;font:500 12px/20px var(--tw-font-sans);color:#a84f47;text-decoration:none;}
+ #lf-workstation .wfp-panel .wfp-field :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {min-height:42px;padding:10px 12px;border-color:var(--lf-control-border);border-radius:9px;font:400 14px/20px var(--tw-font-sans);background-color:#fff;box-shadow:0 1px 2px rgb(41 66 85 / 2%);}
+ #lf-workstation .wfp-panel .wfp-field :is(input,textarea)::placeholder {color:#748893;font-size:12px;}
+ #lf-workstation .wfp-panel .wfp-field.is-incomplete :is(input,select,textarea) {border-color:#b36b64;background:#fff;}
+ #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):disabled {box-shadow:none;background:#f5f7f8;color:#657986;}
+ #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):focus {border-color:#7f9ca9;outline:2px solid #3c7083;outline-offset:2px;box-shadow:none;}
+ #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc) {font:400 11px/18px var(--tw-font-sans);color:#5e7481;margin-top:6px;}
+ /* One connected choice field: the search affordance no longer looks like an
+    unrelated ellipsis command. Native select and the F9 lookup both remain. */
+ #lf-workstation .wfp-panel .wfp-field-entry {gap:0;align-items:start;}
+ #lf-workstation .wfp-panel .wfp-field-entry > select,
+ #lf-workstation .wfp-panel .wfp-field-entry > :first-child > select,
+ #lf-workstation .wfp-panel .wfp-field-entry > :first-child > .wfp-select-group > select {border-top-right-radius:0;border-bottom-right-radius:0;}
+ #lf-workstation .wfp-panel .wfp-field-lookup-button {width:35px;min-width:35px;flex:0 0 35px;height:42px;min-height:42px;border-radius:0 9px 9px 0;margin-left:-1px;border:1px solid var(--lf-control-border);border-left-color:#e0e6e9;background:#fff;color:#587787;box-shadow:none;}
+ #lf-workstation .wfp-panel .wfp-field-lookup-button:hover {background:#edf4f6;}
+ #lf-workstation .wfp-field-lookup-button svg {width:16px;height:16px;}
+ /* Provenance is available by pointer and keyboard, but never competes with
+    the entered value. Information is not inferred or moved into the note. */
+ #lf-workstation .lf-field-provenance {position:relative;margin-left:auto;flex:0 0 auto;display:block;line-height:20px;}
+ #lf-workstation .lf-field-provenance > summary {list-style:none;display:flex;align-items:center;justify-content:center;min-width:22px;min-height:22px;padding:1px 3px;color:#697f8c;cursor:pointer;border-radius:5px;}
+ #lf-workstation .lf-field-provenance > summary::-webkit-details-marker {display:none;}
+ #lf-workstation .lf-field-provenance > summary::before,#lf-workstation .lf-field-provenance > summary::after {content:none;}
+ #lf-workstation .lf-field-provenance[open] > summary {background:#eaf2f4;color:#294255;}
+ #lf-workstation .lf-provenance-content {position:absolute;top:calc(100% + 5px);right:0;z-index:20;display:flex;flex-direction:column;gap:6px;min-width:150px;width:max-content;max-width:240px;white-space:normal;padding:12px 14px;background:#fff;border:1px solid #d7e1e6;border-radius:10px;box-shadow:0 6px 20px rgb(27 49 65 / 12%);}
+ #lf-workstation .lf-field-provenance .wfp-register-source {font:500 12px/18px var(--tw-font-sans);color:#294255;}
+ #lf-workstation .lf-field-provenance .wfp-register-change {font:400 11px/17px var(--tw-font-sans);color:#82591c;}
+ #lf-workstation .lf-edited-label {font:500 10px/18px var(--tw-font-sans);color:#82591c;}
+ /* Contextual instruction, one concise next action, and the complete reference.
+    Real cadence cautions are deliberately kept outside the disclosure. */
+ #lf-workstation .wfp-operator-guidance {position:relative;background:#f1f6f7;border:0;border-radius:12px;padding:16px 19px;margin:0 auto 25px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 15px;}
+ #lf-workstation .wfp-operator-guidance-head {grid-column:1;padding:0;gap:9px;align-items:center;}
+ #lf-workstation .wfp-operator-guidance-head > strong {font-size:12px;font-weight:500;color:#385968;}
+ #lf-workstation .wfp-operator-guidance-head > span {font-size:11px;color:#586f7c;}
+ #lf-workstation .wfp-operator-guidance-list {grid-column:1/-1;grid-row:2;}
+ #lf-workstation .wfp-operator-guidance-row {font-size:12px;line-height:20px;}
+ #lf-workstation .wfp-operator-guidance-action {grid-column:2;grid-row:1;margin:0;padding:0;min-height:24px;width:auto;font-size:11px;}
+ #lf-workstation .wfp-operator-guidance > .wfp-reference {grid-column:1/-1;}
+ #lf-workstation .wfp-operator-guidance .wfp-reference > summary {font-weight:400;font-size:11px;padding-top:5px;}
+ #lf-workstation .lf-reference-version {font-size:11px;color:var(--lf-muted);margin:0 0 12px;}
+ #lf-workstation .wfp-operator-guidance-row.is-warning {border:1px solid var(--tw-review-border);padding:10px 12px;margin-top:7px;}
+ /* Ordinary choice rows are neither completion badges nor warning boxes. */
+ #lf-workstation .wfp-option-row {padding:12px 14px;border-radius:9px;border-color:#dee6ea;background:#fff;}
+ #lf-workstation .wfp-option-row.is-selected {background:#eef4f6;border-color:#afc4ce;}
+ #lf-workstation .wfp-option-title {font-size:13px;line-height:20px;font-weight:500;}
+ #lf-workstation .wfp-option-list {gap:9px;}
+ #lf-workstation .wfp-site-tile {border-radius:9px;min-height:53px;border-color:#dce5e9;}
+ #lf-workstation .wfp-site-tile-title {font-size:12px;font-weight:500;}
+ #lf-workstation .wfp-site-tile-icon {display:none;}
+ #lf-workstation .wfp-site-tile {gap:11px;}
+ #lf-workstation .wfp-needle-ref {font-size:10px;font-weight:400;letter-spacing:0;color:#6d828d;}
+ #lf-workstation .wfp-needle-input-caption {font:500 12px/20px var(--tw-font-sans);letter-spacing:0;text-transform:none;}
+ #lf-workstation .wfp-reference > summary::before {content:"›";font:400 16px/1 var(--tw-font-sans);}
+ #lf-workstation .wfp-reference[open] > summary::before {content:"⌄";}
+
+ #lf-workstation .wfp-checkbox-row {font-size:13px;line-height:21px;padding-block:3px;}
+ #lf-workstation .wfp-transaction {border:0;border-top:1px solid #e1e8ec;border-radius:0;}
+ #lf-workstation .wfp-transaction-line {border:0;border-radius:0;background:transparent;padding:14px 0;min-height:45px;gap:10px;}
+ #lf-workstation .wfp-transaction-line > strong {font-size:12px;font-weight:500;line-height:19px;}
+ #lf-workstation .wfp-transaction-line:hover {background:#f4f7f9;}
+ #lf-workstation .lf-disclosure-chevron {font:400 20px/20px var(--tw-font-sans);color:#648291;}
+ #lf-workstation .wfp-transaction-state {font-size:10px;}
+ #lf-workstation .wfp-transaction-body {border:0;padding:5px 0 22px;background:transparent;gap:22px;}
+ #lf-workstation .wfp-needle-panel {border:0;border-radius:10px;background:#f3f7f8;}
+ #lf-workstation .wfp-schedule-register {border-radius:10px;}
+ #lf-workstation .wfp-review-contract {border-radius:10px;padding:18px;background:#f3f7f8;}
+ #lf-workstation .wfp-review-contract.is-current {background:var(--tw-ready-bg);border-color:var(--tw-ready-border);}
+ #lf-workstation .cd2004-record-actions {padding:13px 30px;min-height:66px;box-shadow:none;}
+ #lf-workstation .cd2004-record-actions-state > strong {font-size:12px;font-weight:500;}
+ #lf-workstation .cd2004-record-actions-state > small {font-size:10px;line-height:17px;}
+ #lf-workstation .cd2004-record-actions-buttons button {min-height:37px;border-radius:8px;font-size:12px;font-weight:500;}
+ #lf-workstation .cd2004-record-actions-buttons button kbd {display:none;}
+ #lf-workstation .lf-service-footer {gap:9px;padding:13px 30px;}
+ #lf-workstation .lf-service-scroll {padding:24px 30px;}
+ #lf-workstation .lf-service-scroll .wfp-section-head {font-size:16px;}
+ #lf-workstation .wfp-invalidation-receipt {border:1px solid var(--tw-review-border);background:var(--tw-review-bg);border-radius:10px;padding:12px 15px;font-size:12px;line-height:19px;}
+ #lf-workstation .wfp-invalidation-receipt > strong {text-transform:none;letter-spacing:0;font-weight:600;}
+
+ body:has(#lf-workstation) .cd2004-outstanding-requirements-dialog .cd2004-dialog-frame {width:min(580px,calc(100vw - 48px));max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);display:flex;flex-direction:column;}
+ body:has(#lf-workstation) .lf-dialog-title {flex:0 0 auto;white-space:normal;overflow:visible;}
+ body:has(#lf-workstation) .lf-dialog-title > div {min-width:0;flex:1;white-space:normal;overflow:visible;}
+ body:has(#lf-workstation) .lf-dialog-title :is(h2,p) {white-space:normal;overflow:visible;text-overflow:clip;max-height:none;}
+ body:has(#lf-workstation) .lf-requirements-body {min-height:0;flex:1 1 auto;overflow-y:auto;scrollbar-gutter:stable;}
+
+ body:has(#lf-workstation) .cd2004-lookup-row {grid-template-columns:minmax(0,1fr) auto;gap:16px;}
+ body:has(#lf-workstation) .cd2004-lookup-row > span {border:0;padding:0;}
+ body:has(#lf-workstation) .cd2004-lookup-row > span:first-child {font:inherit;color:inherit;text-align:left;}
+ body:has(#lf-workstation) .cd2004-lookup-row strong {font-weight:500;}
+ body:has(#lf-workstation) .cd2004-lookup-row > .lf-lookup-selected {font:500 11px/18px var(--tw-font-sans);color:#3c7083;}
+ body:has(#lf-workstation) .cd2004-lookup-actions > span:first-child {white-space:normal;font:400 11px/18px var(--tw-font-sans);text-transform:none;letter-spacing:0;}
+ /* Complete dialog system, including portals appended outside the app root. */
+ body:has(#lf-workstation) :is(dialog.cd2004-dialog,dialog.cd2004-lookup-dialog,dialog.records-drawer-layer)::backdrop {background:rgb(27 49 65 / 32%);backdrop-filter:blur(2px);}
+ body:has(#lf-workstation) :is(.cd2004-dialog-frame,.cd2004-lookup-window,.records-drawer) {border:1px solid #dce5e9;border-radius:16px;background:#fff;color:#294255;box-shadow:0 24px 70px rgb(27 49 65 / 17%);overflow:hidden;}
+ body:has(#lf-workstation) :is(.cd2004-dialog-titlebar,.records-drawer-head) {display:flex;justify-content:space-between;align-items:flex-start;gap:16px;min-height:64px;background:#fff;background-image:none;border:0;padding:24px 26px 17px;box-shadow:none;color:#294255;}
+ body:has(#lf-workstation) :is(.cd2004-dialog-titlebar h2,.records-drawer-head h2) {font:400 26px/1.25 var(--lf-heading-font);letter-spacing:-.3px;margin:0;color:#294255;text-transform:none;}
+ body:has(#lf-workstation) .lf-dialog-title p {margin:9px 0 0;font:400 12px/20px var(--tw-font-sans);color:#587080;max-width:520px;}
+ body:has(#lf-workstation) :is(.lf-dialog-close,.records-drawer-close) {display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;min-height:32px;padding:5px;border:0!important;background:#f4f6f8;border-radius:50%!important;box-shadow:none;color:#587080;}
+ body:has(#lf-workstation) :is(.lf-dialog-close,.records-drawer-close):hover {background:#e7eff3;}
+ body:has(#lf-workstation) .cd2004-dialog-body {padding:6px 26px 23px;background:#fff;color:#294255;font:400 13px/21px var(--tw-font-sans);overflow:auto;}
+ body:has(#lf-workstation) .cd2004-dialog-body > p {margin:0 0 15px;}
+ body:has(#lf-workstation) .cd2004-dialog-body .wfp-row {gap:18px;}
+ body:has(#lf-workstation) .cd2004-dialog-field {gap:8px;color:#445e6d;font:500 12px/20px var(--tw-font-sans);}
+ body:has(#lf-workstation) .cd2004-dialog-field :is(input,select,textarea) {min-height:42px;padding:10px 12px;border:1px solid #bdcbd3;border-radius:9px;box-shadow:none;color:#294255;background:#fff;font:400 14px/20px var(--tw-font-sans);}
+ body:has(#lf-workstation) .cd2004-dialog-field small {font:400 11px/18px var(--tw-font-sans);color:#587080;}
+ body:has(#lf-workstation) .cd2004-dialog-actions {padding:16px 26px;gap:9px;background:#fbfcfc;border:0;border-top:1px solid #e4eaee;box-shadow:none;}
+ body:has(#lf-workstation) .cd2004-dialog-actions button {min-height:38px;padding:9px 14px;border:1px solid #bdcbd3;border-radius:8px;color:#294255;background:#fff;font:500 12px/18px var(--tw-font-sans);box-shadow:none;}
+ body:has(#lf-workstation) .cd2004-dialog-actions button.is-primary {color:#fff;background:#294255;border-color:#294255;}
+ body:has(#lf-workstation) .cd2004-dialog-actions button.is-danger {color:#a63737;background:#fff7f4;border-color:#e8bcb3;}
+ body:has(#lf-workstation) .cd2004-dialog-actions button:disabled {color:#778894;background:#f1f4f6;border-color:#e0e6e9;cursor:not-allowed;}
+ body:has(#lf-workstation) .lf-requirements-body {max-height:min(55dvh,480px);padding-top:3px;}
+ body:has(#lf-workstation) .lf-requirements-group + .lf-requirements-group {margin-top:22px;}
+ body:has(#lf-workstation) .lf-requirements-group h3 {display:flex;align-items:center;gap:10px;font:600 13px/20px var(--tw-font-sans);margin:9px 0 6px;color:#294255;}
+ body:has(#lf-workstation) .lf-requirements-group h3 > span {font-weight:400;color:#657c89;font-size:11px;}
+ body:has(#lf-workstation) .wfp-issue-list {gap:0;}
+ body:has(#lf-workstation) .wfp-issue-row {display:flex;align-items:center;gap:14px;justify-content:space-between;width:100%;text-align:left;min-height:45px;border:0;border-bottom:1px solid #e7ecef;border-radius:0;padding:11px 1px;background:#fff;color:#445e6d;font:400 12px/20px var(--tw-font-sans);box-shadow:none;}
+ body:has(#lf-workstation) .wfp-issue-row:hover {background:#f3f7f9;}
+ body:has(#lf-workstation) .lf-issue-arrow {color:#3c7083;flex:0 0 auto;}
+ body:has(#lf-workstation) .cd2004-attestation-review {border:0;border-radius:10px;padding:14px 16px;background:#f3f7f8;gap:12px;}
+ body:has(#lf-workstation) .cd2004-attestation-review dt {font:400 11px/18px var(--tw-font-sans);text-transform:none;letter-spacing:0;color:#607584;}
+ body:has(#lf-workstation) .cd2004-attestation-review dd {font:500 13px/20px var(--tw-font-sans);color:#294255;}
+ body:has(#lf-workstation) .records-drawer-search {padding:5px 26px 17px;background:#fff;}
+ body:has(#lf-workstation) .records-drawer-search input {font:400 13px/20px var(--tw-font-sans);height:42px;border-radius:9px;border-color:#bdcbd3;box-shadow:none;}
+ body:has(#lf-workstation) .records-drawer-foot {padding:14px 24px;background:#fbfcfc;}
+ body:has(#lf-workstation) .cd2004-lookup-row {padding:13px 15px;border:0;border-bottom:1px solid #e6ecef;border-radius:0;box-shadow:none;min-height:44px;background:#fff;color:#294255;font:400 13px/20px var(--tw-font-sans);}
+ body:has(#lf-workstation) .cd2004-lookup-row.is-selected {background:#eaf2f5;}
+ #lf-workstation .lf-service-dialog,#lf-workstation .lf-command-dialog {border-radius:16px;}
+ #lf-workstation .lf-dialog-heading {padding:25px 27px 21px;}
+ #lf-workstation .lf-dialog-heading h2 {font-size:29px;margin-top:0;}
+ #lf-workstation .lf-dialog-heading p {font-size:12px;line-height:20px;}
+ #lf-workstation .lf-service-options {padding:0 24px 24px;gap:5px;}
+ #lf-workstation .lf-service-dialog .lf-service-option {padding:15px 12px;border:0;border-radius:10px;}
+ #lf-workstation .lf-service-icon {background:#eff5f6;border-radius:10px;width:39px;height:43px;}
+ #lf-workstation .lf-service-option strong {font-size:14px;font-weight:500;}
+ #lf-workstation .lf-service-option small {font-size:12px;line-height:20px;}
+ #lf-workstation .lf-icon-button {border:0;background:#f4f6f8;border-radius:50%;width:32px;height:32px;}
+ /* Preserve warning meaning regardless of ordinary selection styling. */
+ #lf-workstation .wfp-option-row.is-stop.is-selected {background:var(--tw-stop-bg);color:var(--tw-stop-fg);border-color:var(--tw-stop-border);}
+ #lf-workstation .wfp-exception-block .wfp-option-row.is-selected,#lf-workstation .wfp-option-row.is-warning.is-selected {background:var(--tw-review-bg);color:var(--tw-review-fg);border-color:var(--tw-review-border);}
+ #lf-workstation .wfp-option-row.is-ready.is-selected {background:#eef4f6;border-color:#afc4ce;}
+ @media (max-width:1179px) {
+  #lf-workstation .wfp-panel .wfp-tabbar {gap:18px;}
+  #lf-workstation .wfp-operator-guidance {grid-template-columns:minmax(0,1fr);}
+  #lf-workstation .wfp-operator-guidance-head {grid-column:1;}
+  #lf-workstation .wfp-operator-guidance-action {grid-column:1;grid-row:auto;justify-content:flex-start;}
+  #lf-workstation .wfp-operator-guidance-list {grid-column:1;}
+ }
+ @media (max-width:949px) {
+  .lf-workstation#lf-workstation {grid-template-columns:158px minmax(0,1fr);}
+  #lf-workstation .lf-section-rail {padding-inline:9px;}
+  #lf-workstation .lf-document-action {font-size:10px;}
+  #lf-workstation .tebra-app-header-main {padding-inline:20px;}
+  #lf-workstation .cd2004-patient-banner {padding:10px 20px;min-height:62px;}
+  #lf-workstation .lf-service-header {padding:15px 22px;}
+  #lf-workstation .lf-service-heading h1 {font-size:27px;}
+  #lf-workstation .lf-form-legend {max-width:235px;font-size:10px;line-height:16px;margin-top:5px;}
+  #lf-workstation .lf-service-header-actions {gap:10px;}
+  #lf-workstation .wfp-transaction-chrome {padding-inline:22px;}
+  #lf-workstation .wfp-panel .wfp-tab {font-size:12px;gap:5px;min-height:43px;}
+  #lf-workstation .wfp-panel .wfp-tabbar {gap:14px;}
+  #lf-workstation .wfp-panel .wfp-transaction-page {padding:20px 22px;}
+  #lf-workstation .wfp-panel .wfp-section-head {font-size:15px;}
+  #lf-workstation .wfp-operator-guidance {padding:14px 16px;margin-bottom:23px;}
+  #lf-workstation .wfp-row {gap:18px;}
+  #lf-workstation .cd2004-record-actions {padding:10px 18px;gap:10px;}
+  #lf-workstation .cd2004-record-actions-buttons button {font-size:10px;min-height:35px;padding-inline:8px;}
+  #lf-workstation .lf-service-footer {padding:11px 18px;}
+ }
+ @media (max-height:700px) {
+  #lf-workstation .lf-service-header {padding-block:12px;}
+  #lf-workstation .lf-service-heading h1 {font-size:26px;}
+  #lf-workstation .lf-form-legend {margin-top:4px;}
+  #lf-workstation .wfp-panel .wfp-tab {min-height:41px;}
+  #lf-workstation .cd2004-record-actions {min-height:60px;}
+  body:has(#lf-workstation) .cd2004-dialog-titlebar {padding:19px 23px 13px;}
+  body:has(#lf-workstation) .cd2004-dialog-titlebar h2 {font-size:24px;}
+ }
+ :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-field :is(input:not([type=checkbox]):not([type=radio]),select) {min-height:36px;padding-block:7px;}
+ :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-field-lookup-button {height:36px;min-height:36px;}
+ #lf-workstation[data-kiosk-mode=true] .wfp-panel .wfp-field :is(input:not([type=checkbox]):not([type=radio]),select,textarea,button) {min-height:44px;}
+ #lf-workstation[data-kiosk-mode=true] .wfp-panel .wfp-field-lookup-button {height:44px;}
+ @media(prefers-reduced-motion:reduce) {body:has(#lf-workstation) * {scroll-behavior:auto!important;}}
+}

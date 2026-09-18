@@ -1,24 +1,7 @@
 import type { ComponentChildren } from "preact";
 
-/**
- * The workstation's register for a system-calculated clinical readout.
- *
- * Replaces a 24px value on a floating card. Hierarchy comes from position and
- * labeling rather than type size, which is how the rest of this screen works,
- * and the facts are labeled rows instead of a prose sentence.
- *
- * Colour is the point, not decoration. Staff need the verdict before they read
- * anything, so state appears twice in fixed positions: a spine down the left
- * edge that carries from across the room, and a saturated verdict chip in the
- * header that names it. Two rules keep that honest:
- *
- *  - Colour never travels alone. Every state also carries its word, so the
- *    register survives red/green colour deficiency (~8% of men) and monochrome
- *    printing. A green spine with no "ON SCHEDULE" beside it would be a
- *    clinical signal that some staff cannot read.
- *  - The spine is a border, not an inset shadow, so it reserves its own width
- *    and can never paint over the content it is marking.
- */
+/** Calculated timing readout. All verdicts and cautions retain explicit text,
+ * and the presentation never derives or changes the clinical conclusion. */
 
 export type ScheduleRegisterTone = "neutral" | "ok" | "warning" | "stop";
 

@@ -697,11 +697,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administeredDisposition).toHaveClass(/is-selected/);
     await expect(administeredDisposition).toHaveCSS(
       'background-color',
-      'rgb(241, 246, 248)'
+      'rgb(238, 244, 246)'
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
-      'rgb(158, 184, 197)'
+      'rgb(175, 196, 206)'
     );
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
@@ -869,8 +869,8 @@ test.describe('MA Workstation browser journeys', () => {
         horizontalOverflow: node.scrollWidth - node.clientWidth
       };
     });
-    expect(drawerVisual.borderRadius).toBe(10);
-    expect(drawerVisual.searchRadius).toBe(7);
+    expect(drawerVisual.borderRadius).toBe(16);
+    expect(drawerVisual.searchRadius).toBe(9);
     expect(drawerVisual.fontFamily).toContain('Inter Variable');
     expect(drawerVisual.headerBackground).toBe('none');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
@@ -1044,13 +1044,13 @@ test.describe('MA Workstation browser journeys', () => {
       node.scrollWidth - node.clientWidth
     )).toBeLessThanOrEqual(1);
     await expect(lookup.getByRole('option')).toHaveCount(5);
-    await lookup.getByRole('searchbox', { name: 'Find value' }).fill('PRN');
+    await lookup.getByRole('searchbox', { name: 'Search options' }).fill('PRN');
     await lookup.getByRole('option', { name: /PRN \/ ordered/ }).click();
 
     await expect(reason).toHaveValue('prn');
     await expect(reason).toBeFocused();
     await expect(page.locator('[data-toast]')).toContainText(
-      'INJ-REASON filed as PRN / ordered.'
+      'Encounter type: PRN / ordered selected.'
     );
     await expect(orderTab).toHaveClass(/is-stop/);
     await expect(orderTab.locator('.wfp-ledger-state')).toContainText('required');
@@ -1068,15 +1068,15 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.getByRole('button', { name: 'Open Encounter type field lookup (F9)' }).click();
     await expect(page.locator('.meditech-command-prompt')).toContainText('INJ-REASON');
     const currentLookupRow = lookup.getByRole('option', {
-      name: /05 PRN \/ ordered CURRENT/
+      name: /PRN \/ ordered Selected/
     });
     await expect(currentLookupRow).toHaveAttribute('aria-selected', 'true');
     await page.mouse.move(0, 0);
-    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(234, 242, 244)');
-    await lookup.getByRole('searchbox', { name: 'Find value' }).press('Enter');
+    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(234, 242, 245)');
+    await lookup.getByRole('searchbox', { name: 'Search options' }).press('Enter');
     await expect(reason).toHaveValue('prn');
     await expect(page.locator('[data-toast]')).toContainText(
-      'INJ-REASON unchanged — PRN / ordered remains selected.'
+      'Encounter type unchanged — PRN / ordered remains selected.'
     );
     await expect.poll(() => page.evaluate(() => window.__ipmgLookupChangeCount)).toBe(0);
 
@@ -1094,7 +1094,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(collectorField.locator('.wfp-register-source')).toHaveText('Session');
     await udsPanel.getByLabel('Collected by', { exact: true }).fill('Jordan Lee, MA');
     await expect(collectorField.locator('.wfp-register-source')).toHaveText('Override');
-    await expect(collectorField.locator('.wfp-register-change')).toHaveText('Changed');
+    await expect(collectorField.locator('.wfp-register-change')).toHaveText('Changed from the carried or calculated value.');
   });
 
   test('keeps each local activity in one Dashboard queue register', async ({ page }) => {
@@ -1583,7 +1583,7 @@ test.describe('MA Workstation browser journeys', () => {
       page.locator('.wfp-panel').getByRole('button', { name: 'Add to daily activity', exact: true })
     ).toHaveCount(0);
     await expect(page.locator('[data-injection-record-actions]')).toContainText('New draft');
-    await expect(page.locator('[data-injection-record-actions]')).not.toContainText('First blocker:');
+    await expect(page.locator('[data-injection-record-actions]')).not.toContainText('Next step:');
   });
 
   test('projects untouched typed workflows as pending instead of falsely confirmed', async ({ page }) => {
@@ -1615,7 +1615,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openWorkflow(page, 'administer');
     await expect(page.locator('[data-injection-record-actions]')).toContainText('New draft');
-    await expect(page.locator('[data-injection-record-actions]')).not.toContainText('First blocker:');
+    await expect(page.locator('[data-injection-record-actions]')).not.toContainText('Next step:');
     await expect(page.locator('[data-injection-record-actions] [data-injection-finish]'))
       .toBeDisabled();
   });
@@ -2790,7 +2790,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await expect(actions).toContainText('Injection note');
     await expect(actions).toContainText('New draft');
-    await expect(save).toHaveAccessibleName('Save F12');
+    await expect(save).toHaveAccessibleName('Save');
     await expect(finish).toHaveAccessibleName('Sign');
     await expect(startNew).toHaveAccessibleName('Start new injection');
     await expect(discard).toHaveAccessibleName('Discard draft…');
@@ -3694,7 +3694,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(udsStopFlag).toContainText(/\d+ to resolve/);
     await expect(udsStopFlag.locator('.wfp-status-icon')).toHaveText('×');
     await udsStopFlag.click();
-    const udsDialog = page.getByRole('dialog', { name: 'Care Checklist' });
+    const udsDialog = page.getByRole('dialog', { name: 'Items to complete' });
     await expect(udsDialog).toBeVisible();
     const udsRows = udsDialog.locator('.wfp-issue-row');
     await expect(udsRows.first()).toBeVisible();
@@ -3711,7 +3711,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(samplesStopFlag).toContainText(/\d+ to resolve/);
     await expect(samplesStopFlag.locator('.wfp-status-icon')).toHaveText('×');
     await samplesStopFlag.click();
-    const samplesDialog = page.getByRole('dialog', { name: 'Care Checklist' });
+    const samplesDialog = page.getByRole('dialog', { name: 'Items to complete' });
     await expect(samplesDialog).toBeVisible();
     const educationRow = samplesDialog.locator('.wfp-issue-row', { hasText: 'patient education status' });
     await expect(educationRow.locator('.wfp-issue-tab')).toHaveText('Safety / review');

@@ -25,7 +25,7 @@ for (const viewport of [{width:1440,height:900},{width:1024,height:768}]) {
         focusStyle:style('.lf-document-action').outlineStyle,
       };
     });
-    expect(result).toEqual({fits:true,overflow:false,font:expect.stringContaining('Inter Variable'),titleFont:expect.stringContaining('Georgia'),navWidth:190,background:'rgb(255, 255, 255)',workHeadingBackground:'rgba(0, 0, 0, 0)',titleColor:'rgb(41, 66, 85)',primary:'rgb(243, 117, 101)',primaryGradient:'none',primaryShadow:'none',focusWidth:'2px',focusStyle:'solid'});
+    expect(result).toEqual({fits:true,overflow:false,font:expect.stringContaining('Inter Variable'),titleFont:expect.stringContaining('Georgia'),navWidth:200,background:'rgb(255, 255, 255)',workHeadingBackground:'rgba(0, 0, 0, 0)',titleColor:'rgb(41, 66, 85)',primary:'rgb(243, 117, 101)',primaryGradient:'none',primaryShadow:'none',focusWidth:'2px',focusStyle:'solid'});
     await page.locator('.lf-document-action').click();
     await expect(page.getByRole('dialog',{name:'Document a service'})).toBeVisible();
     await expect(page.locator('[data-service-open]')).toHaveCount(4);

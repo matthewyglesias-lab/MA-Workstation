@@ -1,3 +1,4 @@
+import { DialogHeading } from "./lightfully/DialogHeading";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
   discardDraftPrompt,
@@ -104,12 +105,7 @@ export function RecordActionDialog({
       }}
     >
       <div class="cd2004-dialog-frame">
-        <div class="cd2004-dialog-titlebar">
-          <span id="cd2004-record-action-title">{title}</span>
-          <button type="button" aria-label={RECORD.closeConfirmation} onClick={onClose}>
-            X
-          </button>
-        </div>
+        <DialogHeading id="cd2004-record-action-title" title={title} closeLabel={RECORD.closeConfirmation} onClose={onClose} />
         <div class="cd2004-dialog-body" id="cd2004-record-action-description">
           {isAttestation ? (
             <>
