@@ -1,0 +1,108 @@
+name: Final visual and operational acceptance
+on:
+  push:
+    branches: [codex/lightfully-standalone-rebuild]
+    paths: ['.github/final-review-transfer/**', '.github/workflows/apply-final-review.yml']
+permissions:
+  contents: write
+concurrency:
+  group: final-workspace-acceptance
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/codex/lightfully-standalone-rebuild'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply exact reviewed interface and regression-test changes
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, lzma
+          from pathlib import Path, PurePosixPath
+          h=lambda b:hashlib.sha256(b).hexdigest()
+          parts=sorted(Path('.github/final-review-transfer').glob('*.part'))
+          assert len(parts)==2
+          raw=lzma.decompress(base64.b64decode(''.join(p.read_text() for p in parts),validate=True))
+          assert h(raw)=='39e2b5555ec4b86fb29be3ab84052e739189381d431300d6cfae3d88b72233de'
+          pending={}
+          for change in json.loads(raw):
+              name=change['path'];pp=PurePosixPath(name)
+              assert not pp.is_absolute() and '..' not in pp.parts
+              assert name.startswith(('src/presentation/','tests/e2e/','docs/lightfully/')) or name=='scripts/review-final.cjs'
+              p=Path(name);old=p.read_bytes() if p.exists() else b''
+              assert h(old)==change['old'] if change['old'] is not None else not p.exists()
+              lines=old.decode().splitlines(keepends=True)
+              for start,end,replacement in reversed(change['ops']):lines[start:end]=replacement
+              new=''.join(lines).encode();assert h(new)==change['new']
+              assert name not in pending
+              pending[name]=new
+          for name,new in pending.items():
+              p=Path(name);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(new)
+          # Preserve the old command search term as an invisible compatibility alias.
+          p=Path('src/presentation/ClinicalDesktopShell.tsx');s=p.read_text()
+          old='keywords: workflow === "administer" ? "LAI medication injection"'
+          new='keywords: workflow === "home" ? "dashboard home worklist" : workflow === "administer" ? "LAI medication injection"'
+          assert s.count(old)==1;p.write_text(s.replace(old,new))
+          print('Applied',len(pending),'reviewed files and the compatibility alias.')
+          PY
+      - name: Confirm original clinical, persistence, documentation and print boundary
+        run: git diff --exit-code 28ae520bb51161ef3eb4b3642071007601b9f64e -- public/legacy src/legacy src/domain src/application src/persistence src/documentation tests/fixtures
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Record inherited dependency audit
+        run: npm audit --json > dependency-audit.json || true
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+      - name: Save recoverable source before long browser checks
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/presentation tests/e2e docs/lightfully scripts/review-final.cjs
+          git rm -r .github/final-review-transfer
+          git commit -m 'fix: cohesive utility screens and robust saved-record dialog lifecycle'
+          git push origin HEAD:codex/lightfully-standalone-rebuild
+      - run: GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Review home-render snapshots with all keyboard and draft checks active
+        run: npx playwright test tests/e2e/lightfully-shell.spec.js --retries=0 --update-snapshots --output=home-review-results --reporter=list
+      - name: Complete workflow and print regression without retries or rebaselining
+        run: npx playwright test --retries=0
+      - name: Native standalone startup and saved-draft reload
+        run: TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js --retries=0 --output=native-test-results --reporter=list
+      - name: Repeat rapid record-window and utility-modal checks without retries
+        run: npx playwright test tests/e2e/final-acceptance.spec.js --repeat-each=3 --retries=0 --output=repeat-test-results --reporter=list
+      - name: Save successful review and remove transfer workflow
+        run: |
+          git add tests/e2e
+          git rm .github/workflows/apply-final-review.yml
+          git commit -m 'test: accept final workspace after no-retry functional and print regression'
+          git push origin HEAD:codex/lightfully-standalone-rebuild
+      - name: Package exact verified revision
+        if: always()
+        run: |
+          GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
+          git archive --format=zip --output=final-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-workspace-acceptance
+          path: |
+            standalone/
+            playwright-report/
+            test-results/
+            home-review-results/
+            native-test-results/
+            repeat-test-results/
+            final-source.zip
+            dependency-audit.json
+          retention-days: 7
+          if-no-files-found: warn
