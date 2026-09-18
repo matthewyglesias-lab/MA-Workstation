@@ -14,6 +14,8 @@ import "./workflows/workflow-panels.css";
 import "./tebra-workstation.css";
 import "./kiosk/kiosk.css";
 import "./tebra-screen-contract.css";
+import "./lightfully/lightfully-shell.css";
+import { WorkspaceTools, type WorkspaceCommand } from "./lightfully/WorkspaceTools";
 import {
   InjectionRecordRepository,
 } from "../persistence/injection-records";
@@ -1333,6 +1335,10 @@ export function ClinicalDesktopShell({
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
+    onWorkflowOpen: (workflow: WorkflowId) => {
+      if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow);
+    },
+    onOpenRecords,
     kioskMode: kioskVisible,
     injectionKioskStep,
     onInjectionKioskStepChange: setInjectionKioskStep,
@@ -1363,7 +1369,7 @@ export function ClinicalDesktopShell({
   return (
     <div
       ref={shellRef}
-      class={`cd2004-shell ${className}`.trim()}
+      class={`cd2004-shell lf-workstation ${className}`.trim()}
       data-active-workflow={selectedWorkflow}
       data-chart-view={chartPatient ? chartView : undefined}
       data-post-state={postState}
@@ -1375,6 +1381,24 @@ export function ClinicalDesktopShell({
       </a>
 
       <AppHeader
+        tools={<WorkspaceTools
+          focused={kioskController.enabled}
+          onFocusInjection={kioskController.enabled ? exitKioskMode : enterKioskMode}
+          commands={[
+            ...shortcutWorkflows.map((workflow): WorkspaceCommand => ({
+              id: workflow,
+              label: WORKFLOW_LABELS[workflow],
+              description: workflow === "home" ? "Review unfinished work and saved drafts" : `Open the ${WORKFLOW_LABELS[workflow].toLowerCase()} workspace`,
+              icon: workflow,
+              keywords: workflow === "administer" ? "LAI medication injection" : workflow === "uds" ? "urine drug screening toxicology" : workflow === "reference" ? "knowledge clinical guidance" : "",
+              onInvoke: () => {
+                if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow);
+              },
+            })),
+            { id: "records", label: "Open saved notes", description: "Find a patient, resume a draft, or view signed history", icon: "records", disabled: !onOpenRecords, onInvoke: () => onOpenRecords?.() },
+            { id: "shortcuts", label: "Keyboard shortcuts", description: "Find the workstation's function-key actions", icon: "reference", onInvoke: openShortcutHelp },
+          ]}
+        />}
         badge={<WorkspaceBadge localStorageAvailable={localStorageAvailable} />}
         account={
           <AccountMenu
@@ -1400,7 +1424,7 @@ export function ClinicalDesktopShell({
           one fact it uniquely carried, that a note is open for someone else,
           moved into the chart header.
         */}
-        {!chartOpen && !kioskVisible && (
+        {!chartOpen && !kioskVisible && selectedWorkflow !== "home" && (
         <PatientBanner
           patient={patient}
           workflowPatient={workflowPatient}
@@ -1709,6 +1733,8 @@ interface RenderWorkflowOptions {
   kioskMode: boolean;
   injectionKioskStep: InjectionKioskStepId;
   onInjectionKioskStepChange: (step: InjectionKioskStepId) => void;
+  onWorkflowOpen?: (workflow: WorkflowId) => void;
+  onOpenRecords?: () => void;
 }
 
 interface InjectionRecordActionsProps {
@@ -1875,6 +1901,8 @@ function renderWorkflowContent({
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
+  onWorkflowOpen,
+  onOpenRecords,
   kioskMode,
   injectionKioskStep,
   onInjectionKioskStepChange,
@@ -1888,6 +1916,8 @@ function renderWorkflowContent({
         onQueueItemOpen={onQueueItemOpen}
         onRecordOpen={onRecordOpen}
         onStartNewInjection={onStartNewInjection}
+        onWorkflowOpen={onWorkflowOpen}
+        onOpenRecords={onOpenRecords}
       />
     );
   }

@@ -99,9 +99,10 @@ export function SectionRail({
 
   return (
     <nav
-      class="cd2004-navigator meditech-record-list tebra-section-rail cd2004-print-exclude"
+      class="cd2004-navigator meditech-record-list tebra-section-rail lf-section-rail cd2004-print-exclude"
       aria-label="Open Notes and clinical functions"
     >
+      <div class="lf-rail-caption">WORKSPACE</div>
       <button
         type="button"
         class="meditech-rail-title tebra-section-rail-title"
@@ -212,6 +213,7 @@ export function SectionRail({
           </section>
         ))}
       </div>
+      <div class="lf-rail-footer"><span class="lf-local-dot" aria-hidden="true"/><span>Standalone workspace<small>Tebra is the chart of record</small></span></div>
     </nav>
   );
 }

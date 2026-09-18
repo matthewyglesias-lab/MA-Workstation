@@ -623,13 +623,13 @@ test.describe('Phase 3b patient chart conventions', () => {
     expect(
       await primary.evaluate((node) => Math.round(node.getBoundingClientRect().height))
     ).toBe(36);
-    await expect(primary).toHaveCSS('background-color', 'rgb(255, 141, 110)');
+    await expect(primary).toHaveCSS('background-color', 'rgb(239, 173, 151)');
 
     const coral = await page
       .locator('.cd2004-shell button')
       .evaluateAll((nodes) =>
         nodes.filter(
-          (node) => getComputedStyle(node).backgroundColor === 'rgb(255, 141, 110)'
+          (node) => getComputedStyle(node).backgroundColor === 'rgb(239, 173, 151)'
         ).length
       );
     // The primary segment and its disclosure are one control, not two.

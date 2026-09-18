@@ -910,7 +910,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-launcher-tile')).toHaveCount(0);
     await expect(page.locator('.cd2004-work-window .cd2004-window-title'))
       .toContainText('Dashboard');
-    await expect(page.getByRole('heading', { name: 'Open Notes', level: 1 }))
+    await expect(page.getByRole('heading', { name: 'Open Notes', level: 2 }))
       .toBeVisible();
     await expect(page.getByRole('button', { name: 'Start new injection', exact: true }))
       .toBeVisible();

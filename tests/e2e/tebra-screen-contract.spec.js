@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-// Replaces meditech-screen-contract.spec.js. Same job — hold every common
+// Lightfully shell updates the presentation expectations; every layout and safety assertion remains.
+// Originally replaced meditech-screen-contract.spec.js. Same job — hold every common
 // workstation surface to ONE palette and ONE control grammar so component
 // import order cannot produce a second visual language — but the grammar it
 // asserts is now Tebra's: a soft radius, a hairline border, no bezel, and the
@@ -15,18 +16,18 @@ const WORKFLOWS = [
 ];
 
 // Token values from src/presentation/tebra-tokens.css, as rendered rgb().
-const TEAL_900 = 'rgb(0, 58, 67)';
-const HEADER_TEAL = 'rgb(0, 72, 82)';
-const MINT_50 = 'rgb(246, 248, 248)';
-const CORAL_500 = 'rgb(255, 141, 110)';
-const WHITE = 'rgb(255, 255, 255)';
+const NAVY = 'rgb(40, 40, 63)';
+const HEADER_PAPER = 'rgb(255, 254, 250)';
+const LAVENDER_50 = 'rgb(247, 244, 250)';
+const CORAL = 'rgb(239, 173, 151)';
+const WHITE = 'rgb(255, 254, 250)';
 
 async function openWorkflow(page, title, selector) {
   await page.locator(`.cd2004-nav-item[title="${title}"]`).click();
   await expect(page.locator(`.cd2004-workflow-slot${selector}`)).toBeVisible();
 }
 
-test.describe('Tebra screen contract', () => {
+test.describe('Lightfully screen contract', () => {
   test('keeps common workstation surfaces in one palette and control grammar', async ({ page }) => {
     await page.goto('/');
 
@@ -59,19 +60,19 @@ test.describe('Tebra screen contract', () => {
     expect(home.retiredLauncherCount).toBe(0);
     // Chart rows use the repository's 8px product-control adaptation; the
     // measured rail itself stays square and flush to the workspace edge.
-    expect(home.navRadius).toBe('8px');
+    expect(home.navRadius).toBe('9px');
     expect(home.navFont).toMatch(/^"Inter Variable"/);
     // The measured shell uses a dark product header, a flush white rail, and
     // an elevated work panel on Tebra's card radius. The
     // Notes-specific table/list grammar remains deliberately unasserted until
     // Phase 3 lands its dedicated components.
-    expect(home.appHeaderBackground).toBe(HEADER_TEAL);
+    expect(home.appHeaderBackground).toBe(HEADER_PAPER);
     expect(home.appHeaderGradient).toBe('none');
-    expect(home.sectionRailBackground).toBe(WHITE);
+    expect(home.sectionRailBackground).toBe('rgb(250, 248, 252)');
     expect(home.sectionRailRadius).toBe('0px');
-    expect(home.workWindowBackground).toBe(WHITE);
-    expect(home.workWindowRadius).toBe('16px');
-    expect(home.workTitlebarColor).toBe(TEAL_900);
+    expect(home.workWindowBackground).toBe('rgba(0, 0, 0, 0)');
+    expect(home.workWindowRadius).toBe('0px');
+    expect(home.workTitlebarColor).toBe(NAVY);
     expect(home.workTitlebarGradient).toBe('none');
 
     for (const workflow of WORKFLOWS) {
@@ -100,7 +101,7 @@ test.describe('Tebra screen contract', () => {
 
       // Worksheets are white paper on a sunken mint tab strip.
       expect(contract.panel.backgroundColor).toBe(WHITE);
-      expect(contract.tabbar.backgroundColor).toBe(MINT_50);
+      expect(contract.tabbar.backgroundColor).toBe(LAVENDER_50);
       expect(contract.panel.fontFamily).toMatch(/^"Inter Variable"/);
       expect(contract.horizontalOverflow).toBeLessThanOrEqual(1);
       if (contract.lookup) {
@@ -118,11 +119,11 @@ test.describe('Tebra screen contract', () => {
     // surface painted coral would be the regression this guards against.
     await expect(page.locator('.cd2004-worklist-new')).toHaveCSS(
       'background-color',
-      CORAL_500
+      CORAL
     );
     await openWorkflow(page, 'Injection', '[data-workflow="administer"]');
     const statusContract = await page.evaluate(() => {
-      const coral = ['rgb(255, 141, 110)', 'rgb(243, 126, 94)', 'rgb(254, 195, 184)'];
+      const coral = ['rgb(239, 173, 151)', 'rgb(228, 153, 132)', 'rgb(245, 196, 180)'];
       const statusSelectors = [
         '.cd2004-readiness-verdict', '.cd2004-readiness-item',
         '.wfp-result-cycle', '.wfp-exception-line', '.cd2004-note-mark'

@@ -1,0 +1,303 @@
+/*
+ * Lightfully-inspired standalone presentation. This stylesheet owns SCREEN
+ * appearance only. The clinical engine, persistence and print cascade retain
+ * their original contracts; no print tokens or patient outputs are changed.
+ */
+@media screen {
+  :root {
+    --lf-ink: #28283f;
+    --lf-muted: #686476;
+    --lf-lavender: #efecf6;
+    --lf-paper: #fffefa;
+    --lf-line: #dcd6e5;
+    --lf-sage: #e3ede4;
+    --lf-leaf: #355342;
+    --lf-coral: #efad97;
+    --lf-display: Georgia, "Times New Roman", serif;
+    /* Map existing semantic surfaces, not clinical verdicts, into this shell. */
+    --tw-teal-900: var(--lf-ink);
+    --tw-teal-800: #343047;
+    --tw-teal-700: #484259;
+    --tw-teal-600: #62596f;
+    --tw-teal-500: #776c84;
+    --tw-teal-300: #aba0b7;
+    --tw-teal-200: #d8d0e4;
+    --tw-mint-200: var(--lf-line);
+    --tw-mint-150: #e8e1f0;
+    --tw-mint-125: #eee8f5;
+    --tw-mint-100: #eae4f2;
+    --tw-mint-75: #f2eef7;
+    --tw-mint-50: #f7f4fa;
+    --tw-mint-25: #faf8fc;
+    --tw-coral-600: #e49984;
+    --tw-coral-500: var(--lf-coral);
+    --tw-coral-300: #f5c4b4;
+    --tw-coral-100: #f9e1d7;
+    --tw-coral-50: #fff5ef;
+    --tw-surface-page: var(--lf-lavender);
+    --tw-surface-panel: var(--lf-paper);
+    --tw-surface-sunken: #f7f4fa;
+    --tw-surface-inverse: var(--lf-ink);
+    --tw-surface-header: var(--lf-paper);
+    --tw-surface-header-input: #f2eef7;
+    --tw-border-subtle: var(--lf-line);
+    --tw-border-strong: #a79caf;
+    --tw-text-primary: var(--lf-ink);
+    --tw-text-secondary: var(--lf-muted);
+    --tw-text-muted: #716b78;
+    --tw-focus-ring: 0 0 0 3px rgb(107 81 148 / 22%);
+    --tw-ready-fg: #315c42;
+    --tw-ready-bg: #e6f0e5;
+    --tw-ready-border: #9cbaa3;
+    --tw-note-incomplete-fg: #594574;
+    --tw-note-incomplete-bg: #eee7f7;
+    --tw-note-incomplete-border: #c9badb;
+    --tw-note-ready-fg: var(--lf-leaf);
+    --tw-note-ready-bg: var(--lf-sage);
+    --tw-note-ready-border: #afc4b2;
+    --tw-note-signed-fg: #585161;
+    --tw-note-signed-bg: #f0ede8;
+    --tw-note-signed-border: #d5cec1;
+    --tw-btn-border-product: #b7acbf;
+    --tw-radius-panel: 16px;
+    --tw-radius-card: 12px;
+    --tw-radius-ctl: 8px;
+    --tw-radius-ws: 6px;
+    --tw-header-height: 72px;
+  }
+  .lf-workstation {
+    --tebra-content-pad: 22px;
+    --tebra-panel-gap: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .lf-workstation *, .lf-command-dialog * { box-sizing: border-box; }
+  .lf-workstation .lf-app-header { background: var(--lf-paper); border-bottom-color: var(--lf-line); }
+  .lf-workstation .tebra-app-header-main {
+    grid-template-columns: 192px minmax(0, 1fr) auto;
+    min-height: 72px; height: auto; padding: 12px 20px; gap: 22px;
+    color: var(--lf-ink); background: var(--lf-paper);
+  }
+  .lf-brand { display: flex; gap: 11px; align-items: center; min-width: 0; }
+  .lf-brand .tebra-app-mark { width: 38px; height: 42px; color: #8d503c; background: #fae6da; border: 0; border-radius: 18px 18px 9px 9px; }
+  .lf-brand .tebra-app-mark svg { width: 31px; height: 31px; }
+  .lf-brand .tebra-app-identity > b { color: var(--lf-ink); font-size: 16px; font-weight: 700; letter-spacing: .04em; }
+  .lf-brand .tebra-app-identity > span { color: var(--lf-muted); font-size: 11px; margin-top: 4px; }
+  .lf-workstation .tebra-app-context { grid-column: 3; color: var(--lf-ink); gap: 10px; }
+  .lf-workstation .tebra-workspace-badge.is-local { color: var(--lf-leaf); background: var(--lf-sage); padding: 5px 8px; }
+  .lf-workstation .tebra-workspace-badge.is-error { padding: 5px 8px; border: 1px solid var(--tw-stop-border); }
+  .lf-workstation .tebra-menu-quiet { color: var(--lf-ink); height: 38px; padding: 0 8px; }
+  .lf-workstation .tebra-menu-quiet:hover { background: var(--lf-lavender); }
+  .lf-workstation .tebra-menu-quiet:focus-visible { outline: 2px solid #715491; outline-offset: 2px; box-shadow: none; }
+  .lf-workstation .tebra-account-avatar { width: 27px; height: 27px; color: #62467f; background: #eae1f2; }
+  .lf-workspace-tools { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  .lf-workspace-tools button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; min-width: 38px; padding: 8px 10px; color: var(--lf-muted); background: transparent; border: 1px solid var(--lf-line); border-radius: 9px; cursor: pointer; font: 500 12px/18px var(--tw-font-sans); white-space: nowrap; }
+  .lf-workspace-tools button:hover { background: #ebe5f2; border-color: #b9aacb; color: var(--lf-ink); }
+  .lf-workspace-tools .lf-command-trigger { justify-content: flex-start; flex: 1 1 auto; max-width: 350px; min-width: 40px; background: #f5f2f8; }
+  .lf-command-trigger > span { overflow: hidden; text-overflow: ellipsis; }
+  .lf-command-trigger kbd { margin-left: auto; }
+  .lf-workspace-tools kbd, .lf-command-dialog kbd { flex: 0 0 auto; padding: 1px 4px; border: 1px solid #d4cbdc; border-radius: 4px; background: var(--lf-paper); color: #6e617b; font: 10px/16px var(--tw-font-sans); }
+  .lf-workspace-tools .lf-density-toggle[aria-pressed="true"] { background: var(--lf-sage); border-color: #a6bfa9; color: var(--lf-leaf); }
+  .lf-workspace-tools .lf-focus-trigger { color: var(--lf-ink); border-color: transparent; }
+  .lf-focus-trigger svg { width: 17px; height: 17px; }
+
+  /* Navigation has a stable width and its own scroll; no document scroll trap. */
+  .lf-workstation .lf-section-rail { background: #faf8fc; border-right-color: var(--lf-line); }
+  .lf-rail-caption { flex: 0 0 auto; color: #756b81; padding: 20px 18px 8px; font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+  .lf-section-rail .tebra-section-rail-title { min-height: 44px; padding: 8px 16px; margin: 0 10px; width: calc(100% - 20px); background: var(--lf-ink); color: #fff9f1; border: 0; border-radius: 9px; font-size: 13px; }
+  .lf-section-rail .tebra-section-rail-title:hover:not(:disabled) { background: #47405d; color: white; }
+  .lf-section-rail .meditech-rail-records-command kbd { color: #eee4fb; background: #4e465f; }
+  .lf-section-rail .tebra-section-rail-context { margin: 8px 12px 0; padding: 10px 4px 12px; min-height: 55px; background: transparent; border-bottom: 1px solid var(--lf-line); }
+  .lf-section-rail .meditech-function-list { padding: 4px 9px 10px; gap: 5px; }
+  .lf-section-rail .meditech-function-heading { padding: 10px 9px 5px; color: #746a7e; font-size: 10px; letter-spacing: .08em; }
+  .lf-section-rail .cd2004-nav-item { min-height: 42px; padding: 7px 9px; border: 1px solid transparent; border-radius: 9px; margin: 2px 0; }
+  .lf-section-rail .cd2004-nav-item strong { font-size: 13px; font-weight: 550; }
+  .lf-section-rail .cd2004-nav-item .meditech-nav-icon { background: transparent; color: #746581; }
+  .lf-section-rail .cd2004-nav-item:hover:not(:disabled) { background: #eee8f5; border-color: #e0d7eb; }
+  .lf-section-rail .cd2004-nav-item.is-selected, .lf-section-rail .cd2004-nav-item[aria-current="page"] { background: var(--lf-sage); color: var(--lf-leaf); border: 1px solid #c8d7c7; }
+  .lf-section-rail .cd2004-nav-item.is-selected .meditech-nav-icon { color: var(--lf-leaf); background: transparent; }
+  .lf-section-rail .cd2004-nav-item.is-selected strong { font-weight: 700; }
+  .lf-rail-footer { display: flex; gap: 8px; align-items: flex-start; flex: 0 0 auto; padding: 14px 16px; border-top: 1px solid var(--lf-line); color: var(--lf-muted); font-size: 10px; line-height: 1.6; }
+  .lf-rail-footer small { display: block; font-size: 9px; color: #706477; }
+  .lf-local-dot { width: 6px; height: 6px; border-radius: 50%; background: #65856c; margin-top: 5px; flex: 0 0 auto; }
+  .lf-section-rail .tebra-rail-search { padding: 10px 12px 0; }
+
+  /* Shared clinical surfaces: semantic warning colours are deliberately kept. */
+  .lf-workstation .cd2004-work-window { border-radius: 13px; border-color: var(--lf-line); box-shadow: 0 2px 10px rgb(43 28 67 / 3%); }
+  .lf-workstation .cd2004-work-window:has([data-workflow="home"]) { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
+  .lf-workstation .cd2004-window-titlebar { background: #f8f4fa; border-color: var(--lf-line); color: var(--lf-ink); }
+  .lf-workstation .cd2004-patient-banner { background: var(--lf-paper); border-bottom-color: #d9cddf; }
+  .lf-workstation .wfp-tabs { background: #f5f0f8; border-color: #d9cfe4; }
+  .lf-workstation .wfp-tab[aria-selected="true"] { background: var(--lf-paper); color: var(--lf-ink); border-color: #c5b6d5; }
+  .lf-workstation .wfp-field :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { background-color: #fffefb; }
+  .lf-workstation .wfp-field :is(input,select,textarea):focus { outline-color: #775a98; }
+  .lf-workstation .tebra-facesheet-banner, .lf-workstation .kiosk-patient-summary { background: var(--lf-ink); }
+  .lf-workstation .tebra-record-list { gap: 0; }
+  .lf-workstation .tebra-record-row { border-radius: 8px; }
+
+  /* Home: actual work register, not a synthetic dashboard. */
+  .lf-workstation .lf-start-center { display: flex; flex-direction: column; gap: 20px; height: 100%; min-height: 0; padding: 4px 2px 8px; overflow-y: auto; background: transparent; }
+  .lf-start-center > * { flex-shrink: 0; }
+  .lf-eyebrow { display: block; color: #756584; font: 700 10px/16px var(--tw-font-sans); letter-spacing: .12em; }
+  .lf-welcome { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 10px 2px 2px; }
+  .lf-welcome h1 { font: 400 clamp(24px, 2.5vw, 35px)/1.22 var(--lf-display); color: var(--lf-ink); margin: 6px 0 7px; letter-spacing: -.025em; }
+  .lf-welcome p { font-size: 13px; margin: 0; color: var(--lf-muted); }
+  .lf-welcome-date { display: flex; gap: 12px; align-items: center; flex: 0 0 auto; color: #765e87; font-size: 11px; }
+  .lf-welcome-date strong { display: block; color: var(--lf-ink); font-size: 13px; font-weight: 600; margin-top: 3px; }
+  .lf-quick-tools { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+  .lf-workstation .lf-quick-tool { position: relative; display: flex; align-items: flex-start; gap: 10px; min-width: 0; min-height: 118px; padding: 17px 14px; text-align: left; white-space: normal; background: var(--lf-paper); color: var(--lf-ink); border: 1px solid #dcd3e5; border-radius: 12px; box-shadow: 0 2px 4px rgb(43 28 67 / 2%); cursor: pointer; }
+  .lf-workstation .lf-quick-tool:hover:not(:disabled) { border-color: #9e8bb0; box-shadow: 0 3px 12px rgb(66 47 90 / 7%); background: #fffdfa; }
+  .lf-quick-icon { flex: 0 0 auto; display: grid; place-items: center; width: 31px; height: 34px; border-radius: 9px; background: #ede5f5; color: #665075; }
+  .lf-quick-icon svg { width: 20px; height: 20px; }
+  .lf-quick-tool.is-administer .lf-quick-icon { background: #fae4d8; color: #9c4e37; }
+  .lf-quick-tool.is-uds .lf-quick-icon { background: #e4eddf; color: #4a6447; }
+  .lf-quick-tool.is-forms .lf-quick-icon { background: #f5ebd9; color: #7e6340; }
+  .lf-quick-copy { display: grid; gap: 5px; min-width: 0; }
+  .lf-quick-copy > small { font: 650 9px/13px var(--tw-font-sans); color: #776b83; letter-spacing: .065em; }
+  .lf-quick-copy > strong { font: 600 14px/20px var(--tw-font-sans); color: var(--lf-ink); }
+  .lf-quick-copy > span { font: 400 11px/16px var(--tw-font-sans); color: var(--lf-muted); }
+  .lf-quick-arrow { position: absolute; top: 12px; right: 11px; color: #8c7c9b; font-size: 14px; }
+  .lf-work-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border: 1px solid #d9d1e2; border-radius: 12px; background: #e8e2f1; padding: 8px 0; }
+  .lf-workstation .lf-summary-item { display: flex; gap: 14px; align-items: center; justify-content: flex-start; min-width: 0; min-height: 61px; padding: 7px 22px; color: var(--lf-ink); text-align: left; border: 0; border-right: 1px solid #d1c7de; border-radius: 0; background: transparent; cursor: pointer; }
+  .lf-summary-item:last-child { border-right: 0; }
+  .lf-summary-number { font: 400 29px/35px var(--lf-display); min-width: 23px; font-variant-numeric: tabular-nums; }
+  .lf-summary-item strong { display: block; font-size: 12px; font-weight: 650; }
+  .lf-summary-item small { display: block; margin-top: 4px; color: #71657d; font-size: 10px; }
+  .lf-workstation .lf-summary-item:hover { background: #e0d7ec; }
+  .lf-worklist-card { display: flex; flex-direction: column; min-width: 0; min-height: 250px; flex: 1 0 290px; overflow: hidden; background: var(--lf-paper); border: 1px solid var(--lf-line); border-radius: 13px; box-shadow: 0 2px 6px rgb(43 28 67 / 3%); }
+  .lf-start-center .cd2004-worklist-header { flex: 0 0 auto; padding: 18px 20px 14px; color: var(--lf-ink); background: var(--lf-paper); border: 0; gap: 14px; }
+  .lf-start-center .cd2004-worklist-header h2 { font: 400 24px/30px var(--lf-display); margin: 2px 0 0; color: var(--lf-ink); }
+  .lf-start-center .cd2004-worklist-header p { color: var(--lf-muted); margin-top: 4px; white-space: normal; overflow: visible; font-size: 11px; line-height: 16px; }
+  .lf-workstation [data-workflow="home"] .cd2004-worklist-new { border-radius: 8px; font-size: 12px; padding: 7px 13px; min-height: 38px; }
+  .lf-worklist-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between; padding: 0 20px 10px; border-bottom: 1px solid #ebe5ef; }
+  .lf-start-center .cd2004-worklist-tabs { min-height: 38px; padding: 0; border: 0; background: transparent; gap: 3px; }
+  .lf-start-center .cd2004-worklist-tabs button { min-height: 32px; padding: 5px 8px; font-size: 11px; gap: 5px; border-radius: 7px; }
+  .lf-start-center .cd2004-worklist-tabs button.is-selected { color: #523d6b; background: #eae1f3; }
+  .lf-start-center .cd2004-worklist-tabs b { min-width: 17px; height: 17px; padding: 0 4px; font-size: 9px; background: #fffdfa; }
+  .lf-worklist-search { display: flex; align-items: center; gap: 8px; min-width: 130px; width: 210px; height: 32px; padding: 4px 9px; background: #faf8fc; color: #7b6e85; border: 1px solid var(--lf-line); border-radius: 7px; }
+  .lf-workstation .lf-worklist-search input { min-width: 0; width: 100%; height: 25px; padding: 0; background: transparent; color: var(--lf-ink); border: 0; border-radius: 0; font: 11px/18px var(--tw-font-sans); box-shadow: none; }
+  .lf-worklist-search:focus-within { outline: 2px solid #806395; outline-offset: 2px; }
+  .lf-workstation .lf-worklist-search input:focus-visible { outline: none; box-shadow: none; }
+  .lf-start-center .cd2004-worklist-sheet { flex: 1 0 105px; padding: 6px 14px; background: var(--lf-paper); overflow: visible; }
+  .lf-start-center .tebra-record-row { grid-template-columns: 34px minmax(0,1fr) auto; gap: 12px; padding: 12px 6px; margin: 0; border: 0; border-bottom: 1px solid #eee8f2; border-radius: 0; background: var(--lf-paper); }
+  .lf-start-center .tebra-record-row:last-child { border-bottom: 0; }
+  .lf-worklist-row-mark { display: grid; place-items: center; width: 31px; height: 34px; color: #6b5580; background: #eee6f6; border-radius: 8px; }
+  .lf-worklist-row-mark.is-stop { color: var(--tw-stop-fg); background: var(--tw-stop-bg); }
+  .lf-worklist-row-mark.is-warning { color: var(--tw-review-fg); background: var(--tw-review-bg); }
+  .lf-start-center .tebra-record-title { font-size: 13px; }
+  .lf-start-center .tebra-record-meta { font-size: 11px; }
+  .lf-start-center .lf-worklist-empty { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; min-height: 145px; padding: 18px; text-align: center; border: 0; background: transparent; }
+  .lf-worklist-empty strong { color: var(--lf-ink); font-size: 13px; font-weight: 550; }
+  .lf-worklist-empty small { font-size: 11px; line-height: 17px; color: var(--lf-muted); }
+  .lf-empty-mark { display: grid; place-items: center; width: 42px; height: 43px; color: #8c789e; }
+  .lf-start-center .cd2004-worklist-footer { align-items: center; flex: 0 0 auto; min-height: 42px; padding: 6px 18px; font-size: 10px; background: #fcfafc; }
+  .lf-workstation .lf-text-button { min-height: 30px; padding: 4px 0; color: #6c507f; background: transparent; border: 0; border-radius: 4px; font-size: 11px; cursor: pointer; }
+  .lf-workstation .lf-text-button:hover:not(:disabled) { text-decoration: underline; }
+  .lf-workspace-footnote { display: flex; gap: 7px; align-items: flex-start; justify-content: center; padding: 0 12px; color: #73687f; font-size: 10px; line-height: 16px; text-align: center; }
+  .lf-workspace-footnote svg { width: 13px; height: 13px; margin-top: 1px; flex: 0 0 auto; }
+
+  /* Command search uses the native dialog top layer and existing guard paths. */
+  .lf-command-dialog { padding: 0; width: min(620px,calc(100vw - 64px)); max-height: calc(100dvh - 80px); border: 1px solid #cfc2dd; border-radius: 17px; color: var(--lf-ink); background: var(--lf-paper); box-shadow: 0 24px 100px rgb(36 20 60 / 28%); font-family: var(--tw-font-sans); }
+  .lf-command-dialog:not([open]) { display: none; }
+  .lf-command-dialog[open] { display: flex; flex-direction: column; }
+  .lf-command-dialog::backdrop { background: rgb(34 27 50 / 38%); }
+  .lf-command-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 23px 24px 16px; }
+  .lf-command-dialog h2 { margin: 4px 0 0; font: 400 26px/33px var(--lf-display); }
+  .lf-icon-button { display: grid; place-items: center; flex: 0 0 auto; width: 32px; height: 32px; border: 1px solid var(--lf-line); border-radius: 8px; color: #6b5b7b; background: #f7f3fa; font: 25px/1 var(--tw-font-sans); cursor: pointer; }
+  .lf-command-input { display: flex; gap: 10px; align-items: center; margin: 0 22px 12px; padding: 11px 12px; border: 1px solid #baa4ce; border-radius: 9px; background: #f7f3fb; color: #745985; }
+  .lf-command-input input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--lf-ink); font: 14px/22px var(--tw-font-sans); }
+  .lf-command-input:focus-within { outline: 2px solid #8b6aab; outline-offset: 2px; }
+  .lf-command-results { overflow: auto; padding: 2px 10px 12px; min-height: 65px; }
+  .lf-command-result { display: grid; grid-template-columns: 35px minmax(0,1fr) 18px; align-items: center; gap: 12px; padding: 11px 12px; margin: 1px 0; border: 1px solid transparent; border-radius: 9px; cursor: pointer; }
+  .lf-command-result.is-active { background: #eee6f7; border-color: #d4c2e7; }
+  .lf-command-result strong { display: block; font-size: 13px; line-height: 20px; font-weight: 600; }
+  .lf-command-result small { display: block; margin-top: 2px; color: #71657d; font-size: 11px; line-height: 16px; }
+  .lf-command-result.is-disabled { opacity: .6; cursor: not-allowed; }
+  .lf-command-icon { display: grid; place-items: center; width: 33px; height: 34px; color: #78628c; border-radius: 8px; background: #f6f0fa; }
+  .lf-command-icon svg { width: 19px; height: 19px; }
+  .lf-command-empty { padding: 20px; font-size: 13px; color: var(--lf-muted); text-align: center; }
+  .lf-command-dialog > footer { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; padding: 12px 20px; border-top: 1px solid var(--lf-line); color: #74687e; font: 10px/18px var(--tw-font-sans); background: #f8f4fb; }
+  .lf-command-dialog button:focus-visible { outline: 2px solid #806395; outline-offset: 2px; }
+
+  /* Only a presentation preference is persisted. Never compact a safety dialog. */
+  :root[data-lf-density="compact"] .lf-workstation { --tebra-content-pad: 14px; --tebra-panel-gap: 10px; }
+  :root[data-lf-density="compact"] .lf-start-center { gap: 13px; }
+  :root[data-lf-density="compact"] .lf-welcome { padding-top: 2px; }
+  :root[data-lf-density="compact"] .lf-welcome h1 { font-size: 27px; }
+  :root[data-lf-density="compact"] .lf-quick-tool { min-height: 88px; padding: 12px; }
+  :root[data-lf-density="compact"] .lf-summary-item { min-height: 47px; padding-block: 4px; }
+  :root[data-lf-density="compact"] .lf-section-rail .cd2004-nav-item { min-height: 35px; padding-block: 3px; }
+  :root[data-lf-density="compact"] .lf-start-center .tebra-record-row { padding-block: 8px; }
+  :root[data-lf-density="compact"] .lf-start-center .cd2004-worklist-header { padding-block: 12px; }
+}
+@media screen and (max-width: 1179px) {
+  .lf-workstation .tebra-app-header-main { grid-template-columns: 175px minmax(0,1fr) auto; gap: 12px; padding-inline: 14px; }
+  .lf-workspace-tools { gap: 5px; }
+  .lf-workspace-tools .lf-density-toggle > span, .lf-workspace-tools .lf-focus-trigger > span { display: none; }
+  .lf-quick-tools { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .lf-workstation .lf-quick-tool { min-height: 89px; padding: 13px; }
+  .lf-welcome-date { display: none; }
+  .lf-work-summary .lf-summary-item { padding-inline: 14px; gap: 8px; }
+  .lf-welcome h1 { font-size: 29px; }
+  .lf-start-center .lf-worklist-controls { gap: 5px; padding-inline: 14px; }
+}
+@media screen and (max-width: 949px) {
+  .lf-workstation { --tebra-content-pad: 14px; }
+  .lf-workstation .tebra-app-header-main { grid-template-columns: 168px minmax(0,1fr) auto; gap: 10px; min-height: 64px; padding-block: 9px; }
+  .lf-workstation .tebra-app-context { gap: 4px; }
+  .lf-workstation .tebra-menu-quiet { max-width: 152px; }
+  .lf-command-trigger > span { display: none; }
+  .lf-workspace-tools .lf-command-trigger { max-width: 85px; }
+  .lf-workspace-tools .lf-command-trigger kbd { margin-left: 0; }
+  .lf-start-center { gap: 14px; }
+  .lf-work-summary .lf-summary-item { padding-inline: 10px; }
+  .lf-summary-item small { display: none; }
+  .lf-summary-item strong { font-size: 11px; }
+  .lf-summary-number { font-size: 26px; }
+  .lf-start-center .cd2004-worklist-header { padding: 14px; }
+  .lf-start-center .cd2004-worklist-header h2 { font-size: 23px; }
+  .lf-start-center .cd2004-worklist-header p { max-width: 250px; }
+  .lf-workspace-footnote { font-size: 9px; }
+}
+@media screen and (max-height: 700px) {
+  .lf-workstation { --tebra-content-pad: 12px; }
+  .lf-section-rail .meditech-function-heading { padding-top: 7px; }
+  .lf-section-rail .cd2004-nav-item { min-height: 34px; padding-block: 3px; margin-block: 1px; }
+  .lf-rail-caption { padding-top: 12px; }
+  .lf-rail-footer { padding-block: 9px; }
+  .lf-workstation .lf-start-center { gap: 12px; }
+  .lf-welcome { padding-top: 0; }
+  .lf-welcome h1 { font-size: 25px; }
+  .lf-workstation .lf-quick-tool { min-height: 84px; padding: 12px; }
+  .lf-summary-item { min-height: 45px; }
+  .lf-worklist-card { flex-basis: 255px; }
+}
+@media screen {
+  .lf-workstation main[data-workflow="home"] > .cd2004-work-window,
+  .lf-workstation main[data-workflow="home"] > .cd2004-work-window > .cd2004-window-body,
+  .lf-workstation main[data-workflow="home"] .cd2004-transaction-window,
+  .lf-workstation main[data-workflow="home"] .cd2004-workflow-slot,
+  .lf-workstation main[data-workflow="home"] .cd2004-workflow-body { background: transparent; }
+  .lf-workstation main[data-workflow="home"] > .cd2004-work-window { border: 0; border-radius: 0; box-shadow: none; }
+  .lf-workstation main[data-workflow="home"] > .cd2004-work-window > .cd2004-window-titlebar { display: none; }
+  .lf-workstation .lf-start-center .lf-worklist-empty { box-shadow: none; border-radius: 0; }
+  .lf-workstation .wfp-panel .wfp-section { border-radius: 10px; box-shadow: none; border: 1px solid #ddd4e7; }
+  .lf-workstation .wfp-panel .wfp-section-head { padding: 12px 15px; background: #fffefa; color: #3f344e; font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; border-bottom: 1px solid #e8e0ee; }
+  .lf-workstation .wfp-panel .wfp-section-body { padding: 14px 15px; }
+  .lf-workstation .wfp-panel .wfp-tabpanel { padding: 16px; gap: 14px; }
+  .lf-workstation .wfp-panel .wfp-summary-bar { background: #f7f4fa; border: 1px solid #e1d8e9; border-radius: 8px; gap: 6px; padding: 6px 9px; }
+  .lf-workstation .wfp-panel .wfp-tabbar { background: #f7f4fa; border-radius: 8px 8px 0 0; }
+  .lf-workstation .wfp-panel .wfp-tab { flex: 1 1 0; min-height: 43px; padding: 7px 8px; font-size: 12px; white-space: normal; text-overflow: clip; }
+  .lf-workstation .wfp-panel .wfp-tab .wfp-tab-label { white-space: normal; text-overflow: clip; overflow: visible; line-height: 16px; }
+  :root[data-lf-density="compact"] .lf-workstation .wfp-panel .wfp-section-head { padding: 8px 12px; font-size: 13px; }
+  :root[data-lf-density="compact"] .lf-workstation .wfp-panel .wfp-section-body { padding: 10px 12px; }
+  :root[data-lf-density="compact"] .lf-workstation .wfp-panel .wfp-tabpanel { padding: 10px; gap: 10px; }
+  :root[data-lf-density="compact"] .lf-workstation .wfp-panel .wfp-tab { min-height: 36px; }
+}
+@media screen and (max-height: 700px) {
+  .lf-workstation .wfp-panel .wfp-tab { min-height: 34px; font-size: 11px; padding: 5px 6px; }
+  .lf-workstation .wfp-panel .wfp-tabpanel { padding: 9px; gap: 9px; }
+  .lf-workstation .wfp-panel .wfp-section-head { padding: 8px 11px; }
+  .lf-workstation .wfp-panel .wfp-section-body { padding: 10px 11px; }
+  .lf-workstation .wfp-panel .wfp-summary-bar { padding: 3px 6px; gap: 4px; }
+}
