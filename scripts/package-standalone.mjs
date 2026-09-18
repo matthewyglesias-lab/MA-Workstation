@@ -44,13 +44,13 @@ if (jsFiles.length !== 1) throw new Error('Code-split builds require an explicit
 const entry = assetPath(scripts[0][1]);
 let code = await fs.readFile(entry, 'utf8');
 const runtime = await fs.readFile(path.join(root, 'legacy/legacy-runtime.js'));
-const legacyPattern = /(["'])\/legacy\/legacy-runtime\.js\?v=[^"']+\1/g;
+const legacyPattern = /(["'`])\/legacy\/legacy-runtime\.js\?v=[A-Za-z0-9._-]+\1/g;
 if ([...code.matchAll(legacyPattern)].length !== 1) throw new Error('Could not uniquely locate the legacy loader asset.');
 code = code.replace(legacyPattern, 'window.__IPMG_STANDALONE_RUNTIME_URL__');
 code = code.replace(/\/\/# sourceMappingURL=.*$/gm, '');
 code = code.replace(/<\/script/gi, '<\\/script');
 const bootstrap = `<script>window.__IPMG_STANDALONE_RUNTIME_URL__=URL.createObjectURL(new Blob([Uint8Array.from(atob('${runtime.toString('base64')}'),c=>c.charCodeAt(0))],{type:'text/javascript'}));</script>`;
-html = html.replace(scripts[0][0], `${bootstrap}\n<script type="module">${code}</script>`);
+html = html.replace(scripts[0][0], () => `${bootstrap}\n<script type="module">${code}</script>`);
 const links = [...html.matchAll(/<link\b[^>]*\bhref="([^"]+)"[^>]*>/g)];
 for (const match of links) {
   if (match[1].startsWith('data:')) continue;
