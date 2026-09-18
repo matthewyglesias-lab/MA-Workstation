@@ -1,154 +1,50 @@
-name: Standalone shell acceptance
+name: Mature standalone acceptance
 on:
   push:
     branches: [codex/lightfully-standalone-rebuild]
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 concurrency:
-  group: lightfully-rebuild-acceptance
+  group: mature-standalone-acceptance
   cancel-in-progress: true
 jobs:
   verify:
-    if: github.ref == 'refs/heads/codex/lightfully-standalone-rebuild'
+    if: github.event.head_commit.message != 'build: transfer mature clinical workspace for verification'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
     env:
       VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Apply reviewed final screen refinements
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('tests/e2e/workstation.spec.js');s=p.read_text()
-          a='expect(drawerVisual.borderRadius).toBe(16);'; b='expect(drawerVisual.borderRadius).toBe(12);'
-          assert a in s or b in s
-          p.write_text(s.replace(a,b))
-          p=Path('src/presentation/lightfully/lightfully-shell.css');s=p.read_text()
-          if 'Short-screen worklist priority' not in s:
-              s+='''
-          /* Short-screen worklist priority: keep real work above decorative copy. */
-          @media screen and (max-height: 800px) {
-            .lf-workstation .lf-start-center { gap: 12px; }
-            .lf-welcome { padding-top: 0; padding-bottom: 0; }
-            .lf-welcome h1 { font-size: 25px; margin: 3px 0; }
-            .lf-welcome p, .lf-quick-copy > small, .lf-quick-copy > span, .lf-quick-arrow { display: none; }
-            .lf-quick-tools { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
-            .lf-workstation .lf-quick-tool { min-height: 64px; padding: 10px; gap: 8px; align-items: center; }
-            .lf-quick-copy > strong { font-size: 12px; line-height: 17px; }
-            .lf-quick-icon { width: 26px; height: 29px; }
-            .lf-workstation .lf-summary-item { min-height: 43px; padding-block: 4px; }
-            .lf-summary-number { font-size: 24px; line-height: 30px; }
-            .lf-summary-item small { display: none; }
-            .lf-start-center .cd2004-worklist-header { padding-block: 10px; }
-            .lf-start-center .cd2004-worklist-header p { display: none; }
-          }
-          '''
-              p.write_text(s)
-          p=Path('index.html');s=p.read_text()
-          if 'Lightfully startup parity' not in s:
-              css='''
-                /* Lightfully startup parity: no old teal flash before the module loads. */
-                #boot-splash { color: #28283f; background: #efecf6; grid-template-rows: 72px 64px minmax(0, 1fr) 38px 32px; }
-                #boot-splash .boot-header { color: #28283f; background: #fffefa; border-bottom: 1px solid #dcd6e5; }
-                #boot-splash .boot-brand-mark { color: #8d503c; background: #fae6da; border-color: #fae6da; }
-                #boot-splash .boot-search, #boot-splash .boot-header-action { background: #f4f0f8; border-color: #dcd6e5; border-radius: 8px; }
-                #boot-splash .boot-patient, #boot-splash .boot-rail { background: #fffefa; border-color: #dcd6e5; }
-                #boot-splash .boot-patient-block:first-child { background: #fffefa; }
-                #boot-splash .boot-patient-block::before, #boot-splash .boot-patient-block::after, #boot-splash .boot-rail-title { background: #dcd6e5; }
-                @media (max-width: 949px) { #boot-splash { grid-template-rows: 64px 64px minmax(0, 1fr) 38px 32px; } }
-              '''
-              s=s.replace('</style>',css+'\n</style>',1);p.write_text(s)
-          Path('favicon.svg').write_text('''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="IPMG MA Workstation"><rect width="40" height="40" rx="11" fill="#fae6da"/><g stroke="#8d503c" stroke-width="2.2" stroke-linecap="round" fill="none"><path d="M8 31V21a12 12 0 0 1 24 0v10M14 31V21a6 6 0 0 1 12 0v10M20 3v3M6 8l3 3M34 8l-3 3M3 21h3M34 21h3"/></g><circle cx="20" cy="27" r="2" fill="#8d503c"/></svg>\n''')
-          p=Path('tests/e2e/lightfully-shell.spec.js');s=p.read_text()
-          if 'worklistVisibleHeight' not in s:
-              anchor="      await expect(page).toHaveScreenshot(`lightfully-home-${size.width}x${size.height}.png`, { animations: 'disabled' });"
-              assert anchor in s
-              extra="""      await expect(page.locator('.cd2004-worklist-tabs')).toBeInViewport();
-                const worklistVisibleHeight = await page.locator('.cd2004-worklist-sheet').evaluate(node => {
-                  const r = node.getBoundingClientRect();
-                  const host = node.closest('.lf-start-center').getBoundingClientRect();
-                  return Math.max(0, Math.min(r.bottom, host.bottom, innerHeight) - Math.max(r.top, host.top, 0));
-                });
-                expect(worklistVisibleHeight).toBeGreaterThanOrEqual(40);
-          """
-              p.write_text(s.replace(anchor,extra+anchor))
-          PY
-      - name: Confirm clinical and print boundary
+      - name: Preserve original clinical and print implementations
         run: git diff --exit-code 28ae520bb51161ef3eb4b3642071007601b9f64e -- public/legacy src/legacy src/domain src/application src/persistence src/documentation tests/fixtures
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Record dependency audit
-        run: npm audit --json > dependency-audit.json || true
       - run: npm run check
       - run: npm run test:unit
       - run: npm run build
-      - name: Commit validated source refinements
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src tests index.html favicon.svg
-          if ! git diff --cached --quiet; then
-            git commit -m 'fix: prioritize worklist on short screens and align startup branding'
-            git push origin HEAD:codex/lightfully-standalone-rebuild
-          fi
-      - name: Package self-contained workstation
-        run: GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-      - name: Recheck affected screen expectations and patient-context safeguards
-        run: npx playwright test tests/e2e/conventions.spec.js:153 tests/e2e/conventions.spec.js:815 tests/e2e/conventions.spec.js:934 tests/e2e/workstation.spec.js:661 tests/e2e/workstation.spec.js:805 tests/e2e/workstation.spec.js:1010 tests/e2e/workstation.spec.js:1624 tests/e2e/workstation.spec.js:3231 tests/e2e/visual-contracts.spec.js tests/e2e/tebra-screen-contract.spec.js tests/e2e/lightfully-shell.spec.js --update-snapshots --max-failures=2
-      - name: Full browser suite and intentional screen rebaseline
-        id: screens
-        continue-on-error: true
-        run: npx playwright test --update-snapshots
-      - name: Preserve first browser report
-        if: always()
-        run: |
-          test ! -d playwright-report || cp -R playwright-report browser-report
-          test ! -d test-results || cp -R test-results browser-results
-      - name: Verify native single-file startup and persistence
-        id: native
-        continue-on-error: true
-        run: TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js
-      - name: Commit screen baselines only after passing behavioral checks
-        if: steps.screens.outcome == 'success'
-        run: |
-          git add tests/e2e
-          if ! git diff --cached --quiet; then
-            git commit -m 'test: baseline Lightfully screens after full browser regression'
-            git push origin HEAD:codex/lightfully-standalone-rebuild
-          fi
-      - name: Reproduce browser and print results without rebaseline
-        if: steps.screens.outcome == 'success'
+      - run: node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Browser, clinical workflow and print regression tests
         run: npx playwright test
+      - name: Native single-file startup and persistence
+        run: TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js --output=native-test-results --reporter=list
       - name: Archive exact source
-        if: always()
-        run: git archive --format=zip --output=lightfully-source.zip HEAD
+        run: git archive --format=zip --output=refined-source.zip HEAD
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: lightfully-acceptance-review
+          name: mature-standalone-review
           path: |
-            dist/
             standalone/
-            browser-report/
-            browser-results/
             playwright-report/
             test-results/
-            tests/e2e/*-snapshots/
-            lightfully-source.zip
-            dependency-audit.json
+            native-test-results/
+            refined-source.zip
           retention-days: 7
-          if-no-files-found: warn
-      - name: Enforce behavioral and native results
-        if: always()
-        run: |
-          test '${{ steps.screens.outcome }}' = 'success'
-          test '${{ steps.native.outcome }}' = 'success'

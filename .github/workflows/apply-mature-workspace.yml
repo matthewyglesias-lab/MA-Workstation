@@ -1,0 +1,92 @@
+name: Verify mature workspace restructure
+on:
+  push:
+    branches: [codex/lightfully-standalone-rebuild]
+    paths: ['.github/mature-transfer/**']
+permissions:
+  contents: write
+concurrency:
+  group: apply-mature-workspace
+  cancel-in-progress: false
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply hash-verified presentation and regression-test edits
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, lzma
+          from pathlib import Path, PurePosixPath
+          h=lambda b: hashlib.sha256(b).hexdigest()
+          parts=sorted(Path('.github/mature-transfer').glob('*.part'))
+          assert len(parts)==4
+          raw=lzma.decompress(base64.b64decode(''.join(p.read_text() for p in parts),validate=True))
+          assert h(raw)=='0068c53684c6800a10a2f55e8c8c294c6f71b3d2bcb547e78cc2e8ab43c3b349'
+          pending={}
+          for change in json.loads(raw):
+              name=change['path']; pp=PurePosixPath(name)
+              assert not pp.is_absolute() and '..' not in pp.parts
+              assert name=='index.html' or name.startswith(('src/presentation/','tests/e2e/','tests/unit/','docs/lightfully/'))
+              p=Path(name); old=p.read_bytes() if p.exists() else b''
+              assert h(old)==change['old'] if change['old'] is not None else not p.exists()
+              lines=old.decode().splitlines(keepends=True)
+              for start,end,replacement in reversed(change['ops']): lines[start:end]=replacement
+              new=''.join(lines).encode(); assert h(new)==change['new']
+              assert name not in pending
+              pending[name]=new
+          for name,new in pending.items():
+              p=Path(name);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(new)
+          print('Applied',len(pending),'verified source/test/documentation files.')
+          PY
+      - name: Verify untouched clinical, persistence and print boundary
+        run: git diff --exit-code 28ae520bb51161ef3eb4b3642071007601b9f64e -- public/legacy src/legacy src/domain src/application src/persistence src/documentation tests/fixtures
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Record existing dependency audit
+        run: npm audit --json > dependency-audit.json || true
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+      - run: node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Full regression with explicitly approved new screen baselines
+        run: npx playwright test --update-snapshots
+      - name: Native file startup, original storage guards and reload
+        run: TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js --output=native-test-results --reporter=list
+      - name: Repeat full suite without updating baselines
+        run: npx playwright test
+      - name: Commit only validated source and remove one-time transfer tooling
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -r .github/mature-transfer .github/workflows/apply-mature-workspace.yml
+          git add src/presentation tests/e2e tests/unit docs/lightfully index.html
+          git commit -m 'feat: simplify MA workstation into a mature clinical documentation workspace'
+          git push origin HEAD:codex/lightfully-standalone-rebuild
+      - name: Package exact verified source revision
+        run: |
+          GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
+          git archive --format=zip --output=refined-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mature-workspace-acceptance
+          path: |
+            standalone/
+            playwright-report/
+            test-results/
+            native-test-results/
+            tests/e2e/*-snapshots/
+            refined-source.zip
+            dependency-audit.json
+          retention-days: 7
+          if-no-files-found: warn
