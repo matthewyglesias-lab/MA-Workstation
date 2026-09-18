@@ -5,19 +5,27 @@ replacement clinical engine or a reduced demonstration. It starts from PR #62
 commit `28ae520bb51161ef3eb4b3642071007601b9f64e`, preserving its draft-integrity
 and injection-focus work in addition to the default-branch clinical engine.
 
-## What changed
+## What changed in the mature workspace revision
 
-A lavender and warm-paper workspace, navy typography, coral primary actions,
-sage navigation selection, editorial headings, and a consistent control grammar.
-The home register offers guarded entry into Injection, UDS, Samples and Forms;
-real review/draft/today counts; a temporary patient/medication filter; and the
-original resume/review actions. There are no invented patients or queue totals.
+A quieter white and blue-gray documentation workspace with navy type, coral
+primary actions, restrained navigation selection, and editorial titles. A single
+left navigation holds Worklist, Saved records and Tools. Document a service opens
+one chooser for Injection, UDS, Samples and Forms through the existing guards.
 
-Ctrl/Cmd+K opens a keyboard-searchable command palette. Navigation uses the
-existing workflow guards. It never offers signing, deletion or medication
-selection. An existing modal or unsupported viewport retains control. Density
-is a browser-local display preference only. The Focus action opens the original
-seven-step injection workflow and its original documentation, not a second form.
+The opening worklist is a real table, not a welcome dashboard: patient/task,
+service, date/time, state and the available action. Original filters and safe
+resume/review paths remain. There are no invented patients, arrivals or totals.
+
+Inside each service, Details gives the form full width. Preview opens the actual
+generated documentation alongside it on wide screens or switches views on narrow
+screens. The same form stays mounted, so changing views does not erase a draft.
+Section tabs remain freely navigable. Existing records and clinical exceptions
+still use the original implementations. See [REFINEMENT.md](REFINEMENT.md).
+
+Ctrl/Cmd+K opens a keyboard-searchable command palette. It never offers signing,
+deletion or medication selection. An existing modal or unsupported viewport
+retains control. Density is a browser-local display preference only. The Focus
+action opens the original seven-step injection workflow, not a second form.
 
 ## Preserved boundary
 

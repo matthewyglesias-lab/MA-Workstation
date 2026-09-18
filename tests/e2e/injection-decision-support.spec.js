@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
@@ -11,7 +12,7 @@ const {
 
 async function openInjection(page) {
   await page.goto('/');
-  await page.locator('.cd2004-nav-item[title="Injection"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
   await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
   return page.locator('.wfp-panel');
 }

@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
@@ -251,7 +252,7 @@ async function openWorkflow(page, workflow) {
   const label = workflow === 'administer' ? 'Injection' : 'Dashboard';
   if (workflow !== 'home') {
     // Bottom-docked strip: every nav item is reachable at every width.
-    await page.locator(`.cd2004-nav-item[title="${label}"]`).click();
+    await clickWorkspace(page, `.cd2004-nav-item[title="${label}"]`);
   }
 
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
@@ -415,7 +416,7 @@ test.describe('workstation visual snapshots', () => {
   test('current worklist at 1366 x 768', async ({ page }) => {
     await bootDeterministicWorkstation(page, VIEWPORTS.desktop1366);
     await openWorkflow(page, 'home');
-    await expect(page.getByRole('heading', { name: 'Open Notes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Worklist', exact: true })).toBeVisible();
     await settleForCapture(page);
 
     await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
@@ -442,7 +443,8 @@ test.describe('workstation visual snapshots', () => {
     await expect(page.locator('.tebra-power-commands > summary')).toBeVisible();
     await expect(page.locator('.meditech-command-deck')).toBeHidden();
     await expect(page.locator('.meditech-context-rail')).toBeVisible();
-    await expect(page.locator('.cd2004-inspector-window')).toBeVisible();
+    await expect(page.locator('.cd2004-inspector-window')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible();
     await expect(page.locator('[data-injection-record-actions]')).toBeVisible();
     await settleForCapture(page);
 
@@ -467,14 +469,19 @@ test.describe('workstation visual snapshots', () => {
     const disclosure = powerCommands.locator(':scope > summary');
     const deck = powerCommands.locator('.meditech-command-deck');
     const recordActions = page.locator('[data-injection-record-actions]');
-    const transaction = page.locator('.cd2004-transaction-window.has-document-split');
+    const transaction = page.locator('.cd2004-transaction-window');
     const inspector = page.locator('.cd2004-inspector-window');
     const workWindow = page.locator('.cd2004-work-window');
     await expect(disclosure).toBeVisible();
     await expect(deck).toBeHidden();
     const disclosureBox = await disclosure.boundingBox();
     const recordBox = await recordActions.boundingBox();
+    await expect(inspector).toBeHidden();
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await expect(inspector).toBeVisible();
     const inspectorBox = await inspector.boundingBox();
+    await page.getByRole('button', { name: 'Details', exact: true }).click();
+    await expect(recordActions).toBeVisible();
     const workWindowBox = await workWindow.boundingBox();
     expect(disclosureBox).not.toBeNull();
     expect(recordBox).not.toBeNull();

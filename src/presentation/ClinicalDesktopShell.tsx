@@ -15,6 +15,8 @@ import "./tebra-workstation.css";
 import "./kiosk/kiosk.css";
 import "./tebra-screen-contract.css";
 import "./lightfully/lightfully-shell.css";
+import { worklistDate } from "./lightfully/worklist-display";
+import { ServiceChooser, ServiceHeader, isDocumentService } from "./lightfully/ServiceWorkspace";
 import { WorkspaceTools, type WorkspaceCommand } from "./lightfully/WorkspaceTools";
 import {
   InjectionRecordRepository,
@@ -162,7 +164,8 @@ function safeInjectionWorklistRows(
     }
     seen.add(row.id);
   }
-  return rows;
+  const storedById = new Map(listed.value.map(record => [record.id, record]));
+  return rows.map(row => ({...row, timeLabel: worklistDate(storedById.get(row.id)?.snapshot.fields.adminDate)}));
 }
 
 function normalizedPatientValue(value?: string) {
@@ -327,6 +330,8 @@ export function ClinicalDesktopShell({
     useState<FocusedControlContext | null>(null);
   const [fieldLookup, setFieldLookup] =
     useState<WorkstationLookupTransaction | null>(null);
+  const [serviceChooserOpen, setServiceChooserOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [injectionKioskStep, setInjectionKioskStep] =
     useState<InjectionKioskStepId>("identify");
@@ -890,7 +895,7 @@ export function ClinicalDesktopShell({
     if (!shell) return;
     const zones = [
       workHostRef.current,
-      shell.querySelector<HTMLElement>(".meditech-record-list"),
+      shell.querySelector<HTMLElement>(".lf-section-rail"),
       shell.querySelector<HTMLElement>(".meditech-command-deck"),
     ].filter(
       (element): element is HTMLElement =>
@@ -908,7 +913,7 @@ export function ClinicalDesktopShell({
     if (target === workHostRef.current) {
       setFocusedPane("work");
       setInternalStatus("Worksheet zone focused.");
-    } else if (target.classList.contains("meditech-record-list")) {
+    } else if (target.classList.contains("lf-section-rail")) {
       setInternalStatus(`${NOTES.openNotes} zone focused.`);
     } else {
       setInternalStatus("Command zone focused.");
@@ -1176,7 +1181,7 @@ export function ClinicalDesktopShell({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      const eventTarget = event.target as HTMLElement | null;
+      const eventTarget = event.target instanceof HTMLElement ? event.target : null;
       const modalOwnsKeyboard = Boolean(
         showShortcutHelp ||
           shellRef.current?.inert ||
@@ -1290,9 +1295,15 @@ export function ClinicalDesktopShell({
   const showsInjectionLayout = selectedWorkflow === "administer" && !chartOpen;
   const kioskVisible = kioskController.enabled && showsInjectionLayout;
   const kioskLocked = injectionRecordActions?.lifecycle === "locked";
-  const showsDocumentSplit = showsInjectionLayout && !kioskVisible;
-  const showsSideInspector =
-    !chartOpen && selectedWorkflow !== "administer" && selectedWorkflow !== "home";
+  const serviceWorkspace = isDocumentService(selectedWorkflow) && !chartOpen && !kioskVisible;
+  const showsDocumentSplit = serviceWorkspace && previewOpen;
+  const showsSideInspector = false;
+  useEffect(() => { setPreviewOpen(false); }, [selectedWorkflow]);
+  useEffect(() => {
+    const revealSource = () => setPreviewOpen(false);
+    window.addEventListener("ipmg:navigate-workflow-source", revealSource);
+    return () => window.removeEventListener("ipmg:navigate-workflow-source", revealSource);
+  }, []);
 
   useEffect(() => {
     if (!kioskVisible) return;
@@ -1335,6 +1346,7 @@ export function ClinicalDesktopShell({
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
+    onDocumentService: () => setServiceChooserOpen(true),
     onWorkflowOpen: (workflow: WorkflowId) => {
       if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow);
     },
@@ -1369,7 +1381,9 @@ export function ClinicalDesktopShell({
   return (
     <div
       ref={shellRef}
-      class={`cd2004-shell lf-workstation ${className}`.trim()}
+      id="lf-workstation"
+      class={`cd2004-shell lf-workstation lf-mature ${className}`.trim()}
+      data-preview-open={previewOpen ? "true" : "false"}
       data-active-workflow={selectedWorkflow}
       data-chart-view={chartPatient ? chartView : undefined}
       data-post-state={postState}
@@ -1380,10 +1394,39 @@ export function ClinicalDesktopShell({
         {SHELL.skipToActiveNote}
       </a>
 
+      {!kioskVisible && (
+        <aside class="meditech-context-rail tebra-context-rail">
+          <SectionRail
+            onDocumentService={() => setServiceChooserOpen(true)}
+            selectedWorkflow={selectedWorkflow}
+            summaries={workflowSummaries}
+            patient={patient}
+            onWorkflowOpen={(workflow) => {
+              // openWorkflow already publishes the correct destination status;
+              // only clear the chart layer after that guarded transition.
+              if (openWorkflow(workflow) && chartPatientKeyState) {
+                closeChart(workflow);
+              }
+            }}
+            onOpenRecords={onOpenRecords}
+            {...(chartPatient ? { browsedPatientName: chartPatient.name } : {})}
+            {...(chartPatient || activePatientKey
+              ? {
+                  onOpenChart: (view: PatientChartView) =>
+                    openChart(chartPatient?.key ?? activePatientKey, view),
+                }
+              : {})}
+            activeChartView={chartPatient ? chartView : null}
+          />
+
+        </aside>
+      )}
+
       <AppHeader
+        search={<PatientSearch patients={chartIndex.patients} onSelect={(selected) => openChart(selected.key)} />}
         tools={<WorkspaceTools
           focused={kioskController.enabled}
-          onFocusInjection={kioskController.enabled ? exitKioskMode : enterKioskMode}
+          onFocusInjection={selectedWorkflow === "administer" ? (kioskController.enabled ? exitKioskMode : enterKioskMode) : undefined}
           commands={[
             ...shortcutWorkflows.map((workflow): WorkspaceCommand => ({
               id: workflow,
@@ -1424,7 +1467,7 @@ export function ClinicalDesktopShell({
           one fact it uniquely carried, that a note is open for someone else,
           moved into the chart header.
         */}
-        {!chartOpen && !kioskVisible && (
+        {!chartOpen && !kioskVisible && selectedWorkflow !== "home" && (
         <PatientBanner
           patient={patient}
           workflowPatient={workflowPatient}
@@ -1490,38 +1533,7 @@ export function ClinicalDesktopShell({
               setInternalStatus(KIOSK.nextPatientStarted);
             }}
           />
-        ) : (
-        <aside class="meditech-context-rail tebra-context-rail">
-          <SectionRail
-            selectedWorkflow={selectedWorkflow}
-            summaries={workflowSummaries}
-            patient={patient}
-            onWorkflowOpen={(workflow) => {
-              // openWorkflow already publishes the correct destination status;
-              // only clear the chart layer after that guarded transition.
-              if (openWorkflow(workflow) && chartPatientKeyState) {
-                closeChart(workflow);
-              }
-            }}
-            onOpenRecords={onOpenRecords}
-            search={
-              <PatientSearch
-                patients={chartIndex.patients}
-                onSelect={(selected) => openChart(selected.key)}
-              />
-            }
-            {...(chartPatient ? { browsedPatientName: chartPatient.name } : {})}
-            {...(chartPatient || activePatientKey
-              ? {
-                  onOpenChart: (view: PatientChartView) =>
-                    openChart(chartPatient?.key ?? activePatientKey, view),
-                }
-              : {})}
-            activeChartView={chartPatient ? chartView : null}
-          />
-          {showsSideInspector && inspectorPanel}
-        </aside>
-        )}
+        ) : null}
 
         <Panel
           pane="work"
@@ -1535,6 +1547,8 @@ export function ClinicalDesktopShell({
           active={focusedPane === "work"}
           onActivate={setFocusedPane}
         >
+          {serviceWorkspace && <ServiceHeader workflow={selectedWorkflow} previewOpen={previewOpen}
+            onPreview={() => setPreviewOpen(value => !value)} onChangeService={() => setServiceChooserOpen(true)}/>}
           <div
             class={`cd2004-transaction-window ${
               showsDocumentSplit ? "has-document-split" : ""
@@ -1596,8 +1610,8 @@ export function ClinicalDesktopShell({
               />
             )}
           </div>
-          {showsDocumentSplit && (
-            <div class="cd2004-document-split">{inspectorPanel}</div>
+          {serviceWorkspace && (
+            <div id="lf-document-preview" class="cd2004-document-split" hidden={!previewOpen}>{inspectorPanel}</div>
           )}
           </div>
         </Panel>
@@ -1637,6 +1651,7 @@ export function ClinicalDesktopShell({
         } satisfies FunctionKeyActions}
       />
 
+      {serviceChooserOpen && <ServiceChooser summaries={workflowSummaries} onDismiss={() => setServiceChooserOpen(false)} onOpen={workflow => { if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow); }}/>} 
       <Toast message={announcement} />
 
       <p
@@ -1717,6 +1732,7 @@ export function ClinicalDesktopShell({
 }
 
 interface RenderWorkflowOptions {
+  onDocumentService?: () => void;
   workflow: WorkflowId;
   patient: PatientContext;
   isMismatch: boolean;
@@ -1888,6 +1904,7 @@ function InjectionRecordActions({
 }
 
 function renderWorkflowContent({
+  onDocumentService,
   workflow,
   patient,
   isMismatch,
@@ -1910,6 +1927,7 @@ function renderWorkflowContent({
   if (workflow === "home") {
     return (
       <StartCenter
+        onDocumentService={onDocumentService}
         needsReview={needsReview}
         todayQueue={todayQueue}
         injectionRecords={injectionRecords}
@@ -2002,6 +2020,10 @@ function PatientBanner({
         ? `MEDICATION: ${patient.medicationLabel}`
         : `${SHELL.noteType.toUpperCase()}: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
       : `${medicationContextPrefix}${SHELL.noteType.toUpperCase()}: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · ${SHELL.status.toUpperCase()}: ${workflowStateLabel.toUpperCase()}`;
+  if (!hasActiveChart && !mismatch) return <div class="cd2004-patient-banner is-no-active-chart lf-empty-patient">
+    <div class="cd2004-patient-primary"><DesktopIcon name="patient"/><span><strong>{PATIENT.noPatient}</strong><small>Enter the patient details below, or open a saved note.</small></span></div>
+    <button type="button" class="lf-text-button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>{NOTES.openNotes} <span aria-hidden="true">→</span></button>
+  </div>;
   return (
     <div
       class={`cd2004-patient-banner ${

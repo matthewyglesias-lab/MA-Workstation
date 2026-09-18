@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue, selectRegisteredProvider } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
@@ -27,7 +28,7 @@ async function bootWorkstation(page) {
 }
 
 async function openWorkflow(page, title, workflow) {
-  await page.locator(`.cd2004-nav-item[title="${title}"]`).click();
+  await clickWorkspace(page, `.cd2004-nav-item[title="${title}"]`);
   await expect(page.locator('.cd2004-shell'))
     .toHaveAttribute('data-active-workflow', workflow);
 }

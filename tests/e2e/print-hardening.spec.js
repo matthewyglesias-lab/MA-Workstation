@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 
 /**
@@ -231,7 +232,7 @@ test.describe('hardened print pipeline', () => {
       await page.evaluate(() => window.__IPMG_INJECTION_PATIENT_SCREENING_ENABLED__ === true)
     ).toBe(true);
 
-    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     const panel = page.locator('.wfp-panel');
     await expect(panel).toBeVisible();
     await panel.locator('select[name="inj-medication"]').selectOption('uzedy');

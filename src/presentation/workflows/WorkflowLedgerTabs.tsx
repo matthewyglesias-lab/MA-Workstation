@@ -1,12 +1,12 @@
 import type { WorkflowLedgerState } from "../../application/workstation-projection";
 
 const LEDGER_STATE_LABEL: Record<WorkflowLedgerState, string> = {
-  pending: "PEND",
-  entry: "ENTRY",
-  complete: "OK",
-  review: "REV",
-  stop: "STOP",
-  locked: "LOCK",
+  pending: "Not started",
+  entry: "In progress",
+  complete: "Complete",
+  review: "Review",
+  stop: "Required",
+  locked: "Signed",
 };
 
 export interface WorkflowLedgerTab<Tab extends string> {
@@ -60,7 +60,7 @@ export function WorkflowLedgerTabs<Tab extends string>({
         const stateId = `${tabId}-state`;
         const stateLabel =
           tab.state === "stop" && tab.stopCount
-            ? `${tab.stopCount} STOP`
+            ? `${tab.stopCount} required`
             : LEDGER_STATE_LABEL[tab.state];
         return (
           <button

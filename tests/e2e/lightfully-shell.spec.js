@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 
 async function boot(page) {
@@ -12,10 +13,11 @@ test.describe('Lightfully standalone shell', () => {
     test(`keeps the home and command tools usable at ${size.width}x${size.height}`, async ({ page }) => {
       await page.setViewportSize(size);
       await boot(page);
-      await expect(page.getByRole('heading', { name: 'Care, with a little more clarity.' })).toBeVisible();
-      await expect(page.locator('.lf-quick-tool')).toHaveCount(4);
+      await expect(page.getByRole('heading', { name: 'Worklist', exact: true })).toBeVisible();
+      await expect(page.locator('.lf-quick-tool')).toHaveCount(0);
+      await expect(page.locator('.lf-document-action')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
-      for (const selector of ['.lf-command-trigger', '.lf-density-toggle', '.lf-focus-trigger', '.tebra-account-trigger']) {
+      for (const selector of ['.lf-command-trigger', '.lf-density-toggle', '.tebra-account-trigger']) {
         const box = await page.locator(selector).boundingBox();
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(size.width);
@@ -67,7 +69,7 @@ test.describe('Lightfully standalone shell', () => {
   });
   test('retains a draft through command navigation and supports arrow-key work filters', async ({ page }) => {
     await boot(page);
-    await page.locator('.lf-quick-tool.is-administer').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     const name = page.locator('input[name="inj-patient-name"]');
     // Use the panel label when the underlying field has no native name.
     const patient = await name.count() ? name : page.locator('.wfp-panel').getByRole('textbox', { name: /^Patient name/ });
@@ -82,11 +84,12 @@ test.describe('Lightfully standalone shell', () => {
     await expect(page.getByRole('tab', { name: /^Drafts/ })).toBeFocused();
     await page.keyboard.press('Home');
     await expect(first).toBeFocused();
-    await page.locator('.lf-quick-tool.is-administer').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     await expect(patient).toHaveValue('Lightfully QA, Synthetic');
   });
   test('enters the existing injection focus workflow, not a parallel form', async ({ page }) => {
     await boot(page);
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     await page.getByRole('button', { name: 'Open focused injection workspace', exact: true }).click();
     await expect(page.locator('.lf-workstation')).toHaveAttribute('data-kiosk-mode', 'true');
     await expect(page.locator('.kiosk-stepper [data-kiosk-step]')).toHaveCount(7);

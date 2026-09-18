@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -16,7 +17,7 @@ test.describe('Self-contained file artifact', () => {
     await expect(page.locator('.lf-workstation')).toBeVisible();
     await expect(page.locator('[data-workspace-badge="local"]')).toBeVisible();
     expect(await page.evaluate(() => typeof navigator.locks?.request)).toBe('function');
-    await page.locator('.lf-quick-tool.is-administer').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     const patient = page.locator('.wfp-panel input[placeholder="Last, First"]');
     await patient.fill('Standalone QA, Synthetic');
     await page.locator('[data-injection-save]').click();

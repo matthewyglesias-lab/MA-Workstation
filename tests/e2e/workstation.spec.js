@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue, providerControl } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
@@ -27,9 +28,7 @@ test.describe('MA Workstation browser journeys', () => {
     const shell = page.locator('.cd2004-shell');
     // The workflow tab strip is docked along the bottom edge at every width,
     // so a tab is always directly clickable - no pane switching required.
-    const navButton = page.locator(`.cd2004-nav-item[title="${workflowLabels[workflow]}"]`);
-    await navButton.scrollIntoViewIfNeeded();
-    await navButton.click();
+    await clickWorkspace(page, `.cd2004-nav-item[title="${workflowLabels[workflow]}"]`);
     await expect(shell).toHaveAttribute('data-active-workflow', workflow);
     if (
       workflow === 'forms' ||
@@ -279,7 +278,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(panel.locator('.wfp-prerequisite-line')).toHaveCount(0);
     await expect(panel.getByRole('group', { name: 'Lot & traceability' })).toBeVisible();
     await panel.locator('input[placeholder="00000-0000-00"]').fill('00000-0000-42');
-    await expect(panel.locator('.wfp-summary-fact').filter({ hasText: 'PKG' }))
+    await expect(panel.locator('.wfp-summary-fact').filter({ hasText: 'Product' }))
       .toContainText('MANUAL');
 
     await openInjectionTab(page, 'Outcome');
@@ -698,11 +697,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administeredDisposition).toHaveClass(/is-selected/);
     await expect(administeredDisposition).toHaveCSS(
       'background-color',
-      'rgb(232, 225, 240)'
+      'rgb(237, 244, 246)'
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
-      'rgb(49, 92, 66)'
+      'rgb(31, 111, 92)'
     );
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
@@ -812,6 +811,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-app-title > span')).toHaveText('MA Workstation');
     await expect(page.locator('.cd2004-app-environment')).toContainText('Local only');
     await expect(page.locator('.cd2004-app-environment')).not.toContainText('LIVE');
+    await openWorkflow(page, 'administer');
     const chartBanner = page.locator('.cd2004-patient-banner');
     await expect(chartBanner).toHaveClass(/is-no-active-chart/);
     await expect(chartBanner).not.toHaveClass(/has-active-chart/);
@@ -869,8 +869,8 @@ test.describe('MA Workstation browser journeys', () => {
         horizontalOverflow: node.scrollWidth - node.clientWidth
       };
     });
-    expect(drawerVisual.borderRadius).toBe(12);
-    expect(drawerVisual.searchRadius).toBe(8);
+    expect(drawerVisual.borderRadius).toBe(10);
+    expect(drawerVisual.searchRadius).toBe(7);
     expect(drawerVisual.fontFamily).toContain('Inter Variable');
     expect(drawerVisual.headerBackground).toBe('none');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
@@ -899,21 +899,20 @@ test.describe('MA Workstation browser journeys', () => {
     const shell = page.locator('.cd2004-shell');
     const navigator = page.locator('.cd2004-navigator');
     const home = page.locator('.cd2004-nav-item[title="Dashboard"]');
-    const administer = page.locator('.cd2004-nav-item[title="Injection"]');
+    const administer = page.locator('.lf-current-service');
 
     await expect(navigator).toHaveAttribute(
       'aria-label',
-      'Open Notes and clinical functions'
+      'Workspace navigation'
     );
-    await expect(navigator.locator('.cd2004-nav-item')).toHaveCount(8);
+    await expect(navigator.locator('.cd2004-nav-item')).toHaveCount(5);
     await expect(home).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.cd2004-launcher-tile')).toHaveCount(0);
     await expect(page.locator('.cd2004-work-window .cd2004-window-title'))
       .toContainText('Dashboard');
-    await expect(page.getByRole('heading', { name: 'Open Notes', level: 2 }))
+    await expect(page.getByRole('heading', { name: 'Worklist', level: 1 }))
       .toBeVisible();
-    await expect(page.getByRole('button', { name: 'Start new injection', exact: true }))
-      .toBeVisible();
+    await expect(page.getByRole('button', { name: 'Document a service', exact: true })).toBeVisible();
 
     await page.keyboard.press('Alt+2');
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
@@ -926,12 +925,12 @@ test.describe('MA Workstation browser journeys', () => {
       document.addEventListener('ipmg:tabchange', () => { window.__ipmgTabChanges += 1; });
     });
     await openWorkflow(page, 'home');
-    await page.locator('.cd2004-nav-item[title="UDS"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="UDS"]');
     await expect(shell).toHaveAttribute('data-active-workflow', 'uds');
     await expect.poll(() => page.evaluate(() => window.__ipmgTabChanges)).toBe(2);
 
     await openWorkflow(page, 'samples');
-    const workBody = page.locator('.cd2004-work-window .cd2004-window-body');
+    const workBody = page.locator('.cd2004-work-window > .cd2004-window-body');
     const savedScroll = await workBody.evaluate(node => {
       node.scrollTop = Math.min(1200, Math.max(0, node.scrollHeight - node.clientHeight));
       return node.scrollTop;
@@ -952,7 +951,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.tebra-app-workspace')).toHaveCount(0);
 
     await openWorkflow(page, 'administer');
-    await expect(page.getByRole('heading', { name: 'Injection worksheet', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Injection', level: 1, exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Patient & ordering provider', level: 2 })).toBeVisible();
     const injectionReason = page.getByLabel('Encounter type', { exact: true });
     await expect(injectionReason).toHaveAttribute('aria-required', 'true');
@@ -978,9 +977,8 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openWorkflow(page, 'uds');
     const panel = page.locator('.wfp-panel');
-    await expect(page.locator('.meditech-patient-safety')).toContainText(
-      'UDS — Not started'
-    );
+    await expect(page.locator('.lf-empty-patient')).toContainText('No patient selected');
+    await expect(panel.locator('.wfp-summary-bar')).toContainText('Not started');
     const powerCommands = page.locator('.tebra-power-commands');
     const commandDeck = powerCommands.locator(
       '[role="toolbar"][aria-label="Keyboard shortcuts"]'
@@ -1024,7 +1022,7 @@ test.describe('MA Workstation browser journeys', () => {
     const f8 = commandDeck.locator('button').filter({ hasText: 'F8' });
     const f9 = commandDeck.locator('button').filter({ hasText: 'F9' });
 
-    await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('PEND');
+    await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('Not started');
     await reason.focus();
     await expect(page.locator('[data-status-prompt]')).toContainText(
       'INJ-REASON | Encounter type'
@@ -1055,7 +1053,7 @@ test.describe('MA Workstation browser journeys', () => {
       'INJ-REASON filed as PRN / ordered.'
     );
     await expect(orderTab).toHaveClass(/is-stop/);
-    await expect(orderTab.locator('.wfp-ledger-state')).toContainText('STOP');
+    await expect(orderTab.locator('.wfp-ledger-state')).toContainText('required');
     await expect(f8).toContainText('Next stop');
 
     // Reconfirming the current lookup row is a no-op. It must not emit the
@@ -1074,7 +1072,7 @@ test.describe('MA Workstation browser journeys', () => {
     });
     await expect(currentLookupRow).toHaveAttribute('aria-selected', 'true');
     await page.mouse.move(0, 0);
-    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(232, 225, 240)');
+    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(234, 242, 244)');
     await lookup.getByRole('searchbox', { name: 'Find value' }).press('Enter');
     await expect(reason).toHaveValue('prn');
     await expect(page.locator('[data-toast]')).toContainText(
@@ -1085,11 +1083,11 @@ test.describe('MA Workstation browser journeys', () => {
     await openWorkflow(page, 'uds');
     const udsPanel = page.locator('.wfp-panel');
     const specimenTab = udsPanel.getByRole('tab', { name: 'Specimen', exact: true });
-    await expect(specimenTab.locator('.wfp-ledger-state')).toHaveText('PEND');
+    await expect(specimenTab.locator('.wfp-ledger-state')).toHaveText('Not started');
     await signInLocalStaff(page, 'Alex Rivera, MA');
     await udsPanel.getByLabel('Encounter type', { exact: true }).selectOption('routine');
     await expect(specimenTab).toHaveClass(/is-stop/);
-    await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('STOP');
+    await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('required');
 
     await udsPanel.getByRole('button', { name: 'Use signed-in staff', exact: true }).click();
     const collectorField = udsPanel.locator('.wfp-field[data-field-path="collector"]');
@@ -1133,7 +1131,7 @@ test.describe('MA Workstation browser journeys', () => {
     await page.goto('/');
 
     const workQueue = page.locator('.cd2004-worklist-sheet');
-    await expect(page.getByRole('heading', { name: 'Open Notes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Worklist', exact: true })).toBeVisible();
     await expect(page.getByRole('tab', { name: /All work/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Needs review/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Today/ })).toBeVisible();
@@ -1189,7 +1187,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(badge).toHaveAttribute('data-workspace-badge', 'local');
 
     // An announcement toasts, then clears itself rather than going stale.
-    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     await expect(page.locator('[data-toast]')).toContainText('Injection opened.');
   });
 
@@ -1204,11 +1202,11 @@ test.describe('MA Workstation browser journeys', () => {
     // The Dashboard is a single worklist surface. A clinical worksheet then
     // owns the work and document-review pair without redundant window chrome.
     await expect(navigator).toBeVisible();
-    await expect(navigator.getByText('Clinical work', { exact: true })).toBeVisible();
-    await expect(navigator.getByText('Resources', { exact: true })).toBeVisible();
-    await expect(navigator.getByText('Closeout', { exact: true })).toBeVisible();
+    await expect(navigator.getByText('Worklist', { exact: true })).toBeVisible();
+    await expect(navigator.getByText('Saved records', { exact: true })).toBeVisible();
+    await expect(navigator.locator('.lf-tools-navigation > summary')).toBeVisible();
     await expect(navigator.locator('.cd2004-nav-item > i')).toHaveCount(0);
-    await expect(navigator.locator('.meditech-nav-icon svg')).toHaveCount(8);
+    await expect(navigator.locator('.lf-primary-navigation button svg')).toHaveCount(2);
     await expect(work).toBeVisible();
     await expect(inspector).toHaveCount(0);
     await expect(page.locator('.cd2004-caption-button')).toHaveCount(0);
@@ -1216,6 +1214,7 @@ test.describe('MA Workstation browser journeys', () => {
     await openWorkflow(page, 'uds');
     await expect(navigator).toBeVisible();
     await expect(work).toBeVisible();
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
     await expect(inspector).toBeVisible();
     await expect(inspector.locator('.cd2004-window-title')).toContainText(
       'Clinical Documentation'
@@ -1273,11 +1272,11 @@ test.describe('MA Workstation browser journeys', () => {
 
     // With no clinical stops active, F8 cycles the visible work, navigation,
     // and opt-in command zones.
-    const startInjection = page.getByRole('button', { name: 'Start new injection', exact: true });
-    await startInjection.focus();
+    const worklistControl = page.getByRole('tab', { name: /All work/ });
+    await worklistControl.focus();
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.meditech-record-list'))
+      Boolean(document.activeElement?.closest('.lf-section-rail'))
     )).toBe(true);
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>
@@ -1632,7 +1631,7 @@ test.describe('MA Workstation browser journeys', () => {
     // persistence remains a separate status in the rail and action bar.
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 254, 250)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -1651,10 +1650,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(mismatch).toBeVisible();
     await expect(mismatch).toContainText('Bravo, Patient');
     await expect(mismatch).toHaveCSS('background-color', 'rgb(253, 243, 226)');
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 254, 250)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 254, 250)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');
@@ -1942,6 +1941,13 @@ test.describe('MA Workstation browser journeys', () => {
       await openWorkflow(page, workflow);
       const slot = page.locator(`.cd2004-workflow-slot[data-workflow="${workflow}"]`);
       const panel = slot.locator('.wfp-panel');
+      if (workflow === 'administer') {
+        await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Abilify Maintena' });
+        // Medication selection creates a draft asynchronously. Measure scrolling
+        // after its saved-record context is settled, not during that transition.
+        await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+        await expect(page.locator('.cd2004-patient-banner')).toHaveClass(/has-active-chart/);
+      }
       const chrome = panel.locator('.wfp-transaction-chrome');
       const tabs = chrome.locator('.wfp-tabbar');
       const clinicalPage = panel.locator('.wfp-transaction-page');
@@ -1985,7 +1991,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await verifyTransactionChrome({
       workflow: 'administer',
-      facts: ['DUE', 'PKG']
+      facts: ['Next dose', 'Product']
     });
     await verifyTransactionChrome({
       workflow: 'uds',
@@ -2046,6 +2052,8 @@ test.describe('MA Workstation browser journeys', () => {
       for (const [tab, selector] of workflows) {
         await openWorkflow(page, tab);
         await expect(page.locator(selector)).toBeVisible();
+        await expect(visibleWindows).toHaveCount(1);
+        await page.getByRole('button', { name: 'Preview', exact: true }).click();
         await expect(visibleWindows).toHaveCount(2);
         const inspectorBox = await page
           .locator('.cd2004-inspector-window')
@@ -2067,6 +2075,8 @@ test.describe('MA Workstation browser journeys', () => {
             .evaluate((transaction) => transaction.scrollHeight - transaction.clientHeight);
           expect(transactionOverflow).toBeLessThanOrEqual(1);
         }
+        await page.getByRole('button', { name: 'Details', exact: true }).click();
+        await expect(page.locator(selector)).toBeVisible();
         const internalOverflow = await page.locator(selector).evaluate(node =>
           node.scrollWidth - node.clientWidth
         );
@@ -2443,6 +2453,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(assessment).toContainText(productPreparationLine);
     await expect(assessment).not.toContainText('Inspect the solution before administration.');
 
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
     const viewerAssessment = page
       .locator('.cd2004-inspector-window .cd2004-note-section')
       .filter({ hasText: 'Assessment' });
@@ -3179,7 +3190,7 @@ test.describe('MA Workstation browser journeys', () => {
     const panel = page.locator('.wfp-panel');
     const summaryFact = (label) => panel.locator('.wfp-summary-fact').filter({ hasText: label });
 
-    await expect(panel.getByRole('heading', { name: 'Urine drug screen' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Urine drug screen', level:1, exact:true })).toBeVisible();
     await expect(summaryFact('PANELS')).toContainText('PENDING');
 
     const specimenTab = panel.getByRole('tab', { name: 'Specimen', exact: true });
@@ -3214,8 +3225,9 @@ test.describe('MA Workstation browser journeys', () => {
     // an incomplete screen's documentation is never offered as a draft, and
     // the panel and the sidebar offer the same single note.
     await expect(panel.getByRole('button', { name: 'Copy note', exact: true })).toBeEnabled();
-    await expect(page.locator('.cd2004-inspector').getByRole('button', { name: 'Copy note' }))
-      .toBeEnabled();
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await expect(page.locator('.cd2004-inspector').getByRole('button', { name: 'Copy note' })).toBeEnabled();
+    await page.getByRole('button', { name: 'Details', exact: true }).click();
     await expect(panel.getByRole('button', { name: 'Print patient summary' })).toBeDisabled();
 
     await panel.locator('.wfp-field', { hasText: 'Medication alignment' }).locator('select')
@@ -3267,8 +3279,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(bup).toHaveText('NEG');
     await bup.press('ArrowDown');
     await page.mouse.move(0, 0);
-    await expect(bup).toHaveCSS('background-color', 'rgb(255, 254, 250)');
-    await expect(bup).toHaveCSS('color', 'rgb(49, 92, 66)');
+    await expect(bup).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(bup).toHaveCSS('color', 'rgb(31, 111, 92)');
     const mtd = panel.locator('.wfp-grid-row', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
     await expect(mtd).toBeFocused();
     await mtd.press('p');
@@ -3339,6 +3351,7 @@ test.describe('MA Workstation browser journeys', () => {
     );
 
     const inspector = page.locator('.cd2004-inspector');
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
     await expect(inspector.locator('.cd2004-note-body').first()).toBeVisible();
 
     // Compare what each section shows against what its own Copy button puts on
@@ -3422,6 +3435,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     for (const workflow of ['administer', 'uds', 'samples', 'forms']) {
       await openWorkflow(page, workflow);
+      await page.getByRole('button', { name: 'Preview', exact: true }).click();
       const sections = inspector.locator('.cd2004-note-section');
       await expect(sections.first()).toBeVisible();
       const count = await sections.count();

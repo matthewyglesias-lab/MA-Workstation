@@ -62,14 +62,14 @@ test.describe('Injection focus workspace', () => {
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
     await expect(shell).toHaveAttribute('data-kiosk-mode', 'true');
     await expect(page.locator('.kiosk-stepper [data-kiosk-step]')).toHaveCount(7);
-    await expect(page.locator('main > .tebra-context-rail')).toHaveCount(0);
+    await expect(page.locator('#lf-workstation > .tebra-context-rail')).toHaveCount(0);
     await expect(page.locator('[data-workspace-badge="local"]')).toBeVisible();
     await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), KIOSK_STORAGE_KEY))
       .toBe('1');
 
     await page.locator('[data-kiosk-exit]').click();
     await expect(shell).not.toHaveAttribute('data-kiosk-mode', 'true');
-    await expect(page.locator('main > .tebra-context-rail')).toBeVisible();
+    await expect(page.locator('#lf-workstation > .tebra-context-rail')).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.has('kiosk')).toBe(false);
     await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), KIOSK_STORAGE_KEY))
       .toBe('0');

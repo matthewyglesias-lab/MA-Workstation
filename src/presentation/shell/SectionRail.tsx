@@ -1,32 +1,15 @@
-import type { ComponentChildren } from "preact";
 import { DesktopIcon } from "../DesktopIcon";
-import { getFunctionKeyCommand } from "../FunctionKeyProfile";
-import {
-  WORKFLOW_LABELS,
-  type PatientContext,
-  type WorkflowId,
-  type WorkflowSummary,
-} from "../types";
-import { NAVIGATION, NOTES, PATIENT, PATIENT_NOTES } from "../vocabulary";
-
+import { LightfullyMark } from "../lightfully/WorkspaceTools";
+import { isDocumentService } from "../lightfully/ServiceWorkspace";
+import { WORKFLOW_LABELS, type PatientContext, type WorkflowId, type WorkflowSummary } from "../types";
+import { PATIENT, NAVIGATION } from "../vocabulary";
 interface SectionRailProps {
+  onDocumentService: () => void;
   selectedWorkflow: WorkflowId;
   summaries: Partial<Record<WorkflowId, WorkflowSummary>>;
   patient?: PatientContext;
   onWorkflowOpen: (workflow: WorkflowId) => void;
   onOpenRecords?: () => void;
-  /**
-   * Patient search.
-   *
-   * Tebra puts this in the product header, centred. Measured at every
-   * supported width, this module's header cannot hold it: the menu bar - an
-   * affordance Tebra does not have - occupies the centre, and below 1024px
-   * there is no room on either side of it. Putting it here keeps it reachable
-   * at 800x600 instead of vanishing exactly where the workstation is most
-   * constrained, and the rail is already where this app's patient context
-   * lives. A repository adaptation, not a Tebra measurement.
-   */
-  search?: ComponentChildren;
   /**
    * The patient whose chart is currently being browsed, when one is. The rail
    * follows it rather than the open note's patient, so it cannot say "No
@@ -43,177 +26,22 @@ interface SectionRailProps {
   activeChartView?: "facesheet" | "notes" | null;
 }
 
-const RAIL_GROUPS: Array<{
-  label: string;
-  id: string;
-  workflows: WorkflowId[];
-}> = [
-  {
-    label: NAVIGATION.clinicalWork,
-    id: "clinical",
-    workflows: ["home", "administer", "uds", "samples", "forms"],
-  },
-  {
-    label: NAVIGATION.resources,
-    id: "reference",
-    workflows: ["reference"],
-  },
-  {
-    label: NAVIGATION.closeout,
-    id: "closeout",
-    workflows: ["log", "tms"],
-  },
-];
 
-/**
- * Left section rail for the work this module can actually open. It keeps the
- * familiar Tebra patient-hub placement without inventing links to server-side
- * chart areas that do not exist in this browser-local workstation.
- */
-export function SectionRail({
-  selectedWorkflow,
-  summaries,
-  patient = {},
-  onWorkflowOpen,
-  onOpenRecords,
-  search,
-  browsedPatientName,
-  onOpenChart,
-  activeChartView = null,
-}: SectionRailProps) {
-  const localEmrCommand = getFunctionKeyCommand("local-emr");
-  const browsed = browsedPatientName?.trim();
-  const hasLocalChart = Boolean(
-    browsed ||
-      patient.localRecordId?.trim() ||
-      patient.visitLabel?.trim() ||
-      patient.medicalRecordNumber?.trim(),
-  );
-  const localChartDetail = browsed
-    ? browsed
-    : hasLocalChart
-      ? [patient.name?.trim() || PATIENT.facesheet, patient.localRecordId?.trim()]
-          .filter(Boolean)
-          .join(" · ")
-      : NAVIGATION.selectRecordHint;
-
-  return (
-    <nav
-      class="cd2004-navigator meditech-record-list tebra-section-rail lf-section-rail cd2004-print-exclude"
-      aria-label="Open Notes and clinical functions"
-    >
-      <div class="lf-rail-caption">WORKSPACE</div>
-      <button
-        type="button"
-        class="meditech-rail-title tebra-section-rail-title"
-        onClick={onOpenRecords}
-        disabled={!onOpenRecords}
-        aria-label={`Open saved notes (${localEmrCommand.keyLabel})`}
-        title={`${NOTES.openNotes} (${localEmrCommand.keyLabel})`}
-      >
-        <span>{NOTES.openNotes}</span>
-        <span class="meditech-rail-records-command">
-          <kbd>{localEmrCommand.keyLabel}</kbd>
-          <DesktopIcon name="records" />
-        </span>
-      </button>
-
-      {search ? <div class="tebra-rail-search">{search}</div> : null}
-
-      <div class="meditech-rail-context tebra-section-rail-context" aria-label={NAVIGATION.localChart}>
-        <strong>{hasLocalChart ? PATIENT.facesheet : PATIENT.noPatient}</strong>
-        <span>{localChartDetail}</span>
-      </div>
-
-      {onOpenChart ? (
-        <section
-          class="meditech-rail-group is-patient"
-          aria-labelledby="meditech-rail-patient"
-        >
-          <div class="meditech-function-heading" id="meditech-rail-patient">
-            {NAVIGATION.patientChart}
-          </div>
-          <button
-            type="button"
-            class={`cd2004-nav-item${activeChartView === "facesheet" ? " is-selected" : ""}`}
-            data-chart-nav="facesheet"
-            aria-current={activeChartView === "facesheet" ? "page" : undefined}
-            aria-label={NAVIGATION.openFacesheet}
-            onClick={() => onOpenChart("facesheet")}
-          >
-            <span>
-              <strong>{PATIENT.facesheet}</strong>
-            </span>
-            <span class="meditech-nav-icon" aria-hidden="true">
-              <DesktopIcon name="patient" />
-            </span>
-          </button>
-          <button
-            type="button"
-            class={`cd2004-nav-item${activeChartView === "notes" ? " is-selected" : ""}`}
-            data-chart-nav="notes"
-            aria-current={activeChartView === "notes" ? "page" : undefined}
-            aria-label={NAVIGATION.openPatientNotes}
-            onClick={() => onOpenChart("notes")}
-          >
-            <span>
-              <strong>{PATIENT_NOTES.title}</strong>
-            </span>
-            <span class="meditech-nav-icon" aria-hidden="true">
-              <DesktopIcon name="note" />
-            </span>
-          </button>
-        </section>
-      ) : null}
-
-      <div class="meditech-function-list">
-        {RAIL_GROUPS.map((group) => (
-          <section
-            key={group.id}
-            class={`meditech-rail-group is-${group.id}`}
-            aria-labelledby={`meditech-rail-${group.id}`}
-          >
-            <div class="meditech-function-heading" id={`meditech-rail-${group.id}`}>
-              {group.label}
-            </div>
-            {group.workflows.map((workflow) => {
-              const summary = summaries[workflow];
-              return (
-                <button
-                  key={workflow}
-                  type="button"
-                  class={[
-                    "cd2004-nav-item",
-                    selectedWorkflow === workflow ? "is-selected" : "",
-                    `is-${summary?.state ?? "idle"}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  aria-current={selectedWorkflow === workflow ? "page" : undefined}
-                  aria-label={
-                    summary?.detail
-                      ? `${WORKFLOW_LABELS[workflow]} — ${summary.detail}`
-                      : WORKFLOW_LABELS[workflow]
-                  }
-                  title={WORKFLOW_LABELS[workflow]}
-                  onClick={() => onWorkflowOpen(workflow)}
-                >
-                  <span>
-                    <strong>{WORKFLOW_LABELS[workflow]}</strong>
-                  </span>
-                  {summary?.count ? (
-                    <em aria-label={`${summary.count} items`}>{summary.count}</em>
-                  ) : null}
-                  <span class="meditech-nav-icon" aria-hidden="true">
-                    <DesktopIcon name={workflow} />
-                  </span>
-                </button>
-              );
-            })}
-          </section>
-        ))}
-      </div>
-      <div class="lf-rail-footer"><span class="lf-local-dot" aria-hidden="true"/><span>Standalone workspace<small>Tebra is the chart of record</small></span></div>
-    </nav>
-  );
+/** Global navigation names jobs, not each nested worksheet page. */
+export function SectionRail({ selectedWorkflow, onWorkflowOpen, onDocumentService, onOpenRecords,
+  patient = {}, browsedPatientName, onOpenChart, activeChartView = null }: SectionRailProps) {
+  const patientName = browsedPatientName?.trim() || patient.name?.trim();
+  const toolsActive = ["reference", "log", "tms"].includes(selectedWorkflow);
+  return <nav class="cd2004-navigator tebra-section-rail lf-section-rail cd2004-print-exclude" aria-label="Workspace navigation">
+    <div class="lf-sidebar-brand"><span class="lf-brand-symbol"><LightfullyMark small/></span><span class="cd2004-app-title"><b>IPMG</b><span>MA Workstation</span></span></div>
+    <button type="button" class="lf-document-action cd2004-worklist-new" aria-haspopup="dialog" onClick={onDocumentService}><DesktopIcon name="new"/><span>Document a service</span></button>
+    <div class="lf-primary-navigation">
+      <button type="button" class={`cd2004-nav-item${selectedWorkflow === "home" && !activeChartView ? " is-selected" : ""}`} title="Dashboard" aria-current={selectedWorkflow === "home" && !activeChartView ? "page" : undefined} onClick={() => onWorkflowOpen("home")}><DesktopIcon name="home"/><span>Worklist</span></button>
+      {isDocumentService(selectedWorkflow) && !activeChartView && <div class="lf-current-service" aria-current="page"><DesktopIcon name={selectedWorkflow}/><span>{WORKFLOW_LABELS[selectedWorkflow]}<small>Current workspace</small></span></div>}
+      <button type="button" class="cd2004-nav-item" disabled={!onOpenRecords} aria-label="Open saved notes (F11)" onClick={onOpenRecords}><DesktopIcon name="records"/><span>Saved records</span><kbd>F11</kbd></button>
+    </div>
+    {onOpenChart && patientName && <section class="lf-patient-navigation" aria-label="Patient records"><div class="tebra-section-rail-context"><small>CURRENT PATIENT</small><strong>{patientName}</strong></div><button type="button" class={`cd2004-nav-item${activeChartView === "facesheet" ? " is-selected" : ""}`} data-chart-nav="facesheet" aria-current={activeChartView === "facesheet" ? "page" : undefined} aria-label={NAVIGATION.openFacesheet} onClick={() => onOpenChart("facesheet")}><DesktopIcon name="patient"/><span>{PATIENT.facesheet}</span></button><button type="button" class={`cd2004-nav-item${activeChartView === "notes" ? " is-selected" : ""}`} data-chart-nav="notes" aria-current={activeChartView === "notes" ? "page" : undefined} aria-label={NAVIGATION.openPatientNotes} onClick={() => onOpenChart("notes")}><DesktopIcon name="note"/><span>Patient notes</span></button></section>}
+    <details class="lf-tools-navigation" open={toolsActive || undefined}><summary><DesktopIcon name="reference"/><span>Tools</span><span aria-hidden="true">⌄</span></summary><div>{(["reference", "log", "tms"] as WorkflowId[]).map(workflow => <button type="button" class={`cd2004-nav-item${selectedWorkflow === workflow ? " is-selected" : ""}`} title={WORKFLOW_LABELS[workflow]} aria-current={selectedWorkflow === workflow ? "page" : undefined} onClick={() => onWorkflowOpen(workflow)}><DesktopIcon name={workflow}/><span>{workflow === "tms" ? "TMS · not available" : WORKFLOW_LABELS[workflow]}</span></button>)}</div></details>
+    <div class="lf-rail-footer"><span class="lf-local-dot" aria-hidden="true"/><span>Browser-local records<small>Tebra is the chart of record</small></span></div>
+  </nav>;
 }

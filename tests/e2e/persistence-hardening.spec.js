@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { fillDate } = require('./date-entry');
 
@@ -7,10 +8,7 @@ const workflowLabels = {
 
 async function openWorkflow(page, workflow) {
   const shell = page.locator('.cd2004-shell');
-  const navButton = page.locator(
-    `.cd2004-nav-item[title="${workflowLabels[workflow]}"]`
-  );
-  await navButton.click();
+  await clickWorkspace(page, `.cd2004-nav-item[title="${workflowLabels[workflow]}"]`);
   await expect(shell).toHaveAttribute('data-active-workflow', workflow);
   // Injection is migrated to a real panel; #panel-administer stays loaded
   // hidden as a print/readiness compatibility mirror only.

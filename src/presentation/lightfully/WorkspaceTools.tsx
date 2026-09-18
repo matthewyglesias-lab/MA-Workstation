@@ -59,7 +59,7 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false }: 
   }, []);
   return <div class="lf-workspace-tools">
     <button ref={trigger} type="button" class="lf-command-trigger" aria-label="Search workspace commands" aria-haspopup="dialog" onClick={() => setOpen(true)}>
-      <SearchGlyph /><span>Find a tool or workflow</span><kbd>Ctrl K</kbd>
+      <SearchGlyph /><span>Commands</span><kbd>Ctrl K</kbd>
     </button>
     <button type="button" class="lf-density-toggle" aria-label="Compact workspace" aria-pressed={density === "compact"} title={density === "compact" ? "Use comfortable spacing" : "Use compact spacing"} onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="5" rx="1.5"/><rect x="4" y="14" width="16" height="5" rx="1.5"/></svg><span>Compact</span>
@@ -84,7 +84,7 @@ function CommandPalette({ commands, onDismiss }: { commands: WorkspaceCommand[];
     requestAnimationFrame(() => command.onInvoke());
   };
   return <ModalDialog class="lf-command-dialog cd2004-print-exclude" labelledBy="lf-command-title" onDismiss={onDismiss}>
-    <header><div><span class="lf-eyebrow">WORKSPACE</span><h2 id="lf-command-title">Where would you like to go?</h2></div><button type="button" aria-label="Close command search" class="lf-icon-button" onClick={onDismiss}>×</button></header>
+    <header><div><span class="lf-eyebrow">WORKSPACE</span><h2 id="lf-command-title">Find a tool</h2></div><button type="button" aria-label="Close command search" class="lf-icon-button" onClick={onDismiss}>×</button></header>
     <div class="lf-command-input"><SearchGlyph/><input ref={input} value={query} placeholder="Search injections, UDS, notes, forms…" aria-label="Search commands" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="lf-command-results" aria-activedescendant={matches.length ? `lf-command-${selected}` : undefined} onInput={(event) => { setQuery(event.currentTarget.value); setActive(0); }} onKeyDown={(event) => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setActive((value) => matches.length ? (value + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length : 0); }
       if (event.key === "Enter") { event.preventDefault(); invoke(matches[selected]); }
@@ -95,7 +95,7 @@ function CommandPalette({ commands, onDismiss }: { commands: WorkspaceCommand[];
       </div>)}
       {!matches.length && <p class="lf-command-empty" role="status">No matching tools. Try “notes,” “samples,” or “injection.”</p>}
     </div>
-    <footer><span><kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open</span><span>Navigation only · your note stays protected</span></footer>
+    <footer><span><kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open</span><span></span></footer>
   </ModalDialog>;
 }
 

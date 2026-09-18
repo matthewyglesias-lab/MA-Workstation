@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 
 // Lightfully shell updates the presentation expectations; every layout and safety assertion remains.
@@ -16,14 +17,14 @@ const WORKFLOWS = [
 ];
 
 // Screen-only token overrides from lightfully-shell.css, as rendered rgb().
-const NAVY = 'rgb(40, 40, 63)';
-const HEADER_PAPER = 'rgb(255, 254, 250)';
-const LAVENDER_50 = 'rgb(247, 244, 250)';
-const CORAL = 'rgb(239, 173, 151)';
-const WHITE = 'rgb(255, 254, 250)';
+const NAVY = 'rgb(41, 66, 85)';
+const HEADER_PAPER = 'rgb(255, 255, 255)';
+const LAVENDER_50 = 'rgb(255, 255, 255)';
+const CORAL = 'rgb(243, 117, 101)';
+const WHITE = 'rgb(255, 255, 255)';
 
 async function openWorkflow(page, title, selector) {
-  await page.locator(`.cd2004-nav-item[title="${title}"]`).click();
+  await clickWorkspace(page, `.cd2004-nav-item[title="${title}"]`);
   await expect(page.locator(`.cd2004-workflow-slot${selector}`)).toBeVisible();
 }
 
@@ -60,7 +61,7 @@ test.describe('Lightfully screen contract', () => {
     expect(home.retiredLauncherCount).toBe(0);
     // Chart rows use the repository's 8px product-control adaptation; the
     // measured rail itself stays square and flush to the workspace edge.
-    expect(home.navRadius).toBe('9px');
+    expect(home.navRadius).toBe('7px');
     expect(home.navFont).toMatch(/^"Inter Variable"/);
     // The measured shell uses a warm-white header and rail, and
     // a lavender workspace. The
@@ -68,9 +69,9 @@ test.describe('Lightfully screen contract', () => {
     // Phase 3 lands its dedicated components.
     expect(home.appHeaderBackground).toBe(HEADER_PAPER);
     expect(home.appHeaderGradient).toBe('none');
-    expect(home.sectionRailBackground).toBe(HEADER_PAPER);
+    expect(home.sectionRailBackground).toBe('rgba(0, 0, 0, 0)');
     expect(home.sectionRailRadius).toBe('0px');
-    expect(home.workWindowBackground).toBe('rgba(0, 0, 0, 0)');
+    expect(home.workWindowBackground).toBe('rgb(251, 252, 252)');
     expect(home.workWindowRadius).toBe('0px');
     expect(home.workTitlebarColor).toBe(NAVY);
     expect(home.workTitlebarGradient).toBe('none');
@@ -123,7 +124,7 @@ test.describe('Lightfully screen contract', () => {
     );
     await openWorkflow(page, 'Injection', '[data-workflow="administer"]');
     const statusContract = await page.evaluate(() => {
-      const coral = ['rgb(239, 173, 151)', 'rgb(228, 153, 132)', 'rgb(245, 196, 180)'];
+      const coral = ['rgb(243, 117, 101)', 'rgb(231, 107, 92)', 'rgb(246, 178, 168)'];
       const statusSelectors = [
         '.cd2004-readiness-verdict', '.cd2004-readiness-item',
         '.wfp-result-cycle', '.wfp-exception-line', '.cd2004-note-mark'
@@ -185,7 +186,7 @@ test.describe('Lightfully screen contract', () => {
       expect(await lifecycleAction.evaluate((node) =>
         Number.parseFloat(getComputedStyle(node).outlineWidth)
       )).toBeGreaterThanOrEqual(2);
-      await expect(lifecycleAction).toHaveCSS('outline-offset', '-2px');
+      await expect(lifecycleAction).toHaveCSS('outline-offset', '2px');
 
       const lifecycleDetail = page.locator(
         '.cd2004-record-actions-state > small[role="status"]'

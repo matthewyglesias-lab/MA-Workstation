@@ -94,6 +94,8 @@ export interface InjectionRecordRow {
   patientLabel: string;
   medicationLabel: string;
   administeredLabel: string;
+  /** Recorded encounter date supplied by the validated presentation projection. */
+  timeLabel?: string;
   statusLabel: string;
   tone?: ClinicalTone;
 }

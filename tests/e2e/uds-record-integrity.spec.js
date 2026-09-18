@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { fillDate } = require('./date-entry');
 
@@ -94,7 +95,7 @@ async function boot(page, records = []) {
   }, { key: UDS_RECORDS_KEY, value: JSON.stringify(records) });
   await page.goto('/');
   await page.waitForFunction(() => document.body.dataset.applicationReady === 'true');
-  await page.locator('.cd2004-nav-item[title="UDS"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="UDS"]');
   await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'uds');
   await expect(page.locator('.wfp-panel')).toBeVisible();
 }
@@ -209,7 +210,7 @@ test.describe('UDS record-integrity boundaries', () => {
         .toBeEnabled();
       await blockedPage.goto('/');
       await blockedPage.waitForFunction(() => document.body.dataset.applicationReady === 'true');
-      await blockedPage.locator('.cd2004-nav-item[title="UDS"]').click();
+      await clickWorkspace(blockedPage, '.cd2004-nav-item[title="UDS"]');
       const blockedPanel = blockedPage.locator('.wfp-panel');
       await expect(blockedPanel.getByRole('region', { name: 'UDS note actions' }))
         .toContainText('Another browser tab is editing UDS records');
@@ -232,12 +233,12 @@ test.describe('UDS record-integrity boundaries', () => {
       expect(await ownerPage.evaluate((key) => localStorage.getItem(key), UDS_RECORDS_KEY))
         .toBe(before);
 
-      await ownerPage.locator('.cd2004-nav-item[title="Forms"]').click();
+      await clickWorkspace(ownerPage, '.cd2004-nav-item[title="Forms"]');
       await expect(ownerPage.locator('.cd2004-shell'))
         .toHaveAttribute('data-active-workflow', 'forms');
       await blockedPage.reload();
       await blockedPage.waitForFunction(() => document.body.dataset.applicationReady === 'true');
-      await blockedPage.locator('.cd2004-nav-item[title="UDS"]').click();
+      await clickWorkspace(blockedPage, '.cd2004-nav-item[title="UDS"]');
       const ownerPanel = blockedPage.locator('.wfp-panel');
       await ownerPanel.getByRole('button', { name: /Open UDS notes/ }).click();
       await blockedPage.locator('[data-records-open="uds-switch-target"]').click();
@@ -268,7 +269,7 @@ test.describe('UDS record-integrity boundaries', () => {
       await contenderPage.waitForFunction(
         () => document.body.dataset.applicationReady === 'true'
       );
-      await contenderPage.locator('.cd2004-nav-item[title="UDS"]').click();
+      await clickWorkspace(contenderPage, '.cd2004-nav-item[title="UDS"]');
       const contenderPanel = contenderPage.locator('.wfp-panel');
       const contenderActions = contenderPanel.getByRole('region', {
         name: 'UDS note actions'
@@ -412,7 +413,7 @@ test.describe('UDS record-integrity boundaries', () => {
       'No patients match.'
     );
 
-    await page.locator('.cd2004-nav-item[title="UDS"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="UDS"]');
     const panel = page.locator('.wfp-panel');
     await panel.getByRole('button', { name: /Open UDS notes/ }).click();
     const drawer = page.locator('dialog[open][aria-labelledby="udsRecordsDrawerTitle"]');
@@ -454,7 +455,7 @@ test.describe('UDS record-integrity boundaries', () => {
       .toContainText('Some saved UDS data could not be read safely.');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
 
-    await page.locator('.cd2004-nav-item[title="Dashboard"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Dashboard"]');
     const search = page.locator('[data-patient-search] input');
     await search.fill('ta');
     await page.locator('[data-patient-result]').click();
@@ -550,7 +551,7 @@ test.describe('UDS record-integrity boundaries', () => {
     expect(first.id).toBeTruthy();
 
     await name.fill('');
-    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     await expect(page.locator('.cd2004-shell'))
       .toHaveAttribute('data-active-workflow', 'administer');
     const after = await page.evaluate((key) => {
@@ -563,7 +564,7 @@ test.describe('UDS record-integrity boundaries', () => {
     }, UDS_RECORDS_KEY);
     expect(after).toEqual({ count: 1, id: first.id, patient: { name: '', dob: '' } });
 
-    await page.locator('.cd2004-nav-item[title="UDS"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="UDS"]');
     await expect(name).toHaveValue('');
     await expect(panel.locator('.cd2004-record-actions button.is-save')).toBeEnabled();
   });
@@ -581,7 +582,7 @@ test.describe('UDS record-integrity boundaries', () => {
       name.dispatchEvent(new Event('input', { bubbles: true }));
       dob.value = '01/02/1990';
       dob.dispatchEvent(new Event('input', { bubbles: true }));
-      document.querySelector('.cd2004-nav-item[title="Injection"]')?.click();
+      dob.dispatchEvent(new KeyboardEvent('keydown', { key: '2', altKey: true, bubbles: true }));
     });
 
     await expect(page.locator('.cd2004-shell'))
@@ -740,9 +741,9 @@ test.describe('UDS record-integrity boundaries', () => {
     );
     await expect(savedTimestamp).toHaveText(displayedTimestamp);
 
-    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
-    await page.locator('.cd2004-nav-item[title="UDS"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="UDS"]');
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'uds');
     await expect(panel.locator('fieldset').first()).toHaveAttribute('disabled', '');
     await expect(savedAddendum).toBeVisible();
@@ -750,7 +751,7 @@ test.describe('UDS record-integrity boundaries', () => {
 
     const addendum = panel.locator('[data-addendum-input]');
     await addendum.fill('Pending synthetic clarification.');
-    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'uds');
     await expect(addendum).toBeFocused();
     await expect(addendum).toHaveValue('Pending synthetic clarification.');
@@ -823,7 +824,7 @@ test.describe('UDS record-integrity boundaries', () => {
     expect(await page.evaluate((key) => localStorage.getItem(key), UDS_RECORDS_KEY))
       .toBe(externalRaw);
 
-    await page.locator('.cd2004-nav-item[title="Injection"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     await expect(page.locator('.cd2004-shell'))
       .toHaveAttribute('data-active-workflow', 'uds');
     await expect(patientName).toHaveValue('Local Edit, Synthetic');

@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { selectRegisteredProvider } = require('./provider-entry');
 
@@ -82,7 +83,7 @@ async function bootWithLockedStoragePrototype(page, records = []) {
 }
 
 async function openInjection(page) {
-  await page.locator('.cd2004-nav-item[title="Injection"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
     'data-active-workflow',
     'administer'
@@ -195,7 +196,7 @@ test('keeps Injection non-editable when exact draft protection cannot install', 
   expect(await page.evaluate(() => window.__injectionRecordWrites)).toBe(0);
   expect(await page.evaluate(key => localStorage.getItem(key), RECORDS_KEY))
     .toBeNull();
-  await page.locator('.cd2004-nav-item[title="Forms"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Forms"]');
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
     'data-active-workflow',
     'forms'
@@ -204,7 +205,7 @@ test('keeps Injection non-editable when exact draft protection cannot install', 
 
 test('refuses an editable saved Injection when pagehide protection cannot install', async ({ page, context }) => {
   await bootWithLockedStoragePrototype(page, [targetRecord]);
-  await page.locator('.cd2004-nav-item[title="Forms"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Forms"]');
   await page.keyboard.press('F11');
   const dialog = page.locator(
     'dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer'
@@ -383,7 +384,7 @@ test('files a typed-only blank Injection before same-task workflow navigation', 
     (select, value) => {
       select.value = value;
       select.dispatchEvent(new Event('change', { bubbles: true }));
-      document.querySelector('.cd2004-nav-item[title="Forms"]')?.click();
+      select.dispatchEvent(new KeyboardEvent('keydown', { key: '5', altKey: true, bubbles: true }));
     },
     'scheduled'
   );
@@ -445,7 +446,7 @@ test('restores the prior workflow when legacy open activates Injection before a 
     'dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer'
   );
   await dialog.locator('[data-records-open]').click();
-  await page.locator('.cd2004-nav-item[title="Forms"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Forms"]');
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
     'data-active-workflow',
     'forms'
@@ -528,7 +529,7 @@ test('excludes and refuses a saved Injection with mismatched patient identity', 
 
 test('refuses stale external Injection data for open and save without changing bytes', async ({ page }) => {
   await boot(page, [targetRecord]);
-  await page.locator('.cd2004-nav-item[title="Forms"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Forms"]');
   const externalBytes = await page.evaluate(key => {
     const records = JSON.parse(localStorage.getItem(key) || '[]');
     records[0].summary = 'Externally updated synthetic record';
@@ -745,7 +746,7 @@ test('a valid presentation-only external change locks output but does not trap c
   await expect(page.locator('[data-injection-record-actions]')).toContainText(
     'Saved Injection data could not be verified'
   );
-  await page.locator('.cd2004-nav-item[title="Forms"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Forms"]');
   await expect(page.locator('.cd2004-shell')).toHaveAttribute(
     'data-active-workflow',
     'forms'
@@ -777,7 +778,7 @@ test('preflight refuses malformed addenda before legacy can partially open the r
     completedAt: '2026-09-01T08:10:00-07:00'
   };
   await boot(page, [completed]);
-  await page.locator('.cd2004-nav-item[title="Forms"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Forms"]');
   await page.keyboard.press('F11');
   const dialog = page.locator(
     'dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer'
@@ -808,7 +809,7 @@ test('preflight refuses malformed addenda before legacy can partially open the r
 
 test('preflight refuses a wrong known snapshot leaf before legacy restore', async ({ page }) => {
   await boot(page, [targetRecord]);
-  await page.locator('.cd2004-nav-item[title="Forms"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Forms"]');
   await page.keyboard.press('F11');
   const dialog = page.locator(
     'dialog[aria-labelledby="recordsDrawerTitle"] > .records-drawer'

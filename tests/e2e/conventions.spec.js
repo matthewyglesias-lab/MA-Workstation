@@ -1,3 +1,4 @@
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 
 const INJECTION_RECORDS_KEY = 'ipmgMedAssistInjectionRecordsV1';
@@ -165,7 +166,7 @@ test.describe('Phase 3a global Open Notes conventions', () => {
     const headerColors = await table.locator('thead th').evaluateAll((headers) =>
       headers.map((header) => getComputedStyle(header).backgroundColor)
     );
-    expect(new Set(headerColors)).toEqual(new Set(['rgb(220, 214, 229)']));
+    expect(new Set(headerColors)).toEqual(new Set(['rgb(222, 229, 233)']));
 
     const rows = table.locator('tbody [data-records-open]');
     await expect(rows).toHaveCount(SYNTHETIC_INJECTION_RECORDS.length);
@@ -623,13 +624,13 @@ test.describe('Phase 3b patient chart conventions', () => {
     expect(
       await primary.evaluate((node) => Math.round(node.getBoundingClientRect().height))
     ).toBe(36);
-    await expect(primary).toHaveCSS('background-color', 'rgb(239, 173, 151)');
+    await expect(primary).toHaveCSS('background-color', 'rgb(243, 117, 101)');
 
     const coral = await page
       .locator('.cd2004-shell button')
       .evaluateAll((nodes) =>
         nodes.filter(
-          (node) => getComputedStyle(node).backgroundColor === 'rgb(239, 173, 151)'
+          (node) => getComputedStyle(node).backgroundColor === 'rgb(243, 117, 101)'
         ).length
       );
     // The primary segment and its disclosure are one control, not two.
@@ -886,9 +887,7 @@ test.describe('Phase 3b patient chart conventions', () => {
 
     await page.keyboard.press('Escape');
     await expect(chart).toHaveCount(0);
-    await expect(page.locator('.cd2004-patient-banner')).not.toContainText(
-      'Beta, Synthetic'
-    );
+    await expect(page.locator('.cd2004-patient-banner.has-active-chart')).toHaveCount(0);
     await search.fill('be');
     const betaResult = page.locator('[data-patient-result]');
     await expect(betaResult).toHaveCount(1);
@@ -935,7 +934,7 @@ test.describe('Phase 3b patient chart conventions', () => {
     await bootWithPatientChart(page);
 
     // Outside a chart the masthead is the open note's context, as always.
-    await expect(page.locator('.cd2004-patient-banner')).toBeVisible();
+    await expect(page.locator('.cd2004-patient-banner')).toHaveCount(0);
 
     await openBakerChart(page);
 
@@ -952,7 +951,7 @@ test.describe('Phase 3b patient chart conventions', () => {
     // is selected beside that patient's own Facesheet, and offers the chart's
     // two pages as navigation.
     const railContext = page.locator('.tebra-section-rail-context');
-    await expect(railContext).toContainText('Facesheet');
+    await expect(railContext).toContainText('CURRENT PATIENT');
     await expect(railContext).toContainText('Baker, Test');
     await expect(railContext).not.toContainText('No patient selected');
     await expect(page.locator('[data-chart-nav="facesheet"]')).toBeVisible();
@@ -960,7 +959,7 @@ test.describe('Phase 3b patient chart conventions', () => {
 
     // And it comes back on the way out.
     await page.keyboard.press('Escape');
-    await expect(page.locator('.cd2004-patient-banner')).toBeVisible();
+    await expect(page.locator('.cd2004-patient-banner')).toHaveCount(0);
   });
 
   test('says so when a note is open for a different patient', async ({ page }) => {
@@ -1020,7 +1019,7 @@ test.describe('Phase 3b patient chart conventions', () => {
   ]) {
     test(`${replacement.label} replacement defaults safe, preserves the current note, then explicitly starts clean`, async ({ page }) => {
       await bootWithPatientChart(page);
-      await page.locator(`.cd2004-nav-item[title="${replacement.label}"]`).click();
+      await clickWorkspace(page, `.cd2004-nav-item[title="${replacement.label}"]`);
       const panel = page.locator('.wfp-panel');
       await panel.locator('input[placeholder="Last, First"]').fill('Session A, Synthetic');
       await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('03/04/1980');
@@ -1122,7 +1121,7 @@ test.describe('Phase 3b patient chart conventions', () => {
   ]) {
     test(`${dirtyOnly.label} ${dirtyOnly.field}-only edits require explicit replacement`, async ({ page }) => {
       await bootWithPatientChart(page);
-      await page.locator(`.cd2004-nav-item[title="${dirtyOnly.label}"]`).click();
+      await clickWorkspace(page, `.cd2004-nav-item[title="${dirtyOnly.label}"]`);
       const panel = page.locator('.wfp-panel');
       const { input, expected } = await dirtyOnly.prepare(panel);
       await expect(input).toHaveValue(expected);
@@ -1149,7 +1148,7 @@ test.describe('Phase 3b patient chart conventions', () => {
 
   test('dirty state stays sticky after a Forms value is cleared back to blank', async ({ page }) => {
     await bootWithPatientChart(page);
-    await page.locator('.cd2004-nav-item[title="Forms"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Forms"]');
     const action = page.locator('.wfp-panel').locator(
       'textarea[placeholder^="Prepared draft, requested records"]'
     );
@@ -1184,7 +1183,7 @@ test.describe('Phase 3b patient chart conventions', () => {
   ]) {
     test(`${transient.label} publishes the exact edit before same-task workflow navigation`, async ({ page }) => {
       await bootWithPatientChart(page);
-      await page.locator(`.cd2004-nav-item[title="${transient.label}"]`).click();
+      await clickWorkspace(page, `.cd2004-nav-item[title="${transient.label}"]`);
       const panel = page.locator('.wfp-panel');
       const marker = panel.locator(transient.markerSelector);
 
@@ -1218,7 +1217,7 @@ test.describe('Phase 3b patient chart conventions', () => {
 
     test(`${transient.label} commits a focused date before same-task Alt navigation`, async ({ page }) => {
       await bootWithPatientChart(page);
-      await page.locator(`.cd2004-nav-item[title="${transient.label}"]`).click();
+      await clickWorkspace(page, `.cd2004-nav-item[title="${transient.label}"]`);
       const panel = page.locator('.wfp-panel');
       const date = panel.locator(
         `.wfp-field:has(.wfp-field-caption:text-is("${transient.dateLabel}")) input`
@@ -1239,7 +1238,7 @@ test.describe('Phase 3b patient chart conventions', () => {
 
   test('Samples publishes SIG and review actions before same-task navigation', async ({ page }) => {
     await bootWithPatientChart(page);
-    await page.locator('.cd2004-nav-item[title="Samples"]').click();
+    await clickWorkspace(page, '.cd2004-nav-item[title="Samples"]');
     const panel = page.locator('.wfp-panel');
     const field = (label) => panel.locator('.wfp-field').filter({
       has: page.getByText(label, { exact: true })

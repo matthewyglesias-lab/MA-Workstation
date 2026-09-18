@@ -2409,16 +2409,16 @@ export function InjectionPanel({
                   onOpenRequirements={() => setRequirementsOpen(true)}
                 />
               )}
-              <WorkflowSummaryFact
-                label="DUE"
+              {encounter.medicationKey && <WorkflowSummaryFact
+                label="Next dose"
                 value={suggestedNextDose || "PENDING"}
                 tone={suggestedNextDose ? "normal" : "attention"}
-              />
-              <WorkflowSummaryFact
-                label="PKG"
+              />}
+              {encounter.medicationKey && <WorkflowSummaryFact
+                label="Product"
                 value={packageState}
                 tone={packageState === "INCOMPLETE" ? "attention" : "normal"}
-              />
+              />}
               {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
                 <button
                   type="button"
