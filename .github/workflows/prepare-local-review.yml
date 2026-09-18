@@ -15,14 +15,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Package pinned offline toolchain
-        run: |
-          tar -czf review-dependencies.tar.gz node_modules
-          git archive --format=zip --output=review-source.zip HEAD
+      - run: npx playwright install chromium --only-shell
+      - name: Package exact test renderer
+        run: tar -czf review-renderer.tar.gz -C "$HOME/.cache/ms-playwright" chromium_headless_shell-1234 ffmpeg-1011
       - uses: actions/upload-artifact@v4
         with:
-          name: pinned-ui-review
-          path: |
-            review-dependencies.tar.gz
-            review-source.zip
+          name: pinned-browser-review
+          path: review-renderer.tar.gz
           retention-days: 1
