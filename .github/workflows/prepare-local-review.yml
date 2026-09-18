@@ -1,0 +1,28 @@
+name: Prepare isolated UI review
+on:
+  push:
+    branches: [codex/lightfully-standalone-rebuild]
+    paths: ['.github/workflows/prepare-local-review.yml']
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Package pinned offline toolchain
+        run: |
+          tar -czf review-dependencies.tar.gz node_modules
+          git archive --format=zip --output=review-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pinned-ui-review
+          path: |
+            review-dependencies.tar.gz
+            review-source.zip
+          retention-days: 1
