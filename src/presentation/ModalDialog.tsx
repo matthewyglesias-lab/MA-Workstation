@@ -1,5 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
+import { trapDialogTabKey } from "./records-drawer-shared";
 
 /**
  * Thin wrapper over the native <dialog> element. showModal() supplies the top
@@ -34,6 +35,7 @@ export function ModalDialog({
       ref={dialogRef}
       class={className}
       aria-labelledby={labelledBy}
+      onKeyDown={(event) => trapDialogTabKey(dialogRef.current, event)}
       onCancel={(event) => {
         event.preventDefault();
         onDismiss();

@@ -1,3 +1,4 @@
+import { ToolPageHeader } from "../../lightfully/ToolPageHeader";
 import { useMemo, useState } from "preact/hooks";
 import {
   KNOWLEDGE_CATEGORIES,
@@ -66,11 +67,9 @@ export function KnowledgePanel() {
 
   return (
     <div class="wfp-panel cd2004-print-exclude" tabIndex={-1}>
-      <div class="wfp-summary-bar">
-        <strong>Knowledge base</strong>
+      <ToolPageHeader title="Reference">
         <span class="wfp-status-flag is-idle">{results.length} entries</span>
-        <span class="wfp-summary-spacer" />
-      </div>
+      </ToolPageHeader>
 
       <p class="wfp-field-hint">
         Fast MA-facing reference for injections, UDS, oral samples, TMS setup, and common psych-office safety
@@ -100,6 +99,7 @@ export function KnowledgePanel() {
             <div class="wfp-field">
               <input
                 value={query}
+                aria-label="Search clinical reference"
                 placeholder="Search LAIs, UDS panels, samples, TMS…"
                 onInput={(event) => setQuery(event.currentTarget.value)}
               />

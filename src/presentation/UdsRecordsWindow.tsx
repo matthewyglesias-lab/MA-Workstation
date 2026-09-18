@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   filteredNoteCount,
   noteCount,
@@ -97,7 +97,7 @@ export function UdsRecordsWindow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (open && !dialog.open) {
@@ -128,6 +128,8 @@ export function UdsRecordsWindow({
   const onKeyDown = (event: KeyboardEvent) => trapDialogTabKey(dialogRef.current, event);
 
   const handleDialogClose = () => {
+    // A queued close event from an earlier opening must not close this one.
+    if (dialogRef.current?.open) return;
     setActionError(null);
     onClose();
     const opener = openerRef.current;
@@ -139,7 +141,8 @@ export function UdsRecordsWindow({
     }
     if (!opener?.isConnected) return;
     requestAnimationFrame(() => {
-      if (opener.isConnected) opener.focus();
+      // Never pull focus out of a newly opened dialog or back to a stale opener.
+      if (opener.isConnected && !document.querySelector("dialog[open]")) opener.focus();
     });
   };
 
@@ -192,6 +195,11 @@ export function UdsRecordsWindow({
       class="records-drawer-layer"
       aria-labelledby="udsRecordsDrawerTitle"
       onClose={handleDialogClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        // Keep controlled state and the native top layer in the same lifecycle.
+        onClose();
+      }}
       onKeyDown={onKeyDown}
       onClick={(event) => {
         if (event.target === dialogRef.current) onClose();

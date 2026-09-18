@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { ModalDialog } from "../ModalDialog";
+import { DialogHeading } from "./DialogHeading";
 import { DesktopIcon } from "../DesktopIcon";
 import type { DesktopIconName } from "../types";
 
@@ -84,7 +85,7 @@ function CommandPalette({ commands, onDismiss }: { commands: WorkspaceCommand[];
     requestAnimationFrame(() => command.onInvoke());
   };
   return <ModalDialog class="lf-command-dialog cd2004-print-exclude" labelledBy="lf-command-title" onDismiss={onDismiss}>
-    <header><div><span class="lf-eyebrow">WORKSPACE</span><h2 id="lf-command-title">Find a tool</h2></div><button type="button" aria-label="Close command search" class="lf-icon-button" onClick={onDismiss}>×</button></header>
+    <DialogHeading id="lf-command-title" title="Find a tool" closeLabel="Close command search" onClose={onDismiss} />
     <div class="lf-command-input"><SearchGlyph/><input ref={input} value={query} placeholder="Search injections, UDS, notes, forms…" aria-label="Search commands" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="lf-command-results" aria-activedescendant={matches.length ? `lf-command-${selected}` : undefined} onInput={(event) => { setQuery(event.currentTarget.value); setActive(0); }} onKeyDown={(event) => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setActive((value) => matches.length ? (value + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length : 0); }
       if (event.key === "Enter") { event.preventDefault(); invoke(matches[selected]); }

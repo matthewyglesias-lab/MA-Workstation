@@ -78,7 +78,8 @@ export function NotesTable({ rows, label, emptyMessage, onOpen }: NotesTableProp
               }}
             >
               <td class="notes-table-patient records-drawer-row-title">
-                {row.patientLabel}
+                <span>{row.patientLabel}</span>
+                {row.patientDob && <small class="lf-note-patient-dob">DOB {row.patientDob}</small>}
               </td>
               <td class="notes-table-lock">
                 {row.lock ? (

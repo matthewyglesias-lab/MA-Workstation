@@ -17,6 +17,8 @@ import "./tebra-screen-contract.css";
 import "./lightfully/lightfully-shell.css";
 import "./lightfully/lightfully-components.css";
 import "./lightfully/contemporary.css";
+import "./lightfully/final-polish.css";
+import { DialogHeading } from "./lightfully/DialogHeading";
 import { worklistDate } from "./lightfully/worklist-display";
 import { ServiceChooser, ServiceHeader, isDocumentService } from "./lightfully/ServiceWorkspace";
 import { WorkspaceTools, type WorkspaceCommand } from "./lightfully/WorkspaceTools";
@@ -1432,10 +1434,10 @@ export function ClinicalDesktopShell({
           commands={[
             ...shortcutWorkflows.map((workflow): WorkspaceCommand => ({
               id: workflow,
-              label: WORKFLOW_LABELS[workflow],
+              label: workflow === "home" ? "Worklist" : WORKFLOW_LABELS[workflow],
               description: workflow === "home" ? "Review unfinished work and saved drafts" : `Open the ${WORKFLOW_LABELS[workflow].toLowerCase()} workspace`,
               icon: workflow,
-              keywords: workflow === "administer" ? "LAI medication injection" : workflow === "uds" ? "urine drug screening toxicology" : workflow === "reference" ? "knowledge clinical guidance" : "",
+              keywords: workflow === "home" ? "dashboard home worklist" : workflow === "administer" ? "LAI medication injection" : workflow === "uds" ? "urine drug screening toxicology" : workflow === "reference" ? "knowledge clinical guidance" : "",
               onInvoke: () => {
                 if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow);
               },
@@ -1684,22 +1686,10 @@ export function ClinicalDesktopShell({
           }}
         >
           <section class="cd2004-help-dialog">
-            <div class="cd2004-window-titlebar">
-              <span class="cd2004-window-mark" aria-hidden="true" />
-              <strong id="cd2004ShortcutTitle">Keyboard Reference</strong>
-              <button
-                type="button"
-                class="cd2004-caption-button cd2004-caption-close"
-                aria-label="Close keyboard reference"
-                autoFocus
-                onClick={() => {
-                  setShowShortcutHelp(false);
-                  restorePreviousFocus();
-                }}
-              >
-                ×
-              </button>
-            </div>
+            <DialogHeading id="cd2004ShortcutTitle" title="Keyboard Reference"
+              description="Move around the workspace without leaving the keyboard."
+              closeLabel="Close keyboard reference"
+              onClose={() => { setShowShortcutHelp(false); restorePreviousFocus(); }} />
             <div class="cd2004-help-body">
               {FUNCTION_KEY_PROFILE.map((command) => (
                 <ShortcutRow
@@ -1708,7 +1698,7 @@ export function ClinicalDesktopShell({
                   label={command.description}
                 />
               ))}
-              <ShortcutRow keys="Alt+1–7" label="Switch major modules" />
+              <ShortcutRow keys="Alt+1–7" label="Switch service or workspace" />
             </div>
             <footer>
               <button

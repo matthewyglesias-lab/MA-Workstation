@@ -151,7 +151,7 @@ async function recordStorageSnapshot(page) {
 }
 
 test.describe('Phase 3a global Open Notes conventions', () => {
-  test('uses the five-column legacy ledger grammar and visit-date sorting without persistence writes', async ({ page }) => {
+  test('uses readable five-column note rows and visit-date sorting without persistence writes', async ({ page }) => {
     await bootWithSyntheticNotes(page);
     const { table } = await openGlobalNotes(page);
 
@@ -166,13 +166,13 @@ test.describe('Phase 3a global Open Notes conventions', () => {
     const headerColors = await table.locator('thead th').evaluateAll((headers) =>
       headers.map((header) => getComputedStyle(header).backgroundColor)
     );
-    expect(new Set(headerColors)).toEqual(new Set(['rgb(222, 229, 233)']));
+    expect(new Set(headerColors)).toEqual(new Set(['rgb(245, 247, 248)']));
 
     const rows = table.locator('tbody [data-records-open]');
     await expect(rows).toHaveCount(SYNTHETIC_INJECTION_RECORDS.length);
     expect(await rows.evaluateAll((items) =>
       items.map((item) => Math.round(item.getBoundingClientRect().height))
-    )).toEqual([44, 44, 44, 44]);
+    )).toEqual([64, 64, 64, 64]);
     expect(await rows.evaluateAll((items) =>
       items.map((item) => item.getAttribute('data-note-type'))
     )).toEqual(['injection', 'injection', 'injection', 'injection']);

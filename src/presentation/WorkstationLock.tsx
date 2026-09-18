@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { DesktopIcon } from "./DesktopIcon";
 
 const IDLE_LOCK_MINUTES = 15;
 const IDLE_LOCK_MS = IDLE_LOCK_MINUTES * 60_000;
@@ -112,7 +113,7 @@ export function WorkstationLock({ staffLabel, onUnlock }: WorkstationLockProps) 
     >
       <div class="cd2004-lock-card">
         <div class="cd2004-lock-icon" aria-hidden="true">
-          🔒
+          <DesktopIcon name="lock" />
         </div>
         <h2 id="workstationLockTitle">This workstation is locked</h2>
         <p class="cd2004-lock-detail">

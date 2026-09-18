@@ -1,3 +1,4 @@
+import { ToolPageHeader } from "../../lightfully/ToolPageHeader";
 
 const PLANNED_CAPABILITIES: ReadonlyArray<{ title: string; detail: string }> = [
   {
@@ -31,10 +32,9 @@ const PLANNED_NOTE_PREVIEW =
 export function TmsPanel() {
   return (
     <div class="wfp-panel">
-      <div class="wfp-summary-bar">
-        <strong>Future / TMS</strong>
+      <ToolPageHeader title="TMS">
         <span class="wfp-status-flag is-idle">Not installed</span>
-      </div>
+      </ToolPageHeader>
 
       <div class="wfp-wall">
         <div class="wfp-wall-title">TMS — Module Not Installed</div>

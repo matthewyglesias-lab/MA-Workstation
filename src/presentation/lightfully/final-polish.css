@@ -1,0 +1,83 @@
+/** Final visual/operation review. Utility surfaces use the same vocabulary as
+ * the editor. Screen-only: clinical notes and paper templates are untouched.
+ */
+@media screen {
+  #lf-workstation .lf-tool-page-header {
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+    gap:16px 24px;padding:24px 30px 20px;background:#fff;border-bottom:1px solid var(--lf-line);
+  }
+  #lf-workstation .lf-tool-page-header h1 {
+    font:400 31px/1.2 var(--lf-heading-font);letter-spacing:-.6px;color:var(--lf-ink);margin:0;
+  }
+  #lf-workstation .lf-tool-page-actions {display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+  #lf-workstation .lf-tool-page-actions .wfp-status-flag {font:400 12px/20px var(--tw-font-sans);color:var(--lf-muted);padding-inline:0;margin-right:8px;}
+  #lf-workstation .lf-tool-page-actions button {min-height:38px;border-radius:8px;font:500 12px/18px var(--tw-font-sans);padding:8px 12px;}
+  /* Help was still an opaque desktop titlebar inside a translucent window.
+     Use the shared semantic dialog heading and give only its body a scroll. */
+  body:has(#lf-workstation) dialog.cd2004-modal-backdrop::backdrop,
+  body:has(#lf-workstation) dialog.lf-command-dialog::backdrop,
+  body:has(#lf-workstation) dialog.cd2004-lock-overlay::backdrop {background:rgb(27 49 65 / 32%);backdrop-filter:blur(2px);}
+  #lf-workstation .cd2004-help-dialog {
+    display:flex;flex-direction:column;width:min(620px,calc(100vw - 48px));
+    max-height:calc(100dvh - 48px);background:#fff;border:1px solid var(--lf-line);
+    border-radius:16px;color:var(--lf-ink);box-shadow:0 24px 70px rgb(27 49 65 / 17%);animation:none;
+  }
+  #lf-workstation .cd2004-help-body {min-height:0;overflow:auto;padding:0 26px 14px;gap:0;background:#fff;border:0;}
+  #lf-workstation .cd2004-shortcut-row {
+    grid-template-columns:100px minmax(0,1fr);gap:16px;border:0;border-bottom:1px solid var(--lf-line);
+    border-radius:0;min-height:43px;padding:10px 0;background:#fff;font:400 13px/21px var(--tw-font-sans);
+  }
+  #lf-workstation .cd2004-shortcut-row kbd {
+    min-width:0;padding:3px 8px;border:1px solid var(--lf-line);background:#f5f7f8;
+    border-radius:5px;color:var(--lf-muted);font:500 11px/18px var(--tw-font-sans);
+  }
+  #lf-workstation .cd2004-help-dialog > footer {flex:0 0 auto;padding:14px 26px;background:#fbfcfc;border-top:1px solid var(--lf-line);}
+  #lf-workstation .cd2004-help-dialog > footer button {min-height:38px;border:1px solid var(--lf-control-border);border-radius:8px;background:#fff;color:var(--lf-ink);font:500 12px/18px var(--tw-font-sans);box-shadow:none;}
+  #lf-workstation .lf-command-dialog {display:flex;flex-direction:column;max-height:calc(100dvh - 48px);background:#fff;}
+  #lf-workstation .lf-command-dialog:not([open]) {display:none;}
+  #lf-workstation .lf-command-dialog .lf-dialog-title {padding:24px 26px 14px;border:0;}
+  #lf-workstation .lf-command-input {flex:0 0 auto;padding:8px 26px 17px;gap:12px;}
+  #lf-workstation .lf-command-input input {font:400 14px/20px var(--tw-font-sans);min-height:42px;border:1px solid var(--lf-control-border);border-radius:9px;box-shadow:none;}
+  #lf-workstation .lf-command-results {min-height:0;flex:1 1 auto;overflow:auto;scrollbar-gutter:stable;padding:6px 12px;}
+  #lf-workstation .lf-command-result {min-height:58px;padding:11px 12px;gap:12px;border-radius:9px;font:400 13px/20px var(--tw-font-sans);}
+  #lf-workstation .lf-command-result strong {font-size:13px;font-weight:500;}
+  #lf-workstation .lf-command-result small {font-size:11px;line-height:18px;}
+  #lf-workstation .lf-command-dialog > footer {flex:0 0 auto;padding:12px 26px;background:#fbfcfc;}
+  /* Saved records: preserve the table, filters and sort semantics, but remove
+     the terminal typography. DOB is displayed from the record, never guessed. */
+  body:has(#lf-workstation) .notes-table {font:400 13px/20px var(--tw-font-sans);color:var(--lf-ink);}
+  body:has(#lf-workstation) .notes-table thead th {background:#f5f7f8;border-color:var(--lf-line);color:var(--lf-muted);font:500 11px/18px var(--tw-font-sans);text-transform:none;padding:9px 10px;}
+  body:has(#lf-workstation) .notes-table th button {font:inherit;text-transform:none;}
+  body:has(#lf-workstation) .notes-table td {padding:12px 10px;border-color:var(--lf-line);}
+  body:has(#lf-workstation) .notes-table-patient {font-weight:500;white-space:normal;overflow-wrap:anywhere;}
+  body:has(#lf-workstation) .notes-table-patient > span {display:block;white-space:normal;text-overflow:clip;overflow:visible;}
+  body:has(#lf-workstation) .lf-note-patient-dob {display:block;margin-top:3px;color:var(--lf-muted);font:400 11px/17px var(--tw-font-sans);}
+  body:has(#lf-workstation) .notes-table-visit {font:400 12px/20px var(--tw-font-sans);letter-spacing:0;}
+  body:has(#lf-workstation) .records-drawer-filters {padding:0 26px 14px;gap:6px;}
+  body:has(#lf-workstation) .records-drawer-filters button {font:500 12px/18px var(--tw-font-sans);min-height:34px;border-radius:7px;box-shadow:none;}
+  body:has(#lf-workstation) .records-drawer-filters button.on {background:#eaf2f5;border-color:#cadde5;color:var(--lf-ink);}
+  body:has(#lf-workstation) .records-drawer-foot button {font:500 12px/18px var(--tw-font-sans);border-radius:8px;box-shadow:none;}
+  /* Lock remains explicit and non-dismissible; appearance is not authentication. */
+  body:has(#lf-workstation) .cd2004-lock-card {width:min(440px,calc(100vw - 48px));padding:30px;border:1px solid var(--lf-line);border-radius:16px;background:#fff;color:var(--lf-ink);box-shadow:0 24px 70px rgb(27 49 65 / 17%);}
+  body:has(#lf-workstation) .cd2004-lock-icon {display:grid;place-items:center;width:44px;height:44px;margin:0 auto 16px;border-radius:12px;background:#fff0ea;color:#9d5e50;}
+  body:has(#lf-workstation) .cd2004-lock-icon svg {width:22px;height:22px;}
+  body:has(#lf-workstation) .cd2004-lock-card h2 {font:400 27px/1.25 var(--lf-heading-font);letter-spacing:-.3px;}
+  body:has(#lf-workstation) .cd2004-lock-card :is(p,label) {font:400 13px/21px var(--tw-font-sans);}
+  body:has(#lf-workstation) .cd2004-lock-card input[type=text] {min-height:42px;padding:10px 12px;border:1px solid var(--lf-control-border);border-radius:9px;background:#fff;color:var(--lf-ink);font:400 14px/20px var(--tw-font-sans);box-shadow:none;}
+  body:has(#lf-workstation) .cd2004-lock-card button[type=submit] {min-height:42px;border:0;border-radius:9px;background:#294255;color:#fff;font:500 13px/20px var(--tw-font-sans);box-shadow:none;}
+  body:has(#lf-workstation) .cd2004-lock-card button[type=submit]:disabled {background:#edf1f3;color:#657986;}
+  body:has(#lf-workstation) :is(.cd2004-help-dialog,.lf-command-dialog,.cd2004-lock-card) :is(button,input):focus-visible {outline:2px solid #3c7083;outline-offset:2px;}
+  @media (max-width:949px) {
+    #lf-workstation .lf-tool-page-header {padding:20px 22px 16px;gap:14px;}
+    #lf-workstation .lf-tool-page-header h1 {font-size:27px;}
+    #lf-workstation .lf-tool-page-actions {gap:8px;}
+    #lf-workstation .lf-tool-page-actions button {font-size:11px;padding-inline:9px;}
+  }
+  @media (max-height:700px) {
+    #lf-workstation .cd2004-help-dialog {max-height:calc(100dvh - 32px);}
+    #lf-workstation .cd2004-shortcut-row {padding-block:8px;min-height:39px;}
+  }
+  @media (prefers-reduced-motion:reduce) {
+    body:has(#lf-workstation) :is(.cd2004-help-dialog,.cd2004-lock-card,.lf-command-dialog) {animation:none;transition:none;}
+  }
+}

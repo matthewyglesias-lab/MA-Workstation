@@ -70,7 +70,7 @@ export const FUNCTION_KEY_PROFILE: readonly FunctionKeyCommand[] = [
     id: "focus-next-zone",
     keyLabel: "F8",
     label: "Next zone",
-    description: "Cycle focus through worksheet, record rail, and command deck.",
+    description: "Move between the work area, navigation, and shortcuts; go to the next required item when one is outstanding.",
     showInDeck: true,
   },
   {

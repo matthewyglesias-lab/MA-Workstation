@@ -1,3 +1,4 @@
+import { ToolPageHeader } from "../../lightfully/ToolPageHeader";
 import { useState } from "preact/hooks";
 import {
   ACTIVITY_LOG_FILTERS,
@@ -61,10 +62,8 @@ export function DailyCloseoutPanel() {
 
   return (
     <div class="wfp-panel cd2004-print-exclude" tabIndex={-1}>
-      <div class="wfp-summary-bar">
-        <strong>Daily Closeout</strong>
+      <ToolPageHeader title="Daily closeout">
         <span class="wfp-status-flag is-idle">{stats.total} logged today</span>
-        <span class="wfp-summary-spacer" />
         <button type="button" class="cd2004-link-button" onClick={() => clickLegacyControl("copyDailySummary")}>
           Copy summary
         </button>
@@ -77,7 +76,7 @@ export function DailyCloseoutPanel() {
         <button type="button" class="cd2004-command-button" onClick={() => clickLegacyControl("saveDailyPdf")}>
           Save closeout PDF
         </button>
-      </div>
+      </ToolPageHeader>
 
       <div class="wfp-section">
         <div class="wfp-section-head">Today's summary</div>
