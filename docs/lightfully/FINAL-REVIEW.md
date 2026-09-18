@@ -40,3 +40,11 @@ origins/profiles automatically. Do not bypass storage or writer-lock failures.
 The staff-name lock is not enterprise authentication. Use synthetic patients for
 clinic acceptance. Automated software tests do not independently validate all
 clinical references or replace local workflow review. Live deployment unchanged.
+
+## Final corner corrections
+
+Focused injection mode no longer inherits pale inverse text on its white patient
+header. Patient identifiers, clinical facts and exit actions use explicit navy
+and muted captions. Short-screen keyboard-help rows size to their full content
+and scroll within the dialog rather than clipping a two-line description.
+Both 800x600 and 1440x900 have dedicated regression checks.

@@ -22,7 +22,7 @@
     max-height:calc(100dvh - 48px);background:#fff;border:1px solid var(--lf-line);
     border-radius:16px;color:var(--lf-ink);box-shadow:0 24px 70px rgb(27 49 65 / 17%);animation:none;
   }
-  #lf-workstation .cd2004-help-body {min-height:0;overflow:auto;padding:0 26px 14px;gap:0;background:#fff;border:0;}
+  #lf-workstation .cd2004-help-body {grid-auto-rows:max-content;align-content:start;min-height:0;overflow:auto;padding:0 26px 14px;gap:0;background:#fff;border:0;}
   #lf-workstation .cd2004-shortcut-row {
     grid-template-columns:100px minmax(0,1fr);gap:16px;border:0;border-bottom:1px solid var(--lf-line);
     border-radius:0;min-height:43px;padding:10px 0;background:#fff;font:400 13px/21px var(--tw-font-sans);
@@ -57,6 +57,18 @@
   body:has(#lf-workstation) .records-drawer-filters button {font:500 12px/18px var(--tw-font-sans);min-height:34px;border-radius:7px;box-shadow:none;}
   body:has(#lf-workstation) .records-drawer-filters button.on {background:#eaf2f5;border-color:#cadde5;color:var(--lf-ink);}
   body:has(#lf-workstation) .records-drawer-foot button {font:500 12px/18px var(--tw-font-sans);border-radius:8px;box-shadow:none;}
+  /* Focus mode shares the light patient surface. Retire inverse text left by
+     its former dark banner without changing any patient or clinical state. */
+  #lf-workstation .kiosk-patient-summary {color:var(--lf-ink);background:#fff;border-bottom:1px solid var(--lf-line);}
+  #lf-workstation .kiosk-patient-identity {border-right-color:var(--lf-line);}
+  #lf-workstation .kiosk-patient-identity strong {color:var(--lf-ink);font:600 17px/24px var(--tw-font-sans);}
+  #lf-workstation .kiosk-patient-identity small,
+  #lf-workstation .kiosk-patient-identity > span,
+  #lf-workstation .kiosk-patient-facts dt {color:var(--lf-muted);font:400 11px/18px var(--tw-font-sans);letter-spacing:0;text-transform:none;}
+  #lf-workstation .kiosk-patient-facts > div {border-right-color:var(--lf-line);}
+  #lf-workstation .kiosk-patient-facts dd {color:var(--lf-ink);font:500 13px/20px var(--tw-font-sans);}
+  #lf-workstation .kiosk-shell-actions button {color:var(--lf-ink);border-color:var(--lf-control-border);border-radius:8px;background:#fff;font:500 12px/18px var(--tw-font-sans);}
+  #lf-workstation .kiosk-shell-actions button:hover {background:#edf4f6;}
   /* Lock remains explicit and non-dismissible; appearance is not authentication. */
   body:has(#lf-workstation) .cd2004-lock-card {width:min(440px,calc(100vw - 48px));padding:30px;border:1px solid var(--lf-line);border-radius:16px;background:#fff;color:var(--lf-ink);box-shadow:0 24px 70px rgb(27 49 65 / 17%);}
   body:has(#lf-workstation) .cd2004-lock-icon {display:grid;place-items:center;width:44px;height:44px;margin:0 auto 16px;border-radius:12px;background:#fff0ea;color:#9d5e50;}
