@@ -11,6 +11,19 @@ export type ClinicalFieldState = "REQ" | "OK" | "OPT" | "PEND" | "REV" | "STOP" 
  * record, the product label, a calculation, an override, or a locked record.
  */
 const SILENT_SOURCE: ReadonlySet<ClinicalFieldSource> = new Set(["ENTRY"]);
+const SOURCE_LABEL: Record<string, string> = {
+  CHART: "From chart", STAFF: "Signed-in staff", SESSION: "Session", LOCAL: "Local record",
+  LABEL: "Product label", LBL: "Product label", CALC: "Calculated", REF: "Reference",
+  OVR: "Override", LOCK: "Signed record", LOCKED: "Signed record", DEFAULT: "Default", RECORD: "Saved record",
+};
+const readableSummary = (value: string): string => {
+  const labels: Record<string, string> = { PENDING: "Not set", INCOMPLETE: "Details needed", COMPLETE: "Complete" };
+  const date = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return date ? `${date[2]}/${date[3]}/${date[1]}` : labels[value] ?? value;
+};
+// Sentence case only the uppercase heading of an exception/disclosure, never
+// arbitrary clinical text, medication names, or values.
+const readableHeading = (label: string): string => label.replace(/^[A-Z][A-Z /&–-]+(?= —|:|$)/, text => text[0] + text.slice(1).toLowerCase());
 
 /**
  * REQ duplicates the caption's red asterisk, OPT duplicates its italic
@@ -49,13 +62,13 @@ export function RegisterMarkers({
       class="wfp-register-markers"
       aria-label={`Source ${source}; state ${state}${changed ? "; changed from carried or calculated value" : ""}`}
     >
-      {showSource && <span class="wfp-register-source">{source}</span>}
+      {showSource && <span class="wfp-register-source" title={`Source: ${source}`}>{SOURCE_LABEL[source] ?? source}</span>}
       {changed && (
         <span class="wfp-register-change" title={changeDetail ?? "Changed from carried or calculated value"}>
-          CHG
+          Changed
         </span>
       )}
-      {showState && <span class={`wfp-register-state is-${state.toLowerCase()}`}>{state}</span>}
+      {showState && <span class={`wfp-register-state is-${state.toLowerCase()}`}>{state === "STOP" ? "Required" : state === "REV" ? "Review" : state}</span>}
     </span>
   );
 }
@@ -76,7 +89,7 @@ export function WorkflowSummaryFact({
       aria-label={`${label}: ${value}`}
     >
       <b>{label}</b>
-      <span>{value}</span>
+      <span>{readableSummary(value)}</span>
     </span>
   );
 }
@@ -98,9 +111,9 @@ export function TransactionLine({
     <div class={`wfp-transaction ${open ? "is-open" : ""}`}>
       <button type="button" class="wfp-transaction-line" aria-expanded={open} onClick={onToggle}>
         <span aria-hidden="true">{open ? "−" : "+"}</span>
-        <strong>{label}</strong>
+        <strong>{readableHeading(label)}</strong>
         <span class={`wfp-transaction-state ${documented ? "is-documented" : ""}`}>
-          {documented ? "DOCUMENTED" : "NONE"}
+          {documented ? "Documented" : "Not recorded"}
         </span>
       </button>
       {open && <div class="wfp-transaction-body">{children}</div>}

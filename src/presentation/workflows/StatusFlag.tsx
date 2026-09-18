@@ -26,7 +26,7 @@ export function StatusFlag({ idle, stopCount, warningCount, onOpenRequirements }
   const label = idle
     ? NOTES.statusNotStarted
     : stopCount > 0
-      ? CHECKLIST.stopCount(stopCount)
+      ? `${stopCount} to resolve`
       : warningCount > 0
         ? CHECKLIST.reviewCount(warningCount)
         : NOTES.statusReadyToSign;

@@ -1,5 +1,6 @@
+import { labelControls } from "../WorkflowField";
 import type { ComponentChildren, Ref } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef, useState } from "preact/hooks";
 import {
   confirmSampleReview,
   sampleReviewIsCurrent,
@@ -184,6 +185,7 @@ function Field({
   width?: "date" | "short";
   children: ComponentChildren;
 }) {
+  const captionId = `${useId()}-caption`;
   // Requirement is marked on the field itself - a red asterisk on the caption
   // and a filled control - rather than as a word of helper text underneath.
   // Only the bare "required"/"optional" markers are replaced; a hint carrying
@@ -201,7 +203,7 @@ function Field({
     <div
       class={`wfp-field ${required ? "is-required" : ""} ${width ? `is-w-${width}` : ""}`}
     >
-      <label>
+      <label id={captionId}>
         <span class="wfp-field-caption">{label}</span>
         {required && (
           <abbr class="wfp-req" title="Required">
@@ -210,8 +212,8 @@ function Field({
         )}
         {optional && <span class="wfp-opt">optional</span>}
       </label>
-      {children}
-      {detail && <span class="wfp-field-hint">{detail}</span>}
+      {labelControls(children, { labelledBy: captionId, describedBy: detail ? `${captionId}-help` : undefined, required, invalid: false })}
+      {detail && <span class="wfp-field-hint" id={`${captionId}-help`}>{detail}</span>}
     </div>
   );
 }
@@ -470,50 +472,6 @@ export function SamplesPanel({
       onInput={markDirty}
       onChange={markDirty}
     >
-      <div class="wfp-summary-bar">
-        <strong>Oral sample encounter</strong>
-        <StatusFlag
-          idle={(evaluation?.readiness ?? "idle") === "idle"}
-          stopCount={stops.length}
-          warningCount={evaluation?.warnings.length ?? 0}
-          onOpenRequirements={() => setRequirementsOpen(true)}
-        />
-        <span class="wfp-summary-spacer" />
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() =>
-            patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } })
-          }
-          disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
-        >
-          Use current patient
-        </button>
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() => {
-            if (staffSignInValue) patch({ staff: staffSignInValue });
-          }}
-          disabled={!staffSignInValue}
-        >
-          Use signed-in staff
-        </button>
-        <button
-          type="button"
-          class="cd2004-command-button"
-          disabled={!canFinalizeSampleLog}
-          title={
-            canFinalizeSampleLog
-              ? "Add the completed sample dispense to today's local activity log."
-              : "Complete the documented safety, traceability, and final review requirements before logging this dispense."
-          }
-          onClick={() => clickLegacyControl("sampleAddLog")}
-        >
-          Finalize dispense &amp; add to daily log
-        </button>
-      </div>
-
       <div class="wfp-tabbar" role="tablist">
         <button
           type="button"
@@ -574,6 +532,7 @@ export function SamplesPanel({
         </button>
       </div>
 
+      <div class="lf-service-scroll">
       <OutstandingRequirements<SamplesTab>
         open={requirementsOpen}
         onClose={() => setRequirementsOpen(false)}
@@ -588,7 +547,7 @@ export function SamplesPanel({
           <div class="wfp-section" role="group" aria-label="Patient / order">
             <div class="wfp-section-head">Patient / order</div>
             <div class="wfp-section-body">
-              <div class="wfp-row">
+              <div class="wfp-row lf-patient-order-row">
                 <Field label="Patient name">
                   <input
                     value={encounter.patient.name}
@@ -1040,6 +999,50 @@ export function SamplesPanel({
         Sample handouts support prescriber instructions. They do not replace medication guides, pharmacy counseling,
         or the prescriber's final directions.
       </p>
+      </div>
+      <div class="wfp-summary-bar lf-service-footer" role="group" aria-label="Samples encounter actions">
+        <StatusFlag
+          idle={(evaluation?.readiness ?? "idle") === "idle"}
+          stopCount={stops.length}
+          warningCount={evaluation?.warnings.length ?? 0}
+          onOpenRequirements={() => setRequirementsOpen(true)}
+        />
+        <span class="wfp-summary-spacer" />
+        <button
+          type="button"
+          class="cd2004-link-button"
+          onClick={() =>
+            patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } })
+          }
+          disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
+        >
+          Use current patient
+        </button>
+        <button
+          type="button"
+          class="cd2004-link-button"
+          onClick={() => {
+            if (staffSignInValue) patch({ staff: staffSignInValue });
+          }}
+          disabled={!staffSignInValue}
+        >
+          Use signed-in staff
+        </button>
+        <button
+          type="button"
+          class="cd2004-command-button"
+          disabled={!canFinalizeSampleLog}
+          title={
+            canFinalizeSampleLog
+              ? "Add the completed sample dispense to today's local activity log."
+              : "Complete the documented safety, traceability, and final review requirements before logging this dispense."
+          }
+          onClick={() => clickLegacyControl("sampleAddLog")}
+        >
+          Finalize dispense &amp; add to daily log
+        </button>
+      </div>
+
     </div>
   );
 }

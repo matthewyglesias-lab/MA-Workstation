@@ -437,12 +437,12 @@ test.describe('MA Workstation browser journeys', () => {
     );
 
     const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
-    await expect(registerMarker(register)).toHaveText('PENDING');
+    await expect(registerMarker(register)).toHaveText('Not set');
     await expect(registerValue(register, 'Next dose due')).toHaveText('—');
     await expect(registerNote(register, 'Next dose due')).toContainText(
       'enter the return date from the active order'
     );
-    await expect(register).not.toContainText('CALC');
+    await expect(register).not.toContainText('Calculated');
     await register.getByRole('button', { name: 'Set return date…' }).click();
 
     const returnDate = page.getByRole('dialog', { name: 'Record ordered return date' });
@@ -454,7 +454,7 @@ test.describe('MA Workstation browser journeys', () => {
       .fill('Active order directs this return date');
     await returnDate.getByRole('button', { name: 'Record return date', exact: true }).click();
 
-    await expect(registerMarker(register)).toHaveText('OVR');
+    await expect(registerMarker(register)).toHaveText('Override');
     await expect(registerValue(register, 'Next dose due')).toHaveText('09/11/26');
     await expect(registerNote(register, 'Next dose due')).toContainText(
       'Active order directs this return date'
@@ -492,7 +492,7 @@ test.describe('MA Workstation browser journeys', () => {
       'QA renamed manual product'
     );
     const resumedRegister = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
-    await expect(registerMarker(resumedRegister)).toHaveText('OVR');
+    await expect(registerMarker(resumedRegister)).toHaveText('Override');
     await expect(registerValue(resumedRegister, 'Next dose due')).toHaveText('09/11/26');
     await expect(registerNote(resumedRegister, 'Next dose due')).toContainText(
       'Active order directs this return date'
@@ -512,7 +512,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Order');
     const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
-    await expect(registerMarker(register)).toHaveText('OVR');
+    await expect(registerMarker(register)).toHaveText('Override');
     await expect(registerValue(register, 'Next dose due')).toHaveText('08/27/26');
 
     // Save a normal current-format draft, then start a genuinely blank record
@@ -557,13 +557,13 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Order');
     const restoredRegister = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
-    await expect(registerMarker(restoredRegister)).toHaveText('REVIEW');
+    await expect(registerMarker(restoredRegister)).toHaveText('Review');
     await expect(registerVerdict(restoredRegister)).toHaveText('NEEDS REVIEW');
     await expect(registerValue(restoredRegister, 'Next dose due')).toHaveText('08/27/26');
     await expect(registerNote(restoredRegister, 'Next dose due')).toContainText(
       'legacy return date — verify against the active order'
     );
-    await expect(restoredRegister).not.toContainText('CALC');
+    await expect(restoredRegister).not.toContainText('Calculated');
     await expect.poll(() => page.evaluate(() =>
       window.ipmgLegacyClinicalStateSnapshot().injection.documentation?.nextDose ?? null
     )).toBeNull();
@@ -606,7 +606,7 @@ test.describe('MA Workstation browser journeys', () => {
       .locator('textarea')
       .fill('Active order return date confirmed after legacy draft review');
     await returnDate.getByRole('button', { name: 'Record return date', exact: true }).click();
-    await expect(registerMarker(restoredRegister)).toHaveText('OVR');
+    await expect(registerMarker(restoredRegister)).toHaveText('Override');
 
     await openInjectionTab(page, 'Outcome');
     await expect(administeredDisposition).not.toHaveClass(/is-selected/);
@@ -697,11 +697,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administeredDisposition).toHaveClass(/is-selected/);
     await expect(administeredDisposition).toHaveCSS(
       'background-color',
-      'rgb(237, 244, 246)'
+      'rgb(241, 246, 248)'
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
-      'rgb(31, 111, 92)'
+      'rgb(158, 184, 197)'
     );
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
@@ -1091,10 +1091,10 @@ test.describe('MA Workstation browser journeys', () => {
 
     await udsPanel.getByRole('button', { name: 'Use signed-in staff', exact: true }).click();
     const collectorField = udsPanel.locator('.wfp-field[data-field-path="collector"]');
-    await expect(collectorField.locator('.wfp-register-source')).toHaveText('SESSION');
+    await expect(collectorField.locator('.wfp-register-source')).toHaveText('Session');
     await udsPanel.getByLabel('Collected by', { exact: true }).fill('Jordan Lee, MA');
-    await expect(collectorField.locator('.wfp-register-source')).toHaveText('OVR');
-    await expect(collectorField.locator('.wfp-register-change')).toHaveText('CHG');
+    await expect(collectorField.locator('.wfp-register-source')).toHaveText('Override');
+    await expect(collectorField.locator('.wfp-register-change')).toHaveText('Changed');
   });
 
   test('keeps each local activity in one Dashboard queue register', async ({ page }) => {
@@ -3191,7 +3191,7 @@ test.describe('MA Workstation browser journeys', () => {
     const summaryFact = (label) => panel.locator('.wfp-summary-fact').filter({ hasText: label });
 
     await expect(page.getByRole('heading', { name: 'Urine drug screen', level:1, exact:true })).toBeVisible();
-    await expect(summaryFact('PANELS')).toContainText('PENDING');
+    await expect(summaryFact('PANELS')).toContainText('Not set');
 
     const specimenTab = panel.getByRole('tab', { name: 'Specimen', exact: true });
     const resultsTab = panel.getByRole('tab', { name: 'Results', exact: true });
@@ -3215,7 +3215,7 @@ test.describe('MA Workstation browser journeys', () => {
     await reviewTab.click();
 
     const outsideLab = panel.locator('.wfp-field', { hasText: 'Outside lab' });
-    await expect(outsideLab.locator('.wfp-register-source')).toHaveText('REF');
+    await expect(outsideLab.locator('.wfp-register-source')).toHaveText('Reference');
     await expect(panel.locator('.wfp-exception-register'))
       .not.toContainText('Medication alignment requires review');
     const udsRegister = scheduleRegister(panel, 'POINT-OF-CARE REPORT');
@@ -3691,7 +3691,7 @@ test.describe('MA Workstation browser journeys', () => {
     const uds = page.locator('.wfp-panel');
     await uds.locator('input[placeholder="Last, First"]').fill('Rivera, Ana');
     const udsStopFlag = uds.locator('.wfp-status-flag.is-stop');
-    await expect(udsStopFlag).toContainText(/\d+ stops?/);
+    await expect(udsStopFlag).toContainText(/\d+ to resolve/);
     await expect(udsStopFlag.locator('.wfp-status-icon')).toHaveText('×');
     await udsStopFlag.click();
     const udsDialog = page.getByRole('dialog', { name: 'Care Checklist' });
@@ -3708,7 +3708,7 @@ test.describe('MA Workstation browser journeys', () => {
     const samples = page.locator('.wfp-panel');
     await samples.locator('input[placeholder="Last, First"]').fill('Okafor, Ben');
     const samplesStopFlag = samples.locator('.wfp-status-flag.is-stop');
-    await expect(samplesStopFlag).toContainText(/\d+ stops?/);
+    await expect(samplesStopFlag).toContainText(/\d+ to resolve/);
     await expect(samplesStopFlag.locator('.wfp-status-icon')).toHaveText('×');
     await samplesStopFlag.click();
     const samplesDialog = page.getByRole('dialog', { name: 'Care Checklist' });
@@ -3759,7 +3759,7 @@ test.describe('MA Workstation browser journeys', () => {
     // The date renders in the same MM/DD/YY the typed date fields use, so a
     // calculated date and a keyed date are never shown two ways on one screen.
     await expect(registerValue(register, 'Next dose due')).toHaveText('08/27/26');
-    await expect(registerMarker(register)).toHaveText('CALC');
+    await expect(registerMarker(register)).toHaveText('Calculated');
     await expect(registerNote(register, 'Next dose due')).toContainText('from 07/30/26');
     await expect(register.locator('input[data-workstation-date="date"]')).toHaveCount(0);
     await expect(register.getByRole('button', { name: 'Override…' })).toBeVisible();
@@ -3796,6 +3796,6 @@ test.describe('MA Workstation browser journeys', () => {
     // left sitting in the field looking like a still-valid value.
     await panel.locator('label:has-text("Re-initiation / provider plan")').click();
     await expect(nextDue).toHaveText('—');
-    await expect(registerMarker(register)).toHaveText('PENDING');
+    await expect(registerMarker(register)).toHaveText('Not set');
   });
 });

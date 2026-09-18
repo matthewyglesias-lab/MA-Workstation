@@ -1,5 +1,6 @@
+import { labelControls, OptionList } from "../WorkflowField";
 import type { ComponentChildren, Ref } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef, useState } from "preact/hooks";
 import {
   emptyFormsEncounter,
   FORM_REQUEST_TYPE_OPTIONS,
@@ -60,46 +61,6 @@ interface FormsPanelProps {
 const patientIsEmpty = (patient: FormsEncounter["patient"]): boolean =>
   !patient.name.trim() && !patient.dob.trim();
 
-interface OptionListProps<T extends string> {
-  name: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: ReadonlyArray<{ key: T; label: string; description?: string }>;
-  inline?: boolean;
-}
-
-function OptionList<T extends string>({
-  name,
-  value,
-  onChange,
-  options,
-  inline,
-}: OptionListProps<T>) {
-  // Native <select> rather than a custom radio-row list: the OS draws the
-  // popup, keyboard type-ahead comes for free, and a closed control costs one
-  // line instead of one per option. The selected option's description stays
-  // visible beneath it - clinical guidance should not hide inside a tooltip.
-  const selected = options.find((option) => option.key === value);
-  return (
-    <div class={`wfp-select-group ${inline ? "wfp-select-group-inline" : ""}`}>
-      <select
-        name={name}
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value as T)}
-      >
-        {options.map((option) => (
-          <option key={option.key} value={option.key} title={option.description}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {selected?.description && (
-        <small class="wfp-select-desc">{selected.description}</small>
-      )}
-    </div>
-  );
-}
-
 function Field({
   label,
   hint,
@@ -114,6 +75,7 @@ function Field({
   width?: "date" | "short";
   children: ComponentChildren;
 }) {
+  const captionId = `${useId()}-caption`;
   // Requirement is marked on the field itself - a red asterisk on the caption
   // and a filled control - rather than as a word of helper text underneath.
   // Only the bare "required"/"optional" markers are replaced; a hint carrying
@@ -131,7 +93,7 @@ function Field({
     <div
       class={`wfp-field ${required ? "is-required" : ""} ${width ? `is-w-${width}` : ""}`}
     >
-      <label>
+      <label id={captionId}>
         <span class="wfp-field-caption">{label}</span>
         {required && (
           <abbr class="wfp-req" title="Required">
@@ -140,8 +102,8 @@ function Field({
         )}
         {optional && <span class="wfp-opt">optional</span>}
       </label>
-      {children}
-      {detail && <span class="wfp-field-hint">{detail}</span>}
+      {labelControls(children, { labelledBy: captionId, describedBy: detail ? `${captionId}-help` : undefined, required, invalid: false })}
+      {detail && <span class="wfp-field-hint" id={`${captionId}-help`}>{detail}</span>}
     </div>
   );
 }
@@ -262,50 +224,6 @@ export function FormsPanel({
       onInput={markDirty}
       onChange={markDirty}
     >
-      <div class="wfp-summary-bar">
-        <strong>Forms &amp; letters</strong>
-        <StatusFlag
-          idle={(evaluation?.readiness ?? "idle") === "idle"}
-          stopCount={requestStops.length}
-          warningCount={requestWarnings.length}
-        />
-        <span class="wfp-summary-spacer" />
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() => {
-            patch({
-              patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" },
-            });
-          }}
-          disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
-        >
-          Use current patient
-        </button>
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() => {
-            if (staffSignInValue) patch({ staff: staffSignInValue });
-          }}
-          disabled={!staffSignInValue}
-        >
-          Use signed-in staff
-        </button>
-        <button
-          type="button"
-          class="cd2004-command-button"
-          title={
-            formsLogCompleted
-              ? "Add the completed forms task to today's local activity log."
-              : "Add this forms task to today's local activity log as needs review; this does not release a letter."
-          }
-          onClick={() => clickLegacyControl("formsAddLog")}
-        >
-          {formsLogCompleted ? "Log completed task" : "Log as needs review"}
-        </button>
-      </div>
-
       <div class="wfp-tabbar" role="tablist">
         <button
           type="button"
@@ -332,12 +250,13 @@ export function FormsPanel({
         </button>
       </div>
 
+      <div class="lf-service-scroll">
       {tab === "request" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section" role="group" aria-label="Patient & request">
             <div class="wfp-section-head">Patient &amp; request</div>
             <div class="wfp-section-body">
-              <div class="wfp-row">
+              <div class="wfp-row lf-patient-date-row">
                 <Field label="Patient name">
                   <input
                     value={encounter.patient.name}
@@ -695,6 +614,50 @@ export function FormsPanel({
         This module tracks operational status only. Provider determines wording, completion,
         and release of clinical/legal letters or forms.
       </p>
+      </div>
+      <div class="wfp-summary-bar lf-service-footer" role="group" aria-label="Forms encounter actions">
+        <StatusFlag
+          idle={(evaluation?.readiness ?? "idle") === "idle"}
+          stopCount={requestStops.length}
+          warningCount={requestWarnings.length}
+        />
+        <span class="wfp-summary-spacer" />
+        <button
+          type="button"
+          class="cd2004-link-button"
+          onClick={() => {
+            patch({
+              patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" },
+            });
+          }}
+          disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
+        >
+          Use current patient
+        </button>
+        <button
+          type="button"
+          class="cd2004-link-button"
+          onClick={() => {
+            if (staffSignInValue) patch({ staff: staffSignInValue });
+          }}
+          disabled={!staffSignInValue}
+        >
+          Use signed-in staff
+        </button>
+        <button
+          type="button"
+          class="cd2004-command-button"
+          title={
+            formsLogCompleted
+              ? "Add the completed forms task to today's local activity log."
+              : "Add this forms task to today's local activity log as needs review; this does not release a letter."
+          }
+          onClick={() => clickLegacyControl("formsAddLog")}
+        >
+          {formsLogCompleted ? "Log completed task" : "Log as needs review"}
+        </button>
+      </div>
+
     </div>
   );
 }

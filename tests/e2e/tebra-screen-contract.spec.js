@@ -108,7 +108,7 @@ test.describe('Lightfully screen contract', () => {
       if (contract.lookup) {
         expect(contract.lookup.backgroundImage).toBe('none');
         expect(contract.lookup.boxShadow).toBe('none');
-        expect(contract.lookup.borderRadius).toBe('6px');
+        expect(contract.lookup.borderRadius).toBe('8px');
       }
     }
   });
@@ -186,7 +186,7 @@ test.describe('Lightfully screen contract', () => {
       expect(await lifecycleAction.evaluate((node) =>
         Number.parseFloat(getComputedStyle(node).outlineWidth)
       )).toBeGreaterThanOrEqual(2);
-      await expect(lifecycleAction).toHaveCSS('outline-offset', '2px');
+      await expect(lifecycleAction).toHaveCSS('outline-offset', '3px');
 
       const lifecycleDetail = page.locator(
         '.cd2004-record-actions-state > small[role="status"]'

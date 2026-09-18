@@ -757,10 +757,10 @@ function OperatorGuidance({
   return (
     <section class="wfp-operator-guidance" aria-label="Operator guidance" data-operator-guidance>
       <div class="wfp-operator-guidance-head">
-        <strong>Operator guidance</strong>
+        <strong>Clinical guidance</strong>
         <span>{INJECTION_TAB_LABELS[tab]} — {medication.label}</span>
         {presentedOutput?.clinicalReferenceVersion && (
-          <small>REF {presentedOutput.clinicalReferenceVersion}</small>
+          <small>Reference {presentedOutput.clinicalReferenceVersion}</small>
         )}
       </div>
       {(primaryItem || intervalReviewWarning) && (
@@ -786,7 +786,7 @@ function OperatorGuidance({
           class="wfp-operator-guidance-action"
           onClick={() => onNavigate(blockerTab)}
         >
-          Next required: {firstStop.message} — go to {INJECTION_TAB_LABELS[blockerTab]}
+          <span>Next: {firstStop.message}</span><span class="lf-guidance-destination">{INJECTION_TAB_LABELS[blockerTab]} <span aria-hidden="true">→</span></span>
         </button>
       )}
       <details class="wfp-reference">
@@ -2531,7 +2531,7 @@ export function InjectionPanel({
           <div class="wfp-section" role="group" aria-label="Patient & ordering provider">
             <h2 class="wfp-section-head">Patient &amp; ordering provider</h2>
             <div class="wfp-section-body">
-              <div class="wfp-row">
+              <div class="wfp-row lf-patient-order-row">
                 <Field label="Patient name" field="patient.name" source={projectCarriedFieldSource(encounter.patient.name, activePatientName, "CHART")}>
                   <input
                     value={encounter.patient.name}
@@ -2563,6 +2563,17 @@ export function InjectionPanel({
                   />
                 </Field>
               </div>
+              <div class="wfp-row lf-encounter-purpose-row">
+              <Field label="Encounter type" field="reason">
+                <OptionList<InjectionReason>
+                  name="inj-reason"
+                  value={encounter.reason}
+                  onChange={(value) => patch({ reason: value })}
+                  options={INJECTION_REASON_OPTIONS}
+                  placeholder="Select encounter type"
+                  inline
+                />
+              </Field>
               <Field
                 label="Verified active-order purpose"
                 field="details.purpose"
@@ -2574,23 +2585,14 @@ export function InjectionPanel({
                   onInput={(event) => patchDetails({ purpose: event.currentTarget.value })}
                 />
               </Field>
-              <Field label="Encounter type" field="reason">
-                <OptionList<InjectionReason>
-                  name="inj-reason"
-                  value={encounter.reason}
-                  onChange={(value) => patch({ reason: value })}
-                  options={INJECTION_REASON_OPTIONS}
-                  placeholder="Select encounter type"
-                  inline
-                />
-              </Field>
+              </div>
             </div>
           </div>
 
           <div class="wfp-section" role="group" aria-label="Ordered medication">
             <h2 class="wfp-section-head">Ordered medication</h2>
             <div class="wfp-section-body">
-              <div class="wfp-row">
+              <div class="wfp-row lf-medication-order-row">
                 <Field label="Drug" field="medicationKey">
                   <select
                     name="inj-medication"

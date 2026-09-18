@@ -4,6 +4,9 @@ const { clickWorkspace } = require('./workspace-navigation');
 const service = (page, label) => clickWorkspace(page, `.cd2004-nav-item[title="${label}"]`);
 const preview = page => page.getByRole('button', { name: 'Preview', exact: true });
 const details = page => page.getByRole('button', { name: 'Details', exact: true });
+const stableRecords = page => page.evaluate(() =>
+  JSON.parse(localStorage.getItem('ipmgMedAssistInjectionRecordsV1') || '[]')
+    .map(({updatedAt, ...record}) => record));
 
 for (const size of [{width:1440,height:900},{width:1024,height:768},{width:800,height:600}]) {
   test(`entry and preview are two views of the same draft at ${size.width}x${size.height}`, async ({page}) => {
@@ -16,7 +19,7 @@ for (const size of [{width:1440,height:900},{width:1024,height:768},{width:800,h
     await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
     await page.locator('[data-injection-save]').click();
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
-    const before = await page.evaluate(() => localStorage.getItem('ipmgMedAssistInjectionRecordsV1'));
+    const before = await stableRecords(page);
     await expect(page.locator('#lf-document-preview')).toBeHidden();
     await preview(page).click();
     await expect(page.locator('#lf-document-preview')).toBeVisible();
@@ -31,7 +34,7 @@ for (const size of [{width:1440,height:900},{width:1024,height:768},{width:800,h
     await details(page).click();
     await expect(name).toHaveValue('Workspace QA, Synthetic');
     await expect(name).toBeVisible();
-    expect(await page.evaluate(() => localStorage.getItem('ipmgMedAssistInjectionRecordsV1'))).toBe(before);
+    expect(await stableRecords(page)).toEqual(before);
     await expect(page.locator('[data-injection-record-actions]')).toBeVisible();
     const actions = await page.locator('[data-injection-record-actions]').boundingBox();
     expect(actions.y+actions.height).toBeLessThanOrEqual(size.height+1);

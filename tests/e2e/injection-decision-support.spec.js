@@ -98,7 +98,7 @@ test.describe('Injection decision support', () => {
 
     const guidance = panel.locator('[data-operator-guidance]');
     await expect(guidance).toBeVisible();
-    await expect(guidance).toContainText('Operator guidance');
+    await expect(guidance).toContainText('Clinical guidance');
     await expect(guidance).toContainText('Active order');
     await expect(guidance.locator('summary')).toHaveText(/Reference/);
 
@@ -158,7 +158,7 @@ test.describe('Injection decision support', () => {
       .locator('textarea').fill('Active order specifies this return date');
     await override.getByRole('button', { name: 'Record override' }).click();
     await expect(registerValue(dueField, 'Next dose due')).toHaveText('01/15/30');
-    await expect(registerMarker(dueField)).toHaveText('OVR');
+    await expect(registerMarker(dueField)).toHaveText('Override');
 
     const actions = page.locator('[data-injection-record-actions]');
     await expect(actions.locator('[data-injection-save]')).toBeEnabled();
@@ -209,7 +209,7 @@ test.describe('Injection decision support', () => {
     // Snapping to Friday records a real, auditable manual override rather
     // than quietly moving the date the way the legacy worksheet did.
     await expect(registerValue(dueField, 'Next dose due')).toHaveText('08/28/26');
-    await expect(registerMarker(dueField)).toHaveText('OVR');
+    await expect(registerMarker(dueField)).toHaveText('Override');
     await expect(registerNote(dueField, 'Next dose due')).toContainText(
       'Weekend-adjusted from the calculated return date',
     );

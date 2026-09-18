@@ -60,6 +60,15 @@ export function ScheduleRegister({
   ariaLive = "polite",
 }: ScheduleRegisterProps) {
   const showBand = Boolean(bandTitle || bandDetail);
+  // Display names only. Raw provenance and the evaluator verdict remain
+  // accessible; no clinical facts or decisions are translated here.
+  const readableTitle: Record<string, string> = {
+    "SCHEDULE — NEXT DOSE": "Next-dose timing", "RETURN TARGET": "Return planning",
+  };
+  const readableMarker: Record<string, string> = {
+    CALC: "Calculated", OVR: "Override", REF: "Reference",
+    PENDING: "Not set", REVIEW: "Review", "N/A": "Not applicable",
+  };
   return (
     <section
       class={`wfp-schedule-register is-${tone}`}
@@ -67,9 +76,9 @@ export function ScheduleRegister({
       aria-live={ariaLive}
     >
       <header class="wfp-schedule-head">
-        <strong>{title}</strong>
+        <strong>{readableTitle[title] ?? title}</strong>
         <span class="wfp-schedule-marks">
-          {marker && <span class="wfp-schedule-mark">{marker}</span>}
+          {marker && <span class="wfp-schedule-mark" data-source-code={marker} title={`Source: ${marker}`}>{readableMarker[marker] ?? marker}</span>}
           {verdict && (
             <span class={`wfp-schedule-verdict is-${tone}`}>{verdict}</span>
           )}

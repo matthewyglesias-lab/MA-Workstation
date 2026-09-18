@@ -15,6 +15,7 @@ import "./tebra-workstation.css";
 import "./kiosk/kiosk.css";
 import "./tebra-screen-contract.css";
 import "./lightfully/lightfully-shell.css";
+import "./lightfully/lightfully-components.css";
 import { worklistDate } from "./lightfully/worklist-display";
 import { ServiceChooser, ServiceHeader, isDocumentService } from "./lightfully/ServiceWorkspace";
 import { WorkspaceTools, type WorkspaceCommand } from "./lightfully/WorkspaceTools";
@@ -2011,15 +2012,8 @@ function PatientBanner({
   // context") that named its own internals rather than anything staff act on.
   const chartContextLabel = PATIENT.facesheet;
   const workflowContextLabel = `${WORKFLOW_LABELS[selectedWorkflow]} — ${workflowStateLabel}`;
-  const medicationContextPrefix = patient.medicationLabel
-    ? `MEDICATION: ${patient.medicationLabel} · `
-    : "";
-  const safetyContextLabel =
-    selectedWorkflow === "home"
-      ? patient.medicationLabel
-        ? `MEDICATION: ${patient.medicationLabel}`
-        : `${SHELL.noteType.toUpperCase()}: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()}`
-      : `${medicationContextPrefix}${SHELL.noteType.toUpperCase()}: ${WORKFLOW_LABELS[selectedWorkflow].toUpperCase()} · ${SHELL.status.toUpperCase()}: ${workflowStateLabel.toUpperCase()}`;
+  const safetyContextLabel = patient.medicationLabel || workflowContextLabel;
+  const knownNegativeAllergy = /^(nkda|nka|no known (drug |medication )?allergies)[.!]?$/i.test((patient.allergyStatus ?? "").trim());
   if (!hasActiveChart && !mismatch) return <div class="cd2004-patient-banner is-no-active-chart lf-empty-patient">
     <div class="cd2004-patient-primary"><DesktopIcon name="patient"/><span><strong>{PATIENT.noPatient}</strong><small>Enter the patient details below, or open a saved note.</small></span></div>
     <button type="button" class="lf-text-button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>{NOTES.openNotes} <span aria-hidden="true">→</span></button>
@@ -2042,10 +2036,10 @@ function PatientBanner({
         <strong>{dobLabel}</strong>
       </div>
       <div class="cd2004-patient-field" title={`Local visit / record: ${recordLabel}`}>
-        <small>{PATIENT.visitRecord}</small>
-        <strong>{recordLabel}</strong>
+        <small>Record status</small>
+        <strong>{workflowStateLabel}</strong>
       </div>
-      <div class="meditech-patient-safety">
+      <div class="meditech-patient-safety" data-allergy-tone={knownNegativeAllergy ? "documented-negative" : "review"}>
         <strong>{PATIENT.allergiesLabel}:</strong>
         <b>
           {hasActiveChart

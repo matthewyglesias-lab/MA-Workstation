@@ -39,7 +39,7 @@ const registerState = (
  * field caption. This lets the dense workstation keep its compact caption /
  * control grid while exposing a real accessible name to assistive software.
  */
-function labelControls(
+export function labelControls(
   children: ComponentChildren,
   accessibility: {
     labelledBy: string;
