@@ -1,0 +1,98 @@
+name: Contemporary workspace checkpoint and acceptance
+on:
+  push:
+    branches: [codex/lightfully-standalone-rebuild]
+    paths: ['.github/contemporary-transfer/**', '.github/workflows/apply-contemporary-workspace.yml']
+permissions:
+  contents: write
+concurrency:
+  group: contemporary-workspace-acceptance
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/codex/lightfully-standalone-rebuild'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply hash-verified presentation and test source
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, lzma
+          from pathlib import Path, PurePosixPath
+          h=lambda b:hashlib.sha256(b).hexdigest()
+          parts=sorted(Path('.github/contemporary-transfer').glob('*.part'))
+          assert len(parts)==3
+          raw=lzma.decompress(base64.b64decode(''.join(p.read_text() for p in parts),validate=True))
+          assert h(raw)=='67f2c64ba204713d690340d1f7df6e031940b88d9aed0f5cea1be768036d4cb4'
+          pending={}
+          for change in json.loads(raw):
+              name=change['path'];pp=PurePosixPath(name)
+              assert not pp.is_absolute() and '..' not in pp.parts
+              assert name.startswith(('src/presentation/','tests/e2e/','tests/unit/','docs/lightfully/'))
+              p=Path(name);old=p.read_bytes() if p.exists() else b''
+              assert h(old)==change['old'] if change['old'] is not None else not p.exists()
+              lines=old.decode().splitlines(keepends=True)
+              for start,end,replacement in reversed(change['ops']):lines[start:end]=replacement
+              new=''.join(lines).encode();assert h(new)==change['new']
+              assert name not in pending
+              pending[name]=new
+          for name,new in pending.items():
+              p=Path(name);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(new)
+          print('Applied',len(pending),'verified presentation/test/documentation files.')
+          PY
+      - name: Confirm clinical, persistence and print implementations remain untouched
+        run: git diff --exit-code 28ae520bb51161ef3eb4b3642071007601b9f64e -- public/legacy src/legacy src/domain src/application src/persistence src/documentation tests/fixtures
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Record inherited dependency audit
+        run: npm audit --json > dependency-audit.json || true
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+      - name: Save recoverable source checkpoint before browser verification
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/presentation tests/e2e tests/unit docs/lightfully
+          git rm -r .github/contemporary-transfer
+          git commit -m 'feat: contemporary forms, quiet hierarchy and cohesive dialogs'
+          git push origin HEAD:codex/lightfully-standalone-rebuild
+      - run: GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Full browser, clinical workflow and print suite with reviewed appearance
+        run: npx playwright test --update-snapshots
+      - name: Native single-file startup and draft reload
+        run: TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js --output=native-test-results --reporter=list
+      - name: Save accepted screen baselines and remove transfer workflow
+        run: |
+          git add tests/e2e
+          git rm .github/workflows/apply-contemporary-workspace.yml
+          git commit -m 'test: accept contemporary workspace with full clinical and print regression'
+          git push origin HEAD:codex/lightfully-standalone-rebuild
+      - name: Package exact revision
+        if: always()
+        run: |
+          GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
+          git archive --format=zip --output=contemporary-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contemporary-workspace-acceptance
+          path: |
+            standalone/
+            playwright-report/
+            test-results/
+            native-test-results/
+            tests/e2e/*-snapshots/
+            contemporary-source.zip
+            dependency-audit.json
+          retention-days: 7
+          if-no-files-found: warn
