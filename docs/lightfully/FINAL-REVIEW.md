@@ -48,3 +48,17 @@ header. Patient identifiers, clinical facts and exit actions use explicit navy
 and muted captions. Short-screen keyboard-help rows size to their full content
 and scroll within the dialog rather than clipping a two-line description.
 Both 800x600 and 1440x900 have dedicated regression checks.
+
+## Release verification
+
+Type/static checks, all unit tests with Git history, the production build and
+the protected implementation comparison passed. Browser checks ran with retries
+disabled and did not update snapshots.
+
+browser-tests.log: 249 passed (8.7m)
+native-tests.log: 1 passed (5.5s)
+repeated-tests.log: 36 passed (59.3s)
+
+The standalone test is opt-in and is exercised separately from the web suite.
+Inherited dependency audit findings remain in the attached JSON audit; this
+release does not claim independent clinical or security certification.
