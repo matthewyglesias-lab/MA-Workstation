@@ -4,8 +4,8 @@ const { test, expect } = require('@playwright/test');
 // Originally replaced meditech-screen-contract.spec.js. Same job — hold every common
 // workstation surface to ONE palette and ONE control grammar so component
 // import order cannot produce a second visual language — but the grammar it
-// asserts is now Tebra's: a soft radius, a hairline border, no bezel, and the
-// teal token palette. The 800x600 overflow guard is carried over unchanged;
+// asserts is Lightfully-inspired: a soft radius, a hairline border, no bezel,
+// and warm-white/lavender surfaces. The 800x600 overflow guard is carried over unchanged;
 // it is a layout contract, not a visual one.
 
 const WORKFLOWS = [
@@ -15,7 +15,7 @@ const WORKFLOWS = [
   { title: 'Forms', selector: '[data-workflow="forms"]' }
 ];
 
-// Token values from src/presentation/tebra-tokens.css, as rendered rgb().
+// Screen-only token overrides from lightfully-shell.css, as rendered rgb().
 const NAVY = 'rgb(40, 40, 63)';
 const HEADER_PAPER = 'rgb(255, 254, 250)';
 const LAVENDER_50 = 'rgb(247, 244, 250)';
@@ -62,13 +62,13 @@ test.describe('Lightfully screen contract', () => {
     // measured rail itself stays square and flush to the workspace edge.
     expect(home.navRadius).toBe('9px');
     expect(home.navFont).toMatch(/^"Inter Variable"/);
-    // The measured shell uses a dark product header, a flush white rail, and
-    // an elevated work panel on Tebra's card radius. The
+    // The measured shell uses a warm-white header and rail, and
+    // a lavender workspace. The
     // Notes-specific table/list grammar remains deliberately unasserted until
     // Phase 3 lands its dedicated components.
     expect(home.appHeaderBackground).toBe(HEADER_PAPER);
     expect(home.appHeaderGradient).toBe('none');
-    expect(home.sectionRailBackground).toBe('rgb(250, 248, 252)');
+    expect(home.sectionRailBackground).toBe(HEADER_PAPER);
     expect(home.sectionRailRadius).toBe('0px');
     expect(home.workWindowBackground).toBe('rgba(0, 0, 0, 0)');
     expect(home.workWindowRadius).toBe('0px');
@@ -99,7 +99,7 @@ test.describe('Lightfully screen contract', () => {
         };
       });
 
-      // Worksheets are white paper on a sunken mint tab strip.
+      // Worksheets are warm-white paper with a pale lavender tab strip.
       expect(contract.panel.backgroundColor).toBe(WHITE);
       expect(contract.tabbar.backgroundColor).toBe(LAVENDER_50);
       expect(contract.panel.fontFamily).toMatch(/^"Inter Variable"/);
@@ -114,7 +114,7 @@ test.describe('Lightfully screen contract', () => {
 
   test('reserves coral for the primary action and never for clinical status', async ({ page }) => {
     await page.goto('/');
-    // Coral is Tebra's accent and sits close to a clinical warning hue, so the
+    // Coral is an action accent and sits close to a clinical warning hue, so the
     // redesign reserves it for the single primary action per screen. A status
     // surface painted coral would be the regression this guards against.
     await expect(page.locator('.cd2004-worklist-new')).toHaveCSS(

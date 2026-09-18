@@ -698,11 +698,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administeredDisposition).toHaveClass(/is-selected/);
     await expect(administeredDisposition).toHaveCSS(
       'background-color',
-      'rgb(235, 240, 239)'
+      'rgb(232, 225, 240)'
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
-      'rgb(31, 111, 92)'
+      'rgb(49, 92, 66)'
     );
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
@@ -1074,7 +1074,7 @@ test.describe('MA Workstation browser journeys', () => {
     });
     await expect(currentLookupRow).toHaveAttribute('aria-selected', 'true');
     await page.mouse.move(0, 0);
-    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(235, 240, 239)');
+    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(232, 225, 240)');
     await lookup.getByRole('searchbox', { name: 'Find value' }).press('Enter');
     await expect(reason).toHaveValue('prn');
     await expect(page.locator('[data-toast]')).toContainText(
@@ -1632,7 +1632,7 @@ test.describe('MA Workstation browser journeys', () => {
     // persistence remains a separate status in the rail and action bar.
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(252, 249, 245)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 254, 250)');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -1651,10 +1651,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(mismatch).toBeVisible();
     await expect(mismatch).toContainText('Bravo, Patient');
     await expect(mismatch).toHaveCSS('background-color', 'rgb(253, 243, 226)');
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(252, 249, 245)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 254, 250)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(252, 249, 245)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 254, 250)');
     await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');
@@ -3267,8 +3267,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(bup).toHaveText('NEG');
     await bup.press('ArrowDown');
     await page.mouse.move(0, 0);
-    await expect(bup).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-    await expect(bup).toHaveCSS('color', 'rgb(31, 111, 92)');
+    await expect(bup).toHaveCSS('background-color', 'rgb(255, 254, 250)');
+    await expect(bup).toHaveCSS('color', 'rgb(49, 92, 66)');
     const mtd = panel.locator('.wfp-grid-row', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
     await expect(mtd).toBeFocused();
     await mtd.press('p');

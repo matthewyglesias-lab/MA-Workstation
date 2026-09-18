@@ -165,7 +165,7 @@ test.describe('Phase 3a global Open Notes conventions', () => {
     const headerColors = await table.locator('thead th').evaluateAll((headers) =>
       headers.map((header) => getComputedStyle(header).backgroundColor)
     );
-    expect(new Set(headerColors)).toEqual(new Set(['rgb(210, 220, 218)']));
+    expect(new Set(headerColors)).toEqual(new Set(['rgb(220, 214, 229)']));
 
     const rows = table.locator('tbody [data-records-open]');
     await expect(rows).toHaveCount(SYNTHETIC_INJECTION_RECORDS.length);

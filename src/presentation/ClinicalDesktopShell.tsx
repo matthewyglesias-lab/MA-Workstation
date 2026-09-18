@@ -1424,7 +1424,7 @@ export function ClinicalDesktopShell({
           one fact it uniquely carried, that a note is open for someone else,
           moved into the chart header.
         */}
-        {!chartOpen && !kioskVisible && selectedWorkflow !== "home" && (
+        {!chartOpen && !kioskVisible && (
         <PatientBanner
           patient={patient}
           workflowPatient={workflowPatient}

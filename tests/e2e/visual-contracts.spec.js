@@ -296,52 +296,45 @@ async function collectVisualContract(page, workflow) {
 function expectedContract(workflow, viewport) {
   const module = WORKFLOWS[workflow];
   const isHome = workflow === 'home';
-  const compact = viewport.width <= 919;
-  const titlebarHeight = compact ? '56px' : '65px';
-  const windowTitlebarMinHeight = compact ? '42px' : '48px';
-  const headingFontSize = compact ? '21px' : '32px';
-  const headingLineHeight = compact ? '28px' : '40px';
-
+  const compact = viewport.width <= 949;
+  // Intentional shell redesign: assert the new typography, surfaces, and
+  // hierarchy precisely. Geometry, focus visibility, and containment retain
+  // the same strict acceptance criteria as the original workstation.
   return {
     workflow,
     activeWorkflow: workflow,
     workTitle: isHome ? 'Dashboard' : `${module.label} note`,
     heading: {
       text: module.headingText,
-      tag: isHome ? 'H1' : 'H2',
+      tag: 'H2',
       style: {
-        // Cream on the Dashboard's teal band; teal-900 on the workflow
-        // headings, which still sit on a light surface.
-        color: isHome ? 'rgb(248, 243, 235)' : 'rgb(0, 58, 67)',
-        fontFamily: expect.stringMatching(/^"Plus Jakarta Sans Variable"/),
-        fontSize: isHome ? headingFontSize : '16px',
-        fontWeight: '700',
-        lineHeight: isHome ? headingLineHeight : '18.4px'
+        color: 'rgb(40, 40, 63)',
+        fontFamily: expect.stringMatching(/^Georgia/),
+        fontSize: compact ? '23px' : '24px',
+        fontWeight: '400',
+        lineHeight: '30px'
       }
     },
     chrome: {
       shell: {
-        backgroundColor: 'rgb(251, 249, 248)',
+        backgroundColor: 'rgb(239, 236, 246)',
         fontFamily: expect.stringMatching(/^"Inter Variable"/),
-        fontSize: '16px',
+        fontSize: '14px',
         overflow: 'hidden'
       },
       applicationTitlebar: {
-        color: 'rgb(248, 243, 235)',
-        height: titlebarHeight,
-        backgroundColor: 'rgb(0, 72, 82)',
+        color: 'rgb(40, 40, 63)',
+        height: compact ? '64px' : '72px',
+        backgroundColor: 'rgb(255, 254, 250)',
         backgroundImage: 'none',
         usesGradient: false
       },
       activeWindow: {
-        // Phase 4 moved the work panel onto Tebra's card radius. 4px is one of
-        // their real radii, but it is the one they spend on chips and inputs;
-        // the panel a whole screen of work sits in is a card, and reads as one.
-        borderRadius: '16px',
+        borderRadius: '0px',
         borderTopWidth: '0px',
         borderRightWidth: '0px',
-        titlebarColor: 'rgb(0, 58, 67)',
-        titlebarMinHeight: windowTitlebarMinHeight,
+        titlebarColor: 'rgb(40, 40, 63)',
+        titlebarMinHeight: viewport.width <= 919 ? '42px' : '48px',
         titlebarUsesGradient: false,
         titlebarUsesNavy: false
       }
@@ -355,33 +348,25 @@ function expectedContract(workflow, viewport) {
     },
     surface: {
       panelVisible: true,
-      layoutDisplay: 'grid',
+      layoutDisplay: 'flex',
       topLevelColumns: 1,
       horizontalOverflow: false,
       panelHorizontalOverflow: false,
-      // The Dashboard hero is a deep-teal band with cream type. Counting
-      // Tebra's own production CSS, #004952 is their second most used
-      // background after white and #f8f3eb their second most used text
-      // colour - cream exists to sit on that teal, and alternating teal
-      // against white is the most recognisable thing about how they look. A
-      // white hero here made the first screen of the shift read as any SaaS
-      // product. Still flush and square: it is a section band, not a card.
       hero: {
-        backgroundColor: isHome ? 'rgb(0, 73, 82)' : 'rgb(246, 248, 248)',
-        borderBottomColor: isHome ? 'rgb(248, 243, 235)' : 'rgb(210, 220, 218)',
+        backgroundColor: 'rgb(255, 254, 250)',
+        borderBottomColor: 'rgb(40, 40, 63)',
         borderRadius: '0px',
         boxShadow: 'none',
         hasRelief: false
       },
-      // Tebra's control grammar: a soft radius, a hairline border, and no bezel.
       representativeSquare: false,
       representativeFlat: true,
       representativeHasRelief: false,
       controlSquare: false,
-      focusedControlBorder: 'rgb(255, 141, 110)',
+      focusedControlBorder: 'rgb(239, 173, 151)',
       focusedControlHasGlow: false,
       focusedControlOutline: {
-        color: 'rgb(0, 73, 82)',
+        color: 'rgb(52, 48, 71)',
         style: 'solid',
         width: '2px'
       },
