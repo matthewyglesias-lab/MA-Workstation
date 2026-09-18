@@ -1,16 +1,15 @@
-name: Apply and verify standalone shell
+name: Standalone shell acceptance
 on:
   push:
     branches: [codex/lightfully-standalone-rebuild]
-    paths: ['.github/lightfully-rebuild-data/**', '.github/workflows/lightfully-rebuild-apply.yml']
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: lightfully-rebuild-apply
-  cancel-in-progress: false
+  group: lightfully-rebuild-acceptance
+  cancel-in-progress: true
 jobs:
-  apply:
+  verify:
     if: github.ref == 'refs/heads/codex/lightfully-standalone-rebuild'
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -19,25 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: codex/lightfully-standalone-rebuild
           fetch-depth: 0
-      - name: Verify and apply reviewed UI patch
-        run: |
-          python3 - <<'PY'
-          import base64, hashlib, lzma, pathlib, subprocess
-          parts = sorted(pathlib.Path('.github/lightfully-rebuild-data').glob('*.part'))
-          assert len(parts) == 5
-          patch = lzma.decompress(base64.b64decode(''.join(p.read_text() for p in parts)))
-          assert hashlib.sha256(patch).hexdigest() == 'b99b84b7267d7b7b1c3c0ea007d0df9ef6c8b36a5628ab457ee0981b6da7712d'
-          path = pathlib.Path('/tmp/lightfully-reviewed.patch')
-          path.write_bytes(patch)
-          check = subprocess.run(['git','apply','--check',str(path)], capture_output=True)
-          if check.returncode == 0:
-              subprocess.run(['git','apply',str(path)],check=True)
-          else:
-              subprocess.run(['git','apply','--reverse','--check',str(path)],check=True)
-              print('Reviewed patch already applied; verifying current source.')
-          PY
       - name: Confirm clinical and print boundary
         run: git diff --exit-code 28ae520bb51161ef3eb4b3642071007601b9f64e -- public/legacy src/legacy src/domain src/application src/persistence src/documentation tests/fixtures
       - uses: actions/setup-node@v4
@@ -45,47 +26,62 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Record dependency audit without silently changing the baseline
+        run: npm audit --json > dependency-audit.json || true
       - run: npm run check
       - run: npm run test:unit
       - run: npm run build
-      - name: Commit verified source on isolated branch
+      - name: Package self-contained workstation
+        run: node scripts/package-standalone.mjs
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Full browser suite and intentional screen rebaseline
+        id: screens
+        continue-on-error: true
+        run: npx playwright test --update-snapshots
+      - name: Preserve first browser report
+        if: always()
+        run: |
+          test ! -d playwright-report || cp -R playwright-report browser-report
+          test ! -d test-results || cp -R test-results browser-results
+      - name: Verify native single-file startup and persistence
+        id: native
+        continue-on-error: true
+        run: TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js
+      - name: Commit screen baselines only after passing all behavioral checks
+        if: steps.screens.outcome == 'success'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src tests scripts docs
-          if ! git diff --cached --quiet; then
-            git commit -m 'feat: rebuild standalone MA workstation with Lightfully shell'
-            git push origin HEAD:codex/lightfully-standalone-rebuild
-          fi
-      - name: Package self-contained workstation
-        run: GITHUB_SHA=$(git rev-parse HEAD) node scripts/package-standalone.mjs
-      - name: Install exact Chromium renderer
-        run: npx playwright install --with-deps chromium
-      - name: Intentional screen rebaseline with unchanged clinical and layout assertions
-        run: npx playwright test --update-snapshots
-      - name: Commit reviewed screen baselines
-        run: |
           git add tests/e2e
           if ! git diff --cached --quiet; then
-            git commit -m 'test: baseline Lightfully screens after complete browser suite'
+            git commit -m 'test: baseline Lightfully screens after full browser regression'
             git push origin HEAD:codex/lightfully-standalone-rebuild
           fi
       - name: Reproduce browser and print results without rebaseline
+        if: steps.screens.outcome == 'success'
         run: npx playwright test
-      - name: Verify native single-file startup and persistence
-        run: TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js
       - name: Archive exact source
         if: always()
         run: git archive --format=zip --output=lightfully-source.zip HEAD
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: lightfully-rebuild-review
+          name: lightfully-acceptance-review
           path: |
             dist/
             standalone/
+            browser-report/
+            browser-results/
             playwright-report/
             test-results/
+            tests/e2e/*-snapshots/
             lightfully-source.zip
+            dependency-audit.json
           retention-days: 7
           if-no-files-found: warn
+      - name: Enforce behavioral and native results
+        if: always()
+        run: |
+          test '${{ steps.screens.outcome }}' = 'success'
+          test '${{ steps.native.outcome }}' = 'success'
