@@ -28,7 +28,11 @@ export function SectionRail({ selectedWorkflow, onWorkflowOpen, onDocumentServic
     .forEach(menu => { menu.open = false; });
   useEffect(() => {
     const dismissOutside = (event: Event) => {
-      if (event.target instanceof Node && !nav.current?.contains(event.target)) closeMenus();
+      if (!(event.target instanceof Node)) return;
+      const target = event.target;
+      nav.current?.querySelectorAll<HTMLDetailsElement>("details[open]").forEach(menu => {
+        if (!menu.contains(target)) menu.open = false;
+      });
     };
     const escape = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.key !== "Escape" || document.querySelector("dialog[open]")) return;
@@ -46,7 +50,20 @@ export function SectionRail({ selectedWorkflow, onWorkflowOpen, onDocumentServic
   }, []);
   const go = (workflow: WorkflowId) => { closeMenus(); onWorkflowOpen(workflow); };
 
-  return <nav ref={nav} class="cd2004-navigator tebra-section-rail lf-section-rail cd2004-print-exclude" aria-label="Workspace navigation">
+  return <nav ref={nav} class="cd2004-navigator tebra-section-rail lf-section-rail cd2004-print-exclude" aria-label="Workspace navigation" onKeyDown={event => {
+    const target = event.target as HTMLElement;
+    const menu = target.closest<HTMLDetailsElement>("details.lf-header-disclosure");
+    if (!menu || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = Array.from(menu.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+    if (!items.length) return;
+    event.preventDefault(); event.stopPropagation();
+    const index = items.indexOf(target as HTMLButtonElement);
+    if (!menu.open) { closeMenus(); menu.open = true; }
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 :
+      index < 0 ? (event.key === "ArrowUp" ? items.length - 1 : 0) :
+      (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    items[next]?.focus();
+  }}>
     <div class="lf-masthead-brand"><IPMGBrand /></div>
     <div class="lf-primary-navigation">
       <button type="button" class={`cd2004-nav-item${selectedWorkflow === "home" && !activeChartView ? " is-selected" : ""}`}

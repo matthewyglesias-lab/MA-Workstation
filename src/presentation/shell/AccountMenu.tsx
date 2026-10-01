@@ -3,141 +3,42 @@ import { ACCOUNT, KIOSK, PATIENT, SHELL } from "../vocabulary";
 import { MenuButton } from "./MenuButton";
 
 interface AccountMenuProps {
-  staffLabel: string;
-  locationLabel: string;
-  onOpenStaff?: () => void;
-  onOpenLocation?: () => void;
-  onOpenShortcuts?: () => void;
-  kioskMode?: boolean;
-  onToggleKiosk?: () => void;
+  staffLabel: string; locationLabel: string;
+  onOpenStaff?: () => void; onOpenLocation?: () => void;
+  onOpenShortcuts?: () => void; kioskMode?: boolean; onToggleKiosk?: () => void;
 }
 
-/**
- * Who is signed in and where, as a menu — Tebra's own top-right user control.
- *
- * This is where the retired menu bar's genuinely homeless commands landed.
- * Everything else it held already had a Tebra-native home: Save and Sign are
- * on the note, Open Notes and the note types are in the section rail, New Note
- * is the action bar's split control. Only staff sign-in and visit location had
- * nowhere else to be, and in Tebra those are account-level settings reached
- * from exactly here.
- */
-export function AccountMenu({
-  staffLabel,
-  locationLabel,
-  onOpenStaff,
-  onOpenLocation,
-  onOpenShortcuts,
-  kioskMode = false,
-  onToggleKiosk,
-}: AccountMenuProps) {
-  return (
-    <MenuButton
-      label={staffLabel}
-      menuLabel={ACCOUNT.label}
-      trigger="quiet"
-      class="tebra-account-trigger"
-      icon={
-        <span class="tebra-account-avatar" aria-hidden="true">
-          <DesktopIcon name="staff" />
-        </span>
-      }
-    >
-      {(dismiss) => (
-        <>
-          <p class="tebra-account-identity" role="none">
-            <strong>{staffLabel}</strong>
-            <small>{locationLabel}</small>
-          </p>
-          <button
-            type="button"
-            role="menuitem"
-            data-account-action="staff"
-            disabled={!onOpenStaff}
-            onClick={() => {
-              dismiss();
-              onOpenStaff?.();
-            }}
-          >
-            {ACCOUNT.staffSignIn}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            data-account-action="location"
-            disabled={!onOpenLocation}
-            onClick={() => {
-              dismiss();
-              onOpenLocation?.();
-            }}
-          >
-            {ACCOUNT.visitLocation}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            data-account-action="shortcuts"
-            disabled={!onOpenShortcuts}
-            onClick={() => {
-              // Focus returns to the trigger before the dialog opens, so the
-              // dialog captures the trigger as its return target rather than
-              // the menu item that is about to unmount.
-              dismiss();
-              onOpenShortcuts?.();
-            }}
-          >
-            {SHELL.shortcuts}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            data-account-action="kiosk"
-            disabled={!onToggleKiosk}
-            onClick={() => {
-              dismiss();
-              onToggleKiosk?.();
-            }}
-          >
-            {kioskMode ? KIOSK.exitMode : KIOSK.enterMode}
-          </button>
-          {/*
-            The provenance line, in the menu that names the account. This app
-            has no server; the more faithfully it reads as a real EHR the more
-            it needs to say so where someone checking "am I signed in?" will
-            see it.
-          */}
-          <p class="tebra-account-scope" role="none">
-            {SHELL.localOnlyDetail}
-          </p>
-        </>
-      )}
-    </MenuButton>
-  );
+/** Local context, not authentication. All mutations remain caller-owned. */
+export function AccountMenu({ staffLabel, locationLabel, onOpenStaff, onOpenLocation,
+  onOpenShortcuts, kioskMode = false, onToggleKiosk }: AccountMenuProps) {
+  const displayStaff = staffLabel === PATIENT.notSignedIn ? "Staff name" : staffLabel;
+  const actions = [
+    { id: "staff", label: "Documenting staff", invoke: onOpenStaff },
+    { id: "location", label: ACCOUNT.visitLocation, invoke: onOpenLocation },
+    { id: "shortcuts", label: SHELL.shortcuts, invoke: onOpenShortcuts },
+    { id: "kiosk", label: kioskMode ? KIOSK.exitMode : KIOSK.enterMode, invoke: onToggleKiosk },
+  ];
+  return <MenuButton label={displayStaff} menuLabel={ACCOUNT.label} trigger="quiet"
+    class="tebra-account-trigger" icon={<span class="tebra-account-avatar" aria-hidden="true"><DesktopIcon name="staff" /></span>}>
+    {dismiss => <>
+      <p class="tebra-account-identity" role="none"><strong>{displayStaff}</strong><small>{locationLabel}</small></p>
+      {actions.map(action => <button key={action.id} type="button" role="menuitem"
+        data-account-action={action.id} disabled={!action.invoke}
+        onClick={() => {
+          // Restore the stable trigger before the next dialog captures its opener.
+          dismiss(); action.invoke?.();
+        }}>{action.label}</button>)}
+      <p class="tebra-account-scope" role="none">{SHELL.localOnlyDetail}</p>
+    </>}
+  </MenuButton>;
 }
 
-interface WorkspaceBadgeProps {
-  localStorageAvailable: boolean;
+/** Locality and failed storage must remain visible, including on small screens. */
+export function WorkspaceBadge({ localStorageAvailable }: { localStorageAvailable: boolean }) {
+  return <span class={`tebra-workspace-badge ${localStorageAvailable ? "is-local" : "is-error"}`}
+    data-workspace-badge={localStorageAvailable ? "local" : "storage-error"}
+    title={localStorageAvailable ? SHELL.localOnlyDetail : SHELL.storageUnavailable}>
+    {localStorageAvailable ? SHELL.localOnlyBadge : SHELL.storageError}
+  </span>;
 }
-
-/**
- * The always-visible provenance badge.
- *
- * It also carries the storage-failure state, which used to live in the status
- * bar. That bar is gone, and a browser that cannot save must never fail
- * quietly: staff would keep documenting into a note that is not being kept.
- */
-export function WorkspaceBadge({ localStorageAvailable }: WorkspaceBadgeProps) {
-  return (
-    <span
-      class={`tebra-workspace-badge ${localStorageAvailable ? "is-local" : "is-error"}`}
-      data-workspace-badge={localStorageAvailable ? "local" : "storage-error"}
-      title={localStorageAvailable ? SHELL.localOnlyDetail : SHELL.storageUnavailable}
-    >
-      {localStorageAvailable ? SHELL.localOnlyBadge : SHELL.storageError}
-    </span>
-  );
-}
-
-/** Not exported for use elsewhere; kept beside the badge it labels. */
-export const accountLocationLabel = (location: string): string =>
-  location.trim() || PATIENT.noLocation;
+export const accountLocationLabel = (location: string): string => location.trim() || PATIENT.noLocation;

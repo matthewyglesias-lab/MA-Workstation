@@ -61,7 +61,7 @@ export function DailyCloseoutPanel() {
   };
 
   return (
-    <div class="wfp-panel cd2004-print-exclude" tabIndex={-1}>
+    <div class="wfp-panel lf-closeout-panel cd2004-print-exclude" tabIndex={-1}>
       <ToolPageHeader title="Daily closeout">
         <span class="wfp-status-flag is-idle">{stats.total} logged today</span>
         <button type="button" class="cd2004-link-button" onClick={() => clickLegacyControl("copyDailySummary")}>

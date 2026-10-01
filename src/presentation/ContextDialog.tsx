@@ -71,11 +71,11 @@ export function ContextDialog({
       onClick={(event) => {
         // A click landing on the dialog element itself is a backdrop click:
         // the content sits in an inner wrapper, so it never targets the host.
-        if (event.target === dialogRef.current) onClose();
+        if (event.target === dialogRef.current && staff === staffValue && location === locationValue) onClose();
       }}
     >
       <div class="cd2004-dialog-frame">
-        <DialogHeading id="cd2004-context-title" title={kind === 'staff' ? 'Staff sign-in' : 'Visit location'} onClose={onClose} />
+        <DialogHeading id="cd2004-context-title" title={kind === 'staff' ? 'Documenting staff' : 'Visit location'} onClose={onClose} />
         <form onSubmit={submit}>
           <div class="cd2004-dialog-body">
             {kind === 'staff' ? (
@@ -90,7 +90,7 @@ export function ContextDialog({
                   }
                 />
                 <small>
-                  Saved in this browser and applied to compatible encounter fields.
+                  This name is saved on this workstation and used in compatible encounter fields. It is not a sign-in or verified signature.
                 </small>
               </label>
             ) : (

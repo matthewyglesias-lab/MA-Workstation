@@ -240,6 +240,7 @@ export function RecordsWindow({
         <div class="records-drawer-head">
           <div>
             <h2 id="recordsDrawerTitle">{NOTES.openNotes}</h2>
+            <p>Injection history · saved on this workstation</p>
           </div>
           <button
             type="button"
@@ -302,12 +303,19 @@ export function RecordsWindow({
           </p>
         )}
 
+        {!storageError && !visible.length && (query.trim() || filter !== "all") && (
+          <div class="lf-records-reset"><button type="button" onClick={() => {
+            setQuery(""); setFilter("all");
+            dialogRef.current?.querySelector<HTMLInputElement>("#recordsDrawerSearch")?.focus();
+          }}>Clear search & filters</button></div>
+        )}
+
         <div class="records-drawer-results" id="recordsDrawerResults">
           {!open ? null : (
             <NotesTable
               rows={visible}
               label={NOTES_TABLE.injectionLabel}
-              emptyMessage={OPEN_NOTES.noMatches}
+              emptyMessage={storageError ? "Saved records need attention. Review the message above before continuing." : records.length ? OPEN_NOTES.noMatches : "No injection records saved here yet. Start a record to build this workstation’s history."}
               onOpen={openRecord}
             />
           )}

@@ -1,3 +1,4 @@
+import { useId, useState } from "preact/hooks";
 import { PATIENT, PATIENT_CARD } from "../vocabulary";
 import type { ChartPatient } from "../patient-chart-model";
 
@@ -19,18 +20,25 @@ interface PatientCardPopupProps {
  * only an explicit Open or New Note crosses into a workflow.
  */
 export function PatientCardPopup({ patient, label }: PatientCardPopupProps) {
+  const id = useId();
+  const [dismissed, setDismissed] = useState(false);
   return (
-    <span class="tebra-patient-card-host">
+    <span class="tebra-patient-card-host" data-card-dismissed={dismissed}
+      onPointerEnter={() => setDismissed(false)} onFocus={() => setDismissed(false)}
+      onKeyDown={event => {
+        if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDismissed(true); }
+      }}>
       <button
         type="button"
         class="tebra-patient-card-trigger"
-        aria-describedby={`patient-card-${patient.key}`}
+        aria-describedby={`patient-card-${id}`}
+        onClick={() => setDismissed(false)}
       >
         {label}
       </button>
       <span
         class="tebra-patient-card"
-        id={`patient-card-${patient.key}`}
+        id={`patient-card-${id}`}
         role="tooltip"
         data-patient-card
       >

@@ -51,9 +51,11 @@ export function MenuButton({
   const menuRef = useRef<HTMLDivElement>(null);
   const pendingFocusRef = useRef<"first" | "last" | null>(null);
   const menuId = useId();
+  const typeahead = useRef({ text: "", at: 0 });
 
   const dismiss = (restoreFocus = true) => {
     pendingFocusRef.current = null;
+    typeahead.current.text = "";
     setOpen(false);
     if (restoreFocus) triggerRef.current?.focus();
   };
@@ -76,6 +78,7 @@ export function MenuButton({
       item.tabIndex = itemIndex === nextIndex ? 0 : -1;
     });
     items[nextIndex]?.focus({ preventScroll: true });
+    items[nextIndex]?.scrollIntoView({ block: "nearest" });
   };
 
   const openAndFocus = (position: "first" | "last") => {
@@ -106,13 +109,18 @@ export function MenuButton({
       if (!hostRef.current?.contains(event.target as Node)) dismiss(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.defaultPrevented || event.key !== "Escape" || document.querySelector("dialog[open]")) return;
       event.stopPropagation();
       dismiss();
     };
+    const onFocusIn = (event: FocusEvent) => {
+      if (event.target instanceof Node && !hostRef.current?.contains(event.target)) dismiss(false);
+    };
+    document.addEventListener("focusin", onFocusIn);
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => {
+      document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
@@ -224,6 +232,20 @@ export function MenuButton({
             if (event.key === "End") {
               event.preventDefault();
               focusMenuItem(items.length - 1);
+              return;
+            }
+            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
+              const now = Date.now();
+              const letter = event.key.toLocaleLowerCase();
+              const previous = now - typeahead.current.at < 600 ? typeahead.current.text : "";
+              const query = previous === letter ? letter : previous + letter;
+              typeahead.current = { text: query, at: now };
+              for (let offset = 1; offset <= items.length; offset++) {
+                const index = (currentIndex + offset + items.length) % items.length;
+                if (items[index]?.textContent?.trim().toLocaleLowerCase().startsWith(query)) {
+                  event.preventDefault(); focusMenuItem(index); break;
+                }
+              }
             }
           }}
         >

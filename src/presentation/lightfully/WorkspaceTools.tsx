@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { createActionGate, nextEnabledCommand } from "./interaction-policy";
 import { ModalDialog } from "../ModalDialog";
 import { DialogHeading } from "./DialogHeading";
 import { DesktopIcon } from "../DesktopIcon";
@@ -74,25 +75,31 @@ function CommandPalette({ commands, onDismiss }: { commands: WorkspaceCommand[];
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
+  const gate = useRef(createActionGate());
   const matches = useMemo(() => filterWorkspaceCommands(commands, query), [commands, query]);
-  const selected = Math.min(active, Math.max(0, matches.length - 1));
+  const selected = matches[active] && !matches[active].disabled ? active : nextEnabledCommand(matches, -1, 1);
   useEffect(() => { input.current?.focus(); }, []);
-  useEffect(() => { document.getElementById(`lf-command-${selected}`)?.scrollIntoView({ block: "nearest" }); }, [selected]);
+  useEffect(() => { document.getElementById(`lf-command-${selected}`)?.scrollIntoView({ block: "nearest" }); }, [selected, query]);
   const invoke = (command?: WorkspaceCommand) => {
-    if (!command || command.disabled) return;
+    if (!command || command.disabled || !gate.current.enter()) return;
     onDismiss();
     // Let the dialog leave the top layer before opening another native dialog.
     requestAnimationFrame(() => command.onInvoke());
   };
   return <ModalDialog class="lf-command-dialog cd2004-print-exclude" labelledBy="lf-command-title" onDismiss={onDismiss}>
     <DialogHeading id="lf-command-title" title="Find a tool" closeLabel="Close command search" onClose={onDismiss} />
-    <div class="lf-command-input"><SearchGlyph/><input ref={input} value={query} placeholder="Search injections, UDS, notes, forms…" aria-label="Search commands" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="lf-command-results" aria-activedescendant={matches.length ? `lf-command-${selected}` : undefined} onInput={(event) => { setQuery(event.currentTarget.value); setActive(0); }} onKeyDown={(event) => {
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setActive((value) => matches.length ? (value + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length : 0); }
+    <div class="lf-command-input"><SearchGlyph/><input ref={input} value={query} placeholder="Search injections, UDS, notes, forms…" aria-label="Search commands" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="lf-command-results" aria-activedescendant={selected >= 0 ? `lf-command-${selected}` : undefined} onInput={(event) => { setQuery(event.currentTarget.value); setActive(0); }} onKeyDown={(event) => {
+      if (event.isComposing) return;
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault(); setActive(nextEnabledCommand(matches, selected, event.key === "ArrowDown" ? 1 : -1));
+      }
+      if (event.key === "Home" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); setActive(nextEnabledCommand(matches, -1, 1)); }
+      if (event.key === "End" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); setActive(nextEnabledCommand(matches, matches.length, -1)); }
       if (event.key === "Enter") { event.preventDefault(); invoke(matches[selected]); }
     }}/><kbd>Esc</kbd></div>
     <div id="lf-command-results" role="listbox" aria-label="Workspace destinations" class="lf-command-results">
-      {matches.map((command, index) => <div key={command.id} id={`lf-command-${index}`} role="option" aria-selected={index === selected} aria-disabled={command.disabled || undefined} class={`lf-command-result${index === selected ? " is-active" : ""}${command.disabled ? " is-disabled" : ""}`} onMouseDown={(event) => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => invoke(command)}>
-        <span class="lf-command-icon"><DesktopIcon name={command.icon}/></span><span><strong>{command.label}</strong><small>{command.description}</small></span><span aria-hidden="true">↗</span>
+      {matches.map((command, index) => <div key={command.id} id={`lf-command-${index}`} role="option" aria-selected={index === selected} aria-disabled={command.disabled || undefined} class={`lf-command-result${index === selected ? " is-active" : ""}${command.disabled ? " is-disabled" : ""}`} onMouseDown={(event) => event.preventDefault()} onMouseEnter={() => { if (!command.disabled) setActive(index); }} onClick={() => invoke(command)}>
+        <span class="lf-command-icon"><DesktopIcon name={command.icon}/></span><span><strong>{command.label}</strong><small>{command.description}</small></span><span class="lf-command-availability" aria-hidden="true">{command.disabled ? "Unavailable here" : "↗"}</span>
       </div>)}
       {!matches.length && <p class="lf-command-empty" role="status">No matching tools. Try “notes,” “samples,” or “injection.”</p>}
     </div>

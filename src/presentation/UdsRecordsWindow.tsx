@@ -209,6 +209,7 @@ export function UdsRecordsWindow({
         <div class="records-drawer-head">
           <div>
             <h2 id="udsRecordsDrawerTitle">{OPEN_NOTES.udsTitle}</h2>
+            <p>Drug screen history · saved on this workstation</p>
           </div>
           <button
             type="button"
@@ -267,12 +268,18 @@ export function UdsRecordsWindow({
           </p>
         )}
 
+        {!storageError && !visible.length && (query.trim() || filter !== "all") && (
+          <div class="lf-records-reset"><button type="button" onClick={() => {
+            setQuery(""); setFilter("all");
+            dialogRef.current?.querySelector<HTMLInputElement>("#udsRecordsDrawerSearch")?.focus();
+          }}>Clear search & filters</button></div>
+        )}
         <div class="records-drawer-results" id="udsRecordsDrawerResults">
           {!open ? null : (
             <NotesTable
               rows={visible}
               label={NOTES_TABLE.udsLabel}
-              emptyMessage={OPEN_NOTES.noUdsMatches}
+              emptyMessage={storageError ? "Saved records need attention. Review the message above before continuing." : records.length ? OPEN_NOTES.noUdsMatches : "No drug screen records saved here yet. Start a record to build this workstation’s history."}
               onOpen={openRecord}
             />
           )}

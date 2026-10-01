@@ -1,3 +1,4 @@
+import { createActionGate } from "./lightfully/interaction-policy";
 import { DialogHeading } from "./lightfully/DialogHeading";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
@@ -49,6 +50,8 @@ export function RecordActionDialog({
   onClose,
 }: RecordActionDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const actionGate = useRef(createActionGate());
+  const close = () => { if (!actionGate.current.pending) onClose(); };
   const keepEditingRef = useRef<HTMLButtonElement>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -71,7 +74,7 @@ export function RecordActionDialog({
   }, []);
 
   const confirm = async () => {
-    if (submitting || (isAttestation && !acknowledged)) return;
+    if ((isAttestation && !acknowledged) || !actionGate.current.enter()) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -86,6 +89,7 @@ export function RecordActionDialog({
     } catch {
       setError(isAttestation ? RECORD.signFailed : RECORD.discardFailed);
     } finally {
+      actionGate.current.release();
       setSubmitting(false);
     }
   };
@@ -96,16 +100,17 @@ export function RecordActionDialog({
       class="cd2004-dialog-layer cd2004-dialog cd2004-record-action-dialog"
       aria-labelledby="cd2004-record-action-title"
       aria-describedby="cd2004-record-action-description"
+      aria-busy={submitting}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        close();
       }}
       onClick={(event) => {
-        if (event.target === dialogRef.current) onClose();
+        if (event.target === dialogRef.current) close();
       }}
     >
       <div class="cd2004-dialog-frame">
-        <DialogHeading id="cd2004-record-action-title" title={title} closeLabel={RECORD.closeConfirmation} onClose={onClose} />
+        <DialogHeading id="cd2004-record-action-title" title={title} closeLabel={RECORD.closeConfirmation} onClose={close} closeDisabled={submitting} />
         <div class="cd2004-dialog-body" id="cd2004-record-action-description">
           {isAttestation ? (
             <>
@@ -171,7 +176,7 @@ export function RecordActionDialog({
             ref={keepEditingRef}
             type="button"
             disabled={submitting}
-            onClick={onClose}
+            onClick={close}
           >
             {isAttestation ? RECORD.backToEditing : RECORD.keepEditing}
           </button>

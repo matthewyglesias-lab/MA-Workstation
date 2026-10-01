@@ -66,7 +66,7 @@ export function KnowledgePanel() {
   const selected = results.find((entry) => entry.id === selectedId) ?? results[0] ?? null;
 
   return (
-    <div class="wfp-panel cd2004-print-exclude" tabIndex={-1}>
+    <div class="wfp-panel lf-reference-panel cd2004-print-exclude" tabIndex={-1}>
       <ToolPageHeader title="Reference">
         <span class="wfp-status-flag is-idle">{results.length} entries</span>
       </ToolPageHeader>
@@ -77,12 +77,23 @@ export function KnowledgePanel() {
         or lab policy.
       </p>
 
-      <div class="wfp-tabbar" role="tablist">
+      <div class="wfp-tabbar" role="tablist" aria-label="Reference categories" onKeyDown={event => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const current = KNOWLEDGE_CATEGORIES.findIndex(entry => entry.key === category);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? KNOWLEDGE_CATEGORIES.length - 1 :
+          (current + (event.key === "ArrowRight" ? 1 : -1) + KNOWLEDGE_CATEGORIES.length) % KNOWLEDGE_CATEGORIES.length;
+        setCategory(KNOWLEDGE_CATEGORIES[next]!.key);
+        event.currentTarget.querySelectorAll<HTMLButtonElement>("button")[next]?.focus();
+      }}>
         {KNOWLEDGE_CATEGORIES.map((entry) => (
           <button
             key={entry.key}
             type="button"
             role="tab"
+            id={`lf-reference-category-${entry.key}`}
+            aria-controls="lf-reference-results"
+            tabIndex={category === entry.key ? 0 : -1}
             class="wfp-tab"
             aria-selected={category === entry.key}
             onClick={() => setCategory(entry.key)}
@@ -92,12 +103,13 @@ export function KnowledgePanel() {
         ))}
       </div>
 
-      <div class="wfp-tabpanel" role="tabpanel">
+      <div class="wfp-tabpanel" role="tabpanel" id="lf-reference-results" aria-labelledby={`lf-reference-category-${category}`}>
         <div class="wfp-section">
           <div class="wfp-section-head">Search</div>
           <div class="wfp-section-body">
             <div class="wfp-field">
               <input
+                type="search"
                 value={query}
                 aria-label="Search clinical reference"
                 placeholder="Search LAIs, UDS panels, samples, TMS…"
@@ -139,6 +151,10 @@ export function KnowledgePanel() {
               <div class="wfp-wall">
                 <div class="wfp-wall-title">No matching entries</div>
                 <p>Try a different search term or category.</p>
+                <button type="button" class="lf-reference-clear" onClick={() => {
+                  setQuery(""); setCategory("all"); setSelectedId(null);
+                  document.querySelector<HTMLInputElement>('[aria-label="Search clinical reference"]')?.focus();
+                }}>Clear search & category</button>
               </div>
             )}
           </div>
