@@ -1,0 +1,51 @@
+name: Lightfully reference review
+on:
+  push:
+    branches: [codex/ipmg-local-workstation-refinement]
+    paths: [.github/workflows/lightfully-reference-review.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Archive exact source and history for local verification
+        run: |
+          mkdir -p design-review
+          git archive --format=tar HEAD | gzip > design-review/source.tar.gz
+          git bundle create design-review/review.bundle HEAD refs/remotes/origin/main
+          git rev-parse HEAD > design-review/COMMIT.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium
+      - name: Read public design reference (no patient data or submissions)
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'JS'
+          import { chromium } from '@playwright/test';
+          import fs from 'node:fs/promises';
+          const browser = await chromium.launch({headless:true});
+          const page = await browser.newPage({viewport:{width:1440,height:1000}});
+          await page.goto('https://lightfully.com/',{waitUntil:'domcontentloaded',timeout:60000});
+          await page.waitForTimeout(4000);
+          await page.screenshot({path:'design-review/lightfully-reference.png',fullPage:true});
+          const styles = await page.evaluate(() => [...document.querySelectorAll('h1,h2,h3,button,a.et_pb_button,body,.et_pb_section')].slice(0,90).map(el=>{const s=getComputedStyle(el);return {tag:el.tagName,text:el.textContent.trim().slice(0,100),font:s.fontFamily,size:s.fontSize,weight:s.fontWeight,color:s.color,background:s.backgroundColor,border:s.borderRadius,letterSpacing:s.letterSpacing}}));
+          await fs.writeFile('design-review/reference-styles.json',JSON.stringify(styles,null,2));
+          await browser.close();
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lightfully-design-source-review
+          path: design-review/
+          retention-days: 3
+          if-no-files-found: error
