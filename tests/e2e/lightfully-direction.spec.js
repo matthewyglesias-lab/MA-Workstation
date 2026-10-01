@@ -51,6 +51,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
     await expect(page.locator('[data-injection-finish]')).toBeDisabled();
     await page.clock.runFor(4500);
     await noHorizontalOverflow(page);
+    const visibleEditor = await page.locator('.wfp-transaction-page').evaluate(el => {
+      const r = el.getBoundingClientRect();
+      const p = el.closest('.wfp-panel').getBoundingClientRect();
+      return Math.min(r.bottom, p.bottom) - Math.max(r.top, p.top);
+    });
+    expect(visibleEditor).toBeGreaterThanOrEqual(150);
     await capture(page, info, '03-injection');
     for (const [index, tab] of (await panel.getByRole('tab').all()).entries()) {
       await tab.click();
@@ -65,7 +71,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
     await expect(panel.locator('[data-field-path="patient.name"] input')).toHaveValue('Design review, Synthetic');
     await expect(page.locator('[data-injection-finish]')).toBeDisabled();
     await page.getByRole('button', { name: 'Open focused injection workspace', exact: true }).click();
-    await expect(page.locator('[data-kiosk-step]')).toHaveCount(7);
+    await expect(page.locator('.kiosk-stepper [data-kiosk-step]')).toHaveCount(7);
     await capture(page, info, '06-focus');
     await page.getByRole('button', { name: 'Exit injection focus', exact: true }).click();
     expect(errors).toEqual([]);

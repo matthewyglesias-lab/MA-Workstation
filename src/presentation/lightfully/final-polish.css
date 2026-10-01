@@ -69,7 +69,7 @@
   #lf-workstation .kiosk-patient-facts dt {color:var(--lf-muted);font:400 11px/18px var(--tw-font-sans);letter-spacing:0;text-transform:none;}
   #lf-workstation .kiosk-patient-facts > div {border-right-color:var(--lf-line);}
   #lf-workstation .kiosk-patient-facts dd {color:var(--lf-ink);font:500 13px/20px var(--tw-font-sans);}
-  #lf-workstation .kiosk-shell-actions button {color:var(--lf-ink);border-color:var(--lf-control-border);border-radius:8px;background:#fff;font:500 12px/18px var(--tw-font-sans);}
+  #lf-workstation .kiosk-shell-actions button {color:var(--lf-ink);border-color:var(--lf-control-border);border-radius:8px;background:#fff;font:500 12px/20px var(--tw-font-sans);}
   #lf-workstation .kiosk-shell-actions button:hover {background:#edf4f6;}
   /* Lock remains explicit and non-dismissible; appearance is not authentication. */
   body:has(#lf-workstation) .cd2004-lock-card {width:min(440px,calc(100vw - 48px));padding:30px;border:1px solid var(--lf-line);border-radius:16px;background:#fff;color:var(--lf-ink);box-shadow:0 24px 70px rgb(27 49 65 / 17%);}
@@ -93,5 +93,59 @@
   }
   @media (prefers-reduced-motion:reduce) {
     body:has(#lf-workstation) :is(.cd2004-help-dialog,.cd2004-lock-card,.lf-command-dialog) {animation:none;transition:none;}
+  }
+}
+
+/* Render-reviewed working geometry. Keep patient context; spend pixels on work. */
+@media screen {
+  #lf-workstation.lf-workstation .lf-section-rail {min-height:64px;padding-block:8px;}
+  #lf-workstation .tebra-app-header-main {height:40px;min-height:40px;}
+  #lf-workstation .cd2004-patient-banner {min-height:60px;padding-block:8px;}
+  #lf-workstation .lf-service-header {padding-block:12px 10px;gap:8px 20px;}
+  #lf-workstation .lf-service-heading {display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 16px;min-width:0;}
+  #lf-workstation .lf-service-heading h1 {margin:0;}
+  #lf-workstation .lf-service-heading .lf-form-legend {margin:0;}
+  #lf-workstation .wfp-panel .wfp-tabpanel {max-width:none;margin-inline:0;}
+  #lf-workstation .wfp-panel .wfp-row {margin-bottom:0;}
+  #lf-workstation .wfp-panel .wfp-section {padding-block:18px 22px;}
+  #lf-workstation .wfp-panel > .wfp-tabbar {padding-inline:var(--lf-gutter);}
+  #lf-workstation .wfp-transaction-page > .wfp-operator-guidance {max-width:none;margin-inline:0;}
+  #lf-workstation .wfp-transaction-page > .wfp-field-hint {max-width:none;}
+  #lf-workstation .lf-tool-page-header {padding-inline:var(--lf-gutter);}
+  #lf-workstation .lf-tool-page-header h1 {color:var(--lf-leaf);}
+  #lf-workstation .tebra-facesheet-banner {border:0;border-bottom:1px solid var(--lf-line);background:#f8f5f1;}
+  #lf-workstation .tebra-facesheet-name {font:400 29px/1.2 var(--lf-display);color:var(--lf-leaf);}
+  #lf-workstation .tebra-summary-card {border:1px solid var(--lf-line);border-radius:6px;box-shadow:none;}
+  #lf-workstation .tebra-summary-card-head {background:#f2f5f3;border-bottom:1px solid var(--lf-line);}
+  #lf-workstation .tebra-summary-card-head h3 {font:400 21px/27px var(--lf-display);color:var(--lf-leaf);}
+  #lf-workstation .tebra-summary-card-body {font:400 13px/21px var(--tw-font-sans);color:var(--lf-ink);}
+  #lf-workstation .cd2004-note-ident :is(dt,dd) {font-family:var(--tw-font-sans);}
+  #lf-workstation .cd2004-note-ident dd {font-size:12px;}
+  body:has(#lf-workstation) .notes-table thead th {background:var(--lf-lavender);}
+  #lf-workstation .lf-service-shortcut:disabled {color:var(--lf-muted);cursor:not-allowed;}
+  @media (max-width:1179px) {
+    #lf-workstation.lf-workstation .lf-section-rail {min-height:60px;padding-block:7px;}
+  }
+  @media (max-width:949px) {
+    #lf-workstation .ipmg-product-name {display:none;}
+    #lf-workstation.lf-workstation .lf-section-rail {min-height:56px;padding-block:6px;}
+    #lf-workstation .lf-service-header {padding-block:10px 8px;gap:6px 12px;}
+    #lf-workstation .lf-service-header-actions {gap:12px;}
+    #lf-workstation .lf-service-heading {gap:2px 12px;}
+    #lf-workstation .wfp-summary-print-avs[data-patient-screening-print=summary] {font-size:0;flex:0 0 36px;width:36px;min-width:36px;padding:8px;gap:0;overflow:hidden;}
+    #lf-workstation .wfp-summary-print-avs[data-patient-screening-print=summary] svg {width:16px;height:16px;flex:0 0 16px;}
+  }
+  @media (max-height:700px) {
+    #lf-workstation.lf-workstation .lf-section-rail {min-height:52px;padding-block:5px;}
+    #lf-workstation .tebra-app-header-main {height:38px;min-height:38px;}
+    #lf-workstation .cd2004-patient-banner {min-height:0;padding-block:6px;}
+    #lf-workstation .lf-service-header {padding-block:8px 7px;gap:5px 12px;}
+    #lf-workstation .lf-service-heading h1 {margin:0;}
+    #lf-workstation .lf-empty-mark {display:none;}
+    #lf-workstation .lf-worklist-empty {min-height:128px;padding:12px 20px;gap:6px;}
+    #lf-workstation .lf-worklist-empty strong {font-size:23px;line-height:28px;}
+    #lf-workstation .lf-worklist-card {min-height:0;}
+    #lf-workstation .wfp-panel .wfp-transaction-page {padding-top:12px;}
+    #lf-workstation .wfp-panel .wfp-section {padding-block:12px 18px;}
   }
 }
