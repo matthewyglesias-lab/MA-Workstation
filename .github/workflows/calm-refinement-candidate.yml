@@ -1,0 +1,102 @@
+name: Verify calm workspace candidate
+on:
+  push:
+    branches: [codex/ipmg-local-workstation-refinement]
+    paths: [.github/workflows/calm-refinement-candidate.yml]
+# One-use, exact-tree transport. Self-removes. No deployment or merge.
+permissions:
+  contents: write
+jobs:
+  reviewed-candidate:
+    if: github.repository == 'matthewyglesias-lab/MA-Workstation' && github.ref == 'refs/heads/codex/ipmg-local-workstation-refinement'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact reviewed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = 0760dacddff3d2dbb96e6620f66f0d5f4ce7ebfb
+          cat .github/review/calm-{1,2,3,4,5,6}.txt | base64 --decode | gzip --decompress > "$RUNNER_TEMP/calm.patch"
+          echo "deb729f19fe80ec22bfef34b421e2f076204ab49297bf3bb462c5d16a6d0f159  $RUNNER_TEMP/calm.patch" | sha256sum --check
+          git apply --check "$RUNNER_TEMP/calm.patch"
+          git apply --index "$RUNNER_TEMP/calm.patch"
+          git rm .github/workflows/calm-refinement-candidate.yml .github/review/calm-{1,2,3,4,5,6}.txt
+          test "$(git write-tree)" = 0faea71e42afd7dc2467323e7315a92b1a9e3556
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat: simplify everyday Lightfully workspace and reveal advanced tools' -m 'Keep Save, Sign, identity and safety checks visible. Add accessible non-modal shelves for record actions, local workspace preferences and explicit detail reuse. Preserve clinical, persistence, print and AVS behavior. Remove this one-use transport. Draft PR #68 only; no merge or deployment.'
+          mkdir -p review-proof review-source
+          git rev-parse HEAD > review-proof/COMMIT.txt
+          git rev-parse HEAD^{tree} > review-proof/TREE.txt
+          git archive --format=tar HEAD | gzip > review-source/source.tar.gz
+          git bundle create review-source/review.bundle HEAD ^59551bc914b945f268710fca3ef44c2e9ca62c50
+          cp review-proof/{COMMIT,TREE}.txt review-source/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: calm-candidate-source
+          path: review-source/
+          retention-days: 3
+          if-no-files-found: error
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Protect clinical, storage and print behavior
+        run: node scripts/check-local-refinement.mjs
+      - run: npm run check
+      - name: Unit regression suite
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:unit | tee review-proof/unit-results.txt
+      - run: npm run build
+      - name: Package exact candidate
+        run: GITHUB_SHA="$(git rev-parse HEAD)" node scripts/package-standalone.mjs
+      - run: npx playwright install chromium
+      - name: Browser, local-file and print review
+        env:
+          TEST_STANDALONE_FILE: '1'
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-proof/browser-results.json
+        run: >-
+          npx playwright test
+          tests/e2e/calm-workspace.spec.js
+          tests/e2e/deep-refinement.spec.js
+          tests/e2e/lightfully-direction.spec.js
+          tests/e2e/local-refinement.spec.js
+          tests/e2e/contemporary-workspace.spec.js
+          tests/e2e/injection-full-draft-safety.spec.js
+          tests/e2e/uds-record-integrity.spec.js
+          tests/e2e/print-regression.spec.js
+          tests/e2e/standalone-file.spec.js
+          tests/e2e/kiosk-flow.spec.js
+          --reporter=line,json,html
+      - name: Publish verified source to draft branch only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/codex/ipmg-local-workstation-refinement | cut -f1)" = "$GITHUB_SHA"
+          git push origin HEAD:refs/heads/codex/ipmg-local-workstation-refinement
+      - uses: actions/upload-artifact@v4
+        with:
+          name: calm-workspace-standalone
+          path: standalone/
+          retention-days: 7
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: calm-workspace-review-evidence
+          path: |
+            review-proof/
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
