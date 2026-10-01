@@ -1,5 +1,5 @@
 import { DesktopIcon } from "../DesktopIcon";
-import { LightfullyMark } from "../lightfully/WorkspaceTools";
+import { IPMGBrand } from "../branding/IPMGBrand";
 import { isDocumentService } from "../lightfully/ServiceWorkspace";
 import { WORKFLOW_LABELS, type PatientContext, type WorkflowId, type WorkflowSummary } from "../types";
 import { PATIENT, NAVIGATION } from "../vocabulary";
@@ -33,7 +33,7 @@ export function SectionRail({ selectedWorkflow, onWorkflowOpen, onDocumentServic
   const patientName = browsedPatientName?.trim() || patient.name?.trim();
   const toolsActive = ["reference", "log", "tms"].includes(selectedWorkflow);
   return <nav class="cd2004-navigator tebra-section-rail lf-section-rail cd2004-print-exclude" aria-label="Workspace navigation">
-    <div class="lf-sidebar-brand"><span class="lf-brand-symbol"><LightfullyMark small/></span><span class="cd2004-app-title"><b>IPMG</b><span>MA Workstation</span></span></div>
+    <IPMGBrand />
     <button type="button" class="lf-document-action cd2004-worklist-new" aria-haspopup="dialog" onClick={onDocumentService}><DesktopIcon name="new"/><span>Document a service</span></button>
     <div class="lf-primary-navigation">
       <button type="button" class={`cd2004-nav-item${selectedWorkflow === "home" && !activeChartView ? " is-selected" : ""}`} title="Dashboard" aria-current={selectedWorkflow === "home" && !activeChartView ? "page" : undefined} onClick={() => onWorkflowOpen("home")}><DesktopIcon name="home"/><span>Worklist</span></button>

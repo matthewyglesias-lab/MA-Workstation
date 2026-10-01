@@ -1,0 +1,204 @@
+/** IPMG local-workstation design increment.
+ * Imported by final-polish after the legacy screen layers. Explicit shell
+ * specificity owns presentation only; no print, hidden-state or safety overrides.
+ */
+@media screen {
+  :root {
+    --ipmg-ink: #203e4d;
+    --ipmg-muted: #526b78;
+    --ipmg-accent: #176c76;
+    --ipmg-accent-hover: #115761;
+    --ipmg-tint: #eaf4f4;
+    --ipmg-line: #dce5e9;
+    --ipmg-canvas: #f5f8fa;
+    --lf-ink: var(--ipmg-ink);
+    --lf-muted: var(--ipmg-muted);
+    --lf-leaf: var(--ipmg-accent);
+    --lf-lavender: var(--ipmg-canvas);
+    --lf-line: var(--ipmg-line);
+    --lf-heading-font: var(--tw-font-display);
+    --lf-display: var(--tw-font-display);
+    --lf-control-border: #b7c8d0;
+    --tw-text-primary: var(--ipmg-ink);
+    --tw-text-secondary: #405f70;
+    --tw-text-muted: var(--ipmg-muted);
+    --tw-focus-ring: 0 0 0 3px rgb(23 108 118 / 19%);
+  }
+
+  #lf-workstation.lf-workstation {
+    color: var(--ipmg-ink);
+    background: var(--ipmg-canvas);
+    font-size: 14px;
+  }
+  #lf-workstation.lf-workstation > .tebra-context-rail {
+    background: #f7fafa;
+    border-right-color: var(--ipmg-line);
+  }
+  #lf-workstation.lf-workstation .ipmg-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 23px 9px 24px;
+  }
+  #lf-workstation.lf-workstation .ipmg-brand-logo {
+    display: block;
+    width: 147px;
+    height: 52px;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: left center;
+  }
+  #lf-workstation.lf-workstation .ipmg-product-name {
+    color: var(--ipmg-ink);
+    font: 600 12px/18px var(--tw-font-sans);
+    letter-spacing: .035em;
+  }
+  #lf-workstation.lf-workstation .lf-document-action {
+    min-height: 44px;
+    background: var(--ipmg-accent);
+    border-color: var(--ipmg-accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9px;
+    box-shadow: 0 2px 3px rgb(23 108 118 / 8%);
+  }
+  #lf-workstation.lf-workstation .lf-document-action:hover {
+    background: var(--ipmg-accent-hover);
+    border-color: var(--ipmg-accent-hover);
+  }
+  #lf-workstation.lf-workstation .lf-section-rail .cd2004-nav-item {
+    color: #42616e;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+  #lf-workstation.lf-workstation .lf-section-rail .cd2004-nav-item.is-selected,
+  #lf-workstation.lf-workstation .lf-current-service {
+    color: #195963;
+    background: #e5f0f1;
+    box-shadow: inset 3px 0 0 var(--ipmg-accent);
+  }
+  #lf-workstation.lf-workstation .lf-section-rail .cd2004-nav-item > svg,
+  #lf-workstation.lf-workstation .lf-current-service svg { color: var(--ipmg-accent); }
+  #lf-workstation.lf-workstation .lf-rail-footer {
+    color: var(--ipmg-muted);
+    line-height: 17px;
+  }
+  #lf-workstation.lf-workstation .lf-rail-footer small { font-size: 10px; line-height: 16px; }
+  /* This dot denotes locality, not a successful save or a security guarantee. */
+  #lf-workstation.lf-workstation .lf-local-dot { background: #718794; }
+
+  #lf-workstation.lf-workstation .tebra-app-header-main { background: #fff; }
+  #lf-workstation.lf-workstation .lf-header-search input {
+    border-color: #dce5e9 !important;
+    background: #f7f9fa !important;
+  }
+  #lf-workstation.lf-workstation .tebra-workspace-badge.is-local { color: #526b78; font-size: 10px; }
+  #lf-workstation.lf-workstation .cd2004-patient-banner {
+    background: #f8fbfc;
+    border-top-color: #e5ecef;
+  }
+  #lf-workstation.lf-workstation .cd2004-patient-primary strong { font-size: 15px; font-weight: 650; }
+  #lf-workstation.lf-workstation .cd2004-patient-field strong { font-size: 13px; font-variant-numeric: tabular-nums; }
+  #lf-workstation.lf-workstation .cd2004-patient-primary small,
+  #lf-workstation.lf-workstation .cd2004-patient-field small { color: #526b78; font-size: 10px; }
+
+  #lf-workstation.lf-workstation .lf-service-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 20px;
+    padding-block: 19px 14px;
+  }
+  #lf-workstation.lf-workstation .lf-service-heading h1,
+  #lf-workstation.lf-workstation .lf-tool-page-header h1,
+  #lf-workstation.lf-workstation .lf-worklist-heading h1 {
+    font: 600 27px/1.24 var(--tw-font-display);
+    letter-spacing: -.7px;
+    color: var(--ipmg-ink);
+    margin-top: 0;
+  }
+  #lf-workstation.lf-workstation .lf-worklist-heading h1 { font-size: 30px; }
+  #lf-workstation.lf-workstation .lf-worklist-heading p { color: var(--ipmg-muted); font-size: 13px; }
+  #lf-workstation.lf-workstation .lf-form-legend { margin-top: 7px; color: var(--ipmg-muted); }
+  #lf-workstation.lf-workstation .lf-view-switch { border-radius: 9px; background: #f1f5f7; }
+  #lf-workstation.lf-workstation .lf-view-switch button[aria-pressed=true] {
+    color: #185f69;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(32 62 77 / 12%);
+  }
+  #lf-workstation.lf-workstation .ipmg-review-cue {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 9px 12px;
+    border: 1px solid #dbe9ec;
+    border-radius: 8px;
+    background: #f4f9fa;
+    color: #486470;
+  }
+  #lf-workstation.lf-workstation .ipmg-review-cue > svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    margin-top: 1px;
+    color: var(--ipmg-accent);
+  }
+  #lf-workstation.lf-workstation .ipmg-review-cue p { margin: 0; font: 400 11px/18px var(--tw-font-sans); }
+  #lf-workstation.lf-workstation .ipmg-review-cue strong { color: #285663; font-weight: 600; margin-right: 9px; }
+  #lf-workstation.lf-workstation .ipmg-review-cue span { overflow-wrap: anywhere; }
+
+  #lf-workstation.lf-workstation .wfp-field-caption { color: #365563; font-size: 12px; font-weight: 550; }
+  #lf-workstation.lf-workstation .wfp-panel .wfp-section-head { color: var(--ipmg-ink); font-weight: 600; }
+  #lf-workstation.lf-workstation .wfp-panel .wfp-field :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {
+    color: var(--ipmg-ink);
+    border-color: var(--lf-control-border);
+    box-shadow: 0 1px 2px rgb(32 62 77 / 3%);
+  }
+  #lf-workstation.lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):focus-visible {
+    outline: 2px solid var(--ipmg-accent);
+    outline-offset: 2px;
+  }
+  #lf-workstation.lf-workstation .lf-worklist-card { border-radius: 12px; box-shadow: 0 3px 12px rgb(32 62 77 / 3%); }
+  #lf-workstation.lf-workstation .lf-worklist-controls { background: #fff; }
+  #lf-workstation.lf-workstation .cd2004-worklist-table th { background: #f4f7f9; color: #526b78; }
+  #lf-workstation.lf-workstation .cd2004-note-heading { color: var(--ipmg-ink); }
+  #lf-workstation.lf-workstation .cd2004-note-ident dd { font-weight: 600; font-variant-numeric: tabular-nums; }
+  #lf-workstation.lf-workstation .cd2004-record-actions-buttons button.is-primary:not(:disabled) {
+    background: var(--ipmg-accent);
+    border-color: var(--ipmg-accent);
+    color: #fff;
+  }
+  body:has(#lf-workstation.lf-workstation) .lf-dialog-title h2,
+  body:has(#lf-workstation.lf-workstation) .cd2004-dialog-titlebar h2,
+  body:has(#lf-workstation.lf-workstation) .records-drawer-head h2 {
+    color: var(--ipmg-ink);
+    font: 600 24px/1.3 var(--tw-font-display);
+    letter-spacing: -.5px;
+  }
+  body:has(#lf-workstation.lf-workstation) .lf-service-option strong { font-weight: 600; }
+  body:has(#lf-workstation.lf-workstation) .lf-service-icon { color: var(--ipmg-accent); background: #eaf4f4; }
+  body:has(#lf-workstation.lf-workstation) .lf-service-option:hover { border-color: #aac8d0; background: #f5fafa; }
+  #lf-workstation.lf-workstation :is(button,summary,a):focus-visible {
+    outline: 2px solid var(--ipmg-accent);
+    outline-offset: 3px;
+  }
+  @media (max-width: 1050px) {
+    #lf-workstation.lf-workstation .lf-service-header { gap: 10px 12px; padding-block: 15px 12px; }
+    #lf-workstation.lf-workstation .lf-service-heading h1,
+    #lf-workstation.lf-workstation .lf-tool-page-header h1 { font-size: 24px; }
+    #lf-workstation.lf-workstation .lf-worklist-heading h1 { font-size: 27px; }
+  }
+  @media (max-height: 700px) {
+    #lf-workstation.lf-workstation .ipmg-brand { padding-block: 16px; gap: 7px; }
+    #lf-workstation.lf-workstation .lf-service-header { padding-block: 12px 10px; gap: 8px 12px; }
+    #lf-workstation.lf-workstation .ipmg-review-cue { padding-block: 6px; }
+  }
+  :root[data-lf-density=compact] #lf-workstation.lf-workstation .lf-service-header { padding-block: 12px 10px; gap: 8px 12px; }
+  @media (forced-colors: active) {
+    #lf-workstation.lf-workstation .ipmg-review-cue { border-color: CanvasText; }
+    #lf-workstation.lf-workstation .lf-document-action { border-color: ButtonText; }
+  }
+}

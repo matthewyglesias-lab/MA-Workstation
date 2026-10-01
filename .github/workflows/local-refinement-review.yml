@@ -16,7 +16,7 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
     steps:
@@ -29,21 +29,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Package exact review workspace
-        run: |
-          mkdir -p review-workspace
-          git archive --format=tar HEAD | gzip > review-workspace/source.tar.gz
-          tar -czf review-workspace/dependencies.tar.gz node_modules
-          git rev-parse HEAD > review-workspace/COMMIT.txt
-      - name: Retrieve public logo for one-time asset review
-        run: |
-          curl --fail --location --retry 2 'https://www.inlandpsych.com/wp-content/uploads/elementor/thumbs/logoImg-pbw2jjeutu7i1msff1529mln2sfucpc7d0hd8m01c8.png' -o review-workspace/ipmg-logo.png
-      - uses: actions/upload-artifact@v4
-        with:
-          name: local-refinement-workspace
-          path: review-workspace/
-          retention-days: 3
-          if-no-files-found: error
+      - name: Verify protected clinical and storage boundary
+        run: node scripts/check-local-refinement.mjs
       - run: npm run check
       - run: npm run test:unit
       - run: npm run build
@@ -54,3 +41,25 @@ jobs:
           path: standalone/
           retention-days: 7
           if-no-files-found: error
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Review local workflows, safety, persistence and print
+        env:
+          TEST_STANDALONE_FILE: '1'
+        run: >-
+          npx playwright test
+          tests/e2e/local-refinement.spec.js
+          tests/e2e/contemporary-workspace.spec.js
+          tests/e2e/injection-full-draft-safety.spec.js
+          tests/e2e/uds-record-integrity.spec.js
+          tests/e2e/print-regression.spec.js
+          tests/e2e/standalone-file.spec.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-refinement-review-evidence
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
