@@ -16,6 +16,7 @@
     --lf-leaf: var(--ipmg-accent);
     --lf-lavender: var(--ipmg-canvas);
     --lf-line: var(--ipmg-line);
+    --tw-font-display: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", "Inter Variable", Inter, Arial, sans-serif;
     --lf-heading-font: var(--tw-font-display);
     --lf-display: var(--tw-font-display);
     --lf-control-border: #b7c8d0;
@@ -191,6 +192,16 @@
     #lf-workstation.lf-workstation .ipmg-brand { padding-block: 16px; gap: 7px; }
     #lf-workstation.lf-workstation .lf-service-header { padding-block: 12px 10px; gap: 8px 12px; }
     #lf-workstation.lf-workstation .ipmg-review-cue { padding-block: 6px; }
+    #lf-workstation.lf-workstation .cd2004-patient-banner { min-height: 0; padding-block: 8px; gap: 8px 12px; }
+    #lf-workstation.lf-workstation .cd2004-patient-primary,
+    #lf-workstation.lf-workstation .cd2004-patient-field { min-height: 0; }
+    #lf-workstation.lf-workstation .meditech-patient-safety { min-height: 0; padding-block: 5px; }
+    #lf-workstation.lf-workstation .wfp-panel .wfp-transaction-page { padding-top: 12px; }
+    #lf-workstation.lf-workstation .wfp-panel .wfp-section-head { margin-bottom: 12px; }
+    @media (max-width: 949px) {
+      #lf-workstation.lf-workstation .meditech-patient-safety > b { flex: 1 1 120px; }
+      #lf-workstation.lf-workstation .meditech-patient-safety > small { flex: 0 1 auto; }
+    }
   }
   :root[data-lf-density=compact] #lf-workstation.lf-workstation .lf-service-header { padding-block: 12px 10px; gap: 8px 12px; }
   @media (forced-colors: active) {

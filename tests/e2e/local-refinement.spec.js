@@ -25,6 +25,7 @@ for (const size of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, 
     await name.fill('Review QA, Synthetic');
     await panel.locator('[data-field-path="patient.dob"] input').fill('01/02/1990');
     await panel.locator('[name="inj-medication"]').selectOption('maintena');
+    await expect(page.locator('.lf-service-heading h1')).toHaveCSS('font-family', /Plus Jakarta Sans/);
     await expect(page.locator('[data-review-cue="administer"]')).toContainText('Recheck any value you change');
     await expect(page.locator('[data-injection-finish]')).toBeDisabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
@@ -33,6 +34,7 @@ for (const size of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, 
     expect(cue.x + cue.width).toBeLessThanOrEqual(size.width + 1);
     const form = await panel.boundingBox();
     expect(form.height).toBeGreaterThan(80);
+    await page.clock.runFor(4500);
     await page.screenshot({ path: testInfo.outputPath('injection.png') });
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
     await expect(page.locator('[data-review-cue="preview"]')).toContainText('File and verify separately in Tebra');
@@ -57,6 +59,7 @@ for (const [title, workflow, detail] of [
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', workflow);
     await expect(page.locator(`[data-review-cue="${workflow}"]`)).toContainText(detail);
     await expect(page.locator('.wfp-panel')).toBeVisible();
+    await page.clock.runFor(4500);
     await page.screenshot({ path: testInfo.outputPath(`${workflow}.png`) });
     await page.emulateMedia({ media: 'print' });
     await expect(page.locator('[data-review-cue]')).not.toBeVisible();
