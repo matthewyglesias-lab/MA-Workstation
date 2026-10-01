@@ -1,0 +1,53 @@
+name: Local workstation refinement review
+
+on:
+  push:
+    branches: [codex/ipmg-local-workstation-refinement]
+  workflow_dispatch:
+
+# Review only. No deployment, secrets, database, or repository write permissions.
+permissions:
+  contents: read
+
+concurrency:
+  group: local-refinement-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Package exact review workspace
+        run: |
+          mkdir -p review-workspace
+          git archive --format=tar HEAD | gzip > review-workspace/source.tar.gz
+          tar -czf review-workspace/dependencies.tar.gz node_modules
+          git rev-parse HEAD > review-workspace/COMMIT.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-refinement-workspace
+          path: review-workspace/
+          retention-days: 3
+          if-no-files-found: error
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+      - run: node scripts/package-standalone.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-refinement-standalone
+          path: standalone/
+          retention-days: 7
+          if-no-files-found: error
