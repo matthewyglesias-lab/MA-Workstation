@@ -20,6 +20,7 @@ jobs:
           mkdir -p design-review
           git archive --format=tar HEAD | gzip > design-review/source.tar.gz
           git bundle create design-review/review.bundle HEAD refs/remotes/origin/main
+          git bundle verify design-review/review.bundle
           git rev-parse HEAD > design-review/COMMIT.txt
           sha256sum design-review/source.tar.gz design-review/review.bundle > design-review/SHA256SUMS.txt
       - name: Publish reproducible source before optional reference capture
