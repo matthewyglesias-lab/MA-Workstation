@@ -867,14 +867,14 @@ test.describe('unchanged clinical print surfaces', () => {
         /AFTER VISIT SUMMARY/i,
         /LONG-ACTING INJECTION/i,
         /Print, Injection/i,
-        // The due date is the sheet's primary call to action, and the window
-        // is deliberately not printed - patients are asked for the exact day.
+        // This PRN/ordered fixture keeps its exact provider-directed date.
+        // Routine, clinic-confirmed windows are covered separately.
         /YOUR NEXT INJECTION/i,
         /DUE DATE - CALL US TO SCHEDULE OR RESCHEDULE/i,
         /not a scheduled appointment/i,
         /PRINT-LOT-001/i,
         // Walk-in policy and the San Bernardino number appear on every sheet.
-        /9:30 AM - 4:30 PM/i,
+        /8:30 AM - 5:00 PM/i,
         /\(909\) 887-6222/i
       ],
       maxPages: 1
@@ -937,6 +937,8 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('footer.avs2-foot')).toHaveCount(2);
     await expect(avs.locator('footer.avs2-foot').first()).toContainText('Page 1 of 2');
     await expect(avs.locator('footer.avs2-foot').last()).toContainText('Page 2 of 2');
+    await expect(avs.locator('.avs2-step-due')).toContainText('3 days before or 3 days after');
+    await expect(avs).toContainText('8:30 AM - 5:00 PM');
     await expect(avs.locator('.avs2-page-primary')).toContainText(
       'Important: opioid tolerance and overdose risk'
     );
