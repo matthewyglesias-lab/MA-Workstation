@@ -4,7 +4,7 @@ on:
     branches: [codex/ipmg-local-workstation-refinement]
     paths: [.github/workflows/resume-reviewed-refinement.yml]
 # One-use transport for exact reviewed edits, not an ongoing write-enabled bot.
-# No secrets or deployment actions; the payload and this workflow self-remove.
+# No deployment actions; the payload and this workflow self-remove.
 permissions:
   contents: write
 jobs:
@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = b9b65e9e452a302e1bca981abb3de00dfbacf740
+          test "$(git rev-parse HEAD^)" = 0fbe4e5078d591d9e83e56dc1a53ccffd1448e27
           cat .github/review/resume-{1,2,3,4,5}.txt | base64 --decode | gzip --decompress > "$RUNNER_TEMP/reviewed.patch"
           echo "263539ecc2deaf8a32a0379b3702bf3da403cca3b1a11129bebfcf4602c7f788  $RUNNER_TEMP/reviewed.patch" | sha256sum --check
           git apply --check "$RUNNER_TEMP/reviewed.patch"
@@ -53,10 +53,25 @@ jobs:
           PY
           git rm .github/workflows/resume-reviewed-refinement.yml .github/review/resume-{1,2,3,4,5}.txt
           test "$(git write-tree)" = cc2d708aeb631521364df4eefc148d378f4dd376
+          # First exact-candidate run passed 106/107. The new lookup test targeted
+          # the launcher; the original dismissFieldLookup deliberately focuses
+          # its native control. Preserve that behavior and assert it explicitly.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tests/e2e/deep-refinement.spec.js')
+          source = p.read_text()
+          before = "  await page.keyboard.press('Escape'); await expect(launch).toBeFocused();\n  expect(await value()).toBe(before);"
+          after = "  await page.keyboard.press('Escape');\n  // F9 lookup belongs to the native field; cancel returns there, not its launcher.\n  await expect(page.locator('[data-field-path=\"orderingProvider\"] select')).toBeFocused();\n  expect(await value()).toBe(before);"
+          if source.count(before) != 1:
+              raise SystemExit('Unexpected lookup-test content')
+          p.write_text(source.replace(before, after))
+          PY
+          git add tests/e2e/deep-refinement.spec.js
+          test "$(git write-tree)" = 3ae37ab6d10de5c7ad185980a2983f8de676d0b4
           git diff --cached --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'fix: finish deep Lightfully interactions and preserved browser journeys' -m 'Apply exact reviewed presentation and test edits. Preserve clinical, storage, print and AVS boundary. Remove the one-use patch transport. Draft PR #68 only; no deployment or merge.'
+          git commit -m 'fix: finish deep Lightfully interactions and preserved browser journeys' -m 'Apply exact reviewed presentation and test edits. Preserve native-field lookup focus, clinical, storage, print and AVS behavior. Remove the one-use transport. Draft PR #68 only; no deployment or merge.'
           mkdir -p review-proof
           git rev-parse HEAD > review-proof/COMMIT.txt
           git rev-parse HEAD^{tree} > review-proof/TREE.txt
