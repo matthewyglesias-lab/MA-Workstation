@@ -21,17 +21,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = 0760dacddff3d2dbb96e6620f66f0d5f4ce7ebfb
+          test "$(git rev-parse HEAD^)" = 34d3eb4557e1801c259f8abdd4c05215a8df96f8
           cat .github/review/calm-{1,2,3,4,5,6}.txt | base64 --decode | gzip --decompress > "$RUNNER_TEMP/calm.patch"
           echo "deb729f19fe80ec22bfef34b421e2f076204ab49297bf3bb462c5d16a6d0f159  $RUNNER_TEMP/calm.patch" | sha256sum --check
           git apply --check "$RUNNER_TEMP/calm.patch"
           git apply --index "$RUNNER_TEMP/calm.patch"
-          git rm .github/workflows/calm-refinement-candidate.yml .github/review/calm-{1,2,3,4,5,6}.txt
-          test "$(git write-tree)" = 0faea71e42afd7dc2467323e7315a92b1a9e3556
+          base64 --decode .github/review/calm-fixes.txt | gzip --decompress > "$RUNNER_TEMP/calm-fixes.patch"
+          echo "8dd8d387932f0754413cf9323b7de05d1cbec074c9b0dc5b22e9b5c676aaef7d  $RUNNER_TEMP/calm-fixes.patch" | sha256sum --check
+          git apply --check "$RUNNER_TEMP/calm-fixes.patch"
+          git apply --index "$RUNNER_TEMP/calm-fixes.patch"
+          git rm .github/workflows/calm-refinement-candidate.yml .github/review/calm-{1,2,3,4,5,6}.txt .github/review/calm-fixes.txt
+          test "$(git write-tree)" = b93da931e777479fdf6b2eb0148ffa140c77c3a9
           git diff --cached --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'feat: simplify everyday Lightfully workspace and reveal advanced tools' -m 'Keep Save, Sign, identity and safety checks visible. Add accessible non-modal shelves for record actions, local workspace preferences and explicit detail reuse. Preserve clinical, persistence, print and AVS behavior. Remove this one-use transport. Draft PR #68 only; no merge or deployment.'
+          git commit -m 'feat: simplify everyday Lightfully workspace and reveal advanced tools' -m 'Keep Save, Sign, identity and safety checks visible. Add accessible non-modal shelves for record actions, local workspace preferences and explicit detail reuse. Fix compact-screen clipping and icon-only style inheritance found during browser review. Preserve clinical, persistence, print and AVS behavior. Remove this one-use transport. Draft PR #68 only; no merge or deployment.'
           mkdir -p review-proof review-source
           git rev-parse HEAD > review-proof/COMMIT.txt
           git rev-parse HEAD^{tree} > review-proof/TREE.txt
