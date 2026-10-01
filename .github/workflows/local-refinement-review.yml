@@ -35,6 +35,9 @@ jobs:
           git archive --format=tar HEAD | gzip > review-workspace/source.tar.gz
           tar -czf review-workspace/dependencies.tar.gz node_modules
           git rev-parse HEAD > review-workspace/COMMIT.txt
+      - name: Retrieve public logo for one-time asset review
+        run: |
+          curl --fail --location --retry 2 'https://www.inlandpsych.com/wp-content/uploads/elementor/thumbs/logoImg-pbw2jjeutu7i1msff1529mln2sfucpc7d0hd8m01c8.png' -o review-workspace/ipmg-logo.png
       - uses: actions/upload-artifact@v4
         with:
           name: local-refinement-workspace
