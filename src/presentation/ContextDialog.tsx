@@ -1,3 +1,5 @@
+import { trapDialogTabKey } from "./records-drawer-shared";
+import { useBackdropDismiss } from "./lightfully/use-backdrop-dismiss";
 import { DialogHeading } from "./lightfully/DialogHeading";
 import { useEffect, useRef, useState } from 'preact/hooks';
 
@@ -35,6 +37,7 @@ export function ContextDialog({
 }: ContextDialogProps) {
   const [staff, setStaff] = useState(staffValue);
   const [location, setLocation] = useState(locationValue);
+  const backdrop = useBackdropDismiss(onClose, staff === staffValue && location === locationValue);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const staffControlRef = useRef<HTMLInputElement>(null);
   const locationControlRef = useRef<HTMLSelectElement>(null);
@@ -68,11 +71,8 @@ export function ContextDialog({
         event.preventDefault();
         onClose();
       }}
-      onClick={(event) => {
-        // A click landing on the dialog element itself is a backdrop click:
-        // the content sits in an inner wrapper, so it never targets the host.
-        if (event.target === dialogRef.current && staff === staffValue && location === locationValue) onClose();
-      }}
+      onKeyDown={event => trapDialogTabKey(dialogRef.current, event)}
+      {...backdrop}
     >
       <div class="cd2004-dialog-frame">
         <DialogHeading id="cd2004-context-title" title={kind === 'staff' ? 'Documenting staff' : 'Visit location'} onClose={onClose} />

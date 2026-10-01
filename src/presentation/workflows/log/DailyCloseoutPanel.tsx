@@ -124,12 +124,24 @@ export function DailyCloseoutPanel() {
       <div class="wfp-section">
         <div class="wfp-section-head">Today's activity</div>
         <div class="wfp-section-body">
-          <div class="wfp-tabbar" role="tablist">
+          <div class="wfp-tabbar" role="tablist" aria-label="Activity filters" onKeyDown={event => {
+            if (event.isComposing || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const index = ACTIVITY_LOG_FILTERS.findIndex(item => item.key === filter);
+            const count = ACTIVITY_LOG_FILTERS.length;
+            const next = event.key === "Home" ? 0 : event.key === "End" ? count - 1
+              : (index + (event.key === "ArrowRight" ? 1 : -1) + count) % count;
+            setFilter(ACTIVITY_LOG_FILTERS[next]!.key);
+            event.currentTarget.querySelectorAll<HTMLButtonElement>("button")[next]?.focus();
+          }}>
             {ACTIVITY_LOG_FILTERS.map((item) => (
               <button
                 key={item.key}
                 type="button"
                 role="tab"
+                tabIndex={filter === item.key ? 0 : -1}
+                id={`lf-activity-tab-${item.key}`}
+                aria-controls="lf-activity-results"
                 class="wfp-tab"
                 aria-selected={filter === item.key}
                 onClick={() => setFilter(item.key)}
@@ -139,6 +151,7 @@ export function DailyCloseoutPanel() {
             ))}
           </div>
 
+          <div id="lf-activity-results" role="tabpanel" aria-labelledby={`lf-activity-tab-${filter}`}>
           {visibleRows.length ? (
             <div class="wfp-table-wrap">
               <table class="wfp-table">
@@ -190,10 +203,15 @@ export function DailyCloseoutPanel() {
               <div class="wfp-wall-title">
                 {entries.length ? "No activity matches this filter." : "No activity logged yet."}
               </div>
-              <p>Log an entry from another workflow to populate this view.</p>
+              <p>{entries.length ? "Choose another category to review the rest of today’s activity." : "Log an entry from another workflow to populate this view."}</p>
+              {entries.length > 0 && <button type="button" class="lf-lookup-reset" onClick={() => {
+                setFilter("all");
+                document.getElementById("lf-activity-tab-all")?.focus();
+              }}>Show all activity</button>}
             </div>
           )}
 
+          </div>
           <button type="button" class="cd2004-link-button" onClick={() => clickLegacyControl("clearLog")}>
             Clear log
           </button>

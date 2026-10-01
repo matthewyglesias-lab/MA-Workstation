@@ -107,7 +107,7 @@ test.describe('MA Workstation browser journeys', () => {
   async function signInLocalStaff(page, staff = 'QA Staff, MA') {
     await page.locator('.tebra-account-trigger').click();
     await page.locator('[data-account-action="staff"]').click();
-    const dialog = page.getByRole('dialog', { name: 'Staff Sign-In' });
+    const dialog = page.getByRole('dialog', { name: 'Documenting staff' });
     await expect(dialog).toBeVisible();
     await dialog.getByRole('textbox', { name: 'Name or initials' }).fill(staff);
     await dialog.getByRole('button', { name: 'Use for encounter', exact: true }).click();
@@ -1840,7 +1840,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.locator('.tebra-account-trigger').click();
     await page.locator('[data-account-action="staff"]').click();
-    const staffDialog = page.getByRole('dialog', { name: 'Staff Sign-In' });
+    const staffDialog = page.getByRole('dialog', { name: 'Documenting staff' });
     const staffDraft = staffDialog.getByRole('textbox', { name: 'Name or initials' });
     await staffDraft.fill('Unsaved Resize, Test MA');
     await page.setViewportSize({ width: 390, height: 844 });

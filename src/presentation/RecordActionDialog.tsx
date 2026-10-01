@@ -1,3 +1,5 @@
+import { trapDialogTabKey } from "./records-drawer-shared";
+import { useBackdropDismiss } from "./lightfully/use-backdrop-dismiss";
 import { createActionGate } from "./lightfully/interaction-policy";
 import { DialogHeading } from "./lightfully/DialogHeading";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -52,6 +54,7 @@ export function RecordActionDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const actionGate = useRef(createActionGate());
   const close = () => { if (!actionGate.current.pending) onClose(); };
+  const backdrop = useBackdropDismiss(close);
   const keepEditingRef = useRef<HTMLButtonElement>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -105,9 +108,8 @@ export function RecordActionDialog({
         event.preventDefault();
         close();
       }}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) close();
-      }}
+      onKeyDown={event => trapDialogTabKey(dialogRef.current, event)}
+      {...backdrop}
     >
       <div class="cd2004-dialog-frame">
         <DialogHeading id="cd2004-record-action-title" title={title} closeLabel={RECORD.closeConfirmation} onClose={close} closeDisabled={submitting} />
@@ -150,6 +152,7 @@ export function RecordActionDialog({
                 <input
                   type="checkbox"
                   checked={acknowledged}
+                  disabled={submitting}
                   onChange={(event) => setAcknowledged(event.currentTarget.checked)}
                 />
                 <span>

@@ -174,3 +174,25 @@
   #lf-workstation .lf-closeout-panel .wfp-table th { color: var(--lf-muted); background: var(--lf-lavender); font: 500 11px/18px var(--tw-font-sans); }
   #lf-workstation .lf-closeout-panel .wfp-table td { font: 400 12px/20px var(--tw-font-sans); padding: 12px 10px; }
 }
+
+/* Final recovery and keyboard states: the same controls on secondary screens. */
+@media screen {
+  body:has(#lf-workstation) .lf-lookup-reset {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 36px; padding: 7px 12px; margin-top: 10px;
+    border: 1px solid var(--lf-control-border); border-radius: 6px;
+    background: #fff; color: #315f72; cursor: pointer;
+    font: 500 12px/20px var(--tw-font-sans); box-shadow: none;
+  }
+  body:has(#lf-workstation) .lf-lookup-reset:hover { background: #eaf0f2; }
+  body:has(#lf-workstation) .cd2004-lookup-row:focus-visible {
+    outline: 2px solid #3c7083; outline-offset: -3px; background: #eaf0f2;
+  }
+  body:has(#lf-workstation) .cd2004-lookup-empty p { margin: 0; }
+  #lf-workstation .lf-closeout-panel [role=tabpanel] { min-width: 0; }
+  #lf-workstation .lf-closeout-panel .wfp-table th { position: sticky; top: 0; z-index: 1; }
+  #lf-workstation .tebra-patient-card-host[data-card-dismissed=true] .tebra-patient-card { visibility: hidden; }
+  /* Status text, not a green surface, establishes what happened. Persistent
+     errors and clinical warnings retain their own explicit state treatments. */
+  #lf-workstation .tebra-toast { border-color: #cbd8df; border-left-color: #7795a2; background: #f5f7f8; }
+}

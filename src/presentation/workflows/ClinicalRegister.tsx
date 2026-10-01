@@ -8,7 +8,7 @@ export type ClinicalFieldState = "REQ" | "OK" | "OPT" | "PEND" | "REV" | "STOP" 
  * remains available in a keyboard-accessible disclosure beside the caption. */
 const SILENT_SOURCE: ReadonlySet<ClinicalFieldSource> = new Set(["ENTRY"]);
 const SOURCE_LABEL: Record<string, string> = {
-  CHART: "From chart", STAFF: "Signed-in staff", SESSION: "Session", LOCAL: "Local record",
+  CHART: "From chart", STAFF: "Documenting staff", SESSION: "Session", LOCAL: "Local record",
   LABEL: "Product label", LBL: "Product label", CALC: "Calculated", REF: "Reference",
   OVR: "Override", LOCK: "Signed record", LOCKED: "Signed record", DEFAULT: "Default", RECORD: "Saved record",
 };

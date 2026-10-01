@@ -29,6 +29,8 @@ export function WorkstationLookupDialog({
   onDismiss: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [focusedValue, setFocusedValue] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const titleId = "cd2004FieldLookupTitle";
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -49,6 +51,9 @@ export function WorkstationLookupDialog({
         options.findIndex((option) => option.selected),
       );
   const preferredOption = options[preferredIndex];
+  const focusedIndex = options.findIndex(option => option.value === focusedValue);
+  const tabIndex = focusedIndex >= 0 ? focusedIndex : preferredIndex;
+  const resetQuery = () => { setQuery(""); setFocusedValue(null); searchRef.current?.focus(); };
 
   const focusResult = (index: number) => {
     const rows = Array.from(
@@ -74,15 +79,20 @@ export function WorkstationLookupDialog({
           <label class="cd2004-dialog-field">
             Search options
             <input
+              ref={searchRef}
               autoFocus
               type="search"
               value={query}
               placeholder="Search available options"
-              onInput={(event) => setQuery(event.currentTarget.value)}
+              onInput={(event) => { setQuery(event.currentTarget.value); setFocusedValue(null); }}
               onKeyDown={(event) => {
+                if (event.isComposing) return;
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
                   focusResult(preferredIndex);
+                } else if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  focusResult(options.length - 1);
                 } else if (event.key === "Enter" && preferredOption) {
                   event.preventDefault();
                   onChoose(preferredOption);
@@ -103,9 +113,12 @@ export function WorkstationLookupDialog({
                 type="button"
                 class={`cd2004-lookup-row ${option.selected ? "is-selected" : ""}`}
                 role="option"
+                tabIndex={index === tabIndex ? 0 : -1}
+                onFocus={() => setFocusedValue(option.value)}
                 aria-selected={option.selected || undefined}
                 onClick={() => onChoose(option)}
                 onKeyDown={(event) => {
+                  if (event.isComposing) return;
                   if (event.key === "ArrowDown") {
                     event.preventDefault();
                     focusResult(index + 1);
@@ -130,7 +143,8 @@ export function WorkstationLookupDialog({
             ))}
             {!options.length && (
               <div class="cd2004-lookup-empty" role="status">
-                No matching options. Try another search.
+                <p>No matching options. Your current field value has not changed.</p>
+                <button type="button" class="lf-lookup-reset" onClick={resetQuery}>Clear search</button>
               </div>
             )}
           </div>

@@ -11,7 +11,7 @@ const kioskStep = (page, id) =>
 async function signInLocalStaff(page, staff = 'Kiosk QA Staff, MA') {
   await page.locator('.tebra-account-trigger').click();
   await page.locator('[data-account-action="staff"]').click();
-  const dialog = page.getByRole('dialog', { name: 'Staff Sign-In' });
+  const dialog = page.getByRole('dialog', { name: 'Documenting staff' });
   await dialog.getByRole('textbox', { name: 'Name or initials' }).fill(staff);
   await dialog.getByRole('button', { name: 'Use for encounter', exact: true }).click();
   await expect(dialog).toBeHidden();

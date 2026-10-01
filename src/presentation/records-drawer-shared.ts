@@ -25,7 +25,8 @@ export function trapDialogTabKey(dialog: HTMLDialogElement | null, event: Keyboa
     ...dialog.querySelectorAll<HTMLElement>(
       'button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])',
     ),
-  ].filter((node) => !node.hasAttribute("disabled") && node.offsetParent !== null);
+  ].filter((node) => !node.hasAttribute("disabled") && node.tabIndex >= 0 &&
+    node.offsetParent !== null && getComputedStyle(node).visibility !== "hidden");
   if (!focusable.length) return;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];

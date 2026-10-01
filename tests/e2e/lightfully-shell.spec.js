@@ -60,7 +60,7 @@ test.describe('Lightfully standalone shell', () => {
     await boot(page);
     await page.locator('.tebra-account-trigger').click();
     await page.locator('[data-account-action="staff"]').click();
-    const dialog = page.getByRole('dialog', { name: 'Staff Sign-In' });
+    const dialog = page.getByRole('dialog', { name: 'Documenting staff' });
     await expect(dialog).toBeVisible();
     await page.keyboard.press('Control+k');
     await expect(page.locator('.lf-command-dialog')).toHaveCount(0);

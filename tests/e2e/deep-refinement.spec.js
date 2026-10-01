@@ -152,3 +152,96 @@ test('reduced-motion preference disables new decorative transitions',async({page
   await page.locator('.wfp-status-flag.is-stop').click();
   await expect(page.locator('dialog[open] .cd2004-dialog-frame')).toHaveCSS('animation-name','none');
 });
+
+
+test('record confirmation ignores interior padding and selection drags, with safe focus wrap', async ({page}, info) => {
+  await boot(page); await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
+  await page.locator('[data-field-path="patient.name"] input').fill('Confirmation, Synthetic');
+  await page.locator('[data-injection-save]').click();
+  await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
+  const before = await page.evaluate(key => localStorage.getItem(key), RECORDS);
+  await page.locator('[data-injection-discard]').click();
+  const dialog = page.getByRole('dialog', {name:'Discard draft'});
+  const frame = dialog.locator('.cd2004-dialog-frame');
+  await expect(dialog.getByRole('button', {name:'Keep editing',exact:true})).toBeFocused();
+  const box = await frame.boundingBox();
+  await page.mouse.click(box.x+box.width/2, box.y+box.height-2);
+  await expect(dialog).toBeVisible();
+  await page.mouse.move(box.x+35,box.y+35); await page.mouse.down();
+  await page.mouse.move(2,2); await page.mouse.up();
+  await expect(dialog).toBeVisible();
+  const close = dialog.getByRole('button', {name:'Close confirmation',exact:true});
+  await close.focus(); await page.keyboard.press('Shift+Tab');
+  await expect(dialog.getByRole('button', {name:'Discard draft',exact:true})).toBeFocused();
+  await page.keyboard.press('Tab'); await expect(close).toBeFocused();
+  await shot(page,info,'confirmation-keyboard-review');
+  await dialog.getByRole('button', {name:'Keep editing',exact:true}).click();
+  expect(await page.evaluate(key => localStorage.getItem(key),RECORDS)).toBe(before);
+});
+
+test('lookup search recovers without changing the field and ignores composition Enter', async ({page}, info) => {
+  await boot(page); await clickWorkspace(page,'.cd2004-nav-item[title="Injection"]');
+  const launch = page.getByRole('button',{name:'Open Ordering provider field lookup (F9)',exact:true});
+  const value = () => page.locator('[data-field-path="orderingProvider"] select').inputValue();
+  const before = await value();
+  await launch.click();
+  const dialog = page.locator('.cd2004-lookup-dialog');
+  const search = dialog.getByRole('searchbox',{name:'Search options'});
+  await search.fill('zz-no-provider-matches-8932');
+  await expect(dialog.getByRole('option')).toHaveCount(0);
+  await expect(dialog).toContainText('Your current field value has not changed.');
+  await dialog.getByRole('button',{name:'Clear search',exact:true}).click();
+  await expect(search).toBeFocused(); await expect(search).toHaveValue('');
+  await search.dispatchEvent('keydown',{key:'Enter',code:'Enter',isComposing:true,bubbles:true});
+  await expect(dialog).toBeVisible();
+  await search.press('ArrowUp');
+  await expect(dialog.getByRole('option').last()).toBeFocused();
+  await page.keyboard.press('Home'); await expect(dialog.getByRole('option').first()).toBeFocused();
+  await expect(dialog.locator('[role=option][tabindex="0"]')).toHaveCount(1);
+  await shot(page,info,'lookup-recovery');
+  await page.keyboard.press('Escape');
+  // F9 lookup belongs to the native field; cancel returns there, not its launcher.
+  await expect(page.locator('[data-field-path="orderingProvider"] select')).toBeFocused();
+  expect(await value()).toBe(before);
+});
+
+test('staff dialog wraps focus and does not close after a drag from its content',async({page})=>{
+  await boot(page);
+  await page.locator('.tebra-account-trigger').click();
+  await page.locator('[data-account-action=staff]').click();
+  const dialog=page.getByRole('dialog',{name:'Documenting staff',exact:true});
+  const frame=await dialog.locator('.cd2004-dialog-frame').boundingBox();
+  await page.mouse.move(frame.x+35,frame.y+35);await page.mouse.down();
+  await page.mouse.move(2,2);await page.mouse.up();
+  await expect(dialog).toBeVisible();
+  const first=dialog.getByRole('button',{name:'Close',exact:true});
+  await first.focus();await page.keyboard.press('Shift+Tab');
+  await expect(dialog.getByRole('button',{name:'Use for encounter',exact:true})).toBeFocused();
+  await page.keyboard.press('Tab');await expect(first).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.tebra-account-trigger')).toBeFocused();
+});
+
+for (const width of [1440,800]) {
+  test(`closeout filters have keyboard navigation and non-destructive recovery at ${width}`,async({page},info)=>{
+    await boot(page,{width,height:width===800?600:900});
+    const key='ipmgMedAssistActivityLog_2026-10-01';
+    const entries=[{type:'injection',status:'completed',time:'10:00 AM',pt:'Closeout, Synthetic',summary:'Test entry only'}];
+    await page.evaluate(({key,entries})=>localStorage.setItem(key,JSON.stringify(entries)),{key,entries});
+    await clickWorkspace(page,'.cd2004-nav-item[title="Daily Closeout"]');
+    const before=await page.evaluate(key=>localStorage.getItem(key),key);
+    const tabs=page.getByRole('tablist',{name:'Activity filters'});
+    await tabs.getByRole('tab',{name:'All',exact:true}).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(tabs.getByRole('tab',{name:'Injections',exact:true})).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(tabs.getByRole('tab',{name:'UDS',exact:true})).toHaveAttribute('aria-selected','true');
+    await page.getByRole('button',{name:'Show all activity',exact:true}).click();
+    await expect(tabs.getByRole('tab',{name:'All',exact:true})).toBeFocused();
+    await expect(page.getByRole('tabpanel')).toContainText('Closeout, Synthetic');
+    await page.keyboard.press('End');await expect(tabs.getByRole('tab',{name:'Completed',exact:true})).toBeFocused();
+    await page.keyboard.press('Home');await expect(tabs.getByRole('tab',{name:'All',exact:true})).toBeFocused();
+    expect(await page.evaluate(key=>localStorage.getItem(key),key)).toBe(before);
+    await shot(page,info,'populated-closeout');
+  });
+}

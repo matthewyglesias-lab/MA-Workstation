@@ -1715,7 +1715,7 @@ export function UdsPanel({
               title={
                 staffSignInValue
                   ? "Carry the signed-in staff member into the collector field."
-                  : "Sign in a staff member first."
+                  : "Enter the documenting staff name first."
               }
             >
               Use signed-in staff
