@@ -1,3 +1,4 @@
+const { openRecordActions } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { clickWorkspace } = require('./workspace-navigation');
 const RECORDS = 'ipmgMedAssistInjectionRecordsV1';
@@ -61,7 +62,8 @@ for (const width of [1440,800]) {
     await insideViewport(page,page.locator('[data-field-lookup-dialog]'));
     await shot(page,info,'provider-lookup');
     await page.keyboard.press('Escape');
-    await page.locator('[data-injection-discard]').click();
+    await openRecordActions(page);
+  await page.locator('[data-injection-discard]').click();
     await insideViewport(page,page.locator('dialog[open] .cd2004-dialog-frame'));
     await shot(page,info,'discard-confirmation');
     await page.getByRole('button',{name:'Keep editing',exact:true}).click();
@@ -160,6 +162,7 @@ test('record confirmation ignores interior padding and selection drags, with saf
   await page.locator('[data-injection-save]').click();
   await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
   const before = await page.evaluate(key => localStorage.getItem(key), RECORDS);
+  await openRecordActions(page);
   await page.locator('[data-injection-discard]').click();
   const dialog = page.getByRole('dialog', {name:'Discard draft'});
   const frame = dialog.locator('.cd2004-dialog-frame');

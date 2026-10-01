@@ -1,3 +1,4 @@
+const { openRecordActions } = require('./workspace-navigation');
 const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { selectRegisteredProvider } = require('./provider-entry');
@@ -343,6 +344,7 @@ test('files a typed-only blank Injection before Start new replaces it', async ({
   const panel = await openInjection(page);
   await selectOnlyReason(panel);
 
+  await openRecordActions(page);
   await page.locator(
     '[data-injection-record-actions] [data-injection-new]'
   ).click();
@@ -400,6 +402,7 @@ test('same-task discard confirmation and pagehide cannot resurrect the draft', a
   const panel = await openInjection(page);
   await selectOnlyReason(panel);
   await expect.poll(() => storedReason(page, 'scheduled')).not.toBeNull();
+  await openRecordActions(page);
   await page.locator(
     '[data-injection-record-actions] [data-injection-discard]'
   ).click();
@@ -420,6 +423,7 @@ test('typed-only unsaved Injection can be discarded before its debounce fires', 
   await boot(page);
   const panel = await openInjection(page);
   await selectOnlyReason(panel);
+  await openRecordActions(page);
   await page.locator(
     '[data-injection-record-actions] [data-injection-discard]'
   ).click();
@@ -656,6 +660,7 @@ test('reopens exact structured response and additional-note facts from the saved
   await page.locator(
     '[data-injection-record-actions] [data-injection-save]'
   ).click();
+  await openRecordActions(page);
   await page.locator(
     '[data-injection-record-actions] [data-injection-new]'
   ).click();

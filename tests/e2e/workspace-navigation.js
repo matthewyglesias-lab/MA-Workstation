@@ -13,4 +13,13 @@ async function clickWorkspace(page, selector) {
   }
   await page.locator(selector).click();
 }
-module.exports = { clickWorkspace };
+/** Open real progressive-disclosure controls; never force-click hidden actions. */
+async function openRecordActions(page) {
+  const shelf = page.locator('.cd2004-record-actions .lf-record-shelf');
+  if (await shelf.getAttribute('open') === null) await shelf.locator(':scope > summary').click();
+}
+async function openWorkspaceOptions(page) {
+  const shelf = page.locator('.lf-workspace-shelf');
+  if (await shelf.getAttribute('open') === null) await shelf.locator(':scope > summary').click();
+}
+module.exports = { clickWorkspace, openRecordActions, openWorkspaceOptions };

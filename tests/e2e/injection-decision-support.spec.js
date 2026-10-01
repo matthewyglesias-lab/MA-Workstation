@@ -1,3 +1,4 @@
+const { openRecordActions } = require('./workspace-navigation');
 const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue } = require('./provider-entry');
@@ -168,7 +169,8 @@ test.describe('Injection decision support', () => {
     // Move away from the active draft, then reload it through the only record
     // list. This exercises persisted next-dose provenance rather than merely
     // retaining component state in the same mounted panel.
-    await actions.locator('[data-injection-new]').click();
+    await openRecordActions(page);
+  await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
       name: /^Open incomplete Injection note for QA, Next Due, visit /

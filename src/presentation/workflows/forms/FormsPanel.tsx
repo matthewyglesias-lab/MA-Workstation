@@ -1,3 +1,4 @@
+import { ActionShelf } from "../../lightfully/ActionShelf";
 import { labelControls, OptionList } from "../WorkflowField";
 import type { ComponentChildren, Ref } from "preact";
 import { useEffect, useId, useRef, useState } from "preact/hooks";
@@ -622,6 +623,7 @@ export function FormsPanel({
           warningCount={requestWarnings.length}
         />
         <span class="wfp-summary-spacer" />
+        <ActionShelf label="Use existing details" heading="Bring details into this form" description="Choose what to use, then compare it with this patient’s record." placement="up" class="lf-context-shelf">
         <button
           type="button"
           class="cd2004-link-button"
@@ -642,8 +644,9 @@ export function FormsPanel({
           }}
           disabled={!staffSignInValue}
         >
-          Use signed-in staff
+          Use documenting staff
         </button>
+        </ActionShelf>
         <button
           type="button"
           class="cd2004-command-button"

@@ -1,3 +1,4 @@
+const { openWorkspaceOptions } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { clickWorkspace } = require('./workspace-navigation');
 
@@ -70,10 +71,15 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
     await panel.getByRole('tab').first().click();
     await expect(panel.locator('[data-field-path="patient.name"] input')).toHaveValue('Design review, Synthetic');
     await expect(page.locator('[data-injection-finish]')).toBeDisabled();
-    await page.getByRole('button', { name: 'Open focused injection workspace', exact: true }).click();
+    await openWorkspaceOptions(page);
+  await page.getByRole('button', { name: 'Open focused injection workspace', exact: true }).click();
     await expect(page.locator('.kiosk-stepper [data-kiosk-step]')).toHaveCount(7);
     await capture(page, info, '06-focus');
-    await page.getByRole('button', { name: 'Exit injection focus', exact: true }).click();
+    // The guided view already has a dedicated, visible return control.
+    // Do not reach back into the now-collapsed Workspace extras to exit it.
+    await expect(page.locator('[data-kiosk-exit]')).toBeInViewport();
+    await page.locator('[data-kiosk-exit]').click();
+    await expect(page.locator('.kiosk-stepper')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 }

@@ -45,6 +45,7 @@ import { copyButtonLabel, useCopyFeedback } from "../../clipboard";
 import { ModalDialog } from "../../ModalDialog";
 import { formatDobAsTyped } from "../../format-dob";
 import { RecordActionDialog, type RecordActionKind } from "../../RecordActionDialog";
+import { ActionShelf } from "../../lightfully/ActionShelf";
 import { RecordLifecycleActions } from "../../RecordLifecycleActions";
 import { UdsRecordsWindow } from "../../UdsRecordsWindow";
 import {
@@ -2573,7 +2574,7 @@ export function UdsPanel({
                 </button>
               </>
             )}
-            <span class="cd2004-record-action-separator" aria-hidden="true" />
+            <ActionShelf label="More actions" heading="This drug screen note" description={locked ? "Start another note. This signed note stays read-only." : "Start another note, or choose whether to discard this draft."} placement="up" class="lf-record-shelf">
             <button
               type="button"
               class="is-new"
@@ -2604,6 +2605,7 @@ export function UdsPanel({
                 {RECORD.discardDraft}…
               </button>
             )}
+            </ActionShelf>
           </>
         }
       />

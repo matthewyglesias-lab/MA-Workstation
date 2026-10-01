@@ -1,3 +1,4 @@
+const { openRecordActions } = require('./workspace-navigation');
 const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { fillDate } = require('./date-entry');
@@ -450,7 +451,8 @@ test.describe('UDS record-integrity boundaries', () => {
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
 
     await drawer.locator('.records-drawer-cancel').click();
-    await panel.getByRole('button', { name: 'Start new UDS screen' }).click();
+    await openRecordActions(page);
+  await panel.getByRole('button', { name: 'Start new UDS screen' }).click();
     await expect(panel.getByRole('region', { name: 'UDS note actions' }))
       .toContainText('Some saved UDS data could not be read safely.');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
@@ -845,7 +847,8 @@ test.describe('UDS record-integrity boundaries', () => {
       return serialized;
     }, { key: UDS_RECORDS_KEY, id: targetRecord.id });
 
-    await panel.getByRole('button', { name: 'Discard draft…', exact: true }).click();
+    await openRecordActions(page);
+  await panel.getByRole('button', { name: 'Discard draft…', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Discard draft' });
     await dialog.getByRole('button', { name: 'Discard draft', exact: true }).click();
 

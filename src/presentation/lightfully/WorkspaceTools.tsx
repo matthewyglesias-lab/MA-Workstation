@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { createActionGate, nextEnabledCommand } from "./interaction-policy";
+import { ActionShelf } from "./ActionShelf";
 import { ModalDialog } from "../ModalDialog";
 import { DialogHeading } from "./DialogHeading";
 import { DesktopIcon } from "../DesktopIcon";
@@ -42,7 +43,7 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false }: 
 }) {
   const [open, setOpen] = useState(false);
   const [density, setDensity] = useState<Density>(readDensity);
-  const trigger = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     document.documentElement.dataset.lfDensity = density;
     try { localStorage.setItem(DENSITY_KEY, density); } catch { /* Cosmetic preference only. */ }
@@ -60,13 +61,18 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false }: 
     return () => window.removeEventListener("keydown", listener);
   }, []);
   return <div class="lf-workspace-tools">
-    <button ref={trigger} type="button" class="lf-command-trigger" aria-label="Search workspace commands" aria-haspopup="dialog" onClick={() => setOpen(true)}>
-      <SearchGlyph /><span>Commands</span><kbd>Ctrl K</kbd>
-    </button>
-    <button type="button" class="lf-density-toggle" aria-label="Compact workspace" aria-pressed={density === "compact"} title={density === "compact" ? "Use comfortable spacing" : "Use compact spacing"} onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="5" rx="1.5"/><rect x="4" y="14" width="16" height="5" rx="1.5"/></svg><span>Compact</span>
-    </button>
-    {onFocusInjection && <button type="button" class="lf-focus-trigger" aria-label={focused ? "Exit injection focus" : "Open focused injection workspace"} aria-pressed={focused} onClick={onFocusInjection}><DesktopIcon name="administer"/><span>{focused ? "Exit focus" : "Focus"}</span></button>}
+    <ActionShelf label="Workspace" heading="Make yourself at home" description="Useful tools, a little more room, or a focused view." class="lf-workspace-shelf">
+      <button type="button" class="lf-command-trigger" aria-label="Search workspace commands" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        <SearchGlyph/><span><strong>Find a tool</strong><small>Search services, records and more.</small></span><kbd>Ctrl K</kbd>
+      </button>
+      <button type="button" class="lf-density-toggle" data-shelf-stay-open aria-label="Compact workspace" aria-pressed={density === "compact"} onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="5" rx="1.5"/><rect x="4" y="14" width="16" height="5" rx="1.5"/></svg>
+        <span><strong>Roomier or compact</strong><small>{density === "compact" ? "Compact spacing is on." : "Comfortable spacing is on."}</small></span><span class="lf-preference-state" aria-hidden="true">{density === "compact" ? "Compact" : "Roomier"}</span>
+      </button>
+      {onFocusInjection && <button type="button" class="lf-focus-trigger" aria-label={focused ? "Exit injection focus" : "Open focused injection workspace"} aria-pressed={focused} onClick={onFocusInjection}>
+        <DesktopIcon name="administer"/><span><strong>{focused ? "Back to the full workspace" : "One step at a time"}</strong><small>{focused ? "Leave the focused injection view." : "Open the existing guided injection view."}</small></span><span aria-hidden="true">→</span>
+      </button>}
+    </ActionShelf>
     {open && <CommandPalette commands={commands} onDismiss={() => setOpen(false)} />}
   </div>;
 }
@@ -97,11 +103,13 @@ function CommandPalette({ commands, onDismiss }: { commands: WorkspaceCommand[];
       if (event.key === "End" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); setActive(nextEnabledCommand(matches, matches.length, -1)); }
       if (event.key === "Enter") { event.preventDefault(); invoke(matches[selected]); }
     }}/><kbd>Esc</kbd></div>
-    <div id="lf-command-results" role="listbox" aria-label="Workspace destinations" class="lf-command-results">
+    <div class="lf-command-results">
+    <div id="lf-command-results" role="listbox" aria-label="Workspace destinations">
       {matches.map((command, index) => <div key={command.id} id={`lf-command-${index}`} role="option" aria-selected={index === selected} aria-disabled={command.disabled || undefined} class={`lf-command-result${index === selected ? " is-active" : ""}${command.disabled ? " is-disabled" : ""}`} onMouseDown={(event) => event.preventDefault()} onMouseEnter={() => { if (!command.disabled) setActive(index); }} onClick={() => invoke(command)}>
         <span class="lf-command-icon"><DesktopIcon name={command.icon}/></span><span><strong>{command.label}</strong><small>{command.description}</small></span><span class="lf-command-availability" aria-hidden="true">{command.disabled ? "Unavailable here" : "↗"}</span>
       </div>)}
-      {!matches.length && <p class="lf-command-empty" role="status">No matching tools. Try “notes,” “samples,” or “injection.”</p>}
+    </div>
+      {!matches.length && <div class="lf-command-empty" role="status"><p>No matching tools. Try “notes,” “samples,” or “injection.”</p><button type="button" class="lf-secondary-button" onClick={() => { setQuery(""); setActive(0); input.current?.focus(); }}>Show all tools</button></div>}
     </div>
     <footer><span><kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open</span><span></span></footer>
   </ModalDialog>;

@@ -1,0 +1,147 @@
+/* A quieter first layer over the approved Lightfully palette.
+ * Screen-only. These disclosures never contain evaluator warnings or required
+ * clinical inputs; the original record state and primary actions stay visible.
+ */
+@media screen {
+  /* Keep the brand header present without competing with the current encounter. */
+  #lf-workstation:not([data-active-workflow="home"]) .lf-document-action {
+    background: #fff8f4; border-color: #c98a7e; color: #743e35;
+  }
+  #lf-workstation:not([data-active-workflow="home"]) .lf-document-action:hover {
+    background: #fbe5df; border-color: #b86758;
+  }
+  #lf-workstation .lf-current-service { display: none; }
+  #lf-workstation .lf-service-strip {
+    border: 1px solid #e2deda; border-radius: 8px 26px 8px 8px;
+    background: #fcf9f5; overflow: hidden;
+  }
+  #lf-workstation .lf-service-shortcut { min-height: 91px; border-color: #e2deda; padding-inline: 20px; }
+  #lf-workstation .lf-service-shortcut:first-child { padding-left: 20px; }
+  #lf-workstation .lf-service-shortcut:hover:not(:disabled) { background: #f9eeea; }
+  #lf-workstation .lf-service-uds:hover:not(:disabled) { background: #edf3f5; }
+  #lf-workstation .lf-service-samples:hover:not(:disabled) { background: #edf2e9; }
+  #lf-workstation .lf-service-forms:hover:not(:disabled) { background: #fbf4e1; }
+  #lf-workstation .lf-service-shortcut:focus-visible { outline-offset: -4px; }
+  #lf-workstation .lf-shortcut-number { background: #f6dfd7; }
+  #lf-workstation .lf-shortcut-arrow { opacity: .85; }
+  #lf-workstation .lf-worklist-heading p { max-width: 560px; }
+  #lf-workstation .lf-worklist-card { border-radius: 8px 8px 20px 8px; }
+  #lf-workstation .lf-worklist-empty { background: #fffefa; }
+
+  /* A small, labelled shelf, not an unlabeled ellipsis or a second toolbar. */
+  #lf-workstation .lf-action-shelf {
+    position: relative; flex: 0 0 auto; min-width: 0; margin: 0; padding: 0;
+    border: 0; color: var(--lf-ink); background: transparent;
+  }
+  #lf-workstation .lf-shelf-trigger {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    list-style: none; min-height: 38px; padding: 8px 12px; margin: 0;
+    border: 1px solid #bbc9cc; border-radius: 6px; background: #fff;
+    color: #365566; cursor: pointer; white-space: nowrap;
+    font: 500 12px/20px var(--tw-font-sans); user-select: none;
+  }
+  #lf-workstation .lf-shelf-trigger::-webkit-details-marker { display: none; }
+  #lf-workstation .lf-shelf-trigger::marker { content: ""; }
+  #lf-workstation .lf-shelf-trigger > svg { flex: 0 0 12px; }
+  #lf-workstation .lf-shelf-trigger:hover,
+  #lf-workstation .lf-action-shelf[open] > .lf-shelf-trigger { background: #f2ecef; border-color: #a6b9c1; }
+  #lf-workstation .lf-action-shelf[open] > .lf-shelf-trigger > svg { transform: rotate(180deg); }
+  #lf-workstation .lf-shelf-panel {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 90;
+    width: 315px; max-width: calc(100vw - 40px); max-height: min(450px,calc(100dvh - 130px));
+    overflow-y: auto; overscroll-behavior: contain; padding: 0;
+    background: #fffefa; color: var(--lf-ink);
+    border: 1px solid #d6deda; border-top: 3px solid #edb66f;
+    border-radius: 8px 22px 8px 8px;
+    box-shadow: 0 10px 32px rgb(27 49 65 / 15%);
+  }
+  #lf-workstation .lf-action-shelf:not([open]) > .lf-shelf-panel { display: none; }
+  #lf-workstation .lf-action-shelf[data-placement="up"] > .lf-shelf-panel {
+    top: auto; bottom: calc(100% + 10px); border-top-color: #cd8f80;
+  }
+  #lf-workstation .lf-shelf-intro { padding: 19px 19px 14px; border-bottom: 1px solid #e5e1dc; }
+  #lf-workstation .lf-shelf-intro > strong { display: block; color: var(--lf-leaf); font: 400 23px/28px var(--lf-display); }
+  #lf-workstation .lf-shelf-intro p { margin: 7px 0 0; color: #526b79; font: 400 12px/19px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-actions { display: grid; padding: 8px; gap: 4px; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button {
+    display: flex; align-items: center; justify-content: flex-start; gap: 12px;
+    width: 100%; min-height: 46px; padding: 11px 12px; border: 1px solid transparent;
+    border-radius: 5px; margin: 0; background: transparent; box-shadow: none;
+    white-space: normal; text-align: left; color: var(--lf-ink);
+    font: 500 12px/20px var(--tw-font-sans);
+  }
+  #lf-workstation .lf-shelf-actions > button > svg { flex: 0 0 18px; width: 18px; height: 18px; color: var(--lf-leaf); }
+  #lf-workstation .lf-shelf-actions > button > span:has(strong) { flex: 1; min-width: 0; }
+  #lf-workstation .lf-shelf-actions > button strong { display: block; font: 500 13px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-actions > button small { display: block; margin-top: 2px; color: #526b79; font: 400 11px/17px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button:hover:not(:disabled) { background: #f1eef3; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button.is-danger { color: #913d33; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button.is-danger:hover:not(:disabled) { background: #fbece6; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button:disabled { background: #f3f3f0; color: #61737d; border-color: transparent; cursor: not-allowed; }
+  #lf-workstation .lf-shelf-panel kbd { display: inline-block; background: transparent; padding: 0; border: 0; color: #526b79; font: 400 10px/18px var(--tw-font-sans); }
+  /* These rows replace icon-only header controls. Keep their useful labels at
+     every size; the older toolbar's span-hiding rules must not leak in. */
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button > span { display: block; }
+  /* The old compact action row was a horizontal scroller, which clipped an
+     upward disclosure despite its valid bounding box. The shorter row fits
+     naturally now, so permit the panel to paint and receive real pointer input. */
+  #lf-workstation .cd2004-record-actions-buttons { overflow: visible; flex-wrap: wrap; }
+  #lf-workstation .cd2004-record-actions:has(.lf-action-shelf[open]) { z-index: 8; }
+  #lf-workstation .wfp-panel > .wfp-summary-bar.lf-service-footer {
+    position: relative; z-index: 4; padding: 10px var(--lf-gutter); gap: 10px;
+    overflow: visible; min-width: 0; background: #f9f8f6;
+  }
+  #lf-workstation .wfp-panel > .lf-service-footer:has(.lf-action-shelf[open]) { z-index: 8; }
+  #lf-workstation .lf-preference-state { flex: 0 0 auto; color: #476658; font: 500 10px/16px var(--tw-font-sans); }
+  #lf-workstation .lf-workspace-shelf > .lf-shelf-trigger { border-color: transparent; background: transparent; min-height: 32px; padding-block: 5px; font-size: 11px; }
+  #lf-workstation .lf-workspace-shelf[open] > .lf-shelf-trigger { background: #eae6ec; }
+  #lf-workstation .lf-workspace-shelf .lf-shelf-panel { width: 354px; }
+  #lf-workstation .lf-record-shelf > .lf-shelf-trigger { min-height: 38px; }
+  #lf-workstation .cd2004-record-actions-buttons { gap: 9px; }
+  #lf-workstation .cd2004-record-actions-state > small { max-width: 620px; }
+  #lf-workstation .lf-context-shelf > .lf-shelf-trigger { background: transparent; }
+
+  /* Brief reminders stay visible. The longer how-to is available by choice;
+     actual clinical warnings, blockers and status flags remain untouched. */
+  #lf-workstation .ipmg-review-cue { display: block; padding: 0; border-left: 2px solid #d48979; background: #fcf7f2; }
+  #lf-workstation .lf-review-disclosure { margin: 0; border: 0; padding: 0; }
+  #lf-workstation .lf-review-disclosure > summary {
+    display: flex; align-items: baseline; gap: 9px; min-height: 32px; padding: 7px 12px;
+    list-style: none; cursor: pointer; color: #4f626d; font: 400 11px/18px var(--tw-font-sans);
+  }
+  #lf-workstation .lf-review-disclosure > summary::-webkit-details-marker { display: none; }
+  #lf-workstation .lf-review-disclosure > summary::marker { content: ""; }
+  #lf-workstation .lf-review-disclosure > summary > svg { flex: 0 0 14px; width: 14px; height: 14px; align-self: center; color: #925047; }
+  #lf-workstation .lf-review-disclosure > summary strong { margin: 0; flex: 0 0 auto; }
+  #lf-workstation .lf-review-brief { flex: 1; }
+  #lf-workstation .lf-review-tail { margin-left: auto; color: #7e443b; white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; }
+  #lf-workstation .lf-review-detail { padding: 0 16px 12px 35px; max-width: 1000px; }
+  #lf-workstation .lf-review-disclosure[open] > summary { padding-bottom: 8px; }
+  #lf-workstation .lf-review-disclosure > summary:hover { background: #f8efea; }
+  #lf-workstation .lf-shelf-trigger:focus-visible,
+  #lf-workstation .lf-review-disclosure > summary:focus-visible { outline: 2px solid #3c7083; outline-offset: 2px; }
+
+  @media (max-width: 949px) {
+    #lf-workstation .lf-service-shortcut { min-height: 68px; padding: 12px 14px; }
+    #lf-workstation .lf-service-shortcut:first-child { padding-left: 14px; }
+    #lf-workstation .lf-shelf-trigger { font-size: 11px; padding-inline: 10px; }
+    #lf-workstation .lf-review-disclosure > summary { gap: 7px; }
+    #lf-workstation .lf-review-disclosure > summary strong { font-size: 10px; }
+    #lf-workstation .lf-review-tail { font-size: 10px; }
+  }
+  @media (max-height: 700px) {
+    #lf-workstation .lf-service-shortcut { min-height: 58px; padding-block: 9px; }
+    #lf-workstation .lf-review-disclosure > summary { padding-block: 4px; min-height: 27px; }
+    #lf-workstation .lf-shelf-intro { padding: 14px 16px 10px; }
+    #lf-workstation .lf-shelf-panel .lf-shelf-actions > button { padding-block: 9px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    #lf-workstation .lf-shelf-trigger,
+    #lf-workstation .lf-service-shortcut { transition: background-color 120ms ease; }
+  }
+  @media (forced-colors: active) {
+    #lf-workstation .lf-shelf-panel,
+    #lf-workstation .lf-shelf-trigger,
+    #lf-workstation .ipmg-review-cue { border: 1px solid CanvasText; }
+  }
+}

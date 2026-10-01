@@ -1,3 +1,4 @@
+const { openWorkspaceOptions } = require('./workspace-navigation');
 const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 
@@ -17,12 +18,14 @@ test.describe('Lightfully standalone shell', () => {
       await expect(page.locator('.lf-quick-tool')).toHaveCount(0);
       await expect(page.locator('.lf-document-action')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+      await openWorkspaceOptions(page);
       for (const selector of ['.lf-command-trigger', '.lf-density-toggle', '.tebra-account-trigger']) {
         const box = await page.locator(selector).boundingBox();
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(size.width);
         expect(box.y + box.height).toBeLessThanOrEqual(size.height);
       }
+      await page.keyboard.press('Escape');
       await expect(page.locator('.cd2004-worklist-tabs')).toBeInViewport();
       const worklistVisibleHeight = await page.locator('.cd2004-worklist-sheet').evaluate(node => {
         const r = node.getBoundingClientRect();
@@ -44,16 +47,19 @@ test.describe('Lightfully standalone shell', () => {
   }
   test('keeps searches temporary and persists only the display-density choice', async ({ page }) => {
     await boot(page);
-    await page.getByRole('button', { name: 'Compact workspace', exact: true }).click();
+    await openWorkspaceOptions(page);
+  await page.getByRole('button', { name: 'Compact workspace', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-lf-density', 'compact');
     expect(await page.evaluate(() => localStorage.getItem('ipmg.lightfully.ui-density.v1'))).toBe('compact');
-    await page.getByRole('button', { name: 'Search workspace commands' }).click();
+    await openWorkspaceOptions(page);
+  await page.getByRole('button', { name: 'Search workspace commands' }).click();
     await page.getByRole('combobox', { name: 'Search commands' }).fill('QA temporary search');
     await expect(page.locator('.lf-command-empty')).toBeVisible();
     expect(await page.evaluate(() => Object.values(localStorage).some(v => v.includes('QA temporary search')))).toBe(false);
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('button', { name: 'Search workspace commands' })).toBeFocused();
+    await expect(page.locator('.lf-workspace-shelf > summary')).toBeFocused();
     await page.reload();
+    await openWorkspaceOptions(page);
     await expect(page.getByRole('button', { name: 'Compact workspace', exact: true })).toHaveAttribute('aria-pressed', 'true');
   });
   test('does not open command search over an identity dialog', async ({ page }) => {
@@ -90,7 +96,8 @@ test.describe('Lightfully standalone shell', () => {
   test('enters the existing injection focus workflow, not a parallel form', async ({ page }) => {
     await boot(page);
     await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
-    await page.getByRole('button', { name: 'Open focused injection workspace', exact: true }).click();
+    await openWorkspaceOptions(page);
+  await page.getByRole('button', { name: 'Open focused injection workspace', exact: true }).click();
     await expect(page.locator('.lf-workstation')).toHaveAttribute('data-kiosk-mode', 'true');
     await expect(page.locator('.kiosk-stepper [data-kiosk-step]')).toHaveCount(7);
     await expect(page.locator('.wfp-panel')).toHaveCount(1);

@@ -18,6 +18,8 @@ import "./lightfully/lightfully-shell.css";
 import "./lightfully/lightfully-components.css";
 import "./lightfully/contemporary.css";
 import "./lightfully/final-polish.css";
+import "./lightfully/calm-workspace.css";
+import { ActionShelf } from "./lightfully/ActionShelf";
 import { DialogHeading } from "./lightfully/DialogHeading";
 import { worklistDate } from "./lightfully/worklist-display";
 import { ServiceChooser, ServiceHeader, isDocumentService } from "./lightfully/ServiceWorkspace";
@@ -1856,7 +1858,7 @@ function InjectionRecordActions({
               </button>
             </>
           )}
-          <span class="cd2004-record-action-separator" aria-hidden="true" />
+          <ActionShelf label="More actions" heading="This injection note" description={locked ? "Start another note. This signed note stays read-only." : "Start another note, or choose whether to discard this draft."} placement="up" class="lf-record-shelf">
           <button
             type="button"
             class="is-new"
@@ -1889,6 +1891,7 @@ function InjectionRecordActions({
               {RECORD.discardDraft}…
             </button>
           )}
+          </ActionShelf>
         </>
       }
     />

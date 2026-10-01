@@ -87,17 +87,6 @@ export function ActionBar({
         <span>{ACTION_BAR.print}</span>
       </button>
 
-      <MenuButton label={ACTION_BAR.more} menuLabel={ACTION_BAR.more} trigger="outlined">
-        {() => (
-          // `More` is where low-frequency page actions will land. Until this
-          // module has one, it says so rather than listing a destination that
-          // does not exist - a dead menu entry is the most obvious tell there is.
-          <p class="tebra-action-menu-empty" role="none">
-            {ACTION_BAR.moreUnavailable}
-          </p>
-        )}
-      </MenuButton>
-
       <MenuButton
         label={ACTION_BAR.customizeView}
         menuLabel={ACTION_BAR.customizeViewMenu}

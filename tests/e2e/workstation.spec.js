@@ -1,3 +1,4 @@
+const { openRecordActions } = require('./workspace-navigation');
 const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue, providerControl } = require('./provider-entry');
@@ -386,7 +387,8 @@ test.describe('MA Workstation browser journeys', () => {
     const actions = page.locator('[data-injection-record-actions]');
     await actions.locator('[data-injection-save]').click();
     await expect(actions).toContainText('Draft saved');
-    await actions.locator('[data-injection-new]').click();
+    await openRecordActions(page);
+  await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
       name: /^Open incomplete Injection note for QA, Vivitrol Habitus, visit /
@@ -481,7 +483,8 @@ test.describe('MA Workstation browser journeys', () => {
     const actions = page.locator('[data-injection-record-actions]');
     await actions.locator('[data-injection-save]').click();
     await expect(actions).toContainText('Draft saved');
-    await actions.locator('[data-injection-new]').click();
+    await openRecordActions(page);
+  await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
       name: /^Open incomplete Injection note for QA, Other Manual Return, visit /
@@ -522,7 +525,8 @@ test.describe('MA Workstation browser journeys', () => {
     const actions = page.locator('[data-injection-record-actions]');
     await actions.locator('[data-injection-save]').click();
     await expect(actions).toContainText('Draft saved');
-    await actions.locator('[data-injection-new]').click();
+    await openRecordActions(page);
+  await actions.locator('[data-injection-new]').click();
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
 
     // This is the actual v4 legacy shape: a visible legacy #nextDate, but no
@@ -638,7 +642,8 @@ test.describe('MA Workstation browser journeys', () => {
     const actions = page.locator('[data-injection-record-actions]');
     await actions.locator('[data-injection-save]').click();
     await expect(actions).toContainText('Draft saved');
-    await actions.locator('[data-injection-new]').click();
+    await openRecordActions(page);
+  await actions.locator('[data-injection-new]').click();
     await page.getByRole('button', { name: /Open saved notes/ }).click();
     await page.getByRole('row', {
       name: new RegExp(`^Open incomplete Injection note for ${patient}, visit `)
@@ -1853,7 +1858,8 @@ test.describe('MA Workstation browser journeys', () => {
 
     const discard = page.locator('[data-injection-discard]');
     await expect(discard).toBeEnabled();
-    await discard.click();
+    await openRecordActions(page);
+  await discard.click();
     const discardDialog = page.getByRole('dialog', { name: 'Discard draft' });
     await expect(discardDialog).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
@@ -2758,7 +2764,8 @@ test.describe('MA Workstation browser journeys', () => {
 
     // Switch immediately through the visible lifecycle control: it must flush
     // the pending sub-700 ms autosave instead of losing structured fields.
-    await page.locator('[data-injection-record-actions] [data-injection-new]').click();
+    await openRecordActions(page);
+  await page.locator('[data-injection-record-actions] [data-injection-new]').click();
     await expect(page.locator('#ptName')).toHaveValue('');
     // The new panel must reset its own typed state too, not just the hidden
     // legacy mirror fields, when the active record genuinely changes.
@@ -2792,9 +2799,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(actions).toContainText('New draft');
     await expect(save).toHaveAccessibleName('Save');
     await expect(finish).toHaveAccessibleName('Sign');
+    await openRecordActions(page);
     await expect(startNew).toHaveAccessibleName('Start new injection');
     await expect(discard).toHaveAccessibleName('Discard draft…');
-    await startNew.focus();
+    await openRecordActions(page);
+  await startNew.focus();
     await expect(page.locator('[data-status-prompt]')).toContainText('Start new injection');
     await panel.locator('input[placeholder="Last, First"]').focus();
     await expect(page.locator('[data-status-prompt]')).toContainText('Patient name');
@@ -2815,7 +2824,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
     // New is safe navigation: it retains the saved draft rather than deleting it.
-    await startNew.click();
+    await openRecordActions(page);
+  await startNew.click();
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
     await expect(actions).toContainText('New draft');
     await expect.poll(() => page.evaluate(() =>
@@ -2827,14 +2837,16 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[placeholder="Last, First"]').fill('QA, Discard Me');
     await setProvider(panel, 'QA Lifecycle Provider');
     await expect(discard).toBeEnabled();
-    await discard.click();
+    await openRecordActions(page);
+  await discard.click();
     const discardDialog = page.getByRole('dialog', { name: 'Discard draft' });
     await expect(discardDialog).toBeVisible();
     await expect(discardDialog).toContainText('QA, Discard Me');
     await discardDialog.getByRole('button', { name: 'Keep editing', exact: true }).click();
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('QA, Discard Me');
 
-    await discard.click();
+    await openRecordActions(page);
+  await discard.click();
     await discardDialog.getByRole('button', { name: 'Discard draft', exact: true }).click();
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
     await expect.poll(() => page.evaluate(() =>
@@ -3043,7 +3055,8 @@ test.describe('MA Workstation browser journeys', () => {
     await actions.locator('[data-injection-save]').click();
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
 
-    await actions.locator('[data-injection-new]').click();
+    await openRecordActions(page);
+  await actions.locator('[data-injection-new]').click();
     await expect(page.locator('#ptName')).toHaveValue('');
     await openInjectionTab(page, 'Order');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
@@ -3107,7 +3120,8 @@ test.describe('MA Workstation browser journeys', () => {
     await setProvider(persistencePanel, 'QA Provider');
     await persistencePanel.locator('select[name="inj-reason"]').selectOption('scheduled');
 
-    await page.locator('[data-injection-record-actions] [data-injection-new]').click();
+    await openRecordActions(page);
+  await page.locator('[data-injection-record-actions] [data-injection-new]').click();
     await expect(persistencePanel.locator('input[placeholder="Last, First"]'))
       .toHaveValue('QA, Persistence Guard');
     await expect(persistencePanel.locator('select[name="inj-reason"]'))

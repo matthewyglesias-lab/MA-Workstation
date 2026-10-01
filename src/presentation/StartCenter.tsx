@@ -184,7 +184,7 @@ export function StartCenter({
 
   return (
     <section class="cd2004-start-center lf-start-center" aria-labelledby="currentWorklistTitle">
-      <header class="lf-worklist-heading cd2004-worklist-header"><div><span class="lf-eyebrow">CLINICAL DOCUMENTATION</span><h1 id="currentWorklistTitle">Worklist</h1><p>Start a service, return to a draft, or give an item a second look.</p></div><time>{new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date())}</time></header>
+      <header class="lf-worklist-heading cd2004-worklist-header"><div><span class="lf-eyebrow">YOUR LOCAL WORKSPACE</span><h1 id="currentWorklistTitle">Worklist</h1><p>Choose a service, pick up a draft, or review what needs attention.</p></div><time>{new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date())}</time></header>
       <div class="lf-service-strip" aria-label="Start or resume a service">
         {SERVICES.map((service, index) => <button type="button" class={`lf-service-shortcut lf-service-${service.id}`} key={service.id}
           disabled={!onWorkflowOpen} onClick={() => onWorkflowOpen?.(service.id)}>

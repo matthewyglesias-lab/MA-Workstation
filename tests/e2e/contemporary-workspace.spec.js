@@ -1,3 +1,4 @@
+const { openRecordActions } = require('./workspace-navigation');
 const {test,expect}=require('@playwright/test');
 const {clickWorkspace}=require('./workspace-navigation');
 const open=page=>clickWorkspace(page,'.cd2004-nav-item[title="Injection"]');
@@ -85,7 +86,8 @@ test('chooser, context, lookup and lifecycle dialog share one semantic heading d
  await expect(page.locator('dialog[open] .lf-dialog-title h2')).toHaveText('Ordering provider');
  await expect(page.getByRole('searchbox',{name:'Search options',exact:true})).toBeVisible();
  await page.keyboard.press('Escape');
- await page.locator('[data-injection-discard]').click();
+ await openRecordActions(page);
+  await page.locator('[data-injection-discard]').click();
  await expect(page.locator('dialog[open] .lf-dialog-title h2')).toHaveText('Discard draft');
  await expect(page.getByRole('button',{name:'Keep editing',exact:true})).toBeVisible();
  await page.keyboard.press('Escape');await expect(page.locator('[data-field-path="patient.name"] input')).toHaveValue('Dialog QA, Synthetic');

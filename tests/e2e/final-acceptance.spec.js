@@ -1,3 +1,4 @@
+const { openWorkspaceOptions } = require('./workspace-navigation');
 const {test,expect}=require('@playwright/test');
 const {clickWorkspace}=require('./workspace-navigation');
 const openService=(page,name)=>clickWorkspace(page,`.cd2004-nav-item[title="${name}"]`);
@@ -22,6 +23,7 @@ for(const size of [{width:1440,height:900},{width:800,height:600}]) {
   const close=help.getByRole('button',{name:'Close keyboard reference'}),ok=help.getByRole('button',{name:'OK',exact:true});
   await close.focus();await page.keyboard.press('Shift+Tab');await expect(ok).toBeFocused();
   await page.keyboard.press('Tab');await expect(close).toBeFocused();await page.keyboard.press('Escape');await expect(help).toHaveCount(0);
+  await openWorkspaceOptions(page);
   await page.getByRole('button',{name:'Search workspace commands',exact:true}).click();
   const commands=page.locator('.lf-command-dialog');await inViewport(commands,size);
   await expect(commands.getByRole('heading',{level:2})).toHaveText('Find a tool');
@@ -82,6 +84,7 @@ for(const size of [{width:1440,height:900},{width:800,height:600}]) {
   await page.setViewportSize(size);await page.goto('/');await openService(page,'Injection');
   await page.locator('[data-field-path="patient.name"] input').fill('Focus QA, Synthetic');
   await page.locator('[data-field-path="patient.dob"] input').fill('01/02/1990');
+  await openWorkspaceOptions(page);
   await page.getByRole('button',{name:'Open focused injection workspace',exact:true}).click();
   const summary=page.locator('.kiosk-patient-summary');await expect(summary).toBeVisible();await inViewport(summary,size);
   expect(await summary.evaluate(n=>getComputedStyle(n).backgroundColor)).toBe('rgb(255, 255, 255)');
