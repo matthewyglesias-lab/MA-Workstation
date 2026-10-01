@@ -69,7 +69,7 @@
   #lf-workstation .kiosk-patient-facts dt {color:var(--lf-muted);font:400 11px/18px var(--tw-font-sans);letter-spacing:0;text-transform:none;}
   #lf-workstation .kiosk-patient-facts > div {border-right-color:var(--lf-line);}
   #lf-workstation .kiosk-patient-facts dd {color:var(--lf-ink);font:500 13px/20px var(--tw-font-sans);}
-  #lf-workstation .kiosk-shell-actions button {color:var(--lf-ink);border-color:var(--lf-control-border);border-radius:8px;background:#fff;font:500 12px/20px var(--tw-font-sans);}
+  #lf-workstation .kiosk-shell-actions button {color:var(--lf-ink);border-color:var(--lf-control-border);border-radius:8px;background:#fff;font:500 12px/18px var(--tw-font-sans);}
   #lf-workstation .kiosk-shell-actions button:hover {background:#edf4f6;}
   /* Lock remains explicit and non-dismissible; appearance is not authentication. */
   body:has(#lf-workstation) .cd2004-lock-card {width:min(440px,calc(100vw - 48px));padding:30px;border:1px solid var(--lf-line);border-radius:16px;background:#fff;color:var(--lf-ink);box-shadow:0 24px 70px rgb(27 49 65 / 17%);}
