@@ -25,7 +25,7 @@ for (const size of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, 
     await name.fill('Review QA, Synthetic');
     await panel.locator('[data-field-path="patient.dob"] input').fill('01/02/1990');
     await panel.locator('[name="inj-medication"]').selectOption('maintena');
-    await expect(page.locator('.lf-service-heading h1')).toHaveCSS('font-family', /Plus Jakarta Sans/);
+    await expect(page.locator('.lf-service-heading h1')).toHaveCSS('font-family', /Georgia/);
     await expect(page.locator('[data-review-cue="administer"]')).toContainText('Recheck any value you change');
     await expect(page.locator('[data-injection-finish]')).toBeDisabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
