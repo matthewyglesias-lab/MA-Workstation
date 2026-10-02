@@ -43,6 +43,8 @@ const SNAPSHOT_OPTIONS = {
   timeout: 15_000
 };
 
+// Normalize state/geometry captures to the bundled font, not an OS fallback.
+// Lightfully shell and deep-surface captures retain the actual display typography.
 const CAPTURE_STYLES = `
   html[data-visual-regression="true"],
   html[data-visual-regression="true"] body,
@@ -50,7 +52,7 @@ const CAPTURE_STYLES = `
   html[data-visual-regression="true"] .cd2004-shell *,
   html[data-visual-regression="true"] .meditech-workstation-gate,
   html[data-visual-regression="true"] .meditech-workstation-gate * {
-    font-family: Arial, "Liberation Sans", sans-serif !important;
+    font-family: "Inter Variable", Arial, sans-serif !important;
     font-synthesis: none !important;
   }
 

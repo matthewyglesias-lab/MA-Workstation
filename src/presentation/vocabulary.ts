@@ -254,7 +254,7 @@ export const RECORD = {
   discardDraftDescription: "Discard this editable draft. This cannot be undone.",
   saveUdsDraftDescription: "Save this editable UDS draft in this browser.",
   udsFieldsBeforeSigning:
-    "Complete the required clinical fields and sign in staff before signing this note.",
+    "Complete the required clinical fields and enter the documenting staff name before signing this note.",
   startUdsDescription:
     "Start a blank UDS screen. Any current editable work is saved as a draft first.",
   handoffNoAdministration:
@@ -563,8 +563,8 @@ export const SHELL = {
  * menu bar was retired.
  */
 export const ACCOUNT = {
-  label: "Account and location",
-  staffSignIn: "Staff sign-in…",
+  label: "Staff and location",
+  staffSignIn: "Documenting staff…",
   visitLocation: "Visit location…",
 } as const;
 

@@ -708,7 +708,7 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
-      'rgb(175, 196, 206)'
+      'rgb(150, 177, 167)'
     );
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
@@ -876,8 +876,8 @@ test.describe('MA Workstation browser journeys', () => {
         horizontalOverflow: node.scrollWidth - node.clientWidth
       };
     });
-    expect(drawerVisual.borderRadius).toBe(16);
-    expect(drawerVisual.searchRadius).toBe(9);
+    expect(drawerVisual.borderRadius).toBe(10);
+    expect(drawerVisual.searchRadius).toBe(5);
     expect(drawerVisual.fontFamily).toContain('Inter Variable');
     expect(drawerVisual.headerBackground).toBe('none');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
@@ -1096,7 +1096,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(specimenTab).toHaveClass(/is-stop/);
     await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('required');
 
-    await udsPanel.getByRole('button', { name: 'Use signed-in staff', exact: true }).click();
+    await udsPanel.getByRole('button', { name: 'Use documenting staff', exact: true }).click();
     const collectorField = udsPanel.locator('.wfp-field[data-field-path="collector"]');
     await expect(collectorField.locator('.wfp-register-source')).toHaveText('Session');
     await udsPanel.getByLabel('Collected by', { exact: true }).fill('Jordan Lee, MA');
@@ -1226,7 +1226,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(inspector.locator('.cd2004-window-title')).toContainText(
       'Clinical Documentation'
     );
-    await expect(inspector.locator('.cd2004-note-mode')).toHaveText('READ ONLY · LOCAL');
+    await expect(inspector.locator('.cd2004-note-mode')).toHaveText('Read-only preview · local');
     await expect(navigator.locator('.cd2004-inspector-window')).toHaveCount(0);
   });
 
@@ -2691,6 +2691,8 @@ test.describe('MA Workstation browser journeys', () => {
     await panel.locator('input[type="time"]').first().fill('10:15');
     await panel.locator('.wfp-field:has-text("Component 2 actual time") input').fill('10:18');
     await panel.locator('input[placeholder="J. Doe, LVN"]').fill('QA Staff, MA');
+    await openInjectionTab(page, 'Outcome');
+    await panel.locator('select[name="inj-response"]').selectOption('well');
 
     await openInjectionTab(page, 'Administration');
     const administered = page.locator('#clinicalDisposition [data-disposition="administered"]');
@@ -3418,11 +3420,11 @@ test.describe('MA Workstation browser journeys', () => {
       expect(section).toEqual(section.map((_, index) => String(index + 1)));
     }
 
-    await expect(inspector.locator('.cd2004-note-eod')).toHaveText('── END OF DOCUMENT ──');
+    await expect(inspector.locator('.cd2004-note-eod')).toHaveText('End of note');
     // An unfiled note carries no second state mark: it is the same note that
     // will be filed, so the heading says only where it lives.
     await expect(inspector.locator('.cd2004-note-heading .cd2004-note-mark'))
-      .toHaveText(['LOCAL']);
+      .toHaveText(['Local']);
   });
 
   /**
@@ -3470,7 +3472,7 @@ test.describe('MA Workstation browser journeys', () => {
         );
         await sentinel(`__stale_${workflow}_${index}__`);
         await section.locator('.cd2004-note-copy').click();
-        await expect(section.locator('.cd2004-note-copy')).toHaveText('COPIED');
+        await expect(section.locator('.cd2004-note-copy')).toHaveText('Copied');
         expect(
           (await clipboard()).replace(/\r\n/g, '\n'),
           `${workflow} section ${index} Copy must put its own text on the clipboard`
@@ -3505,19 +3507,19 @@ test.describe('MA Workstation browser journeys', () => {
 
     const reportPreview = page.locator('.wfp-report-preview');
     const report = page.locator('.lf-lab-sheet');
-    await expect(reportPreview.getByText('WAITING FOR RESULTS')).toBeVisible();
+    await expect(reportPreview.getByText('Waiting for results')).toBeVisible();
     await expect(report).toBeHidden();
     await reportPreview.locator('summary').click();
     await expect(report).toBeVisible();
     await expect(report).toContainText('Point-of-care testing');
-    await expect(report).toContainText('PRELIMINARY / PRESUMPTIVE');
+    await expect(report).toContainText('Preliminary / presumptive');
     await expect(report.locator('.lf-lab-results tbody tr')).toHaveCount(14);
     await expect(report.locator('th')).toHaveText([
-      'TEST / ANALYTE',
-      'RESULT',
-      'FLAG',
-      'EXPECTED',
-      'STATUS'
+      'Test / analyte',
+      'Result',
+      'Flag',
+      'Expected',
+      'Status'
     ]);
     await expect(page.getByRole('button', { name: 'Print clinician report' })).toBeVisible();
   });

@@ -706,13 +706,15 @@ async function expectPrintContract(page, {
     `Horizontal print clipping in #${rootId}`
   ).toEqual([]);
 
+  const pdfPath = test.info().outputPath(`${rootId}-print.pdf`);
   const pdf = await page.pdf({
+    path: pdfPath,
     format: 'Letter',
     preferCSSPageSize: true,
     printBackground: true,
     displayHeaderFooter: false
   });
-  await test.info().attach(`${rootId}-print.pdf`, { body: pdf, contentType: 'application/pdf' });
+  await test.info().attach(`${rootId}-print.pdf`, { path: pdfPath, contentType: 'application/pdf' });
   expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
   expect(pdf.length).toBeGreaterThan(5_000);
 

@@ -2,6 +2,7 @@ import { NOTES, RECORD, SHELL, WORKLIST_EMPTY, noteCount } from "./vocabulary";
 import { useMemo, useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
 import { SERVICES } from "./lightfully/ServiceWorkspace";
+import type { NotesTableRow } from "./notes/note-table-model";
 import { WORKFLOW_LABELS } from "./types";
 import {
   type ClinicalTone,
@@ -15,6 +16,8 @@ type WorklistFilter = "all" | "review" | "today" | "drafts";
 type WorklistSource = "review" | "today" | "drafts";
 
 export interface StartCenterProps {
+  udsDraftRows?: NotesTableRow[];
+  onUdsDraftOpen?: (row: NotesTableRow) => void;
   sessionDrafts?: WorkspaceSessionDraft[];
   onDocumentService?: () => void;
   needsReview: WorkQueueItem[];
@@ -45,6 +48,7 @@ interface WorklistRow {
   queueItem?: WorkQueueItem;
   record?: InjectionRecordRow;
   session?: WorkspaceSessionDraft;
+  udsDraft?: NotesTableRow;
 }
 
 const FILTERS: Array<{ id: WorklistFilter; label: string }> = [
@@ -145,6 +149,8 @@ const TONE_GLYPH: Record<ClinicalTone, string> = {
 };
 
 export function StartCenter({
+  udsDraftRows = [],
+  onUdsDraftOpen,
   sessionDrafts = [],
   onDocumentService,
   needsReview,
@@ -169,6 +175,12 @@ export function StartCenter({
     return [
       ...reviewItems.map(item => queueWorklistRow(item, "review")),
       ...savedDrafts.map(recordWorklistRow),
+      ...udsDraftRows.map((record): WorklistRow => ({
+        id: `uds-draft:${record.recordId}`, source: 'drafts', service: 'uds',
+        priorityLabel: 'Saved draft', patientLabel: record.patientLabel,
+        taskLabel: record.summaryLabel || 'Drug screen', timeLabel: record.visit.label,
+        stateLabel: 'Draft saved locally', actionLabel: 'Resume', tone: 'neutral', udsDraft: record,
+      })),
       ...sessionDrafts.map((session): WorklistRow => ({
         id: `session:${session.workflow}`, source: 'drafts', service: session.workflow,
         priorityLabel: 'Unfinished session', patientLabel: session.patientLabel,
@@ -178,7 +190,7 @@ export function StartCenter({
       })),
       ...todayItems.map(item => queueWorklistRow(item, "today")),
     ];
-  }, [needsReview, todayQueue, injectionRecords, sessionDrafts]);
+  }, [needsReview, todayQueue, injectionRecords, sessionDrafts, udsDraftRows]);
   const indexedRows = useMemo(() => allRows.map(row => ({
     row, text: `${row.patientLabel} ${row.taskLabel} ${row.stateLabel}`.toLocaleLowerCase(),
   })), [allRows]);
@@ -198,6 +210,7 @@ export function StartCenter({
   const countFor = (candidate: WorklistFilter) => counts[candidate];
 
   const openRow = (row: WorklistRow) => {
+    if (row.udsDraft) { onUdsDraftOpen?.(row.udsDraft); return; }
     if (row.session) { onWorkflowOpen?.(row.session.workflow); return; }
     if (row.queueItem) onQueueItemOpen?.(row.queueItem);
     if (row.record) onRecordOpen?.(row.record);
@@ -236,7 +249,7 @@ export function StartCenter({
             <td><span class="lf-table-service"><DesktopIcon name={row.service}/>{WORKFLOW_LABELS[row.service]}</span></td>
             <td class="lf-table-date">{row.timeLabel || "—"}</td>
             <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{TONE_GLYPH[row.tone ?? "neutral"]}</span>{row.stateLabel}</span></td>
-            <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.session ? !onWorkflowOpen : row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<span aria-hidden="true"> →</span></button></td>
+            <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.udsDraft ? !onUdsDraftOpen : row.session ? !onWorkflowOpen : row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<span aria-hidden="true"> →</span></button></td>
           </tr>)}
         </tbody></table> : <div class="tebra-record-empty lf-worklist-empty"><span class="lf-empty-mark" aria-hidden="true"><span/><DesktopIcon name={query.trim() ? "records" : "note"}/></span><strong>{query.trim() ? "No matching work" : filter === "all" ? "Your worklist is clear" : worklistEmptyText(filter)}</strong><small>{query.trim() ? "Try another patient or medication, or clear the search." : filter === "all" ? "Document an injection, drug screen, samples or a form request. Your unfinished work will appear here." : worklistEmptyHint(filter)}</small>{query.trim() ? <button type="button" class="lf-secondary-button" onClick={() => setQuery("")}>Clear search</button> : filter === "all" && <button type="button" class="lf-secondary-button" disabled={!onDocumentService} onClick={onDocumentService}>Choose a service <span aria-hidden="true">→</span></button>}</div>}
       </div>

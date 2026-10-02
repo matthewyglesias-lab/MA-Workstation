@@ -9,6 +9,7 @@ for (const [name, workflow] of [['Forms','forms'],['Samples','samples']]) {
     const patient=page.getByRole('textbox',{name:'Patient name',exact:true});
     await patient.fill('Recovery, Synthetic');
     await page.getByRole('textbox',{name:'DOB',exact:true}).fill('01/02/1990');
+    if(workflow==='forms') await page.getByRole('combobox',{name:'Requested document',exact:true}).selectOption('restrictions');
     await expect(page.locator('.lf-recovery-notice')).toContainText('Draft retained for this tab');
     const bytes=await page.evaluate(w=>sessionStorage.getItem(`ipmg.tab-recovery.${w}.v1`),workflow);
     expect(JSON.parse(bytes).encounter.patient).toEqual({name:'Recovery, Synthetic',dob:'01/02/1990'});
@@ -16,27 +17,32 @@ for (const [name, workflow] of [['Forms','forms'],['Samples','samples']]) {
     const resume=page.locator(`[data-worklist-open="session:${workflow}"]`);
     await expect(resume).toBeVisible();await resume.click();
     await expect(patient).toHaveValue('Recovery, Synthetic');
-    let prompts=0;page.on('dialog',async d=>{prompts++;await d.dismiss();});
+    let prompts=0;page.on('dialog',async d=>{prompts++;await d.accept();});
     await page.reload();await page.waitForFunction(()=>document.body.dataset.applicationReady==='true');
     await open(page,name);await expect(patient).toHaveValue('Recovery, Synthetic');
-    expect(prompts).toBe(0);
+    expect(prompts).toBe(1);
     expect(await page.evaluate(w=>sessionStorage.getItem(`ipmg.tab-recovery.${w}.v1`),workflow)).toBe(bytes);
     await page.getByRole('button',{name:'Preview',exact:true}).click();
     await expect(page.locator('#lf-document-preview')).toContainText('Recovery, Synthetic');
+    if(workflow==='forms') {
+      await expect(page.getByRole('combobox',{name:'Requested document',exact:true})).toHaveValue('restrictions');
+      await expect(page.locator('#lf-document-preview')).toContainText('Restrictions / accommodation');
+      await expect(page.locator('#lf-document-preview')).not.toContainText('Diagnosis / treatment verification handoff');
+    }
     await expect(page.locator('#lf-document-preview .lf-note-boundary')).toContainText('Copying does not file it');
     await page.screenshot({path:info.outputPath(`${workflow}-recovered-preview.png`)});
   });
 }
 
-test('failed recovery leaves entered work visible and warns before reload',async({page})=>{
+test('failed recovery leaves entered work visible and prevents an unconfirmed tab close',async({page})=>{
   await boot(page);await open(page,'Forms');
   await page.evaluate(()=>{const old=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k.startsWith('ipmg.tab-recovery.'))throw new DOMException('Full','QuotaExceededError');return old.call(this,k,v);};});
   const patient=page.getByRole('textbox',{name:'Patient name',exact:true});await patient.fill('Keep open, Synthetic');
   await expect(page.locator('.lf-recovery-notice[role=alert]')).toContainText('Reload recovery unavailable');
   await open(page,'Dashboard');await page.locator('[data-worklist-open="session:forms"]').click();
   await expect(patient).toHaveValue('Keep open, Synthetic');
-  const dialog=page.waitForEvent('dialog');const reload=page.reload().catch(()=>{});const warning=await dialog;
-  expect(warning.type()).toBe('beforeunload');await warning.dismiss();await reload;
+  const dialog=page.waitForEvent('dialog');await page.close({runBeforeUnload:true});const warning=await dialog;
+  expect(warning.type()).toBe('beforeunload');await warning.dismiss();expect(page.isClosed()).toBe(false);
   await expect(patient).toHaveValue('Keep open, Synthetic');
 });
 
@@ -54,7 +60,7 @@ test('signed local record never claims a Tebra filing',async({page})=>{
   await boot(page);await page.getByRole('button',{name:'Open saved notes (F11)'}).click();
   await page.locator('[data-records-open]').first().click();
   await page.getByRole('button',{name:'Preview',exact:true}).click();
-  await expect(page.locator('.cd2004-note-mark')).toHaveText('Signed locally');
+  await expect(page.locator('.cd2004-note-mark.is-signed')).toHaveText('Signed locally');
   await expect(page.locator('.lf-note-boundary')).toContainText('Confirm the final note separately in Tebra');
   await expect(page.locator('#lf-document-preview')).not.toContainText('FILED');
 });
@@ -64,10 +70,12 @@ test('UDS report preview does not invent a reported time',async({page},info)=>{
   const panel=page.locator('.wfp-panel');
   await panel.getByRole('textbox',{name:'Patient name',exact:true}).fill('Report, Synthetic');
   await panel.getByRole('button',{name:'Use current date/time'}).click();
+  await expect(panel.getByRole('textbox',{name:'Patient name',exact:true})).toHaveValue('Report, Synthetic');
   await panel.getByRole('tab',{name:'Review',exact:true}).click();
   const disclosure=panel.locator('.wfp-report-preview');if(await disclosure.getAttribute('open')===null)await disclosure.locator('summary').click();
   const report=page.getByRole('region',{name:'UDS clinician laboratory report preview'});
   await expect(report).toContainText('Inland Psychiatric Medical Group');
+  await expect(report).toContainText('Report, Synthetic');
   await expect(report.locator('div',{has:page.locator('dt',{hasText:'Report time'})})).toContainText('Not documented');
   await expect(report).not.toContainText('POC-UDS / OPEN');
   await page.screenshot({path:info.outputPath('uds-report-preview.png')});
@@ -93,4 +101,18 @@ test('new injection facts remain unconfirmed through medication selection',async
   await expect(panel.locator('[name="inj-response"]')).toHaveValue('');
   await page.getByRole('button',{name:'Preview',exact:true}).click();
   await expect(page.locator('#lf-document-preview')).not.toContainText(/NKDA|tolerated well|Consent.*obtained/);
+});
+
+
+test('saved drug-screen drafts resume from the home worklist with the right patient',async({page})=>{
+  await boot(page);await open(page,'UDS');
+  const patient=page.getByRole('textbox',{name:'Patient name',exact:true});
+  await patient.fill('Worklist, Synthetic');
+  await page.getByRole('textbox',{name:'DOB',exact:true}).fill('01/02/1990');
+  await page.locator('.cd2004-record-actions button.is-save').click();
+  await open(page,'Dashboard');
+  const row=page.locator('[data-worklist-open^="uds-draft:"]');
+  await expect(row).toHaveCount(1);await row.click();
+  await expect(patient).toHaveValue('Worklist, Synthetic');
+  await expect(page.locator('.cd2004-patient-banner')).toContainText('Worklist, Synthetic');
 });

@@ -19,6 +19,7 @@ import "./lightfully/lightfully-components.css";
 import "./lightfully/contemporary.css";
 import "./lightfully/workspace.css";
 import "./documents/injection-avs.css";
+import "./documents/clinical-print.css";
 import { ActionShelf } from "./lightfully/ActionShelf";
 import { DialogHeading } from "./lightfully/DialogHeading";
 import { worklistDate } from "./lightfully/worklist-display";
@@ -29,7 +30,7 @@ import {
 } from "../persistence/injection-records";
 import { browserSafeStorage } from "../persistence/storage";
 import { UdsRecordRepository } from "../persistence/uds-records";
-import { isUsableUdsRecord } from "./uds-record-safety";
+import { isUsableUdsRecord, isUnambiguousUsableUdsRecordList } from "./uds-record-safety";
 import { isUsableInjectionRecord } from "./workflows/injection/injection-presentation-extension";
 import {
   fieldsBeforeSigning,
@@ -74,6 +75,7 @@ import {
   type RecordLifecycle,
 } from "./RecordLifecycleActions";
 import { StartCenter } from "./StartCenter";
+import { udsRecordToNotesTableRow, type NotesTableRow } from "./notes/note-table-model";
 import {
   WorkstationLookupDialog,
   type WorkstationLookupOption,
@@ -354,6 +356,7 @@ export function ClinicalDesktopShell({
     null,
   );
   const [chartView, setChartView] = useState<PatientChartView>("facesheet");
+  const [udsDraftRows, setUdsDraftRows] = useState<NotesTableRow[]>([]);
   const [chartIndex, setChartIndex] = useState<PatientChartIndex>(() => ({
     patients: [],
     rowsByPatient: new Map(),
@@ -445,6 +448,11 @@ export function ClinicalDesktopShell({
     const injections = new InjectionRecordRepository(storage).list();
     const uds = new UdsRecordRepository(storage).list();
     const rawUds = uds.ok ? uds.value : [];
+    // A worklist is a read-only view, not permission to open or overwrite a record.
+    // Quarantine ambiguous/corrupt stores and revalidate on every resume action.
+    setUdsDraftRows(uds.ok && !uds.warnings.length && isUnambiguousUsableUdsRecordList(rawUds)
+      ? rawUds.filter(record => record.status === "draft").map(udsRecordToNotesTableRow)
+      : []);
     const udsIdCounts = rawUds.reduce<Map<string, number>>((counts, record) => {
       counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
       return counts;
@@ -1351,6 +1359,16 @@ export function ClinicalDesktopShell({
     needsReview,
     todayQueue,
     injectionRecords: dashboardInjectionRecords,
+    udsDraftRows,
+    onUdsDraftOpen: onOpenUdsRecord ? row => {
+      const result = onOpenUdsRecord(row.recordId, row.patientDob ? { name: row.patientLabel, dob: row.patientDob } : undefined);
+      if (result === false || result === "patient-identity-mismatch") {
+        setInternalStatus(result === "patient-identity-mismatch" ? RECORD.savedNotePatientChanged : RECORD.savedNoteCouldNotOpen);
+        reloadChartIndex();
+        return;
+      }
+      closeChart("uds");
+    } : undefined,
     sessionDrafts,
     onQueueItemOpen,
     onRecordOpen,
@@ -1729,6 +1747,8 @@ export function ClinicalDesktopShell({
 }
 
 interface RenderWorkflowOptions {
+  udsDraftRows: NotesTableRow[];
+  onUdsDraftOpen?: (row: NotesTableRow) => void;
   sessionDrafts?: WorkspaceSessionDraft[];
   onDocumentService?: () => void;
   workflow: WorkflowId;
@@ -1903,6 +1923,8 @@ function InjectionRecordActions({
 }
 
 function renderWorkflowContent({
+  udsDraftRows,
+  onUdsDraftOpen,
   sessionDrafts,
   onDocumentService,
   workflow,
@@ -1927,6 +1949,8 @@ function renderWorkflowContent({
   if (workflow === "home") {
     return (
       <StartCenter
+        udsDraftRows={udsDraftRows}
+        onUdsDraftOpen={onUdsDraftOpen}
         sessionDrafts={sessionDrafts}
         onDocumentService={onDocumentService}
         needsReview={needsReview}

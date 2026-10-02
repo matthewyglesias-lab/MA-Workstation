@@ -300,6 +300,17 @@ export function FormsPanel({
                 options={FORM_REQUEST_TYPE_OPTIONS}
               />
               <div class="wfp-row">
+                <Field label="Requested document" hint="Tracks the requested document only; provider approval is required before release.">
+                  <select
+                    name="forms-document-purpose"
+                    value={encounter.letterType}
+                    onChange={(event) => patch({ letterType: event.currentTarget.value as LetterType })}
+                  >
+                    {LETTER_TYPE_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <div class="wfp-row">
                 <Field label="Assigned provider">
                   <ProviderField
                     fallbackLabel="Assigned provider"

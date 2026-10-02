@@ -7,6 +7,6 @@ export function DraftRecoveryNotice({ status }: { status?: RecoveryStatus }) {
     <strong>{error ? 'Reload recovery unavailable' : status === 'recovered' ? 'Unfinished work restored' : saved ? 'Draft retained for this tab' : 'Unfinished work'}</strong>
     <span>{error
       ? 'Keep this tab open. Copy your work before reloading or closing; existing recovery data was left unchanged.'
-      : 'You can change services or reload this tab. Finish and verify the documentation in Tebra before closing the tab.'}</span>
+      : 'Work is retained when you change services or reload. Closing this tab ends the session; copy and verify the documentation in Tebra first.'}</span>
   </div>;
 }

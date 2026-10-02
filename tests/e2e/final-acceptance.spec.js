@@ -45,7 +45,7 @@ for(const size of [{width:1440,height:900},{width:800,height:600}]) {
     const search=page.getByRole('searchbox',{name:'Search clinical reference'});await search.fill('Vivitrol');
     await expect(page.locator('.wfp-lookup')).toContainText('Vivitrol');
    }
-   if(label==='Future / TMS') await expect(page.locator('.lf-service-unavailable')).toContainText('does not yet support');
+   if(label==='Future / TMS') await expect(page.locator('.wfp-wall')).toContainText('does not yet support');
   });
  }
 }

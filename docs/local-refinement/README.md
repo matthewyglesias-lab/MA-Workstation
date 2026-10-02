@@ -1,8 +1,9 @@
 > Current scope: the user's clinic-first request now explicitly includes state,
 > recovery, architecture and AVS refinement. See `docs/clinic-first/AUDIT.md`.
 > Earlier presentation-only restrictions below document prior increments; the
-> current preservation check still locks clinical engines, note grammar,
-> existing record schemas and the compatibility runtime to PR head 4bc9b5bb.
+> current preservation check still locks medication rules, note grammar and
+> existing record schemas to PR head 4bc9b5bb, with explicitly reviewed changes
+> for unconfirmed documentation defaults, verified storage and tab recovery.
 
 # IPMG local workstation · controlled refinement
 

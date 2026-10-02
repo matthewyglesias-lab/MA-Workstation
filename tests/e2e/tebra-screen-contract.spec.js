@@ -17,7 +17,7 @@ const WORKFLOWS = [
 ];
 
 // Screen-only token overrides from lightfully-shell.css, as rendered rgb().
-const NAVY = 'rgb(41, 66, 85)';
+const NAVY = 'rgb(27, 49, 65)';
 const HEADER_PAPER = 'rgb(246, 244, 247)';
 const LAVENDER_50 = 'rgb(255, 255, 255)';
 const CORAL = 'rgb(243, 117, 101)';
@@ -186,7 +186,7 @@ test.describe('Lightfully screen contract', () => {
       expect(await lifecycleAction.evaluate((node) =>
         Number.parseFloat(getComputedStyle(node).outlineWidth)
       )).toBeGreaterThanOrEqual(2);
-      await expect(lifecycleAction).toHaveCSS('outline-offset', '3px');
+      await expect(lifecycleAction).toHaveCSS('outline-offset', '2px');
 
       const lifecycleDetail = page.locator(
         '.cd2004-record-actions-state > small[role="status"]'

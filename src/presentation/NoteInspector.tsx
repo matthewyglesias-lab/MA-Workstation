@@ -179,8 +179,8 @@ export function NoteInspector({
         <DesktopIcon name="note" />
         <strong>{title}</strong>
         <span class="cd2004-note-marks">
-          <span class="cd2004-note-mark">LOCAL</span>
-          {signedLocally && <span class="cd2004-note-mark is-filed">Signed locally</span>}
+          <span class="cd2004-note-mark">Local</span>
+          {signedLocally && <span class="cd2004-note-mark is-signed">Signed locally</span>}
         </span>
       </div>
 
@@ -209,7 +209,7 @@ export function NoteInspector({
 
       <div class="cd2004-note-toolbar" role="toolbar" aria-label="Document review commands">
         <span class="cd2004-note-mode" title={subtitle}>
-          READ ONLY · LOCAL
+          Read-only preview · local
         </span>
         <button
           type="button"
@@ -260,7 +260,7 @@ export function NoteInspector({
                     class="cd2004-note-mark cd2004-note-source"
                     onClick={() => window.dispatchEvent(new CustomEvent("ipmg:navigate-workflow-source", { detail: section.sourceTarget }))}
                   >
-                    SOURCE
+                    Source
                   </button>
                 )}
                 <button
@@ -271,7 +271,7 @@ export function NoteInspector({
                   disabled={copyUnsafe}
                   onClick={() => copy(section.content, section.id)}
                 >
-                  {stateFor(section.id) === "copied" ? "COPIED" : "COPY"}
+                  {stateFor(section.id) === "copied" ? "Copied" : "Copy"}
                 </button>
               </header>
               <NoteDocumentBody content={section.content} />
@@ -298,10 +298,10 @@ export function NoteInspector({
           </div>
         )}
         {/* A document that just stops leaves the reader unsure whether more of
-            it failed to render. A terminal viewer says where the end is. */}
+            it failed to render. A quiet endpoint confirms that the preview is complete. */}
         {sections.length > 0 && (
           <div class="cd2004-note-eod" aria-hidden="true">
-            ── END OF DOCUMENT ──
+            End of note
           </div>
         )}
       </div>
@@ -309,8 +309,8 @@ export function NoteInspector({
       {sections.length > 0 && (
         <div class="cd2004-note-foot">
           <span>
-            {stats.sections} SECTION{stats.sections === 1 ? "" : "S"} · {stats.lines} LINE
-            {stats.lines === 1 ? "" : "S"}
+            {stats.sections} section{stats.sections === 1 ? "" : "s"} · {stats.lines} line
+            {stats.lines === 1 ? "" : "s"}
           </span>
           <span class="cd2004-note-foot-state">{subtitle ?? RECORD.notePreview}</span>
         </div>

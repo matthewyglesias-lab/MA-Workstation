@@ -11,7 +11,7 @@ interface AccountMenuProps {
 /** Local context, not authentication. All mutations remain caller-owned. */
 export function AccountMenu({ staffLabel, locationLabel, onOpenStaff, onOpenLocation,
   onOpenShortcuts, kioskMode = false, onToggleKiosk }: AccountMenuProps) {
-  const displayStaff = staffLabel === PATIENT.notSignedIn ? "Staff name" : staffLabel;
+  const displayStaff = staffLabel === PATIENT.notSignedIn ? "Staff name" : staffLabel.replace(/^Signed in:\s*/i, "");
   const actions = [
     { id: "staff", label: "Documenting staff", invoke: onOpenStaff },
     { id: "location", label: ACCOUNT.visitLocation, invoke: onOpenLocation },

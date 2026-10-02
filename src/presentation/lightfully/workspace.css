@@ -514,7 +514,7 @@
     margin: 0; padding: 12px 20px; color: var(--lf-muted);
     background: #faf8f5; border-block: 1px solid var(--lf-line); font: 400 12px/1.6 var(--tw-font-sans);
   }
-  #lf-workstation .cd2004-note-mark.is-filed { text-transform: none; letter-spacing: 0; }
+  #lf-workstation .cd2004-note-mark.is-signed { text-transform: none; letter-spacing: 0; }
   #lf-workstation .lf-lab-sheet {
     max-width: 960px; margin: 0 auto; background: #fff; color: var(--lf-ink);
     font: 400 13px/1.55 var(--tw-font-sans); overflow-wrap: anywhere;
@@ -557,4 +557,23 @@
 @media screen and (max-width: 900px) {
   #lf-workstation :is(.lf-lab-demographics,.lf-lab-device) { grid-template-columns: repeat(2,minmax(0,1fr)); }
   #lf-workstation .lf-lab-results :is(th,td) { padding: 8px 6px; }
+}
+
+@media screen {
+  #lf-workstation .cd2004-note-section > header {
+    color: var(--lf-ink); text-transform: none; letter-spacing: 0;
+    font: 600 12px/20px var(--tw-font-sans); align-items: center;
+  }
+  #lf-workstation .cd2004-note-section > header small { color: var(--lf-muted); font-size: 11px; }
+  #lf-workstation .cd2004-note-section > header .cd2004-note-mark {
+    min-height: 28px; padding: 3px 8px; color: #425f70; background: #f0f4f3;
+    font: 500 11px/20px var(--tw-font-sans); text-transform: none; letter-spacing: 0;
+  }
+  #lf-workstation .cd2004-note-section > header .cd2004-note-mark:hover:not(:disabled) { background: #e4ece9; }
+  #lf-workstation .cd2004-note-mode, #lf-workstation .cd2004-note-foot { text-transform: none; letter-spacing: 0; }
+  #lf-workstation .cd2004-note-eod { color: var(--lf-muted); font: 400 11px/20px var(--tw-font-sans); letter-spacing: 0; }
+  #lf-workstation .cd2004-readiness-verdict.is-blocked {
+    background: #fbf4f2; color: #813d37; border-left: 3px solid #b67870;
+  }
+  #lf-workstation .wfp-report-preview > summary { padding: 10px 14px; color: var(--lf-ink); background: #f5f4f2; font: 600 12px/20px var(--tw-font-sans); text-transform: none; letter-spacing: 0; }
 }

@@ -2220,7 +2220,7 @@ input[type="radio"]:disabled {
   letter-spacing: 0.03em;
 }
 
-.cd2004-note-mark.is-filed {
+.cd2004-note-mark.is-signed {
   color: #fff;
   background: var(--cd-green);
   border-color: #0d4a27;

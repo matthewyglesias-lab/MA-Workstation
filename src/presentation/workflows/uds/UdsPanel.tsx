@@ -337,14 +337,14 @@ function ClinicianLabSheet({
       </header>
 
       <div class="lf-lab-status">
-        <strong>PRELIMINARY / PRESUMPTIVE</strong>
+        <strong>Preliminary / presumptive</strong>
         <span>Confirm unexpected findings by definitive laboratory method.</span>
       </div>
 
       <dl class="lf-lab-demographics">
         <div>
-          <dt>PATIENT</dt>
-          <dd>{encounter.patient.name || "NO PATIENT ENTERED"}</dd>
+          <dt>Patient</dt>
+          <dd>{encounter.patient.name || "Patient not entered"}</dd>
         </div>
         <div>
           <dt>DOB</dt>
@@ -355,7 +355,7 @@ function ClinicianLabSheet({
           <dd>Local preview</dd>
         </div>
         <div>
-          <dt>COLLECTED</dt>
+          <dt>Collected</dt>
           <dd>{collected}</dd>
         </div>
         <div>
@@ -363,30 +363,30 @@ function ClinicianLabSheet({
           <dd>Not documented</dd>
         </div>
         <div>
-          <dt>COLLECTOR</dt>
+          <dt>Collector</dt>
           <dd>{encounter.collector || "—"}</dd>
         </div>
       </dl>
 
       <dl class="lf-lab-device">
         <div>
-          <dt>SPECIMEN</dt>
+          <dt>Specimen</dt>
           <dd>Urine, random</dd>
         </div>
         <div>
-          <dt>DEVICE / METHOD</dt>
+          <dt>Device / method</dt>
           <dd>{encounter.customDeviceName?.trim() || encounter.device || "Device not entered"} · waived immunoassay</dd>
         </div>
         <div>
-          <dt>LOT / EXP</dt>
+          <dt>Lot / expiration</dt>
           <dd>{encounter.lot || "—"} / {encounter.expiration || "—"}</dd>
         </div>
         <div>
-          <dt>CONTROL</dt>
+          <dt>Control</dt>
           <dd>{encounter.control}</dd>
         </div>
         <div>
-          <dt>TEMPERATURE</dt>
+          <dt>Temperature</dt>
           <dd>{encounter.temperature}</dd>
         </div>
       </dl>
@@ -394,11 +394,11 @@ function ClinicianLabSheet({
       <table class="lf-lab-results">
         <thead>
           <tr>
-            <th>TEST / ANALYTE</th>
-            <th>RESULT</th>
-            <th>FLAG</th>
-            <th>EXPECTED</th>
-            <th>STATUS</th>
+            <th>Test / analyte</th>
+            <th>Result</th>
+            <th>Flag</th>
+            <th>Expected</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
@@ -409,14 +409,14 @@ function ClinicianLabSheet({
               : encounter.results[panel] ?? "nt";
             const derived = UDS_RESULT_FLAG[state];
             const result = notOnCup
-              ? "NOT ON DEVICE"
+              ? "Not on device"
               : state === "pos"
-                ? "PRESUMPTIVE POS"
+                ? "Presumptive positive"
                 : state === "neg"
-                  ? "NEGATIVE"
+                  ? "Negative"
                   : state === "invalid"
-                    ? "INVALID"
-                    : "NOT TESTED";
+                    ? "Invalid"
+                    : "Not tested";
             return (
               <tr class={derived.abnormal ? "is-abnormal" : ""} key={panel}>
                 <td>
@@ -425,7 +425,7 @@ function ClinicianLabSheet({
                 </td>
                 <td>{result}</td>
                 <td>{notOnCup ? "" : derived.flag}</td>
-                <td>NEGATIVE</td>
+                <td>Negative</td>
                 <td>{notOnCup ? "Not on cup" : derived.status}</td>
               </tr>
             );
@@ -448,7 +448,7 @@ function ClinicianLabSheet({
         </div>
         {encounter.comment?.trim() && (
           <p>
-            <b>COMMENT:</b> {encounter.comment}
+            <b>Comment:</b> {encounter.comment}
           </p>
         )}
       </div>
@@ -459,8 +459,8 @@ function ClinicianLabSheet({
         </p>
         {includeSignatureFields && (
           <div class="lf-lab-signatures">
-            <span>REVIEWED BY</span>
-            <span>DATE / TIME</span>
+            <span>Reviewed by</span>
+            <span>Date / time</span>
           </div>
         )}
       </footer>
@@ -1715,11 +1715,11 @@ export function UdsPanel({
               disabled={recordMutationUnavailable || !staffSignInValue}
               title={
                 staffSignInValue
-                  ? "Carry the signed-in staff member into the collector field."
+                  ? "Use the documenting staff name as the collector."
                   : "Enter the documenting staff name first."
               }
             >
-              Use signed-in staff
+              Use documenting staff
             </button>
           )}
           <button
@@ -2302,11 +2302,11 @@ export function UdsPanel({
                 onToggle={(event) => setReportPreviewOpen(event.currentTarget.open)}
               >
                 <summary>
-                  <span>REPORT PREVIEW</span>
+                  <span>Report preview</span>
                   <strong>
                     {testedCount > 0
-                      ? `${testedCount}/${displayedPanels.length} PANELS ENTERED`
-                      : "WAITING FOR RESULTS"}
+                      ? `${testedCount}/${displayedPanels.length} panels entered`
+                      : "Waiting for results"}
                   </strong>
                 </summary>
                 <ClinicianLabSheet

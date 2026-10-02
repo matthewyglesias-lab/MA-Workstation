@@ -28,18 +28,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node scripts/check-local-refinement.mjs
       - run: npm run check
       - run: npm run test:unit
       - run: npm run build
       - run: node scripts/package-standalone.mjs
       - run: npx playwright install --with-deps chromium
-      - name: Preserve browser runtime for local review
-        uses: actions/upload-artifact@v4
-        with:
-          name: clinic-first-browser-runtime
-          path: /home/runner/.cache/ms-playwright/chromium_headless_shell-*/
-          retention-days: 1
-          if-no-files-found: error
       - name: Full workflow and visual regression
         run: npx playwright test --retries=0 --reporter=line,json,html
       - name: Preserve exact review provenance

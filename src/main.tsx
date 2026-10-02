@@ -626,8 +626,8 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     const protectUnsavedTypedWork = (event: BeforeUnloadEvent) => {
       if (
         !typedInjectionStateRef.current?.dirty &&
-        (!typedFormsStateRef.current?.dirty || formsRecovery.isCurrent(typedFormsStateRef.current.encounter)) &&
-        (!typedSamplesStateRef.current?.dirty || samplesRecovery.isCurrent(typedSamplesStateRef.current.encounter))
+        !typedFormsStateRef.current?.dirty &&
+        !typedSamplesStateRef.current?.dirty
       ) {
         return;
       }
@@ -1734,7 +1734,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   return (
     <WorkstationViewportBoundary>
       <ClinicalDesktopShell
-        organizationName="Integrated Psychiatric Medical Group"
+        organizationName="Inland Psychiatric Medical Group"
         activeWorkflow={activeWorkflow}
         onWorkflowChange={openWorkflow}
         onBeforeViewChange={canLeaveActiveEditor}

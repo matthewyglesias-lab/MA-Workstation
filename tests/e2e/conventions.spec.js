@@ -664,7 +664,7 @@ test.describe('Phase 3b patient chart conventions', () => {
       await bar.locator('.tebra-action-menu-list').first().evaluate((node) =>
         Math.round(node.getBoundingClientRect().width)
       )
-    ).toBe(242);
+    ).toBe(245);
     await page.keyboard.press('Escape');
     await expect(menu).toHaveCount(0);
     await expect(disclosure).toBeFocused();

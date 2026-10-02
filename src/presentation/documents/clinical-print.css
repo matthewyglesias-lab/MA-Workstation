@@ -1,0 +1,47 @@
+/* Shared paper typography. Renderers still own clinical content and structure;
+ * these root-scoped rules cannot alter a staff form or another print job. */
+@media print {
+  #print-root :is(#letterSheet, #sampleSheet, #udsSheet, #udsPatientSheet, #dailySheet),
+  #print-root :is(#letterSheet, #sampleSheet, #udsSheet, #udsPatientSheet, #dailySheet) * {
+    font-family: "Inter Variable", Arial, sans-serif !important;
+  }
+
+  /* A real top inset survives the compatibility stylesheet's global @page
+   * cascade. Flowing the footer prevents long correspondence covering it. */
+  #print-root #letterSheet .letter-page-print {
+    box-sizing: border-box;
+    padding: .4in 0 .3in;
+    min-height: 0;
+    color: #233640;
+  }
+  #print-root #letterSheet .print-brand { font-size: 21px; font-weight: 600; line-height: 1.25; }
+  #print-root #letterSheet .print-letterhead { border-bottom: 1px solid #62766f; }
+  #print-root #letterSheet .print-doc { border-color: #aab8b2; border-radius: 3px; font-weight: 600; }
+  #print-root #letterSheet .print-body { font-size: 14px; line-height: 1.65; }
+  #print-root #letterSheet .print-body p { color: #233640; }
+  #print-root #letterSheet .print-footer {
+    position: static; margin-top: .4in; padding-top: 10px; text-align: left;
+    font-size: 11px; line-height: 1.5; color: #485851;
+  }
+
+  #print-root :is(#sampleSheet, #udsPatientSheet) :is(.beauty-head, .beauty-hero, .beauty-callout) {
+    border-radius: 3px !important; background: #faf9f5 !important; border-color: #cdd7d2;
+  }
+  #print-root :is(#sampleSheet, #udsPatientSheet) .beauty-head::before { background: #6b8277; width: 4px; }
+  #print-root :is(#sampleSheet, #udsPatientSheet) .beauty-title { font-weight: 600; line-height: 1.2; }
+  #print-root :is(#sampleSheet, #udsPatientSheet) .beauty-pill { border-radius: 3px; font-weight: 600; }
+  #print-root :is(#sampleSheet, #udsPatientSheet) .beauty-page { padding-block: 24px !important; }
+  #print-root :is(#sampleSheet, #udsPatientSheet) :is(h1, h2, h3, b, strong, .beauty-big, .beauty-kicker, .beauty-label) { font-weight: 600; }
+
+  /* The clinician report has enough paper for readable results and handoff
+   * instructions. Keep abnormal-result words, colors and source data intact. */
+  #print-root #udsSheet :is(.lm-title, .lm-statusbox, .lm-card, .lm-photo, .lm-esign, .lm-status, .lm-metric, .lm-result) { border-radius: 3px; }
+  #print-root #udsSheet .lm-title { background: #faf9f5; border-left-color: #6b8277; }
+  #print-root #udsSheet :is(h1, h2, b, strong, .lm-screen, .lm-result) { font-weight: 600; }
+  #print-root #udsSheet .lm-result { font-size: 11px; line-height: 1.3; }
+  #print-root #udsSheet :is(.lm-body, .lm-attn, .lm-results, .lm-demo b) { font-size: 12px; line-height: 1.4; }
+  #print-root #udsSheet :is(.lm-demo div, .lm-trace div, .lm-footer, .lm-esign, .lm-sub) { font-size: 10.5px; line-height: 1.4; }
+  #print-root #udsSheet :is(.lm-card h2, .lm-demo span, .lm-trace span, .lm-results th) { font-size: 9px; font-weight: 600; }
+  #print-root #udsSheet .lm-screen small { font-size: 10px; line-height: 1.3; }
+  #print-root #udsSheet .lm-results td { padding: 4px 6px; }
+}
