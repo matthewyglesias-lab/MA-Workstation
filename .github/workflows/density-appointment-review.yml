@@ -1,0 +1,105 @@
+name: Density and integrated appointment candidate review
+on:
+  push:
+    branches: [codex/premium-workstation-composition]
+    paths: [.github/workflows/density-appointment-review.yml]
+permissions:
+  contents: read
+concurrency:
+  group: density-appointment-review
+  cancel-in-progress: false
+jobs:
+  review:
+    if: github.repository == 'matthewyglesias-lab/MA-Workstation' && github.ref == 'refs/heads/codex/premium-workstation-composition'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+      TEST_STANDALONE_FILE: '1'
+      PLAYWRIGHT_HTML_OPEN: never
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Apply the exact readable reviewed source patch on this review branch only
+        run: |
+          test "$GITHUB_REF" = refs/heads/codex/premium-workstation-composition
+          test "$(git rev-parse HEAD^)" = 771e36aec7ba413b371e22608446bb327955f7f9
+          test "$(git ls-remote origin "$GITHUB_REF" | cut -f1)" = "$GITHUB_SHA"
+          python - <<'PY'
+          import hashlib, pathlib, subprocess, os
+          paths=[pathlib.Path(f'docs/density-appointment/pending/{i:02}.patch') for i in range(1,9)]
+          data=b''.join(p.read_bytes() for p in paths)
+          # Correct the single transport-only leading space on a diff header.
+          assert data.count(b'\n diff --git') == 1
+          data=data.replace(b'\n diff --git',b'\ndiff --git')
+          assert hashlib.sha256(data).hexdigest() == '4f7b0d3c2896b4d98249f9ca682bc352fc2ebe0dd2684ddf286a6a7f7a065471', 'Patch bytes changed; do not apply'
+          patch=pathlib.Path(os.environ['RUNNER_TEMP'])/'reviewed-density-appointment.patch'
+          patch.write_bytes(data)
+          subprocess.run(['git','apply','--check','--index',str(patch)],check=True)
+          subprocess.run(['git','apply','--index',str(patch)],check=True)
+          subprocess.run(['git','rm','--',*[str(p) for p in paths],'.github/workflows/density-appointment-review.yml'],check=True)
+          actual=subprocess.check_output(['git','write-tree'],text=True).strip()
+          assert actual=='83682d70fd2e8db1c153029fa5e073a0fdb78dc7', 'Candidate tree differs from the reviewed source'
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat: compact desktop forms and integrated patient appointment reminder'
+          git push origin HEAD:refs/heads/codex/premium-workstation-composition
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-local-refinement.mjs
+      - run: npm run check
+      - name: Unit tests with complete repository history
+        run: mkdir -p review-evidence && npx vitest run --reporter=default --reporter=json --outputFile=review-evidence/unit.json
+      - run: npm run build
+      - run: node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Complete density, appointment, persistence, modal and printing journeys
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/focused.json
+        run: npx playwright test tests/e2e/density-and-appointment.spec.js tests/e2e/control-details.spec.js tests/e2e/premium-composition.spec.js tests/e2e/modal-ownership.spec.js tests/e2e/kiosk-flow.spec.js tests/e2e/print-regression.spec.js --retries=0 --reporter=line,json,html
+      - name: Preserve focused screenshots and PDFs
+        if: always()
+        run: mkdir -p review-evidence && if [ -d test-results ]; then cp -r test-results review-evidence/focused-captures; fi
+      - name: Generate candidate screen references without changing thresholds
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/visual-candidates.json
+        run: npx playwright test tests/e2e/visual-snapshots.spec.js tests/e2e/lightfully-shell.spec.js --retries=0 --update-snapshots --reporter=line,json,html
+      - name: Full suite without updating any reference
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/full.json
+        run: npx playwright test --retries=0 --reporter=line,json,html
+      - name: Record candidate references only after all complete journeys pass
+        run: |
+          git add -- tests/e2e/visual-snapshots.spec.js-snapshots/linux tests/e2e/lightfully-shell.spec.js-snapshots/linux
+          if ! git diff --cached --quiet; then
+            git commit -m 'test: capture compact workstation reference images for visual inspection'
+            git push origin HEAD:refs/heads/codex/premium-workstation-composition
+          fi
+      - name: Archive exact candidate provenance
+        if: always()
+        run: |
+          mkdir -p review-evidence
+          git rev-parse HEAD > review-evidence/COMMIT.txt
+          git rev-parse HEAD^{tree} > review-evidence/TREE.txt
+          git status --short > review-evidence/WORKING-TREE.txt
+          git archive HEAD | gzip > review-evidence/source.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: density-integrated-appointment-review
+          path: |
+            review-evidence/
+            test-results/
+            playwright-report/
+            tests/e2e/visual-snapshots.spec.js-snapshots/linux/
+            tests/e2e/lightfully-shell.spec.js-snapshots/linux/
+          retention-days: 7
+          if-no-files-found: error

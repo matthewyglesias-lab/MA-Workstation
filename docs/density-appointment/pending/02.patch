@@ -1,0 +1,305 @@
++  if (!encounter || !isAvsAppointment(encounter.avsAppointment)) return undefined;
++  const dob = (s: string) => {
++    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s.trim());
++    return m ? `${m[3]}-${m[1]}-${m[2]}` : s.trim();
++  };
++  return encounter.patient.name.trim() && encounter.patient.dob.trim() &&
++    encounter.patient.name.trim() === input.patientName.trim() &&
++    dob(encounter.patient.dob) === dob(input.patientDob) &&
++    encounter.administrationDate === input.administrationDate && encounter.medicationKey === input.medicationKey
++    ? structuredClone(encounter.avsAppointment) : undefined;
++}
+ diff --git a/src/domain/injection-avs-content.ts b/src/domain/injection-avs-content.ts
+index fad35abd60a7f5b45b2200399ea033a3d9153a25..e1e65d81d30697922d2ac7bdfbcc04c6c848f494 100644
+--- a/src/domain/injection-avs-content.ts
++++ b/src/domain/injection-avs-content.ts
+@@ -34,12 +34,17 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
+   const visitCall = model.nextDose.firmness === "call-first"
+     ? "Call ahead so we can prepare your medication; this is not a scheduled appointment."
+     : `Call ${input.clinicPhone} to schedule or change your visit; this is not a scheduled appointment.`;
+-  const notes = routine
++  const hasAppointmentSection = input.providerAppointment && input.providerAppointment.mode !== "omit";
++  const scopeDateNote = (line: string) => hasAppointmentSection ? line
++    .replace("This is your due date, not a scheduled appointment.", "An injection due date does not reserve an appointment time.")
++    .replace("this is not a scheduled appointment.", "an injection due date does not reserve an appointment time.") : line;
++  const notes = (routine
+     ? [`${AVS_ROUTINE_RETURN_WINDOW} ${visitCall}`]
+-    : model.nextDose.notes;
++    : model.nextDose.notes).map(scopeDateNote);
+ 
+   return {
+     ...model,
++    ...(input.providerAppointment ? { providerAppointment: input.providerAppointment } : {}),
+     nextDose: {
+       ...model.nextDose,
+       notes,
+@@ -50,7 +55,9 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
+     // The printed timeline consumes detail rather than nextDose.notes. Keep
+     // both views in agreement without mutating the preserved guidance model.
+     timeline: model.timeline.map((step) =>
+-      routine && step.state === "due" ? { ...step, detail: notes } : step,
++      step.state === "due" && (routine || hasAppointmentSection)
++        ? { ...step, detail: routine ? notes : step.detail.map(scopeDateNote) }
++        : step,
+     ),
+     blocks: routine ? model.blocks.map((block) =>
+       block.kind === "call-clinic" ? {
+diff --git a/src/domain/injection-avs-guidance.ts b/src/domain/injection-avs-guidance.ts
+index c1c0664d922cdf414590cc4e1e3fda061a7126aa..5a854cbb4c443c84bfff1656cd26be1e70725c2b 100644
+--- a/src/domain/injection-avs-guidance.ts
++++ b/src/domain/injection-avs-guidance.ts
+@@ -46,6 +46,8 @@ export type AvsSiteRegion =
+ export type AvsDateFirmness = "standard" | "firm" | "call-first";
+ 
+ export interface InjectionAvsInput {
++  /** Verified scheduling reminder, independent of the calculated injection date. */
++  providerAppointment?: import("./avs-appointment").AvsAppointment;
+   patientName: string;
+   patientDob: string;
+   recordNumber: string;
+@@ -158,6 +160,7 @@ export interface AvsTimelineStep {
+ }
+ 
+ export interface InjectionAvsModel {
++  providerAppointment?: import("./avs-appointment").AvsAppointment;
+   documentTitle: string;
+   /** Second title line, e.g. the starting-series marker. Empty when routine. */
+   documentSubtitle: string;
+diff --git a/src/domain/injection-avs-render.ts b/src/domain/injection-avs-render.ts
+index b088ff566a86c1efd4fd21a87287a318b41a32a1..dc965894756d84a5489b3b098674c783f8d09faa 100644
+--- a/src/domain/injection-avs-render.ts
++++ b/src/domain/injection-avs-render.ts
+@@ -1,3 +1,4 @@
++import { renderAvsAppointment, appointmentLineBudget } from "./avs-appointment-render";
+ import {
+   buildInjectionAvsModel,
+   type AvsBlock,
+@@ -156,7 +157,7 @@ const estimatedTimelineLines = (timeline: readonly AvsTimelineStep[]): number =>
+  * out of page one and paint underneath the explicit continuation page.
+  */
+ const estimatedPrimaryLines = (model: InjectionAvsModel): number =>
+-  17 +
++  17 + appointmentLineBudget(model.providerAppointment) +
+   model.leadAlerts.reduce(
+     (total, block) => total + estimatedBlockLines(block),
+     0,
+@@ -199,7 +200,7 @@ export const selectInjectionAvsLayout = (
+     (total, block) => total + estimatedBlockLines(block),
+     0,
+   );
+-  if (guidanceLines <= 24) {
++  if (guidanceLines + appointmentLineBudget(model.providerAppointment) <= 24) {
+     return hasDensePrimaryFacts(model)
+       ? "routine-two-page"
+       : "routine-one-page";
+@@ -274,6 +275,7 @@ const renderStep = (
+   step: AvsTimelineStep,
+   instruction = "",
+   siteLabel = "",
++  appointmentHtml = "",
+ ): string => {
+   // The due step keeps the avs2-next / avs2-date hooks: it is still "the next
+   // dose and its date", the roles those classes have always named, so the
+@@ -306,6 +308,7 @@ const renderStep = (
+       ? `<div class="avs2-step-instr">${escapeHtml(instruction)}</div>`
+       : "") +
+     paragraphs(step.detail) +
++    appointmentHtml +
+     `</div></li>`
+   );
+ };
+@@ -315,14 +318,17 @@ const renderSpine = (
+   administrationNote: string,
+   instruction: string,
+   siteLabel: string,
++  appointmentHtml = "",
+ ): string => {
+-  if (!timeline.length) return "";
++  // The reminder belongs within the due-date panel. A handoff without a due
++  // step uses an explicit follow-up panel, never an invented injection date.
++  const dueIndex = timeline.findIndex((step) => step.state === "due");
+   // The dose-specific note is folded into the step it describes rather than
+   // trailing the spine as its own row. That keeps every row in the spine a real
+   // dated step, which is what lets the rail terminate cleanly at the first and
+   // last nodes instead of running past a marker-less row.
+   const steps = timeline
+-    .map((step) => {
++    .map((step, index) => {
+       const detail =
+         step.state === "given" && administrationNote
+           ? [...step.detail, administrationNote]
+@@ -331,10 +337,12 @@ const renderSpine = (
+         { ...step, detail },
+         step.state === "due" ? instruction : "",
+         step.state === "given" ? siteLabel : "",
++        index === dueIndex ? appointmentHtml : "",
+       );
+     })
+     .join("");
+-  return `<ol class="avs2-spine" aria-label="Treatment timeline">${steps}</ol>`;
++  return (steps ? `<ol class="avs2-spine" aria-label="Treatment timeline">${steps}</ol>` : "") +
++    (dueIndex < 0 && appointmentHtml ? `<div class="avs2-follow-up">${appointmentHtml}</div>` : "");
+ };
+ 
+ const IDENTITY_ORDER = [
+@@ -417,7 +425,7 @@ export const renderInjectionAvsHtml = (
+ 
+   const contactBlock: AvsBlock = {
+     kind: "contact",
+-    heading: "Plan your next visit",
++    heading: model.providerAppointment && model.providerAppointment.mode !== "omit" ? "Clinic information" : "Plan your next visit",
+     rows: model.nextDose.contactLines,
+   };
+   const renderContact = (compact = false): string =>
+@@ -523,6 +531,7 @@ export const renderInjectionAvsHtml = (
+       model.administrationNote,
+       model.nextDose.instruction,
+       model.administration.find((row) => row.label === "ROUTE / SITE")?.value ?? "",
++      renderAvsAppointment(model.providerAppointment),
+     ) +
+     `</section>` +
+     renderContact() +
+diff --git a/src/domain/injection.ts b/src/domain/injection.ts
+index aee4cf50aa29a77cbb859b877f402cf4421ea737..f010dbc2292043a7062b097adce6b2711955be52 100644
+--- a/src/domain/injection.ts
++++ b/src/domain/injection.ts
+@@ -214,6 +214,8 @@ export interface InjectionAdministrationDetails {
+ }
+ 
+ export interface InjectionEncounter {
++  /** Patient handout metadata only; never used to evaluate or authorize care. */
++  avsAppointment?: import("./avs-appointment").AvsAppointment;
+   patient: PatientIdentity;
+   medicationKey: InjectionMedicationKey | "";
+   customMedication?: string;
+diff --git a/src/main.tsx b/src/main.tsx
+index 07b30952c7cc171011ec8430ca40b1f5c43048ce..5e4272a7e72bc695e3e131fba409343ad3f4576e 100644
+--- a/src/main.tsx
++++ b/src/main.tsx
+@@ -1,4 +1,5 @@
+ import { render } from 'preact';
++import { emptyAvsAppointment, appointmentForInput } from './domain/avs-appointment';
+ /*
+  * Plus Jakarta Sans is load-bearing for PRINT: the AVS patient handout sets its
+  * titles in it (the @media print block in clinical-desktop.css), and
+@@ -294,7 +295,7 @@ function rawInjectionEncounterRead(
+   ) {
+     return { encounter: fallback, status: 'invalid' };
+   }
+-  if (!activeRecordId) return { encounter: fallback, status: 'absent' };
++  if (!activeRecordId) return { encounter: { ...fallback, avsAppointment: emptyAvsAppointment() }, status: 'absent' };
+   const matches = listed.value.filter((record) => record.id === activeRecordId);
+   if (matches.length !== 1) return { encounter: fallback, status: 'invalid' };
+   const stored = matches[0];
+@@ -585,7 +586,17 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
+       () => rememberInjectionDirty(false),
+     );
+     setInjectionExtensionInstalled(injectionPresentationExtensionAvailable());
+-    return uninstall;
++    // One print builder, with a live ref rather than another event listener.
++    const bridge = window as unknown as { ipmgBuildInjectionAvsHtml?: (input: InjectionAvsInput, chrome?: Partial<InjectionAvsChrome>) => string };
++    const previousBuilder = bridge.ipmgBuildInjectionAvsHtml;
++    const build = (input: InjectionAvsInput, chrome?: Partial<InjectionAvsChrome>) => buildInjectionAvsHtml({
++      ...input, providerAppointment: appointmentForInput(typedInjectionStateRef.current?.encounter, input),
++    }, chrome ?? {});
++    bridge.ipmgBuildInjectionAvsHtml = build;
++    return () => {
++      uninstall();
++      if (bridge.ipmgBuildInjectionAvsHtml === build) bridge.ipmgBuildInjectionAvsHtml = previousBuilder;
++    };
+   }, [rememberInjectionDirty]);
+ 
+   useEffect(() => {
+diff --git a/src/presentation/documents/AvsAppointmentEditor.tsx b/src/presentation/documents/AvsAppointmentEditor.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..37ec0e6c94092e148cd296ae15857c7d52169732
+--- /dev/null
++++ b/src/presentation/documents/AvsAppointmentEditor.tsx
+@@ -0,0 +1,63 @@
++import { WorkstationDateField } from "../workflows/WorkstationDateField";
++import { useId } from "preact/hooks";
++import { emptyAvsAppointment, appointmentDateLabel, appointmentTimeLabel, validAppointmentDate, type AvsAppointment } from "../../domain/avs-appointment";
++
++import { providerRegisterOptions } from "../../domain/provider-register";
++import "./avs-appointment-editor.css";
++
++interface Props {
++  value?: AvsAppointment;
++  dueDate: string;
++  locked: boolean;
++  disabled: boolean;
++  onChange: (value: AvsAppointment) => void;
++}
++/** One disclosure in the existing output area, no new global listeners. */
++export function AvsAppointmentEditor({ value, dueDate, locked, disabled, onChange }: Props) {
++  const id = useId();
++  const appointment = value ?? { ...emptyAvsAppointment(), mode: "omit" as const };
++  const set = (partial: Partial<AvsAppointment>) => {
++    if (!locked && !disabled) onChange({ ...appointment, ...partial });
++  };
++  const summary = appointment.mode === "write-in" ? "Space to write in on AVS" :
++    appointment.mode === "schedule" ? "Front-desk scheduling reminder" :
++    appointment.mode === "omit" ? "Not included" :
++    [appointmentDateLabel(appointment.date), appointmentTimeLabel(appointment.time)].filter(Boolean).join(" · ") || "Details to complete";
++  return <details class="lf-avs-appointment-editor" data-avs-appointment-editor>
++    <summary><strong>Provider appointment</strong><span>{summary}</span><span class="lf-appointment-edit">{locked ? "View" : "Edit"}</span></summary>
++    <div class="lf-appointment-editor-body">
++      <p id={`${id}-scope`}>A reminder on this handout only. Confirm the appointment in Tebra; this does not book or change a visit.</p>
++      {locked && <p>This record is signed. These details are preserved for reprinting; confirm later scheduling changes with the front desk and mark them clearly on the patient’s paper copy.</p>}
++      <fieldset disabled={locked || disabled} aria-describedby={`${id}-scope`}>
++        <label class="lf-appointment-field"><span>On the AVS</span><select aria-label="Appointment reminder format" value={appointment.mode}
++          onChange={e => set({ mode: e.currentTarget.value as AvsAppointment["mode"] })}>
++          <option value="write-in">Space to write in</option><option value="details">Enter appointment details</option>
++          <option value="schedule">Ask front desk to schedule</option><option value="omit">Leave off this AVS</option>
++        </select></label>
++        {appointment.mode === "details" && <>
++          <div class="lf-appointment-date-row">
++            <label class="lf-appointment-field"><span id={`${id}-date`}>Provider appointment date</span><WorkstationDateField labelledBy={`${id}-date`} value={appointment.date} disabled={locked || disabled} onCommit={date => set({ date })}/></label>
++            <label class="lf-appointment-field"><span>Appointment time</span><input type="time" aria-label="Provider appointment time" value={appointment.time} onInput={e => set({ time: e.currentTarget.value })}/></label>
++          </div>
++          <button type="button" class="lf-text-button" disabled={!validAppointmentDate(dueDate)} onClick={() => set({ date: dueDate })}>Use injection due date</button>
++          <p class="lf-appointment-date-note">Copies the date once. Use only after confirming the appointment. Changing either date will not move the other.</p>
++          {validAppointmentDate(dueDate) && appointment.date && appointment.date !== dueDate &&
++            <p>Injection due: {appointmentDateLabel(dueDate)} · Appointment: {appointmentDateLabel(appointment.date)}</p>}
++          <div class="lf-appointment-details-row">
++            <label class="lf-appointment-field"><span id={`${id}-provider`}>Appointment provider</span>
++              <input aria-labelledby={`${id}-provider`} list={`${id}-providers`} maxLength={160} value={appointment.provider}
++                onInput={e => set({ provider: e.currentTarget.value.replace(/[\u0000-\u001f\u007f]/g, "") })}/>
++              <datalist id={`${id}-providers`}>{providerRegisterOptions().map(p => <option key={p.key} value={p.label}/>)}</datalist></label>
++            <label class="lf-appointment-field"><span>Visit type</span><select aria-label="Provider appointment visit type" value={appointment.visitType} onChange={e => set({ visitType: e.currentTarget.value as AvsAppointment["visitType"] })}>
++              <option value="">Not entered</option><option value="in-person">In person</option><option value="video">Video</option><option value="phone">Phone</option>
++            </select></label>
++          </div>
++          <label class="lf-appointment-field"><span>{appointment.visitType === "video" || appointment.visitType === "phone" ? "Connection instructions" : "Confirmed office / location"}</span>
++            <input aria-label="Provider appointment location" maxLength={240} value={appointment.location} placeholder="Enter the confirmed office or connection instructions"
++              onInput={e => set({ location: e.currentTarget.value.replace(/[\u0000-\u001f\u007f]/g, "") })}/></label>
++          <p>Leave unknown details blank for handwriting. An empty field does not mean an appointment is not scheduled.</p>
++        </>}
++      </fieldset>
++    </div>
++  </details>;
++}
+diff --git a/src/presentation/documents/avs-appointment-editor.css b/src/presentation/documents/avs-appointment-editor.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..d7d05117170b6090ec62989aa5940a23e51f4bd8
+--- /dev/null
++++ b/src/presentation/documents/avs-appointment-editor.css
+@@ -0,0 +1,17 @@
++@media screen {
++  #lf-workstation .lf-avs-appointment-editor { margin: 0 0 12px; border: 1px solid var(--lf-line); border-radius: 8px; background: #fff; }
++  #lf-workstation .lf-avs-appointment-editor > summary { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; padding: 8px 12px; cursor: pointer; color: var(--lf-ink); font: 400 12px/20px var(--tw-font-sans); }
++  #lf-workstation .lf-avs-appointment-editor > summary strong { font-weight: 600; }
++  #lf-workstation .lf-appointment-edit { margin-left: auto; color: var(--lf-leaf); text-decoration: underline; text-underline-offset: 3px; }
++  #lf-workstation .lf-appointment-editor-body { padding: 10px 12px 12px; border-top: 1px solid var(--lf-line); }
++  #lf-workstation .lf-appointment-editor-body p { margin: 0 0 8px; color: var(--lf-muted); font: 400 12px/1.5 var(--tw-font-sans); }
++  #lf-workstation .lf-appointment-editor-body fieldset { display: grid; gap: 10px; padding: 0; margin: 0; min-width: 0; border: 0; }
++  #lf-workstation .lf-appointment-date-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,.6fr); gap: 12px; }
++  #lf-workstation .lf-appointment-details-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,.6fr); gap: 12px; }
++  #lf-workstation .lf-appointment-field { display: flex; flex-direction: column; min-width: 0; gap: 4px; font: 600 12px/20px var(--tw-font-sans); color: var(--lf-ink); }
++  #lf-workstation .lf-appointment-field :is(input,select) { width: 100%; }
++  #lf-workstation .lf-appointment-editor-body .lf-text-button { justify-self: start; }
++  @container workflow (max-width: 420px) {
++    #lf-workstation :is(.lf-appointment-date-row,.lf-appointment-details-row) { grid-template-columns: minmax(0,1fr); }
++  }
++}
+diff --git a/src/presentation/documents/injection-avs.css b/src/presentation/documents/injection-avs.css
