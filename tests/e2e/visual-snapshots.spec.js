@@ -2,6 +2,9 @@ const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
+const { readFileSync } = require('node:fs');
+const { createHash } = require('node:crypto');
+const { PNG } = require('playwright-core/lib/utilsBundle');
 
 const FIXED_NOW = new Date('2026-07-30T10:30:00-07:00');
 const FIXED_DATE_KEY = '2026-07-30';
@@ -451,10 +454,25 @@ test.describe('workstation visual snapshots', () => {
     await settleForCapture(page);
     await expectNativeWorklistGeometry(page);
 
-    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
-      'current-worklist-1366x768.png',
-      SNAPSHOT_OPTIONS
-    );
+    // Pin the reviewed full image by decoded RGBA pixels, not PNG compression.
+    // This one reference is zero-tolerance and never regenerated from the app.
+    // Keep the real PNG in the report for human inspection on every run.
+    const reference = JSON.parse(readFileSync(test.info().snapshotPath(
+      'current-worklist-1366x768.rgba.json'
+    ), 'utf8'));
+    const imagePath = test.info().outputPath('current-worklist-1366x768.png');
+    await expect.poll(async () => {
+      const image = PNG.sync.read(await page.locator('.cd2004-shell').screenshot({
+        animations: 'disabled', caret: 'hide', scale: 'css', path: imagePath
+      }));
+      return { width: image.width, height: image.height,
+        rgbaSha256: createHash('sha256').update(image.data).digest('hex') };
+    }, { timeout: SNAPSHOT_OPTIONS.timeout,
+      message: 'The populated worklist must match the visually reviewed pixels'
+    }).toEqual(reference);
+    await test.info().attach('Populated worklist — actual screenshot', {
+      path: imagePath, contentType: 'image/png'
+    });
   });
 
   test('active Injection draft at 1366 x 768', async ({ page }) => {
