@@ -64,6 +64,17 @@ treatment-step, row separation, page-width and four-step-depth assertions.
 No clinical threshold, body-type minimum, overflow tolerance, content fixture,
 or screenshot tolerance is relaxed.
 
+The full local revision passed 752 unit tests and 306 browser tests. CI run
+`36961647116` on `f19a5fe` passed all non-snapshot tests (299 passed; 7 image
+comparison tests failed). Its eight differing images were inspected: differences
+were limited to platform font rendering in headings, navigation and arrows,
+without clipped controls or shifted clinical fields. The ZIP's SHA-256 was
+`45675c02cb9e6079af4471cf59895a781789640be0d3e5e8fcf6d95df791f090`, and its
+commit/tree manifest matched the published source. These eight Linux references
+now use those CI captures; three unaffected references remain. The final full
+gate must pass on the subsequent exact commit, including assertions after each
+image comparison. This reference-only follow-up changes no application runtime.
+
 The PR description records the exact final source and test run. Earlier passing
 runs certify their earlier source only. Current screenshots and PDFs must be
 inspected before replacing references; Linux output does not approve managed
