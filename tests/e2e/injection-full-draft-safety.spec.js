@@ -699,7 +699,7 @@ test('reopens exact structured response and additional-note facts from the saved
     return records.find(record => record.id === 'synthetic-open-target');
   }, RECORDS_KEY);
   expect(stored.snapshot.documentation.typedEncounterV1).toMatchObject({
-    version: 2,
+    version: 3,
     response: { kind: 'bleed', detail: 'extended' },
     details: {
       siteAssessed: true,
@@ -715,6 +715,9 @@ test('reopens exact structured response and additional-note facts from the saved
     weight: '215',
     weightUnit: 'lb'
   });
+  // Re-saving a pre-reminder draft migrates the envelope, not its patient facts.
+  // An old record must not acquire the new-encounter appointment default.
+  expect(stored.snapshot.documentation.typedEncounterV1.avsAppointment).toBeUndefined();
   expect(stored.snapshot.fields.injProductSourceOther)
     .toBe('Synthetic custom source');
   expect(JSON.stringify(stored)).not.toContain('typed draft bootstrap');

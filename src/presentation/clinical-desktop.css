@@ -1362,27 +1362,6 @@ input[type="radio"]:disabled {
     1px 1px 1px rgb(0 0 0 / 24%);
 }
 
-
-.cd2004-window-titlebar {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  min-height: 24px;
-  padding: 2px 2px 2px 4px;
-  color: var(--tw-mint-50);
-  background: var(--tw-teal-500);
-  border-bottom: 1px solid #424e5a;
-  font-weight: 700;
-  user-select: none;
-}
-
-.cd2004-window.is-active > .cd2004-window-titlebar,
-.cd2004-help-dialog > .cd2004-window-titlebar {
-  color: #fff;
-  background: var(--cd-navy);
-}
-
 .cd2004-window-mark {
   flex: 0 0 auto;
   width: 11px;
@@ -2686,23 +2665,6 @@ input[type="radio"]:disabled {
     animation: cd2004-dialog-in var(--tw-dur-base) var(--tw-ease) both;
   }
 
-  .cd2004-help-dialog > .cd2004-window-titlebar {
-    min-height: 52px;
-    padding: 12px 16px;
-    color: var(--tw-on-inverse);
-    background: var(--tw-surface-inverse);
-    border: 0;
-  }
-
-  .cd2004-help-dialog > .cd2004-window-titlebar strong {
-    min-width: 0;
-    margin-right: auto;
-    overflow: hidden;
-    font-size: var(--tw-fs-ws-base);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .cd2004-help-body {
     display: grid;
     gap: 8px;
@@ -3154,10 +3116,6 @@ input[type="radio"]:disabled {
     min-width: 0;
     min-height: 0;
     padding: 3px;
-  }
-
-  .cd2004-window-titlebar {
-    min-height: 27px;
   }
 
   .cd2004-caption-button {

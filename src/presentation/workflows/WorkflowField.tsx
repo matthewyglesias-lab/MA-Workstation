@@ -5,12 +5,13 @@ import {
   type ComponentChildren,
   type VNode,
 } from "preact";
-import { useId } from "preact/hooks";
+import { useId, useState } from "preact/hooks";
 import type {
   WorkflowFieldPresentation,
   WorkflowFieldState,
 } from "../../application/workstation-projection";
 import { requestWorkstationFieldLookup } from "../workstation-events";
+import { DesktopIcon } from "../DesktopIcon";
 import { RegisterMarkers } from "./ClinicalRegister";
 import { hasProviderRegister } from "../../domain/provider-register";
 import { OptionList, type OptionListProps } from "./OptionList";
@@ -188,6 +189,7 @@ export function WorkflowField({
   children: ComponentChildren;
 }) {
   const generatedId = useId();
+  const [touched, setTouched] = useState(false);
   const labelId = `${generatedId}-label`;
   if (presentation.state === "not-applicable") return null;
 
@@ -200,15 +202,18 @@ export function WorkflowField({
   // A hint containing only “Required” repeats the asterisk; no clinical hint is suppressed.
   const detail = rawDetail && /^required\.?$/i.test(rawDetail.trim()) ? undefined : rawDetail;
   const detailId = detail ? `${generatedId}-detail` : undefined;
+  const filled = isControlFilled(children);
+  // Missing required data is pending entry, not an invalid answer. A non-missing
+  // clinical issue remains immediate even when the associated field is blank.
+  const invalid = incomplete && (filled || touched || Boolean(presentation.issue));
   const labelledChildren = labelControls(children, {
     labelledBy: labelId,
     describedBy: detailId,
     required,
-    invalid: incomplete,
+    invalid,
   });
   const hasLookup = containsSelectControl(children);
   const dateMode = findDateControl(children);
-  const filled = isControlFilled(children);
   const fieldPrompt =
     prompt ??
     (hasLookup
@@ -221,7 +226,10 @@ export function WorkflowField({
 
   return (
     <div
-      class={`wfp-field ${required ? "is-required" : ""} ${filled ? "is-filled" : ""} ${incomplete ? "is-incomplete" : ""} ${optional ? "is-optional" : ""} ${pending ? "is-pending-context" : ""} ${width ? `is-w-${width}` : ""}`}
+      class={`wfp-field ${required ? "is-required" : ""} ${filled ? "is-filled" : ""} ${incomplete ? "is-incomplete" : ""} ${invalid ? "is-invalid" : ""} ${optional ? "is-optional" : ""} ${pending ? "is-pending-context" : ""} ${width ? `is-w-${width}` : ""}`}
+      onFocusOut={event => {
+        if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) setTouched(true);
+      }}
       data-requirement={presentation.state}
       data-field-code={presentation.fieldCode}
       data-field-label={label}
@@ -263,7 +271,7 @@ export function WorkflowField({
               requestWorkstationFieldLookup(select);
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+            <DesktopIcon name="search" width="16" height="16"/>
           </button>
         </div>
       ) : (

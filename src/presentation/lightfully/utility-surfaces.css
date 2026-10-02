@@ -98,13 +98,12 @@
 
 /* Render-reviewed working geometry. Keep patient context; spend pixels on work. */
 @media screen {
-  #lf-workstation.lf-workstation .lf-section-rail {min-height:64px;padding-block:8px;}
-  #lf-workstation .tebra-app-header-main {height:40px;min-height:40px;}
-  #lf-workstation .cd2004-patient-banner {min-height:60px;padding-block:8px;}
-  #lf-workstation .lf-service-header {padding-block:12px 10px;gap:8px 20px;}
-  #lf-workstation .lf-service-heading {display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 16px;min-width:0;}
-  #lf-workstation .lf-service-heading h1 {margin:0;}
-  #lf-workstation .lf-service-heading .lf-form-legend {margin:0;}
+  #lf-workstation .lf-uds-tools .lf-shelf-panel { width: min(310px,calc(100vw - 64px)); max-height: min(320px,calc(100dvh - 300px)); }
+  #lf-workstation .lf-uds-tools .lf-shelf-actions > button { width: 100%; justify-content: flex-start; text-align: left; white-space: normal; }
+  #lf-workstation .tebra-toast > span { display: block; }
+  #lf-workstation .tebra-toast > span + span { margin-top: 4px; }
+  body:has(#lf-workstation) #toast[data-notification-adapter=true] { display: none !important; }
+
   #lf-workstation .wfp-panel .wfp-tabpanel {max-width:none;margin-inline:0;}
   #lf-workstation .wfp-panel .wfp-row {margin-bottom:0;}
   #lf-workstation .wfp-panel .wfp-section {padding-block:18px 22px;}
@@ -122,29 +121,11 @@
   #lf-workstation .cd2004-note-ident :is(dt,dd) {font-family:var(--tw-font-sans);}
   #lf-workstation .cd2004-note-ident dd {font-size:12px;}
   body:has(#lf-workstation) .notes-table thead th {background:var(--lf-lavender);}
-  #lf-workstation .lf-service-shortcut:disabled {color:var(--lf-muted);cursor:not-allowed;}
-  @media (max-width:1179px) {
-    #lf-workstation.lf-workstation .lf-section-rail {min-height:60px;padding-block:7px;}
-  }
   @media (max-width:949px) {
-    #lf-workstation .ipmg-product-name {display:none;}
-    #lf-workstation.lf-workstation .lf-section-rail {min-height:56px;padding-block:6px;}
-    #lf-workstation .lf-service-header {padding-block:10px 8px;gap:6px 12px;}
-    #lf-workstation .lf-service-header-actions {gap:12px;}
-    #lf-workstation .lf-service-heading {gap:2px 12px;}
     #lf-workstation .wfp-summary-print-avs[data-patient-screening-print=summary] {font-size:0;flex:0 0 36px;width:36px;min-width:36px;padding:8px;gap:0;overflow:hidden;}
     #lf-workstation .wfp-summary-print-avs[data-patient-screening-print=summary] svg {width:16px;height:16px;flex:0 0 16px;}
   }
   @media (max-height:700px) {
-    #lf-workstation.lf-workstation .lf-section-rail {min-height:52px;padding-block:5px;}
-    #lf-workstation .tebra-app-header-main {height:38px;min-height:38px;}
-    #lf-workstation .cd2004-patient-banner {min-height:0;padding-block:6px;}
-    #lf-workstation .lf-service-header {padding-block:8px 7px;gap:5px 12px;}
-    #lf-workstation .lf-service-heading h1 {margin:0;}
-    #lf-workstation .lf-empty-mark {display:none;}
-    #lf-workstation .lf-worklist-empty {min-height:128px;padding:12px 20px;gap:6px;}
-    #lf-workstation .lf-worklist-empty strong {font-size:23px;line-height:28px;}
-    #lf-workstation .lf-worklist-card {min-height:0;}
     #lf-workstation .wfp-panel .wfp-transaction-page {padding-top:12px;}
     #lf-workstation .wfp-panel .wfp-section {padding-block:12px 18px;}
   }

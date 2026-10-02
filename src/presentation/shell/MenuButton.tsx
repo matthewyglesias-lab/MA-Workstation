@@ -1,5 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useId, useRef, useState } from "preact/hooks";
+import { useDismissibleLayer } from "../interaction/use-dismissible-layer";
 
 export type MenuTrigger = "split-disclosure" | "outlined" | "quiet";
 
@@ -32,9 +33,8 @@ interface MenuButtonProps {
  * have), and with it the reason to maintain two menus that behaved differently
  * on Escape and on focus return. This is the survivor.
  *
- * Escape and outside-pointer both dismiss, and dismissal returns focus to the
- * trigger. A menu that drops focus on the body is the kind of small break that
- * reads as unfinished rather than as a different product.
+ * Escape restores the opener. Outside pointer/focus dismissal leaves the new
+ * destination in control; it must not steal focus back from another field.
  */
 export function MenuButton({
   label,
@@ -53,7 +53,10 @@ export function MenuButton({
   const menuId = useId();
   const typeahead = useRef({ text: "", at: 0 });
 
+  const layer = useDismissibleLayer(hostRef, reason => dismiss(reason === "escape"));
+
   const dismiss = (restoreFocus = true) => {
+    layer.deactivate();
     pendingFocusRef.current = null;
     typeahead.current.text = "";
     setOpen(false);
@@ -82,6 +85,7 @@ export function MenuButton({
   };
 
   const openAndFocus = (position: "first" | "last") => {
+    if (!layer.activate()) return;
     pendingFocusRef.current = position;
     setOpen(true);
   };
@@ -103,29 +107,6 @@ export function MenuButton({
     focusMenuItem(pending === "last" ? items.length - 1 : 0);
   });
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!hostRef.current?.contains(event.target as Node)) dismiss(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.key !== "Escape" || document.querySelector("dialog[open]")) return;
-      event.stopPropagation();
-      dismiss();
-    };
-    const onFocusIn = (event: FocusEvent) => {
-      if (event.target instanceof Node && !hostRef.current?.contains(event.target)) dismiss(false);
-    };
-    document.addEventListener("focusin", onFocusIn);
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
   const triggerClass =
     trigger === "split-disclosure"
       ? "tebra-action-split-disclosure"
@@ -142,13 +123,14 @@ export function MenuButton({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        aria-label={trigger === "split-disclosure" ? menuLabel : undefined}
+        aria-label={trigger === "split-disclosure" ? menuLabel : label}
         disabled={disabled}
         onClick={() => {
           if (open) dismiss(false);
           else openAndFocus("first");
         }}
         onKeyDown={(event) => {
+          if (event.defaultPrevented || event.isComposing) return;
           if (
             event.key === "ArrowDown" ||
             event.key === "Enter" ||
@@ -162,11 +144,6 @@ export function MenuButton({
             event.preventDefault();
             openAndFocus("last");
             return;
-          }
-          if (event.key === "Escape" && open) {
-            event.preventDefault();
-            event.stopPropagation();
-            dismiss();
           }
         }}
       >
@@ -198,21 +175,13 @@ export function MenuButton({
             }
           }}
           onKeyDown={(event) => {
+            if (event.defaultPrevented || event.isComposing) return;
             const items = menuItems();
             const currentIndex = items.findIndex(
               (item) =>
                 item === document.activeElement || item.contains(document.activeElement),
             );
-            if (event.key === "Escape") {
-              event.preventDefault();
-              event.stopPropagation();
-              dismiss();
-              return;
-            }
-            if (event.key === "Tab") {
-              globalThis.setTimeout(() => dismiss(false), 0);
-              return;
-            }
+            if (event.key === "Tab") return;
             if (!items.length) return;
             if (event.key === "ArrowDown") {
               event.preventDefault();

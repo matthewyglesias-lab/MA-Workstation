@@ -1,3 +1,4 @@
+import { renderAvsAppointment, appointmentLineBudget } from "./avs-appointment-render";
 import {
   buildInjectionAvsModel,
   type AvsBlock,
@@ -156,7 +157,7 @@ const estimatedTimelineLines = (timeline: readonly AvsTimelineStep[]): number =>
  * out of page one and paint underneath the explicit continuation page.
  */
 const estimatedPrimaryLines = (model: InjectionAvsModel): number =>
-  17 +
+  17 + appointmentLineBudget(model.providerAppointment) +
   model.leadAlerts.reduce(
     (total, block) => total + estimatedBlockLines(block),
     0,
@@ -183,11 +184,19 @@ const hasDensePrimaryFacts = (model: InjectionAvsModel): boolean =>
 export type InjectionAvsLayoutVariant =
   | "routine-one-page"
   | "routine-two-page"
-  | "complex-two-page";
+  | "complex-two-page"
+  | "follow-up-three-page";
 
 export const selectInjectionAvsLayout = (
   model: InjectionAvsModel,
 ): InjectionAvsLayoutVariant => {
+  // A long preparation/overdose alert plus the new reminder can exceed page
+  // one even without ordinary guidance. Preserve every instruction and keep
+  // the due date with the appointment on their own identified continuation.
+  if (appointmentLineBudget(model.providerAppointment) > 0 &&
+      estimatedPrimaryLines(model) > ROUTINE_PRIMARY_LINE_CAPACITY) {
+    return "follow-up-three-page";
+  }
   if (
     model.timeline.length > 2 ||
     Boolean(model.documentSubtitle) ||
@@ -199,7 +208,7 @@ export const selectInjectionAvsLayout = (
     (total, block) => total + estimatedBlockLines(block),
     0,
   );
-  if (guidanceLines <= 24) {
+  if (guidanceLines + appointmentLineBudget(model.providerAppointment) <= 24) {
     return hasDensePrimaryFacts(model)
       ? "routine-two-page"
       : "routine-one-page";
@@ -274,6 +283,7 @@ const renderStep = (
   step: AvsTimelineStep,
   instruction = "",
   siteLabel = "",
+  appointmentHtml = "",
 ): string => {
   // The due step keeps the avs2-next / avs2-date hooks: it is still "the next
   // dose and its date", the roles those classes have always named, so the
@@ -306,6 +316,7 @@ const renderStep = (
       ? `<div class="avs2-step-instr">${escapeHtml(instruction)}</div>`
       : "") +
     paragraphs(step.detail) +
+    appointmentHtml +
     `</div></li>`
   );
 };
@@ -315,14 +326,17 @@ const renderSpine = (
   administrationNote: string,
   instruction: string,
   siteLabel: string,
+  appointmentHtml = "",
 ): string => {
-  if (!timeline.length) return "";
+  // The reminder belongs within the due-date panel. A handoff without a due
+  // step uses an explicit follow-up panel, never an invented injection date.
+  const dueIndex = timeline.findIndex((step) => step.state === "due");
   // The dose-specific note is folded into the step it describes rather than
   // trailing the spine as its own row. That keeps every row in the spine a real
   // dated step, which is what lets the rail terminate cleanly at the first and
   // last nodes instead of running past a marker-less row.
   const steps = timeline
-    .map((step) => {
+    .map((step, index) => {
       const detail =
         step.state === "given" && administrationNote
           ? [...step.detail, administrationNote]
@@ -331,10 +345,12 @@ const renderSpine = (
         { ...step, detail },
         step.state === "due" ? instruction : "",
         step.state === "given" ? siteLabel : "",
+        index === dueIndex ? appointmentHtml : "",
       );
     })
     .join("");
-  return `<ol class="avs2-spine" aria-label="Treatment timeline">${steps}</ol>`;
+  return (steps ? `<ol class="avs2-spine" aria-label="Treatment timeline">${steps}</ol>` : "") +
+    (dueIndex < 0 && appointmentHtml ? `<div class="avs2-follow-up">${appointmentHtml}</div>` : "");
 };
 
 const IDENTITY_ORDER = [
@@ -417,15 +433,15 @@ export const renderInjectionAvsHtml = (
 
   const contactBlock: AvsBlock = {
     kind: "contact",
-    heading: "Plan your next visit",
+    heading: model.providerAppointment && model.providerAppointment.mode !== "omit" ? "Clinic information" : "Plan your next visit",
     rows: model.nextDose.contactLines,
   };
-  const renderContact = (compact = false): string =>
+  const renderContact = (compact = false, suffix = compact ? "continued" : "primary"): string =>
     model.nextDose.contactLines.length
       ? renderSection(
           contactBlock,
           compact ? "avs2-sec-contact-compact" : "",
-          compact ? "continued" : "primary",
+          suffix,
         )
       : "";
 
@@ -440,7 +456,15 @@ export const renderInjectionAvsHtml = (
   // or stranded on an unlabeled browser-created page.
   const layout = selectInjectionAvsLayout(model);
   const pages = partitionInjectionAvsBlocks(model, layout);
+  const followUpPage = layout === "follow-up-three-page";
+  const primaryTimeline = followUpPage ? model.timeline.filter(step => step.state !== "due") : model.timeline;
+  const followUpTimeline = followUpPage ? model.timeline.filter(step => step.state === "due") : [];
+  const followUpGuidance = followUpPage ? model.blocks.filter(block => block.kind === "timing" || block.kind === "site-care") : [];
+  const finalGuidance = followUpPage
+    ? pages.continuation.filter(block => block.kind !== "timing" && block.kind !== "site-care")
+    : pages.continuation;
   const twoPage = layout !== "routine-one-page";
+  const totalPages = followUpPage ? 3 : twoPage ? 2 : 1;
   const continuation = twoPage
     ? `<header class="avs2-continuation">` +
       `<div class="avs2-continuation-title"><h2>After Visit Summary - Continued</h2></div>` +
@@ -519,25 +543,35 @@ export const renderInjectionAvsHtml = (
     `<section class="avs2-overview" aria-labelledby="avs-treatment-summary">` +
     `<h2 class="avs2-overview-title" id="avs-treatment-summary">Your treatment today</h2>` +
     renderSpine(
-      model.timeline,
+      primaryTimeline,
       model.administrationNote,
       model.nextDose.instruction,
       model.administration.find((row) => row.label === "ROUTE / SITE")?.value ?? "",
+      followUpPage ? "" : renderAvsAppointment(model.providerAppointment),
     ) +
     `</section>` +
+    (followUpPage ? `<p class="avs2-page-pointer">${followUpTimeline.length ? "Your next injection and provider appointment are" : "Your provider appointment details are"} on page 2. Please read all pages of this handout.</p>` : "") +
     renderContact() +
     renderGuidance(pages.primary) +
     `</div>` +
-    renderFooter(1, twoPage ? 2 : 1) +
+    renderFooter(1, totalPages) +
     `</div>` +
+    (followUpPage
+      ? `<div class="avs2-page avs2-page-continuation avs2-page-follow-up"><div class="avs2-page-body">` +
+        continuation +
+        `<section class="avs2-overview" aria-labelledby="avs-upcoming-care"><h2 class="avs2-overview-title" id="avs-upcoming-care">Your follow-up visits</h2>` +
+        renderSpine(followUpTimeline, "", model.nextDose.instruction, "", renderAvsAppointment(model.providerAppointment)) +
+        `</section>` + renderGuidance(followUpGuidance) + renderContact(true, "follow-up") +
+        `</div>` + renderFooter(2, totalPages) + `</div>`
+      : "") +
     (twoPage
       ? `<div class="avs2-page avs2-page-continuation">` +
         `<div class="avs2-page-body">` +
         continuation +
-        renderGuidance(pages.continuation) +
+        renderGuidance(finalGuidance) +
         renderContact(true) +
         `</div>` +
-        renderFooter(2, 2) +
+        renderFooter(totalPages, totalPages) +
         `</div>`
       : "") +
     `</article>`

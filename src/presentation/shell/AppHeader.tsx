@@ -1,8 +1,7 @@
 import type { ComponentChildren } from "preact";
-import { LightfullyMark } from "../lightfully/WorkspaceTools";
-import { SHELL } from "../vocabulary";
 
 interface AppHeaderProps {
+  navigation: ComponentChildren;
   badge: ComponentChildren;
   account: ComponentChildren;
   children: ComponentChildren;
@@ -10,13 +9,17 @@ interface AppHeaderProps {
   search?: ComponentChildren;
 }
 
-/** A quiet, persistent masthead; clinical context remains in its own safety band. */
-export function AppHeader({ badge, account, children, tools, search }: AppHeaderProps) {
+/** One masthead, followed by the patient safety band. Neither is duplicated by
+ * an alternate desktop/sidebar composition. Guided mode supplies no navigation. */
+export function AppHeader({ navigation, badge, account, children, tools, search }: AppHeaderProps) {
   return <header class="cd2004-application-header tebra-app-header lf-app-header cd2004-print-exclude">
-    <div class="cd2004-app-titlebar tebra-app-header-main">
-      <div class="lf-header-search">{search}</div>
-      {tools}
-      <span class="cd2004-app-environment tebra-app-context">{badge}{account}</span>
+    <div class="lf-masthead">
+      {navigation}
+      <div class="lf-masthead-utilities">
+        <div class="lf-header-search">{search}</div>
+        {tools}
+        <span class="cd2004-app-environment tebra-app-context">{badge}{account}</span>
+      </div>
     </div>
     {children}
   </header>;

@@ -49,6 +49,39 @@
     overflow-wrap: anywhere;
   }
 
+  /* Provider appointment: part of the original sage next-injection panel.
+     Staff density never changes the patient-facing typography or writing room. */
+  body.print-avs #avsSheet .avs2-appointment {
+    margin: 11px -17px -11px; padding: 11px 17px 10px;
+    border-top: 1px solid #c6d5c3; background: #f8fbf6;
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  body.print-avs #avsSheet .avs2-appointment-title {
+    margin: 0 0 10px; font-family: inherit; font-size: 13px;
+    font-weight: 600; line-height: 1.4; color: var(--avs-accent) !important;
+  }
+  body.print-avs #avsSheet :is(.avs2-appointment-when,.avs2-appointment-where) {
+    display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; margin: 3px 0;
+  }
+  body.print-avs #avsSheet .avs2-appointment-field {
+    display: flex; align-items: center; gap: 7px; min-height: 28px; min-width: 0;
+    font-size: 12px; line-height: 1.45;
+  }
+  body.print-avs #avsSheet .avs2-appointment-label { flex: 0 0 auto; color: var(--avs-muted); }
+  body.print-avs #avsSheet .avs2-appointment-field strong { font-weight: 600; overflow-wrap: anywhere; }
+  body.print-avs #avsSheet .avs2-write-line { flex: 1; display: block; min-width: 45px; height: 22px; border-bottom: 1px solid #617b6d; }
+  body.print-avs #avsSheet .avs2-appointment-field small { flex: 0 0 auto; font-size: 9px; color: var(--avs-muted); }
+  body.print-avs #avsSheet .avs2-appointment-booked { display: flex; flex-wrap: wrap; gap: 6px 13px; margin: 0 0 5px; font-size: 17px; line-height: 1.4; }
+  body.print-avs #avsSheet .avs2-appointment-booked > strong { font-weight: 600; overflow-wrap: anywhere; }
+  body.print-avs #avsSheet .avs2-appointment-time { border-left: 1px solid #afc2b2; padding-left: 13px; white-space: nowrap; }
+  body.print-avs #avsSheet .avs2-appointment p { margin: 4px 0 0; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+  body.print-avs #avsSheet .avs2-appointment-provider > span { color: var(--avs-muted); }
+  body.print-avs #avsSheet .avs2-appointment .avs2-appointment-help { margin-top: 6px; font-size: 11px; color: var(--avs-muted); }
+  body.print-avs #avsSheet .avs2-follow-up { margin: 6px 0; padding: 0 17px 11px; border: 1px solid #c6d5c3; border-left: 4px solid var(--avs-accent); border-radius: 0 5px 5px 0; background: #f8fbf6; }
+  body.print-avs #avsSheet .avs2-follow-up > .avs2-appointment { margin-top: 0; border-top: 0; }
+
+  body.print-avs #avsSheet .avs2-page-pointer { margin: 12px 0 8px; font-size: 12px; line-height: 1.5; color: var(--avs-ink) !important; }
+
   body.print-avs #avsSheet .avs2-page {
     position: relative;
     display: grid;

@@ -112,12 +112,12 @@ test('staff settings keep unsaved text on an outside click and use local wording
 });
 test('header and account menus handle arrows, typeahead, Escape and focus departure',async({page},info)=>{
   await boot(page);
-  const trigger=page.locator('.lf-tools-navigation > summary');
+  const trigger=page.locator('.lf-workspace-shelf > summary');
   await trigger.focus();await page.keyboard.press('ArrowDown');
-  await expect(page.locator('.lf-tools-navigation button').first()).toBeFocused();
-  await page.keyboard.press('End');await expect(page.locator('.lf-tools-navigation button').last()).toBeFocused();
+  await expect(page.locator('.lf-workspace-shelf button').first()).toBeFocused();
+  await page.keyboard.press('End');await expect(page.locator('.lf-workspace-shelf button').last()).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();
-  await expect(page.locator('.lf-tools-navigation')).not.toHaveAttribute('open','');
+  await expect(page.locator('.lf-workspace-shelf')).not.toHaveAttribute('open','');
   await page.locator('.tebra-account-trigger').click();
   await page.keyboard.press('v');await expect(page.locator('[data-account-action=location]')).toBeFocused();
   await shot(page,info,'local-settings-menu');

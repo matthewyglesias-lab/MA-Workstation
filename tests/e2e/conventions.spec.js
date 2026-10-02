@@ -448,7 +448,7 @@ test.describe('Phase 3b patient chart conventions', () => {
 
     await expect(search).toHaveAttribute(
       'placeholder',
-      /2-3 letters of the patient's name, or DOB as mm\/dd\/yyyy/i
+      'Name or DOB'
     );
 
     await search.click();
@@ -511,6 +511,47 @@ test.describe('Phase 3b patient chart conventions', () => {
     await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
   });
 
+  test('returns from patient browsing with guarded draft preservation and unchanged existing records', async ({ page }, info) => {
+    await bootWithPatientChart(page, { width: 800, height: 600 });
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
+    const name = page.locator('.wfp-panel input[placeholder="Last, First"]');
+    const dob = page.locator('.wfp-panel input[placeholder="MM/DD/YYYY"]');
+    await name.fill('Return path, Synthetic');
+    await dob.fill('01/02/1990');
+    await dob.press('Tab');
+    const records = () => page.evaluate(keys => keys.map(key => localStorage.getItem(key)), [INJECTION_RECORDS_KEY, UDS_RECORDS_KEY]);
+    const before = await records();
+    await openBakerChart(page);
+    await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
+    await expect(page.locator('.lf-draft-return')).toContainText('active service is unchanged');
+    await expect(page.getByRole('button', { name: 'Return to active service', exact: true })).toHaveCount(1);
+    // The existing leave guard saves the active injection before browsing.
+    // That intentional write must not change any pre-existing record, and
+    // returning from this read-only chart must perform no additional write.
+    const afterBrowse = await records();
+    const oldInjectionRecords = JSON.parse(before[0]);
+    const savedInjectionRecords = JSON.parse(afterBrowse[0]);
+    const originalIds = new Set(oldInjectionRecords.map(record => record.id));
+    // The repository orders its array by updatedAt on every save. Compare the
+    // complete original records by identity, not the incidental storage order.
+    const byId = records => [...records].sort((a, b) => a.id.localeCompare(b.id));
+    expect(byId(savedInjectionRecords.filter(record => originalIds.has(record.id))))
+      .toEqual(byId(oldInjectionRecords));
+    const activeDraft = savedInjectionRecords.filter(record => !originalIds.has(record.id));
+    expect(activeDraft).toHaveLength(1);
+    expect(activeDraft[0].patient).toEqual({ name: 'Return path, Synthetic', dob: '01/02/1990' });
+    expect(activeDraft[0].status).toBe('draft');
+    expect(afterBrowse[1]).toBe(before[1]);
+    await page.screenshot({ path: info.outputPath('patient-browse-800.png') });
+    await page.getByRole('button', { name: 'Return to active service', exact: true }).click();
+    await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
+    await expect(name).toHaveValue('Return path, Synthetic');
+    await expect(name).toBeFocused();
+    await expect(dob).toHaveValue('01/02/1990');
+    expect(await records()).toEqual(afterBrowse);
+    await page.screenshot({ path: info.outputPath('patient-return-800.png') });
+  });
+
   test('shows Facesheet cards that each state their ordering rule', async ({ page }) => {
     await bootWithPatientChart(page);
     await openBakerChart(page);
@@ -566,7 +607,8 @@ test.describe('Phase 3b patient chart conventions', () => {
     const list = page.locator('[data-patient-notes]');
     await expect(list).toBeVisible();
 
-    // Exactly four 200x40 filter fields in one panel.
+    // Patient-chart filters retain their explicit 40px design height in Compact.
+    // This is distinct from 34px clinical entry and 42px Comfortable controls.
     const fields = list.locator('[data-patient-notes-filter]');
     await expect(fields).toHaveCount(4);
     expect(
@@ -576,7 +618,7 @@ test.describe('Phase 3b patient chart conventions', () => {
           return [Math.round(box.width), Math.round(box.height)];
         })
       )
-    ).toEqual([[200, 42], [200, 42], [200, 42], [200, 42]]);
+    ).toEqual([[200, 40], [200, 40], [200, 40], [200, 40]]);
 
     // 100px rows, a 73x38 Open button, and no global-ledger 44px row here.
     const rows = list.locator('.tebra-record-row');
@@ -947,15 +989,12 @@ test.describe('Phase 3b patient chart conventions', () => {
     // Clinic and staff are not lost — the header's top right still carries them.
     await expect(page.locator('.tebra-app-context')).toContainText('Alex Rivera, MA');
 
-    // The rail follows the browsed chart too, rather than claiming no patient
-    // is selected beside that patient's own Facesheet, and offers the chart's
-    // two pages as navigation.
-    const railContext = page.locator('.tebra-section-rail-context');
-    await expect(railContext).toContainText('CURRENT PATIENT');
-    await expect(railContext).toContainText('Baker, Test');
-    await expect(railContext).not.toContainText('No patient selected');
-    await expect(page.locator('[data-chart-nav="facesheet"]')).toBeVisible();
-    await expect(page.locator('[data-chart-nav="notes"]')).toBeVisible();
+    // The chart owns its patient context and local page navigation once. Do
+    // not reintroduce the retired duplicate patient menu in the masthead.
+    await expect(page.locator('.tebra-section-rail-context,[data-chart-nav]')).toHaveCount(0);
+    await expect(page.locator('.tebra-facesheet-name')).toHaveCount(1);
+    await expect(page.locator('[data-chart-tab="facesheet"]')).toBeVisible();
+    await expect(page.locator('[data-chart-tab="notes"]')).toBeVisible();
 
     // And it comes back on the way out.
     await page.keyboard.press('Escape');

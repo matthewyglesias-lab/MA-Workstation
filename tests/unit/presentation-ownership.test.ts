@@ -1,0 +1,59 @@
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import postcss from 'postcss';
+import { describe, expect, it } from 'vitest';
+
+const root = fileURLToPath(new URL('../../', import.meta.url));
+const read = (path: string) => readFileSync(root + path, 'utf8');
+
+describe('presentation ownership boundaries', () => {
+  it('keeps table rows separate from the patient-note flex-card owner', () => {
+    const worklist = read('src/presentation/StartCenter.tsx');
+    expect(worklist).toContain('class="lf-work-row"');
+    expect(worklist).not.toMatch(/<tr[^>]*class="tebra-record-row"/);
+    expect(read('src/presentation/notes/PatientNotesList.tsx')).toContain('class="tebra-record-row"');
+  });
+
+  it('does not reinstall private global dismissal handlers in migrated components', () => {
+    for (const path of ['shell/MenuButton.tsx','shell/PatientSearch.tsx','shell/SectionRail.tsx',
+      'lightfully/ActionShelf.tsx','lightfully/WorkspaceTools.tsx','workflows/ClinicalRegister.tsx']) {
+      expect(read('src/presentation/' + path), path).not.toMatch(/(?:document|window)\.addEventListener/);
+    }
+  });
+  it('removes the old command deck rather than hiding a second interactive surface', () => {
+    expect(existsSync(root + 'src/presentation/TebraChrome.tsx')).toBe(false);
+    const shell = read('src/presentation/ClinicalDesktopShell.tsx');
+    expect(shell).not.toMatch(/PowerCommandMenu|<aside[^>]*tebra-context-rail/);
+    expect(shell.match(/window\.addEventListener\("keydown"/g)).toHaveLength(1);
+    expect(read('src/presentation/Panel.tsx')).not.toContain('cd2004-window-titlebar');
+  });
+  it('gives the completion state one screen owner and makes its retained editor inert', () => {
+    const panel = read('src/presentation/Panel.tsx');
+    expect(panel).toContain('inert={suspended}');
+    expect(panel).toContain('aria-hidden={suspended ? "true" : undefined}');
+    expect(read('src/presentation/ClinicalDesktopShell.tsx'))
+      .toContain('suspended={kioskVisible && Boolean(kioskLocked)}');
+    expect(read('src/presentation/kiosk/kiosk.css'))
+      .not.toContain('has-kiosk-completion > .cd2004-work-window');
+    const css = postcss.parse(read('src/presentation/lightfully/shell-layout.css'));
+    const owners: string[] = [];
+    css.walkRules(rule => {
+      if (!rule.selector.includes('[data-suspended=true]')) return;
+      owners.push(rule.selector);
+      expect(rule.parent?.type).toBe('atrule');
+      expect((rule.parent as { params?: string }).params).toBe('screen');
+    });
+    expect(owners).toHaveLength(1);
+  });
+  it('keeps the pre-refinement print blocks byte-identical during screen cleanup', () => {
+    // Hash of the @media print blocks at main 50f9937. Do not approve a screen
+    // change by silently refreshing this print contract.
+    const blocks: string[] = [];
+    postcss.parse(read('src/presentation/clinical-desktop.css')).walkAtRules('media', rule => {
+      if (/\bprint\b/.test(rule.params)) blocks.push(rule.toString());
+    });
+    expect(createHash('sha256').update(blocks.join('\n')).digest('hex'))
+      .toBe('d0fee23b568827ee6895802c72f95207c030722bf92eaa961e593a416b8d3251');
+  });
+});

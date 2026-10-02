@@ -7,11 +7,12 @@ async function clickWorkspace(page, selector) {
       await page.locator('.lf-document-action').click();
     }
   } else if (["Reference", "Daily Closeout", "Future / TMS"].includes(title)) {
-    if (!(await page.locator('.lf-tools-navigation').getAttribute('open') !== null)) {
-      await page.locator('.lf-tools-navigation > summary').click();
+    if (!(await page.locator('.lf-workspace-shelf').getAttribute('open') !== null)) {
+      await page.locator('.lf-workspace-shelf > summary').click();
     }
   }
-  await page.locator(selector).click();
+  if (title === "Dashboard") await page.getByRole("button", {name:"Worklist", exact:true}).click();
+  else await page.locator(selector).click();
 }
 /** Open real progressive-disclosure controls; never force-click hidden actions. */
 async function openRecordActions(page) {

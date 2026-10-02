@@ -16,12 +16,23 @@ const reviewedScope = new Set([
   'src/persistence/storage.ts',
   'src/persistence/workflow-recovery.ts',
 ]);
-// Only the documented unconfirmed-default corrections are permitted in these
+// Reviewed defaults, the optional handout type, and its explicit exclusion from
+// administration-review invalidation are permitted in these
 // clinical/compatibility files. A different byte requires an explicit re-review.
 const reviewedDefaults = new Map([
-  ['src/domain/injection.ts', 'ad92ae767542c7411f77cce42273a63b3eb090ab518eb7da5d620dac7fbe3741'],
+  ['src/domain/injection.ts', 'c78e1c6602fa11a06a75adb2722cd0f78da790891ba249fa62253a6efcaa4b91'],
   ['src/legacy/legacy-markup.html', '97ea5fa36ff7e4b0a6ae9f56085f49b6994c9b99df868ce17fae470de430fbd2'],
   ['public/legacy/legacy-runtime.js', 'c570e6e85ceb1f9218fabe232c62a0c699b7c293d47f7def0194ee96e7586381'],
+]);
+// Authorized density/appointment follow-up, 2026-10-02. These exact bytes add
+// optional reminder metadata and rendering, not medication/timing rules.
+// See docs/density-appointment/IMPLEMENTATION.md. This is not a broad exemption.
+const reviewedHandout = new Map([
+  ['src/domain/avs-appointment.ts', '453a3997a2f971500bdfe107d07584497ac726646783def26dd59a44abab4f53'],
+  ['src/domain/avs-appointment-render.ts', 'f1818a8d8e7d5bcfc801af2cdcc93e5267f5d1bf0af64a3feb275e3bdf116c2e'],
+  ['src/domain/injection-avs-content.ts', '759b654e1cf1ac5ff9b3d97aac9d857b658eae9bc05c3eac682d1b3bbff4033d'],
+  ['src/domain/injection-avs-render.ts', '39160256761589ce4e0c27425f47a60e5deb56f9404bb6d724f24803064d5776'],
+  ['src/domain/injection-avs-guidance.ts', '4e4951d5427dbf4a70951ba9a1dc35485dbd69b711b87590f9fed19bf0eea7a9'],
 ]);
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 try {
@@ -31,13 +42,13 @@ try {
     ...git('diff', '--no-renames', '--name-only', baseline, '--', ...protectedPaths).split('\n'),
     ...git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths).split('\n'),
   ].filter(Boolean);
-  const unexpected = changed.filter(path => !reviewedScope.has(path) && !reviewedDefaults.has(path));
+  const unexpected = changed.filter(path => !reviewedScope.has(path) && !reviewedDefaults.has(path) && !reviewedHandout.has(path));
   if (unexpected.length) throw new Error(`Protected files changed:\n${unexpected.join('\n')}`);
-  for (const [path, expected] of reviewedDefaults) {
+  for (const [path, expected] of [...reviewedDefaults, ...reviewedHandout]) {
     const actual = createHash('sha256').update(readFileSync(path)).digest('hex');
-    if (actual !== expected) throw new Error(`Unreviewed clinical/default change: ${path}`);
+    if (actual !== expected) throw new Error(`Unreviewed clinical/default/handout change: ${path}`);
   }
-  console.log(`Clinical rules, note grammar and existing record schemas match ${baseline}; reviewed documentation defaults and recovery changes are explicit.`);
+  console.log(`Clinical rules, note grammar and existing record schemas match ${baseline}; reviewed documentation defaults, recovery and optional handout changes are explicit.`);
 } catch (error) {
   console.error('Clinical preservation check failed. Use full git history and review the actual difference.');
   console.error(error instanceof Error ? error.message : String(error));

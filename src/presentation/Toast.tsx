@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useState } from "preact/hooks";
 
 interface ToastProps {
   /** The latest status message. Empty or unchanged text shows nothing new. */
@@ -22,6 +22,35 @@ interface ToastProps {
  */
 export function Toast({ message, durationMs = 4000 }: ToastProps) {
   const [shown, setShown] = useState("");
+  const [compatibilityMessage, setCompatibilityMessage] = useState("");
+
+  useLayoutEffect(() => {
+    const source = document.getElementById("toast");
+    if (!source) return;
+    // The classic runtime still writes this message sink and owns its expiry.
+    // Consume that output in the one notification surface; do not wrap its
+    // global function or discard messages from a save/storage failure.
+    const previousHidden = source.getAttribute("aria-hidden");
+    const previousOwner = source.getAttribute("data-notification-adapter");
+    const previousInert = source.inert;
+    const sync = () => setCompatibilityMessage(source.classList.contains("show")
+      ? source.querySelector("#toastMsg")?.textContent?.trim() ?? "" : "");
+    const observer = new MutationObserver(sync);
+    observer.observe(source, { subtree: true, childList: true, characterData: true,
+      attributes: true, attributeFilter: ["class"] });
+    source.setAttribute("data-notification-adapter", "true");
+    source.setAttribute("aria-hidden", "true");
+    source.inert = true;
+    sync();
+    return () => {
+      observer.disconnect();
+      if (previousOwner === null) source.removeAttribute("data-notification-adapter");
+      else source.setAttribute("data-notification-adapter", previousOwner);
+      if (previousHidden === null) source.removeAttribute("aria-hidden");
+      else source.setAttribute("aria-hidden", previousHidden);
+      source.inert = previousInert;
+    };
+  }, []);
 
   useEffect(() => {
     const next = message.trim();
@@ -34,6 +63,7 @@ export function Toast({ message, durationMs = 4000 }: ToastProps) {
     return () => globalThis.clearTimeout(timer);
   }, [message, durationMs]);
 
+  const messages = [...new Set([shown, compatibilityMessage].filter(Boolean))];
   return (
     <div
       class="tebra-toast-region cd2004-print-exclude"
@@ -41,9 +71,9 @@ export function Toast({ message, durationMs = 4000 }: ToastProps) {
       aria-live="polite"
       aria-atomic="true"
     >
-      {shown ? (
+      {messages.length ? (
         <p class="tebra-toast" data-toast>
-          {shown}
+          {messages.map(text => <span key={text}>{text}</span>)}
         </p>
       ) : null}
     </div>

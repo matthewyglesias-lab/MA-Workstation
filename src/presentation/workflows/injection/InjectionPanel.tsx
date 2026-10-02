@@ -114,6 +114,9 @@ import {
 
 // Four transaction pages match how staff actually complete the MAR: establish
 // order/timing, identify the physical product, administer and verify, review.
+import { AvsAppointmentEditor } from "../../documents/AvsAppointmentEditor";
+import { emptyAvsAppointment } from "../../../domain/avs-appointment";
+
 type InjectionTab = "order" | "product" | "administration" | "review";
 
 const INJECTION_TABS: Array<[InjectionTab, string]> = [
@@ -1554,6 +1557,10 @@ export function InjectionPanel({
       (previous) => ({
         ...previous,
         patient: { ...previous.patient, ...partial },
+        // A different identity never silently inherits a scheduling reminder.
+        avsAppointment: Object.entries(partial).some(([key, value]) =>
+          previous.patient[key as keyof InjectionEncounter["patient"]] !== value)
+          ? emptyAvsAppointment() : previous.avsAppointment,
       }),
       { silentPatientIdentity: true },
     );
@@ -4123,6 +4130,12 @@ export function InjectionPanel({
       {tab === "review" && (
         <div class="wfp-section" role="group" aria-label="Document output">
           <h2 class="wfp-section-head">Document output</h2>
+          <AvsAppointmentEditor
+            value={encounter.avsAppointment}
+            dueDate={encounter.nextDoseDate || suggestedNextDose}
+            locked={Boolean(locked)} disabled={editorUnavailable}
+            onChange={(value) => patch({ avsAppointment: value })}
+          />
           <div class="wfp-section-body">
             <p class="wfp-field-hint wfp-document-output-hint">
               Printing uses the same local encounter snapshot as Clinical Documentation, in the sidebar.

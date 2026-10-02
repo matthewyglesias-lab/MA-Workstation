@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import { emptyAvsAppointment, appointmentForInput } from './domain/avs-appointment';
 /*
  * Plus Jakarta Sans is load-bearing for PRINT: the AVS patient handout sets its
  * titles in it (the @media print block in clinical-desktop.css), and
@@ -294,7 +295,7 @@ function rawInjectionEncounterRead(
   ) {
     return { encounter: fallback, status: 'invalid' };
   }
-  if (!activeRecordId) return { encounter: fallback, status: 'absent' };
+  if (!activeRecordId) return { encounter: { ...fallback, avsAppointment: emptyAvsAppointment() }, status: 'absent' };
   const matches = listed.value.filter((record) => record.id === activeRecordId);
   if (matches.length !== 1) return { encounter: fallback, status: 'invalid' };
   const stored = matches[0];
@@ -585,7 +586,17 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       () => rememberInjectionDirty(false),
     );
     setInjectionExtensionInstalled(injectionPresentationExtensionAvailable());
-    return uninstall;
+    // One print builder, with a live ref rather than another event listener.
+    const bridge = window as unknown as { ipmgBuildInjectionAvsHtml?: (input: InjectionAvsInput, chrome?: Partial<InjectionAvsChrome>) => string };
+    const previousBuilder = bridge.ipmgBuildInjectionAvsHtml;
+    const build = (input: InjectionAvsInput, chrome?: Partial<InjectionAvsChrome>) => buildInjectionAvsHtml({
+      ...input, providerAppointment: appointmentForInput(typedInjectionStateRef.current?.encounter, input),
+    }, chrome ?? {});
+    bridge.ipmgBuildInjectionAvsHtml = build;
+    return () => {
+      uninstall();
+      if (bridge.ipmgBuildInjectionAvsHtml === build) bridge.ipmgBuildInjectionAvsHtml = previousBuilder;
+    };
   }, [rememberInjectionDirty]);
 
   useEffect(() => {

@@ -461,10 +461,6 @@
     box-shadow: var(--tw-shadow-elevation-1);
   }
 
-  .cd2004-shell .cd2004-workspace.is-kiosk > .cd2004-work-window > .cd2004-window-titlebar {
-    display: none;
-  }
-
   .cd2004-shell .cd2004-workspace.is-kiosk > .cd2004-work-window {
     grid-template-rows: minmax(0, 1fr);
   }
@@ -495,15 +491,7 @@
 
   /* Touch targets grow only in the focused shell. The underlying inputs,
      option values, and event handlers stay exactly the workstation's. */
-  .cd2004-shell[data-kiosk-mode="true"] :is(
-      .wfp-panel input:not([type="checkbox"]):not([type="radio"]),
-      .wfp-panel select,
-      .wfp-panel textarea,
-      .wfp-panel button,
-      .cd2004-record-actions-buttons button,
-      .tebra-account-trigger,
-      .tebra-power-commands > summary
-    ) {
+  .cd2004-shell[data-kiosk-mode="true"] :is(.wfp-panel input:not([type="checkbox"]):not([type="radio"]), .wfp-panel select, .wfp-panel textarea, .wfp-panel button, .cd2004-record-actions-buttons button, .tebra-account-trigger) {
     min-height: 44px;
   }
 
@@ -561,9 +549,6 @@
     padding-inline: 18px;
   }
 
-  .cd2004-shell .cd2004-workspace.is-kiosk.has-kiosk-completion > .cd2004-work-window {
-    display: none;
-  }
 
   .cd2004-shell .kiosk-sign-next {
     grid-column: 2;

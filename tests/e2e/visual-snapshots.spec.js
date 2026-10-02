@@ -2,6 +2,9 @@ const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
+const { readFileSync } = require('node:fs');
+const { createHash } = require('node:crypto');
+const { PNG } = require('playwright-core/lib/utilsBundle');
 
 const FIXED_NOW = new Date('2026-07-30T10:30:00-07:00');
 const FIXED_DATE_KEY = '2026-07-30';
@@ -401,6 +404,35 @@ async function settleForCapture(page) {
   });
 }
 
+async function expectNativeWorklistGeometry(page) {
+  const table = page.locator('.lf-work-table');
+  const rows = table.locator('tbody > tr');
+  await expect(rows).toHaveCount(4);
+  const geometry = await table.evaluate(node => {
+    const headers = Array.from(node.querySelectorAll('thead th')).map(h => h.getBoundingClientRect());
+    return Array.from(node.querySelectorAll('tbody > tr')).map(row => ({
+      display: getComputedStyle(row).display,
+      height: row.getBoundingClientRect().height,
+      cells: Array.from(row.children).map((cell, index) => ({
+        width: cell.getBoundingClientRect().width,
+        leftDelta: Math.abs(cell.getBoundingClientRect().left - headers[index].left),
+        display: getComputedStyle(cell).display,
+      })),
+    }));
+  });
+  for (const row of geometry) {
+    expect(row.display).toBe('table-row');
+    expect(row.height).toBeLessThan(180);
+    expect(row.cells).toHaveLength(5);
+    expect(row.cells[0].width).toBeGreaterThan(180);
+    for (const cell of row.cells) {
+      expect(cell.display).toBe('table-cell');
+      expect(cell.leftDelta).toBeLessThanOrEqual(1);
+    }
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+}
+
 test.describe('workstation visual snapshots', () => {
   test('empty chart at 1024 x 768', async ({ page }) => {
     await bootDeterministicWorkstation(page, VIEWPORTS.desktop1024);
@@ -420,11 +452,27 @@ test.describe('workstation visual snapshots', () => {
     await openWorkflow(page, 'home');
     await expect(page.getByRole('heading', { name: 'Worklist', exact: true })).toBeVisible();
     await settleForCapture(page);
+    await expectNativeWorklistGeometry(page);
 
-    await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
-      'current-worklist-1366x768.png',
-      SNAPSHOT_OPTIONS
-    );
+    // Pin the reviewed full image by decoded RGBA pixels, not PNG compression.
+    // This one reference is zero-tolerance and never regenerated from the app.
+    // Keep the real PNG in the report for human inspection on every run.
+    const reference = JSON.parse(readFileSync(test.info().snapshotPath(
+      'current-worklist-1366x768.rgba.json'
+    ), 'utf8'));
+    const imagePath = test.info().outputPath('current-worklist-1366x768.png');
+    await expect.poll(async () => {
+      const image = PNG.sync.read(await page.locator('.cd2004-shell').screenshot({
+        animations: 'disabled', caret: 'hide', scale: 'css', path: imagePath
+      }));
+      return { width: image.width, height: image.height,
+        rgbaSha256: createHash('sha256').update(image.data).digest('hex') };
+    }, { timeout: SNAPSHOT_OPTIONS.timeout,
+      message: 'The populated worklist must match the visually reviewed pixels'
+    }).toEqual(reference);
+    await test.info().attach('Populated worklist — actual screenshot', {
+      path: imagePath, contentType: 'image/png'
+    });
   });
 
   test('active Injection draft at 1366 x 768', async ({ page }) => {
@@ -442,9 +490,9 @@ test.describe('workstation visual snapshots', () => {
     await bootDeterministicWorkstation(page, VIEWPORTS.narrowDesktop);
     await openFixtureDraft(page);
     await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
-    await expect(page.locator('.tebra-power-commands > summary')).toBeVisible();
-    await expect(page.locator('.meditech-command-deck')).toBeHidden();
-    await expect(page.locator('.meditech-context-rail')).toBeVisible();
+    await expect(page.locator('.lf-workspace-shelf > summary')).toBeVisible();
+    await expect(page.locator('.lf-workspace-shelf .lf-shelf-panel')).toBeHidden();
+    await expect(page.locator('.lf-section-rail')).toBeVisible();
     await expect(page.locator('.cd2004-inspector-window')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible();
     await expect(page.locator('[data-injection-record-actions]')).toBeVisible();
@@ -467,9 +515,9 @@ test.describe('workstation visual snapshots', () => {
       SNAPSHOT_OPTIONS
     );
 
-    const powerCommands = page.locator('.tebra-power-commands');
+    const powerCommands = page.locator('.lf-workspace-shelf');
     const disclosure = powerCommands.locator(':scope > summary');
-    const deck = powerCommands.locator('.meditech-command-deck');
+    const deck = powerCommands.locator('.lf-shelf-panel');
     const recordActions = page.locator('[data-injection-record-actions]');
     const transaction = page.locator('.cd2004-transaction-window');
     const inspector = page.locator('.cd2004-inspector-window');
@@ -514,24 +562,15 @@ test.describe('workstation visual snapshots', () => {
     const deckBox = await deck.boundingBox();
     expect(deckBox).not.toBeNull();
     expect(await deck.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
-    await expect(deck.locator('button > kbd')).toHaveText([
-      'F1',
-      'F6',
-      'F7',
-      'F8',
-      'F9',
-      'F11',
-      'F12',
-      'Esc'
-    ]);
+    await expect(deck.getByRole('button', { name: 'Search workspace commands' })).toBeVisible();
+    await expect(deck.getByRole('button', { name: 'Compact workspace' })).toBeVisible();
 
     for (const button of await deck.locator('button:visible').all()) {
       const box = await button.boundingBox();
       expect(box.y).toBeGreaterThanOrEqual(deckBox.y - 1);
       expect(box.y + box.height).toBeLessThanOrEqual(deckBox.y + deckBox.height + 1);
     }
-    // The inline shortcut disclosure reallocates space; validate the live
-    // action bar, not its location before the disclosure opened.
+    // The anchored Workspace popover does not displace the action bar.
     const expandedRecordBox = await recordActions.boundingBox();
     expect(expandedRecordBox.y + expandedRecordBox.height).toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
     for (const button of await recordActions.locator('button:visible').all()) {
@@ -541,7 +580,7 @@ test.describe('workstation visual snapshots', () => {
     }
 
     const verticallyClippedButtons = await page
-      .locator('.meditech-command-deck button:visible, [data-injection-record-actions] button:visible')
+      .locator('.lf-shelf-panel button:visible, [data-injection-record-actions] button:visible')
       .evaluateAll((buttons) =>
         buttons
           .filter((button) => button.scrollHeight > button.clientHeight + 1)
@@ -552,7 +591,14 @@ test.describe('workstation visual snapshots', () => {
           }))
       );
     expect(verticallyClippedButtons).toEqual([]);
-    await page.screenshot({ path: test.info().outputPath('minimum-shortcuts-open.png') });
+    await page.screenshot({ path: test.info().outputPath('minimum-workspace-open.png') });
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('F1');
+    const help = page.getByRole('dialog', { name: 'Keyboard Reference' });
+    await expect(help).toBeVisible();
+    for (const key of ['F1','F6','F7','F8','F9','F11','F12','Esc']) await expect(help).toContainText(key);
+    await page.keyboard.press('Escape');
+    await expect(help).toBeHidden();
   });
 
   test('ready-to-attest and locked local records at 1440 x 900', async ({ page }) => {
@@ -595,3 +641,19 @@ test.describe('workstation visual snapshots', () => {
     );
   });
 });
+
+for (const viewport of [VIEWPORTS.desktop1440, VIEWPORTS.minimumDesktop]) {
+  test(`populated worklist preserves native columns and keyboard resume at ${viewport.width}`, async ({ page }, info) => {
+    await bootDeterministicWorkstation(page, viewport);
+    await openWorkflow(page, 'home');
+    await settleForCapture(page);
+    await expectNativeWorklistGeometry(page);
+    await page.screenshot({path:info.outputPath(`populated-worklist-${viewport.width}.png`)});
+    const draft = page.locator('.lf-work-table tbody tr').filter({hasText:'Patel, Rowan'});
+    await expect(draft).toHaveCount(1);
+    const resume = draft.getByRole('button', {name:'Resume', exact:true});
+    await resume.focus(); await expect(resume).toBeFocused(); await page.keyboard.press('Enter');
+    await expect(page.locator('.wfp-panel input[placeholder="Last, First"]')).toHaveValue('Patel, Rowan');
+    await expect(page.locator('.wfp-panel input[placeholder="MM/DD/YYYY"]')).toHaveValue('11/03/1994');
+  });
+}

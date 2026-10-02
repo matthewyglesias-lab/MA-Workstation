@@ -18,7 +18,7 @@ const WORKFLOWS = [
 
 // Screen-only token overrides from lightfully-shell.css, as rendered rgb().
 const INK = 'rgb(41, 66, 85)';
-const HEADER_PAPER = 'rgb(246, 243, 246)';
+const HEADER_PAPER = 'rgba(0, 0, 0, 0)'; // The single masthead inherits its white parent.
 const SECTION_RAIL_FILL = 'rgb(246, 246, 249)';
 const CORAL = 'rgb(243, 117, 101)';
 const WHITE = 'rgb(255, 255, 255)';
@@ -35,10 +35,10 @@ test.describe('Lightfully screen contract', () => {
     const home = await page.evaluate(() => {
       const primaryAction = document.querySelector('.cd2004-worklist-new');
       const nav = document.querySelector('button.cd2004-nav-item');
-      const appHeader = document.querySelector('.tebra-app-header-main');
+      const appHeader = document.querySelector('.lf-masthead');
       const sectionRail = document.querySelector('.tebra-section-rail');
       const workWindow = document.querySelector('.cd2004-work-window');
-      const workTitlebar = workWindow?.querySelector(':scope > .cd2004-window-titlebar');
+      const retiredTitlebars = document.querySelectorAll('.cd2004-window-titlebar').length;
       return {
         primaryActionGradient: getComputedStyle(primaryAction).backgroundImage,
         primaryActionRelief: getComputedStyle(primaryAction).boxShadow,
@@ -51,8 +51,7 @@ test.describe('Lightfully screen contract', () => {
         sectionRailRadius: getComputedStyle(sectionRail).borderRadius,
         workWindowBackground: getComputedStyle(workWindow).backgroundColor,
         workWindowRadius: getComputedStyle(workWindow).borderRadius,
-        workTitlebarColor: getComputedStyle(workTitlebar).color,
-        workTitlebarGradient: getComputedStyle(workTitlebar).backgroundImage
+        retiredTitlebars
       };
     });
     // No gradients and no raised/sunken bezel: those are the client/server tell.
@@ -61,7 +60,7 @@ test.describe('Lightfully screen contract', () => {
     expect(home.retiredLauncherCount).toBe(0);
     // Chart rows use the repository's 8px product-control adaptation; the
     // measured rail itself stays square and flush to the workspace edge.
-    expect(home.navRadius).toBe('6px');
+    expect(home.navRadius).toBe('8px');
     expect(home.navFont).toMatch(/^"Workstation Mulish"/);
     // The measured shell uses a warm-white header and rail, and
     // a lavender workspace. The
@@ -71,10 +70,9 @@ test.describe('Lightfully screen contract', () => {
     expect(home.appHeaderGradient).toBe('none');
     expect(home.sectionRailBackground).toBe('rgba(0, 0, 0, 0)');
     expect(home.sectionRailRadius).toBe('0px');
-    expect(home.workWindowBackground).toBe('rgb(246, 243, 246)');
+    expect(home.workWindowBackground).toBe('rgba(0, 0, 0, 0)');
     expect(home.workWindowRadius).toBe('0px');
-    expect(home.workTitlebarColor).toBe(INK);
-    expect(home.workTitlebarGradient).toBe('none');
+    expect(home.retiredTitlebars).toBe(0);
 
     for (const workflow of WORKFLOWS) {
       await openWorkflow(page, workflow.title, workflow.selector);

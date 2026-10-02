@@ -46,6 +46,8 @@ export type AvsSiteRegion =
 export type AvsDateFirmness = "standard" | "firm" | "call-first";
 
 export interface InjectionAvsInput {
+  /** Verified scheduling reminder, independent of the calculated injection date. */
+  providerAppointment?: import("./avs-appointment").AvsAppointment;
   patientName: string;
   patientDob: string;
   recordNumber: string;
@@ -158,6 +160,7 @@ export interface AvsTimelineStep {
 }
 
 export interface InjectionAvsModel {
+  providerAppointment?: import("./avs-appointment").AvsAppointment;
   documentTitle: string;
   /** Second title line, e.g. the starting-series marker. Empty when routine. */
   documentSubtitle: string;

@@ -15,6 +15,7 @@ import "./tebra-workstation.css";
 import "./kiosk/kiosk.css";
 import "./tebra-screen-contract.css";
 import "./lightfully/lightfully-shell.css";
+import "./lightfully/shell-layout.css";
 import "./lightfully/lightfully-components.css";
 import "./lightfully/contemporary.css";
 import "./lightfully/workspace.css";
@@ -55,7 +56,6 @@ import {
 import { PatientSearch } from "./shell/PatientSearch";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
-import { PowerCommandMenu } from "./TebraChrome";
 import { Toast } from "./Toast";
 import { AppHeader } from "./shell/AppHeader";
 import { AccountMenu, WorkspaceBadge } from "./shell/AccountMenu";
@@ -66,7 +66,6 @@ import { requestClinicalPrint } from "./workflows/clinical-print";
 import {
   FUNCTION_KEY_PROFILE,
   resolveFunctionKeyCommand,
-  type FunctionKeyActions,
 } from "./FunctionKeyProfile";
 import { LegacyWorkflowHost } from "./LegacyWorkflowHost";
 import { ModalDialog } from "./ModalDialog";
@@ -344,6 +343,7 @@ export function ClinicalDesktopShell({
   const [serviceChooserOpen, setServiceChooserOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [injectionKioskStep, setInjectionKioskStep] =
     useState<InjectionKioskStepId>("identify");
   const kioskController = useKioskMode();
@@ -913,7 +913,7 @@ export function ClinicalDesktopShell({
     const zones = [
       workHostRef.current,
       shell.querySelector<HTMLElement>(".lf-section-rail"),
-      shell.querySelector<HTMLElement>(".meditech-command-deck"),
+      shell.querySelector<HTMLElement>(".lf-masthead-utilities"),
     ].filter(
       (element): element is HTMLElement =>
         Boolean(element && element.getClientRects().length),
@@ -972,13 +972,13 @@ export function ClinicalDesktopShell({
     const active = document.activeElement as HTMLElement | null;
     const activeContext = contextForFocusedControl(active);
     const retainsWorksheetContext = Boolean(
-      active?.closest(".meditech-command-deck, .cd2004-lookup-dialog"),
+      active?.closest(".cd2004-lookup-dialog"),
     );
     // A focus event and the following function key can occur in the same
     // browser task. Prefer the live focused control so a stale render cannot
     // open the prior field's values (for example, after moving from Encounter
-    // type back to Patient name). Command/deck utilities deliberately retain
-    // the last worksheet field, as documented by handleFocus above.
+    // type back to Patient name). Only the native field lookup retains its
+    // originating control while it owns focus.
     const select =
       activeContext?.lookupSelect ??
       (retainsWorksheetContext || !activeContext
@@ -1031,14 +1031,8 @@ export function ClinicalDesktopShell({
   );
 
   const safeBack = useCallback(() => {
-    // Nothing here navigates away from a draft or destroys local work; callers
-    // may only dismiss a local utility. Menus are not handled here any more:
-    // each one stops Escape at its own host, so the key never reaches this.
-    if (showShortcutHelp) {
-      setShowShortcutHelp(false);
-      restorePreviousFocus();
-      return;
-    }
+    // Native dialogs and the shared popover owner consume their own Escape.
+    // Only a non-modal local view can reach this handler; no draft is discarded.
     // The chart is a destination, so Escape leaves it the way Escape leaves
     // any other local view: back to the workflow that was open, with nothing
     // saved, discarded or started.
@@ -1048,7 +1042,7 @@ export function ClinicalDesktopShell({
     }
     onEscape?.();
     setInternalStatus("Back: no draft was discarded.");
-  }, [chartPatientKeyState, onEscape, selectedWorkflow, showShortcutHelp]);
+  }, [chartPatientKeyState, onEscape]);
 
   useEffect(() => {
     onWorkAreaReady?.(workHostRef.current);
@@ -1061,10 +1055,10 @@ export function ClinicalDesktopShell({
     const handleFocus = (event: FocusEvent) => {
       if (
         event.target instanceof HTMLElement &&
-        event.target.closest(".meditech-command-deck, .cd2004-lookup-dialog")
+        event.target.closest(".cd2004-lookup-dialog")
       ) {
-        // The fixed keys and their lookup dialog operate on the last
-        // worksheet field. Retaining that context while F9 or the modal owns
+        // The field lookup operates on its originating worksheet control.
+        // Retaining that context while the modal owns
         // focus prevents a field lookup from degrading into a generic record
         // lookup or replacing the field prompt with dialog chrome.
         return;
@@ -1197,7 +1191,7 @@ export function ClinicalDesktopShell({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
+      if (event.defaultPrevented || event.isComposing) return;
       const eventTarget = event.target instanceof HTMLElement ? event.target : null;
       const modalOwnsKeyboard = Boolean(
         showShortcutHelp ||
@@ -1205,9 +1199,7 @@ export function ClinicalDesktopShell({
           document.querySelector("dialog[open]") ||
           eventTarget?.closest('dialog[open], [aria-modal="true"]'),
       );
-      if (modalOwnsKeyboard) {
-        if (!(showShortcutHelp && event.key === "Escape")) return;
-      }
+      if (modalOwnsKeyboard) return;
       if (
         eventTarget?.closest(".cd2004-dialog-layer") &&
         event.key !== "Escape"
@@ -1215,9 +1207,16 @@ export function ClinicalDesktopShell({
         return;
       }
       const key = event.key.toLocaleLowerCase();
-      if ((event.ctrlKey || event.metaKey) && key === "s") {
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === "k") {
         event.preventDefault();
-        requestDraftSave();
+        if (!event.repeat) setCommandPaletteOpen(true);
+        return;
+      }
+      // Consume repeated owned shortcuts without issuing another action or
+      // leaking a repeated Ctrl+S/F11 into the browser. Unowned chords stay native.
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === "s") {
+        event.preventDefault();
+        if (!event.repeat) requestDraftSave();
         return;
       }
 
@@ -1229,6 +1228,7 @@ export function ClinicalDesktopShell({
         /^[1-7]$/.test(event.key)
       ) {
         event.preventDefault();
+        if (event.repeat) return;
         const workflow = shortcutWorkflows[Number(event.key) - 1];
         if (workflow && openWorkflow(workflow)) {
           if (chartPatientKeyState) closeChart(workflow);
@@ -1245,6 +1245,7 @@ export function ClinicalDesktopShell({
       const command = resolveFunctionKeyCommand(event.key, event.shiftKey);
       if (!command) return;
       event.preventDefault();
+      if (event.repeat) return;
       switch (command.id) {
         case "help":
           openShortcutHelp();
@@ -1299,6 +1300,10 @@ export function ClinicalDesktopShell({
     requestDraftSave,
     safeBack,
     showShortcutHelp,
+    openWorkflow,
+    closeChart,
+    selectedWorkflow,
+    chartPatientKeyState,
   ]);
 
   /**
@@ -1388,8 +1393,6 @@ export function ClinicalDesktopShell({
     <Panel
       pane="inspector"
       title="Clinical Documentation"
-      subtitle={selectedWorkflow === "administer" ? undefined : WORKFLOW_LABELS[selectedWorkflow]}
-      icon="note"
       active={focusedPane === "inspector"}
       onActivate={setFocusedPane}
     >
@@ -1422,37 +1425,21 @@ export function ClinicalDesktopShell({
         {SHELL.skipToActiveNote}
       </a>
 
-      {!kioskVisible && (
-        <aside class="meditech-context-rail tebra-context-rail">
-          <SectionRail
-            onDocumentService={() => setServiceChooserOpen(true)}
-            selectedWorkflow={selectedWorkflow}
-            summaries={workflowSummaries}
-            patient={patient}
-            onWorkflowOpen={(workflow) => {
-              // openWorkflow already publishes the correct destination status;
-              // only clear the chart layer after that guarded transition.
-              if (openWorkflow(workflow) && chartPatientKeyState) {
-                closeChart(workflow);
-              }
-            }}
-            onOpenRecords={onOpenRecords}
-            {...(chartPatient ? { browsedPatientName: chartPatient.name } : {})}
-            {...(chartPatient || activePatientKey
-              ? {
-                  onOpenChart: (view: PatientChartView) =>
-                    openChart(chartPatient?.key ?? activePatientKey, view),
-                }
-              : {})}
-            activeChartView={chartPatient ? chartView : null}
-          />
-
-        </aside>
-      )}
-
       <AppHeader
+        navigation={!kioskVisible && <SectionRail
+          onDocumentService={() => setServiceChooserOpen(true)}
+          selectedWorkflow={selectedWorkflow}
+          chartOpen={chartOpen}
+          onWorkflowOpen={(workflow) => {
+            if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow);
+          }}
+          onOpenRecords={onOpenRecords}
+        />}
         search={<PatientSearch patients={chartIndex.patients} onSelect={(selected) => openChart(selected.key)} />}
         tools={<WorkspaceTools
+          open={commandPaletteOpen}
+          onOpen={() => setCommandPaletteOpen(true)}
+          onDismiss={() => setCommandPaletteOpen(false)}
           focused={kioskController.enabled}
           onFocusInjection={selectedWorkflow === "administer" ? (kioskController.enabled ? exitKioskMode : enterKioskMode) : undefined}
           commands={[
@@ -1466,6 +1453,7 @@ export function ClinicalDesktopShell({
                 if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow);
               },
             })),
+            { id: "tms", label: "TMS · not available", description: "Availability information only; no clinical documentation", icon: "tms", onInvoke: () => { if (openWorkflow("tms") && chartPatientKeyState) closeChart("tms"); } },
             { id: "records", label: "Open saved notes", description: "Find a patient, resume a draft, or view signed history", icon: "records", disabled: !onOpenRecords, onInvoke: () => onOpenRecords?.() },
             { id: "shortcuts", label: "Keyboard shortcuts", description: "Find the workstation's function-key actions", icon: "reference", onInvoke: openShortcutHelp },
           ]}
@@ -1510,6 +1498,7 @@ export function ClinicalDesktopShell({
           }
           onUseWorkflowPatient={onUseWorkflowPatient}
           onSelectLocalRecord={onOpenRecords}
+          onOpenChart={activePatientKey ? view => openChart(activePatientKey, view) : undefined}
         />
         )}
       </AppHeader>
@@ -1566,12 +1555,7 @@ export function ClinicalDesktopShell({
         <Panel
           pane="work"
           title={windowTitle}
-          icon={chartPatient ? "patient" : selectedWorkflow}
-          subtitle={
-            chartPatient || selectedWorkflow === "home"
-              ? undefined
-              : SHELL.activeEncounter
-          }
+          suspended={kioskVisible && Boolean(kioskLocked)}
           active={focusedPane === "work"}
           onActivate={setFocusedPane}
         >
@@ -1609,6 +1593,7 @@ export function ClinicalDesktopShell({
                   onViewChange={setChartView}
                   onOpenNote={openChartNote}
                   onNewNote={startNoteFromChart}
+                  onReturnToService={isDocumentService(selectedWorkflow) ? () => closeChart(selectedWorkflow) : undefined}
                   {...(activePatientKey && activePatientKey !== chartPatient.key
                     ? { otherNotePatient: patient.name?.trim() ?? "" }
                     : {})}
@@ -1645,39 +1630,6 @@ export function ClinicalDesktopShell({
         </Panel>
 
       </main>
-
-      <PowerCommandMenu
-        selectedWorkflow={selectedWorkflow}
-        contextCode={focusedControl?.fieldCode}
-        actions={{
-          help: { onInvoke: openShortcutHelp },
-          "next-section": { onInvoke: () => focusWorksheetSection(1) },
-          "previous-section": { onInvoke: () => focusWorksheetSection(-1) },
-          "next-page": { onInvoke: () => focusWorksheetPage(1) },
-          "previous-page": { onInvoke: () => focusWorksheetPage(-1) },
-          "focus-next-zone": {
-            onInvoke: hasOutstandingStops ? focusNextStop : cycleFocusZone,
-            label: hasOutstandingStops ? "Next stop" : "Next zone",
-            active: hasOutstandingStops,
-          },
-          lookup: {
-            onInvoke: openContextualLookup,
-            disabled: !focusedControl?.lookupSelect && !onLookup,
-            label: focusedControl?.lookupSelect ? "Field values" : "Lookup",
-            active: Boolean(focusedControl?.lookupSelect),
-          },
-          "local-emr": {
-            onInvoke: onOpenRecords,
-            disabled: !onOpenRecords,
-          },
-          file: {
-            onInvoke: requestDraftSave,
-            disabled: Boolean(chartPatientKeyState) || !onSaveDraft,
-            label: RECORD.save,
-          },
-          back: { onInvoke: safeBack },
-        } satisfies FunctionKeyActions}
-      />
 
       {serviceChooserOpen && <ServiceChooser sessions={sessionDrafts} summaries={workflowSummaries} onDismiss={() => setServiceChooserOpen(false)} onOpen={workflow => { if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow); }}/>}
       <Toast message={announcement} />
@@ -1723,6 +1675,8 @@ export function ClinicalDesktopShell({
                 />
               ))}
               <ShortcutRow keys="Alt+1–7" label="Switch service or workspace" />
+              <ShortcutRow keys="Ctrl / ⌘ K" label="Find a workspace tool" />
+              <ShortcutRow keys="Ctrl / ⌘ S" label="Save the current draft locally" />
             </div>
             <footer>
               <button
@@ -2007,6 +1961,7 @@ interface PatientBannerProps {
   workflowStateLabel: string;
   onUseWorkflowPatient?: (workflow: WorkflowId) => void;
   onSelectLocalRecord?: () => void;
+  onOpenChart?: (view: PatientChartView) => void;
 }
 
 function PatientBanner({
@@ -2017,6 +1972,7 @@ function PatientBanner({
   workflowStateLabel,
   onUseWorkflowPatient,
   onSelectLocalRecord,
+  onOpenChart,
 }: PatientBannerProps) {
   // The masthead follows a complete patient identity across workflows. Local
   // record persistence remains a separate status in the rail and action bar.
@@ -2054,8 +2010,11 @@ function PatientBanner({
       <div class="cd2004-patient-primary" title={patientNameLabel}>
         <DesktopIcon name={mismatch ? "alert" : hasActiveChart ? "patient" : "records"} />
         <span>
-          <small>{chartContextLabel}</small>
-          <strong>{patientNameLabel}</strong>
+          {onOpenChart ? <ActionShelf label="Patient records" heading="Current patient's local records" class="lf-patient-navigation">
+            <button type="button" data-chart-nav="facesheet" aria-label="Open the Facesheet" onClick={() => onOpenChart("facesheet")}><DesktopIcon name="patient"/><span>Patient summary</span></button>
+            <button type="button" data-chart-nav="notes" aria-label="Open this patient's Notes" onClick={() => onOpenChart("notes")}><DesktopIcon name="note"/><span>Patient notes</span></button>
+          </ActionShelf> : <small>{chartContextLabel}</small>}
+          <strong data-active-patient-name>{patientNameLabel}</strong>
         </span>
       </div>
       <div class="cd2004-patient-field" title={`DOB: ${dobLabel}`}>

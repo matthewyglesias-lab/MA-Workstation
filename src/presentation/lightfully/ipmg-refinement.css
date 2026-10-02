@@ -29,184 +29,20 @@
     --lf-gutter: clamp(22px, 3.2vw, 48px);
   }
   /* An editorial masthead, not a SaaS side rail. Main content gains the width. */
-  #lf-workstation.lf-workstation {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-    color: var(--lf-ink);
-    background: var(--lf-lavender);
-    font-family: var(--tw-font-sans);
-    font-size: 14px;
-  }
-  #lf-workstation.lf-workstation > .tebra-context-rail {
-    grid-column: 1; grid-row: 1;
-    height: auto; min-height: 0; width: 100%; overflow: visible;
-    background: #fff; border: 0; border-top: 4px solid var(--lf-coral);
-    position: relative; z-index: 31;
-  }
-  #lf-workstation.lf-workstation .lf-section-rail {
-    display: flex; flex-direction: row; align-items: center; flex-wrap: wrap;
-    gap: 10px 22px; padding: 10px var(--lf-gutter); min-height: 72px;
-    height: auto; width: 100%; overflow: visible; border: 0;
-  }
-  #lf-workstation .lf-masthead-brand { flex: 0 0 auto; margin-right: auto; }
-  #lf-workstation .ipmg-brand {
-    display: flex; flex-direction: row; align-items: center; gap: 18px;
-    padding: 0; margin: 0; background: transparent;
-  }
-  #lf-workstation .ipmg-brand-logo {
-    display: block; width: 132px; height: 47px; object-fit: contain; flex-shrink: 0;
-  }
-  #lf-workstation .ipmg-product-name {
-    display: block; max-width: 122px; padding-left: 18px; border-left: 1px solid #cbd6dc;
-    font: 400 19px/1.18 var(--lf-display); color: var(--lf-leaf);
-  }
-  #lf-workstation .lf-primary-navigation { display: flex; align-items: center; gap: 3px; padding: 0; }
-  #lf-workstation .lf-section-rail .cd2004-nav-item,
-  #lf-workstation .lf-header-disclosure > summary {
-    display: flex; align-items: center; justify-content: flex-start; gap: 7px;
-    width: auto; min-height: 40px; padding: 8px 12px; border: 0;
-    background: transparent; color: var(--lf-ink); border-radius: 6px;
-    box-shadow: none; font: 500 12px/20px var(--tw-font-sans);
-    text-align: left; cursor: pointer; white-space: nowrap;
-  }
-  #lf-workstation .lf-section-rail .cd2004-nav-item > svg,
-  #lf-workstation .lf-header-disclosure > summary > svg { color: var(--lf-leaf); width: 17px; height: 17px; flex-shrink: 0; }
-  #lf-workstation .lf-section-rail .cd2004-nav-item.is-selected,
-  #lf-workstation .lf-header-disclosure > summary.is-selected { background: #e9f0f2; color: var(--lf-ink); box-shadow: none; }
-  #lf-workstation .lf-section-rail .cd2004-nav-item:hover:not(:disabled),
-  #lf-workstation .lf-header-disclosure > summary:hover { background: #f3f0f2; color: var(--lf-ink); }
-  #lf-workstation .lf-current-service {
-    background: transparent; border: 0; border-left: 1px solid var(--lf-line);
-    border-radius: 0; padding: 4px 0 4px 16px; color: var(--lf-muted);
-    font-size: 12px; box-shadow: none;
-  }
-  #lf-workstation .lf-document-action {
-    flex: 0 0 auto; width: auto; min-height: 42px; gap: 10px;
-    padding: 10px 17px; border: 1px solid var(--lf-coral); border-radius: 6px;
-    background: var(--lf-coral); color: #1b3141;
-    font: 600 12px/20px var(--tw-font-sans); box-shadow: none;
-  }
-  #lf-workstation .lf-document-action:hover { background: #f68b7d; border-color: #f68b7d; }
-  #lf-workstation[data-chart-view] .lf-document-action { background: var(--lf-coral); color: #1b3141; border-color: var(--lf-coral); }
-  #lf-workstation .lf-header-disclosure { position: relative; margin: 0; padding: 0; border: 0; }
-  #lf-workstation .lf-header-disclosure > summary { list-style: none; }
-  #lf-workstation .lf-header-disclosure > summary::-webkit-details-marker { display: none; }
-  #lf-workstation .lf-header-disclosure > summary > span:last-child { margin-left: 4px; }
-  #lf-workstation .lf-navigation-popover {
-    position: absolute; top: calc(100% + 8px); right: 0; z-index: 70;
-    display: grid; width: 270px; max-width: calc(100vw - 32px);
-    padding: 10px; border: 1px solid #dde4e7; border-top: 3px solid #f8ce1b;
-    border-radius: 8px; background: #fff; box-shadow: 0 10px 32px rgb(27 49 65 / 14%);
-  }
-  #lf-workstation .lf-navigation-popover .cd2004-nav-item { width: 100%; white-space: normal; }
-  #lf-workstation .lf-navigation-popover .tebra-section-rail-context { margin: 3px 8px 9px; padding: 0 0 9px; border-bottom: 1px solid var(--lf-line); }
-  #lf-workstation .lf-navigation-popover .tebra-section-rail-context strong { font: 500 13px/20px var(--tw-font-sans); }
-
-  #lf-workstation .lf-chart-navigation { flex: 1 0 100%; display: flex; align-items: center; gap: 12px; padding-top: 8px; border-top: 1px solid var(--lf-line); }
-  #lf-workstation .lf-chart-navigation .tebra-section-rail-context { display: flex; align-items: baseline; flex: 1; gap: 12px; margin: 0; padding: 0; min-width: 0; }
-  #lf-workstation .lf-chart-navigation .tebra-section-rail-context strong { font: 600 13px/20px var(--tw-font-sans); overflow-wrap: anywhere; }
-  #lf-workstation .lf-chart-navigation .tebra-section-rail-context small { font-size: 9px; letter-spacing: .08em; color: var(--lf-muted); }
 
   /* Working utilities stay quiet; locality and save errors are always visible. */
-  #lf-workstation.lf-workstation > .lf-app-header { grid-column: 1; grid-row: 2; border-top: 1px solid var(--lf-line); background: #fff; z-index: 20; }
-  #lf-workstation .tebra-app-header-main { min-height: 45px; height: 45px; padding: 4px var(--lf-gutter); gap: 14px; background: #f6f3f6; }
-  #lf-workstation .lf-header-search { max-width: 375px; }
   #lf-workstation .lf-workspace-tools button { min-height: 32px; border: 0; background: transparent; color: var(--lf-ink); font-size: 11px; }
   #lf-workstation .lf-workspace-tools button:hover { background: #e8e4ea; }
-  #lf-workstation .tebra-workspace-badge.is-local { color: #496472; font-size: 10px; font-weight: 500; letter-spacing: .025em; }
-  #lf-workstation .tebra-workspace-badge.is-error { background: var(--tw-stop-bg); color: var(--tw-stop-fg); }
-  #lf-workstation .tebra-account-avatar { background: #e3ece9; color: #314f4b; border-radius: 50%; }
   #lf-workstation .tebra-menu-quiet { font-size: 12px; }
-  #lf-workstation .cd2004-patient-banner {
-    display: grid; grid-template-columns: minmax(190px, 1.2fr) 120px minmax(130px, .7fr) minmax(220px, 1.35fr);
-    background: #fff; padding: 11px var(--lf-gutter); min-height: 68px; gap: 18px;
-    border: 0; border-top: 1px solid #e5e2e5; align-items: center;
-  }
-  #lf-workstation .cd2004-patient-primary, #lf-workstation .cd2004-patient-field { min-height: 0; }
-  #lf-workstation .cd2004-patient-primary strong { font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -.2px; }
-  #lf-workstation .cd2004-patient-field strong { font-size: 13px; font-variant-numeric: tabular-nums; }
-  #lf-workstation .cd2004-patient-banner small { color: var(--lf-muted); font-size: 10px; letter-spacing: .025em; }
-  #lf-workstation .cd2004-patient-primary svg { color: var(--lf-leaf); }
-  #lf-workstation .meditech-patient-safety { border-radius: 5px; padding: 6px 10px; min-height: 0; }
-  #lf-workstation .meditech-patient-safety[data-allergy-tone=documented-negative] { background: #f1f5f2; border-color: #d3e0d8; }
-  #lf-workstation .meditech-patient-safety[data-allergy-tone=review] { background: var(--tw-review-bg); border-color: var(--tw-review-border); color: var(--tw-review-fg); }
-  #lf-workstation .lf-empty-patient { display: flex; padding-block: 9px; min-height: 51px; }
-  #lf-workstation .lf-empty-patient .cd2004-patient-primary strong { font-size: 13px; }
-  #lf-workstation .cd2004-patient-banner.has-mismatch { border: 2px solid var(--tw-stop-fg); }
 
   /* Work canvas. Restrained maximum line lengths without the left-rail tax. */
-  #lf-workstation.lf-workstation > .cd2004-workspace { grid-column: 1; grid-row: 3; background: var(--lf-lavender); min-height: 0; }
-  #lf-workstation .cd2004-work-window, #lf-workstation .cd2004-workflow-body { background: var(--lf-lavender); }
-  #lf-workstation .lf-start-center { padding: 28px var(--lf-gutter) 22px; max-width: 1320px; gap: 20px; min-height: 0; }
-  #lf-workstation .lf-worklist-heading { position: relative; padding-bottom: 0; }
   #lf-workstation .lf-eyebrow { color: var(--lf-muted); font: 600 10px/17px var(--tw-font-sans); letter-spacing: .13em; }
-  #lf-workstation .lf-worklist-heading h1,
-  #lf-workstation .lf-service-heading h1,
   #lf-workstation .lf-tool-page-header h1 {
     color: var(--lf-leaf); font: 400 36px/1.12 var(--lf-display); letter-spacing: -.7px; margin: 5px 0 8px;
   }
-  #lf-workstation .lf-worklist-heading h1 { font-size: 43px; }
-  #lf-workstation .lf-worklist-heading p { color: var(--lf-muted); font: 400 13px/21px var(--tw-font-sans); }
-  #lf-workstation .lf-worklist-heading time { padding: 24px 0 0; color: var(--lf-leaf); font: 400 18px/24px var(--lf-display); }
-  #lf-workstation .lf-service-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; flex-shrink: 0; border-block: 1px solid #cdd8dc; }
-  #lf-workstation .lf-service-shortcut {
-    position: relative; display: flex; align-items: center; gap: 13px;
-    min-width: 0; min-height: 84px; padding: 14px 19px; background: transparent;
-    border: 0; border-right: 1px solid #d9dfe1; border-radius: 0; color: var(--lf-ink); text-align: left; box-shadow: none; cursor: pointer;
-  }
-  #lf-workstation .lf-service-shortcut:first-child { padding-left: 0; }
-  #lf-workstation .lf-service-shortcut:last-child { border-right: 0; }
-  #lf-workstation .lf-shortcut-number { display: grid; place-items: center; width: 32px; height: 38px; flex: 0 0 32px; border-radius: 18px 18px 5px 5px; background: #fbe4df; color: #854136; font: 400 16px/20px var(--lf-display); }
-  #lf-workstation .lf-service-uds .lf-shortcut-number { background: #dce9ee; color: #3c6070; }
-  #lf-workstation .lf-service-samples .lf-shortcut-number { background: #e0e9dc; color: #486342; }
-  #lf-workstation .lf-service-forms .lf-shortcut-number { background: #f9ecc2; color: #6a5622; }
-  #lf-workstation .lf-shortcut-copy { min-width: 0; }
-  #lf-workstation .lf-shortcut-copy strong { display: block; color: var(--lf-ink); font: 400 21px/26px var(--lf-display); }
-  #lf-workstation .lf-shortcut-copy small { display: block; margin-top: 5px; font: 400 11px/17px var(--tw-font-sans); color: var(--lf-muted); }
-  #lf-workstation .lf-shortcut-arrow { margin-left: auto; color: var(--lf-leaf); font-size: 20px; }
-  #lf-workstation .lf-service-shortcut:hover:not(:disabled) { background: #fff; }
-  #lf-workstation .lf-worklist-card { min-height: 200px; border: 1px solid #e1dfe3; border-radius: 8px; box-shadow: none; }
-  #lf-workstation .lf-worklist-controls { flex-wrap: nowrap; min-height: 58px; padding: 11px 23px; background: #fff; border-color: #e4e0e6; }
-  #lf-workstation .lf-start-center .cd2004-worklist-tabs { gap: 15px; }
-  #lf-workstation .lf-start-center .cd2004-worklist-tabs button { min-height: 35px; padding: 4px 0; border-radius: 0; border-bottom: 2px solid transparent; font-size: 12px; color: var(--lf-muted); }
-  #lf-workstation .lf-start-center .cd2004-worklist-tabs button.is-selected { border-bottom-color: #bd574b; background: transparent; color: var(--lf-ink); }
-  #lf-workstation .lf-worklist-search { flex: 0 1 245px; }
-  #lf-workstation .lf-worklist-search input { border-radius: 5px; border-color: #bdc9ce; background: #fff; }
-  #lf-workstation .lf-worklist-empty { min-height: 230px; padding: 26px; gap: 8px; background: #fff; }
-  #lf-workstation .lf-empty-mark { position: relative; width: 74px; height: 57px; background: #e6eff0; border-radius: 38px 38px 8px 8px; color: var(--lf-leaf); margin-bottom: 6px; }
-  #lf-workstation .lf-empty-mark > span { position: absolute; width: 19px; height: 19px; border-radius: 50%; top: -4px; right: -6px; background: var(--lf-sun); }
-  #lf-workstation .lf-empty-mark svg { width: 26px; height: 26px; }
-  #lf-workstation .lf-worklist-empty strong { font: 400 27px/34px var(--lf-display); color: var(--lf-leaf); }
-  #lf-workstation .lf-worklist-empty small { max-width: 410px; color: var(--lf-muted); font-size: 12px; line-height: 20px; }
-  #lf-workstation .lf-work-table th { background: #f6f3f6; color: #496472; font-size: 11px; }
-  #lf-workstation .lf-work-table td { font-size: 12px; padding-block: 16px; }
-  #lf-workstation .lf-work-table .tebra-record-title { font-size: 14px; color: var(--lf-ink); }
-  #lf-workstation .lf-work-table .tebra-record-meta { color: var(--lf-muted); font-size: 12px; }
-  #lf-workstation .lf-work-table .tebra-record-action { color: #315f72; text-decoration: underline; text-underline-offset: 4px; font-size: 12px; }
-  #lf-workstation .lf-workspace-footnote { font-size: 11px; color: var(--lf-muted); }
 
   /* Page heads and review prompts are useful editorial hierarchy, not banners. */
-  #lf-workstation .lf-service-header {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center; gap: 8px 20px; padding: 18px var(--lf-gutter) 12px;
-    background: #fff; border-bottom: 1px solid #e6e0e1;
-  }
-  #lf-workstation .lf-service-heading h1 { font-size: 33px; margin: 2px 0 4px; }
-  #lf-workstation .lf-form-legend { color: var(--lf-muted); font-size: 11px; line-height: 17px; margin: 4px 0 0; }
-  #lf-workstation .lf-service-header-actions { gap: 18px; }
   #lf-workstation .lf-text-button { color: #315f72; font-size: 12px; }
-  #lf-workstation .lf-view-switch { padding: 0; border: 1px solid #aabfc8; border-radius: 6px; background: #fff; overflow: hidden; }
-  #lf-workstation .lf-view-switch button { min-height: 36px; border: 0; padding: 7px 15px; border-radius: 0; color: #315f72; background: #fff; font-size: 12px; }
-  #lf-workstation .lf-view-switch button[aria-pressed=true] { background: #e7eef1; color: var(--lf-ink); box-shadow: none; }
-  #lf-workstation .ipmg-review-cue {
-    grid-column: 1/-1; display: flex; align-items: flex-start; gap: 9px;
-    padding: 9px 12px; border: 0; border-left: 3px solid var(--lf-coral);
-    border-radius: 0 6px 6px 0; background: #fbf4f0; color: #4f626d;
-  }
-  #lf-workstation .ipmg-review-cue > svg { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; color: #925047; }
-  #lf-workstation .ipmg-review-cue p { margin: 0; font: 400 11px/18px var(--tw-font-sans); }
-  #lf-workstation .ipmg-review-cue strong { color: #704339; font-weight: 600; margin-right: 10px; }
-  #lf-workstation .ipmg-review-cue span { overflow-wrap: anywhere; }
   #lf-workstation .wfp-transaction-chrome { padding-inline: var(--lf-gutter); border-bottom-color: #d2dce0; }
   #lf-workstation .wfp-panel .wfp-summary-bar { min-height: 32px; padding: 5px 0; gap: 8px; }
   #lf-workstation .wfp-summary-fact { color: #4a6573; font-size: 11px; background: #f5f2f5; }
@@ -214,25 +50,21 @@
   #lf-workstation .wfp-panel .wfp-tab { min-height: 42px; font-size: 12px; color: #617581; padding: 8px 2px; }
   #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { color: #294255; border-bottom: 3px solid #bd574b; background: transparent; }
   #lf-workstation .lf-tab-count { color: #496472; background: #ede9ef; }
-  #lf-workstation .wfp-panel .wfp-transaction-page { padding: 22px var(--lf-gutter) 30px; background: #fff; }
+  #lf-workstation .wfp-panel .wfp-transaction-page { background: #fff; }
   #lf-workstation .wfp-panel .wfp-tabpanel { max-width: 1150px; }
-  #lf-workstation .wfp-panel .wfp-section { padding: 24px 0 28px; border-bottom-color: #e1e5e4; }
-  #lf-workstation .wfp-panel .wfp-section-head { color: #3c7083; font: 400 24px/30px var(--lf-display); letter-spacing: -.3px; padding: 0 0 15px; margin: 0; }
-  #lf-workstation .wfp-section-body { gap: 19px; }
-  #lf-workstation .wfp-row { gap: 22px; margin-bottom: 20px; }
-  #lf-workstation .wfp-field-label { min-height: 20px; margin-bottom: 6px; }
+  #lf-workstation .wfp-panel .wfp-section { border-bottom-color: #e1e5e4; }
+  #lf-workstation .wfp-panel .wfp-section-head { color: #3c7083; letter-spacing: -.3px; }
   #lf-workstation .wfp-field-caption { font: 500 12px/20px var(--tw-font-sans); color: #344f5d; }
   #lf-workstation .wfp-req { color: #963f37; }
-  #lf-workstation .wfp-panel .wfp-field.is-incomplete :is(input,select,textarea) { border-color: #ae625c; }
   #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc) { color: #617581; font-size: 12px; line-height: 19px; }
-  #lf-workstation .wfp-panel .wfp-field-lookup-button { height: 40px; min-height: 40px; border-radius: 0 5px 5px 0; background: #f4f6f5; border-color: #83969e; }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button { border-radius: 0 5px 5px 0; background: #f4f6f5; border-color: #83969e; }
   #lf-workstation .wfp-panel .wfp-field-entry > select { border-radius: 5px 0 0 5px; }
   #lf-workstation .lf-provenance-content { border-radius: 6px; border-color: #c9d6dc; color: #496472; }
   #lf-workstation .wfp-operator-guidance { background: #eaf1f3; border: 0; border-radius: 6px 20px 6px 6px; padding: 15px 18px; margin-bottom: 22px; }
   #lf-workstation .wfp-operator-guidance-head > strong { color: #315f72; font-weight: 600; }
   #lf-workstation .wfp-operator-guidance-head > span,
   #lf-workstation .wfp-operator-guidance-row { color: #496472; }
-  #lf-workstation .wfp-option-row { padding: 11px 13px; border-radius: 6px; border-color: #c5d1d5; background: #fff; }
+  #lf-workstation .wfp-option-row { border-radius: 6px; border-color: #c5d1d5; background: #fff; }
   #lf-workstation .wfp-option-row.is-selected { background: #eaf0ed; border-color: #96b1a7; }
   #lf-workstation .wfp-option-title { font-size: 13px; color: #294255; }
   #lf-workstation .wfp-option-row.is-ready.is-selected { background: #eaf0ed; border-color: #96b1a7; }
@@ -247,7 +79,6 @@
 
   /* The document remains the real output, not a decorative reproduction. */
   #lf-workstation .cd2004-document-split { border-left: 1px solid #d9d6d9; background: #f6f3ee; }
-  #lf-workstation .cd2004-inspector-window > .cd2004-window-titlebar { background: #f4f0eb; border-bottom: 1px solid #ded9d2; padding: 12px 20px; }
   #lf-workstation .cd2004-inspector-window .cd2004-window-title { font: 400 22px/28px var(--lf-display); color: #3c7083; }
   #lf-workstation .cd2004-inspector-window > .cd2004-window-body { background: #f6f3ee; }
   #lf-workstation .cd2004-note-heading { color: #294255; font: 400 21px/28px var(--lf-display); }
@@ -300,25 +131,6 @@
   #lf-workstation .kiosk-stepper button[aria-current=step] { border-color: #7d9da7; background: #e7eef0; color: #294255; }
 
   /* A disclosure can never cover a clinical field or its lookup button. */
-  #lf-workstation.lf-workstation > .tebra-power-commands {
-    grid-row: 4; grid-column: 1; position: relative; inset: auto;
-    min-height: 28px; width: 100%; padding: 0 var(--lf-gutter);
-    background: #edf1ef; border-top: 1px solid #d8e1de; z-index: 5;
-  }
-  #lf-workstation .tebra-power-commands > summary { color: #496472; font-size: 11px; min-height: 28px; }
-  #lf-workstation .tebra-power-commands .meditech-command-deck,
-  #lf-workstation .tebra-power-commands[open] .meditech-command-deck {
-    position: static; inset: auto; width: 100%; max-width: none; max-height: 160px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    overflow: auto; border: 0; border-top: 1px solid #cdd9d6; border-radius: 0;
-    box-shadow: none; background: #edf1ef; margin: 0; padding: 8px 0;
-  }
-  #lf-workstation .meditech-command-deck button { background: #fff; color: #294255; border-color: #c1cfcb; box-shadow: none; border-radius: 5px; }
-  #lf-workstation .meditech-command-deck .meditech-command-prompt { color: #496472; background: transparent; }
-  #lf-workstation.lf-workstation[data-kiosk-mode=true] { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr) auto; }
-  #lf-workstation[data-kiosk-mode=true] > .lf-app-header { grid-row: 1; }
-  #lf-workstation[data-kiosk-mode=true] > .cd2004-workspace { grid-row: 2; }
-  #lf-workstation[data-kiosk-mode=true] > .tebra-power-commands { grid-row: 3; }
 
   /* Preserve clinical meaning; no brand color is a verification result. */
   #lf-workstation .wfp-option-row.is-stop.is-selected { background: var(--tw-stop-bg); color: var(--tw-stop-fg); border-color: var(--tw-stop-border); }
@@ -328,80 +140,15 @@
   body:has(#lf-workstation) input:is([type=checkbox],[type=radio]) { accent-color: #3c7083; }
   body:has(#lf-workstation) :is(button,summary,a,input,select,textarea):focus-visible { outline: 2px solid #3c7083; outline-offset: 3px; }
   #lf-workstation .cd2004-toast { color: #fff; background: #294255; border-radius: 6px; }
-
-  @media (max-width: 1179px) {
-    #lf-workstation .lf-section-rail { gap: 8px 13px; padding-block: 9px; min-height: 66px; }
-    #lf-workstation .ipmg-brand { gap: 13px; }
-    #lf-workstation .ipmg-product-name { padding-left: 13px; max-width: 104px; font-size: 17px; }
-    #lf-workstation .lf-current-service { display: none; }
-    #lf-workstation .lf-section-rail .cd2004-nav-item,
-    #lf-workstation .lf-header-disclosure > summary { padding-inline: 9px; font-size: 11px; }
-    #lf-workstation .lf-document-action { padding-inline: 12px; font-size: 11px; }
-    #lf-workstation .lf-shortcut-copy strong { font-size: 19px; }
-    #lf-workstation .lf-shortcut-copy small { font-size: 10px; }
-    #lf-workstation .lf-service-shortcut { padding-inline: 12px; gap: 10px; }
-    #lf-workstation .cd2004-patient-banner { grid-template-columns: minmax(180px,1fr) 100px minmax(200px,1.3fr); gap: 12px; }
-    #lf-workstation .cd2004-patient-field:nth-child(3) { display: none; }
-    #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr); }
-  }
   @media (max-width: 949px) {
-    #lf-workstation .lf-section-rail { gap: 6px 12px; }
-    #lf-workstation .ipmg-brand-logo { width: 112px; height: 40px; }
-    #lf-workstation .ipmg-product-name { font-size: 16px; max-width: 90px; }
-    #lf-workstation .lf-primary-navigation { gap: 0; }
-    #lf-workstation .lf-section-rail .cd2004-nav-item > svg { width: 15px; height: 15px; }
-    #lf-workstation .lf-document-action { min-height: 36px; padding: 7px 10px; gap: 6px; }
-    #lf-workstation .lf-document-action > span:last-child { display: none; }
-    #lf-workstation .lf-header-disclosure > summary { gap: 5px; }
-    #lf-workstation .lf-header-disclosure > summary > svg { display: none; }
-    #lf-workstation .tebra-app-header-main { min-height: 40px; height: 40px; padding-inline: var(--lf-gutter); }
-    #lf-workstation .cd2004-patient-banner.has-active-chart { grid-template-columns: minmax(175px,1fr) 100px minmax(200px,1.1fr); }
-    #lf-workstation .cd2004-patient-banner.has-active-chart .meditech-patient-safety { grid-column: auto; display: flex; flex-wrap: wrap; }
-    #lf-workstation .lf-service-header { padding-block: 14px 10px; gap: 6px 12px; }
-    #lf-workstation .lf-service-heading h1 { font-size: 29px; }
-    #lf-workstation .lf-form-legend { max-width: none; font-size: 10px; }
-    #lf-workstation .lf-service-strip { grid-template-columns: repeat(4,minmax(0,1fr)); }
-    #lf-workstation .lf-shortcut-copy strong { font-size: 17px; line-height: 21px; }
-    #lf-workstation .lf-shortcut-copy small { display: none; }
-    #lf-workstation .lf-shortcut-number { width: 27px; flex-basis: 27px; height: 33px; font-size: 14px; }
-    #lf-workstation .lf-service-shortcut { min-height: 66px; padding: 12px; gap: 9px; }
-    #lf-workstation .lf-shortcut-arrow { font-size: 17px; }
-    #lf-workstation .lf-worklist-controls { flex-wrap: nowrap; gap: 12px; padding: 10px 16px; }
-    #lf-workstation .lf-worklist-search { flex: 0 1 205px; }
-    #lf-workstation .lf-worklist-search svg { display: none; }
-    #lf-workstation .lf-start-center .cd2004-worklist-tabs { gap: 12px; }
-    #lf-workstation .lf-start-center .cd2004-worklist-tabs button { font-size: 11px; gap: 4px; }
     #lf-workstation .cd2004-record-actions-buttons button { font-size: 11px; padding-inline: 10px; }
   }
   @media (max-height: 700px) {
-    #lf-workstation .lf-section-rail { padding-block: 6px; min-height: 56px; }
-    #lf-workstation .ipmg-brand-logo { height: 37px; width: 108px; }
-    #lf-workstation .tebra-app-header-main { min-height: 38px; height: 38px; }
-    #lf-workstation .lf-start-center { padding-top: 17px; gap: 14px; }
-    #lf-workstation .lf-worklist-heading h1 { font-size: 32px; margin: 3px 0 5px; }
-    #lf-workstation .lf-worklist-heading p { font-size: 12px; line-height: 18px; }
-    #lf-workstation .lf-worklist-heading time { padding-top: 16px; font-size: 16px; }
-    #lf-workstation .lf-service-shortcut { min-height: 60px; padding-block: 9px; }
-    #lf-workstation .lf-worklist-empty { min-height: 180px; padding: 16px; gap: 5px; }
-    #lf-workstation .lf-empty-mark { width: 50px; height: 36px; margin-bottom: 3px; }
-    #lf-workstation .lf-empty-mark svg { width: 20px; height: 20px; }
-    #lf-workstation .lf-worklist-empty strong { font-size: 23px; line-height: 28px; }
-    #lf-workstation .cd2004-patient-banner { min-height: 0; padding-block: 7px; }
-    #lf-workstation .lf-service-header { padding-block: 9px 7px; gap: 5px 12px; }
-    #lf-workstation .lf-service-heading h1 { font-size: 26px; margin-block: 0 3px; }
-    #lf-workstation .lf-service-heading .lf-eyebrow { display: none; }
-    #lf-workstation .ipmg-review-cue { padding-block: 5px; }
     #lf-workstation .wfp-panel .wfp-tab { min-height: 36px; }
     #lf-workstation .wfp-panel .wfp-summary-bar { min-height: 30px; }
-    #lf-workstation .wfp-panel .wfp-transaction-page { padding-top: 15px; }
-    #lf-workstation .wfp-panel .wfp-section-head { font-size: 22px; line-height: 28px; padding-bottom: 12px; }
     #lf-workstation .cd2004-record-actions, #lf-workstation .lf-service-footer { min-height: 55px; padding-block: 8px; }
   }
-  :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-field-lookup-button { min-height: 36px; height: 36px; }
-  #lf-workstation[data-kiosk-mode=true] .wfp-panel .wfp-field-lookup-button { height: 44px; }
   @media (forced-colors: active) {
-    #lf-workstation .ipmg-review-cue, #lf-workstation .lf-service-shortcut { border: 1px solid CanvasText; }
-    #lf-workstation .lf-document-action, #lf-workstation .lf-view-switch button { border: 1px solid ButtonText; }
     #lf-workstation .wfp-tab[aria-selected=true] { border-bottom: 3px solid Highlight; }
   }
 }

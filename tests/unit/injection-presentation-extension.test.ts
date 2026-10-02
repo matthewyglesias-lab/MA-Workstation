@@ -368,7 +368,7 @@ describe("Injection presentation extension", () => {
       .toBe("Synthetic custom source");
     expect(stored.snapshot.documentation.existing).toBe("preserved");
     expect(stored.snapshot.documentation.typedEncounterV1).toMatchObject({
-      version: 2,
+      version: 3,
       orderingProvider: "provider-register-id",
       response: { kind: "bleed", detail: "extended" },
     });

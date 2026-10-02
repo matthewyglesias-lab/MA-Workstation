@@ -63,14 +63,14 @@ test.describe('Injection focus workspace', () => {
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
     await expect(shell).toHaveAttribute('data-kiosk-mode', 'true');
     await expect(page.locator('.kiosk-stepper [data-kiosk-step]')).toHaveCount(7);
-    await expect(page.locator('#lf-workstation > .tebra-context-rail')).toHaveCount(0);
+    await expect(page.locator('#lf-workstation .lf-section-rail')).toHaveCount(0);
     await expect(page.locator('[data-workspace-badge="local"]')).toBeVisible();
     await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), KIOSK_STORAGE_KEY))
       .toBe('1');
 
     await page.locator('[data-kiosk-exit]').click();
     await expect(shell).not.toHaveAttribute('data-kiosk-mode', 'true');
-    await expect(page.locator('#lf-workstation > .tebra-context-rail')).toBeVisible();
+    await expect(page.locator('#lf-workstation .lf-section-rail')).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.has('kiosk')).toBe(false);
     await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), KIOSK_STORAGE_KEY))
       .toBe('0');
@@ -263,6 +263,16 @@ test.describe('Injection focus workspace', () => {
     await expect(finish).toBeEnabled();
     await kioskStep(page, 'sign').click();
     await expect(finish).toBeFocused();
+    const appointment = panel.locator('[data-avs-appointment-editor]');
+    await appointment.locator('summary').click();
+    await appointment.getByLabel('Appointment reminder format').selectOption('details');
+    await fillDate(appointment.getByLabel('Provider appointment date'), '2026-08-28');
+    await appointment.getByLabel('Provider appointment time').fill('10:30');
+    await appointment.getByLabel('Appointment provider', { exact: true }).fill('Synthetic Appointment Provider');
+    await appointment.getByLabel('Provider appointment visit type').selectOption('in-person');
+    await appointment.getByLabel('Provider appointment location').fill('Confirmed synthetic office');
+    // Scheduling metadata must not silently erase the already completed clinical review.
+    await expect(finish).toBeEnabled();
     await finish.click();
     await confirmLocalSignature(page);
 
@@ -272,10 +282,41 @@ test.describe('Injection focus workspace', () => {
     await expect(completion.getByRole('button', { name: 'Print patient handout' }))
       .toBeEnabled();
     await expect(completion).toBeFocused();
+    await page.evaluate(() => { window.__ipmgNativePrint = () => {}; window.cleanPrintClasses = () => {}; });
+    await completion.getByRole('button', { name: 'Print patient handout' }).click();
+    const printedAppointment = page.locator('#avsSheet .avs2-step-due .avs2-appointment');
+    await expect(printedAppointment).toContainText('Friday, August 28, 2026');
+    await expect(printedAppointment).toContainText('10:30 AM');
+    const signedHandout = await page.locator('#avsSheet').innerHTML();
+    // The native dialog is stubbed; explicitly end the simulated print session.
+    await page.evaluate(() => document.body.classList.remove('print-avs'));
+    await completion.getByRole('button', { name: 'Print patient handout' }).click();
+    expect(await page.locator('#avsSheet').innerHTML()).toBe(signedHandout);
+    await page.evaluate(() => document.body.classList.remove('print-avs'));
+    await completion.focus();
     await expect(page.locator('.is-primary:visible')).toHaveCount(1);
+    const editor = page.locator('#cd2004-pane-work');
+    await expect(editor).toHaveAttribute('inert', '');
+    await expect(editor).toBeHidden();
+    // The mounted source remains available to printing, but is not a second
+    // editor behind the outcome at either supported composition width.
+    for (const size of [{ width: 1440, height: 900 }, { width: 800, height: 600 }]) {
+      await page.setViewportSize(size);
+      await expect(completion).toBeVisible();
+      await expect(editor).toBeHidden();
+      await editor.evaluate(node => node.focus());
+      await expect(completion).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(completion.getByRole('button', { name: 'Print patient handout' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(completion.getByRole('button', { name: 'Start next patient' })).toBeFocused();
+      await completion.focus();
+    }
 
     await completion.getByRole('button', { name: 'Start next patient' }).click();
     await expect(completion).toBeHidden();
+    await expect(editor).not.toHaveAttribute('inert', '');
+    await expect(editor).toBeVisible();
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-kiosk-step', 'identify');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
     await expect(panel.locator('input[placeholder="Last, First"]')).toBeFocused();

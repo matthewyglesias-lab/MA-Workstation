@@ -1,13 +1,12 @@
 import type { ComponentChildren } from "preact";
-import { DesktopIcon } from "./DesktopIcon";
-import type { DesktopIconName, DesktopPane } from "./types";
+import type { DesktopPane } from "./types";
 
 interface PanelProps {
   pane: DesktopPane;
   title: string;
-  icon?: DesktopIconName;
-  subtitle?: string;
   active?: boolean;
+  /** Keep the editor mounted for records/print, but unavailable behind an outcome. */
+  suspended?: boolean;
   children: ComponentChildren;
   toolbar?: ComponentChildren;
   footer?: ComponentChildren;
@@ -22,9 +21,8 @@ interface PanelProps {
 export function Panel({
   pane,
   title,
-  icon,
-  subtitle,
   active = false,
+  suspended = false,
   children,
   toolbar,
   footer,
@@ -40,22 +38,15 @@ export function Panel({
         .filter(Boolean)
         .join(" ")}
       data-pane={pane}
+      data-suspended={suspended ? "true" : undefined}
+      inert={suspended}
+      aria-hidden={suspended ? "true" : undefined}
       id={`cd2004-pane-${pane}`}
       role="region"
       aria-label={`${title} panel`}
       tabIndex={-1}
-      onMouseDown={() => onActivate?.(pane)}
       onFocusCapture={() => onActivate?.(pane)}
     >
-      <header class="cd2004-window-titlebar">
-        <span class={`cd2004-window-mark ${icon ? "has-icon" : ""}`} aria-hidden="true">
-          {icon && <DesktopIcon name={icon} />}
-        </span>
-        <span class="cd2004-window-title">
-          {title}
-          {subtitle && <small>{subtitle}</small>}
-        </span>
-      </header>
       {toolbar && <div class="cd2004-window-toolbar">{toolbar}</div>}
       <div class="cd2004-window-body">{children}</div>
       {footer && <footer class="cd2004-window-footer">{footer}</footer>}
