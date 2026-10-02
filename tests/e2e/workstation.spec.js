@@ -904,28 +904,28 @@ test.describe('MA Workstation browser journeys', () => {
   test('uses the keyboard-accessible section rail and workflow routing', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
-    const navigator = page.locator('.cd2004-navigator');
-    const home = page.locator('.cd2004-nav-item[title="Dashboard"]');
-    const administer = page.locator('.lf-current-service');
+    const navigator = page.locator('.lf-section-rail');
+    const home = page.locator('.cd2004-nav-item[title="Worklist"]');
+    const administer = page.locator('.lf-service-heading h1');
 
     await expect(navigator).toHaveAttribute(
       'aria-label',
       'Workspace navigation'
     );
-    await expect(navigator.locator('.cd2004-nav-item')).toHaveCount(5);
+    await expect(navigator.locator('.cd2004-nav-item')).toHaveCount(2);
     await expect(home).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.cd2004-launcher-tile')).toHaveCount(0);
-    await expect(page.locator('.cd2004-work-window .cd2004-window-title'))
-      .toContainText('Dashboard');
+    await expect(page.locator('.cd2004-work-window')).toHaveAttribute('aria-label', 'Dashboard panel');
+    await expect(page.locator('.cd2004-window-titlebar')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Worklist', level: 1 }))
       .toBeVisible();
     await expect(page.getByRole('button', { name: 'Document a service', exact: true })).toBeVisible();
 
     await page.keyboard.press('Alt+2');
     await expect(shell).toHaveAttribute('data-active-workflow', 'administer');
-    await expect(administer).toHaveAttribute('aria-current', 'page');
+    await expect(administer).toHaveText('Injection');
     await expect(page.locator('#panel-administer')).toHaveClass(/on/);
-    await expect(navigator.locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(navigator.locator('[aria-current="page"]')).toHaveCount(0);
 
     await page.evaluate(() => {
       window.__ipmgTabChanges = 0;
@@ -986,17 +986,13 @@ test.describe('MA Workstation browser journeys', () => {
     const panel = page.locator('.wfp-panel');
     await expect(page.locator('.lf-empty-patient')).toContainText('No patient selected');
     await expect(panel.locator('.wfp-summary-bar')).toContainText('Not started');
-    const powerCommands = page.locator('.tebra-power-commands');
-    const commandDeck = powerCommands.locator(
-      '[role="toolbar"][aria-label="Keyboard shortcuts"]'
-    );
-    await expect(powerCommands.locator(':scope > summary')).toBeVisible();
-    await expect(commandDeck).toBeHidden();
-    await powerCommands.locator(':scope > summary').click();
-    await expect(commandDeck).toBeVisible();
-    await expect(
-      commandDeck.locator('button').filter({ hasText: 'F9' })
-    ).toContainText('Lookup');
+    await page.keyboard.press('F1');
+    const keyboardReference = page.getByRole('dialog', { name: 'Keyboard Reference' });
+    await expect(keyboardReference).toBeVisible();
+    await expect(keyboardReference).toContainText('F9');
+    await expect(keyboardReference).toContainText('Lookup');
+    await page.keyboard.press('Escape');
+    await expect(keyboardReference).toBeHidden();
     await expect(panel.getByRole('button', { name: 'Add to daily log' })).toBeDisabled();
     await expect(panel.getByRole('button', { name: 'Save' })).toBeDisabled();
     await expect(
@@ -1019,23 +1015,16 @@ test.describe('MA Workstation browser journeys', () => {
     const panel = page.locator('.wfp-panel');
     const reason = panel.getByLabel('Encounter type', { exact: true });
     const orderTab = panel.getByRole('tab', { name: 'Order & Timing', exact: true });
-    const powerCommands = page.locator('.tebra-power-commands');
-    const commandDeck = powerCommands.locator(
-      '[role="toolbar"][aria-label="Keyboard shortcuts"]'
-    );
-    await expect(commandDeck).toBeHidden();
-    await powerCommands.locator(':scope > summary').click();
-    await expect(commandDeck).toBeVisible();
-    const f8 = commandDeck.locator('button').filter({ hasText: 'F8' });
-    const f9 = commandDeck.locator('button').filter({ hasText: 'F9' });
+    const f9 = panel.getByRole('button', { name: 'Open Encounter type field lookup (F9)' });
+    await expect(page.locator('.meditech-command-deck')).toHaveCount(0);
 
     await expect(orderTab.locator('.wfp-ledger-state')).toHaveText('Not started');
     await reason.focus();
     await expect(page.locator('[data-status-prompt]')).toContainText(
       'INJ-REASON | Encounter type'
     );
-    await expect(page.locator('.meditech-command-prompt')).toContainText('INJ-REASON');
-    await expect(f9).toContainText('Field values');
+    await expect(page.locator('[data-status-prompt]')).toContainText('INJ-REASON');
+    await expect(f9).toBeEnabled();
     await expect(
       panel.getByRole('button', { name: 'Open Encounter type field lookup (F9)' })
     ).toBeVisible();
@@ -1061,7 +1050,8 @@ test.describe('MA Workstation browser journeys', () => {
     );
     await expect(orderTab).toHaveClass(/is-stop/);
     await expect(orderTab.locator('.wfp-ledger-state')).toContainText('required');
-    await expect(f8).toContainText('Next stop');
+    await page.keyboard.press('F8');
+    await expect.poll(() => page.evaluate(() => Boolean(document.activeElement?.closest('[data-required-stop="true"],.wfp-field.is-incomplete')))).toBe(true);
 
     // Reconfirming the current lookup row is a no-op. It must not emit the
     // material change event that can invalidate downstream disposition and
@@ -1073,7 +1063,7 @@ test.describe('MA Workstation browser journeys', () => {
       });
     });
     await panel.getByRole('button', { name: 'Open Encounter type field lookup (F9)' }).click();
-    await expect(page.locator('.meditech-command-prompt')).toContainText('INJ-REASON');
+    await expect(page.locator('[data-status-prompt]')).toContainText('INJ-REASON');
     const currentLookupRow = lookup.getByRole('option', {
       name: /PRN \/ ordered Selected/
     });
@@ -1200,9 +1190,9 @@ test.describe('MA Workstation browser journeys', () => {
 
   test('keeps the navigator fixed and adds document context only inside a clinical workflow', async ({ page }) => {
     await page.goto('/');
-    // The left section rail is persistent; documentation stays inside the
+    // The masthead navigation is persistent; documentation stays inside the
     // clinical workspace instead of displacing that navigation.
-    const navigator = page.locator('.cd2004-navigator');
+    const navigator = page.locator('.lf-section-rail');
     const work = page.locator('.cd2004-work-window');
     const inspector = page.locator('.cd2004-inspector-window');
 
@@ -1211,9 +1201,9 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(navigator).toBeVisible();
     await expect(navigator.getByText('Worklist', { exact: true })).toBeVisible();
     await expect(navigator.getByText('Saved records', { exact: true })).toBeVisible();
-    await expect(navigator.locator('.lf-tools-navigation > summary')).toBeVisible();
+    await expect(page.locator('.lf-workspace-shelf > summary')).toBeVisible();
     await expect(navigator.locator('.cd2004-nav-item > i')).toHaveCount(0);
-    await expect(navigator.locator('.lf-primary-navigation button svg')).toHaveCount(5);
+    await expect(navigator.locator('.lf-primary-navigation button svg')).toHaveCount(2);
     await expect(work).toBeVisible();
     await expect(inspector).toHaveCount(0);
     await expect(page.locator('.cd2004-caption-button')).toHaveCount(0);
@@ -1223,9 +1213,8 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(work).toBeVisible();
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
     await expect(inspector).toBeVisible();
-    await expect(inspector.locator('.cd2004-window-title')).toContainText(
-      'Clinical Documentation'
-    );
+    await expect(inspector).toHaveAttribute('aria-label', 'Clinical Documentation panel');
+    await expect(inspector.locator('.cd2004-window-titlebar')).toHaveCount(0);
     await expect(inspector.locator('.cd2004-note-mode')).toHaveText('Read-only preview · local');
     await expect(navigator.locator('.cd2004-inspector-window')).toHaveCount(0);
   });
@@ -1233,33 +1222,12 @@ test.describe('MA Workstation browser journeys', () => {
   test('keeps power-user function keys available without a permanent command deck', async ({ page }) => {
     await page.goto('/');
     const shell = page.locator('.cd2004-shell');
-    const powerCommands = page.locator('.tebra-power-commands');
-    const disclosure = powerCommands.locator(':scope > summary');
-    const deck = powerCommands.locator(
-      '[role="toolbar"][aria-label="Keyboard shortcuts"]'
-    );
-
-    await expect(disclosure).toBeVisible();
-    await expect(disclosure).toContainText('Keyboard shortcuts');
-    await expect(deck).toBeHidden();
-    await disclosure.click();
-    await expect(powerCommands).toHaveAttribute('open', '');
-    await expect(deck).toBeVisible();
-    await expect(deck).toContainText('F1');
-    await expect(deck).toContainText('F6');
-    await expect(deck).toContainText('F7');
-    await expect(deck).toContainText('F8');
-    await expect(deck).toContainText('F9');
-    await expect(deck).toContainText('F11');
-    await expect(deck).toContainText('F12');
-    await expect(deck).toContainText('Esc');
-    await expect(deck).not.toContainText('F3');
-    await expect(deck).not.toContainText('F4');
-    await expect(deck).not.toContainText('F10');
-
+    await expect(page.locator('.meditech-command-deck')).toHaveCount(0);
     await page.keyboard.press('F1');
     const helpDialog = page.getByRole('dialog', { name: 'Keyboard Reference' });
     await expect(helpDialog).toBeVisible();
+    for (const key of ['F1','F6','F7','F8','F9','F11','F12','Esc']) await expect(helpDialog).toContainText(key);
+    for (const key of ['F3','F4','F10']) await expect(helpDialog).not.toContainText(key);
     await expect(helpDialog).toContainText(/next section/i);
     await expect(helpDialog).toContainText(/previous section/i);
     await expect(helpDialog).toContainText(/next page/i);
@@ -1287,7 +1255,7 @@ test.describe('MA Workstation browser journeys', () => {
     )).toBe(true);
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>
-      Boolean(document.activeElement?.closest('.meditech-command-deck'))
+      Boolean(document.activeElement?.closest('.lf-masthead-utilities'))
     )).toBe(true);
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>
@@ -1338,7 +1306,7 @@ test.describe('MA Workstation browser journeys', () => {
     // Once the evaluator has active stops, the same visible F8 key becomes
     // the purposeful Next stop command and lands on the first missing field.
     await patientName.focus();
-    await expect(deck.locator('button').filter({ hasText: 'F8' })).toContainText('Next stop');
+    await expect(page.locator('.meditech-command-deck')).toHaveCount(0);
     await page.keyboard.press('F8');
     await expect.poll(() => page.evaluate(() =>
       document.activeElement?.getAttribute('name')
@@ -1433,9 +1401,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     const udsPanel = page.locator('.wfp-panel');
     await udsPanel.locator('select[name="uds-reason"]').selectOption('routine');
-    const udsFileCommand = page
-      .locator('[role="toolbar"][aria-label="Keyboard shortcuts"] button')
-      .filter({ hasText: 'F12' });
+    const udsFileCommand = udsPanel.getByRole('button', { name: 'Save', exact: true });
     await expect(udsFileCommand).toBeEnabled();
     await page.keyboard.press('F12');
     await expect(udsPanel.getByRole('region', { name: 'UDS note actions' }))
@@ -1685,8 +1651,8 @@ test.describe('MA Workstation browser journeys', () => {
       matchMedia('(prefers-reduced-motion: reduce)').matches
     )).toBe(true);
 
-    const powerCommands = page.locator('.tebra-power-commands');
-    const commandDeck = powerCommands.locator('.meditech-command-deck');
+    const powerCommands = page.locator('.lf-workspace-shelf');
+    const commandDeck = powerCommands.locator('.lf-shelf-panel');
     await expect(powerCommands.locator(':scope > summary')).toBeVisible();
     await expect(commandDeck).toBeHidden();
     await powerCommands.locator(':scope > summary').click();
@@ -1779,8 +1745,8 @@ test.describe('MA Workstation browser journeys', () => {
     await patientName.fill('QA, Resize Safety');
     await expect(patientName).toHaveValue('QA, Resize Safety');
     await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
-    await expect(page.locator('.tebra-power-commands > summary')).toBeVisible();
-    await expect(page.locator('.meditech-command-deck')).toBeHidden();
+    await expect(page.locator('.lf-workspace-shelf > summary')).toBeVisible();
+    await expect(page.locator('.lf-workspace-shelf .lf-shelf-panel')).toBeHidden();
     await expect(page.locator('.meditech-context-rail')).toBeVisible();
 
     // Native dialogs live in the top layer rather than inside the ordinary
@@ -2036,9 +2002,9 @@ test.describe('MA Workstation browser journeys', () => {
       expect(shellBox.x).toBeGreaterThanOrEqual(0);
       expect(shellBox.width).toBeLessThanOrEqual(width);
 
-      const powerCommands = page.locator('.tebra-power-commands');
+      const powerCommands = page.locator('.lf-workspace-shelf');
       const commandDisclosure = powerCommands.locator(':scope > summary');
-      const commandDeck = powerCommands.locator('.meditech-command-deck');
+      const commandDeck = powerCommands.locator('.lf-shelf-panel');
       await expect(commandDisclosure).toBeVisible();
       await expect(commandDeck).toBeHidden();
       await commandDisclosure.click();
@@ -2053,7 +2019,7 @@ test.describe('MA Workstation browser journeys', () => {
       // The Dashboard owns one worklist window. Clinical workflows add the
       // documentation child window throughout the supported desktop range.
       const visibleWindows = page.locator('.cd2004-workspace .cd2004-window:visible');
-      await expect(page.locator('.cd2004-navigator')).toBeVisible();
+      await expect(page.locator('.lf-section-rail')).toBeVisible();
       await expect(visibleWindows).toHaveCount(1);
       await expect(page.locator('.cd2004-mobile-switcher')).toHaveCount(0);
 

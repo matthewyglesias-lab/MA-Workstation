@@ -10,12 +10,12 @@ for (const viewport of [{width:1440,height:900},{width:1024,height:768}]) {
       const q=s=>document.querySelector(s),style=s=>getComputedStyle(q(s));
       const inside=s=>{const r=q(s).getBoundingClientRect();return r.width>0&&r.height>0&&r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1;};
       return {
-        fits:['.tebra-section-rail','.tebra-app-header-main','.cd2004-work-window','.cd2004-worklist-tabs','.cd2004-worklist-footer'].every(inside),
+        fits:['.tebra-section-rail','.lf-masthead','.cd2004-work-window','.cd2004-worklist-tabs','.cd2004-worklist-footer'].every(inside),
         overflow:document.documentElement.scrollWidth>innerWidth+1,
         font:style('#lf-workstation').fontFamily,
         titleFont:style('#currentWorklistTitle').fontFamily,
-        navWidth:Math.round(q('.tebra-context-rail').getBoundingClientRect().width),
-        background:style('.tebra-app-header-main').backgroundColor,
+        navWidth:Math.round(q('.lf-masthead').getBoundingClientRect().width),
+        background:style('.lf-masthead').backgroundColor,
         workHeadingBackground:style('.lf-worklist-heading').backgroundColor,
         titleColor:style('#currentWorklistTitle').color,
         primary:style('.lf-document-action').backgroundColor,
@@ -25,7 +25,7 @@ for (const viewport of [{width:1440,height:900},{width:1024,height:768}]) {
         focusStyle:style('.lf-document-action').outlineStyle,
       };
     });
-    expect(result).toEqual({fits:true,overflow:false,font:expect.stringContaining('Workstation Mulish'),titleFont:expect.stringContaining('Workstation Lora'),navWidth:viewport.width,background:'rgb(246, 243, 246)',workHeadingBackground:'rgba(0, 0, 0, 0)',titleColor:'rgb(41, 66, 85)',primary:'rgb(243, 117, 101)',primaryGradient:'none',primaryShadow:'none',focusWidth:'2px',focusStyle:'solid'});
+    expect(result).toEqual({fits:true,overflow:false,font:expect.stringContaining('Workstation Mulish'),titleFont:expect.stringContaining('Workstation Lora'),navWidth:viewport.width,background:'rgba(0, 0, 0, 0)',workHeadingBackground:'rgba(0, 0, 0, 0)',titleColor:'rgb(41, 66, 85)',primary:'rgb(243, 117, 101)',primaryGradient:'none',primaryShadow:'none',focusWidth:'2px',focusStyle:'solid'});
     await page.locator('.lf-document-action').click();
     await expect(page.getByRole('dialog',{name:'Document a service'})).toBeVisible();
     await expect(page.locator('[data-service-open]')).toHaveCount(4);

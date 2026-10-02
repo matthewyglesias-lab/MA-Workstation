@@ -95,7 +95,6 @@
  /* Preview is a document, not an editor with line-number gutters. */
  #lf-workstation .cd2004-document-split {border:0;border-left:1px solid #dce5ea;padding:0;min-width:0;min-height:0;background:#f3f6f8;}
  #lf-workstation .cd2004-inspector-window {height:100%;border:0;border-radius:0;background:#f3f6f8;box-shadow:none;}
- #lf-workstation .cd2004-inspector-window > .cd2004-window-titlebar {background:#f3f6f8;color:#294255;border-bottom:1px solid #dce5ea;padding:10px 18px;min-height:43px;}
  #lf-workstation .cd2004-inspector-window .cd2004-window-title {font-size:11px;font-weight:600;}
  #lf-workstation .cd2004-inspector-window > .cd2004-window-body {background:#f3f6f8;overflow:auto;}
  #lf-workstation .cd2004-readiness-verdict {padding:10px 16px;font-size:10px;}

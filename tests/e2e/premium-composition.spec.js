@@ -22,7 +22,19 @@ for (const size of [{ width: 1440, height: 900 }, { width: 800, height: 600 }]) 
       await name.fill(`Premium review, ${service}`);
       await page.screenshot({ path: info.outputPath(`${service}-${size.width}.png`) });
       await expect(page.locator('.lf-service-heading h1')).toHaveCount(1);
-      const form = await panel.locator('.wfp-body').boundingBox();
+      // Hidden compatibility mirrors remain non-interactive; only one actual
+      // entry control and one accessible identifier may be visible.
+      await expect(page.locator('input[placeholder="Last, First"]:visible')).toHaveCount(1);
+      const duplicateIds = await page.evaluate(() => {
+        const seen = new Set(); const duplicates = [];
+        for (const node of document.querySelectorAll('[id]')) {
+          if (!node.getClientRects().length || node.closest('[hidden],[inert],[aria-hidden="true"]')) continue;
+          if (seen.has(node.id)) duplicates.push(node.id); else seen.add(node.id);
+        }
+        return duplicates;
+      });
+      expect(duplicateIds).toEqual([]);
+      const form = await panel.locator('.wfp-transaction-page,.lf-service-scroll').boundingBox();
       expect(form, 'A visible clinical working area is required').not.toBeNull();
       expect(form.height).toBeGreaterThanOrEqual(size.width === 800 ? 230 : 400);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
@@ -55,7 +67,7 @@ test('popover listeners stay balanced and one Escape dismisses one surface', asy
   });
   await page.goto('/');
   await page.locator('.lf-service-administer').click();
-  const field = page.locator('input[placeholder="Last, First"]');
+  const field = page.locator('.wfp-panel input[placeholder="Last, First"]');
   await field.fill('Ownership, Synthetic');
   await page.locator('.lf-service-heading h1').click();
   const counts = () => page.evaluate(() => window.__listenerCounts());
@@ -94,7 +106,7 @@ test('popover listeners stay balanced and one Escape dismisses one surface', asy
 test('save and lookup commands fire once and preserve native modal focus', async ({ page }) => {
   await page.goto('/');
   await page.locator('.lf-service-uds').click();
-  await page.locator('input[placeholder="Last, First"]').fill('Single action, Synthetic');
+  await page.locator('.wfp-panel input[placeholder="Last, First"]').fill('Single action, Synthetic');
   await page.evaluate(() => {
     window.__saveRequests = 0;
     window.addEventListener('ipmg:workstation-draft-save-request', () => window.__saveRequests++);
@@ -102,6 +114,16 @@ test('save and lookup commands fire once and preserve native modal focus', async
   await page.keyboard.press('Control+s');
   expect(await page.evaluate(() => window.__saveRequests)).toBe(1);
   await page.keyboard.press('F12');
+  expect(await page.evaluate(() => window.__saveRequests)).toBe(2);
+  // Repeated owned keys are consumed, not executed again. Browser modifier
+  // combinations are not claimed by the workstation.
+  const chords = await page.evaluate(() => {
+    const send = init => { const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+      document.activeElement.dispatchEvent(event); return event.defaultPrevented; };
+    return [send({key:'s',ctrlKey:true,repeat:true}),send({key:'F12',repeat:true}),
+      send({key:'s',ctrlKey:true,altKey:true}),send({key:'s',ctrlKey:true,shiftKey:true})];
+  });
+  expect(chords).toEqual([true,true,false,false]);
   expect(await page.evaluate(() => window.__saveRequests)).toBe(2);
   const provider = page.locator('.wfp-panel select').first();
   await provider.focus();

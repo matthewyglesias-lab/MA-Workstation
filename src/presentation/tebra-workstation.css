@@ -968,23 +968,6 @@
     grid-template-rows: auto minmax(0, 1fr);
   }
 
-  .cd2004-window-titlebar,
-  .cd2004-window.is-active > .cd2004-window-titlebar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    min-height: 48px;
-    padding: 9px 14px;
-    color: var(--tw-text-primary);
-    background: var(--tw-surface-panel);
-    border: 0;
-    border-bottom: 1px solid var(--tw-border-subtle);
-    font-size: var(--tw-fs-ws-base);
-    font-weight: 750;
-    user-select: none;
-  }
-
   .cd2004-window-mark,
   .cd2004-window-mark.has-icon {
     display: grid;
@@ -1318,170 +1301,6 @@
   }
 
   /* ---------------------------------------------- power-user command menu */
-
-  .tebra-power-commands {
-    position: relative;
-    z-index: 30;
-    flex: 0 0 38px;
-    min-width: 0;
-    min-height: 38px;
-    padding: 4px 12px;
-    color: var(--tw-text-secondary);
-    background: var(--tw-sand-75);
-    border-top: 1px solid var(--tw-border-subtle);
-  }
-
-  .tebra-power-commands > summary {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    width: max-content;
-    min-height: 29px;
-    padding: 4px 9px;
-    margin-left: auto;
-    color: var(--tw-teal-800);
-    background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-ctl);
-    cursor: pointer;
-    font-size: var(--tw-fs-ws-label);
-    font-weight: 700;
-    list-style: none;
-    user-select: none;
-  }
-
-  .tebra-power-commands > summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .tebra-power-commands > summary:hover {
-    background: var(--tw-mint-50);
-  }
-
-  .tebra-power-commands > summary svg {
-    width: 15px;
-    height: 15px;
-  }
-
-  .tebra-power-commands > summary kbd {
-    padding: 2px 5px;
-    color: var(--tw-text-secondary);
-    background: var(--tw-mint-150);
-    border: 0;
-    border-radius: var(--tw-radius-tight);
-    font-family: var(--tw-font-mono);
-    font-size: 9px;
-  }
-
-  .tebra-power-commands .meditech-command-deck {
-    position: absolute;
-    right: 12px;
-    bottom: calc(100% + 8px);
-    display: grid;
-    grid-template-columns: repeat(4, minmax(140px, 1fr));
-    gap: 6px;
-    width: min(880px, calc(100vw - 24px));
-    max-height: min(420px, calc(100vh - 96px));
-    padding: 12px;
-    overflow: auto;
-    color: var(--tw-text-primary);
-    background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-card);
-    box-shadow: 0 16px 42px rgb(0 58 67 / 18%);
-  }
-
-  .tebra-power-commands:not([open]) .meditech-command-deck {
-    display: none;
-  }
-
-  .meditech-command-prompt {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    min-width: 0;
-    min-height: 34px;
-    padding: 5px 7px 9px;
-    color: var(--tw-text-secondary);
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--tw-border-subtle);
-  }
-
-  .meditech-command-prompt strong {
-    color: var(--tw-text-primary);
-    font-size: var(--tw-fs-ws-meta);
-  }
-
-  .meditech-command-prompt span {
-    min-width: 0;
-    overflow: hidden;
-    font-family: var(--tw-font-mono);
-    font-size: var(--tw-fs-ws-label);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .meditech-command-deck button {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    min-height: 40px;
-    padding: 7px 9px;
-    color: var(--tw-text-primary);
-    text-align: left;
-    background: var(--tw-surface-panel);
-    border: 1px solid var(--tw-border-subtle);
-    border-radius: var(--tw-radius-ctl);
-    box-shadow: none;
-  }
-
-  .meditech-command-deck button:hover:not(:disabled),
-  .meditech-command-deck button.is-active {
-    color: var(--tw-text-primary);
-    background: var(--tw-mint-50);
-    border-color: var(--tw-teal-300);
-  }
-
-  .meditech-command-deck button:active:not(:disabled) {
-    background: var(--tw-mint-150);
-    box-shadow: none;
-    transform: none;
-  }
-
-  .meditech-command-deck button:disabled {
-    color: var(--tw-text-muted);
-    background: var(--tw-mint-50);
-    opacity: 0.68;
-  }
-
-  .meditech-command-deck button kbd {
-    display: grid;
-    place-items: center;
-    min-width: 27px;
-    min-height: 23px;
-    padding: 2px 4px;
-    color: var(--tw-teal-800);
-    background: var(--tw-mint-150);
-    border: 0;
-    border-radius: var(--tw-radius-tight);
-    font-family: var(--tw-font-mono);
-    font-size: 9px;
-    font-weight: 700;
-  }
-
-  .meditech-command-deck button > span {
-    min-width: 0;
-    overflow: hidden;
-    font-size: var(--tw-fs-ws-meta);
-    font-weight: 650;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 
   /* ============================================================ Phase 3b
      Patient chart: header search, Facesheet, patient Notes, action bar.
@@ -2465,10 +2284,6 @@
   .cd2004-workspace.has-side-inspector {
     grid-template-columns: 192px minmax(0, 1fr);
   }
-
-  .tebra-power-commands .meditech-command-deck {
-    grid-template-columns: repeat(3, minmax(140px, 1fr));
-  }
 }
 
 /* Short laptop viewports have more usable width than height. Keep the note
@@ -2592,12 +2407,6 @@
     padding-inline: 4px 6px;
   }
 
-  .cd2004-window-titlebar,
-  .cd2004-window.is-active > .cd2004-window-titlebar {
-    min-height: 42px;
-    padding: 7px 10px;
-  }
-
   .cd2004-worklist-header {
     padding: 12px 14px;
   }
@@ -2605,10 +2414,6 @@
   .cd2004-worklist-header h1 {
     font-size: 21px;
     line-height: 28px;
-  }
-
-  .tebra-power-commands .meditech-command-deck {
-    grid-template-columns: repeat(2, minmax(180px, 1fr));
   }
 }
 
@@ -2731,12 +2536,6 @@
     padding: 6px;
   }
 
-  .cd2004-window-titlebar,
-  .cd2004-window.is-active > .cd2004-window-titlebar {
-    min-height: 38px;
-    padding: 5px 8px;
-  }
-
   .cd2004-window-mark,
   .cd2004-window-mark.has-icon {
     width: 24px;
@@ -2775,15 +2574,6 @@
    * moment that bar was retired and the disclosure landed on the viewport
    * edge. Four pixels of workspace is the right price for a reachable one.
    */
-  .tebra-power-commands {
-    flex: 0 0 auto;
-    min-height: 38px;
-    padding: 2px 8px;
-  }
-
-  .tebra-power-commands > summary {
-    min-height: 28px;
-  }
 }
 
 @media screen and (max-height: 700px) and (min-width: 800px) {
@@ -2874,9 +2664,8 @@
 
 @media screen and (prefers-contrast: more) {
   .cd2004-window,
-  .cd2004-navigator.meditech-record-list.tebra-section-rail,
-  .meditech-workstation-gate-window,
-  .tebra-power-commands .meditech-command-deck {
+.cd2004-navigator.meditech-record-list.tebra-section-rail,
+.meditech-workstation-gate-window {
     border: 1px solid var(--tw-teal-800);
   }
 
@@ -2895,9 +2684,8 @@
 
 @media screen and (forced-colors: active) {
   .cd2004-window,
-  .cd2004-navigator.meditech-record-list.tebra-section-rail,
-  .meditech-workstation-gate-window,
-  .tebra-power-commands .meditech-command-deck{
+.cd2004-navigator.meditech-record-list.tebra-section-rail,
+.meditech-workstation-gate-window{
     border: 1px solid CanvasText;
     box-shadow: none;
   }

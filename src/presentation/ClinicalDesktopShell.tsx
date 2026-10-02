@@ -1031,14 +1031,8 @@ export function ClinicalDesktopShell({
   );
 
   const safeBack = useCallback(() => {
-    // Nothing here navigates away from a draft or destroys local work; callers
-    // may only dismiss a local utility. Menus are not handled here any more:
-    // each one stops Escape at its own host, so the key never reaches this.
-    if (showShortcutHelp) {
-      setShowShortcutHelp(false);
-      restorePreviousFocus();
-      return;
-    }
+    // Native dialogs and the shared popover owner consume their own Escape.
+    // Only a non-modal local view can reach this handler; no draft is discarded.
     // The chart is a destination, so Escape leaves it the way Escape leaves
     // any other local view: back to the workflow that was open, with nothing
     // saved, discarded or started.
@@ -1048,7 +1042,7 @@ export function ClinicalDesktopShell({
     }
     onEscape?.();
     setInternalStatus("Back: no draft was discarded.");
-  }, [chartPatientKeyState, onEscape, selectedWorkflow, showShortcutHelp]);
+  }, [chartPatientKeyState, onEscape]);
 
   useEffect(() => {
     onWorkAreaReady?.(workHostRef.current);
@@ -1205,9 +1199,7 @@ export function ClinicalDesktopShell({
           document.querySelector("dialog[open]") ||
           eventTarget?.closest('dialog[open], [aria-modal="true"]'),
       );
-      if (modalOwnsKeyboard) {
-        if (!(showShortcutHelp && event.key === "Escape")) return;
-      }
+      if (modalOwnsKeyboard) return;
       if (
         eventTarget?.closest(".cd2004-dialog-layer") &&
         event.key !== "Escape"
@@ -1215,16 +1207,16 @@ export function ClinicalDesktopShell({
         return;
       }
       const key = event.key.toLocaleLowerCase();
-      if ((event.ctrlKey || event.metaKey) && !event.altKey && key === "k") {
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === "k") {
         event.preventDefault();
         if (!event.repeat) setCommandPaletteOpen(true);
         return;
       }
-      // OS key-repeat must not save, navigate or open a second command surface.
-      if (event.repeat) return;
-      if ((event.ctrlKey || event.metaKey) && key === "s") {
+      // Consume repeated owned shortcuts without issuing another action or
+      // leaking a repeated Ctrl+S/F11 into the browser. Unowned chords stay native.
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === "s") {
         event.preventDefault();
-        requestDraftSave();
+        if (!event.repeat) requestDraftSave();
         return;
       }
 
@@ -1236,6 +1228,7 @@ export function ClinicalDesktopShell({
         /^[1-7]$/.test(event.key)
       ) {
         event.preventDefault();
+        if (event.repeat) return;
         const workflow = shortcutWorkflows[Number(event.key) - 1];
         if (workflow && openWorkflow(workflow)) {
           if (chartPatientKeyState) closeChart(workflow);
@@ -1252,6 +1245,7 @@ export function ClinicalDesktopShell({
       const command = resolveFunctionKeyCommand(event.key, event.shiftKey);
       if (!command) return;
       event.preventDefault();
+      if (event.repeat) return;
       switch (command.id) {
         case "help":
           openShortcutHelp();

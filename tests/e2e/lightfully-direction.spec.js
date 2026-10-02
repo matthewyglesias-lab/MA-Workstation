@@ -27,7 +27,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
   test(`editorial masthead, service choices and original editor at ${viewport.width}`, async ({ page }, info) => {
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     await boot(page, viewport);
-    const masthead = await page.locator('.tebra-context-rail').boundingBox();
+    const masthead = await page.locator('.lf-masthead').boundingBox();
     expect(masthead.width).toBeGreaterThanOrEqual(viewport.width - 2);
     await expect(page.locator('#currentWorklistTitle')).toHaveCSS('font-family', /Workstation Lora/);
     await expect(page.locator('.lf-service-shortcut')).toHaveCount(4);
@@ -106,13 +106,13 @@ for (const [title, id] of [['UDS', 'uds'], ['Samples', 'samples'], ['Forms', 'fo
 
 test('tools close on Escape and genuine field lookup is not covered by open shortcuts', async ({ page }, info) => {
   await boot(page, { width: 1024, height: 768 });
-  await page.locator('.lf-tools-navigation > summary').click();
-  await expect(page.locator('.lf-tools-navigation')).toHaveAttribute('open', '');
+  await page.locator('.lf-workspace-shelf > summary').click();
+  await expect(page.locator('.lf-workspace-shelf')).toHaveAttribute('open', '');
   await page.keyboard.press('Escape');
-  await expect(page.locator('.lf-tools-navigation')).not.toHaveAttribute('open', '');
-  await expect(page.locator('.lf-tools-navigation > summary')).toBeFocused();
+  await expect(page.locator('.lf-workspace-shelf')).not.toHaveAttribute('open', '');
+  await expect(page.locator('.lf-workspace-shelf > summary')).toBeFocused();
   await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
-  await page.locator('.tebra-power-commands > summary').click();
+  await page.locator('.lf-workspace-shelf > summary').click();
   const lookup = page.locator('.wfp-panel').getByRole('button', { name: 'Open Encounter type field lookup (F9)' });
   await lookup.click(); // Deliberately no force: an overlay must not intercept this.
   await expect(page.locator('.cd2004-lookup-dialog')).toBeVisible();

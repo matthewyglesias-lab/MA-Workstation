@@ -540,7 +540,6 @@
   /* Paper preview: a document with supporting checks, rather than another form. */
   #lf-workstation .cd2004-document-split { border: 0; background: transparent; }
   #lf-workstation .cd2004-document-split .cd2004-inspector-window { border: 0; background: transparent; border-radius: 0; }
-  #lf-workstation .cd2004-inspector-window > .cd2004-window-titlebar { padding: 0 0 11px; min-height: 34px; border: 0; background: transparent; }
   #lf-workstation .cd2004-inspector-window .cd2004-window-title { font: 500 12px/20px var(--tw-font-sans); color: var(--lf-muted); text-transform: none; }
   #lf-workstation .cd2004-inspector-window > .cd2004-window-body { overflow: hidden; background: transparent; }
   #lf-workstation .cd2004-document-split .cd2004-inspector { display: flex; flex-direction: column; gap: 16px; padding: 0 4px 16px 0; min-height: 0; height: 100%; overflow: auto; background: transparent; }
