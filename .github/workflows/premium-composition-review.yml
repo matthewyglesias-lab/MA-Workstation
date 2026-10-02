@@ -11,7 +11,7 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     permissions:
       contents: write
     env:
@@ -28,13 +28,12 @@ jobs:
           test "$GITHUB_REF" = refs/heads/codex/premium-workstation-composition
           python - <<'PY'
           import base64, hashlib, json, lzma, pathlib, subprocess
-          raw = lzma.decompress(base64.b64decode(pathlib.Path('.review-transport/revision-03.b64').read_text().strip(), validate=True))
-          assert hashlib.sha256(raw).hexdigest() == '8348a2d9f939f82c165ded78e8d3e58935e1f311a2e3bc88320a2988de7a8797', 'Transport digest mismatch'
+          raw = lzma.decompress(base64.b64decode(pathlib.Path('.review-transport/revision-04.b64').read_text().strip(), validate=True))
+          assert hashlib.sha256(raw).hexdigest() == '04fbf6de3ae9b0755b768e5da0821e84ac790b12a102cfb0d58d3363f99365c7', 'Transport digest mismatch'
           changes = json.loads(raw)
           def digest(path):
               return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
-          already_applied = all(digest(pathlib.Path(c['p'])) == c['a'] for c in changes)
-          if not already_applied:
+          if not all(digest(pathlib.Path(c['p'])) == c['a'] for c in changes):
               prepared = []
               for c in changes:
                   path = pathlib.Path(c['p'])
@@ -54,11 +53,10 @@ jobs:
               subprocess.run(['git','add','-A','--',*[c['p'] for c in changes]],check=True)
               subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
               subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
-              subprocess.run(['git','commit','-m','fix: keep focused headers visible, narrow previews exclusive and notifications unified'],check=True)
+              subprocess.run(['git','commit','-m','refactor: finish single-owner utility styling and verify guarded patient context'],check=True)
               subprocess.run(['git','push','origin','HEAD:refs/heads/codex/premium-workstation-composition'],check=True)
           pathlib.Path('review-evidence').mkdir(exist_ok=True)
           pathlib.Path('review-evidence/SOURCE_COMMIT.txt').write_bytes(subprocess.check_output(['git','rev-parse','HEAD']))
-          pathlib.Path('review-evidence/changed-files.json').write_text(json.dumps([{k:c[k] for k in ['p','b','a']} for c in changes],indent=2))
           PY
       - uses: actions/setup-node@v4
         with:
@@ -79,16 +77,21 @@ jobs:
         run: npx playwright test --grep 'one coherent shell|popover listeners|save and lookup|legacy and shell|focused injection keeps|editorial masthead|entry and preview|returns from patient browsing|quiet everyday controls' --retries=0 --reporter=line,json,html
       - name: Preserve focused journey evidence
         if: always()
-        run: |
-          cp -r test-results review-evidence/focused-captures 2>/dev/null || true
+        run: cp -r test-results review-evidence/focused-captures 2>/dev/null || true
       - name: Generate candidate screen references without changing tolerances
         id: candidates
         continue-on-error: true
         env:
           PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/visual-candidates.json
         run: npx playwright test tests/e2e/visual-snapshots.spec.js tests/e2e/lightfully-shell.spec.js --update-snapshots --retries=0 --reporter=line,json,html
-      - name: Commit candidates only when complete journeys pass
-        if: steps.journeys.outcome == 'success' && steps.candidates.outcome == 'success'
+      - name: Full regression review without updating references
+        id: full
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/full.json
+        run: npx playwright test --retries=0 --reporter=line,json,html
+      - name: Commit candidate references only after all journeys pass
+        if: steps.journeys.outcome == 'success' && steps.candidates.outcome == 'success' && steps.full.outcome == 'success'
         run: |
           git add tests/e2e/visual-snapshots.spec.js-snapshots/ tests/e2e/lightfully-shell.spec.js-snapshots/
           python - <<'PY'
@@ -120,6 +123,6 @@ jobs:
             tests/e2e/lightfully-shell.spec.js-snapshots/linux/
           retention-days: 7
           if-no-files-found: error
-      - name: Require both complete journey reviews
+      - name: Require all complete journey reviews
         if: always()
-        run: test '${{ steps.journeys.outcome }}' = success && test '${{ steps.candidates.outcome }}' = success
+        run: test '${{ steps.journeys.outcome }}' = success && test '${{ steps.candidates.outcome }}' = success && test '${{ steps.full.outcome }}' = success
