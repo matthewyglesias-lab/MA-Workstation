@@ -1,4 +1,5 @@
 import { DraftRecoveryNotice } from "../../lightfully/DraftRecoveryNotice";
+import { WorkflowTabList } from "../WorkflowTabList";
 import type { RecoveryStatus } from "../../../persistence/workflow-recovery";
 import { ActionShelf } from "../../lightfully/ActionShelf";
 import { labelControls, OptionList } from "../WorkflowField";
@@ -229,7 +230,7 @@ export function FormsPanel({
       onInput={markDirty}
       onChange={markDirty}
     >
-      <div class="wfp-tabbar" role="tablist">
+      <WorkflowTabList label="Forms sections">
         <button
           type="button"
           role="tab"
@@ -253,7 +254,7 @@ export function FormsPanel({
             <span class="wfp-tab-badge">{letterTabIssues}</span>
           )}
         </button>
-      </div>
+      </WorkflowTabList>
 
       <div class="lf-service-scroll">
       <DraftRecoveryNotice status={recoveryStatus} />

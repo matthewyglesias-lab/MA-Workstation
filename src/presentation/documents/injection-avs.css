@@ -1,10 +1,6 @@
-/* ===================== INJECTION AVS (mature clinical refinement) =====================
- * This is deliberately an evolution of the existing AVS, not a second visual
- * language imported from another product. It keeps the dose timeline and the
- * reviewed patient copy, while replacing the editorial/marginalia experiment
- * with a restrained outpatient-document system: a locally bundled display
- * face over a clinical body sans, a visible patient banner, a single due-date
- * emphasis, quiet rules, and compact guidance.
+/* Patient correspondence: verified content, one prominent return-date panel,
+ * comfortable body type and explicit continuation pages. Presentation is kept
+ * separate from the renderer, medication rules and approved instructions.
  */
 @media print {
   /* legacy.css globally sets overflow-x:hidden. Per the overflow shorthand
@@ -27,12 +23,12 @@
   }
 
   body.print-avs #avsSheet .avs2 {
-    --avs-ink: #294255;
-    --avs-muted: #68767c;
+    --avs-ink: #1e332b;
+    --avs-muted: #5b6960;
     --avs-rule: #d5dad9;
     --avs-rule-light: #e9ebea;
-    --avs-accent: #3c6173;
-    --avs-accent-soft: #f7f3f0;
+    --avs-accent: #42695c;
+    --avs-accent-soft: #edf2e7;
     --avs-surface: #fcfbf8;
     --avs-surface-strong: #f7f6f2;
     --avs-warm: #8a6645;
@@ -97,7 +93,7 @@
     align-items: flex-start;
     justify-content: space-between;
     padding-bottom: 10px;
-    border-bottom: 1.5px solid var(--avs-accent);
+    border-bottom: 2px solid var(--avs-accent);
     color: var(--avs-muted);
     font-family: inherit;
     font-size: 9px;
@@ -142,8 +138,8 @@
     color: var(--avs-ink);
     font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
       sans-serif;
-    font-size: 28px;
-    font-weight: 700;
+    font-size: 31px;
+    font-weight: 500;
     letter-spacing: -0.035em;
     line-height: 1.06;
     text-align: left;
@@ -197,11 +193,11 @@
 
   body.print-avs #avsSheet .avs2-id {
     margin: 14px 0 0;
-    padding: 11px 13px 12px;
-    border: 1px solid var(--avs-rule);
-    border-left: 2px solid var(--avs-accent);
-    border-radius: 3px;
-    background: var(--avs-surface);
+    padding: 11px 0 12px;
+    border: 0;
+    border-block: 1px solid var(--avs-rule);
+    border-radius: 0;
+    background: transparent;
     color: var(--avs-ink);
     font-size: 10px;
     line-height: 1.3;
@@ -287,8 +283,8 @@
 
   body.print-avs #avsSheet .avs2-step {
     display: grid;
-    grid-template-columns: 92px 18px minmax(0, 1fr);
-    column-gap: 12px;
+    grid-template-columns: 76px minmax(0, 1fr);
+    column-gap: 16px;
     margin: 0;
     padding: 6px 0 6px;
     break-inside: avoid;
@@ -296,10 +292,12 @@
   }
 
   body.print-avs #avsSheet .avs2-step-given {
-    border-top: 1px solid var(--avs-rule-light);
+    border-top: 0;
+    padding-bottom: 8px;
   }
 
   body.print-avs #avsSheet .avs2-step-due {
+    grid-template-columns: minmax(0, 1fr);
     margin: 0;
     padding: 6px 0 6px;
     border: 0;
@@ -308,19 +306,26 @@
   }
 
   body.print-avs #avsSheet .avs2-step-due .avs2-step-body {
-    margin-top: -3px;
-    padding: 10px 13px 10px 15px;
-    border: 1px solid var(--avs-rule);
-    border-left: 2px solid var(--avs-accent);
-    border-radius: 3px;
+    margin-top: 0;
+    padding: 10px 17px 11px;
+    border: 1px solid #c6d5c3;
+    border-left: 4px solid var(--avs-accent);
+    border-radius: 0 5px 5px 0;
     background: var(--avs-accent-soft);
   }
 
   body.print-avs #avsSheet .avs2-when {
     padding-top: 1px;
     color: var(--avs-ink);
-    text-align: right;
+    text-align: left;
+    border-right: 1px solid var(--avs-rule);
+    padding-right: 12px;
   }
+
+  /* The full due date is already prominent in the same step. The short-date
+     gutter and decorative spine are redundant in this full-width composition. */
+  body.print-avs #avsSheet .avs2-step-due .avs2-when,
+  body.print-avs #avsSheet .avs2-rail { display: none; }
 
   body.print-avs #avsSheet .avs2-when b {
     display: block;
@@ -445,8 +450,8 @@
     font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
       sans-serif;
     color: var(--avs-accent);
-    font-size: 18.5px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 600;
   }
 
   body.print-avs #avsSheet .avs2-step-due .avs2-when b {
@@ -459,8 +464,8 @@
     color: var(--avs-ink);
     font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
       sans-serif;
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 25px;
+    font-weight: 600;
     line-height: 1.25;
   }
 
@@ -516,9 +521,10 @@
     gap: 12px;
     margin-top: 10px;
     padding: 10px 12px 11px;
-    border: 1px solid var(--avs-rule);
-    border-radius: 3px;
-    background: var(--avs-surface);
+    border: 0;
+    border-block: 1px solid var(--avs-rule);
+    border-radius: 0;
+    background: transparent;
   }
 
   body.print-avs #avsSheet .avs2-sec-contact .avs2-lab {
@@ -731,7 +737,7 @@
   }
 
   body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-overview {
-    margin-top: 12px;
+    margin-top: 10px;
   }
 
   body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-sec-contact {
@@ -741,7 +747,7 @@
   }
 
   body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-guidance {
-    gap: 8px 24px;
+    gap: 6px 24px;
     margin-top: 10px;
   }
 
@@ -808,4 +814,10 @@
     padding-top: 7px;
     padding-bottom: 7px;
   }
+
+  /* These root-scoped colors supersede the compatibility print reset. Every
+     distinction also has a heading or rule and remains readable in grayscale. */
+  body.print-avs #avsSheet .avs2 :is(.avs2-title,.avs2-run-name,.avs2-id-v,.avs2-step-date) { color: var(--avs-ink) !important; }
+  body.print-avs #avsSheet .avs2 :is(.avs2-step-due .avs2-step-title,.avs2-step-instr) { color: var(--avs-accent) !important; }
+  body.print-avs #avsSheet .avs2 .avs2-step-due .avs2-step-body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }

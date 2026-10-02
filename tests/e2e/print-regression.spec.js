@@ -345,13 +345,12 @@ async function expectTwoPageAvsToBeBalanced(page) {
     .toBeLessThan(0.46);
 }
 
-async function expectTimelineToConnect(page, { syntheticActionTitle = '' } = {}) {
+async function expectTreatmentStepsToReadClearly(page, { syntheticActionTitle = '' } = {}) {
   const geometry = await page.locator('#avsSheet .avs2-spine').evaluateAll((spines, title) =>
     spines.map(spine => {
-      // The maximum-depth case extends rendered output rather than changing
-      // clinical state. Insert and measure that synthetic row in one browser
-      // task so a queued compatibility render cannot replace the fixture
-      // between the row-count and rail-geometry assertions.
+      // Keep the maximum-depth fixture and measure it in one task. The new
+      // correspondence layout replaces the decorative rail with separated,
+      // dated rows and a full-width return panel; no clinical row may disappear.
       if (title) {
         const source = spine.querySelector('.avs2-step:not(:last-child)');
         const due = spine.querySelector('.avs2-step:last-child');
@@ -361,49 +360,29 @@ async function expectTimelineToConnect(page, { syntheticActionTitle = '' } = {})
         extra.querySelector('.avs2-step-title').textContent = title;
         spine.insertBefore(extra, due);
       }
-      const rails = [...spine.querySelectorAll('.avs2-rail')];
-      const nodes = [...spine.querySelectorAll('.avs2-node')];
-      const railRects = rails.map(rail => rail.getBoundingClientRect());
-      const centers = nodes.map(node => {
-        const rect = node.getBoundingClientRect();
-        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-      });
-      const segments = rails.map((rail, index) => {
-        const railRect = railRects[index];
-        const style = getComputedStyle(rail, '::before');
-        const top = railRect.top + (parseFloat(style.top) || 0);
-        const height = parseFloat(style.height);
-        const bottom = Number.isFinite(height)
-          ? top + height
-          : railRect.bottom - (parseFloat(style.bottom) || 0);
-        return { top, bottom };
-      });
-      const gaps = segments.slice(0, -1).map((segment, index) =>
-        segments[index + 1].top - segment.bottom
-      );
+      const steps = [...spine.querySelectorAll('.avs2-step')];
+      const rects = steps.map(step => step.getBoundingClientRect());
+      const spineRect = spine.getBoundingClientRect();
       return {
-        count: rails.length,
-        horizontalDrift: Math.max(...centers.map(center => center.x)) -
-          Math.min(...centers.map(center => center.x)),
-        maxGap: gaps.length ? Math.max(...gaps) : 0,
-        firstEndpointError: Math.abs(segments[0].top - centers[0].y),
-        lastEndpointError: Math.abs(
-          segments[segments.length - 1].bottom - centers[centers.length - 1].y
-        )
+        count: steps.length,
+        invisible: steps.filter(step => !step.querySelector('.avs2-step-title').innerText.trim() || step.getBoundingClientRect().height <= 0).length,
+        overlap: Math.max(0, ...rects.slice(0, -1).map((rect, i) => rect.bottom - rects[i + 1].top)),
+        overflow: Math.max(0, ...rects.map(rect => Math.max(spineRect.left - rect.left, rect.right - spineRect.right))),
+        missingDate: steps.filter(step => {
+          const date = step.querySelector(step.classList.contains('avs2-step-due') ? '.avs2-step-date' : '.avs2-when');
+          return !date || !date.innerText.trim() || date.getBoundingClientRect().height <= 0;
+        }).length,
+        dueWidthError: Math.abs(spineRect.width - spine.querySelector('.avs2-step-due .avs2-step-body').getBoundingClientRect().width),
       };
-    }),
-    syntheticActionTitle
-  );
-
+    }), syntheticActionTitle);
   for (const result of geometry) {
-    if (syntheticActionTitle) {
-      expect(result.count, 'maximum-depth fixture did not render four treatment steps').toBe(4);
-    }
+    if (syntheticActionTitle) expect(result.count, 'maximum-depth fixture must retain four treatment steps').toBe(4);
     expect(result.count).toBeGreaterThanOrEqual(2);
-    expect(result.horizontalDrift, 'timeline nodes drift off the shared rail').toBeLessThanOrEqual(0.5);
-    expect(result.maxGap, 'timeline rail contains a visible vertical gap').toBeLessThanOrEqual(1);
-    expect(result.firstEndpointError, 'timeline rail does not start at the first node').toBeLessThanOrEqual(1);
-    expect(result.lastEndpointError, 'timeline rail does not end at the last node').toBeLessThanOrEqual(1);
+    expect(result.invisible, 'treatment step missing or invisible').toBe(0);
+    expect(result.missingDate, 'treatment date missing or hidden').toBe(0);
+    expect(result.overlap, 'treatment rows overlap').toBeLessThanOrEqual(0.5);
+    expect(result.overflow, 'treatment rows overflow the page').toBeLessThanOrEqual(0.5);
+    expect(result.dueWidthError, 'return date should use the available page width').toBeLessThanOrEqual(1);
   }
 }
 
@@ -438,7 +417,7 @@ async function expectRefinedAvsVisualSystem(page) {
       emergencyEdge: parseFloat(emergency.borderLeftWidth),
       emergencyHeadingTransform: emergencyHeading.textTransform,
       inkLuminance: luminance(article.color),
-      surfaceLuminance: luminance(patient.backgroundColor),
+      surfaceLuminance: luminance(due.backgroundColor),
       accentLuminance: luminance(due.borderLeftColor),
       emergencyLuminance: luminance(emergency.borderLeftColor)
     };
@@ -448,8 +427,8 @@ async function expectRefinedAvsVisualSystem(page) {
   expect(visual.titleFont).toContain('Plus Jakarta Sans Variable');
   expect(visual.bodyFontSize).toBeGreaterThanOrEqual(14);
   expect(visual.undersizedBodyCopy, 'patient guidance dropped below 10.5pt').toEqual([]);
-  expect(visual.patientRadius).toBe(3);
-  expect(visual.dueRadius).toBe(3);
+  expect(visual.patientRadius).toBe(0);
+  expect(visual.dueRadius).toBe(0);
   expect(visual.emergencyRadius).toBe(3);
   expect(visual.emergencyEdge).toBe(2);
   expect(visual.emergencyHeadingTransform).toBe('none');
@@ -859,7 +838,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('dl.avs2-pairs')).toContainText('AFTER HOURS');
     await expect(avs.locator('.avs2-page')).toHaveCount(1);
     await expectAvsPagesToFit(page);
-    await expectTimelineToConnect(page);
+    await expectTreatmentStepsToReadClearly(page);
     await expectRefinedAvsVisualSystem(page);
     await expectAvsSemanticStructure(page);
     await expect(avs.locator('article.avs2')).not.toHaveClass(/avs2-draft/);
@@ -920,7 +899,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs).toContainText('MANUFACTURER-TRACE-LOT');
     await expectAvsPagesToFit(page);
     await expectTwoPageAvsToBeBalanced(page);
-    await expectTimelineToConnect(page);
+    await expectTreatmentStepsToReadClearly(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [/Montgomery-Washington-Rivera/i, /MANUFACTURER-TRACE-LOT/i],
@@ -952,7 +931,7 @@ test.describe('unchanged clinical print surfaces', () => {
     );
     await expectAvsPagesToFit(page);
     await expectTwoPageAvsToBeBalanced(page);
-    await expectTimelineToConnect(page);
+    await expectTreatmentStepsToReadClearly(page);
     await expectAvsSemanticStructure(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
@@ -990,7 +969,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('.avs2-continuation-id')).toContainText('Record no.');
     await expectAvsPagesToFit(page);
     await expectTwoPageAvsToBeBalanced(page);
-    await expectTimelineToConnect(page);
+    await expectTreatmentStepsToReadClearly(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
@@ -1026,7 +1005,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs).toContainText('IPMG-AVS-INJ (REV 08/26C)');
     await expectAvsPagesToFit(page);
     await expectTwoPageAvsToBeBalanced(page);
-    await expectTimelineToConnect(page);
+    await expectTreatmentStepsToReadClearly(page);
     await expectRefinedAvsVisualSystem(page);
     await expectAvsSemanticStructure(page);
     await expectPrintContract(page, {
@@ -1060,7 +1039,7 @@ test.describe('unchanged clinical print surfaces', () => {
     await expect(avs.locator('.avs2-continuation-id')).toContainText('09/22/1991');
     await expectAvsPagesToFit(page);
     await expectTwoPageAvsToBeBalanced(page);
-    await expectTimelineToConnect(page);
+    await expectTreatmentStepsToReadClearly(page);
     await expectPrintContract(page, {
       rootId: 'avsSheet',
       content: [
@@ -1075,14 +1054,14 @@ test.describe('unchanged clinical print surfaces', () => {
     });
   });
 
-  test('keeps a four-step treatment rail continuous through maximum row depth', async ({ page }) => {
+  test('keeps all four treatment steps readable through maximum row depth', async ({ page }) => {
     await prepareInitiationInjection(page);
     await setFieldsAndRender(page, {
       bodyClass: 'print-avs',
       renderName: 'renderAVS',
       rootId: 'avsSheet'
     });
-    await expectTimelineToConnect(page, {
+    await expectTreatmentStepsToReadClearly(page, {
       syntheticActionTitle:
         'Clinician-reviewed continuation step with deliberately extended explanatory copy'
     });

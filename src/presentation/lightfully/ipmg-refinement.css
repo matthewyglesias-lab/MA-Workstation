@@ -5,26 +5,26 @@
    ===================================================================== */
 @media screen {
   :root {
-    --lf-ink: #1b3141;
-    --lf-muted: #526b79;
-    --lf-leaf: #3c7083;
+    --lf-ink: #1e332b;
+    --lf-muted: #607168;
+    --lf-leaf: #42695c;
     --lf-coral: #f37565;
     --lf-sun: #f8ce1b;
     --lf-paper: #fff;
-    --lf-lavender: #f6f4f7;
+    --lf-lavender: #f5f2ed;
     --lf-sage: #e8efec;
     --lf-soft: #f9f7f4;
-    --lf-line: #dce2e3;
-    --lf-control-border: #aebfc6;
+    --lf-line: #dce1d9;
+    --lf-control-border: #b8c5bd;
     --lf-display: Georgia, "Times New Roman", serif;
     --lf-heading-font: var(--lf-display);
     --lf-content-width: 1220px;
-    --tw-text-primary: #1b3141;
-    --tw-text-secondary: #425f70;
-    --tw-text-muted: #526b79;
-    --tw-surface-page: #f6f4f7;
-    --tw-surface-inverse: #1b3141;
-    --tw-border-subtle: #dce2e3;
+    --tw-text-primary: #1e332b;
+    --tw-text-secondary: #4d655c;
+    --tw-text-muted: #607168;
+    --tw-surface-page: #f5f2ed;
+    --tw-surface-inverse: #1e332b;
+    --tw-border-subtle: #dce1d9;
     --tw-focus-ring: 0 0 0 3px rgb(60 112 131 / 18%);
     --lf-gutter: clamp(22px, 3.2vw, 48px);
   }
@@ -95,7 +95,7 @@
   #lf-workstation .lf-navigation-popover {
     position: absolute; top: calc(100% + 8px); right: 0; z-index: 70;
     display: grid; width: 270px; max-width: calc(100vw - 32px);
-    padding: 10px; border: 1px solid #dce2e3; border-top: 3px solid #f8ce1b;
+    padding: 10px; border: 1px solid #dce1d9; border-top: 3px solid #f8ce1b;
     border-radius: 8px; background: #fff; box-shadow: 0 10px 32px rgb(27 49 65 / 14%);
   }
   #lf-workstation .lf-navigation-popover .cd2004-nav-item { width: 100%; white-space: normal; }
@@ -109,7 +109,7 @@
 
   /* Working utilities stay quiet; locality and save errors are always visible. */
   #lf-workstation.lf-workstation > .lf-app-header { grid-column: 1; grid-row: 2; border-top: 1px solid var(--lf-line); background: #fff; z-index: 20; }
-  #lf-workstation .tebra-app-header-main { min-height: 45px; height: 45px; padding: 4px var(--lf-gutter); gap: 14px; background: #f6f4f7; }
+  #lf-workstation .tebra-app-header-main { min-height: 45px; height: 45px; padding: 4px var(--lf-gutter); gap: 14px; background: #f5f2ed; }
   #lf-workstation .lf-header-search { max-width: 375px; }
   #lf-workstation .lf-header-search input {
     background: #fff !important; border: 1px solid #c9d3d8 !important;
@@ -117,7 +117,7 @@
   }
   #lf-workstation .lf-workspace-tools button { min-height: 32px; border: 0; background: transparent; color: var(--lf-ink); font-size: 11px; }
   #lf-workstation .lf-workspace-tools button:hover { background: #e8e4ea; }
-  #lf-workstation .tebra-workspace-badge.is-local { color: #425f70; font-size: 10px; font-weight: 500; letter-spacing: .025em; }
+  #lf-workstation .tebra-workspace-badge.is-local { color: #4d655c; font-size: 10px; font-weight: 500; letter-spacing: .025em; }
   #lf-workstation .tebra-workspace-badge.is-error { background: var(--tw-stop-bg); color: var(--tw-stop-fg); }
   #lf-workstation .tebra-account-avatar { background: #e3ece9; color: #314f4b; border-radius: 50%; }
   #lf-workstation .tebra-menu-quiet { font-size: 12px; }
@@ -182,7 +182,7 @@
   #lf-workstation .lf-empty-mark svg { width: 26px; height: 26px; }
   #lf-workstation .lf-worklist-empty strong { font: 400 27px/34px var(--lf-display); color: var(--lf-leaf); }
   #lf-workstation .lf-worklist-empty small { max-width: 410px; color: var(--lf-muted); font-size: 12px; line-height: 20px; }
-  #lf-workstation .lf-work-table th { background: #f6f4f7; color: #425f70; font-size: 11px; }
+  #lf-workstation .lf-work-table th { background: #f5f2ed; color: #4d655c; font-size: 11px; }
   #lf-workstation .lf-work-table td { font-size: 12px; padding-block: 16px; }
   #lf-workstation .lf-work-table .tebra-record-title { font-size: 14px; color: var(--lf-ink); }
   #lf-workstation .lf-work-table .tebra-record-meta { color: var(--lf-muted); font-size: 12px; }
@@ -215,45 +215,45 @@
   #lf-workstation .wfp-panel .wfp-summary-bar { min-height: 32px; padding: 5px 0; gap: 8px; }
   #lf-workstation .wfp-summary-fact { color: #4a6573; font-size: 11px; background: #f5f2f5; }
   #lf-workstation .wfp-panel .wfp-tabbar { gap: 22px; }
-  #lf-workstation .wfp-panel .wfp-tab { min-height: 42px; font-size: 12px; color: #526b79; padding: 8px 2px; }
-  #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { color: #1b3141; border-bottom: 3px solid #bd574b; background: transparent; }
-  #lf-workstation .lf-tab-count { color: #425f70; background: #ede9ef; }
+  #lf-workstation .wfp-panel .wfp-tab { min-height: 42px; font-size: 12px; color: #607168; padding: 8px 2px; }
+  #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { color: #1e332b; border-bottom: 3px solid #bd574b; background: transparent; }
+  #lf-workstation .lf-tab-count { color: #4d655c; background: #ede9ef; }
   #lf-workstation .wfp-panel .wfp-transaction-page { padding: 22px var(--lf-gutter) 30px; background: #fff; }
   #lf-workstation .wfp-panel .wfp-tabpanel { max-width: 1150px; }
   #lf-workstation .wfp-panel .wfp-section { padding: 24px 0 28px; border-bottom-color: #e1e5e4; }
-  #lf-workstation .wfp-panel .wfp-section-head { color: #3c7083; font: 400 24px/30px var(--lf-display); letter-spacing: -.3px; padding: 0 0 15px; margin: 0; }
+  #lf-workstation .wfp-panel .wfp-section-head { color: #42695c; font: 400 24px/30px var(--lf-display); letter-spacing: -.3px; padding: 0 0 15px; margin: 0; }
   #lf-workstation .wfp-section-body { gap: 19px; }
   #lf-workstation .wfp-row { gap: 22px; margin-bottom: 20px; }
   #lf-workstation .wfp-field-label { min-height: 20px; margin-bottom: 6px; }
   #lf-workstation .wfp-field-caption { font: 500 12px/20px var(--tw-font-sans); color: #344f5d; }
   #lf-workstation .wfp-req { color: #963f37; }
   #lf-workstation .wfp-panel .wfp-field :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {
-    border: 1px solid #aebfc6; border-radius: 5px; min-height: 40px;
+    border: 1px solid #b8c5bd; border-radius: 5px; min-height: 40px;
     padding: 9px 11px; font: 400 14px/20px var(--tw-font-sans);
-    background-color: #fff; color: #1b3141; box-shadow: none;
+    background-color: #fff; color: #1e332b; box-shadow: none;
   }
   #lf-workstation .wfp-panel .wfp-field :is(input,textarea)::placeholder { color: #627782; font-size: 12px; }
-  #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):focus { outline: 2px solid #3c7083; outline-offset: 2px; border-color: #70929f; box-shadow: none; }
+  #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):focus { outline: 2px solid #42695c; outline-offset: 2px; border-color: #70929f; box-shadow: none; }
   #lf-workstation .wfp-panel .wfp-field.is-incomplete :is(input,select,textarea) { border-color: #ae625c; }
   #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):disabled { background: #f1f2f2; color: #526570; border-color: #c7d0d4; cursor: not-allowed; box-shadow: none; }
-  #lf-workstation .wfp-panel .wfp-field :is(input,textarea)[readonly] { background: #f5f6f5; color: #425f70; }
-  #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc) { color: #526b79; font-size: 12px; line-height: 19px; }
-  #lf-workstation .wfp-panel .wfp-field-lookup-button { height: 40px; min-height: 40px; border-radius: 0 5px 5px 0; background: #f4f6f5; border-color: #aebfc6; }
+  #lf-workstation .wfp-panel .wfp-field :is(input,textarea)[readonly] { background: #f5f6f5; color: #4d655c; }
+  #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc) { color: #607168; font-size: 12px; line-height: 19px; }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button { height: 40px; min-height: 40px; border-radius: 0 5px 5px 0; background: #f4f6f5; border-color: #b8c5bd; }
   #lf-workstation .wfp-panel .wfp-field-entry > select { border-radius: 5px 0 0 5px; }
-  #lf-workstation .lf-provenance-content { border-radius: 6px; border-color: #c9d6dc; color: #425f70; }
+  #lf-workstation .lf-provenance-content { border-radius: 6px; border-color: #c9d6dc; color: #4d655c; }
   #lf-workstation .wfp-operator-guidance { background: #eaf1f3; border: 0; border-radius: 6px 20px 6px 6px; padding: 15px 18px; margin-bottom: 22px; }
   #lf-workstation .wfp-operator-guidance-head > strong { color: #315f72; font-weight: 600; }
   #lf-workstation .wfp-operator-guidance-head > span,
-  #lf-workstation .wfp-operator-guidance-row { color: #425f70; }
+  #lf-workstation .wfp-operator-guidance-row { color: #4d655c; }
   #lf-workstation .wfp-option-row { padding: 11px 13px; border-radius: 6px; border-color: #c5d1d5; background: #fff; }
   #lf-workstation .wfp-option-row.is-selected { background: #eaf0ed; border-color: #96b1a7; }
-  #lf-workstation .wfp-option-title { font-size: 13px; color: #1b3141; }
+  #lf-workstation .wfp-option-title { font-size: 13px; color: #1e332b; }
   #lf-workstation .wfp-option-row.is-ready.is-selected { background: #eaf0ed; border-color: #96b1a7; }
   #lf-workstation .wfp-site-tile { min-height: 50px; border-radius: 6px; border-color: #c5d1d5; }
-  #lf-workstation .wfp-reference { border-radius: 6px; background: #f9f7f4; color: #425f70; }
+  #lf-workstation .wfp-reference { border-radius: 6px; background: #f9f7f4; color: #4d655c; }
   #lf-workstation .wfp-reference > summary { color: #315f72; font-size: 12px; }
-  #lf-workstation .wfp-kv-key { color: #526b79; font-size: 11px; }
-  #lf-workstation .wfp-kv-value { color: #1b3141; font-size: 13px; }
+  #lf-workstation .wfp-kv-key { color: #607168; font-size: 11px; }
+  #lf-workstation .wfp-kv-value { color: #1e332b; font-size: 13px; }
   #lf-workstation .wfp-schedule-card { border-radius: 6px; border-color: #cdd8dc; box-shadow: none; }
   #lf-workstation .wfp-schedule-head { background: #eaf1f3; }
   #lf-workstation .wfp-status-flag { font-size: 11px; }
@@ -261,56 +261,56 @@
   /* The document remains the real output, not a decorative reproduction. */
   #lf-workstation .cd2004-document-split { border-left: 1px solid #d9d6d9; background: #f6f3ee; }
   #lf-workstation .cd2004-inspector-window > .cd2004-window-titlebar { background: #f4f0eb; border-bottom: 1px solid #ded9d2; padding: 12px 20px; }
-  #lf-workstation .cd2004-inspector-window .cd2004-window-title { font: 400 22px/28px var(--lf-display); color: #3c7083; }
+  #lf-workstation .cd2004-inspector-window .cd2004-window-title { font: 400 22px/28px var(--lf-display); color: #42695c; }
   #lf-workstation .cd2004-inspector-window > .cd2004-window-body { background: #f6f3ee; }
-  #lf-workstation .cd2004-note-heading { color: #1b3141; font: 400 21px/28px var(--lf-display); }
+  #lf-workstation .cd2004-note-heading { color: #1e332b; font: 400 21px/28px var(--lf-display); }
   #lf-workstation .cd2004-note-body { color: #263e4c; font-size: 13px; line-height: 1.7; }
-  #lf-workstation .cd2004-note-ident dd { color: #1b3141; font-weight: 600; }
-  #lf-workstation .cd2004-note-ident dt { color: #526b79; }
+  #lf-workstation .cd2004-note-ident dd { color: #1e332b; font-weight: 600; }
+  #lf-workstation .cd2004-note-ident dt { color: #607168; }
   #lf-workstation .cd2004-note-toolbar { gap: 10px; border-block-color: #e5e1dc; }
   #lf-workstation .cd2004-record-actions, #lf-workstation .lf-service-footer {
     border-top: 1px solid #d6ddd9; background: #f9f8f6; padding: 12px var(--lf-gutter); gap: 12px;
   }
   #lf-workstation .cd2004-record-actions-buttons button,
-  #lf-workstation .lf-service-footer > button { min-height: 38px; padding: 8px 13px; font-size: 12px; border-radius: 6px; border-color: #aebfc6; color: #1b3141; box-shadow: none; }
+  #lf-workstation .lf-service-footer > button { min-height: 38px; padding: 8px 13px; font-size: 12px; border-radius: 6px; border-color: #b8c5bd; color: #1e332b; box-shadow: none; }
   #lf-workstation .cd2004-record-actions-buttons button.is-primary:not(:disabled),
-  #lf-workstation .lf-service-footer > button.is-primary:not(:disabled) { background: #f37565; border-color: #f37565; color: #1b3141; }
+  #lf-workstation .lf-service-footer > button.is-primary:not(:disabled) { background: #f37565; border-color: #f37565; color: #1e332b; }
   #lf-workstation .cd2004-record-actions-buttons button:disabled,
   #lf-workstation .lf-service-footer > button:disabled { color: #5c6f77; background: #e8edee; border-color: #c9d4d8; cursor: not-allowed; }
 
   /* Portalled dialogs and tables share the same typographic family. */
   body:has(#lf-workstation) :is(.cd2004-dialog-frame,.cd2004-lookup-window,.records-drawer) { border: 1px solid #d8dddc; border-radius: 10px 24px 10px 10px; box-shadow: 0 20px 70px rgb(27 49 65 / 18%); }
   body:has(#lf-workstation) :is(.cd2004-dialog-titlebar,.records-drawer-head) { background: #f8f5f1; padding: 24px 27px 18px; border-bottom: 1px solid #e5e0da; }
-  body:has(#lf-workstation) :is(.cd2004-dialog-titlebar h2,.records-drawer-head h2) { color: #3c7083; font: 400 29px/1.2 var(--lf-display); letter-spacing: -.4px; }
-  body:has(#lf-workstation) :is(.lf-dialog-title p,.records-drawer-head p) { color: #526b79; font-size: 12px; line-height: 20px; }
-  body:has(#lf-workstation) :is(.lf-dialog-close,.records-drawer-close) { color: #425f70; background: #eae8e7; border: 0; border-radius: 50%; }
+  body:has(#lf-workstation) :is(.cd2004-dialog-titlebar h2,.records-drawer-head h2) { color: #42695c; font: 400 29px/1.2 var(--lf-display); letter-spacing: -.4px; }
+  body:has(#lf-workstation) :is(.lf-dialog-title p,.records-drawer-head p) { color: #607168; font-size: 12px; line-height: 20px; }
+  body:has(#lf-workstation) :is(.lf-dialog-close,.records-drawer-close) { color: #4d655c; background: #eae8e7; border: 0; border-radius: 50%; }
   body:has(#lf-workstation) .cd2004-dialog-body { padding: 18px 27px 24px; font-size: 13px; line-height: 21px; }
   body:has(#lf-workstation) .cd2004-dialog-field :is(input,select,textarea),
-  body:has(#lf-workstation) .records-drawer-search input { border-radius: 5px; border-color: #aebfc6; color: #1b3141; box-shadow: none; }
+  body:has(#lf-workstation) .records-drawer-search input { border-radius: 5px; border-color: #b8c5bd; color: #1e332b; box-shadow: none; }
   body:has(#lf-workstation) .cd2004-dialog-actions { background: #f8f5f1; border-color: #e5e0da; }
-  body:has(#lf-workstation) .cd2004-dialog-actions button { border-radius: 6px; border-color: #aebfc6; color: #1b3141; }
-  body:has(#lf-workstation) .cd2004-dialog-actions button.is-primary:not(:disabled) { color: #1b3141; background: #f37565; border-color: #f37565; }
+  body:has(#lf-workstation) .cd2004-dialog-actions button { border-radius: 6px; border-color: #b8c5bd; color: #1e332b; }
+  body:has(#lf-workstation) .cd2004-dialog-actions button.is-primary:not(:disabled) { color: #1e332b; background: #f37565; border-color: #f37565; }
   body:has(#lf-workstation) .cd2004-dialog-actions button.is-danger { background: #fff1ed; border-color: #ca8176; color: #9b3e37; }
   body:has(#lf-workstation) .cd2004-attestation-review { border-radius: 6px; background: #edf2ef; }
-  body:has(#lf-workstation) .cd2004-lookup-row { color: #1b3141; }
+  body:has(#lf-workstation) .cd2004-lookup-row { color: #1e332b; }
   body:has(#lf-workstation) .cd2004-lookup-row.is-selected { background: #e7eef0; }
   body:has(#lf-workstation) .notes-table :is(th,td) { font-size: 12px; line-height: 20px; }
-  body:has(#lf-workstation) .notes-table thead th { color: #425f70; background: #f6f4f7; }
+  body:has(#lf-workstation) .notes-table thead th { color: #4d655c; background: #f5f2ed; }
   #lf-workstation .lf-service-dialog, #lf-workstation .lf-command-dialog { border-radius: 10px 28px 10px 10px; border-top: 4px solid #f37565; }
   #lf-workstation .lf-service-options { padding: 13px 20px 21px; gap: 2px; }
   #lf-workstation .lf-service-dialog .lf-service-option { border-bottom: 1px solid #e4e3e4; border-radius: 0; padding: 16px 8px; background: #fff; }
-  #lf-workstation .lf-service-dialog .lf-service-option:hover { background: #f6f4f7; }
-  #lf-workstation .lf-service-option strong { color: #3c7083; font: 400 23px/29px var(--lf-display); }
-  #lf-workstation .lf-service-option small { color: #526b79; font-size: 12px; line-height: 20px; }
+  #lf-workstation .lf-service-dialog .lf-service-option:hover { background: #f5f2ed; }
+  #lf-workstation .lf-service-option strong { color: #42695c; font: 400 23px/29px var(--lf-display); }
+  #lf-workstation .lf-service-option small { color: #607168; font-size: 12px; line-height: 20px; }
   #lf-workstation .lf-service-icon { width: 44px; height: 49px; border-radius: 23px 23px 6px 6px; background: #fbe4df; color: #85514a; }
-  #lf-workstation .lf-service-option:nth-child(2) .lf-service-icon { background: #e0ebef; color: #3c7083; }
+  #lf-workstation .lf-service-option:nth-child(2) .lf-service-icon { background: #e0ebef; color: #42695c; }
   #lf-workstation .lf-service-option:nth-child(3) .lf-service-icon { background: #e2eade; color: #496a42; }
   #lf-workstation .lf-service-option:nth-child(4) .lf-service-icon { background: #f9ecc2; color: #6b592a; }
   #lf-workstation .lf-command-result.is-active { background: #e9f0ed; }
   #lf-workstation .lf-tool-page-header { background: #fff; padding-inline: var(--lf-gutter); }
   #lf-workstation .kiosk-patient-summary { border-top: 3px solid #f37565; background: #fff; border-radius: 6px; }
-  #lf-workstation .kiosk-patient-identity strong { color: #1b3141; }
-  #lf-workstation .kiosk-stepper button[aria-current=step] { border-color: #7d9da7; background: #e7eef0; color: #1b3141; }
+  #lf-workstation .kiosk-patient-identity strong { color: #1e332b; }
+  #lf-workstation .kiosk-stepper button[aria-current=step] { border-color: #7d9da7; background: #e7eef0; color: #1e332b; }
 
   /* A disclosure can never cover a clinical field or its lookup button. */
   #lf-workstation.lf-workstation > .tebra-power-commands {
@@ -318,7 +318,7 @@
     min-height: 28px; width: 100%; padding: 0 var(--lf-gutter);
     background: #edf1ef; border-top: 1px solid #d8e1de; z-index: 5;
   }
-  #lf-workstation .tebra-power-commands > summary { color: #425f70; font-size: 11px; min-height: 28px; }
+  #lf-workstation .tebra-power-commands > summary { color: #4d655c; font-size: 11px; min-height: 28px; }
   #lf-workstation .tebra-power-commands .meditech-command-deck,
   #lf-workstation .tebra-power-commands[open] .meditech-command-deck {
     position: static; inset: auto; width: 100%; max-width: none; max-height: 160px;
@@ -326,8 +326,8 @@
     overflow: auto; border: 0; border-top: 1px solid #cdd9d6; border-radius: 0;
     box-shadow: none; background: #edf1ef; margin: 0; padding: 8px 0;
   }
-  #lf-workstation .meditech-command-deck button { background: #fff; color: #1b3141; border-color: #c1cfcb; box-shadow: none; border-radius: 5px; }
-  #lf-workstation .meditech-command-deck .meditech-command-prompt { color: #425f70; background: transparent; }
+  #lf-workstation .meditech-command-deck button { background: #fff; color: #1e332b; border-color: #c1cfcb; box-shadow: none; border-radius: 5px; }
+  #lf-workstation .meditech-command-deck .meditech-command-prompt { color: #4d655c; background: transparent; }
   #lf-workstation.lf-workstation[data-kiosk-mode=true] { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr) auto; }
   #lf-workstation[data-kiosk-mode=true] > .lf-app-header { grid-row: 1; }
   #lf-workstation[data-kiosk-mode=true] > .cd2004-workspace { grid-row: 2; }
@@ -338,9 +338,9 @@
   #lf-workstation .wfp-exception-block .wfp-option-row.is-selected,
   #lf-workstation .wfp-option-row.is-warning.is-selected { background: var(--tw-review-bg); color: var(--tw-review-fg); border-color: var(--tw-review-border); }
   #lf-workstation .wfp-option-row:is(.is-stop,.is-warning).is-selected .wfp-option-title { color: inherit; }
-  body:has(#lf-workstation) input:is([type=checkbox],[type=radio]) { accent-color: #3c7083; }
-  body:has(#lf-workstation) :is(button,summary,a,input,select,textarea):focus-visible { outline: 2px solid #3c7083; outline-offset: 3px; }
-  #lf-workstation .cd2004-toast { color: #fff; background: #1b3141; border-radius: 6px; }
+  body:has(#lf-workstation) input:is([type=checkbox],[type=radio]) { accent-color: #42695c; }
+  body:has(#lf-workstation) :is(button,summary,a,input,select,textarea):focus-visible { outline: 2px solid #42695c; outline-offset: 3px; }
+  #lf-workstation .cd2004-toast { color: #fff; background: #1e332b; border-radius: 6px; }
 
   @media (max-width: 1179px) {
     #lf-workstation .lf-section-rail { gap: 8px 13px; padding-block: 9px; min-height: 66px; }

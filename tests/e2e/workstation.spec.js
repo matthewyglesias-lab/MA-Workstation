@@ -1638,7 +1638,7 @@ test.describe('MA Workstation browser journeys', () => {
     // persistence remains a separate status in the rail and action bar.
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(238, 241, 235)');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -1657,10 +1657,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(mismatch).toBeVisible();
     await expect(mismatch).toContainText('Bravo, Patient');
     await expect(mismatch).toHaveCSS('background-color', 'rgb(253, 243, 226)');
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(238, 241, 235)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(238, 241, 235)');
     await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');

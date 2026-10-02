@@ -4,6 +4,11 @@ This increment continues draft PR #68. Tebra remains the chart of record.
 It does not authorize a merge, deployment, or replacement of a clinic's working
 copy. All review fixtures are synthetic.
 
+The user's screenshot review prompted a further structural visual revision.
+See [VISUAL-REVISION.md](VISUAL-REVISION.md) for the current composition and its
+verification requirements. The initial screenshot provenance below is historical;
+the PR description identifies the final source and evidence.
+
 ## Workflow and data boundaries
 
 | Responsibility | Owner and boundary |
@@ -91,7 +96,7 @@ Inter font instead of an OS-dependent Arial fallback. Actual Lightfully display
 typography is retained in home and deeper-surface captures. No screenshot
 tolerance, clinical threshold, or document-content fixture was relaxed.
 
-Final Linux references use inspected CI captures where the local machine's
+The initial increment's Linux references used inspected CI captures where the local machine's
 font stack differs. Eight images came from run `36956098139`, artifact
 `11206192449` (ZIP SHA-256
 `bf17d2d34f5b6e47ecb2395e56fc0c3dceb1b60cb6b68b691d63d22a69afd156`).

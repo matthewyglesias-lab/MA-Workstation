@@ -89,7 +89,7 @@ for(const size of [{width:1440,height:900},{width:800,height:600}]) {
   const summary=page.locator('.kiosk-patient-summary');await expect(summary).toBeVisible();await inViewport(summary,size);
   expect(await summary.evaluate(n=>getComputedStyle(n).backgroundColor)).toBe('rgb(255, 255, 255)');
   for(const node of await summary.locator('.kiosk-patient-identity strong,.kiosk-patient-facts dd,.kiosk-shell-actions button').all()){
-   expect(await node.evaluate(n=>getComputedStyle(n).color)).toBe('rgb(27, 49, 65)');
+   expect(await node.evaluate(n=>getComputedStyle(n).color)).toBe('rgb(30, 51, 43)');
   }
   await expect(summary).toContainText('Focus QA, Synthetic');await expect(summary).toContainText('01/02/1990');
   await page.getByRole('button',{name:'Return to full workspace',exact:true}).click();

@@ -17,9 +17,9 @@ const WORKFLOWS = [
 ];
 
 // Screen-only token overrides from lightfully-shell.css, as rendered rgb().
-const NAVY = 'rgb(27, 49, 65)';
-const HEADER_PAPER = 'rgb(246, 244, 247)';
-const LAVENDER_50 = 'rgb(255, 255, 255)';
+const INK = 'rgb(30, 51, 43)';
+const HEADER_PAPER = 'rgb(245, 242, 237)';
+const SECTION_RAIL_FILL = 'rgb(245, 247, 240)';
 const CORAL = 'rgb(243, 117, 101)';
 const WHITE = 'rgb(255, 255, 255)';
 
@@ -71,9 +71,9 @@ test.describe('Lightfully screen contract', () => {
     expect(home.appHeaderGradient).toBe('none');
     expect(home.sectionRailBackground).toBe('rgba(0, 0, 0, 0)');
     expect(home.sectionRailRadius).toBe('0px');
-    expect(home.workWindowBackground).toBe('rgb(246, 244, 247)');
+    expect(home.workWindowBackground).toBe('rgb(245, 242, 237)');
     expect(home.workWindowRadius).toBe('0px');
-    expect(home.workTitlebarColor).toBe(NAVY);
+    expect(home.workTitlebarColor).toBe(INK);
     expect(home.workTitlebarGradient).toBe('none');
 
     for (const workflow of WORKFLOWS) {
@@ -102,7 +102,7 @@ test.describe('Lightfully screen contract', () => {
 
       // Worksheets are warm-white paper with a pale lavender tab strip.
       expect(contract.panel.backgroundColor).toBe(WHITE);
-      expect(contract.tabbar.backgroundColor).toBe(LAVENDER_50);
+      expect(contract.tabbar.backgroundColor).toBe(SECTION_RAIL_FILL);
       expect(contract.panel.fontFamily).toMatch(/^"Inter Variable"/);
       expect(contract.horizontalOverflow).toBeLessThanOrEqual(1);
       if (contract.lookup) {

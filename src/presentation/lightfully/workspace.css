@@ -1,5 +1,6 @@
 /* Current workstation composition. Screen-only; clinical print lives in documents/.
- * These previously separate finishing layers are maintained together in cascade order. */
+ * The final composition below owns page geometry; compatibility rules retain
+ * established field, dialog and clinical-state behavior. */
 @import "./utility-surfaces.css";
 
 /* Deep-surface refinement: same approved Lightfully direction, no new theme.
@@ -69,7 +70,7 @@
 
   /* Every unresolved check remains an actionable row, with a consistent hierarchy. */
   body:has(#lf-workstation) .lf-requirements-group h3 { padding-bottom: 9px; border-bottom: 1px solid #d9e1df; font: 400 22px/28px var(--lf-display); color: var(--lf-leaf); }
-  body:has(#lf-workstation) .lf-requirements-group h3 > span { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: #edf1ee; color: #425f70; font: 500 11px/18px var(--tw-font-sans); }
+  body:has(#lf-workstation) .lf-requirements-group h3 > span { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: #edf1ee; color: #4d655c; font: 500 11px/18px var(--tw-font-sans); }
   body:has(#lf-workstation) .lf-requirements-group .wfp-issue-row { display: flex; align-items: center; gap: 14px; padding: 12px 10px; min-height: 44px; border-radius: 5px; border: 0; border-bottom: 1px solid #ece9eb; background: #fff; text-align: left; color: var(--lf-ink); font: 400 13px/21px var(--tw-font-sans); }
   body:has(#lf-workstation) .lf-requirements-group .wfp-issue-row:hover { background: #f8f5f1; }
   body:has(#lf-workstation) .lf-issue-arrow { margin-left: auto; flex-shrink: 0; color: var(--lf-leaf); }
@@ -79,7 +80,7 @@
   body:has(#lf-workstation) .cd2004-lookup-row { min-height: 48px; padding: 13px 14px; }
   body:has(#lf-workstation) .cd2004-lookup-row :is(strong,small) { white-space: normal; overflow-wrap: anywhere; }
   body:has(#lf-workstation) .cd2004-lookup-row small { color: var(--lf-muted); font: 400 12px/19px var(--tw-font-sans); margin-top: 4px; }
-  body:has(#lf-workstation) .cd2004-lookup-row:hover:not(:disabled) { background: #f6f4f7; }
+  body:has(#lf-workstation) .cd2004-lookup-row:hover:not(:disabled) { background: #f5f2ed; }
   body:has(#lf-workstation) .cd2004-lookup-row.is-selected { background: #e7efeb; border-left: 3px solid #70998c; }
   body:has(#lf-workstation) .cd2004-lookup-empty { padding: 25px 18px; background: #faf8f5; color: var(--lf-muted); font: 400 13px/21px var(--tw-font-sans); }
 
@@ -91,11 +92,11 @@
   body:has(#lf-workstation) .notes-table th { position: sticky; top: 0; z-index: 2; }
   body:has(#lf-workstation) .notes-table-row { cursor: pointer; }
   body:has(#lf-workstation) .notes-table-row:hover td { background: #f8f5f1; }
-  body:has(#lf-workstation) .notes-table-row:focus-visible { outline: 2px solid #3c7083; outline-offset: -3px; background: #edf2f3; }
+  body:has(#lf-workstation) .notes-table-row:focus-visible { outline: 2px solid #42695c; outline-offset: -3px; background: #edf2f3; }
   body:has(#lf-workstation) .notes-table-empty { padding: 35px 26px; white-space: normal; background: #faf8f5; color: var(--lf-muted); font: 400 13px/22px var(--tw-font-sans); }
   body:has(#lf-workstation) .records-drawer-foot { background: #f8f5f1; padding: 15px 26px; gap: 18px; border-top: 1px solid #e2ded8; }
   body:has(#lf-workstation) .records-drawer-foot p { max-width: 530px; font: 400 11px/18px var(--tw-font-sans); color: var(--lf-muted); }
-  body:has(#lf-workstation) .records-drawer-new:not(:disabled) { border: 1px solid #f37565; background: #f37565; color: #1b3141; }
+  body:has(#lf-workstation) .records-drawer-new:not(:disabled) { border: 1px solid #f37565; background: #f37565; color: #1e332b; }
   body:has(#lf-workstation) .lf-records-reset { padding: 0 26px 12px; }
   body:has(#lf-workstation) .lf-records-reset button { padding: 7px 11px; border: 1px solid #afc0c7; border-radius: 5px; background: #fff; color: #315f72; font: 500 12px/20px var(--tw-font-sans); }
   body:has(#lf-workstation) .records-drawer-action-error { margin: 0 26px 12px; padding: 11px 14px; border-radius: 6px; }
@@ -109,7 +110,7 @@
   #lf-workstation .tebra-patient-card-host[data-card-dismissed=true] .tebra-patient-card { opacity: 0; pointer-events: none; }
   #lf-workstation .tebra-patient-notes-filters { background: #f8f6f3; border-color: #e2ded8; border-radius: 7px; gap: 15px; }
   #lf-workstation .tebra-patient-notes-field > span { color: var(--lf-muted); font: 500 11px/18px var(--tw-font-sans); }
-  #lf-workstation .tebra-patient-notes-field :is(input,select) { color: var(--lf-ink); background: #fff; border: 1px solid #aebfc6; border-radius: 5px; box-shadow: none; font: 400 13px/20px var(--tw-font-sans); }
+  #lf-workstation .tebra-patient-notes-field :is(input,select) { color: var(--lf-ink); background: #fff; border: 1px solid #b8c5bd; border-radius: 5px; box-shadow: none; font: 400 13px/20px var(--tw-font-sans); }
   #lf-workstation .tebra-summary-facts :is(dt,dd), #lf-workstation .tebra-summary-rotation { font-family: var(--tw-font-sans); line-height: 1.6; }
   #lf-workstation .tebra-summary-card-rule { color: var(--lf-muted); font: 400 11px/18px var(--tw-font-sans); background: #faf9f6; }
   #lf-workstation .tebra-summary-note-row { padding: 10px 0; border-bottom: 1px solid #e4e7e5; }
@@ -126,7 +127,7 @@
   #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field > label { font: 500 12px/20px var(--tw-font-sans); color: var(--lf-leaf); }
   #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field-hint { line-height: 1.75; }
   #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field-hint li + li { margin-top: 6px; }
-  #lf-workstation .lf-reference-clear { margin-top: 8px; border: 1px solid #aebfc6; border-radius: 5px; color: #315f72; background: #fff; padding: 8px 12px; font: 500 12px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-reference-clear { margin-top: 8px; border: 1px solid #b8c5bd; border-radius: 5px; color: #315f72; background: #fff; padding: 8px 12px; font: 500 12px/20px var(--tw-font-sans); }
   #lf-workstation .wfp-wall { background: #f8f5f1; color: var(--lf-muted); border: 1px solid #e4dfd7; border-radius: 8px 22px 8px 8px; box-shadow: none; }
   #lf-workstation .wfp-wall-title { color: var(--lf-leaf); font: 400 26px/33px var(--lf-display); }
   #lf-workstation .kiosk-rail-heading h2 { color: var(--lf-leaf); font: 400 23px/30px var(--lf-display); }
@@ -135,7 +136,7 @@
 
   /* Quiet feedback; never repaint an error as success or animate form values. */
   #lf-workstation .tebra-toast-region { right: 20px; bottom: 48px; max-width: min(470px,calc(100vw - 40px)); }
-  #lf-workstation .tebra-toast { margin: 0; padding: 13px 18px; border: 1px solid #bdd0ca; border-left: 3px solid #739c8e; border-radius: 7px 17px 7px 7px; box-shadow: 0 8px 24px rgb(27 49 65 / 12%); color: #1b3141; background: #f5f8f5; font: 400 13px/21px var(--tw-font-sans); }
+  #lf-workstation .tebra-toast { margin: 0; padding: 13px 18px; border: 1px solid #bdd0ca; border-left: 3px solid #739c8e; border-radius: 7px 17px 7px 7px; box-shadow: 0 8px 24px rgb(27 49 65 / 12%); color: #1e332b; background: #f5f8f5; font: 400 13px/21px var(--tw-font-sans); }
 
   @media (max-width: 949px) {
     body:has(#lf-workstation) .cd2004-dialog-frame { max-height: calc(100dvh - 24px); }
@@ -172,7 +173,7 @@
   #lf-workstation .lf-closeout-panel .wfp-kpi-row > div:last-child { border: 0; }
   #lf-workstation .lf-closeout-panel .wfp-kpi-value { font: 400 28px/34px var(--lf-display); color: var(--lf-leaf); }
   #lf-workstation .lf-closeout-panel .wfp-kpi-label { color: var(--lf-muted); font: 500 11px/18px var(--tw-font-sans); }
-  #lf-workstation .lf-closeout-panel .wfp-table-wrap { overflow: auto; border: 1px solid #dce2e3; border-radius: 6px; }
+  #lf-workstation .lf-closeout-panel .wfp-table-wrap { overflow: auto; border: 1px solid #dce1d9; border-radius: 6px; }
   #lf-workstation .lf-closeout-panel .wfp-table th { color: var(--lf-muted); background: var(--lf-lavender); font: 500 11px/18px var(--tw-font-sans); }
   #lf-workstation .lf-closeout-panel .wfp-table td { font: 400 12px/20px var(--tw-font-sans); padding: 12px 10px; }
 }
@@ -188,7 +189,7 @@
   }
   body:has(#lf-workstation) .lf-lookup-reset:hover { background: #eaf0f2; }
   body:has(#lf-workstation) .cd2004-lookup-row:focus-visible {
-    outline: 2px solid #3c7083; outline-offset: -3px; background: #eaf0f2;
+    outline: 2px solid #42695c; outline-offset: -3px; background: #eaf0f2;
   }
   body:has(#lf-workstation) .cd2004-lookup-empty p { margin: 0; }
   #lf-workstation .lf-closeout-panel [role=tabpanel] { min-width: 0; }
@@ -262,7 +263,7 @@
   }
   #lf-workstation .lf-shelf-intro { padding: 19px 19px 14px; border-bottom: 1px solid #e5e1dc; }
   #lf-workstation .lf-shelf-intro > strong { display: block; color: var(--lf-leaf); font: 400 23px/28px var(--lf-display); }
-  #lf-workstation .lf-shelf-intro p { margin: 7px 0 0; color: #526b79; font: 400 12px/19px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-intro p { margin: 7px 0 0; color: #607168; font: 400 12px/19px var(--tw-font-sans); }
   #lf-workstation .lf-shelf-actions { display: grid; padding: 8px; gap: 4px; }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button {
     display: flex; align-items: center; justify-content: flex-start; gap: 12px;
@@ -274,12 +275,12 @@
   #lf-workstation .lf-shelf-actions > button > svg { flex: 0 0 18px; width: 18px; height: 18px; color: var(--lf-leaf); }
   #lf-workstation .lf-shelf-actions > button > span:has(strong) { flex: 1; min-width: 0; }
   #lf-workstation .lf-shelf-actions > button strong { display: block; font: 500 13px/20px var(--tw-font-sans); }
-  #lf-workstation .lf-shelf-actions > button small { display: block; margin-top: 2px; color: #526b79; font: 400 11px/17px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-actions > button small { display: block; margin-top: 2px; color: #607168; font: 400 11px/17px var(--tw-font-sans); }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button:hover:not(:disabled) { background: #f1eef3; }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button.is-danger { color: #913d33; }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button.is-danger:hover:not(:disabled) { background: #fbece6; }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button:disabled { background: #f3f3f0; color: #61737d; border-color: transparent; cursor: not-allowed; }
-  #lf-workstation .lf-shelf-panel kbd { display: inline-block; background: transparent; padding: 0; border: 0; color: #526b79; font: 400 10px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-panel kbd { display: inline-block; background: transparent; padding: 0; border: 0; color: #607168; font: 400 10px/18px var(--tw-font-sans); }
   /* These rows replace icon-only header controls. Keep their useful labels at
      every size; the older toolbar's span-hiding rules must not leak in. */
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button > span { display: block; }
@@ -320,7 +321,7 @@
   #lf-workstation .lf-review-disclosure[open] > summary { padding-bottom: 8px; }
   #lf-workstation .lf-review-disclosure > summary:hover { background: #f8efea; }
   #lf-workstation .lf-shelf-trigger:focus-visible,
-  #lf-workstation .lf-review-disclosure > summary:focus-visible { outline: 2px solid #3c7083; outline-offset: 2px; }
+  #lf-workstation .lf-review-disclosure > summary:focus-visible { outline: 2px solid #42695c; outline-offset: 2px; }
 
   @media (max-width: 949px) {
     #lf-workstation .lf-service-shortcut { min-height: 68px; padding: 12px 14px; }
@@ -353,7 +354,7 @@
 @media screen {
   :root {
     --lf-gutter: 40px;
-    --lf-rule: #dce2e3;
+    --lf-rule: #dce1d9;
     --lf-dialog-gutter: 24px;
   }
   #lf-workstation { text-rendering: optimizeLegibility; }
@@ -566,7 +567,7 @@
   }
   #lf-workstation .cd2004-note-section > header small { color: var(--lf-muted); font-size: 11px; }
   #lf-workstation .cd2004-note-section > header .cd2004-note-mark {
-    min-height: 28px; padding: 3px 8px; color: #425f70; background: #f0f4f3;
+    min-height: 28px; padding: 3px 8px; color: #4d655c; background: #f0f4f3;
     font: 500 11px/20px var(--tw-font-sans); text-transform: none; letter-spacing: 0;
   }
   #lf-workstation .cd2004-note-section > header .cd2004-note-mark:hover:not(:disabled) { background: #e4ece9; }
@@ -576,4 +577,194 @@
     background: #fbf4f2; color: #813d37; border-left: 3px solid #b67870;
   }
   #lf-workstation .wfp-report-preview > summary { padding: 10px 14px; color: var(--lf-ink); background: #f5f4f2; font: 600 12px/20px var(--tw-font-sans); text-transform: none; letter-spacing: 0; }
+}
+
+/* Clinic composition: a service desk, a working sheet and a readable document.
+ * Container-based section navigation follows the form's actual width, including
+ * when a preview is open. It never changes fields, evaluation or record state. */
+@media screen {
+  :root {
+    --lf-canvas: #f5f2ed;
+    --lf-surface: #fffefa;
+    --lf-soft: #f3f4ee;
+    --lf-rule: #dce1d9;
+    --lf-gutter: 32px;
+  }
+  #lf-workstation.lf-workstation > .tebra-context-rail { border-top: 0; border-bottom: 1px solid var(--lf-line); }
+  #lf-workstation .lf-section-rail { min-height: 68px; padding-block: 10px; }
+  #lf-workstation .ipmg-brand-logo { width: 112px; height: 40px; }
+  #lf-workstation .ipmg-product-name { max-width: none; font: 500 16px/24px var(--tw-font-sans); letter-spacing: -.4px; color: var(--lf-ink); padding-left: 20px; }
+  #lf-workstation .lf-document-action { border-radius: 6px; }
+  #lf-workstation .tebra-app-header-main { background: var(--lf-canvas); }
+  #lf-workstation .cd2004-patient-banner { background: #eef1eb; border: 0; padding-block: 11px; }
+  #lf-workstation .cd2004-patient-primary > svg { width: 30px; height: 30px; padding: 6px; border-radius: 50%; background: #dde6dd; }
+  #lf-workstation .cd2004-patient-banner.has-mismatch { border: 2px solid var(--tw-stop-fg); }
+  #lf-workstation .cd2004-patient-banner small { letter-spacing: 0; }
+  #lf-workstation .lf-service-header { padding: 20px var(--lf-gutter) 14px; gap: 8px 24px; background: var(--lf-canvas); border: 0; }
+  #lf-workstation .lf-service-heading { display: block; }
+  #lf-workstation .lf-service-heading .lf-eyebrow { font-size: 9px; letter-spacing: .12em; }
+  #lf-workstation .lf-service-heading h1 { margin: 3px 0 0; color: var(--lf-ink); font-size: 34px; }
+  #lf-workstation .lf-service-guidance { grid-column: 1/-1; display: flex; align-items: start; justify-content: space-between; gap: 12px; min-width: 0; }
+  #lf-workstation .lf-service-guidance .lf-form-legend { flex: 0 0 auto; margin: 3px 0 0; font-size: 10px; }
+  #lf-workstation .lf-service-guidance .ipmg-review-cue { flex: 0 1 auto; border: 0; border-radius: 0; background: transparent; }
+  #lf-workstation .lf-review-disclosure > summary { min-height: 24px; padding: 3px 0; gap: 8px; }
+  #lf-workstation .lf-review-disclosure > summary strong { color: var(--lf-ink); }
+  #lf-workstation .lf-review-disclosure > summary:hover { background: transparent; }
+  #lf-workstation .lf-review-tail { color: var(--lf-leaf); }
+  #lf-workstation .lf-review-detail { padding: 9px 0 2px; max-width: 560px; }
+  #lf-workstation .lf-view-switch { border: 1px solid #c9d4cb; border-radius: 7px; padding: 3px; background: #e8ede5; gap: 3px; }
+  #lf-workstation .lf-view-switch button { border-radius: 4px; background: transparent; color: #4d655c; }
+  #lf-workstation .lf-view-switch button[aria-pressed=true] { background: #fffefa; color: var(--lf-ink); box-shadow: 0 1px 3px rgb(38 62 56 / 8%); }
+
+  /* The worklist puts services beside current work, leaving one useful queue. */
+  #lf-workstation .lf-start-center { display: grid; grid-template-columns: 292px minmax(0,1fr); grid-template-rows: max-content minmax(0,1fr) max-content; gap: 28px; max-width: 1440px; height: 100%; padding: 36px var(--lf-gutter) 24px; align-content: start; }
+  #lf-workstation .lf-worklist-heading { grid-column: 1/-1; padding: 0 0 5px; }
+  #lf-workstation .lf-worklist-heading h1 { color: var(--lf-ink); font-size: 48px; line-height: 1.08; margin: 7px 0 12px; }
+  #lf-workstation .lf-worklist-heading time { padding: 6px 0; font: 500 13px/22px var(--tw-font-sans); color: var(--lf-muted); }
+  #lf-workstation .lf-service-launcher { min-height: 0; overflow-y: auto; padding: 24px 20px; border: 0; border-radius: 10px; background: #e7ece3; }
+  #lf-workstation :is(.lf-service-launcher,.lf-worklist-intro) h2 { margin: 0; font: 400 25px/31px var(--lf-display); letter-spacing: -.3px; color: var(--lf-ink); }
+  #lf-workstation :is(.lf-service-launcher,.lf-worklist-intro) > p { margin: 7px 0 22px; font: 400 12px/20px var(--tw-font-sans); color: var(--lf-muted); }
+  #lf-workstation .lf-service-launcher .lf-service-strip { display: flex; flex-direction: column; border: 0; border-radius: 0; background: transparent; }
+  #lf-workstation .lf-service-launcher .lf-service-shortcut { width: 100%; min-height: 80px; padding: 15px 0; gap: 12px; border: 0; border-top: 1px solid #cbd6c9; border-radius: 0; background: transparent; }
+  #lf-workstation .lf-service-launcher .lf-service-shortcut:hover { background: #f2f5ed; }
+  #lf-workstation .lf-shortcut-number { background: #fffefa; width: 36px; height: 40px; border-radius: 6px; flex: 0 0 36px; color: var(--lf-leaf); }
+  #lf-workstation .lf-shortcut-number svg { width: 20px; height: 20px; }
+  #lf-workstation .lf-shortcut-copy strong { font: 500 14px/21px var(--tw-font-sans); color: var(--lf-ink); }
+  #lf-workstation .lf-shortcut-copy small { margin-top: 3px; font-size: 11px; }
+  #lf-workstation .lf-shortcut-arrow { font-size: 18px; }
+  #lf-workstation .lf-worklist-card { align-self: stretch; background: #fffefa; border: 1px solid #dce1d9; border-radius: 10px; overflow: hidden; }
+  #lf-workstation .lf-worklist-intro { flex: 0 0 auto; padding: 24px 24px 0; }
+  #lf-workstation .lf-worklist-intro > p { margin-bottom: 14px; }
+  #lf-workstation .lf-worklist-controls { flex: 0 0 auto; background: transparent; padding: 10px 24px 14px; min-height: 48px; flex-wrap: wrap; gap: 10px 18px; }
+  #lf-workstation .lf-start-center .cd2004-worklist-sheet { min-height: 0; }
+  #lf-workstation .lf-start-center .cd2004-worklist-tabs { gap: 19px; }
+  #lf-workstation .lf-worklist-search { margin-left: auto; flex: 0 1 225px; }
+  #lf-workstation .lf-worklist-empty { min-height: 278px; background: transparent; gap: 9px; padding: 25px; }
+  #lf-workstation .lf-empty-mark { width: 47px; height: 47px; border: 1px solid #d4dfd4; border-radius: 50%; background: #edf2e9; margin-bottom: 9px; }
+  #lf-workstation .lf-empty-mark > span { display: none; }
+  #lf-workstation .lf-worklist-empty strong { color: var(--lf-ink); font: 400 25px/31px var(--lf-display); }
+  #lf-workstation .lf-start-center .cd2004-worklist-footer { flex: 0 0 auto; background: #f8f9f4; border-top: 1px solid var(--lf-line); padding: 13px 24px; }
+  #lf-workstation .lf-workspace-footnote { grid-column: 2; }
+  #lf-workstation .lf-work-table th { background: #f1f4ed; }
+  #lf-workstation .lf-work-table tr:hover td { background: #f6f8f1; }
+
+  /* A working sheet sits within the canvas. The action dock remains attached. */
+  #lf-workstation:not([data-kiosk-mode=true]) .cd2004-workspace:not([data-workflow=home]) .cd2004-transaction-window { margin: 0 24px 16px; gap: 18px; }
+  #lf-workstation:not([data-kiosk-mode=true]) .cd2004-workflow-slot:is([data-workflow=administer],[data-workflow=uds],[data-workflow=samples],[data-workflow=forms]) { container: workflow / inline-size; background: #fff; border: 1px solid var(--lf-line); border-radius: 10px; }
+  #lf-workstation .wfp-panel .wfp-section-head { font: 600 17px/26px var(--tw-font-sans); color: var(--lf-ink); letter-spacing: -.25px; padding-bottom: 19px; }
+  #lf-workstation .wfp-panel .wfp-section { padding-top: 25px; padding-bottom: 30px; }
+  #lf-workstation .wfp-panel .wfp-section-body { gap: 22px; }
+  #lf-workstation .wfp-panel .wfp-field-caption { font-size: 12px; color: #425b50; }
+  #lf-workstation .wfp-panel .wfp-field :is(input:not([type=checkbox]):not([type=radio]),select,textarea) { border-color: #b8c5bd; background-color: #fffefa; }
+  #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):disabled { background: #f0f2ed; color: #627066; }
+  #lf-workstation .wfp-panel .wfp-field.is-incomplete :is(input,select,textarea) { border-color: #ae625c; }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button { background: #f4f6f0; border-color: #b8c5bd; color: var(--lf-leaf); }
+  #lf-workstation .wfp-panel .wfp-tabbar { padding-top: 5px; gap: 20px; }
+  #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { border-bottom-color: #53745b; }
+  #lf-workstation .wfp-summary-fact { background: transparent; border: 0; padding-inline: 0; margin-right: 8px; }
+  #lf-workstation .wfp-panel .wfp-summary-bar { padding-block: 8px; }
+  #lf-workstation .wfp-operator-guidance { background: #f0f4ec; border-radius: 6px; }
+  #lf-workstation :is(.cd2004-record-actions,.wfp-panel > .wfp-summary-bar.lf-service-footer) { background: #f7f8f2; border-top: 1px solid var(--lf-line); }
+  #lf-workstation .lf-recovery-notice { padding: 12px 16px; border: 0; border-left: 2px solid #78947a; background: #f3f6ee; border-radius: 0; margin-bottom: 24px; }
+  #lf-workstation .lf-recovery-notice.is-error { background: #fff7f4; border-left-color: #ae625c; }
+
+  /* Paper preview: a document with supporting checks, rather than another form. */
+  #lf-workstation .cd2004-document-split { border: 0; background: transparent; }
+  #lf-workstation .cd2004-document-split .cd2004-inspector-window { border: 0; background: transparent; border-radius: 0; }
+  #lf-workstation .cd2004-inspector-window > .cd2004-window-titlebar { padding: 0 0 11px; min-height: 34px; border: 0; background: transparent; }
+  #lf-workstation .cd2004-inspector-window .cd2004-window-title { font: 500 12px/20px var(--tw-font-sans); color: var(--lf-muted); text-transform: none; }
+  #lf-workstation .cd2004-inspector-window > .cd2004-window-body { overflow: hidden; background: transparent; }
+  #lf-workstation .cd2004-document-split .cd2004-inspector { display: flex; flex-direction: column; gap: 16px; padding: 0 4px 16px 0; min-height: 0; height: 100%; overflow: auto; background: transparent; }
+  #lf-workstation .lf-document-checks { flex: 0 0 auto; min-width: 0; border: 1px solid #dedfd6; background: #f9f8f1; border-radius: 7px; overflow: hidden; }
+  #lf-workstation .lf-document-checks .cd2004-readiness-verdict { min-height: 32px; padding: 8px 13px; font-size: 11px; }
+  #lf-workstation .lf-document-checks .cd2004-readiness-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); max-height: none; overflow: visible; padding: 3px 9px 8px; background: transparent; }
+  #lf-workstation .lf-document-checks .cd2004-readiness-item { display: grid; grid-template-columns: 14px minmax(0,1fr); align-items: start; gap: 3px 6px; padding: 6px 5px; min-height: 0; border: 0; background: transparent; }
+  #lf-workstation .lf-document-checks .cd2004-readiness-item > span > strong { font-size: 11px; line-height: 17px; }
+  #lf-workstation .lf-document-checks .cd2004-readiness-item > span > small { font-size: 10px; line-height: 15px; margin-top: 2px; }
+  #lf-workstation .lf-document-checks .cd2004-readiness-state { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #lf-workstation .lf-note-paper { flex: 0 0 auto; min-width: 0; border: 1px solid #d6ded3; border-radius: 3px; background: #fffefa; box-shadow: 0 2px 5px rgb(38 62 56 / 4%); padding: 24px 23px 0; }
+  #lf-workstation .lf-note-paper .cd2004-note-heading { padding: 0 0 13px; border: 0; background: transparent; gap: 9px; flex-wrap: wrap; }
+  #lf-workstation .lf-note-paper .cd2004-note-heading > svg { display: none; }
+  #lf-workstation .lf-note-paper .cd2004-note-heading > strong { color: var(--lf-ink); font: 400 25px/31px var(--lf-display); }
+  #lf-workstation .lf-note-paper .cd2004-note-marks { margin-left: auto; }
+  #lf-workstation .lf-note-paper .cd2004-note-ident { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 0 0 17px; margin: 0; background: transparent; border: 0; }
+  #lf-workstation .lf-note-paper .cd2004-note-ident > div { display: block; }
+  #lf-workstation .lf-note-paper .cd2004-note-ident dt { font-size: 9px; color: var(--lf-muted); margin-bottom: 3px; }
+  #lf-workstation .lf-note-paper .cd2004-note-ident dd { font-size: 12px; margin: 0; }
+  #lf-workstation .lf-note-paper .cd2004-note-toolbar { padding: 11px 0; border-block: 1px solid var(--lf-line); background: transparent; }
+  #lf-workstation .lf-note-paper .lf-note-boundary { padding: 12px 0; background: transparent; border: 0; font-size: 11px; }
+  #lf-workstation .lf-note-paper .cd2004-note-sections { display: block; overflow: visible; flex: none; padding: 0; background: transparent; }
+  #lf-workstation .lf-note-paper .cd2004-note-section { border: 0; margin: 0; padding: 12px 0 17px; border-top: 1px solid var(--lf-line); background: transparent; }
+  #lf-workstation .lf-note-paper .cd2004-note-section > header { padding: 0 0 10px; border: 0; background: transparent; }
+  #lf-workstation .lf-note-paper .cd2004-note-body { padding: 0; background: transparent; line-height: 1.7; font-size: 12px; }
+  #lf-workstation .lf-note-paper .cd2004-note-foot { padding: 12px 0; border-top: 1px solid var(--lf-line); background: transparent; font-size: 9px; }
+  #lf-workstation .lf-note-paper .cd2004-note-eod { padding: 18px 0; font-size: 10px; }
+
+  @container workflow (min-width: 1080px) {
+    #lf-workstation:not([data-kiosk-mode=true]) .wfp-panel { display: grid; grid-template-columns: 188px minmax(0,1fr); grid-template-rows: auto minmax(0,1fr) auto; height: 100%; min-height: 0; overflow: hidden; }
+    #lf-workstation .wfp-transaction-chrome { display: contents; }
+    #lf-workstation .wfp-transaction-chrome > .wfp-summary-bar { grid-column: 2; grid-row: 1; padding: 12px 32px; border-bottom: 1px solid var(--lf-line); }
+    #lf-workstation .wfp-panel .wfp-tabbar { grid-column: 1; grid-row: 1/3; display: flex; flex-direction: column; align-items: stretch; align-self: stretch; gap: 5px; padding: 22px 12px; border: 0; border-right: 1px solid var(--lf-line); background: #f5f7f0; overflow-y: auto; }
+    #lf-workstation .wfp-panel .wfp-tabbar::before { content: "IN THIS RECORD"; margin: 0 12px 15px; color: var(--lf-muted); font: 600 9px/16px var(--tw-font-sans); letter-spacing: .11em; }
+    #lf-workstation .wfp-panel .wfp-tab { flex: 0 0 auto; width: 100%; min-height: 54px; padding: 12px; justify-content: flex-start; text-align: left; border: 0; border-left: 2px solid transparent; border-radius: 4px; font-size: 12px; background: transparent; }
+    #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { background: #e3eadd; border-left-color: #4e6e50; border-bottom: 0; color: var(--lf-ink); }
+    #lf-workstation .wfp-panel .wfp-tab > :is(.wfp-ledger-state,.wfp-tab-badge):last-child { margin-left: auto; }
+    #lf-workstation .wfp-panel :is(.wfp-transaction-page,.lf-service-scroll) { grid-column: 2; grid-row: 2; width: 100%; min-width: 0; min-height: 0; overflow-y: auto; padding: 28px 32px; }
+    #lf-workstation .wfp-panel > .lf-service-scroll { grid-row: 1/3; }
+    #lf-workstation .wfp-panel > :is(.cd2004-record-actions,.lf-service-footer) { grid-column: 1/-1; grid-row: 3; }
+  }
+  @media (max-width: 1179px) {
+    :root { --lf-gutter: 24px; }
+    #lf-workstation .lf-start-center { grid-template-columns: 235px minmax(0,1fr); gap: 20px; }
+    #lf-workstation .lf-service-launcher { padding: 21px 16px; }
+    #lf-workstation .lf-service-launcher .lf-service-shortcut { min-height: 64px; padding-block: 11px; }
+    #lf-workstation .lf-worklist-intro { padding-inline: 20px; }
+    #lf-workstation .lf-worklist-controls { padding-inline: 20px; }
+    #lf-workstation .lf-start-center .cd2004-worklist-tabs { gap: 14px; }
+    #lf-workstation .lf-worklist-search { flex: 1 1 100%; }
+    #lf-workstation .lf-service-header { padding-top: 15px; }
+    #lf-workstation .lf-service-heading h1 { font-size: 30px; }
+    #lf-workstation:not([data-kiosk-mode=true]) .cd2004-workspace:not([data-workflow=home]) .cd2004-transaction-window { margin-inline: 14px; margin-bottom: 10px; gap: 12px; }
+    #lf-workstation .lf-service-guidance .lf-review-brief { display: none; }
+    #lf-workstation .lf-document-checks .cd2004-readiness-list { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 949px) {
+    :root { --lf-gutter: 20px; }
+    #lf-workstation .lf-start-center { grid-template-columns: 215px minmax(0,1fr); gap: 18px; padding-top: 24px; }
+    #lf-workstation .lf-service-launcher { padding-inline: 16px; }
+    #lf-workstation .lf-service-launcher > p { margin-bottom: 14px; }
+    #lf-workstation .lf-workspace-footnote { grid-column: 1/-1; }
+    #lf-workstation .lf-worklist-heading h1 { font-size: 39px; }
+    #lf-workstation .lf-service-heading h1 { font-size: 28px; }
+    #lf-workstation .ipmg-product-name { font-size: 14px; padding-left: 13px; }
+    #lf-workstation .lf-service-guidance { gap: 8px; }
+  }
+  @media (max-height: 800px) {
+    #lf-workstation .lf-start-center { gap: 12px; padding-block: 16px 12px; }
+    #lf-workstation .lf-worklist-heading h1 { font-size: 32px; margin: 3px 0 5px; }
+    #lf-workstation .lf-service-launcher { padding: 12px 16px; }
+    #lf-workstation :is(.lf-service-launcher,.lf-worklist-intro) h2 { font-size: 21px; line-height: 26px; }
+    #lf-workstation .lf-service-launcher > p { font-size: 11px; line-height: 17px; margin-top: 5px; }
+    #lf-workstation .lf-service-launcher .lf-service-shortcut { min-height: 47px; padding-block: 6px; }
+    #lf-workstation .lf-shortcut-number { height: 32px; width: 30px; flex-basis: 30px; }
+    #lf-workstation .lf-shortcut-copy strong { font-size: 12px; line-height: 17px; }
+    #lf-workstation .lf-shortcut-copy small { margin-top: 1px; font-size: 10px; line-height: 15px; }
+    #lf-workstation .lf-worklist-intro { padding: 12px 16px 0; }
+    #lf-workstation .lf-worklist-intro > p { font-size: 11px; line-height: 17px; margin: 4px 0 6px; }
+    #lf-workstation .lf-worklist-controls { gap: 6px 15px; padding: 4px 16px 8px; }
+    #lf-workstation .lf-worklist-search { flex: 0 1 200px; }
+    #lf-workstation .lf-start-center .cd2004-worklist-footer { padding: 8px 16px; }
+    #lf-workstation .lf-worklist-empty { min-height: 180px; padding: 16px; }
+    #lf-workstation .lf-empty-mark { width: 36px; height: 36px; margin-bottom: 0; }
+    #lf-workstation .lf-worklist-empty strong { font-size: 23px; line-height: 28px; }
+  }
+  @media (max-height: 700px) {
+    #lf-workstation .lf-service-header { padding-block: 10px 8px; gap: 4px 15px; }
+    #lf-workstation .lf-service-heading h1 { font-size: 28px; }
+    #lf-workstation .lf-service-heading .lf-eyebrow { font-size: 8px; line-height: 12px; }
+    #lf-workstation .lf-service-guidance .lf-form-legend { font-size: 9px; margin-top: 2px; }
+    #lf-workstation .lf-review-disclosure > summary { min-height: 20px; padding-block: 0; }
+    #lf-workstation .wfp-panel .wfp-section { padding-block: 17px 20px; }
+    #lf-workstation .wfp-panel .wfp-section-head { padding-bottom: 14px; }
+  }
 }

@@ -40,8 +40,7 @@ interface NoteInspectorProps {
 }
 
 /**
- * One section of the document, rendered as a terminal document viewer renders
- * one: a numbered gutter beside the text.
+ * One section of the document, preserving the exact generated lines.
  *
  * The gutter is a sibling grid cell per line rather than a single column of
  * numbers beside a single block of text. That is what keeps the numbering
@@ -113,6 +112,7 @@ export function NoteInspector({
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
+      <div class="lf-document-checks">
       {/* The aggregate verdict, colour-coded, because a per-row scan is slower
           than staff need when they are deciding whether a note can be signed.
           Scope is decided in `summarizeReadinessVerdict`; wording in
@@ -172,6 +172,8 @@ export function NoteInspector({
         )}
       </div>
 
+      </div>
+      <article class="lf-note-paper" aria-label="Generated documentation">
       {/* A document header, not a panel caption. It names the document, whose
           it is, and what state it is in - which is what separates a document
           viewer from a text box, and what the old preview never said. */}
@@ -316,6 +318,7 @@ export function NoteInspector({
         </div>
       )}
 
+      </article>
       <div class="cd2004-post-zone">
         {postState === "error" && (
           <div class="cd2004-post-error" role="alert">

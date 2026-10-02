@@ -27,6 +27,19 @@ test.describe('Lightfully standalone shell', () => {
       }
       await page.keyboard.press('Escape');
       await expect(page.locator('.cd2004-worklist-tabs')).toBeInViewport();
+      for (const shortcut of await page.locator('.lf-service-shortcut').all()) {
+        await expect(shortcut).toBeInViewport({ ratio: 1 });
+      }
+      await expect(page.locator('.lf-worklist-empty strong')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('.lf-worklist-empty button')).toBeInViewport({ ratio: 1 });
+      const composition = await page.locator('.lf-start-center').evaluate(node => {
+        const heading = node.querySelector('.lf-worklist-heading').getBoundingClientRect();
+        const service = node.querySelector('.lf-service-launcher').getBoundingClientRect();
+        const work = node.querySelector('.lf-worklist-card').getBoundingClientRect();
+        return { headingBottom: heading.bottom, serviceTop: service.top, workTop: work.top };
+      });
+      expect(composition.headingBottom).toBeLessThanOrEqual(composition.serviceTop);
+      expect(composition.headingBottom).toBeLessThanOrEqual(composition.workTop);
       const worklistVisibleHeight = await page.locator('.cd2004-worklist-sheet').evaluate(node => {
         const r = node.getBoundingClientRect();
         const host = node.closest('.lf-start-center').getBoundingClientRect();
