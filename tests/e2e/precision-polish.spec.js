@@ -65,6 +65,13 @@ test('large local record list keeps all results, unique names and current reload
  const before=await page.evaluate(key=>localStorage.getItem(key),KEY);
  const open=page.getByRole('button',{name:'Open saved notes (F11)'});await open.click();
  const rows=page.locator('.records-drawer [data-records-open]');await expect(rows).toHaveCount(300);
+ const drawer=page.locator('.records-drawer');
+ expect(await drawer.locator('..').evaluate(n=>getComputedStyle(n,'::backdrop').backdropFilter)).toBe('none');
+ const edges=await drawer.evaluate(n=>({title:n.querySelector('h2').getBoundingClientRect().left,header:n.querySelector('th:first-child button').getBoundingClientRect().left,search:n.querySelector('input').getBoundingClientRect().left}));
+ expect(Math.abs(edges.title-edges.header)).toBeLessThanOrEqual(1);
+ expect(Math.abs(edges.title-edges.search)).toBeLessThanOrEqual(1);
+ const completeRows=await rows.evaluateAll(ns=>{const viewport=ns[0].closest('.records-drawer-results').getBoundingClientRect();return ns.filter(n=>{const r=n.getBoundingClientRect();return r.top>=viewport.top&&r.bottom<=viewport.bottom}).length});
+ expect(completeRows).toBeGreaterThanOrEqual(3);
  const labels=await rows.evaluateAll(nodes=>nodes.map(n=>n.getAttribute('aria-label')));expect(new Set(labels).size).toBe(300);
  const input=page.locator('#recordsDrawerSearch');
  await input.fill('0299');await expect(rows).toHaveCount(1);await expect(rows.first()).toContainText('0299');

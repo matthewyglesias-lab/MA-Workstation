@@ -63,6 +63,7 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/browser-results.json
         run: >-
           npx playwright test
+          tests/e2e/precision-polish.spec.js
           tests/e2e/calm-workspace.spec.js
           tests/e2e/deep-refinement.spec.js
           tests/e2e/lightfully-direction.spec.js

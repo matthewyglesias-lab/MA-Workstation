@@ -90,7 +90,7 @@
   body:has(#lf-workstation) .cd2004-attestation-review { column-gap: 24px; }
   body:has(#lf-workstation) .cd2004-attestation-review dd { margin-left: 0; }
   /* A plain dimmed backdrop avoids a full-window blur/compositing pass. */
-  body:has(#lf-workstation) dialog::backdrop { backdrop-filter: none; }
+  body:has(#lf-workstation) dialog[open][class]::backdrop { backdrop-filter: none; }
 
   /* Long names and explanatory text wrap rather than push neighboring columns. */
   #lf-workstation :is(.tebra-summary-card-head h3,.tebra-summary-card-body,
@@ -126,4 +126,25 @@
     #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea)[aria-invalid=true] { border-color: Mark; }
     body:has(#lf-workstation) .notes-table-row:focus-visible { outline-color: Highlight; }
   }
+}
+
+/* The saved-record overlay is a readable register, not a narrow card. Its
+ * first column and all dialog chrome share the same left edge. */
+@media screen {
+  body:has(#lf-workstation) .records-drawer {
+    width: min(840px, calc(100vw - 48px));
+    height: min(680px, calc(100dvh - 48px));
+  }
+  body:has(#lf-workstation) .records-drawer-results { padding-inline: 0; }
+  body:has(#lf-workstation) :is(.records-drawer-search,.records-drawer-status,.records-drawer-foot,.lf-records-reset) { padding-inline: var(--lf-dialog-gutter); }
+  body:has(#lf-workstation) .records-drawer-head p { margin: 10px 0 0; line-height: 20px; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(1) { width: 36%; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(2) { width: 8%; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(3) { width: 14%; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(4) { width: 20%; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(5) { width: 22%; }
+  /* The chart's New Note split control stays primary; the global chooser
+     remains available, but no longer competes with the patient's own action. */
+  #lf-workstation[data-chart-view] .lf-document-action { background: #fff8f5; color: #793f36; border-color: #c88275; }
+  #lf-workstation[data-chart-view] .lf-document-action:hover { background: #faeae4; }
 }
