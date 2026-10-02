@@ -271,6 +271,8 @@ test.describe('Injection focus workspace', () => {
     await appointment.getByLabel('Appointment provider', { exact: true }).fill('Synthetic Appointment Provider');
     await appointment.getByLabel('Provider appointment visit type').selectOption('in-person');
     await appointment.getByLabel('Provider appointment location').fill('Confirmed synthetic office');
+    // Scheduling metadata must not silently erase the already completed clinical review.
+    await expect(finish).toBeEnabled();
     await finish.click();
     await confirmLocalSignature(page);
 
@@ -286,6 +288,8 @@ test.describe('Injection focus workspace', () => {
     await expect(printedAppointment).toContainText('Friday, August 28, 2026');
     await expect(printedAppointment).toContainText('10:30 AM');
     const signedHandout = await page.locator('#avsSheet').innerHTML();
+    // The native dialog is stubbed; explicitly end the simulated print session.
+    await page.evaluate(() => document.body.classList.remove('print-avs'));
     await completion.getByRole('button', { name: 'Print patient handout' }).click();
     expect(await page.locator('#avsSheet').innerHTML()).toBe(signedHandout);
     await page.evaluate(() => document.body.classList.remove('print-avs'));

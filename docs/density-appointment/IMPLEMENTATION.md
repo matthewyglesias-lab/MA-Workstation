@@ -87,9 +87,14 @@ pagination and physical handwriting clearance still require verification.
 
 The clinical preservation script retains its original baseline and protected
 paths. Exact, reviewed hashes are added for the optional metadata/rendering
-files. The injection engine and guidance executable source are byte-identical
-to the starting candidate after removing only the new optional type declarations
-and their comments. The script is not changed to broadly exempt clinical files.
+files. Browser verification found that the all-facts administration fingerprint
+was inadvertently including appointment metadata, so editing a reminder cleared
+an already completed clinical review. The reviewed fix explicitly excludes only
+`avsAppointment` from that fingerprint. Medication/dose/timing rules and the
+clinical facts in the fingerprint remain unchanged; tests prove reminder-only
+edits preserve review while dose, provider, dates, time and lot edits invalidate
+it. Guidance executable source remains unchanged beyond the optional type. The
+script is not changed to broadly exempt clinical files.
 The full-history guard itself cannot run against the source-only local checkout.
 
 ## Verification completed locally
@@ -121,3 +126,16 @@ colors, pointer/keyboard interaction, and actual print pages before release.
 
 Normal local browser navigation is blocked by environment policy. No attempt
 was made to disable or bypass that policy. No code was merged or deployed.
+
+
+## First repository browser review
+
+Run 37055658690 used full Git history: 812 unit tests passed, with no skips.
+Forty of 42 focused browser cases passed, including actual 34px desktop geometry
+at 1440/1366/800, 44px guided controls, and five appointment print variants.
+Two failures were investigated rather than ignored: the clinical-review metadata
+coupling above, and a recovery test selecting an identically named background
+worklist row instead of the F11 dialog row. Recovery now explicitly selects and
+focuses the modal-owned row. Additional long, remote, cold-chain and initiation
+appointment printing cases use the actual application renderer and PDF output.
+These corrections require their own exact-source complete review before merge.

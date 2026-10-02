@@ -958,7 +958,8 @@ export const injectionAttestationRequired = (
  * Stable signature of every encounter fact that participates in the final
  * administration review. Disposition is deliberately excluded: choosing a
  * disposition records the review; changing any clinical/documentation fact
- * after that choice invalidates it.
+ * after that choice invalidates it. The optional provider-appointment reminder
+ * is handout metadata only and does not participate in administration review.
  */
 export const injectionAdministrationReviewFingerprint = (
   encounter: InjectionEncounter,
@@ -969,7 +970,11 @@ export const injectionAdministrationReviewFingerprint = (
     clinicalReferenceVersion: _clinicalReferenceVersion,
     ...reviewedDetails
   } = encounter.details ?? {};
-  const { disposition: _disposition, ...encounterFacts } = encounter;
+  const {
+    disposition: _disposition,
+    avsAppointment: _avsAppointment,
+    ...encounterFacts
+  } = encounter;
   // These three detail fields are renderer/catalog provenance that can settle
   // asynchronously after the visible clinical value is already present. The
   // actual NDC, next-dose date, and every staff-entered review fact remain in

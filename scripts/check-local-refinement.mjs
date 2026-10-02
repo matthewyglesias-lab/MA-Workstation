@@ -16,10 +16,11 @@ const reviewedScope = new Set([
   'src/persistence/storage.ts',
   'src/persistence/workflow-recovery.ts',
 ]);
-// The reviewed unconfirmed-default corrections and optional handout type are permitted in these
+// Reviewed defaults, the optional handout type, and its explicit exclusion from
+// administration-review invalidation are permitted in these
 // clinical/compatibility files. A different byte requires an explicit re-review.
 const reviewedDefaults = new Map([
-  ['src/domain/injection.ts', 'dce597e006f458e1b5f07c7fab498bad98f7c3a42f41bba7aa00438192597d75'],
+  ['src/domain/injection.ts', 'c78e1c6602fa11a06a75adb2722cd0f78da790891ba249fa62253a6efcaa4b91'],
   ['src/legacy/legacy-markup.html', '97ea5fa36ff7e4b0a6ae9f56085f49b6994c9b99df868ce17fae470de430fbd2'],
   ['public/legacy/legacy-runtime.js', 'c570e6e85ceb1f9218fabe232c62a0c699b7c293d47f7def0194ee96e7586381'],
 ]);

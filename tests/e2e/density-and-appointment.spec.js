@@ -61,10 +61,18 @@ test('partial appointment persists through the same draft and identity changes c
   await page.reload();
   // Resume through the original record owner, not by injecting data into a form.
   await page.keyboard.press('F11');
-  const row=page.getByRole('row').filter({hasText:'Appointment, Synthetic'}).first();await row.focus();await page.keyboard.press('Enter');
+  const drawer = page.locator('.records-drawer');
+  await expect(drawer).toBeVisible();
+  // F11 owns focus: never select the identically named background worklist row.
+  const row = drawer.getByRole('row').filter({hasText:'Appointment, Synthetic'});
+  await expect(row).toHaveCount(1);
+  await row.focus(); await expect(row).toBeFocused(); await page.keyboard.press('Enter');
+  await expect(drawer).toBeHidden();
   await panel.getByRole('tab',{name:'Review',exact:true}).click();
   await panel.locator('[data-avs-appointment-editor] summary').click();
   await expect(panel.getByLabel('Provider appointment time')).toHaveValue('10:30');
+  await expect(panel.getByLabel('Appointment provider',{exact:true})).toHaveValue('Synthetic Appointment Provider');
+  await expect(panel.getByLabel('Provider appointment location')).toHaveValue('San Bernardino clinic');
   await panel.getByRole('tab',{name:'Order & Timing',exact:true}).click();
   await panel.locator('input[placeholder="Last, First"]').fill('Different, Synthetic');
   await panel.getByRole('tab',{name:'Review',exact:true}).click();

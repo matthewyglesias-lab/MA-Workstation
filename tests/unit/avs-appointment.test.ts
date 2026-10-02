@@ -3,7 +3,7 @@ import { emptyAvsAppointment, isAvsAppointment, validAppointmentDate, validAppoi
 import { appointmentLineBudget, renderAvsAppointment } from "../../src/domain/avs-appointment-render";
 import { buildInjectionAvsModel, type InjectionAvsInput } from "../../src/domain/injection-avs-content";
 import { buildInjectionAvsHtml, renderInjectionAvsHtml, DEFAULT_AVS_CHROME, selectInjectionAvsLayout } from "../../src/domain/injection-avs-render";
-import { emptyInjectionEncounter, InjectionEngine } from "../../src/domain/injection";
+import { emptyInjectionEncounter, InjectionEngine, injectionAdministrationReviewFingerprint, hasCurrentInjectionAdministrationReview } from "../../src/domain/injection";
 import { injectionPresentationExtensionValue, readInjectionPresentationExtension, TYPED_INJECTION_ENCOUNTER_KEY } from "../../src/presentation/workflows/injection/injection-presentation-extension";
 import { writeFileSync, mkdirSync } from "node:fs";
 const appointment = () => ({ ...emptyAvsAppointment(), mode: "details" as const, date: "2026-11-03", time: "10:30", provider: "Synthetic Provider, PMHNP-BC", location: "San Bernardino clinic", visitType: "in-person" as const });
@@ -77,6 +77,31 @@ describe("patient handout output", () => {
  });
 });
 describe("encounter ownership and backwards compatibility", () => {
+ it("appointment-only edits preserve the current clinical administration review", () => {
+  const encounter = emptyInjectionEncounter();
+  encounter.disposition = {
+   ...encounter.disposition, kind: "administered", reviewedBy: "Synthetic Staff",
+   reviewedAt: "2026-10-02T09:00:00-07:00",
+   reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
+  };
+  expect(hasCurrentInjectionAdministrationReview(encounter)).toBe(true);
+  for (const reminder of [emptyAvsAppointment(), appointment(), { ...appointment(), date: "2026-11-05", time: "11:45" }]) {
+   const edited = { ...encounter, avsAppointment: reminder };
+   expect(injectionAdministrationReviewFingerprint(edited)).toBe(encounter.disposition.reviewFingerprint);
+   expect(hasCurrentInjectionAdministrationReview(edited)).toBe(true);
+  }
+ });
+ it.each(["dose", "orderingProvider", "administrationDate", "administrationTime", "nextDoseDate", "lot"] as const)("clinical %s changes still invalidate administration review", key => {
+  const encounter = { ...emptyInjectionEncounter(), avsAppointment: appointment() };
+  encounter.disposition = {
+   ...encounter.disposition, kind: "administered", reviewedBy: "Synthetic Staff",
+   reviewedAt: "2026-10-02T09:00:00-07:00",
+   reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
+  };
+  const edited = { ...encounter, [key]: "Changed clinical value" };
+  expect(hasCurrentInjectionAdministrationReview(edited)).toBe(false);
+ });
+
  it("round-trips exactly in the existing atomic typed envelope", () => {
   const a={...appointment(),provider:"  Synthetic Provider  "};const source={...emptyInjectionEncounter(),avsAppointment:a};
   const stored=injectionPresentationExtensionValue(source);expect(stored.version).toBe(3);

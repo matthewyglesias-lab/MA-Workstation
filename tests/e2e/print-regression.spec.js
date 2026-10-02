@@ -1502,3 +1502,38 @@ for (const variant of ['write-in', 'typed', 'partial', 'schedule', 'omit']) {
     });
   });
 }
+
+
+// Longer and non-routine documents use the same real renderer and page-fit checks.
+for (const scenario of ['initiation-write-in', 'cold-chain-remote-long', 'vivitrol-partial']) {
+  test(`appointment AVS preserves ${scenario} instructions and pagination`, async ({ page }) => {
+    if (scenario === 'initiation-write-in') await prepareInitiationInjection(page);
+    else if (scenario === 'cold-chain-remote-long') await prepareUzedyColdChainAvs(page);
+    else await prepareVivitrolInjection(page);
+    const editor = await setAppointmentFormat(page, scenario === 'initiation-write-in' ? 'write-in' : 'details');
+    if (scenario !== 'initiation-write-in') {
+      await fillDate(editor.getByLabel('Provider appointment date'), '2026-11-03');
+      await editor.getByLabel('Appointment provider', { exact: true }).fill('Synthetic Appointment Provider for Comprehensive Follow-up and Medication Management, PMHNP-BC');
+      await editor.getByLabel('Provider appointment visit type').selectOption('video');
+      if (scenario === 'cold-chain-remote-long') {
+        await editor.getByLabel('Provider appointment time').fill('13:45');
+        await editor.getByLabel('Provider appointment location').fill('Video visit: use the connection instructions confirmed by the clinic. Contact the front desk if the link has not arrived. This provider appointment is separate from the injection visit; confirm the injection plan with clinic staff.');
+      }
+    }
+    await setFieldsAndRender(page, {bodyClass:'print-avs',renderName:'renderAVS',rootId:'avsSheet'});
+    const reminder = page.locator('#avsSheet .avs2-appointment');
+    await expect(reminder).toHaveCount(1);
+    if (scenario === 'initiation-write-in') await expect(reminder.locator('.avs2-write-line')).toHaveCount(4);
+    else {
+      await expect(reminder).toContainText('Video visit');
+      await expect(reminder).not.toContainText('In person');
+      if (scenario === 'cold-chain-remote-long') await expect(reminder).toContainText('1:45 PM');
+      else await expect(reminder.locator('.avs2-write-line')).toHaveCount(2);
+    }
+    await expectAvsPagesToFit(page);
+    await expectAvsSemanticStructure(page);
+    const pages = await page.locator('#avsSheet .avs2-page').count();
+    expect(pages).toBeLessThanOrEqual(4);
+    await expectPrintContract(page, {rootId:'avsSheet',content:[scenario==='initiation-write-in'?'Invega Sustenna':scenario==='cold-chain-remote-long'?'Uzedy':'Vivitrol'],minPages:pages,maxPages:pages,checkParity:false});
+  });
+}
