@@ -1,3 +1,6 @@
+import { trapDialogTabKey } from "./records-drawer-shared";
+import { useBackdropDismiss } from "./lightfully/use-backdrop-dismiss";
+import { DialogHeading } from "./lightfully/DialogHeading";
 import { useEffect, useRef, useState } from 'preact/hooks';
 
 export interface ClinicOption {
@@ -34,6 +37,7 @@ export function ContextDialog({
 }: ContextDialogProps) {
   const [staff, setStaff] = useState(staffValue);
   const [location, setLocation] = useState(locationValue);
+  const backdrop = useBackdropDismiss(onClose, staff === staffValue && location === locationValue);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const staffControlRef = useRef<HTMLInputElement>(null);
   const locationControlRef = useRef<HTMLSelectElement>(null);
@@ -67,21 +71,11 @@ export function ContextDialog({
         event.preventDefault();
         onClose();
       }}
-      onClick={(event) => {
-        // A click landing on the dialog element itself is a backdrop click:
-        // the content sits in an inner wrapper, so it never targets the host.
-        if (event.target === dialogRef.current) onClose();
-      }}
+      onKeyDown={event => trapDialogTabKey(dialogRef.current, event)}
+      {...backdrop}
     >
       <div class="cd2004-dialog-frame">
-        <div class="cd2004-dialog-titlebar">
-          <span id="cd2004-context-title">
-            {kind === 'staff' ? 'Staff Sign-In' : 'Visit Location'}
-          </span>
-          <button type="button" aria-label="Close" onClick={onClose}>
-            X
-          </button>
-        </div>
+        <DialogHeading id="cd2004-context-title" title={kind === 'staff' ? 'Documenting staff' : 'Visit location'} onClose={onClose} />
         <form onSubmit={submit}>
           <div class="cd2004-dialog-body">
             {kind === 'staff' ? (
@@ -96,7 +90,7 @@ export function ContextDialog({
                   }
                 />
                 <small>
-                  Saved in this browser and applied to compatible encounter fields.
+                  This name is saved on this workstation and used in compatible encounter fields. It is not a sign-in or verified signature.
                 </small>
               </label>
             ) : (

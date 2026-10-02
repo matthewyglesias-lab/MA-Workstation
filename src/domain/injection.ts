@@ -3452,16 +3452,14 @@ export const emptyInjectionEncounter = (): InjectionEncounter => ({
   administeredBy: "",
   administrationTime: "",
   secondAdministrationTime: "",
-  allergies: "NKDA",
+  allergies: "",
   technique: "",
   traceability: { ndc: "", lot: "", expiration: "" },
   vitals: {},
   response: { kind: "", custom: "" },
-  // Pre-checked so staff review by exception (uncheck what wasn't actually
-  // done) instead of affirmatively re-ticking six routine safety steps on
-  // every encounter. "prior" (prior-authorization on file) stays unchecked -
-  // it's a real per-encounter fact, not a standard-of-care checklist item.
-  attestations: { id2: true, rights: true, allergy: true, consent: true, screen: true, hygiene: true },
+  // A new encounter carries no observed or verified findings. Staff document
+  // each completed check; selecting a product cannot establish these facts.
+  attestations: {},
   verifications: {},
   acuteSafetyScreenConfirmed: false,
   activeSafetyConcerns: [],

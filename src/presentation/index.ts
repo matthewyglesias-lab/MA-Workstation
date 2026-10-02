@@ -26,3 +26,4 @@ export { LegacyWorkflowHost } from "./LegacyWorkflowHost";
 export { NoteInspector } from "./NoteInspector";
 export { StartCenter } from "./StartCenter";
 export * from "./types";
+export * from "./vocabulary";

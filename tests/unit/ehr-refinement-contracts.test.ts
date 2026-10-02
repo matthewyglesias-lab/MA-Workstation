@@ -163,16 +163,18 @@ describe("typed readiness projection", () => {
 });
 
 describe("workstation status projection", () => {
+  // The projection reports the phase; the words for it live in
+  // src/presentation/vocabulary.ts and are covered by vocabulary.test.ts.
   it.each([
-    ["idle", "NOT STARTED", "start"],
-    ["blocked", "ENTRY", "resolve-requirement"],
-    ["review", "REVIEW", "review"],
-    ["ready", "READY TO ATTEST", "attest"],
-  ] as const)("maps %s readiness to one honest transaction state", (readiness, label, nextCommand) => {
+    ["idle", "not-started", "start"],
+    ["blocked", "entry", "resolve-requirement"],
+    ["review", "review", "review"],
+    ["ready", "ready-to-attest", "attest"],
+  ] as const)("maps %s readiness to one honest transaction state", (readiness, phase, nextCommand) => {
     const status = projectWorkflowTransactionStatus({
       evaluation: evaluation("uds", readiness),
     });
-    expect(status).toMatchObject({ label, nextCommand });
+    expect(status).toMatchObject({ phase, nextCommand });
   });
 
   it("lets a lock state override editable readiness", () => {
@@ -181,7 +183,7 @@ describe("workstation status projection", () => {
         evaluation: evaluation("injection", "ready"),
         locked: true,
       }),
-    ).toMatchObject({ label: "LOCKED", phase: "locked" });
+    ).toMatchObject({ phase: "locked" });
   });
 
   it("uses deterministic transaction codes for every workstation module", () => {
@@ -243,7 +245,7 @@ describe("workstation status projection", () => {
   });
 });
 
-describe("Client/Server function-key profile", () => {
+describe("workstation function-key profile", () => {
   it.each([
     ["F1", false, "help"],
     ["F6", false, "next-section"],
@@ -268,7 +270,7 @@ describe("Client/Server function-key profile", () => {
     expect(resolveFunctionKeyCommand("F10")).toBeUndefined();
   });
 
-  it("uses one visible deck for the documented primary command set", () => {
+  it("exposes the documented primary command set in the power-user disclosure", () => {
     expect(FUNCTION_KEY_DECK_PROFILE.map((command) => command.keyLabel)).toEqual([
       "F1",
       "F6",

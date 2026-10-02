@@ -1,3 +1,5 @@
+const { openRecordActions } = require('./workspace-navigation');
+const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
@@ -11,7 +13,7 @@ const {
 
 async function openInjection(page) {
   await page.goto('/');
-  await page.locator('.cd2004-nav-item[title="Injection"]').click();
+  await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
   await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-active-workflow', 'administer');
   return page.locator('.wfp-panel');
 }
@@ -97,7 +99,7 @@ test.describe('Injection decision support', () => {
 
     const guidance = panel.locator('[data-operator-guidance]');
     await expect(guidance).toBeVisible();
-    await expect(guidance).toContainText('Operator guidance');
+    await expect(guidance).toContainText('Clinical guidance');
     await expect(guidance).toContainText('Active order');
     await expect(guidance.locator('summary')).toHaveText(/Reference/);
 
@@ -157,19 +159,22 @@ test.describe('Injection decision support', () => {
       .locator('textarea').fill('Active order specifies this return date');
     await override.getByRole('button', { name: 'Record override' }).click();
     await expect(registerValue(dueField, 'Next dose due')).toHaveText('01/15/30');
-    await expect(registerMarker(dueField)).toHaveText('OVR');
+    await expect(registerMarker(dueField)).toHaveText('Override');
 
     const actions = page.locator('[data-injection-record-actions]');
     await expect(actions.locator('[data-injection-save]')).toBeEnabled();
     await actions.locator('[data-injection-save]').click();
-    await expect(actions).toContainText('SAVED LOCAL DRAFT');
+    await expect(actions).toContainText('Draft saved');
 
     // Move away from the active draft, then reload it through the only record
     // list. This exercises persisted next-dose provenance rather than merely
     // retaining component state in the same mounted panel.
-    await actions.locator('[data-injection-new]').click();
-    await page.getByRole('button', { name: /Open saved local records/ }).click();
-    await page.getByRole('button', { name: /Resume draft for QA, Next Due/ }).click();
+    await openRecordActions(page);
+  await actions.locator('[data-injection-new]').click();
+    await page.getByRole('button', { name: /Open saved notes/ }).click();
+    await page.getByRole('row', {
+      name: /^Open incomplete Injection note for QA, Next Due, visit /
+    }).click();
 
     const resumedPanel = page.locator('.wfp-panel');
     await openTab(resumedPanel, 'Order');
@@ -206,7 +211,7 @@ test.describe('Injection decision support', () => {
     // Snapping to Friday records a real, auditable manual override rather
     // than quietly moving the date the way the legacy worksheet did.
     await expect(registerValue(dueField, 'Next dose due')).toHaveText('08/28/26');
-    await expect(registerMarker(dueField)).toHaveText('OVR');
+    await expect(registerMarker(dueField)).toHaveText('Override');
     await expect(registerNote(dueField, 'Next dose due')).toContainText(
       'Weekend-adjusted from the calculated return date',
     );

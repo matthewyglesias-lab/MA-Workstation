@@ -1,8 +1,13 @@
 import type { JSX } from "preact";
 
-const ink = "var(--mt-icon-ink, #20356f)";
-const blueLight = "var(--mt-icon-blue-light, #b9d0ef)";
-const red = "var(--mt-icon-red, #b52c2c)";
+/*
+ * Drawn entirely in the inherited colour, like the rest of the icon set: the
+ * figure is the soft mass, the site marker is the solid one. The marker reads
+ * as a position, not a severity, so it deliberately does not borrow a clinical
+ * status colour - the tile's own text says what state the site is in.
+ */
+const FIGURE_ALPHA = 0.16;
+const HALO_ALPHA = 0.28;
 
 /**
  * One dot position per canonical site string (from injection-catalog.ts),
@@ -51,17 +56,23 @@ export function SiteIcon({ site, ...props }: SiteIconProps) {
       aria-hidden="true"
       focusable="false"
     >
-      <g stroke={ink} stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="8" cy="2.6" r="1.3" fill={blueLight} />
+      <g
+        stroke="currentColor"
+        stroke-width="0.9"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="8" cy="2.6" r="1.3" fill="currentColor" fill-opacity={FIGURE_ALPHA} />
         <path
           d="M4.7 4.4 L11.3 4.4 L10.6 9.1 L11.1 13.4 L4.9 13.4 L5.4 9.1 Z"
-          fill={blueLight}
+          fill="currentColor"
+          fill-opacity={FIGURE_ALPHA}
         />
         <path d="M4.7 4.6 2.7 9.0M11.3 4.6 13.3 9.0" />
         <path d="M6.4 13.4 5.9 15.6M9.6 13.4 10.1 15.6" />
       </g>
-      <circle cx={dot.x} cy={dot.y} r="2.1" fill={red} opacity="0.22" />
-      <circle cx={dot.x} cy={dot.y} r="1.15" fill={red} stroke={ink} stroke-width="0.9" />
+      <circle cx={dot.x} cy={dot.y} r="2.5" fill="currentColor" opacity={HALO_ALPHA} />
+      <circle cx={dot.x} cy={dot.y} r="1.25" fill="currentColor" />
     </svg>
   );
 }

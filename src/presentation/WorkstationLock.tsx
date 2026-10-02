@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { DesktopIcon } from "./DesktopIcon";
 
 const IDLE_LOCK_MINUTES = 15;
 const IDLE_LOCK_MS = IDLE_LOCK_MINUTES * 60_000;
@@ -55,17 +56,17 @@ export function useIdleLock(staffSignedIn: boolean): [boolean, () => void] {
 }
 
 export interface WorkstationLockProps {
-  /** Display label for the currently signed-in staff member, e.g. "A. Rivera, MA". */
+  /** Display label for the current documenting staff member, e.g. "A. Rivera, MA". */
   staffLabel: string;
   onUnlock: () => void;
 }
 
 /**
- * Windows-2000-style "workstation locked" overlay. Native <dialog> supplies
- * the top layer, inerting of everything behind it, and focus trapping -
+ * Workstation lock overlay. Native <dialog> supplies the top layer, inerting
+ * of everything behind it, and focus trapping -
  * deliberately NOT using the shared ModalDialog wrapper, since that one is
  * built to be dismissed by Escape or a backdrop click and a lock screen must
- * not be. Unlocking requires re-typing the signed-in staff name (case/space
+ * not be. Unlocking requires re-typing the documenting staff name (case/space
  * insensitive) - there is no password concept anywhere in this app (staff
  * sign-in is a free-text attestation field, not an authenticated account),
  * so this is a conscious re-confirmation of identity, not real access
@@ -112,14 +113,14 @@ export function WorkstationLock({ staffLabel, onUnlock }: WorkstationLockProps) 
     >
       <div class="cd2004-lock-card">
         <div class="cd2004-lock-icon" aria-hidden="true">
-          🔒
+          <DesktopIcon name="lock" />
         </div>
         <h2 id="workstationLockTitle">This workstation is locked</h2>
         <p class="cd2004-lock-detail">
           Locked at {lockedAt.toLocaleTimeString()} after {IDLE_LOCK_MINUTES} minutes of inactivity.
         </p>
         <p class="cd2004-lock-staff">
-          Signed in: <strong>{staffLabel}</strong>
+          Documenting staff: <strong>{staffLabel}</strong>
         </p>
         <form
           onSubmit={(event) => {
@@ -143,7 +144,7 @@ export function WorkstationLock({ staffLabel, onUnlock }: WorkstationLockProps) 
           />
           {showMismatch && (
             <p class="cd2004-lock-mismatch" role="alert">
-              That name does not match the signed-in staff member.
+              Enter the name shown above to return to this work.
             </p>
           )}
           <button type="submit" disabled={!attempt.trim()}>

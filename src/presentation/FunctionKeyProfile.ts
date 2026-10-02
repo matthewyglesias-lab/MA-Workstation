@@ -1,3 +1,5 @@
+import { NOTES, RECORD } from "./vocabulary";
+
 /**
  * The Client/Server-style function-key contract shared by the desktop shell,
  * help surface, keyboard handler, and visible command deck.  Individual
@@ -68,7 +70,7 @@ export const FUNCTION_KEY_PROFILE: readonly FunctionKeyCommand[] = [
     id: "focus-next-zone",
     keyLabel: "F8",
     label: "Next zone",
-    description: "Cycle focus through worksheet, record rail, and command deck.",
+    description: "Move between the work area, navigation, and shortcuts; go to the next required item when one is outstanding.",
     showInDeck: true,
   },
   {
@@ -81,15 +83,15 @@ export const FUNCTION_KEY_PROFILE: readonly FunctionKeyCommand[] = [
   {
     id: "local-emr",
     keyLabel: "F11",
-    label: "Local EMR",
-    description: "Open the local record list.",
+    label: NOTES.openNotes,
+    description: NOTES.openNotesDescription,
     showInDeck: true,
   },
   {
     id: "file",
     keyLabel: "F12",
-    label: "File / save",
-    description: "File the editable local draft.",
+    label: RECORD.save,
+    description: RECORD.saveDraftDescription,
     showInDeck: true,
   },
   {

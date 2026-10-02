@@ -1,5 +1,13 @@
 import { DesktopIcon } from "./DesktopIcon";
+import { Illustration } from "./Illustration";
 import { summarizeReadinessVerdict } from "../application/readiness-projection";
+import {
+  CHECKLIST,
+  RECORD,
+  SHELL,
+  readinessItemStateLabel,
+  readinessVerdictCopy,
+} from "./vocabulary";
 import { copyButtonLabel, copyFeedbackMessage, useCopyFeedback } from "./clipboard";
 import { noteDocumentLines, noteDocumentStats } from "./note-document";
 import type { NoteSection, PatientContext, ReadinessItem } from "./types";
@@ -20,13 +28,19 @@ interface NoteInspectorProps {
   readiness: ReadinessItem[];
   sections: NoteSection[];
   patient?: PatientContext;
+  /**
+   * Withhold both copy commands: what is rendered here may not be what durable
+   * storage holds, so putting it on the clipboard invites it into a chart as
+   * though it were the record. Separate from a copy the browser refuses, which
+   * `clipboard.ts` reports as "blocked" after an attempt was actually made.
+   */
+  copyUnsafe?: boolean;
   postState: "idle" | "posting" | "posted" | "error";
   postMessage?: string;
 }
 
 /**
- * One section of the document, rendered as a terminal document viewer renders
- * one: a numbered gutter beside the text.
+ * One section of the document, preserving the exact generated lines.
  *
  * The gutter is a sibling grid cell per line rather than a single column of
  * numbers beside a single block of text. That is what keeps the numbering
@@ -70,18 +84,21 @@ export function NoteInspector({
   readiness,
   sections,
   patient,
+  copyUnsafe,
   postState,
   postMessage,
 }: NoteInspectorProps) {
   const verdict = summarizeReadinessVerdict(readiness);
   const stats = noteDocumentStats(sections.map((section) => section.content));
-  // There is one note, written in its final form from the first documented
-  // field onward, so the only state worth marking is whether the local record
-  // has been filed. A second mark reading DRAFT said nothing the readiness
-  // verdict above does not already say, and said it on every note that was
-  // merely unfiled - including finished ones.
-  const filed = postState === "posted";
+  // The compatibility state "posted" means signed in this browser only.
+  // Neither a local signature nor a clipboard copy proves a Tebra handoff.
+  const signedLocally = postState === "posted";
   const patientIdentified = Boolean(patient?.name || patient?.dob);
+  // The verdict still gets its words from vocabulary rather than carrying them
+  // on the projection: this branch's Phase 1 amendment removed `headline` and
+  // `detail` from `ReadinessVerdict`, so `readinessVerdictCopy` is where they
+  // live. Same rendered text either way.
+  const verdictCopy = verdict ? readinessVerdictCopy(verdict) : null;
   // The viewer copies the text it is displaying. It used to forward the click
   // to a hidden control in the compatibility panel, which only ever carried
   // selectors for the injection note - so the same button silently did
@@ -95,20 +112,35 @@ export function NoteInspector({
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
+      <div class="lf-document-checks">
       {/* The aggregate verdict, colour-coded, because a per-row scan is slower
-          than staff need when they are deciding whether a record can be filed.
-          Wording and scope are decided in `summarizeReadinessVerdict`. */}
-      {verdict && (
-        <div class={`cd2004-readiness-verdict is-${verdict.tone}`} role="status">
-          <strong>{verdict.headline}</strong>
-          <span>{verdict.detail}</span>
+          than staff need when they are deciding whether a note can be signed.
+          Scope is decided in `summarizeReadinessVerdict`; wording in
+          `readinessVerdictCopy`. */}
+      {verdict && verdictCopy && (
+        /* `tone` reports "blocked" for a pending item as readily as for a
+           real stop, so a note nobody has filled in yet arrives at the same
+           verdict as one with a contraindication. The projection reports
+           `blockers` separately; presentation is where the two are told apart,
+           exactly as it is where the words are chosen. No clinical rule
+           moves. */
+        <div
+          class={`cd2004-readiness-verdict is-${verdict.tone}${
+            verdict.tone === "blocked" && verdict.blockers === 0
+              ? " is-unfinished"
+              : ""
+          }`}
+          role="status"
+        >
+          <strong>{verdictCopy.headline}</strong>
+          <span>{verdictCopy.detail}</span>
         </div>
       )}
       {!verdict && (
         <div class="cd2004-readiness-summary">
           <div class="cd2004-readiness-score">
-            <span>Requirements</span>
-            <strong>0 OF 0</strong>
+            <span>{CHECKLIST.title}</span>
+            <strong>0 of 0</strong>
           </div>
         </div>
       )}
@@ -131,21 +163,17 @@ export function NoteInspector({
                 {item.detail && <small>{item.detail}</small>}
               </span>
               <small class="cd2004-readiness-state">
-                {item.state === "complete"
-                  ? "Complete"
-                  : item.state === "stop"
-                    ? "Required"
-                    : item.state === "warning"
-                      ? "Review"
-                      : "Pending"}
+                {readinessItemStateLabel(item.state)}
               </small>
             </div>
           ))
         ) : (
-          <div class="cd2004-empty-row">Start the workflow to populate readiness.</div>
+          <div class="cd2004-empty-row">{SHELL.startNoteForReadiness}</div>
         )}
       </div>
 
+      </div>
+      <article class="lf-note-paper" aria-label="Generated documentation">
       {/* A document header, not a panel caption. It names the document, whose
           it is, and what state it is in - which is what separates a document
           viewer from a text box, and what the old preview never said. */}
@@ -153,8 +181,8 @@ export function NoteInspector({
         <DesktopIcon name="note" />
         <strong>{title}</strong>
         <span class="cd2004-note-marks">
-          <span class="cd2004-note-mark">LOCAL</span>
-          {filed && <span class="cd2004-note-mark is-filed">FILED</span>}
+          <span class="cd2004-note-mark">Local</span>
+          {signedLocally && <span class="cd2004-note-mark is-signed">Signed locally</span>}
         </span>
       </div>
 
@@ -183,12 +211,12 @@ export function NoteInspector({
 
       <div class="cd2004-note-toolbar" role="toolbar" aria-label="Document review commands">
         <span class="cd2004-note-mode" title={subtitle}>
-          READ ONLY · LOCAL
+          Read-only preview · local
         </span>
         <button
           type="button"
           class={`cd2004-command-button cd2004-note-copy-all${wholeNoteCopy ? ` is-${wholeNoteCopy}` : ""}`}
-          disabled={!sections.length}
+          disabled={!sections.length || copyUnsafe}
           onClick={() =>
             copy(
               sections.map((section) => section.content).join(DOCUMENT_DIVIDER),
@@ -196,9 +224,11 @@ export function NoteInspector({
             )
           }
           title={
-            sections.length
-              ? "Copy this note exactly as it reads here."
-              : "Document the encounter to build this note."
+            copyUnsafe
+              ? RECORD.noteCopyWithheld
+              : sections.length
+                ? "Copy this note exactly as it reads here."
+                : "Document the encounter to build this note."
           }
         >
           <DesktopIcon name="copy" />
@@ -206,6 +236,7 @@ export function NoteInspector({
         </button>
       </div>
 
+      <p class="lf-note-boundary">{signedLocally ? "This note is signed in this browser. " : "This is a documentation preview. "}Copying does not file it. Confirm the final note separately in Tebra.</p>
       {/* Announced, not just drawn: the confirmation is the whole point of the
           change, and an operator using a screen reader needs it too. */}
       <div class="cd2004-note-copy-status" role="status" aria-live="polite">
@@ -231,7 +262,7 @@ export function NoteInspector({
                     class="cd2004-note-mark cd2004-note-source"
                     onClick={() => window.dispatchEvent(new CustomEvent("ipmg:navigate-workflow-source", { detail: section.sourceTarget }))}
                   >
-                    SOURCE
+                    Source
                   </button>
                 )}
                 <button
@@ -239,9 +270,10 @@ export function NoteInspector({
                   class="cd2004-note-mark cd2004-note-copy"
                   aria-label={`Copy ${section.label} section`}
                   title={`Copy ${section.label} section`}
+                  disabled={copyUnsafe}
                   onClick={() => copy(section.content, section.id)}
                 >
-                  {stateFor(section.id) === "copied" ? "COPIED" : "COPY"}
+                  {stateFor(section.id) === "copied" ? "Copied" : "Copy"}
                 </button>
               </header>
               <NoteDocumentBody content={section.content} />
@@ -254,7 +286,7 @@ export function NoteInspector({
              - a chart with a patient but no documentation reads differently
              from an unopened one - and never implies a draft stage. */
           <div class="cd2004-note-empty">
-            <DesktopIcon name="note" />
+            <Illustration name="note-waiting" />
             <strong>
               {patientIdentified
                 ? "Nothing documented yet."
@@ -268,10 +300,10 @@ export function NoteInspector({
           </div>
         )}
         {/* A document that just stops leaves the reader unsure whether more of
-            it failed to render. A terminal viewer says where the end is. */}
+            it failed to render. A quiet endpoint confirms that the preview is complete. */}
         {sections.length > 0 && (
           <div class="cd2004-note-eod" aria-hidden="true">
-            ── END OF DOCUMENT ──
+            End of note
           </div>
         )}
       </div>
@@ -279,26 +311,27 @@ export function NoteInspector({
       {sections.length > 0 && (
         <div class="cd2004-note-foot">
           <span>
-            {stats.sections} SECTION{stats.sections === 1 ? "" : "S"} · {stats.lines} LINE
-            {stats.lines === 1 ? "" : "S"}
+            {stats.sections} section{stats.sections === 1 ? "" : "s"} · {stats.lines} line
+            {stats.lines === 1 ? "" : "s"}
           </span>
-          <span class="cd2004-note-foot-state">{subtitle ?? "LOCAL PREVIEW"}</span>
+          <span class="cd2004-note-foot-state">{subtitle ?? RECORD.notePreview}</span>
         </div>
       )}
 
+      </article>
       <div class="cd2004-post-zone">
         {postState === "error" && (
           <div class="cd2004-post-error" role="alert">
             <DesktopIcon name="alert" />
             <span>
-              <strong>Record was not posted.</strong>
-              <small>{postMessage ?? "No changes were cleared or locked."}</small>
+              <strong>{RECORD.saveFailed}</strong>
+              <small>{postMessage ?? RECORD.saveFailedDetail}</small>
             </span>
           </div>
         )}
         {postState === "posting" && (
           <div class="cd2004-post-pending" role="status">
-            Saving and validating the local record…
+            {RECORD.validatingAndSaving}
           </div>
         )}
       </div>

@@ -1,47 +1,28 @@
-import { useState } from "preact/hooks";
+import { NOTES, RECORD, SHELL, WORKLIST_EMPTY, noteCount } from "./vocabulary";
+import { useMemo, useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
+import { SERVICES } from "./lightfully/ServiceWorkspace";
+import type { NotesTableRow } from "./notes/note-table-model";
+import { WORKFLOW_LABELS } from "./types";
 import {
-  WORKFLOW_LABELS,
   type ClinicalTone,
   type InjectionRecordRow,
-  type WorkflowId,
-  type WorkflowSummary,
   type WorkQueueItem,
+  type WorkflowId,
+  type WorkspaceSessionDraft,
 } from "./types";
-
-// The module tiles a real EHR home screen opens work from - everything a
-// shift touches except Start Center itself. Order follows the same
-// clinical-first, administrative-last sequence as the workflow nav strip.
-const LAUNCHER_WORKFLOWS: readonly WorkflowId[] = [
-  "administer",
-  "uds",
-  "samples",
-  "forms",
-  "reference",
-  "log",
-  "tms",
-];
-
-const LAUNCHER_HINT: Partial<Record<WorkflowId, string>> = {
-  administer: "Start or resume a medication administration record.",
-  uds: "Document a point-of-care urine drug screen.",
-  samples: "Log dispensed sample packages.",
-  forms: "Build a letter, form, or handoff document.",
-  reference: "Look up clinical and formulary reference material.",
-  log: "Review and close out today's local activity log.",
-  tms: "Open the future / TMS workspace.",
-};
 
 type WorklistFilter = "all" | "review" | "today" | "drafts";
 type WorklistSource = "review" | "today" | "drafts";
 
 export interface StartCenterProps {
-  /** Retained for callers that also summarize the module rail. */
-  summaries: Partial<Record<WorkflowId, WorkflowSummary>>;
+  udsDraftRows?: NotesTableRow[];
+  onUdsDraftOpen?: (row: NotesTableRow) => void;
+  sessionDrafts?: WorkspaceSessionDraft[];
+  onDocumentService?: () => void;
   needsReview: WorkQueueItem[];
   todayQueue: WorkQueueItem[];
   injectionRecords: InjectionRecordRow[];
-  onWorkflowOpen: (workflow: WorkflowId) => void;
   onQueueItemOpen?: (item: WorkQueueItem) => void;
   onRecordOpen?: (record: InjectionRecordRow) => void;
   /**
@@ -49,11 +30,14 @@ export interface StartCenterProps {
    * this remains optional for embedders that only render the worklist.
    */
   onStartNewInjection?: () => void;
+  onWorkflowOpen?: (workflow: WorkflowId) => void;
+  onOpenRecords?: () => void;
 }
 
 interface WorklistRow {
   id: string;
   source: WorklistSource;
+  service: WorkflowId;
   priorityLabel: string;
   timeLabel?: string;
   patientLabel: string;
@@ -63,13 +47,15 @@ interface WorklistRow {
   tone?: ClinicalTone;
   queueItem?: WorkQueueItem;
   record?: InjectionRecordRow;
+  session?: WorkspaceSessionDraft;
+  udsDraft?: NotesTableRow;
 }
 
 const FILTERS: Array<{ id: WorklistFilter; label: string }> = [
-  { id: "all", label: "All Work" },
-  { id: "review", label: "Needs Review" },
+  { id: "all", label: "All work" },
+  { id: "review", label: "Needs review" },
   { id: "today", label: "Today" },
-  { id: "drafts", label: "Saved Drafts" },
+  { id: "drafts", label: "Drafts" },
 ];
 
 function uniqueQueueRows(rows: WorkQueueItem[]) {
@@ -100,6 +86,7 @@ function queueWorklistRow(
   return {
     id: `${source}:${item.id}`,
     source,
+    service: item.workflow,
     priorityLabel: source === "review" ? "Needs review" : "Today",
     timeLabel: item.timeLabel,
     patientLabel: item.patientLabel,
@@ -115,6 +102,8 @@ function recordWorklistRow(record: InjectionRecordRow): WorklistRow {
   return {
     id: `draft:${record.id}`,
     source: "drafts",
+    service: "administer",
+    timeLabel: record.timeLabel,
     priorityLabel: "Saved draft",
     patientLabel: record.patientLabel,
     taskLabel: record.medicationLabel,
@@ -137,201 +126,140 @@ function rowMatchesFilter(row: WorklistRow, filter: WorklistFilter) {
 }
 
 function worklistEmptyText(filter: WorklistFilter) {
-  if (filter === "review") return "No local work is awaiting review.";
-  if (filter === "today") return "No other local work is recorded for today.";
-  if (filter === "drafts") return "No saved local injection drafts are available.";
-  return "No local work or saved drafts are available.";
+  if (filter === "review") return WORKLIST_EMPTY.review;
+  if (filter === "today") return WORKLIST_EMPTY.today;
+  if (filter === "drafts") return WORKLIST_EMPTY.drafts;
+  return WORKLIST_EMPTY.all;
 }
 
 function worklistEmptyHint(filter: WorklistFilter) {
-  if (filter === "drafts") return "Use Start new injection to create an editable local record.";
-  if (filter === "review") return "Items appear here only when a saved local record needs review.";
-  if (filter === "today") return "Completed history remains available from Record List (F11).";
-  return "Start a new injection, or open Record List (F11) for local history.";
+  if (filter === "drafts") return WORKLIST_EMPTY.draftsHint;
+  if (filter === "review") return WORKLIST_EMPTY.reviewHint;
+  if (filter === "today") return WORKLIST_EMPTY.todayHint;
+  return WORKLIST_EMPTY.allHint;
 }
 
+/** Status is never colour alone: every tone renders a glyph and a word. */
+const TONE_GLYPH: Record<ClinicalTone, string> = {
+  stop: "×",
+  warning: "!",
+  ready: "✓",
+  info: "·",
+  neutral: "·",
+};
+
 export function StartCenter({
-  summaries,
+  udsDraftRows = [],
+  onUdsDraftOpen,
+  sessionDrafts = [],
+  onDocumentService,
   needsReview,
   todayQueue,
   injectionRecords,
-  onWorkflowOpen,
   onQueueItemOpen,
   onRecordOpen,
   onStartNewInjection,
+  onWorkflowOpen,
+  onOpenRecords,
 }: StartCenterProps) {
   const [filter, setFilter] = useState<WorklistFilter>("all");
+  const [query, setQuery] = useState("");
 
   // A review item is also present in the general Today queue. Keep it once in
   // its higher-priority register instead of showing the same local work twice.
-  const reviewItems = uniqueQueueRows(needsReview);
-  const reviewIds = new Set(reviewItems.map((item) => item.id));
-  const todayItems = uniqueQueueRows(todayQueue).filter(
-    (item) => !reviewIds.has(item.id),
-  );
-  // Injection records are a local record register. Only editable records
-  // belong on the current worklist; locked history is intentionally kept in
-  // Record List.
-  const savedDrafts = injectionRecords.filter(
-    (record) => !isLockedRecord(record),
-  );
-  const allRows = [
-    ...reviewItems.map((item) => queueWorklistRow(item, "review")),
-    ...savedDrafts.map(recordWorklistRow),
-    ...todayItems.map((item) => queueWorklistRow(item, "today")),
-  ];
-  const visibleRows = allRows.filter((row) => rowMatchesFilter(row, filter));
-  const countFor = (candidate: WorklistFilter) =>
-    allRows.filter((row) => rowMatchesFilter(row, candidate)).length;
+  const allRows = useMemo(() => {
+    const reviewItems = uniqueQueueRows(needsReview);
+    const reviewIds = new Set(reviewItems.map(item => item.id));
+    const todayItems = uniqueQueueRows(todayQueue).filter(item => !reviewIds.has(item.id));
+    const savedDrafts = injectionRecords.filter(record => !isLockedRecord(record));
+    return [
+      ...reviewItems.map(item => queueWorklistRow(item, "review")),
+      ...savedDrafts.map(recordWorklistRow),
+      ...udsDraftRows.map((record): WorklistRow => ({
+        id: `uds-draft:${record.recordId}`, source: 'drafts', service: 'uds',
+        priorityLabel: 'Saved draft', patientLabel: record.patientLabel,
+        taskLabel: record.summaryLabel || 'Drug screen', timeLabel: record.visit.label,
+        stateLabel: 'Draft saved locally', actionLabel: 'Resume', tone: 'neutral', udsDraft: record,
+      })),
+      ...sessionDrafts.map((session): WorklistRow => ({
+        id: `session:${session.workflow}`, source: 'drafts', service: session.workflow,
+        priorityLabel: 'Unfinished session', patientLabel: session.patientLabel,
+        taskLabel: session.recoveryAvailable ? 'Reload recovery available in this tab' : 'Keep this tab open; recovery unavailable',
+        timeLabel: 'Open session', stateLabel: 'Unfinished', actionLabel: 'Resume',
+        tone: session.recoveryAvailable ? 'neutral' : 'warning', session,
+      })),
+      ...todayItems.map(item => queueWorklistRow(item, "today")),
+    ];
+  }, [needsReview, todayQueue, injectionRecords, sessionDrafts, udsDraftRows]);
+  const indexedRows = useMemo(() => allRows.map(row => ({
+    row, text: `${row.patientLabel} ${row.taskLabel} ${row.stateLabel}`.toLocaleLowerCase(),
+  })), [allRows]);
+  const counts = useMemo(() => {
+    const value = { all: allRows.length, review: 0, today: 0, drafts: 0 };
+    for (const row of allRows) {
+      if (row.source === "drafts") value.drafts++;
+      else { value.today++; if (row.source === "review") value.review++; }
+    }
+    return value;
+  }, [allRows]);
+  const visibleRows = useMemo(() => {
+    const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    return indexedRows.filter(({row, text}) => rowMatchesFilter(row, filter) &&
+      words.every(word => text.includes(word))).map(({row}) => row);
+  }, [indexedRows, filter, query]);
+  const countFor = (candidate: WorklistFilter) => counts[candidate];
 
   const openRow = (row: WorklistRow) => {
+    if (row.udsDraft) { onUdsDraftOpen?.(row.udsDraft); return; }
+    if (row.session) { onWorkflowOpen?.(row.session.workflow); return; }
     if (row.queueItem) onQueueItemOpen?.(row.queueItem);
     if (row.record) onRecordOpen?.(row.record);
   };
 
   return (
-    <section class="cd2004-start-center" aria-labelledby="currentWorklistTitle">
-      <nav class="cd2004-launcher" aria-label="Start a clinical workflow">
-        <span class="cd2004-launcher-head">Clinical Modules</span>
-        <div class="cd2004-launcher-grid">
-          {LAUNCHER_WORKFLOWS.map((workflow) => {
-            const summary = summaries[workflow];
-            const count = summary?.count ?? 0;
-            return (
-              <button
-                key={workflow}
-                type="button"
-                class={`cd2004-launcher-tile ${summary?.state ? `is-${summary.state}` : ""}`}
-                title={LAUNCHER_HINT[workflow]}
-                aria-label={
-                  summary?.detail
-                    ? `${WORKFLOW_LABELS[workflow]} — ${summary.detail}`
-                    : WORKFLOW_LABELS[workflow]
-                }
-                onClick={() => onWorkflowOpen(workflow)}
-              >
-                <span class="cd2004-launcher-icon" aria-hidden="true">
-                  <DesktopIcon name={workflow} />
-                </span>
-                <span class="cd2004-launcher-label">{WORKFLOW_LABELS[workflow]}</span>
-                {count > 0 && (
-                  <span class="cd2004-launcher-badge" aria-label={`${count} items`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
-      <header class="cd2004-worklist-header">
-        <div>
-          <h1 id="currentWorklistTitle" aria-label="Current Worklist">
-            Local records only
-          </h1>
-        </div>
-        <button
-          type="button"
-          class="cd2004-worklist-new"
-          disabled={!onStartNewInjection}
-          title={
-            onStartNewInjection
-              ? "Start a clean local injection record."
-              : "Starting a new local injection record is not available in this view."
-          }
-          onClick={() => onStartNewInjection?.()}
-        >
-          <DesktopIcon name="new" />
-          Start new injection
-        </button>
-      </header>
-
-      <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters">
-        <span class="cd2004-worklist-filter-label">VIEW:</span>
-        {FILTERS.map((candidate) => (
-          <button
-            key={candidate.id}
-            type="button"
-            role="tab"
-            aria-selected={filter === candidate.id}
-            class={filter === candidate.id ? "is-selected" : ""}
-            onClick={() => setFilter(candidate.id)}
-          >
-            <span>{candidate.label}</span>
-            <b>{countFor(candidate.id)}</b>
-          </button>
-        ))}
+    <section class="cd2004-start-center lf-start-center" aria-labelledby="currentWorklistTitle">
+      <header class="lf-worklist-heading cd2004-worklist-header"><div><span class="lf-eyebrow">YOUR LOCAL WORKSPACE</span><h1 id="currentWorklistTitle">Worklist</h1><p>Choose a service, pick up a draft, or review what needs attention.</p></div><time>{new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date())}</time></header>
+      <aside class="lf-service-launcher" aria-label="Document care">
+      <h2>Document care</h2><p>Start a service or return to the one you left open.</p>
+      <div class="lf-service-strip" aria-label="Start or resume a service">
+        {SERVICES.map((service) => <button type="button" class={`lf-service-shortcut lf-service-${service.id}`} key={service.id}
+          disabled={!onWorkflowOpen} onClick={() => onWorkflowOpen?.(service.id)}>
+          <span class="lf-shortcut-number" aria-hidden="true"><DesktopIcon name={service.id}/></span>
+          <span class="lf-shortcut-copy"><strong>{service.id === "uds" ? "Drug screen" : service.id === "samples" ? "Samples" : service.id === "forms" ? "Forms & requests" : "Injection"}</strong><small>{service.id === "administer" ? "Document an injection" : service.id === "uds" ? "Collection & results" : service.id === "samples" ? "Medication handoff" : "Prepare documentation"}</small></span>
+          <span class="lf-shortcut-arrow"><DesktopIcon name="arrow-right"/></span>
+        </button>)}
       </div>
-
-      <div class="cd2004-worklist-sheet">
-        <table class="cd2004-worklist-table">
-          <thead>
-            <tr>
-              <th>Time / priority</th>
-              <th>Patient / visit</th>
-              <th>Task / medication</th>
-              <th>State</th>
-              <th>
-                <span class="cd2004-visually-hidden">Action</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.map((row) => (
-              <tr key={row.id} class={`is-${row.tone ?? "neutral"}`}>
-                <td data-label="Time / priority">
-                  <span class="cd2004-worklist-source-icon" aria-hidden="true">
-                    <DesktopIcon
-                      name={
-                        row.source === "drafts"
-                          ? "administer"
-                          : row.tone === "warning" || row.tone === "stop"
-                            ? "alert"
-                            : "records"
-                      }
-                    />
-                  </span>
-                  <span class="cd2004-worklist-priority-copy">
-                    <strong>{row.priorityLabel}</strong>
-                    {row.timeLabel && <small>{row.timeLabel}</small>}
-                  </span>
-                </td>
-                <td data-label="Patient / visit">{row.patientLabel}</td>
-                <td data-label="Task / medication">{row.taskLabel}</td>
-                <td data-label="State">
-                  <span class={`cd2004-worklist-state is-${row.tone ?? "neutral"}`}>
-                    {row.stateLabel}
-                  </span>
-                </td>
-                <td data-label="Action">
-                  <button
-                    type="button"
-                    class="cd2004-worklist-action"
-                    disabled={!row.queueItem && !row.record}
-                    onClick={() => openRow(row)}
-                  >
-                    {row.actionLabel}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {!visibleRows.length && (
-              <tr class="cd2004-worklist-empty">
-                <td colSpan={5}>
-                  <strong>{worklistEmptyText(filter)}</strong>
-                  <small>{worklistEmptyHint(filter)}</small>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      </aside>
+      <div class="lf-worklist-card">
+      <div class="lf-worklist-intro"><h2>Continue work</h2><p>Drafts, open sessions and documentation to review.</p></div>
+      <div class="lf-worklist-controls">
+        <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters" onKeyDown={(event) => {
+          const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+          if (!keys.includes(event.key)) return;
+          event.preventDefault();
+          const index = FILTERS.findIndex((candidate) => candidate.id === filter);
+          const next = event.key === "Home" ? 0 : event.key === "End" ? FILTERS.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + FILTERS.length) % FILTERS.length;
+          setFilter(FILTERS[next]!.id);
+          event.currentTarget.querySelectorAll<HTMLButtonElement>("button")[next]?.focus();
+        }}>
+          {FILTERS.map((candidate) => <button key={candidate.id} type="button" role="tab" id={`lf-work-tab-${candidate.id}`} aria-controls="lf-work-panel" tabIndex={filter === candidate.id ? 0 : -1} aria-selected={filter === candidate.id} class={filter === candidate.id ? "is-selected" : ""} onClick={() => setFilter(candidate.id)}><span>{candidate.label}</span><b>{countFor(candidate.id)}</b></button>)}
+        </div>
+        <label class="lf-worklist-search"><DesktopIcon name="patient"/><input type="search" aria-label="Filter local work by patient or medication" placeholder="Filter this worklist" value={query} onInput={(event) => setQuery(event.currentTarget.value)}/></label>
       </div>
-
-      <footer class="cd2004-worklist-footer">
-        <span>{visibleRows.length} local item{visibleRows.length === 1 ? "" : "s"} shown</span>
-        <span>Locked local history: Record List</span>
-      </footer>
+      <div class="cd2004-worklist-sheet" id="lf-work-panel" role="tabpanel" aria-labelledby={`lf-work-tab-${filter}`}>
+        {visibleRows.length ? <table class="lf-work-table"><caption class="cd2004-visually-hidden">Local records and unfinished work in this tab</caption><thead><tr><th scope="col">Patient / task</th><th scope="col">Service</th><th scope="col">Date / time</th><th scope="col">Status</th><th scope="col"><span class="cd2004-visually-hidden">Action</span></th></tr></thead><tbody>
+          {visibleRows.map((row) => <tr key={row.id} class="tebra-record-row" data-worklist-row={row.source}>
+            <td class="tebra-record-copy"><strong class="tebra-record-title">{row.patientLabel}</strong><span class="tebra-record-meta">{row.taskLabel}</span></td>
+            <td><span class="lf-table-service"><DesktopIcon name={row.service}/>{WORKFLOW_LABELS[row.service]}</span></td>
+            <td class="lf-table-date">{row.timeLabel || "—"}</td>
+            <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{TONE_GLYPH[row.tone ?? "neutral"]}</span>{row.stateLabel}</span></td>
+            <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.udsDraft ? !onUdsDraftOpen : row.session ? !onWorkflowOpen : row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<DesktopIcon name="arrow-right"/></button></td>
+          </tr>)}
+        </tbody></table> : <div class="tebra-record-empty lf-worklist-empty"><span class="lf-empty-mark" aria-hidden="true"><span/><DesktopIcon name={query.trim() ? "records" : "note"}/></span><strong>{query.trim() ? "No matching work" : filter === "all" ? "Your worklist is clear" : worklistEmptyText(filter)}</strong><small>{query.trim() ? "Try another patient or medication, or clear the search." : filter === "all" ? "Document an injection, drug screen, samples or a form request. Your unfinished work will appear here." : worklistEmptyHint(filter)}</small>{query.trim() ? <button type="button" class="lf-secondary-button" onClick={() => setQuery("")}>Clear search</button> : filter === "all" && <button type="button" class="lf-secondary-button" disabled={!onDocumentService} onClick={onDocumentService}>Choose a service <DesktopIcon name="arrow-right"/></button>}</div>}
+      </div>
+      <footer class="cd2004-worklist-footer"><span aria-live="polite">{noteCount(visibleRows.length, "local item")} shown</span><span>Local records &amp; open sessions</span></footer>
+      </div>
+      <p class="lf-workspace-footnote">Review and copy completed documentation to Tebra. This worklist is not an appointment schedule.</p>
     </section>
   );
 }

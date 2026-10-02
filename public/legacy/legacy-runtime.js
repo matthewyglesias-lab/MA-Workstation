@@ -359,8 +359,8 @@ const CLINICS=[
 
 /* ---------- state ---------- */
 const S={ med:null, dose:"", site:"", route:"", intervalKey:"", reason:"",
-          resp:"well", attest:{}, flags:{}, guard:{}, retCustom:false, adminGuideCollapsed:false, needleGuideOpen:false };
-ATTEST.forEach(a=>S.attest[a.id]=!a.off&&a.id!=="prior");
+          resp:"", attest:{}, flags:{}, guard:{}, retCustom:false, adminGuideCollapsed:false, needleGuideOpen:false };
+ATTEST.forEach(a=>S.attest[a.id]=false);
 const UDS={reason:"",temp:"not documented",control:"not documented",results:{},validity:"not documented",consistent:"",lab:"provider to decide",photoData:""};
 UDS_PANELS.forEach(p=>UDS.results[p]="nt");
 let LOG=[];
@@ -946,6 +946,7 @@ function reasonSnapshotLabel(reasonKey,m){
   return map[reasonKey]||`Medication ${t}`;
 }
 function responseSnapshot(){
+  if(!S.resp)return "response not documented";
   if(S.resp==="custom")return ($("respCustom").value.trim()||"response documented").replace(/\.$/,"");
   if(S.resp==="bleed")return "minor bleeding controlled";
   if(S.resp==="disc")return "mild site discomfort";
@@ -1240,12 +1241,12 @@ $("resetBtn").addEventListener("click",()=>{if(confirm("Clear the current note? 
 $("udsReset").addEventListener("click",()=>{if(confirm("Clear the current UDS note?")) softResetUds();});
 
 function softReset(){
-  S.med=null;S.dose="";S.flags={};S.guard={};S.reason="";S.resp="well";S.retCustom=false;
-  ATTEST.forEach(a=>S.attest[a.id]=!a.off&&a.id!=="prior");
+  S.med=null;S.dose="";S.flags={};S.guard={};S.reason="";S.resp="";S.retCustom=false;
+  ATTEST.forEach(a=>S.attest[a.id]=false);
   ["ptName","ptDOB","orderingProvider","injOrderPurpose","tech","ndc","lot","exp","injProductSource","injProductSourceOther","injPreparation","injPreparationDetail","injWasteAmount","injWasteWitness","injProductIssueDetail","injProductIssueAction","injProductIssueRecipient","injProductIssueNotificationTime","injProductIssueDirection","injProductIssueNextStep","bp","hr","temp","rr","spo2","vitalRepeatNote","admin","respCustom","injAdminTime","injSecondAdminTime","injVolume","injVolumeUnit","injDevice","injDeviceOther","injSiteCondition","injSiteConditionDetail","injExceptionSummary","injExceptionRecipient","injExceptionTime","injExceptionOutcome","nextDate","priorDose","priorSite"].forEach(id=>{if($(id))$(id).value="";});
   ["injWasteToggle","injProductIssueToggle","injExceptionToggle"].forEach(id=>{if($(id))$(id).checked=false;});
   try{if(typeof window.resetSmartVitalsState==='function')window.resetSmartVitalsState();}catch(e){}
-  $("allergies").value="NKDA";$("adminDate").value=localDateValue();
+  $("allergies").value="";$("adminDate").value=localDateValue();
   try{const flow=window.__IPMG_RC530__;if(flow){flow.safetyNone=false;flow.inj={};flow.manualOpen.inj={};}}catch(e){}
   $("medHdr").classList.remove("show");$("medChipsGrp").classList.remove("hidden");
   $("medDetail").classList.add("hidden");$("medSpecWrap").classList.remove("show");$("medTip").classList.remove("show");
@@ -1693,8 +1694,8 @@ function resetSample(){
   ["samplePtName","sampleDOB","samplePrescriber","sampleStaff","sampleQty","sampleLot","sampleExp","sampleTitration","sampleExtra","sampleHandoutStatus","sampleFollowUp"].forEach(id=>{if($(id))$(id).value="";});
   if($("sampleDate"))$("sampleDate").value=localDateValue();
   if($("sampleStart"))$("sampleStart").value=localDateValue();
-  if($("sampleMedCheck"))$("sampleMedCheck").value="Prescriber reviewed / ok to dispense";
-  if($("sampleEdu"))$("sampleEdu").value="Reviewed with patient";
+  if($("sampleMedCheck"))$("sampleMedCheck").value="not documented";
+  if($("sampleEdu"))$("sampleEdu").value="not documented";
   clearSampleDoseRows();
   selectSampleMed(SAMPLE_MEDS[0]);
   applyStaffToSamples(false);
@@ -9067,9 +9068,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
   function refreshSamples(){call(window.renderSampleHandout);call(window.renderSampleReadiness);call(window.renderCommandCenter);}
   function restoreInjection(){
-    if(typeof ATTEST!=='undefined'&&typeof S!=='undefined')ATTEST.forEach(a=>{S.attest[a.id]=!a.off&&a.id!=='prior';});
-    if(typeof S!=='undefined')S.resp='well';
-    refreshInjection();say('Routine injection checks restored. Confirm the visible checks and uncheck exceptions.');
+    if(typeof ATTEST!=='undefined'&&typeof S!=='undefined')ATTEST.forEach(a=>{S.attest[a.id]=false;});
+    if(typeof S!=='undefined')S.resp='';
+    refreshInjection();say('Checks cleared. Document only what you verified today.');
   }
   function restoreUds(){
     if(typeof UDS!=='undefined'){
@@ -9081,9 +9082,9 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
   }
   function restoreSamples(){
     const medCheck=by('sampleMedCheck'),education=by('sampleEdu');
-    if(medCheck)medCheck.value='Prescriber reviewed / ok to dispense';
-    if(education)education.value='Reviewed with patient';
-    refreshSamples();say('Routine sample review restored. Change any item that was not completed.');
+    if(medCheck)medCheck.value='not documented';
+    if(education)education.value='not documented';
+    refreshSamples();say('Sample review cleared. Record the review and education actually completed.');
   }
   function bar(id,title,detail,buttonText,handler){
     const wrap=document.createElement('div');wrap.className='fast-review';wrap.id=id;
@@ -9101,18 +9102,18 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     const inj=document.querySelector('#panel-administer .card-safety');
     if(inj&&!by('injFastReview')){
       const header=inj.querySelector('.card-head');
-      const item=bar('injFastReview','Quick review — routine injection checks are preselected.','Keep only what you verified today; tap off anything not completed. <span class="fast-review-alert">Allergy status defaults to NKDA - edit it if the active record shows any allergy or reaction.</span>','Restore routine checks',restoreInjection);
+      const item=bar('injFastReview','Document the checks completed today.','Enter verified allergy status and record each completed check. Unconfirmed findings remain blank.','Clear checks',restoreInjection);
       if(header)header.insertAdjacentElement('afterend',item);else inj.prepend(item);
     }
     const udsQuick=by('udsAllNeg'),udsPatient=by('udsPtName');
     if(udsQuick&&udsPatient&&!by('udsFastReview')){
       const card=udsPatient.closest('.card');const header=card&&card.querySelector('.card-head');
-      const item=bar('udsFastReview','Quick review — routine UDS screen is prefilled.','All displayed panels begin negative with acceptable temperature/control. Confirm the selected cup includes them; set non-included panels to Not tested.','Restore routine screen',restoreUds);
+      const item=bar('udsFastReview','Record the physical UDS readings.','Results and quality checks remain unconfirmed until documented from the physical device.','Clear readings',restoreUds);
       if(header)header.insertAdjacentElement('afterend',item);else card?.prepend(item);
     }
     const sampleCheck=by('sampleMedCheck'),samplePatient=by('samplePtName');
     if(sampleCheck&&samplePatient){
-      const item=by('sampleFastReview')||bar('sampleFastReview','Quick review — routine sample checks are preselected.','Change the review or education status for anything not completed before you print or log the dispense.','Restore routine review',restoreSamples);
+      const item=by('sampleFastReview')||bar('sampleFastReview','Document sample review and education.','Record only the review and education completed before you print or log the dispense.','Clear review',restoreSamples);
       const hero=document.querySelector('#panel-samples .sample-module-hero.rc5,#panel-samples .sample-module-hero');
       const card=samplePatient.closest('.card');const header=card&&card.querySelector('.card-head');
       if(hero)hero.insertAdjacentElement('afterend',item);else if(header)header.insertAdjacentElement('afterend',item);else card?.prepend(item);
@@ -9892,7 +9893,7 @@ window.IPMG_RC_VERSION = 'RC5.9 Print QA + Cohesion';
     call(window.softReset);
     window.__IPMG_INJECTION_DOCUMENTATION_METADATA__=clone(snap.documentation||{});
     const med=MEDS.find(item=>item.key===snap.medKey),customMedication=typeof state.customMedication==='string'?state.customMedication.trim():'';if(med)call(window.selectMed,med.key==='other'&&customMedication?{...med,name:customMedication,label:customMedication}:med);
-    S.dose=state.dose||'';S.site=state.site||'';S.route=state.route||'';S.intervalKey=state.intervalKey||'';S.reason=typeof state.reason==='string'?state.reason:'';S.resp=state.resp||'well';S.attest=clone(state.attest||{});S.flags=clone(state.flags||{});S.guard=clone(state.guard||{});
+    S.dose=state.dose||'';S.site=state.site||'';S.route=state.route||'';S.intervalKey=state.intervalKey||'';S.reason=typeof state.reason==='string'?state.reason:'';S.resp=state.resp||'';S.attest=clone(state.attest||{});S.flags=clone(state.flags||{});S.guard=clone(state.guard||{});
     // Older Other drafts could carry the legacy runtime's generated return
     // date without the newer provenance object or retCustom marker. Preserve
     // the visible value as an unreviewed date through restore; the typed

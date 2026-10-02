@@ -11,10 +11,10 @@
   },
   "outputs": {
     "avsSheet": {
-      "sha256": "cc1eebbc2e60824020e6c1a1c2bbdc30e7f5929f641776fec8b69837c6f491cf",
+      "sha256": "6849b4fbf128ed96fa99b147453e22e6f3e3e3ed3bf33dc2d68e89448ffd59e5",
       "bytes": 6212,
       "topLevelClass": "avs2 avs2-layout-routine-one-page",
-      "note": "Intentionally diverges from the production commit. The injection After Visit Summary now uses capacity-aware deterministic pagination, explicit collision-free guidance rows, resilient repeated identity and footers, and Plus Jakarta Sans display hierarchy over an Aptos/Segoe UI body. Warm near-white surfaces and a lighter slate distinguish routine content, logistical alerts use muted oatmeal, and muted red is reserved for emergencies. Every other print root in this fixture is still pinned to production output."
+      "note": "Intentionally diverges from the production commit. The injection After Visit Summary now uses capacity-aware deterministic pagination, explicit collision-free guidance rows, resilient repeated identity and footers, and Plus Jakarta Sans display hierarchy over an Aptos/Segoe UI body. Warm near-white surfaces and a lighter slate distinguish routine content, logistical alerts use muted oatmeal, and muted red is reserved for emergencies. The 2026-10-01 clinic request changes AVS hours to 8:30 AM - 5:00 PM. This PRN/ordered fixture retains its exact-date instructions; routine scheduling-window copy has separate coverage. Other print-root hashes are unchanged by this hours update."
     },
     "injWorksheetSheet": {
       "sha256": "0eed90bef38a3946679e5b0cce8d53948c0c7010150e1c2c8f7ce6917091fa23",

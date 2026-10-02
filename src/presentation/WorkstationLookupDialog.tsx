@@ -1,3 +1,4 @@
+import { DialogHeading } from "./lightfully/DialogHeading";
 import { useMemo, useRef, useState } from "preact/hooks";
 import { ModalDialog } from "./ModalDialog";
 
@@ -20,16 +21,16 @@ export interface WorkstationLookupTransaction {
 
 export function WorkstationLookupDialog({
   transaction,
-  transactionCode,
   onChoose,
   onDismiss,
 }: {
   transaction: WorkstationLookupTransaction;
-  transactionCode: string;
   onChoose: (option: WorkstationLookupOption) => void;
   onDismiss: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [focusedValue, setFocusedValue] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const titleId = "cd2004FieldLookupTitle";
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -50,6 +51,9 @@ export function WorkstationLookupDialog({
         options.findIndex((option) => option.selected),
       );
   const preferredOption = options[preferredIndex];
+  const focusedIndex = options.findIndex(option => option.value === focusedValue);
+  const tabIndex = focusedIndex >= 0 ? focusedIndex : preferredIndex;
+  const resetQuery = () => { setQuery(""); setFocusedValue(null); searchRef.current?.focus(); };
 
   const focusResult = (index: number) => {
     const rows = Array.from(
@@ -68,33 +72,27 @@ export function WorkstationLookupDialog({
       onDismiss={onDismiss}
     >
       <section class="cd2004-dialog-frame" data-field-lookup-dialog>
-        <header class="cd2004-dialog-titlebar">
-          <strong id={titleId}>
-            {transactionCode} FIELD LOOKUP · {transaction.fieldCode}
-          </strong>
-          <button type="button" aria-label="Close field lookup" onClick={onDismiss}>
-            ×
-          </button>
-        </header>
-
-        <div class="cd2004-lookup-context">
-          <strong>{transaction.fieldLabel}</strong>
-          <span>{transaction.prompt || "Select one of the available local values."}</span>
-        </div>
+        <DialogHeading id={titleId} title={transaction.fieldLabel || transaction.fieldCode} description="Search the available options, then choose a value." closeLabel="Close field lookup" onClose={onDismiss} />
+        <div class="cd2004-lookup-context lf-sr-only"><strong>{transaction.fieldCode}</strong><span>{transaction.prompt}</span></div>
 
         <div class="cd2004-dialog-body cd2004-lookup-body">
           <label class="cd2004-dialog-field">
-            Find value
+            Search options
             <input
+              ref={searchRef}
               autoFocus
               type="search"
               value={query}
-              placeholder="Type to filter the local value table"
-              onInput={(event) => setQuery(event.currentTarget.value)}
+              placeholder="Search available options"
+              onInput={(event) => { setQuery(event.currentTarget.value); setFocusedValue(null); }}
               onKeyDown={(event) => {
+                if (event.isComposing) return;
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
                   focusResult(preferredIndex);
+                } else if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  focusResult(options.length - 1);
                 } else if (event.key === "Enter" && preferredOption) {
                   event.preventDefault();
                   onChoose(preferredOption);
@@ -109,20 +107,18 @@ export function WorkstationLookupDialog({
             role="listbox"
             aria-label={`Available values for ${transaction.fieldLabel}`}
           >
-            <div class="cd2004-lookup-columns" aria-hidden="true">
-              <span>#</span>
-              <span>Local value</span>
-              <span>State</span>
-            </div>
             {options.map((option, index) => (
               <button
                 key={option.value}
                 type="button"
                 class={`cd2004-lookup-row ${option.selected ? "is-selected" : ""}`}
                 role="option"
+                tabIndex={index === tabIndex ? 0 : -1}
+                onFocus={() => setFocusedValue(option.value)}
                 aria-selected={option.selected || undefined}
                 onClick={() => onChoose(option)}
                 onKeyDown={(event) => {
+                  if (event.isComposing) return;
                   if (event.key === "ArrowDown") {
                     event.preventDefault();
                     focusResult(index + 1);
@@ -138,24 +134,24 @@ export function WorkstationLookupDialog({
                   }
                 }}
               >
-                <span>{String(option.ordinal ?? index + 1).padStart(2, "0")}</span>
                 <span>
                   <strong>{option.label}</strong>
                   {option.description && <small>{option.description}</small>}
                 </span>
-                <span>{option.selected ? "CURRENT" : ""}</span>
+                <span class="lf-lookup-selected">{option.selected ? "Selected" : ""}</span>
               </button>
             ))}
             {!options.length && (
               <div class="cd2004-lookup-empty" role="status">
-                NO MATCHING LOCAL VALUES
+                <p>No matching options. Your current field value has not changed.</p>
+                <button type="button" class="lf-lookup-reset" onClick={resetQuery}>Clear search</button>
               </div>
             )}
           </div>
         </div>
 
         <footer class="cd2004-dialog-actions cd2004-lookup-actions">
-          <span>↑↓ MOVE · ENTER SELECT · ESC RETURN</span>
+          <span>Use ↑↓ to move, Enter to select, or Escape to close.</span>
           <span />
           <button type="button" onClick={onDismiss}>
             Cancel

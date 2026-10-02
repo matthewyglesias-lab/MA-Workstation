@@ -1,5 +1,8 @@
+import { DesktopIcon } from "../DesktopIcon";
+import { DialogHeading } from "../lightfully/DialogHeading";
 import type { ClinicalIssue } from "../../domain/contracts";
 import { ModalDialog } from "../ModalDialog";
+import { CHECKLIST } from "../vocabulary";
 
 interface OutstandingRequirementsProps<Tab extends string> {
   /** Whether the floating window is currently shown. */
@@ -18,9 +21,8 @@ interface OutstandingRequirementsProps<Tab extends string> {
 
 /**
  * The list of what is still blocking completion, with each row a direct jump
- * to the tab that owns the field. A floating window - titlebar, close box,
- * centred over the worksheet - mirrors how MEDITECH pops a transaction's
- * outstanding items rather than burying them in the worksheet flow.
+ * to the tab that owns the field. A focused dialog keeps that checklist near
+ * the worksheet without burying it in the form flow.
  *
  * Without this a panel reports only a count - "5 stops" - and staff have to
  * open every tab and compare against a mental list of what the engine wants.
@@ -39,9 +41,17 @@ export function OutstandingRequirements<Tab extends string>({
 }: OutstandingRequirementsProps<Tab>) {
   if (!open || !stops.length) return null;
 
-  const navigate = (tab: Tab) => {
+  const navigate = (tab: Tab, field?: string) => {
     onNavigate(tab);
     onClose();
+    // The native dialog first restores its trigger; then move to the actual
+    // visible answer after the target section has rendered. Never fill a value.
+    if (field) requestAnimationFrame(() => requestAnimationFrame(() => {
+      const candidates = document.querySelectorAll<HTMLElement>(".wfp-panel [data-field-path]");
+      const target = Array.from(candidates).find(node => node.dataset.fieldPath === field && node.getClientRects().length > 0);
+      const control = target?.querySelector<HTMLElement>("input:not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not(:disabled)");
+      if (control) { control.scrollIntoView({ block: "center", behavior: "auto" }); control.focus({ preventScroll: true }); }
+    }));
   };
 
   // The engine pushes stops in whatever order it happens to evaluate them,
@@ -62,33 +72,24 @@ export function OutstandingRequirements<Tab extends string>({
       onDismiss={onClose}
     >
       <div class="cd2004-dialog-frame">
-        <div class="cd2004-dialog-titlebar">
-          <span id="cd2004-outstanding-requirements-title">Outstanding requirements</span>
-          <button
-            type="button"
-            aria-label="Close outstanding requirements"
-            onClick={onClose}
-          >
-            X
-          </button>
-        </div>
-        <div class="cd2004-dialog-body">
-          <div class="wfp-issue-list">
-            {orderedStops.map((stop) => {
-              const stopTab = tabForField(stop.field);
-              return (
-                <button
-                  key={`${stop.code}-${stop.field ?? ""}`}
-                  type="button"
-                  class="wfp-issue-row"
-                  onClick={() => navigate(stopTab)}
-                >
-                  <span class="wfp-issue-tab">{tabLabels[stopTab]}</span>
+        <DialogHeading id="cd2004-outstanding-requirements-title" title={CHECKLIST.title}
+          description="Choose an item to return to its section. Required checks remain in place before you finish."
+          closeLabel={`Close ${CHECKLIST.title}`} onClose={onClose} />
+        <div class="cd2004-dialog-body lf-requirements-body">
+          {tabOrder.map(tab => {
+            const items = orderedStops.filter(stop => tabForField(stop.field) === tab);
+            if (!items.length) return null;
+            return <section class="lf-requirements-group" key={tab} aria-label={tabLabels[tab]}>
+              <h3>{tabLabels[tab]}<span>{items.length}</span></h3>
+              <div class="wfp-issue-list">
+                {items.map(stop => <button key={`${stop.code}-${stop.field ?? ""}`} type="button" class="wfp-issue-row" onClick={() => navigate(tab, stop.field)}>
+                  <span class="wfp-issue-tab lf-sr-only">{tabLabels[tab]}</span>
                   <span class="wfp-issue-message">{stop.message}</span>
-                </button>
-              );
-            })}
-          </div>
+                  <span class="lf-issue-arrow"><DesktopIcon name="arrow-right"/></span>
+                </button>)}
+              </div>
+            </section>;
+          })}
         </div>
       </div>
     </ModalDialog>

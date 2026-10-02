@@ -36,7 +36,6 @@ export type WorkflowTransactionCommand =
 
 export interface WorkflowTransactionStatus {
   phase: WorkflowTransactionPhase;
-  label: string;
   tone: WorkflowTransactionTone;
   nextCommand: WorkflowTransactionCommand;
   firstActionableIssue?: ClinicalIssue;
@@ -141,19 +140,7 @@ export type WorkstationRecordLifecycle =
 
 export interface WorkstationRecordLifecycleStatus {
   state: WorkstationRecordLifecycle;
-  label: string;
 }
-
-export const WORKSTATION_RECORD_LIFECYCLE_LABEL: Record<
-  WorkstationRecordLifecycle,
-  string
-> = {
-  new: "NEW LOCAL DRAFT",
-  draft: "SAVED LOCAL DRAFT",
-  locked: "LOCAL RECORD LOCKED",
-  saving: "SAVING LOCAL DRAFT",
-  error: "SAVE ATTENTION REQUIRED",
-};
 
 export function projectRecordLifecycle({
   locked = false,
@@ -175,7 +162,7 @@ export function projectRecordLifecycle({
         : recordId
           ? "draft"
           : "new";
-  return { state, label: WORKSTATION_RECORD_LIFECYCLE_LABEL[state] };
+  return { state };
 }
 
 const firstIssue = (
@@ -192,7 +179,6 @@ export function projectWorkflowTransactionStatus({
   if (locked) {
     return {
       phase: "locked",
-      label: "LOCKED",
       tone: "neutral",
       nextCommand: "open-locked-record",
     };
@@ -202,7 +188,6 @@ export function projectWorkflowTransactionStatus({
   if (readiness === "idle") {
     return {
       phase: "not-started",
-      label: "NOT STARTED",
       tone: "neutral",
       nextCommand: "start",
     };
@@ -210,7 +195,6 @@ export function projectWorkflowTransactionStatus({
   if (readiness === "blocked") {
     return {
       phase: "entry",
-      label: "ENTRY",
       tone: "stop",
       nextCommand: "resolve-requirement",
       firstActionableIssue: firstIssue(evaluation),
@@ -219,7 +203,6 @@ export function projectWorkflowTransactionStatus({
   if (readiness === "review") {
     return {
       phase: "review",
-      label: "REVIEW",
       tone: "attention",
       nextCommand: "review",
       firstActionableIssue: firstIssue(evaluation),
@@ -227,7 +210,6 @@ export function projectWorkflowTransactionStatus({
   }
   return {
     phase: "ready-to-attest",
-    label: "READY TO ATTEST",
     tone: "success",
     nextCommand: "attest",
   };

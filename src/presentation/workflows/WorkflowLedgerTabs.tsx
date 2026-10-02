@@ -1,12 +1,14 @@
+import { DesktopIcon } from "../DesktopIcon";
 import type { WorkflowLedgerState } from "../../application/workstation-projection";
+import { WorkflowTabList } from "./WorkflowTabList";
 
 const LEDGER_STATE_LABEL: Record<WorkflowLedgerState, string> = {
-  pending: "PEND",
-  entry: "ENTRY",
-  complete: "OK",
-  review: "REV",
-  stop: "STOP",
-  locked: "LOCK",
+  pending: "Not started",
+  entry: "In progress",
+  complete: "Complete",
+  review: "Review",
+  stop: "Required",
+  locked: "Signed",
 };
 
 export interface WorkflowLedgerTab<Tab extends string> {
@@ -24,9 +26,8 @@ export const workflowLedgerPanelId = (idPrefix: string, tab: string) =>
   `${idPrefix}-panel-${tab}`;
 
 /**
- * A single control serves as both worksheet navigation and transaction ledger.
- * This avoids a duplicate modern stepper while giving each MEDITECH-style page
- * a concise, evaluator-derived state stamp.
+ * Direct, non-sequential section navigation. Quiet counts are accompanied by
+ * full evaluator-derived accessible state descriptions; no signing gate changes.
  */
 export function WorkflowLedgerTabs<Tab extends string>({
   tabs,
@@ -41,26 +42,14 @@ export function WorkflowLedgerTabs<Tab extends string>({
   ariaLabel: string;
   idPrefix: string;
 }) {
-  const activateAndFocus = (index: number) => {
-    const normalized = (index + tabs.length) % tabs.length;
-    const next = tabs[normalized];
-    if (!next) return;
-    onChange(next.key);
-    globalThis.requestAnimationFrame(() => {
-      document.getElementById(workflowLedgerTabId(idPrefix, next.key))?.focus({
-        preventScroll: true,
-      });
-    });
-  };
-
   return (
-    <div class="wfp-tabbar wfp-ledger-tabs" role="tablist" aria-label={ariaLabel}>
-      {tabs.map((tab, index) => {
+    <WorkflowTabList label={ariaLabel}>
+      {tabs.map((tab) => {
         const tabId = workflowLedgerTabId(idPrefix, tab.key);
         const stateId = `${tabId}-state`;
         const stateLabel =
           tab.state === "stop" && tab.stopCount
-            ? `${tab.stopCount} STOP`
+            ? `${tab.stopCount} required`
             : LEDGER_STATE_LABEL[tab.state];
         return (
           <button
@@ -76,41 +65,16 @@ export function WorkflowLedgerTabs<Tab extends string>({
             tabIndex={activeTab === tab.key ? 0 : -1}
             title={tab.detail}
             onClick={() => onChange(tab.key)}
-            onKeyDown={(event) => {
-              switch (event.key) {
-                case "ArrowRight":
-                case "ArrowDown":
-                  event.preventDefault();
-                  activateAndFocus(index + 1);
-                  break;
-                case "ArrowLeft":
-                case "ArrowUp":
-                  event.preventDefault();
-                  activateAndFocus(index - 1);
-                  break;
-                case "Home":
-                  event.preventDefault();
-                  activateAndFocus(0);
-                  break;
-                case "End":
-                  event.preventDefault();
-                  activateAndFocus(tabs.length - 1);
-                  break;
-                default:
-                  break;
-              }
-            }}
           >
-            <span class="wfp-ledger-sequence" aria-hidden="true">
-              {String(index + 1).padStart(2, "0")}
-            </span>
             <span class="wfp-ledger-label">{tab.label}</span>
-            <span id={stateId} class={`wfp-ledger-state is-${tab.state}`}>
-              {stateLabel}
+            <span id={stateId} class={`wfp-ledger-state is-${tab.state}`} title={stateLabel}>
+              <span class="lf-sr-only">{stateLabel}</span>
+              {tab.stopCount ? <span class="lf-tab-count" aria-hidden="true">{tab.stopCount}</span> :
+                tab.state === "complete" || tab.state === "locked" ? <span class="lf-tab-complete"><DesktopIcon name="check"/></span> : null}
             </span>
           </button>
         );
       })}
-    </div>
+    </WorkflowTabList>
   );
 }

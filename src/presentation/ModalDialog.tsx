@@ -1,48 +1,27 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
+import { trapDialogTabKey } from "./records-drawer-shared";
+import { useBackdropDismiss } from "./lightfully/use-backdrop-dismiss";
 
-/**
- * Thin wrapper over the native <dialog> element. showModal() supplies the top
- * layer, ::backdrop, Escape-to-cancel, focus trapping, focus restoration, and
- * inerting of everything behind it - replacing the hand-rolled backdrop div,
- * Tab trap, and sibling-isolation effect this shell used to carry.
+/** Native modal behavior, with light dismissal only for a genuine backdrop tap.
+ * Padding clicks and drags that begin in the content never dismiss the dialog.
  */
-export function ModalDialog({
-  class: className,
-  labelledBy,
-  onDismiss,
-  children,
+export function ModalDialog({ class: className, labelledBy, onDismiss, children,
+  dismissOnBackdrop = true,
 }: {
-  class?: string;
-  labelledBy: string;
-  onDismiss: () => void;
-  children: ComponentChildren;
+  class?: string; labelledBy: string; onDismiss: () => void;
+  children: ComponentChildren; dismissOnBackdrop?: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
+  const backdrop = useBackdropDismiss(onDismiss, dismissOnBackdrop);
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog || dialog.open) return;
     dialog.showModal();
-    return () => {
-      if (dialog.open) dialog.close();
-    };
+    return () => { if (dialog.open) dialog.close(); };
   }, []);
-
-  return (
-    <dialog
-      ref={dialogRef}
-      class={className}
-      aria-labelledby={labelledBy}
-      onCancel={(event) => {
-        event.preventDefault();
-        onDismiss();
-      }}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) onDismiss();
-      }}
-    >
-      {children}
-    </dialog>
-  );
+  return <dialog ref={dialogRef} class={className} aria-labelledby={labelledBy} aria-modal="true"
+    onKeyDown={event => trapDialogTabKey(dialogRef.current, event)}
+    onCancel={event => { event.preventDefault(); onDismiss(); }}
+    {...backdrop}>{children}</dialog>;
 }

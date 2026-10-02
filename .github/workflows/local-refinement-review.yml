@@ -1,0 +1,86 @@
+name: Local workstation refinement review
+
+on:
+  push:
+    branches: [codex/ipmg-local-workstation-refinement]
+  workflow_dispatch:
+
+# Review only. No deployment, secrets, database, or repository write permissions.
+permissions:
+  contents: read
+
+concurrency:
+  group: local-refinement-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preserve exact review source
+        run: |
+          mkdir -p review-source
+          git archive --format=tar HEAD | gzip > review-source/source.tar.gz
+          git bundle create review-source/review.bundle HEAD ^59551bc914b945f268710fca3ef44c2e9ca62c50
+          git rev-parse HEAD > review-source/COMMIT.txt
+          git rev-parse HEAD^{tree} > review-source/TREE.txt
+          sha256sum review-source/source.tar.gz review-source/review.bundle > review-source/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-refinement-source
+          path: review-source/
+          retention-days: 3
+          if-no-files-found: error
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify protected clinical and storage boundary
+        run: node scripts/check-local-refinement.mjs
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+      - run: node scripts/package-standalone.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-refinement-standalone
+          path: standalone/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Install Chromium
+        run: npx playwright install chromium
+      - name: Review local workflows, safety, persistence and print
+        env:
+          TEST_STANDALONE_FILE: '1'
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/browser-results.json
+        run: >-
+          npx playwright test
+          tests/e2e/precision-polish.spec.js
+          tests/e2e/calm-workspace.spec.js
+          tests/e2e/deep-refinement.spec.js
+          tests/e2e/lightfully-direction.spec.js
+          tests/e2e/local-refinement.spec.js
+          tests/e2e/contemporary-workspace.spec.js
+          tests/e2e/injection-full-draft-safety.spec.js
+          tests/e2e/uds-record-integrity.spec.js
+          tests/e2e/print-regression.spec.js
+          tests/e2e/standalone-file.spec.js
+          tests/e2e/kiosk-flow.spec.js
+          --reporter=line,json,html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-refinement-review-evidence
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn

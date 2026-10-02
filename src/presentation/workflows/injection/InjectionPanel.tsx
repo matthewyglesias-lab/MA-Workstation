@@ -1,8 +1,10 @@
+import { RECORD, TRANSACTION_PHASE_LABEL } from "../../vocabulary";
 import { createContext, Fragment, type ComponentChildren, type Ref } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { DesktopIcon } from "../../DesktopIcon";
 import { copyButtonLabel, useCopyFeedback } from "../../clipboard";
 import { ModalDialog } from "../../ModalDialog";
+import { DialogHeading } from "../../lightfully/DialogHeading";
 import { SiteIcon } from "../../SiteIcon";
 import {
   INJECTION_ATTESTATION_OPTIONS,
@@ -95,7 +97,7 @@ import {
 } from "./injection-legacy-mirror";
 import { SiteHistoryRepository } from "../../../persistence/site-history";
 import { browserSafeStorage } from "../../../persistence/storage";
-import type { PatientContext } from "../../types";
+import type { InjectionKioskStepId, PatientContext } from "../../types";
 import { formatDobAsTyped } from "../../format-dob";
 import {
   canBuildInjectionPatientScreenDocument,
@@ -105,6 +107,10 @@ import {
   INJECTION_PATIENT_SCREENING_ENABLED,
   printInjectionPatientScreening,
 } from "./patient-screening-print";
+import {
+  defaultInjectionKioskStepForTab,
+  injectionKioskStepDefinition,
+} from "../../kiosk/InjectionStepper";
 
 // Four transaction pages match how staff actually complete the MAR: establish
 // order/timing, identify the physical product, administer and verify, review.
@@ -405,10 +411,21 @@ interface InjectionPanelProps {
   /** True once the record has been completed and locked (read-only) via the
    * records workspace. Matches legacy's #panel-administer.record-readonly. */
   locked?: boolean;
+  /** Prevents edits when the shell cannot safely preserve material typed fields. */
+  editorUnavailable?: boolean;
+  /** Keeps an unsaved dated addendum from being abandoned by shell navigation. */
+  onPendingAddendumChange?: (pending: boolean) => void;
+  /** Sticky all-field edit signal used by the shell's record lifecycle guard. */
+  onDirtyChange?: (dirty: boolean) => void;
   onWorkflowStateChange?: (
     encounter: InjectionEncounter,
     evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
   ) => void;
+  /** Focused-shell navigation. It changes presentation only; tabs and fields
+   * remain the existing worksheet's and the engine still owns every gate. */
+  kioskMode?: boolean;
+  kioskStep?: InjectionKioskStepId;
+  onKioskStepChange?: (step: InjectionKioskStepId) => void;
 }
 
 const patientIsEmpty = (patient: InjectionEncounter["patient"]): boolean =>
@@ -527,7 +544,7 @@ function CheckList({
                 {required && <abbr class="wfp-req" title="Required">*</abbr>}
                 {reviewState ? (
                   <span class={`wfp-review-state is-${reviewState}`}>
-                    {reviewState.toUpperCase()}
+                    {reviewState === "confirmed" ? "Confirmed" : reviewState === "expected" ? "Documented" : "Not documented"}
                   </span>
                 ) : (
                   optional && <span class="wfp-opt">optional</span>
@@ -741,11 +758,8 @@ function OperatorGuidance({
   return (
     <section class="wfp-operator-guidance" aria-label="Operator guidance" data-operator-guidance>
       <div class="wfp-operator-guidance-head">
-        <strong>Operator guidance</strong>
-        <span>{INJECTION_TAB_LABELS[tab]} — {medication.label}</span>
-        {presentedOutput?.clinicalReferenceVersion && (
-          <small>REF {presentedOutput.clinicalReferenceVersion}</small>
-        )}
+        <strong>Clinical guidance</strong>
+        <span>{medication.label}</span>
       </div>
       {(primaryItem || intervalReviewWarning) && (
         <div class="wfp-operator-guidance-list">
@@ -769,13 +783,16 @@ function OperatorGuidance({
           type="button"
           class="wfp-operator-guidance-action"
           onClick={() => onNavigate(blockerTab)}
+          title={firstStop.message}
+          aria-label={`Next: ${firstStop.message}`}
         >
-          Next required: {firstStop.message} — go to {INJECTION_TAB_LABELS[blockerTab]}
+          <span>Review next item <span aria-hidden="true">→</span></span><span class="lf-sr-only">{INJECTION_TAB_LABELS[blockerTab]}</span>
         </button>
       )}
       <details class="wfp-reference">
         <summary>Reference — product, schedule, and technique</summary>
         <div class="wfp-reference-body">
+          {presentedOutput?.clinicalReferenceVersion && <p class="lf-reference-version">Reference version {presentedOutput.clinicalReferenceVersion}</p>}
           <dl class="wfp-report-meta">
             <dt>Medication</dt>
             <dd>{medication.name} ({medication.generic})</dd>
@@ -944,7 +961,7 @@ function NeedleTechniquePanel({
     <div class="wfp-section wfp-needle-section" role="group" aria-label="Needle and technique">
       <h2 class="wfp-section-head">
         Needle &amp; technique
-        {referenceVersion && <span class="wfp-needle-ref">REF {referenceVersion}</span>}
+        {referenceVersion && <span class="wfp-needle-ref" title="Clinical reference version">Reference {referenceVersion}</span>}
       </h2>
       <div class="wfp-section-body">
         <div class="wfp-needle-inputs">
@@ -1240,21 +1257,73 @@ export function InjectionPanel({
   staffSignInValue,
   previewRef,
   locked,
+  editorUnavailable = false,
+  onPendingAddendumChange,
+  onDirtyChange,
   onWorkflowStateChange,
+  kioskMode = false,
+  kioskStep,
+  onKioskStepChange,
 }: InjectionPanelProps) {
+  const editorDisabled = Boolean(locked || editorUnavailable);
   const [encounter, setEncounter] = useState<InjectionEncounter>(initialEncounter);
   // The typed encounter is the workflow authority. Mirroring to the legacy
   // document remains a compatibility path for records and print output, but
   // readiness and commands must update synchronously with the field edit that
   // caused them rather than after a MutationObserver polling cycle.
   const evaluation = useMemo(() => InjectionEngine.evaluate(encounter, {}), [encounter]);
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  const onWorkflowStateChangeRef = useRef(onWorkflowStateChange);
+  onDirtyChangeRef.current = onDirtyChange;
+  onWorkflowStateChangeRef.current = onWorkflowStateChange;
   useEffect(() => {
-    onWorkflowStateChange?.(encounter, evaluation);
+    onWorkflowStateChangeRef.current?.(encounter, evaluation);
     // The callback is a notification boundary, not an input to evaluation.
     // Re-notifying on a parent render would create a shell/panel render loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounter, evaluation]);
   const [tab, setTab] = useState<InjectionTab>("order");
+  const requestedKioskStepRef = useRef<InjectionKioskStepId | null>(null);
+
+  useEffect(() => {
+    if (!kioskMode || !kioskStep) return;
+    const target = injectionKioskStepDefinition(kioskStep);
+    requestedKioskStepRef.current = kioskStep;
+    // Two focus steps share Order and two share Administration. Clear a
+    // same-page request now; otherwise no tab state change would rerun the
+    // synchronization effect and the stale request could override a later
+    // in-worksheet navigation.
+    if (tab === target.tab) requestedKioskStepRef.current = null;
+    setTab(target.tab);
+    const frame = window.requestAnimationFrame(() => {
+      const candidate = target.action === "sign"
+        ? document.querySelector<HTMLElement>("[data-injection-finish]")
+        : target.field
+          ? document.querySelector<HTMLElement>(
+              `[data-field-path="${target.field}"] input:not(:disabled), ` +
+                `[data-field-path="${target.field}"] select:not(:disabled), ` +
+                `[data-field-path="${target.field}"] textarea:not(:disabled), ` +
+                `[data-field-path="${target.field}"] button:not(:disabled), ` +
+                `[data-field-path="${target.field}"][tabindex]`,
+            )
+          : null;
+      candidate?.scrollIntoView({ block: "center" });
+      candidate?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [kioskMode, kioskStep]);
+
+  useEffect(() => {
+    if (!kioskMode || !onKioskStepChange) return;
+    const requested = requestedKioskStepRef.current;
+    if (requested) {
+      if (injectionKioskStepDefinition(requested).tab !== tab) return;
+      requestedKioskStepRef.current = null;
+      onKioskStepChange(requested);
+      return;
+    }
+    onKioskStepChange(defaultInjectionKioskStepForTab(tab));
+  }, [kioskMode, onKioskStepChange, tab]);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [patientScreeningDialogOpen, setPatientScreeningDialogOpen] = useState(false);
   const [lateDoseDialogOpen, setLateDoseDialogOpen] = useState(false);
@@ -1325,6 +1394,8 @@ export function InjectionPanel({
   // [data-inj-addendum] the same one-way-mirror way as everything else.
   const [addendumAuthor, setAddendumAuthor] = useState(staffSignInValue);
   const [addendumText, setAddendumText] = useState("");
+  const [addendumSaving, setAddendumSaving] = useState(false);
+  const addendumSavingRef = useRef(false);
   const [addenda, setAddenda] = useState<Array<{ author: string; text: string; stamp: string }>>([]);
   const nonAdministration = Boolean(
     encounter.disposition.kind && encounter.disposition.kind !== "administered",
@@ -1338,6 +1409,22 @@ export function InjectionPanel({
     }));
 
   useEffect(() => {
+    onPendingAddendumChange?.(Boolean(addendumText.trim()));
+  }, [addendumText, onPendingAddendumChange]);
+
+  useEffect(() => {
+    // A workstation staff handoff changes the default author for the next
+    // clarification, while a non-empty in-progress addendum retains exactly
+    // the author/text staff already entered.
+    if (addendumText.trim()) return;
+    setAddendumAuthor(staffSignInValue);
+    if (locked) setLegacyFieldValue("injAddendumAuthor", staffSignInValue);
+    // Only a staff handoff should refresh this default; author edits remain
+    // deliberate until another handoff occurs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffSignInValue]);
+
+  useEffect(() => {
     if (!locked) return;
     setAddenda(readAddenda());
     setLegacyFieldValue("injAddendumAuthor", addendumAuthor);
@@ -1346,50 +1433,74 @@ export function InjectionPanel({
 
   useEffect(() => {
     if (mirroredOnMount.current) return;
+    if (
+      editorDisabled ||
+      document.getElementById("panel-administer")?.classList.contains("record-readonly")
+    ) {
+      return;
+    }
     mirroredOnMount.current = true;
     mirrorInjectionEncounterToLegacyDom(encounter, { forceChipState: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [editorUnavailable]);
 
   useEffect(() => {
+    if (editorDisabled) return;
     if (!patientIsEmpty(encounter.patient)) return;
     if (!activePatient.name?.trim() && !activePatient.dob?.trim()) return;
-    patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } });
+    patch(
+      { patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } },
+      false,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePatient.name, activePatient.dob]);
+  }, [activePatient.name, activePatient.dob, editorDisabled]);
 
   const updateEncounter = (
     updater: (previous: InjectionEncounter) => InjectionEncounter,
     mirrorOptions?: InjectionLegacyMirrorOptions,
+    markDirty = true,
   ) => {
-    setEncounter((previous) => {
-      const candidate = updater(previous);
-      const materialFactsChanged =
-        injectionAdministrationReviewFingerprint(previous) !==
-        injectionAdministrationReviewFingerprint(candidate);
-      const next =
-        materialFactsChanged && previous.disposition.kind
-          ? {
-              ...candidate,
-              disposition: {
-                kind: "" as const,
-                provider: "",
-                time: "",
-                outcome: "",
-                reviewedBy: "",
-                reviewedAt: "",
-                reviewFingerprint: "",
-              },
-            }
-          : candidate;
-      encounterRef.current = next;
-      mirrorInjectionEncounterToLegacyDom(next, mirrorOptions);
-      return next;
-    });
+    if (
+      editorDisabled ||
+      document.getElementById("panel-administer")?.classList.contains("record-readonly")
+    ) {
+      return;
+    }
+    // Refs, not the render/effect cycle, own the persistence boundary. A
+    // keyboard shortcut can edit a field and request navigation in the same
+    // browser task; publish the exact next encounter before that guard runs.
+    const previous = encounterRef.current;
+    const candidate = updater(previous);
+    const materialFactsChanged =
+      injectionAdministrationReviewFingerprint(previous) !==
+      injectionAdministrationReviewFingerprint(candidate);
+    const next =
+      materialFactsChanged && previous.disposition.kind
+        ? {
+            ...candidate,
+            disposition: {
+              kind: "" as const,
+              provider: "",
+              time: "",
+              outcome: "",
+              reviewedBy: "",
+              reviewedAt: "",
+              reviewFingerprint: "",
+            },
+          }
+        : candidate;
+    encounterRef.current = next;
+    if (markDirty) onDirtyChangeRef.current?.(true);
+    mirrorInjectionEncounterToLegacyDom(next, mirrorOptions);
+    onWorkflowStateChangeRef.current?.(
+      next,
+      InjectionEngine.evaluate(next, {}),
+    );
+    setEncounter(next);
   };
 
-  const patch = (partial: Partial<InjectionEncounter>) => {
-    updateEncounter((previous) => ({ ...previous, ...partial }));
+  const patch = (partial: Partial<InjectionEncounter>, markDirty = true) => {
+    updateEncounter((previous) => ({ ...previous, ...partial }), undefined, markDirty);
   };
 
   const flushPatientIdentityLegacySync = () => {
@@ -1432,11 +1543,11 @@ export function InjectionPanel({
   // the empty field; once staff edits the value, their documentation wins.
   useEffect(() => {
     const sessionStaff = staffSignInValue.trim();
-    if (locked || !sessionStaff || encounter.administeredBy.trim()) return;
-    patch({ administeredBy: sessionStaff });
+    if (editorDisabled || !sessionStaff || encounter.administeredBy.trim()) return;
+    patch({ administeredBy: sessionStaff }, false);
     // `patch` is intentionally a render-local bridge to the legacy mirror.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staffSignInValue, locked, encounter.administeredBy]);
+  }, [staffSignInValue, editorDisabled, encounter.administeredBy]);
 
   const patchPatient = (partial: Partial<InjectionEncounter["patient"]>) => {
     updateEncounter(
@@ -1611,12 +1722,36 @@ export function InjectionPanel({
   const onAddendumTextChange = (value: string) => {
     setAddendumText(value);
     setLegacyFieldValue("injAddendumText", value);
+    onPendingAddendumChange?.(Boolean(value.trim()));
   };
 
   const saveAddendum = () => {
+    if (addendumSavingRef.current) return;
+    addendumSavingRef.current = true;
+    setAddendumSaving(true);
+    // The legacy renderer may have refreshed its hidden defaults since these
+    // controlled fields were edited. Reassert the exact reviewed pair at the
+    // persistence boundary so visible and stored authorship cannot diverge.
+    setLegacyFieldValue("injAddendumAuthor", addendumAuthor);
+    setLegacyFieldValue("injAddendumText", addendumText);
     document.querySelector<HTMLButtonElement>("[data-inj-addendum]")?.click();
-    setAddendumText("");
-    window.setTimeout(() => setAddenda(readAddenda()), 60);
+    window.setTimeout(() => {
+      const legacyText = (
+        document.getElementById("injAddendumText") as HTMLTextAreaElement | null
+      )?.value ?? addendumText;
+      // The legacy record handler clears its field only after persistence
+      // succeeds. Mirror that outcome instead of erasing the visible draft on
+      // an invalid author or storage failure.
+      setAddendumText(legacyText);
+      onPendingAddendumChange?.(Boolean(legacyText.trim()));
+      if (!legacyText.trim()) {
+        setAddendumAuthor(staffSignInValue);
+        setLegacyFieldValue("injAddendumAuthor", staffSignInValue);
+      }
+      setAddenda(readAddenda());
+      addendumSavingRef.current = false;
+      setAddendumSaving(false);
+    }, 60);
   };
 
   const presentationOutput = evaluation?.output as InjectionOutputWithPresentation | undefined;
@@ -1673,7 +1808,7 @@ export function InjectionPanel({
     // allowed sites. When the current order has no site yet, select that
     // alternate for the MA; any explicit site selection remains untouched.
     if (
-      locked ||
+      editorDisabled ||
       nonAdministration ||
       siteRequiresActiveOrderEntry ||
       !recommendedSite ||
@@ -1685,7 +1820,7 @@ export function InjectionPanel({
     // `patch` is intentionally render-local; using the value dependencies
     // prevents a manual site choice from being overwritten.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [encounter.site, locked, nonAdministration, recommendedSite, siteRequiresActiveOrderEntry]);
+  }, [encounter.site, editorDisabled, nonAdministration, recommendedSite, siteRequiresActiveOrderEntry]);
 
   const needleProjection = presentationOutput?.needle;
 
@@ -2099,7 +2234,7 @@ export function InjectionPanel({
   // staff change is preserved: only an empty value or the last calculation is
   // replaced when the date/cadence changes.
   useEffect(() => {
-    if (locked || nonAdministration) return;
+    if (editorDisabled || nonAdministration) return;
     const current = encounter.nextDoseDate;
     if (!suggestedNextDose) {
       // No calculated date currently applies (e.g. switching onto a
@@ -2137,7 +2272,7 @@ export function InjectionPanel({
     applyCalculatedNextDose(suggestedNextDose);
     // `patch` mirrors the same value to legacy and is intentionally omitted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [encounter.nextDoseDate, locked, nextDoseMetadata?.source, nonAdministration, suggestedNextDose]);
+  }, [encounter.nextDoseDate, editorDisabled, nextDoseMetadata?.source, nonAdministration, suggestedNextDose]);
 
   useEffect(() => {
     if (!nonAdministration) return;
@@ -2172,7 +2307,7 @@ export function InjectionPanel({
   // "40 days late" and pop a modal that blocks staff mid-entry, on a value
   // nobody has finished typing yet. By Review the real dates are in.
   useEffect(() => {
-    if (locked || tab !== "review" || !evaluation?.output.lateDoseWarning) return;
+    if (editorDisabled || tab !== "review" || !evaluation?.output.lateDoseWarning) return;
     if (currentLateDoseReview) return;
     if (lateDosePromptedFor.current === lateDoseReviewFingerprint) return;
     lateDosePromptedFor.current = lateDoseReviewFingerprint;
@@ -2185,7 +2320,7 @@ export function InjectionPanel({
     currentLateDoseReview,
     lateDoseReviewFingerprint,
     evaluation?.output.lateDoseWarning,
-    locked,
+    editorDisabled,
   ]);
 
   const confirmLateDoseReview = () => {
@@ -2250,7 +2385,12 @@ export function InjectionPanel({
     );
 
   return (
-    <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
+    <div
+      class="wfp-panel cd2004-print-exclude"
+      ref={previewRef}
+      tabIndex={-1}
+      data-kiosk-step={kioskMode ? kioskStep : undefined}
+    >
       <InjectionRequirementsContext.Provider value={requirements}>
         <InjectionIncompleteFieldsContext.Provider value={incompleteFields}>
           <div class="wfp-transaction-chrome">
@@ -2258,6 +2398,10 @@ export function InjectionPanel({
               <h1 class="wfp-workflow-title"><strong>Injection worksheet</strong></h1>
               {locked ? (
                 <span class="wfp-status-flag is-idle">Read only</span>
+              ) : editorUnavailable ? (
+                <span class="wfp-status-flag is-stop">
+                  {RECORD.injectionProtectionUnavailableShort}
+                </span>
               ) : (
                 <StatusFlag
                   idle={(evaluation?.readiness ?? "idle") === "idle"}
@@ -2266,16 +2410,16 @@ export function InjectionPanel({
                   onOpenRequirements={() => setRequirementsOpen(true)}
                 />
               )}
-              <WorkflowSummaryFact
-                label="DUE"
+              {encounter.medicationKey && <WorkflowSummaryFact
+                label="Next dose"
                 value={suggestedNextDose || "PENDING"}
                 tone={suggestedNextDose ? "normal" : "attention"}
-              />
-              <WorkflowSummaryFact
-                label="PKG"
+              />}
+              {encounter.medicationKey && <WorkflowSummaryFact
+                label="Product"
                 value={packageState}
                 tone={packageState === "INCOMPLETE" ? "attention" : "normal"}
-              />
+              />}
               {INJECTION_PATIENT_SCREENING_ENABLED && encounter.medicationKey && (
                 <button
                   type="button"
@@ -2283,7 +2427,7 @@ export function InjectionPanel({
                   data-patient-screening-print="summary"
                   aria-haspopup="dialog"
                   onClick={() => setPatientScreeningDialogOpen(true)}
-                  disabled={!patientScreeningReady}
+                  disabled={editorUnavailable || !patientScreeningReady}
                   title={
                     patientScreeningReady
                       ? "Print the patient screening and consent form."
@@ -2299,10 +2443,10 @@ export function InjectionPanel({
                 class="wfp-transaction-readout"
                 aria-label={`Worksheet page ${activePage} of ${visibleTabs.length}`}
               >
-                <b>{transactionStatus.label}</b>
+                <b>{TRANSACTION_PHASE_LABEL[transactionStatus.phase]}</b>
                 <span>PG {activePage}/{visibleTabs.length}</span>
               </span>
-              {!locked && patientNeedsRestore && (
+              {!editorDisabled && patientNeedsRestore && (
                 <button
                   type="button"
                   class="cd2004-link-button"
@@ -2313,7 +2457,7 @@ export function InjectionPanel({
                   Use selected local patient
                 </button>
               )}
-              {!locked && staffNeedsRestore && (
+              {!editorDisabled && staffNeedsRestore && (
                 <button
                   type="button"
                   class="cd2004-link-button"
@@ -2324,13 +2468,15 @@ export function InjectionPanel({
               )}
             </div>
 
-            <WorkflowLedgerTabs
-              tabs={injectionLedgerTabs}
-              activeTab={tab}
-              onChange={setTab}
-              ariaLabel="Injection transaction pages and state"
-              idPrefix="injection-ledger"
-            />
+            {!kioskMode && (
+              <WorkflowLedgerTabs
+                tabs={injectionLedgerTabs}
+                activeTab={tab}
+                onChange={setTab}
+                ariaLabel="Injection transaction pages and state"
+                idPrefix="injection-ledger"
+              />
+            )}
           </div>
 
       <div
@@ -2341,11 +2487,12 @@ export function InjectionPanel({
       >
       {invalidationReceipt && (
         <div class="wfp-invalidation-receipt" role="status">
-          <strong>INVALIDATION RECEIPT</strong><span>{invalidationReceipt}</span>
+          <strong>Review updated details</strong><span>{invalidationReceipt}</span>
           <button type="button" class="cd2004-link-button" aria-label="Dismiss invalidation receipt" onClick={() => setInvalidationReceipt(null)}>×</button>
         </div>
       )}
 
+      {tab !== "order" && (
       <OperatorGuidance
         tab={tab}
         medication={medication}
@@ -2356,9 +2503,10 @@ export function InjectionPanel({
         nonAdministration={nonAdministration}
         onNavigate={setTab}
       />
+      )}
 
       {/* A locked record is read-only, so there is nothing to act on. */}
-      {!locked && (
+      {!editorDisabled && (
         <OutstandingRequirements<InjectionTab>
           open={requirementsOpen}
           onClose={() => setRequirementsOpen(false)}
@@ -2371,19 +2519,22 @@ export function InjectionPanel({
         />
       )}
 
-      <fieldset disabled={locked} style="border:none;padding:0;margin:0;display:contents">
+      <fieldset disabled={editorDisabled} style="border:none;padding:0;margin:0;display:contents">
 
       {tab === "order" && (
         <div
           class="wfp-tabpanel"
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "order")}
-          aria-labelledby={workflowLedgerTabId("injection-ledger", "order")}
+          aria-labelledby={
+            kioskMode ? undefined : workflowLedgerTabId("injection-ledger", "order")
+          }
+          aria-label={kioskMode ? INJECTION_TAB_LABELS.order : undefined}
         >
           <div class="wfp-section" role="group" aria-label="Patient & ordering provider">
             <h2 class="wfp-section-head">Patient &amp; ordering provider</h2>
             <div class="wfp-section-body">
-              <div class="wfp-row">
+              <div class="wfp-row lf-patient-order-row">
                 <Field label="Patient name" field="patient.name" source={projectCarriedFieldSource(encounter.patient.name, activePatientName, "CHART")}>
                   <input
                     value={encounter.patient.name}
@@ -2415,6 +2566,17 @@ export function InjectionPanel({
                   />
                 </Field>
               </div>
+              <div class="wfp-row lf-encounter-purpose-row">
+              <Field label="Encounter type" field="reason">
+                <OptionList<InjectionReason>
+                  name="inj-reason"
+                  value={encounter.reason}
+                  onChange={(value) => patch({ reason: value })}
+                  options={INJECTION_REASON_OPTIONS}
+                  placeholder="Select encounter type"
+                  inline
+                />
+              </Field>
               <Field
                 label="Verified active-order purpose"
                 field="details.purpose"
@@ -2426,23 +2588,14 @@ export function InjectionPanel({
                   onInput={(event) => patchDetails({ purpose: event.currentTarget.value })}
                 />
               </Field>
-              <Field label="Encounter type" field="reason">
-                <OptionList<InjectionReason>
-                  name="inj-reason"
-                  value={encounter.reason}
-                  onChange={(value) => patch({ reason: value })}
-                  options={INJECTION_REASON_OPTIONS}
-                  placeholder="Select encounter type"
-                  inline
-                />
-              </Field>
+              </div>
             </div>
           </div>
 
           <div class="wfp-section" role="group" aria-label="Ordered medication">
             <h2 class="wfp-section-head">Ordered medication</h2>
             <div class="wfp-section-body">
-              <div class="wfp-row">
+              <div class="wfp-row lf-medication-order-row">
                 <Field label="Drug" field="medicationKey">
                   <select
                     name="inj-medication"
@@ -2524,6 +2677,16 @@ export function InjectionPanel({
                   </select>
                 </Field>
               </div>
+      <OperatorGuidance
+        tab={tab}
+        medication={medication}
+        evaluation={evaluation}
+        allowedSites={allowedSites}
+        recommendedSite={recommendedSite}
+        suggestedNextDose={suggestedNextDose}
+        nonAdministration={nonAdministration}
+        onNavigate={setTab}
+      />
               <Field
                 label="Needle / technique"
                 field="technique"
@@ -2792,8 +2955,7 @@ export function InjectionPanel({
                 </div>
               )}
               <p class="wfp-field-hint">
-                Read-only rotation history from this workstation's local records. It informs site
-                selection; it never gates it.
+                {RECORD.rotationHistoryDetail}
               </p>
             </div>
           </div>
@@ -3058,7 +3220,12 @@ export function InjectionPanel({
           class="wfp-tabpanel"
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "administration")}
-          aria-labelledby={workflowLedgerTabId("injection-ledger", "administration")}
+          aria-labelledby={
+            kioskMode
+              ? undefined
+              : workflowLedgerTabId("injection-ledger", "administration")
+          }
+          aria-label={kioskMode ? INJECTION_TAB_LABELS.administration : undefined}
         >
           <div class="wfp-section" role="group" aria-label="Actual administration location">
             <h2 class="wfp-section-head">
@@ -3311,7 +3478,10 @@ export function InjectionPanel({
           class="wfp-tabpanel"
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "product")}
-          aria-labelledby={workflowLedgerTabId("injection-ledger", "product")}
+          aria-labelledby={
+            kioskMode ? undefined : workflowLedgerTabId("injection-ledger", "product")
+          }
+          aria-label={kioskMode ? INJECTION_TAB_LABELS.product : undefined}
         >
           {!medication && (
             <div class="wfp-prerequisite-line" role="status">
@@ -3473,7 +3643,7 @@ export function InjectionPanel({
                 role="status"
               >
                 <div class="wfp-review-contract-head">
-                  <strong>STANDARD PRE-ADMIN SET</strong>
+                  <strong>Verification before administration</strong>
                   <span>
                     {administrationReviewCurrent
                       ? `CONFIRMED${encounter.disposition.reviewedBy ? ` · ${encounter.disposition.reviewedBy}` : " · HISTORICAL RECORD"}${encounter.disposition.reviewedAt ? ` · ${new Date(encounter.disposition.reviewedAt).toLocaleString()}` : ""}`
@@ -3481,8 +3651,8 @@ export function InjectionPanel({
                   </span>
                 </div>
                 <p>
-                  Routine checks are preselected as reminders. Clear any step not completed; they
-                  become confirmed only when you select the final administration disposition.
+                  Select only the checks you completed for this patient today. Record allergy status
+                  and the observed response before confirming an administration.
                 </p>
               </div>
               <CheckList
@@ -3669,7 +3839,10 @@ export function InjectionPanel({
           class="wfp-tabpanel"
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "review")}
-          aria-labelledby={workflowLedgerTabId("injection-ledger", "review")}
+          aria-labelledby={
+            kioskMode ? undefined : workflowLedgerTabId("injection-ledger", "review")
+          }
+          aria-label={kioskMode ? INJECTION_TAB_LABELS.review : undefined}
         >
           {!nonAdministration && (
             <ScheduleRegister
@@ -3845,8 +4018,7 @@ export function InjectionPanel({
             </h2>
             <div class="wfp-section-body">
               <p class="wfp-field-hint">
-                Use the checked routine review items as a fast review-by-exception sheet, then make one final
-                documentation choice. An administration note remains unavailable until a complete
+                Review the documented checks and actual outcome, then choose the disposition. An administration note remains unavailable until a complete
                 administration is documented.
               </p>
               <div
@@ -3934,8 +4106,7 @@ export function InjectionPanel({
                   rather than presenting a competing early completion route. */}
               {evaluation?.output.recordStatus === "handoff-ready" && (
                 <p class="wfp-done-line is-info">
-                  <strong>Handoff documented.</strong> No medication administration was recorded, so
-                  this local administration record cannot be attested and locked.
+                  <strong>Handoff documented.</strong> {RECORD.handoffNoAdministration}
                 </p>
               )}
             </div>
@@ -3961,7 +4132,7 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-link-button"
                 onClick={() => copyNote(noteText)}
-                disabled={!noteText}
+                disabled={editorUnavailable || !noteText}
               >
                 <DesktopIcon name="copy" />
                 {copyButtonLabel(noteCopy.state, "Copy note")}
@@ -3971,7 +4142,7 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-command-button"
                 onClick={() => requestClinicalPrint("injection-avs")}
-                disabled={!hasAdministrationDetailsForAvs}
+                disabled={editorUnavailable || !hasAdministrationDetailsForAvs}
                 title={
                   hasAdministrationDetailsForAvs
                     ? undefined
@@ -3988,7 +4159,7 @@ export function InjectionPanel({
                   data-patient-screening-print="outcome"
                   aria-haspopup="dialog"
                   onClick={() => setPatientScreeningDialogOpen(true)}
-                  disabled={!patientScreeningReady}
+                  disabled={editorUnavailable || !patientScreeningReady}
                   title={
                     patientScreeningReady
                       ? "Print the patient screening and consent form."
@@ -4003,7 +4174,7 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-link-button"
                 onClick={() => requestClinicalPrint("injection-worksheet")}
-                disabled={!transactionStarted}
+                disabled={editorUnavailable || !transactionStarted}
                 title={
                   transactionStarted
                     ? "Print the current injection worksheet."
@@ -4017,6 +4188,7 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-link-button"
                 onClick={() => requestClinicalPrint("injection-worksheet-blank")}
+                disabled={editorUnavailable}
               >
                 <DesktopIcon name="print" />
                 Blank worksheet
@@ -4045,6 +4217,7 @@ export function InjectionPanel({
               <input
                 value={addendumAuthor}
                 placeholder="Current staff name or initials"
+                disabled={editorUnavailable}
                 onInput={(event) => onAddendumAuthorChange(event.currentTarget.value)}
               />
             </Field>
@@ -4053,6 +4226,7 @@ export function InjectionPanel({
                 data-addendum-input
                 value={addendumText}
                 placeholder="Clarification, correction, or follow-up. The original completed record remains unchanged."
+                disabled={editorUnavailable}
                 onInput={(event) => onAddendumTextChange(event.currentTarget.value)}
               />
             </Field>
@@ -4061,7 +4235,12 @@ export function InjectionPanel({
                 type="button"
                 class="cd2004-command-button"
                 onClick={saveAddendum}
-                disabled={!addendumText.trim()}
+                disabled={
+                  addendumSaving ||
+                  editorUnavailable ||
+                  !addendumText.trim() ||
+                  !addendumAuthor.trim()
+                }
               >
                 Save addendum
               </button>
@@ -4079,16 +4258,7 @@ export function InjectionPanel({
           onDismiss={() => setPatientScreeningDialogOpen(false)}
         >
           <div class="cd2004-dialog-frame">
-            <div class="cd2004-dialog-titlebar">
-              <span id="patient-screening-print-title">Print patient screening</span>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setPatientScreeningDialogOpen(false)}
-              >
-                X
-              </button>
-            </div>
+            <DialogHeading id="patient-screening-print-title" title={"Print patient screening"} onClose={() => setPatientScreeningDialogOpen(false)} />
             <div class="cd2004-dialog-body">
               <p>
                 This paper form does not store patient answers or signatures electronically and does not change injection readiness.
@@ -4129,12 +4299,7 @@ export function InjectionPanel({
           onDismiss={() => setLateDoseDialogOpen(false)}
         >
           <div class="cd2004-dialog-frame">
-            <div class="cd2004-dialog-titlebar">
-              <span id="late-dose-review-title">Late-dose review</span>
-              <button type="button" aria-label="Close" onClick={() => setLateDoseDialogOpen(false)}>
-                X
-              </button>
-            </div>
+            <DialogHeading id="late-dose-review-title" title={"Late-dose review"} onClose={() => setLateDoseDialogOpen(false)} />
             <div class="cd2004-dialog-body">
               <p>{lateDoseWarningMessage}</p>
               <p class="wfp-field-hint">
@@ -4219,18 +4384,7 @@ export function InjectionPanel({
           onDismiss={() => setNextDoseOverrideOpen(false)}
         >
           <div class="cd2004-dialog-frame">
-            <div class="cd2004-dialog-titlebar">
-              <span id="next-dose-override-title">
-                {manualReturnDate ? "Record ordered return date" : "Override calculated return target"}
-              </span>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setNextDoseOverrideOpen(false)}
-              >
-                X
-              </button>
-            </div>
+            <DialogHeading id="next-dose-override-title" title={manualReturnDate ? "Record ordered return date" : "Override calculated return target"} onClose={() => setNextDoseOverrideOpen(false)} />
             <div class="cd2004-dialog-body">
               <p>
                 {manualReturnDate ? (

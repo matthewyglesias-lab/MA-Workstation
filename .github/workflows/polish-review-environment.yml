@@ -1,0 +1,36 @@
+name: Polish review environment
+on:
+  push:
+    branches: [codex/ipmg-local-workstation-refinement]
+    paths: [.github/workflows/polish-review-environment.yml]
+permissions:
+  contents: read
+jobs:
+  environment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Archive exact locked toolchain for offline local review
+        run: |
+          mkdir -p review-environment
+          tar -czf review-environment/dependencies.tar.gz node_modules
+          git rev-parse HEAD > review-environment/COMMIT.txt
+          sha256sum package-lock.json review-environment/dependencies.tar.gz > review-environment/SHA256SUMS.txt
+      - name: Record dependency audit without automatic version changes
+        run: |
+          npm audit --json > review-environment/audit.json || test $? -eq 1
+          npm audit --omit=dev --json > review-environment/runtime-audit.json || test $? -eq 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polish-offline-review-environment
+          path: review-environment/
+          retention-days: 2
+          if-no-files-found: error

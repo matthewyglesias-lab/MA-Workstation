@@ -1,5 +1,10 @@
+import { DraftRecoveryNotice } from "../../lightfully/DraftRecoveryNotice";
+import { WorkflowTabList } from "../WorkflowTabList";
+import type { RecoveryStatus } from "../../../persistence/workflow-recovery";
+import { ActionShelf } from "../../lightfully/ActionShelf";
+import { labelControls, OptionList } from "../WorkflowField";
 import type { ComponentChildren, Ref } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef, useState } from "preact/hooks";
 import {
   emptyFormsEncounter,
   FORM_REQUEST_TYPE_OPTIONS,
@@ -38,54 +43,28 @@ const LETTER_BUILDER_ENABLED = false;
 
 interface FormsPanelProps {
   initialEncounter: FormsEncounter;
+  initialDirty?: boolean;
+  recoveryStatus?: RecoveryStatus;
   activePatient: PatientContext;
   evaluation?: ClinicalEvaluation<FormsEvaluationOutput>;
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
+  /**
+   * Reports whether this mounted worksheet has received an edit. Dirty state
+   * is conservative and sticky: it starts from initialDirty, becomes true on
+   * the first field edit or encounter-changing action, and never clears until
+   * remount.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Retains the exact typed encounter across shell/chart remounts. */
+  onWorkflowStateChange?: (
+    encounter: FormsEncounter,
+    state: { dirty: boolean },
+  ) => void;
 }
 
 const patientIsEmpty = (patient: FormsEncounter["patient"]): boolean =>
   !patient.name.trim() && !patient.dob.trim();
-
-interface OptionListProps<T extends string> {
-  name: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: ReadonlyArray<{ key: T; label: string; description?: string }>;
-  inline?: boolean;
-}
-
-function OptionList<T extends string>({
-  name,
-  value,
-  onChange,
-  options,
-  inline,
-}: OptionListProps<T>) {
-  // Native <select> rather than a custom radio-row list: the OS draws the
-  // popup, keyboard type-ahead comes for free, and a closed control costs one
-  // line instead of one per option. The selected option's description stays
-  // visible beneath it - clinical guidance should not hide inside a tooltip.
-  const selected = options.find((option) => option.key === value);
-  return (
-    <div class={`wfp-select-group ${inline ? "wfp-select-group-inline" : ""}`}>
-      <select
-        name={name}
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value as T)}
-      >
-        {options.map((option) => (
-          <option key={option.key} value={option.key} title={option.description}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {selected?.description && (
-        <small class="wfp-select-desc">{selected.description}</small>
-      )}
-    </div>
-  );
-}
 
 function Field({
   label,
@@ -101,6 +80,7 @@ function Field({
   width?: "date" | "short";
   children: ComponentChildren;
 }) {
+  const captionId = `${useId()}-caption`;
   // Requirement is marked on the field itself - a red asterisk on the caption
   // and a filled control - rather than as a word of helper text underneath.
   // Only the bare "required"/"optional" markers are replaced; a hint carrying
@@ -118,7 +98,7 @@ function Field({
     <div
       class={`wfp-field ${required ? "is-required" : ""} ${width ? `is-w-${width}` : ""}`}
     >
-      <label>
+      <label id={captionId}>
         <span class="wfp-field-caption">{label}</span>
         {required && (
           <abbr class="wfp-req" title="Required">
@@ -127,22 +107,48 @@ function Field({
         )}
         {optional && <span class="wfp-opt">optional</span>}
       </label>
-      {children}
-      {detail && <span class="wfp-field-hint">{detail}</span>}
+      {labelControls(children, { labelledBy: captionId, describedBy: detail ? `${captionId}-help` : undefined, required, invalid: false })}
+      {detail && <span class="wfp-field-hint" id={`${captionId}-help`}>{detail}</span>}
     </div>
   );
 }
 
 export function FormsPanel({
   initialEncounter,
+  initialDirty = false,
+  recoveryStatus,
   activePatient,
   evaluation,
   staffSignInValue,
   previewRef,
+  onDirtyChange,
+  onWorkflowStateChange,
 }: FormsPanelProps) {
   const [encounter, setEncounter] = useState<FormsEncounter>(initialEncounter);
   const [tab, setTab] = useState<FormsTab>("request");
   const mirroredOnMount = useRef(false);
+  const dirty = useRef(initialDirty);
+  const encounterRef = useRef(initialEncounter);
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  const onWorkflowStateChangeRef = useRef(onWorkflowStateChange);
+  onDirtyChangeRef.current = onDirtyChange;
+  onWorkflowStateChangeRef.current = onWorkflowStateChange;
+
+  const markDirty = () => {
+    if (dirty.current) return;
+    dirty.current = true;
+    onDirtyChangeRef.current?.(true);
+  };
+
+  useEffect(() => {
+    onDirtyChangeRef.current?.(dirty.current);
+  }, []);
+
+  useEffect(() => {
+    onWorkflowStateChangeRef.current?.(encounterRef.current, {
+      dirty: dirty.current,
+    });
+  }, []);
 
   useEffect(() => {
     if (mirroredOnMount.current) return;
@@ -152,22 +158,41 @@ export function FormsPanel({
   }, []);
 
   useEffect(() => {
+    // A remounted dirty draft may intentionally have no patient yet. Ambient
+    // shell context must not silently rewrite that draft while restoring it.
+    if (dirty.current) return;
     if (!patientIsEmpty(encounter.patient)) return;
     if (!activePatient.name?.trim() && !activePatient.dob?.trim()) return;
-    patch({ patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } });
+    patch(
+      { patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" } },
+      false,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePatient.name, activePatient.dob]);
 
-  const patch = (partial: Partial<FormsEncounter>) => {
-    setEncounter((previous) => {
-      const next = { ...previous, ...partial };
-      mirrorFormsEncounterToLegacyDom(next);
-      return next;
-    });
+  const patch = (
+    update:
+      | Partial<FormsEncounter>
+      | ((previous: FormsEncounter) => Partial<FormsEncounter>),
+    userEdited = true,
+  ) => {
+    if (userEdited) markDirty();
+    const previous = encounterRef.current;
+    const partial = typeof update === "function" ? update(previous) : update;
+    const next = { ...previous, ...partial };
+    encounterRef.current = next;
+    mirrorFormsEncounterToLegacyDom(next);
+    // Workflow navigation can occur later in this same browser task. Publish
+    // the exact next encounter before React/Preact effects or rendering so an
+    // immediate unmount cannot restore the prior value with dirty=true.
+    onWorkflowStateChangeRef.current?.(next, { dirty: dirty.current });
+    setEncounter(next);
   };
 
   const patchPatient = (partial: Partial<FormsEncounter["patient"]>) => {
-    patch({ patient: { ...encounter.patient, ...partial } });
+    patch((previous) => ({
+      patient: { ...previous.patient, ...partial },
+    }));
   };
 
   const noteText = DocumentationEngine.format(
@@ -198,52 +223,14 @@ export function FormsPanel({
   const formsLogCompleted = evaluation?.output.activityStatus === "completed";
 
   return (
-    <div class="wfp-panel cd2004-print-exclude" ref={previewRef} tabIndex={-1}>
-      <div class="wfp-summary-bar">
-        <strong>Forms &amp; letters</strong>
-        <StatusFlag
-          idle={(evaluation?.readiness ?? "idle") === "idle"}
-          stopCount={requestStops.length}
-          warningCount={requestWarnings.length}
-        />
-        <span class="wfp-summary-spacer" />
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() => {
-            patch({
-              patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" },
-            });
-          }}
-          disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
-        >
-          Use current patient
-        </button>
-        <button
-          type="button"
-          class="cd2004-link-button"
-          onClick={() => {
-            if (staffSignInValue) patch({ staff: staffSignInValue });
-          }}
-          disabled={!staffSignInValue}
-        >
-          Use signed-in staff
-        </button>
-        <button
-          type="button"
-          class="cd2004-command-button"
-          title={
-            formsLogCompleted
-              ? "Add the completed forms task to today's local activity log."
-              : "Add this forms task to today's local activity log as needs review; this does not release a letter."
-          }
-          onClick={() => clickLegacyControl("formsAddLog")}
-        >
-          {formsLogCompleted ? "Log completed task" : "Log as needs review"}
-        </button>
-      </div>
-
-      <div class="wfp-tabbar" role="tablist">
+    <div
+      class="wfp-panel cd2004-print-exclude"
+      ref={previewRef}
+      tabIndex={-1}
+      onInput={markDirty}
+      onChange={markDirty}
+    >
+      <WorkflowTabList label="Forms sections">
         <button
           type="button"
           role="tab"
@@ -267,14 +254,16 @@ export function FormsPanel({
             <span class="wfp-tab-badge">{letterTabIssues}</span>
           )}
         </button>
-      </div>
+      </WorkflowTabList>
 
+      <div class="lf-service-scroll">
+      <DraftRecoveryNotice status={recoveryStatus} />
       {tab === "request" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section" role="group" aria-label="Patient & request">
             <div class="wfp-section-head">Patient &amp; request</div>
             <div class="wfp-section-body">
-              <div class="wfp-row">
+              <div class="wfp-row lf-patient-date-row">
                 <Field label="Patient name">
                   <input
                     value={encounter.patient.name}
@@ -311,6 +300,17 @@ export function FormsPanel({
                 onChange={(value) => patch({ requestType: value })}
                 options={FORM_REQUEST_TYPE_OPTIONS}
               />
+              <div class="wfp-row">
+                <Field label="Requested document" hint="Tracks the requested document only; provider approval is required before release.">
+                  <select
+                    name="forms-document-purpose"
+                    value={encounter.letterType}
+                    onChange={(event) => patch({ letterType: event.currentTarget.value as LetterType })}
+                  >
+                    {LETTER_TYPE_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
+                  </select>
+                </Field>
+              </div>
               <div class="wfp-row">
                 <Field label="Assigned provider">
                   <ProviderField
@@ -452,9 +452,9 @@ export function FormsPanel({
       {tab === "letter" && !LETTER_BUILDER_ENABLED && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-wall">
-            <div class="wfp-wall-title">Letter Builder — Module Not Installed</div>
+            <div class="wfp-wall-title">Letter drafting is not available</div>
             <p>
-              Provider letter drafting is not available in this build.
+              Continue to prepare approved letters through the clinic’s existing letter workflow. You can track the request and its follow-up here.
             </p>
           </div>
         </div>
@@ -632,6 +632,52 @@ export function FormsPanel({
         This module tracks operational status only. Provider determines wording, completion,
         and release of clinical/legal letters or forms.
       </p>
+      </div>
+      <div class="wfp-summary-bar lf-service-footer" role="group" aria-label="Forms encounter actions">
+        <StatusFlag
+          idle={(evaluation?.readiness ?? "idle") === "idle"}
+          stopCount={requestStops.length}
+          warningCount={requestWarnings.length}
+        />
+        <span class="wfp-summary-spacer" />
+        <ActionShelf label="Use existing details" heading="Bring details into this form" description="Choose what to use, then compare it with this patient’s record." placement="up" class="lf-context-shelf">
+        <button
+          type="button"
+          class="cd2004-link-button"
+          onClick={() => {
+            patch({
+              patient: { name: activePatient.name ?? "", dob: activePatient.dob ?? "" },
+            });
+          }}
+          disabled={!activePatient.name?.trim() && !activePatient.dob?.trim()}
+        >
+          Use current patient
+        </button>
+        <button
+          type="button"
+          class="cd2004-link-button"
+          onClick={() => {
+            if (staffSignInValue) patch({ staff: staffSignInValue });
+          }}
+          disabled={!staffSignInValue}
+        >
+          Use documenting staff
+        </button>
+        </ActionShelf>
+        <button
+          type="button"
+          class="cd2004-command-button"
+          title={
+            formsLogCompleted
+              ? "Add the completed forms task to today's local activity log."
+              : "Add this forms task to today's local activity log as needs review; this does not release a letter."
+          }
+          onClick={() => clickLegacyControl("formsAddLog")}
+        >
+          {formsLogCompleted ? "Log completed task" : "Log as needs review"}
+        </button>
+      </div>
+
     </div>
   );
 }

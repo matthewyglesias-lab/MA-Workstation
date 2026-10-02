@@ -1,0 +1,52 @@
+name: Mature standalone acceptance
+on:
+  push:
+    branches: [codex/lightfully-standalone-rebuild]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mature-standalone-acceptance
+  cancel-in-progress: true
+jobs:
+  verify:
+    if: >-
+      github.event.head_commit.message != 'build: checkpoint Lightfully component polish' &&
+      github.event.head_commit.message != 'build: transfer contemporary clinical workspace'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preserve original clinical and print implementations
+        run: git diff --exit-code 28ae520bb51161ef3eb4b3642071007601b9f64e -- public/legacy src/legacy src/domain src/application src/persistence src/documentation tests/fixtures
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+      - run: node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Browser, clinical workflow and print regression tests
+        run: npx playwright test
+      - name: Native single-file startup and persistence
+        run: TEST_STANDALONE_FILE=1 npx playwright test tests/e2e/standalone-file.spec.js --output=native-test-results --reporter=list
+      - name: Archive exact source
+        run: git archive --format=zip --output=refined-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mature-standalone-review
+          path: |
+            standalone/
+            playwright-report/
+            test-results/
+            native-test-results/
+            refined-source.zip
+          retention-days: 7

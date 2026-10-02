@@ -106,9 +106,9 @@ assert.match(
   'Legacy dose picker must show all labeled strengths before autofilling the interval',
 );
 
-assert.match(html, /<input id="allergies" value="NKDA"/i, 'Allergy status must default to NKDA - staff review/edit it rather than fill a blank required field');
-assert.match(html, /resp:"well", attest:\{\}/, 'Routine injection response must start as tolerated well for quick review');
-assert.match(html, /ATTEST\.forEach\(a=>S\.attest\[a\.id\]=!a\.off&&a\.id!=="prior"\)/, 'Routine attestations must start selected while prior-dose tolerance requires current-review confirmation');
+assert.match(html, /<input id="allergies" value=""/i, 'Allergy status must remain blank until explicitly documented');
+assert.match(html, /resp:"", attest:\{\}/, 'A new injection must not imply an observed response');
+assert.match(html, /ATTEST\.forEach\(a=>S\.attest\[a\.id\]=false\)/, 'All injection attestations must begin unconfirmed');
 assert.match(html, /const UDS=\{reason:"",temp:"not documented",control:"not documented"/, 'UDS must start without an implied encounter type or normal quality-control findings');
 assert.match(html, /const S=\{ med:null, dose:"", site:"", route:"", intervalKey:"", reason:""/, 'Injection must require an explicit encounter type');
 assert.match(html, /if\(!UDS\.reason\)issues\.push\('encounter type'\)/, 'UDS finalized outputs must require an explicit encounter type');
@@ -120,10 +120,10 @@ assert.match(html, /issues\.push\(\.\.\.udsReadingVerificationIssues\(\)\);/, 'U
 assert.match(html, /monthExpired\(val\('udsExp'\),val\('udsDateTime'\)\)/, 'Expired UDS cups must block finalized output against the documented collection date');
 assert.match(html, /<select id="udsValidity"><option value="not documented">Not documented<\/option>/, 'UDS validity must start neutral until staff explicitly reviews quality control');
 assert.match(html, /<select id="udsConsistent"><option value="">Select review status<\/option>/, 'UDS medication alignment must require an explicit staff review');
-assert.match(html, /<select id="sampleMedCheck"><option>Prescriber reviewed \/ ok to dispense<\/option>/, 'Sample medication review must start selected for quick review');
-assert.match(html, /<select id="sampleEdu"><option>Reviewed with patient<\/option>/, 'Sample education must start selected for quick review');
+assert.match(html, /<select id="sampleMedCheck"><option value="not documented">Not documented<\/option>/, 'Sample medication review must start unconfirmed');
+assert.match(html, /<select id="sampleEdu"><option value="not documented">Not documented<\/option>/, 'Sample education must start unconfirmed');
 assert.match(html, /<script id="rc537FastReviewScript">/, 'Expected visible fast review-by-exception controls');
-assert.match(html, /Quick review — routine injection checks are preselected\./, 'Injection workflow must explain review-by-exception');
+assert.match(html, /Document the checks completed today\./, 'Injection workflow must request explicit documentation');
 assert.match(html, /Verified NKDA\?<\/span><button type="button">Enter NKDA<\/button>/, 'A quick action to (re-)enter NKDA must remain available for records where the default was cleared or changed');
 assert.match(html, /window\.IPMG_FAST_REVIEW&&st\.ok&&!st\.block&&!st\.review/, 'Routine workflow cards must auto-confirm once their fields are complete');
 assert.match(html, /id="udsUsePatient"/, 'UDS must support fast current-patient transfer');
@@ -227,17 +227,12 @@ assert.match(html, /recordsDrawerState=\{query:'',filter:'all',lastFocus:null,cl
 assert.match(html, /localDay\(review\.confirmedAt\)===localDay\(new Date\(\)\)/, 'Reviewed-today confirmation must expire on the next local calendar day');
 assert.match(html, /overlay\.setAttribute\('aria-labelledby','injCompletionTitle'\)/, 'The completion dialog must expose a labelled modal contract');
 assert.match(html, /event\.key==='Escape'\)\{event\.preventDefault\(\);close\(\)/, 'The completion dialog must close with Escape');
-// classic-workflows.css is gone: it restyled legacy workflow markup mounted
-// inside the shell, and no workflow mounts legacy markup any more - all eight
-// are typed panels. The square-surface guarantee it used to encode now lives
-// in the panel library, so assert it there instead of on a deleted file.
-assert.match(panelStyle, /border-radius: 0 !important;/, 'Migrated workflow panels must keep the square classic-EHR surface treatment');
-assert.match(desktopStyle, /\.records-drawer \{[^}]*border-radius: 0 !important;/, 'The global records drawer must use the classic-EHR treatment');
-// Was `1px`. The receipt was flattened to a true square edge during the
-// old-EHR polish pass - it had been the last nonzero radius left in either
-// stylesheet - and this assertion was not updated with it. It went unnoticed
-// because check:static only runs on pull requests against `main`.
-assert.match(desktopStyle, /\.inj-completion-card \{[^}]*border-radius: 0 !important;/, 'The completion receipt must use the classic-EHR treatment');
+// The migrated panel controls and body-level dialogs now share the Tebra
+// workstation grammar. Guard the source contract here so a later visual pass
+// cannot quietly restore square bevels or the old `!important` arms race.
+assert.match(panelStyle, /border-radius: var\(--tw-radius-ctl\);/, 'Migrated workflow controls must use the Tebra field radius');
+assert.doesNotMatch(desktopStyle, /\.records-drawer \{[^}]*border-radius: 0(?:\s*!important)?;/, 'The Open Notes dialog must not restore the classic square treatment');
+assert.doesNotMatch(desktopStyle, /\.inj-completion-card \{[^}]*border-radius: 0(?:\s*!important)?;/, 'The completion dialog must not restore the classic square treatment');
 assert.match(html, /id="injAdminTime" data-injection-field="admin-time"/, 'Injection completion must capture the actual administration time');
 assert.match(html, /window\.ipmgInjectionDetailReview=detailReview/, 'Conditional injection documentation must expose a shared finalization review');
 assert.match(html, /Document both the administration amount and its unit/, 'Partial structured administration details must block finalization');
