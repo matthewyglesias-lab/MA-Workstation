@@ -19,7 +19,20 @@ for (const size of [{ width: 1440, height: 900 }, { width: 800, height: 600 }]) 
       }
       const panel = page.locator('.wfp-panel');
       const name = panel.locator('input[placeholder="Last, First"]');
-      await name.fill(`Premium review, ${service}`);
+      // Use one fully identified patient across services. A deliberately
+      // mismatched patient correctly expands the safety banner and is not
+      // the ordinary-space baseline; that guard is exercised separately.
+      const patientName = 'Premium review, Synthetic';
+      await name.fill(patientName);
+      const dob = panel.locator('input[placeholder="MM/DD/YYYY"]');
+      await dob.fill('01/02/1990');
+      await dob.press('Tab');
+      const primary = page.locator('.cd2004-patient-primary strong');
+      const mismatch = page.locator('.cd2004-context-mismatch');
+      await expect.poll(async () => (await primary.textContent())?.includes(patientName) || await mismatch.isVisible()).toBe(true);
+      if (await mismatch.isVisible()) await mismatch.getByRole('button', { name: 'Make active', exact: true }).click();
+      await expect(primary).toContainText(patientName);
+      await expect(mismatch).toHaveCount(0);
       await page.screenshot({ path: info.outputPath(`${service}-${size.width}.png`) });
       await expect(page.locator('.lf-service-heading h1')).toHaveCount(1);
       // Hidden compatibility mirrors remain non-interactive; only one actual
@@ -39,10 +52,10 @@ for (const size of [{ width: 1440, height: 900 }, { width: 800, height: 600 }]) 
       expect(form.height).toBeGreaterThanOrEqual(size.width === 800 ? 230 : 400);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
       await page.getByRole('button', { name: 'Preview', exact: true }).click();
-      await expect(page.getByRole('article', { name: 'Generated documentation' })).toContainText(`Premium review, ${service}`);
+      await expect(page.getByRole('article', { name: 'Generated documentation' })).toContainText(patientName);
       await page.screenshot({ path: info.outputPath(`${service}-preview-${size.width}.png`) });
       await page.getByRole('button', { name: 'Details', exact: true }).click();
-      await expect(name).toHaveValue(`Premium review, ${service}`);
+      await expect(name).toHaveValue(patientName);
     }
   });
 }

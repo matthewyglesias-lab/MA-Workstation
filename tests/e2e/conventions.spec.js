@@ -511,7 +511,7 @@ test.describe('Phase 3b patient chart conventions', () => {
     await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
   });
 
-  test('returns from patient browsing to the active service without changing records', async ({ page }, info) => {
+  test('returns from patient browsing with guarded draft preservation and unchanged existing records', async ({ page }, info) => {
     await bootWithPatientChart(page, { width: 800, height: 600 });
     await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
     const name = page.locator('.wfp-panel input[placeholder="Last, First"]');
@@ -525,14 +525,26 @@ test.describe('Phase 3b patient chart conventions', () => {
     await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
     await expect(page.locator('.lf-draft-return')).toContainText('active service is unchanged');
     await expect(page.getByRole('button', { name: 'Return to active service', exact: true })).toHaveCount(1);
-    expect(await records()).toEqual(before);
+    // The existing leave guard saves the active injection before browsing.
+    // That intentional write must not change any pre-existing record, and
+    // returning from this read-only chart must perform no additional write.
+    const afterBrowse = await records();
+    const oldInjectionRecords = JSON.parse(before[0]);
+    const savedInjectionRecords = JSON.parse(afterBrowse[0]);
+    const originalIds = new Set(oldInjectionRecords.map(record => record.id));
+    expect(savedInjectionRecords.filter(record => originalIds.has(record.id))).toEqual(oldInjectionRecords);
+    const activeDraft = savedInjectionRecords.filter(record => !originalIds.has(record.id));
+    expect(activeDraft).toHaveLength(1);
+    expect(activeDraft[0].patient).toEqual({ name: 'Return path, Synthetic', dob: '01/02/1990' });
+    expect(activeDraft[0].status).toBe('draft');
+    expect(afterBrowse[1]).toBe(before[1]);
     await page.screenshot({ path: info.outputPath('patient-browse-800.png') });
     await page.getByRole('button', { name: 'Return to active service', exact: true }).click();
     await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
     await expect(name).toHaveValue('Return path, Synthetic');
     await expect(name).toBeFocused();
     await expect(dob).toHaveValue('01/02/1990');
-    expect(await records()).toEqual(before);
+    expect(await records()).toEqual(afterBrowse);
     await page.screenshot({ path: info.outputPath('patient-return-800.png') });
   });
 

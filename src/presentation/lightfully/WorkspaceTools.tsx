@@ -46,7 +46,7 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false, op
     return () => { delete document.documentElement.dataset.lfDensity; };
   }, [density]);
   return <div class="lf-workspace-tools">
-    <ActionShelf label="Workspace" heading="Workspace tools" description="Find a service, adjust spacing, or use the guided injection view." class="lf-workspace-shelf">
+    <ActionShelf label="Workspace" heading="Workspace tools" class="lf-workspace-shelf">
       <button type="button" class="lf-command-trigger" aria-label="Search workspace commands" aria-haspopup="dialog" onClick={onOpen}>
         <DesktopIcon name="search"/><span><strong>Find a tool</strong><small>Search services, records and more.</small></span><kbd>Ctrl K</kbd>
       </button>

@@ -4,12 +4,6 @@
  * the editor. Screen-only: clinical notes and paper templates are untouched.
  */
 @media screen {
-  #lf-workstation .lf-uds-tools .lf-shelf-panel { width: min(310px,calc(100vw - 64px)); max-height: min(320px,calc(100dvh - 300px)); }
-  #lf-workstation .lf-uds-tools .lf-shelf-actions > button { width: 100%; justify-content: flex-start; text-align: left; white-space: normal; }
-  #lf-workstation .tebra-toast > span { display: block; }
-  #lf-workstation .tebra-toast > span + span { margin-top: 4px; }
-  body:has(#lf-workstation) #toast[data-notification-adapter=true] { display: none !important; }
-
   #lf-workstation .lf-tool-page-header {
     display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
     gap:16px 24px;padding:24px 30px 20px;background:#fff;border-bottom:1px solid var(--lf-line);
