@@ -87,6 +87,7 @@
   }
 
   body.print-avs #avsSheet .avs2-page-continuation {
+    padding-top: .28in;
     break-before: page;
     page-break-before: always;
   }
@@ -699,12 +700,12 @@
   }
 
   body.print-avs #avsSheet .avs2-page-continuation .avs2-guidance {
-    gap: 8px 24px;
-    margin-top: 10px;
+    gap: 6px 24px;
+    margin-top: 6px;
   }
 
   body.print-avs #avsSheet .avs2-page-continuation .avs2-sec {
-    padding-top: 6px;
+    padding-top: 5px;
   }
 
   body.print-avs #avsSheet .avs2-page-continuation .avs2-sec-call {
@@ -712,10 +713,12 @@
   }
 
   body.print-avs #avsSheet .avs2-page-continuation .avs2-alert {
-    margin-top: 7px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    margin-top: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
+
+  body.print-avs #avsSheet .avs2-page-continuation .avs2-continuation { padding-bottom: 6px; }
 
   body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-heading {
     margin-top: 10px;

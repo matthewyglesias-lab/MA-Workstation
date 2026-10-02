@@ -71,6 +71,8 @@ test('UDS report preview does not invent a reported time',async({page},info)=>{
   await panel.getByRole('textbox',{name:'Patient name',exact:true}).fill('Report, Synthetic');
   await panel.getByRole('button',{name:'Use current date/time'}).click();
   await expect(panel.getByRole('textbox',{name:'Patient name',exact:true})).toHaveValue('Report, Synthetic');
+  await expect(page.locator('.cd2004-patient-banner')).toContainText('Report, Synthetic');
+  await expect(page.locator('.cd2004-patient-banner')).toContainText('Patient details incomplete');
   await panel.getByRole('tab',{name:'Review',exact:true}).click();
   const disclosure=panel.locator('.wfp-report-preview');if(await disclosure.getAttribute('open')===null)await disclosure.locator('summary').click();
   const report=page.getByRole('region',{name:'UDS clinician laboratory report preview'});

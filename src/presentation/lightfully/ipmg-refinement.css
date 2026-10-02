@@ -322,6 +322,7 @@
   #lf-workstation .tebra-power-commands .meditech-command-deck,
   #lf-workstation .tebra-power-commands[open] .meditech-command-deck {
     position: static; inset: auto; width: 100%; max-width: none; max-height: 160px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     overflow: auto; border: 0; border-top: 1px solid #cdd9d6; border-radius: 0;
     box-shadow: none; background: #edf1ef; margin: 0; padding: 8px 0;
   }

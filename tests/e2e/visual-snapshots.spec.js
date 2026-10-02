@@ -530,10 +530,14 @@ test.describe('workstation visual snapshots', () => {
       expect(box.y).toBeGreaterThanOrEqual(deckBox.y - 1);
       expect(box.y + box.height).toBeLessThanOrEqual(deckBox.y + deckBox.height + 1);
     }
+    // The inline shortcut disclosure reallocates space; validate the live
+    // action bar, not its location before the disclosure opened.
+    const expandedRecordBox = await recordActions.boundingBox();
+    expect(expandedRecordBox.y + expandedRecordBox.height).toBeLessThanOrEqual(VIEWPORTS.minimumDesktop.height + 1);
     for (const button of await recordActions.locator('button:visible').all()) {
       const box = await button.boundingBox();
-      expect(box.y).toBeGreaterThanOrEqual(recordBox.y - 1);
-      expect(box.y + box.height).toBeLessThanOrEqual(recordBox.y + recordBox.height + 1);
+      expect(box.y).toBeGreaterThanOrEqual(expandedRecordBox.y - 1);
+      expect(box.y + box.height).toBeLessThanOrEqual(expandedRecordBox.y + expandedRecordBox.height + 1);
     }
 
     const verticallyClippedButtons = await page
@@ -548,6 +552,7 @@ test.describe('workstation visual snapshots', () => {
           }))
       );
     expect(verticallyClippedButtons).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath('minimum-shortcuts-open.png') });
   });
 
   test('ready-to-attest and locked local records at 1440 x 900', async ({ page }) => {

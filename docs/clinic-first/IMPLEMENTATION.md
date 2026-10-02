@@ -41,6 +41,9 @@ copy. All review fixtures are synthetic.
 - Note headings, copy feedback, small-window notices, overlays and warnings use
   the same contemporary visual system. Individual active clinical warnings and
   existing completion requirements remain intact.
+- Partial patient entry stays visible in the masthead with an incomplete-details
+  label; it does not become a verified chart identity. At 800 × 600, all eight
+  keyboard-shortcut commands fit inside the open disclosure without clipping.
 
 ## Patient and clinician print review
 

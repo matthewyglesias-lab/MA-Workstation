@@ -2038,8 +2038,10 @@ function PatientBanner({
   const workflowContextLabel = `${WORKFLOW_LABELS[selectedWorkflow]} — ${workflowStateLabel}`;
   const safetyContextLabel = patient.medicationLabel || workflowContextLabel;
   const knownNegativeAllergy = /^(nkda|nka|no known (drug |medication )?allergies)[.!]?$/i.test((patient.allergyStatus ?? "").trim());
+  const incompletePatient = workflowPatient ?? patient;
+  const incompleteLabel = incompletePatient.name?.trim() || (incompletePatient.dob?.trim() ? `DOB: ${incompletePatient.dob}` : "");
   if (!hasActiveChart && !mismatch) return <div class="cd2004-patient-banner is-no-active-chart lf-empty-patient">
-    <div class="cd2004-patient-primary"><DesktopIcon name="patient"/><span><strong>{PATIENT.noPatient}</strong><small>Enter the patient details below, or open a saved note.</small></span></div>
+    <div class="cd2004-patient-primary"><DesktopIcon name="patient"/><span><strong>{incompleteLabel || PATIENT.noPatient}</strong><small>{incompleteLabel ? "Patient details incomplete. Complete name and DOB before finishing." : "Enter the patient details below, or open a saved note."}</small></span></div>
     <button type="button" class="lf-text-button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>{NOTES.openNotes} <span aria-hidden="true">→</span></button>
   </div>;
   return (
