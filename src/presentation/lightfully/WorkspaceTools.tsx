@@ -27,8 +27,8 @@ export function filterWorkspaceCommands(commands: WorkspaceCommand[], query: str
 const DENSITY_KEY = "ipmg.lightfully.ui-density.v1";
 type Density = "comfortable" | "compact";
 function readDensity(): Density {
-  try { return localStorage.getItem(DENSITY_KEY) === "compact" ? "compact" : "comfortable"; }
-  catch { return "comfortable"; }
+  try { return localStorage.getItem(DENSITY_KEY) === "comfortable" ? "comfortable" : "compact"; }
+  catch { return "compact"; }
 }
 
 /** Shell-only actions. Never writes an encounter or bypasses its navigation guard. */

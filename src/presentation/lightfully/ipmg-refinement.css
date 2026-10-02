@@ -50,24 +50,21 @@
   #lf-workstation .wfp-panel .wfp-tab { min-height: 42px; font-size: 12px; color: #617581; padding: 8px 2px; }
   #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { color: #294255; border-bottom: 3px solid #bd574b; background: transparent; }
   #lf-workstation .lf-tab-count { color: #496472; background: #ede9ef; }
-  #lf-workstation .wfp-panel .wfp-transaction-page { padding: 22px var(--lf-gutter) 30px; background: #fff; }
+  #lf-workstation .wfp-panel .wfp-transaction-page { background: #fff; }
   #lf-workstation .wfp-panel .wfp-tabpanel { max-width: 1150px; }
-  #lf-workstation .wfp-panel .wfp-section { padding: 24px 0 28px; border-bottom-color: #e1e5e4; }
-  #lf-workstation .wfp-panel .wfp-section-head { color: #3c7083; font: 400 24px/30px var(--lf-display); letter-spacing: -.3px; padding: 0 0 15px; margin: 0; }
-  #lf-workstation .wfp-section-body { gap: 19px; }
-  #lf-workstation .wfp-row { gap: 22px; margin-bottom: 20px; }
-  #lf-workstation .wfp-field-label { min-height: 20px; margin-bottom: 6px; }
+  #lf-workstation .wfp-panel .wfp-section { border-bottom-color: #e1e5e4; }
+  #lf-workstation .wfp-panel .wfp-section-head { color: #3c7083; letter-spacing: -.3px; }
   #lf-workstation .wfp-field-caption { font: 500 12px/20px var(--tw-font-sans); color: #344f5d; }
   #lf-workstation .wfp-req { color: #963f37; }
   #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc) { color: #617581; font-size: 12px; line-height: 19px; }
-  #lf-workstation .wfp-panel .wfp-field-lookup-button { height: 40px; min-height: 40px; border-radius: 0 5px 5px 0; background: #f4f6f5; border-color: #83969e; }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button { border-radius: 0 5px 5px 0; background: #f4f6f5; border-color: #83969e; }
   #lf-workstation .wfp-panel .wfp-field-entry > select { border-radius: 5px 0 0 5px; }
   #lf-workstation .lf-provenance-content { border-radius: 6px; border-color: #c9d6dc; color: #496472; }
   #lf-workstation .wfp-operator-guidance { background: #eaf1f3; border: 0; border-radius: 6px 20px 6px 6px; padding: 15px 18px; margin-bottom: 22px; }
   #lf-workstation .wfp-operator-guidance-head > strong { color: #315f72; font-weight: 600; }
   #lf-workstation .wfp-operator-guidance-head > span,
   #lf-workstation .wfp-operator-guidance-row { color: #496472; }
-  #lf-workstation .wfp-option-row { padding: 11px 13px; border-radius: 6px; border-color: #c5d1d5; background: #fff; }
+  #lf-workstation .wfp-option-row { border-radius: 6px; border-color: #c5d1d5; background: #fff; }
   #lf-workstation .wfp-option-row.is-selected { background: #eaf0ed; border-color: #96b1a7; }
   #lf-workstation .wfp-option-title { font-size: 13px; color: #294255; }
   #lf-workstation .wfp-option-row.is-ready.is-selected { background: #eaf0ed; border-color: #96b1a7; }
@@ -149,11 +146,8 @@
   @media (max-height: 700px) {
     #lf-workstation .wfp-panel .wfp-tab { min-height: 36px; }
     #lf-workstation .wfp-panel .wfp-summary-bar { min-height: 30px; }
-    #lf-workstation .wfp-panel .wfp-transaction-page { padding-top: 15px; }
-    #lf-workstation .wfp-panel .wfp-section-head { font-size: 22px; line-height: 28px; padding-bottom: 12px; }
     #lf-workstation .cd2004-record-actions, #lf-workstation .lf-service-footer { min-height: 55px; padding-block: 8px; }
   }
-  :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-field-lookup-button { min-height: 36px; height: 36px; }
   @media (forced-colors: active) {
     #lf-workstation .wfp-tab[aria-selected=true] { border-bottom: 3px solid Highlight; }
   }

@@ -1,3 +1,4 @@
+import { renderAvsAppointment, appointmentLineBudget } from "./avs-appointment-render";
 import {
   buildInjectionAvsModel,
   type AvsBlock,
@@ -156,7 +157,7 @@ const estimatedTimelineLines = (timeline: readonly AvsTimelineStep[]): number =>
  * out of page one and paint underneath the explicit continuation page.
  */
 const estimatedPrimaryLines = (model: InjectionAvsModel): number =>
-  17 +
+  17 + appointmentLineBudget(model.providerAppointment) +
   model.leadAlerts.reduce(
     (total, block) => total + estimatedBlockLines(block),
     0,
@@ -199,7 +200,7 @@ export const selectInjectionAvsLayout = (
     (total, block) => total + estimatedBlockLines(block),
     0,
   );
-  if (guidanceLines <= 24) {
+  if (guidanceLines + appointmentLineBudget(model.providerAppointment) <= 24) {
     return hasDensePrimaryFacts(model)
       ? "routine-two-page"
       : "routine-one-page";
@@ -274,6 +275,7 @@ const renderStep = (
   step: AvsTimelineStep,
   instruction = "",
   siteLabel = "",
+  appointmentHtml = "",
 ): string => {
   // The due step keeps the avs2-next / avs2-date hooks: it is still "the next
   // dose and its date", the roles those classes have always named, so the
@@ -306,6 +308,7 @@ const renderStep = (
       ? `<div class="avs2-step-instr">${escapeHtml(instruction)}</div>`
       : "") +
     paragraphs(step.detail) +
+    appointmentHtml +
     `</div></li>`
   );
 };
@@ -315,14 +318,17 @@ const renderSpine = (
   administrationNote: string,
   instruction: string,
   siteLabel: string,
+  appointmentHtml = "",
 ): string => {
-  if (!timeline.length) return "";
+  // The reminder belongs within the due-date panel. A handoff without a due
+  // step uses an explicit follow-up panel, never an invented injection date.
+  const dueIndex = timeline.findIndex((step) => step.state === "due");
   // The dose-specific note is folded into the step it describes rather than
   // trailing the spine as its own row. That keeps every row in the spine a real
   // dated step, which is what lets the rail terminate cleanly at the first and
   // last nodes instead of running past a marker-less row.
   const steps = timeline
-    .map((step) => {
+    .map((step, index) => {
       const detail =
         step.state === "given" && administrationNote
           ? [...step.detail, administrationNote]
@@ -331,10 +337,12 @@ const renderSpine = (
         { ...step, detail },
         step.state === "due" ? instruction : "",
         step.state === "given" ? siteLabel : "",
+        index === dueIndex ? appointmentHtml : "",
       );
     })
     .join("");
-  return `<ol class="avs2-spine" aria-label="Treatment timeline">${steps}</ol>`;
+  return (steps ? `<ol class="avs2-spine" aria-label="Treatment timeline">${steps}</ol>` : "") +
+    (dueIndex < 0 && appointmentHtml ? `<div class="avs2-follow-up">${appointmentHtml}</div>` : "");
 };
 
 const IDENTITY_ORDER = [
@@ -417,7 +425,7 @@ export const renderInjectionAvsHtml = (
 
   const contactBlock: AvsBlock = {
     kind: "contact",
-    heading: "Plan your next visit",
+    heading: model.providerAppointment && model.providerAppointment.mode !== "omit" ? "Clinic information" : "Plan your next visit",
     rows: model.nextDose.contactLines,
   };
   const renderContact = (compact = false): string =>
@@ -523,6 +531,7 @@ export const renderInjectionAvsHtml = (
       model.administrationNote,
       model.nextDose.instruction,
       model.administration.find((row) => row.label === "ROUTE / SITE")?.value ?? "",
+      renderAvsAppointment(model.providerAppointment),
     ) +
     `</section>` +
     renderContact() +

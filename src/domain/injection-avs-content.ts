@@ -34,12 +34,17 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
   const visitCall = model.nextDose.firmness === "call-first"
     ? "Call ahead so we can prepare your medication; this is not a scheduled appointment."
     : `Call ${input.clinicPhone} to schedule or change your visit; this is not a scheduled appointment.`;
-  const notes = routine
+  const hasAppointmentSection = input.providerAppointment && input.providerAppointment.mode !== "omit";
+  const scopeDateNote = (line: string) => hasAppointmentSection ? line
+    .replace("This is your due date, not a scheduled appointment.", "An injection due date does not reserve an appointment time.")
+    .replace("this is not a scheduled appointment.", "an injection due date does not reserve an appointment time.") : line;
+  const notes = (routine
     ? [`${AVS_ROUTINE_RETURN_WINDOW} ${visitCall}`]
-    : model.nextDose.notes;
+    : model.nextDose.notes).map(scopeDateNote);
 
   return {
     ...model,
+    ...(input.providerAppointment ? { providerAppointment: input.providerAppointment } : {}),
     nextDose: {
       ...model.nextDose,
       notes,
@@ -50,7 +55,9 @@ export const buildInjectionAvsModel = (input: InjectionAvsInput): InjectionAvsMo
     // The printed timeline consumes detail rather than nextDose.notes. Keep
     // both views in agreement without mutating the preserved guidance model.
     timeline: model.timeline.map((step) =>
-      routine && step.state === "due" ? { ...step, detail: notes } : step,
+      step.state === "due" && (routine || hasAppointmentSection)
+        ? { ...step, detail: routine ? notes : step.detail.map(scopeDateNote) }
+        : step,
     ),
     blocks: routine ? model.blocks.map((block) =>
       block.kind === "call-clinic" ? {

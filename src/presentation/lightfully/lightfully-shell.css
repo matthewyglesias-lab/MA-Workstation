@@ -31,7 +31,6 @@
  #lf-workstation .lf-eyebrow {font:600 9px/16px var(--tw-font-sans);letter-spacing:.14em;color:#66828f;display:block;}
  #lf-workstation .lf-text-button {display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:var(--lf-leaf);font:500 11px/18px var(--tw-font-sans);padding:7px 3px;cursor:pointer;}
  /* Empty identity is a prompt, not an allergy alert for a nonexistent patient. */
- #lf-workstation .wfp-section-body {gap:17px;}
  #lf-workstation .wfp-field-entry {gap:8px;justify-content:flex-start;}
  #lf-workstation .wfp-field-entry > select {flex:1;max-width:none;}
  #lf-workstation .wfp-field-entry > .wfp-option-list {flex:1;max-width:none;}
@@ -56,22 +55,21 @@
  #lf-workstation .wfp-ledger-state.is-pending {display:none;}
  #lf-workstation .wfp-ledger-state.is-stop {color:#a63737;background:#fff0ed;}
  #lf-workstation .wfp-ledger-state.is-review {color:#82591c;background:#fff7df;}
- #lf-workstation .wfp-panel .wfp-transaction-page {background:#fff;padding:22px 28px 32px;}
+ #lf-workstation .wfp-panel .wfp-transaction-page {background:#fff;}
  #lf-workstation .wfp-panel .wfp-tabpanel {display:flex;flex-direction:column;gap:0;padding:0;width:100%;max-width:980px;margin:0 auto;background:#fff;}
- #lf-workstation .wfp-panel .wfp-section {background:#fff;border:0;border-bottom:1px solid #e5ebee;border-radius:0;padding:22px 0;margin:0;box-shadow:none;overflow:visible;}
+ #lf-workstation .wfp-panel .wfp-section {background:#fff;border:0;border-bottom:1px solid #e5ebee;border-radius:0;box-shadow:none;overflow:visible;}
  #lf-workstation .wfp-panel .wfp-section:first-child {padding-top:2px;}
  #lf-workstation .wfp-panel .wfp-section:last-child {border-bottom:0;}
- #lf-workstation .wfp-panel .wfp-section-head {padding:0;margin:0 0 16px;border:0;background:transparent;color:#294255;font:600 14px/21px var(--tw-font-sans);letter-spacing:0;text-transform:none;}
- #lf-workstation .wfp-panel .wfp-section-body {padding:0;}
- #lf-workstation .wfp-row {gap:18px;align-items:flex-start;margin:0;}
+ #lf-workstation .wfp-panel .wfp-section-head {border:0;background:transparent;color:#294255;letter-spacing:0;text-transform:none;}
+ #lf-workstation .wfp-row {align-items:flex-start;}
  #lf-workstation .wfp-row:last-child {margin-bottom:0;}
- #lf-workstation .wfp-field-label {gap:4px;margin-bottom:6px;color:#4c6474;font-size:11px;font-weight:500;line-height:17px;}
+ #lf-workstation .wfp-field-label {color:#4c6474;font-weight:500;}
  #lf-workstation .wfp-field-caption::after {content:none;}
  #lf-workstation .wfp-pending {display:none;}
  #lf-workstation .wfp-opt {font-size:10px;font-weight:400;font-style:normal;color:#728795;}
  #lf-workstation .wfp-field input::placeholder,#lf-workstation .wfp-field textarea::placeholder {font-size:12px;color:#788c97;opacity:1;}
  #lf-workstation .wfp-field-hint {font-size:10px;line-height:16px;color:#607584;margin-top:5px;}
- #lf-workstation .wfp-field-lookup-button {width:28px;min-width:28px;border:1px solid #d8e2e7;background:#f8fafb;border-radius:6px;color:#507587;}
+ #lf-workstation .wfp-field-lookup-button {border:1px solid #d8e2e7;background:#f8fafb;border-radius:6px;color:#507587;}
  #lf-workstation .wfp-register-source,#lf-workstation .wfp-register-change {font-size:8px;font-family:var(--tw-font-sans);border-color:#d8e2e7;background:#f6f8f9;color:#607584;}
  #lf-workstation .wfp-option-row {border-color:#d8e2e7;border-radius:6px;background:#fff;}
  #lf-workstation .wfp-option-row.is-ready.is-selected {border-left-color:#1f6f5c;}
@@ -149,8 +147,6 @@
  #lf-workstation button:disabled,#lf-workstation .lf-service-dialog button:disabled {cursor:default;}
  /* Focused injection mode is retained as the existing optional seven-step workflow. */
  #lf-workstation[data-kiosk-mode=true] .wfp-summary-bar .wfp-workflow-title {display:block;}
- :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-section {padding-block:14px;}
- :root[data-lf-density=compact] #lf-workstation .wfp-row {gap:13px;margin-bottom:12px;}
  @media (max-width:1179px) {
   #lf-workstation .cd2004-document-split {border-left:0;}
   #lf-workstation .cd2004-readiness-list {max-height:135px;}
@@ -161,9 +157,7 @@
   #lf-workstation .lf-workspace-tools .lf-command-trigger > span,#lf-workstation .lf-command-trigger kbd {display:none;}
   #lf-workstation .lf-workspace-tools .lf-focus-trigger {padding:5px;}
   #lf-workstation .wfp-transaction-chrome {padding-inline:22px;}
-  #lf-workstation .wfp-panel .wfp-transaction-page {padding:20px 22px;}
   #lf-workstation .wfp-panel .wfp-tab {font-size:11px;gap:5px;}
-  #lf-workstation .wfp-row {gap:12px;}
   #lf-workstation .cd2004-record-actions {padding:10px 18px;gap:10px;align-items:center;}
   #lf-workstation .cd2004-record-actions-state {flex-basis:120px;}
   #lf-workstation .cd2004-record-actions-buttons {flex:1 1 auto;}
@@ -171,7 +165,6 @@
  }
  @media (max-height:700px) {
   #lf-workstation .wfp-panel .wfp-tab {min-height:43px;}
-  #lf-workstation .wfp-panel .wfp-section {padding-block:17px;}
   #lf-workstation .cd2004-record-actions-state > small {max-height:45px;overflow:auto;white-space:normal;}
  }
  #lf-workstation .wfp-field-entry:has(> .wfp-select-group-inline) {max-width:420px;}

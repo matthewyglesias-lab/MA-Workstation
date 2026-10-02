@@ -20,7 +20,8 @@ for (const service of ['administer', 'uds', 'samples', 'forms']) {
     const provider = panel.locator('select').first();
     const sizes = await Promise.all([name, provider].map(control => control.boundingBox()));
     expect(Math.abs(sizes[0].height - sizes[1].height)).toBeLessThanOrEqual(1);
-    expect(sizes[0].height).toBeGreaterThanOrEqual(40);
+    expect(sizes[0].height).toBeGreaterThanOrEqual(34);
+    expect(sizes[0].height).toBeLessThanOrEqual(35);
     await provider.focus();
     const field = await name.evaluate(el => {
       const s = getComputedStyle(el);

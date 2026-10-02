@@ -60,7 +60,7 @@ test('field focus leaves the entry surface calm and required semantics intact', 
  await input.focus();
  expect(await input.evaluate(n=>getComputedStyle(n).backgroundColor)).toBe(initial);
  await expect(input).toHaveAttribute('aria-required','true');
- expect(await input.evaluate(n=>parseFloat(getComputedStyle(n).minHeight))).toBeGreaterThanOrEqual(40);
+ expect(await input.evaluate(n=>parseFloat(getComputedStyle(n).minHeight))).toBe(34);
 });
 
 

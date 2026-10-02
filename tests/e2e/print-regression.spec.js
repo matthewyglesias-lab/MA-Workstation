@@ -64,6 +64,22 @@ async function recordOtherReturnDate(page, panel, date, reason) {
   await dialog.getByRole('button', { name: 'Record return date', exact: true }).click();
 }
 
+// These historical print fixtures explicitly exercise the optional omitted
+// appointment section. Their pinned document bytes remain unchanged; the new
+// reminder variants are covered separately below, without changing fixtures.
+async function setAppointmentFormat(page, mode) {
+  const panel = page.locator('.wfp-panel');
+  await panel.getByRole('tab', { name: 'Review', exact: true }).click();
+  const editor = panel.locator('[data-avs-appointment-editor]');
+  if (!await editor.evaluate(node => node.open)) await editor.locator('summary').click();
+  await editor.getByLabel('Appointment reminder format').selectOption(mode);
+  return editor;
+}
+async function preserveHistoricalAvsFixture(page) {
+  await setAppointmentFormat(page, 'omit');
+  await page.locator('.wfp-panel').getByRole('tab', { name: 'Order & Timing', exact: true }).click();
+}
+
 async function preparePrintableInjection(page) {
   await bootWorkstation(page);
   await openWorkflow(page, 'Injection', 'administer');
@@ -75,6 +91,7 @@ async function preparePrintableInjection(page) {
   // the exact same byte-pinned print output) as the pre-migration fixture.
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Injection');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
+  await preserveHistoricalAvsFixture(page);
   await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'PRN / ordered' });
 
@@ -136,6 +153,7 @@ async function prepareInitiationInjection(page) {
   const panel = page.locator('.wfp-panel');
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Initiation');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('09/22/1991');
+  await preserveHistoricalAvsFixture(page);
   await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Initiation' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Invega Sustenna' });
@@ -162,6 +180,7 @@ async function prepareVivitrolInjection(page) {
   const panel = page.locator('.wfp-panel');
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Vivitrol');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/12/1977');
+  await preserveHistoricalAvsFixture(page);
   await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Vivitrol' });
@@ -189,6 +208,7 @@ async function prepareAsimtufiiAvs(page) {
   const panel = page.locator('.wfp-panel');
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Asimtufii');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('02/12/1977');
+  await preserveHistoricalAvsFixture(page);
   await setProvider(panel, 'Print Ordering Provider');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Abilify Asimtufii' });
@@ -217,6 +237,7 @@ async function prepareUzedyColdChainAvs(page) {
     'Montgomery-Washington, Alexandria Josephine'
   );
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('07/29/2003');
+  await preserveHistoricalAvsFixture(page);
   await setProvider(panel, 'Khadija Hamisi, Psychiatric Nurse Practitioner');
   await panel.locator('select[name="inj-reason"]').selectOption({ label: 'Scheduled' });
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Uzedy' });
@@ -720,6 +741,7 @@ async function prepareMinimalAvsInjection(page) {
   // full administration is documented.
   await panel.locator('input[placeholder="Last, First"]').fill('Print, Early AVS');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('05/06/1990');
+  await preserveHistoricalAvsFixture(page);
   await panel.locator('select[name="inj-medication"]').selectOption({ label: 'Other' });
   await panel.locator('input[name="inj-dose"]').fill('50 mg');
   await panel.locator('input[name="inj-route"]').fill('IM');
@@ -1440,3 +1462,43 @@ test.describe('unchanged clinical print surfaces', () => {
     });
   });
 });
+
+// Optional appointment details never change the clinical print fixture or due date.
+for (const variant of ['write-in', 'typed', 'partial', 'schedule', 'omit']) {
+  test(`appointment AVS: ${variant} is readable, complete and fits its printed pages`, async ({ page }) => {
+    await preparePrintableInjection(page);
+    const editor = await setAppointmentFormat(page, ['typed','partial'].includes(variant) ? 'details' : variant);
+    if (variant === 'typed' || variant === 'partial') {
+      await fillDate(editor.getByLabel('Provider appointment date'), '2026-08-29');
+      await editor.getByLabel('Appointment provider', { exact: true }).fill('Synthetic Appointment Provider');
+      await editor.getByLabel('Provider appointment visit type').selectOption('in-person');
+      if (variant === 'typed') {
+        await editor.getByLabel('Provider appointment time').fill('10:30');
+        await editor.getByLabel('Provider appointment location').fill('Confirmed synthetic office');
+      }
+    }
+    await setFieldsAndRender(page, { bodyClass:'print-avs', renderName:'renderAVS', rootId:'avsSheet' });
+    const reminder = page.locator('#avsSheet .avs2-appointment');
+    if (variant === 'omit') await expect(reminder).toHaveCount(0);
+    else {
+      await expect(reminder).toHaveCount(1);
+      await expect(reminder).toBeVisible();
+      await expect(page.locator("#avsSheet .avs2-step-due .avs2-appointment")).toHaveCount(1);
+      if (variant === 'write-in') await expect(reminder.locator('.avs2-write-line')).toHaveCount(4);
+      if (variant === 'partial') await expect(reminder.locator('.avs2-write-line')).toHaveCount(2);
+      if (variant === 'typed' || variant === 'partial') await expect(reminder).toContainText('Saturday, August 29, 2026');
+      if (variant === 'typed') await expect(reminder).toContainText('10:30 AM');
+      if (variant === 'schedule') await expect(reminder).toContainText('Please see the front desk before you leave.');
+      const writing = await reminder.locator('.avs2-write-line').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().height));
+      writing.forEach(height => expect(height).toBeGreaterThanOrEqual(22));
+    }
+    // Original ordered return date remains August 27, not the appointment date.
+    await expect(page.locator('#avsSheet .avs2-step-due')).toContainText('August 27, 2026');
+    await expectAvsPagesToFit(page);
+    await expectAvsSemanticStructure(page);
+    await expectPrintContract(page, {
+      rootId: 'avsSheet', content: ['Print, Injection', '100 mg'],
+      minPages: 1, maxPages: 2, checkParity: variant === 'omit'
+    });
+  });
+}

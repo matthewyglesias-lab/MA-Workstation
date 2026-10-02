@@ -126,7 +126,7 @@
   #lf-workstation .lf-view-switch button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 4px 12px; border: 0; border-radius: 6px; background: transparent; color: #496472; font: 500 12px/20px var(--tw-font-sans); cursor: pointer; box-shadow: none; }
   #lf-workstation .lf-view-switch button[aria-pressed=true] { background: #fff; color: var(--lf-ink); box-shadow: 0 1px 3px rgb(38 62 56 / 9%); }
   #lf-workstation .lf-view-switch svg { width: 15px; height: 15px; }
-  #lf-workstation .cd2004-transaction-window { display: grid; grid-template-columns: minmax(0,1fr); flex: 1; gap: 16px; min-height: 0; min-width: 0; margin: 0 var(--lf-shell-gutter) 16px; overflow: hidden; }
+  #lf-workstation .cd2004-transaction-window { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); flex: 1; gap: 16px; height: 100%; min-height: 0; min-width: 0; margin: 0 var(--lf-shell-gutter) 16px; padding: 0; background: transparent; overflow: hidden; }
   #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr) minmax(360px,.9fr); }
   #lf-workstation .cd2004-workflow-slot { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
   #lf-workstation:not([data-kiosk-mode=true]) .cd2004-workflow-slot:is([data-workflow=administer],[data-workflow=uds],[data-workflow=samples],[data-workflow=forms]) { container: workflow / inline-size; background: #fff; border: 1px solid var(--lf-line); border-radius: 12px; }

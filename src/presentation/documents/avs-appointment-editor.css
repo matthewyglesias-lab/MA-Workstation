@@ -1,0 +1,17 @@
+@media screen {
+  #lf-workstation .lf-avs-appointment-editor { margin: 0 0 12px; border: 1px solid var(--lf-line); border-radius: 8px; background: #fff; }
+  #lf-workstation .lf-avs-appointment-editor > summary { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; padding: 8px 12px; cursor: pointer; color: var(--lf-ink); font: 400 12px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-avs-appointment-editor > summary strong { font-weight: 600; }
+  #lf-workstation .lf-appointment-edit { margin-left: auto; color: var(--lf-leaf); text-decoration: underline; text-underline-offset: 3px; }
+  #lf-workstation .lf-appointment-editor-body { padding: 10px 12px 12px; border-top: 1px solid var(--lf-line); }
+  #lf-workstation .lf-appointment-editor-body p { margin: 0 0 8px; color: var(--lf-muted); font: 400 12px/1.5 var(--tw-font-sans); }
+  #lf-workstation .lf-appointment-editor-body fieldset { display: grid; gap: 10px; padding: 0; margin: 0; min-width: 0; border: 0; }
+  #lf-workstation .lf-appointment-date-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,.6fr); gap: 12px; }
+  #lf-workstation .lf-appointment-details-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,.6fr); gap: 12px; }
+  #lf-workstation .lf-appointment-field { display: flex; flex-direction: column; min-width: 0; gap: 4px; font: 600 12px/20px var(--tw-font-sans); color: var(--lf-ink); }
+  #lf-workstation .lf-appointment-field :is(input,select) { width: 100%; }
+  #lf-workstation .lf-appointment-editor-body .lf-text-button { justify-self: start; }
+  @container workflow (max-width: 420px) {
+    #lf-workstation :is(.lf-appointment-date-row,.lf-appointment-details-row) { grid-template-columns: minmax(0,1fr); }
+  }
+}

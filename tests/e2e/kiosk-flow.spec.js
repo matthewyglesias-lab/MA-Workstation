@@ -263,6 +263,14 @@ test.describe('Injection focus workspace', () => {
     await expect(finish).toBeEnabled();
     await kioskStep(page, 'sign').click();
     await expect(finish).toBeFocused();
+    const appointment = panel.locator('[data-avs-appointment-editor]');
+    await appointment.locator('summary').click();
+    await appointment.getByLabel('Appointment reminder format').selectOption('details');
+    await fillDate(appointment.getByLabel('Provider appointment date'), '2026-08-28');
+    await appointment.getByLabel('Provider appointment time').fill('10:30');
+    await appointment.getByLabel('Appointment provider', { exact: true }).fill('Synthetic Appointment Provider');
+    await appointment.getByLabel('Provider appointment visit type').selectOption('in-person');
+    await appointment.getByLabel('Provider appointment location').fill('Confirmed synthetic office');
     await finish.click();
     await confirmLocalSignature(page);
 
@@ -272,6 +280,16 @@ test.describe('Injection focus workspace', () => {
     await expect(completion.getByRole('button', { name: 'Print patient handout' }))
       .toBeEnabled();
     await expect(completion).toBeFocused();
+    await page.evaluate(() => { window.__ipmgNativePrint = () => {}; window.cleanPrintClasses = () => {}; });
+    await completion.getByRole('button', { name: 'Print patient handout' }).click();
+    const printedAppointment = page.locator('#avsSheet .avs2-step-due .avs2-appointment');
+    await expect(printedAppointment).toContainText('Friday, August 28, 2026');
+    await expect(printedAppointment).toContainText('10:30 AM');
+    const signedHandout = await page.locator('#avsSheet').innerHTML();
+    await completion.getByRole('button', { name: 'Print patient handout' }).click();
+    expect(await page.locator('#avsSheet').innerHTML()).toBe(signedHandout);
+    await page.evaluate(() => document.body.classList.remove('print-avs'));
+    await completion.focus();
     await expect(page.locator('.is-primary:visible')).toHaveCount(1);
     const editor = page.locator('#cd2004-pane-work');
     await expect(editor).toHaveAttribute('inert', '');

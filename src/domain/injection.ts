@@ -214,6 +214,8 @@ export interface InjectionAdministrationDetails {
 }
 
 export interface InjectionEncounter {
+  /** Patient handout metadata only; never used to evaluate or authorize care. */
+  avsAppointment?: import("./avs-appointment").AvsAppointment;
   patient: PatientIdentity;
   medicationKey: InjectionMedicationKey | "";
   customMedication?: string;

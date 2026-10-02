@@ -20,7 +20,11 @@
     --lf-paper: #fff; --lf-surface: #fff; --lf-soft: #f5f6f8;
     --lf-sage: #edf3ef; --lf-line: #dde4e7; --lf-rule: var(--lf-line);
     --lf-control-border: #83969e; --lf-control-hover: #5f7d8b;
-    --lf-control-height: 42px; --lf-control-radius: 8px;
+    --lf-control-height: 34px; --lf-control-radius: 8px;
+    --lf-control-padding: 6px 10px; --lf-control-font: 13px; --lf-control-line: 20px;
+    --lf-label-gap: 4px; --lf-row-gap: 12px; --lf-column-gap: 16px;
+    --lf-section-gap: 14px; --lf-heading-gap: 8px; --lf-section-font: 15px;
+    --lf-editor-inset: 14px 20px; --lf-choice-padding: 7px 10px; --lf-textarea-height: 96px;
     --lf-field-muted: #f2f4f5; --lf-focus: #3c7083;
     --lf-hover: #eef3f5;
     --tw-teal-900: var(--lf-ink); --tw-teal-800: var(--lf-ink);
@@ -29,18 +33,29 @@
     --tw-focus-ring: 0 0 0 3px rgb(60 112 131 / 13%);
   }
 
+  /* Cosmetic preference on html also reaches portalled dialogs. Guided view
+   * deliberately retains the roomier hit targets without a second editor. */
+  :root[data-lf-density=comfortable], :root:has(#lf-workstation[data-kiosk-mode=true]) {
+    --lf-control-height: 42px; --lf-control-padding: 9px 12px;
+    --lf-control-font: 14px; --lf-control-line: 22px; --lf-label-gap: 6px;
+    --lf-row-gap: 22px; --lf-column-gap: 20px; --lf-section-gap: 25px;
+    --lf-heading-gap: 16px; --lf-section-font: 17px;
+    --lf-editor-inset: 24px 30px; --lf-choice-padding: 11px 12px; --lf-textarea-height: 110px;
+  }
+  :root:has(#lf-workstation[data-kiosk-mode=true]) { --lf-control-height: 44px; --lf-control-padding: 10px 12px; }
+
   /* One native control treatment, also used by lookups and portalled dialogs.
    * Explicitly exclude checkboxes, radios and hidden/button inputs. */
   body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
   :where(input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=button]):not([type=submit]):not([type=range]):not([type=color]):not([type=file]),select,textarea) {
     box-sizing: border-box; min-width: 0; min-height: var(--lf-control-height);
-    padding: 9px 12px; border: 1px solid var(--lf-control-border);
+    padding: var(--lf-control-padding); border: 1px solid var(--lf-control-border);
     border-radius: var(--lf-control-radius); background-color: #fff;
-    color: var(--lf-ink); font: 400 14px/22px var(--tw-font-sans);
+    color: var(--lf-ink); font: 400 var(--lf-control-font)/var(--lf-control-line) var(--tw-font-sans);
     letter-spacing: 0; box-shadow: none; opacity: 1;
   }
   body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) textarea {
-    min-height: 110px; resize: vertical; line-height: 1.6;
+    min-height: var(--lf-textarea-height); resize: vertical; line-height: 1.6;
   }
   body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) :is(input,textarea)::placeholder {
     color: #617581; opacity: 1; font: inherit;
@@ -71,7 +86,7 @@
     border-top-right-radius: 0; border-bottom-right-radius: 0;
   }
   #lf-workstation .wfp-panel .wfp-field-lookup-button {
-    width: 40px; min-width: 40px; flex-basis: 40px; height: var(--lf-control-height);
+    width: var(--lf-control-height); min-width: var(--lf-control-height); flex-basis: var(--lf-control-height); height: var(--lf-control-height);
     min-height: var(--lf-control-height); margin-left: -1px; padding: 0;
     border: 1px solid var(--lf-control-border); border-left-color: #d1dce1;
     border-radius: 0 var(--lf-control-radius) var(--lf-control-radius) 0;
@@ -79,7 +94,7 @@
   }
   #lf-workstation .wfp-panel .wfp-field-lookup-button:hover:not(:disabled) { background: #e9f1f4; }
   #lf-workstation .wfp-panel .wfp-field-lookup-button:disabled { color: #61717b; background: var(--lf-field-muted); }
-  #lf-workstation .wfp-panel .wfp-field-label { min-height: 22px; margin-bottom: 7px; gap: 5px; }
+  #lf-workstation .wfp-panel .wfp-field-label { min-height: 22px; margin-bottom: var(--lf-label-gap); gap: 5px; }
   body:has(#lf-workstation) #lf-workstation .wfp-panel .wfp-field :where(input:not([type=checkbox]):not([type=radio]),select,textarea) { width: 100%; max-width: none; }
   #lf-workstation .wfp-panel .wfp-field-caption { color: #405c6d; font: 600 12px/20px var(--tw-font-sans); }
   #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc) { color: var(--lf-muted); line-height: 1.6; }

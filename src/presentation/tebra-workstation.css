@@ -1052,21 +1052,7 @@
     border-top: 1px solid var(--tw-border-subtle);
   }
 
-  .cd2004-transaction-window {
-    min-width: 0;
-    min-height: 0;
-    height: 100%;
-    overflow: hidden;
-  }
 
-  .cd2004-transaction-window.has-document-split {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
-    grid-template-rows: minmax(0, 1fr);
-    gap: 10px;
-    padding: 10px;
-    background: var(--tw-surface-sunken);
-  }
 
   .cd2004-transaction-window > .cd2004-workflow-slot {
     min-width: 0;
@@ -2247,12 +2233,6 @@
     margin: 0 var(--tebra-content-pad) var(--tebra-content-pad);
   }
 
-  .cd2004-transaction-window.has-document-split {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(190px, 1fr) minmax(126px, 0.52fr);
-    gap: 8px;
-    padding: 8px;
-  }
 
   .cd2004-patient-banner,
   .cd2004-patient-banner.has-mismatch {
@@ -2318,15 +2298,9 @@
   }
 }
 
-/* Injection owns a second, internal note inspector. On the shortest supported
-   displays, keep that inspector beside the clinical worksheet where width
-   permits; otherwise the stacked inspector consumes the worksheet's entire
-   scroll viewport. */
+/* Compact readiness content only. The transaction/preview grid is owned by
+   lightfully/shell-layout.css; it has no second, hidden preview track. */
 @media screen and (min-width: 920px) and (max-width: 1179px) and (max-height: 700px) {
-  .cd2004-transaction-window.has-document-split {
-    grid-template-columns: minmax(0, 1fr) minmax(224px, 30%);
-    grid-template-rows: minmax(0, 1fr);
-  }
 
   .cd2004-workspace.has-central-preview .cd2004-inspector {
     display: flex;
@@ -2339,14 +2313,6 @@
   }
 }
 
-/* Below 920px the two panes no longer fit comfortably side by side. Preserve
-   a compact inspector dock, but give the clinical worksheet enough height for
-   at least one complete control plus its scroll affordance. */
-@media screen and (min-width: 840px) and (max-width: 919px) and (max-height: 650px) {
-  .cd2004-transaction-window.has-document-split {
-    grid-template-rows: minmax(220px, 1fr) minmax(90px, 0.3fr);
-  }
-}
 
 /* 900px workstation: preserve every region and tighten only shell chrome. */
 @media screen and (max-width: 919px) {
@@ -2530,11 +2496,6 @@
     grid-template-rows: minmax(190px, 1fr) minmax(112px, 0.42fr);
   }
 
-  .cd2004-transaction-window.has-document-split {
-    grid-template-rows: minmax(174px, 1fr) minmax(108px, 0.44fr);
-    gap: 6px;
-    padding: 6px;
-  }
 
   .cd2004-window-mark,
   .cd2004-window-mark.has-icon {

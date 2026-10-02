@@ -10,6 +10,8 @@ import {
 import { INJECTION_MEDICATIONS } from "../../../domain/injection-catalog";
 import { INJECTION_RECORDS_STORAGE_KEY } from "../../../persistence/keys";
 
+import { isAvsAppointment, type AvsAppointment } from "../../../domain/avs-appointment";
+
 export const TYPED_INJECTION_ENCOUNTER_KEY = "typedEncounterV1";
 let activeInstallations = 0;
 const installedSetItems = new Set<Storage["setItem"]>();
@@ -20,7 +22,8 @@ export const injectionPresentationExtensionAvailable = (): boolean =>
   installedSetItems.has(Storage.prototype.setItem);
 
 interface TypedInjectionEnvelope {
-  version: 2;
+  version: 3;
+  avsAppointment?: AvsAppointment;
   orderingProvider: string;
   // Empty strings are intentional clears. Omitting these values would allow
   // an older compatibility projection to resurrect a value the user cleared.
@@ -60,8 +63,14 @@ export function readInjectionPresentationExtension(
   fallback: InjectionEncounter,
   documentation: unknown,
 ): InjectionPresentationExtensionRead {
+  // Absence belongs to the saved record, not the current draft's defaults.
+  const withoutAppointment = () => {
+    if (fallback.avsAppointment === undefined) return fallback;
+    const { avsAppointment: _appointment, ...rest } = fallback;
+    return rest;
+  };
   if (documentation === undefined) {
-    return { encounter: fallback, status: "absent" };
+    return { encounter: withoutAppointment(), status: "absent" };
   }
   const documentationRecord = asRecord(documentation);
   if (!documentationRecord) {
@@ -73,22 +82,26 @@ export function readInjectionPresentationExtension(
       TYPED_INJECTION_ENCOUNTER_KEY,
     )
   ) {
-    return { encounter: fallback, status: "absent" };
+    return { encounter: withoutAppointment(), status: "absent" };
   }
   const envelope = asRecord(
     documentationRecord[TYPED_INJECTION_ENCOUNTER_KEY],
   );
   if (
     !envelope ||
-    (envelope.version !== 1 && envelope.version !== 2) ||
+    (envelope.version !== 1 && envelope.version !== 2 && envelope.version !== 3) ||
     typeof envelope.orderingProvider !== "string" ||
-    (envelope.version === 2 && typeof envelope.pairedSecondNdc !== "string") ||
+    (envelope.version >= 2 && typeof envelope.pairedSecondNdc !== "string") ||
     (envelope.version === 1 &&
       envelope.pairedSecondNdc !== undefined &&
       typeof envelope.pairedSecondNdc !== "string") ||
     !asRecord(envelope.response) ||
     !asRecord(envelope.details)
   ) {
+    return { encounter: fallback, status: "invalid" };
+  }
+  if (envelope.avsAppointment !== undefined &&
+      (envelope.version !== 3 || !isAvsAppointment(envelope.avsAppointment))) {
     return { encounter: fallback, status: "invalid" };
   }
   const response = envelope.response as Record<string, unknown>;
@@ -135,9 +148,10 @@ export function readInjectionPresentationExtension(
   const fallbackVitals = { ...fallback.vitals };
   delete fallbackVitals.weight;
   delete fallbackVitals.weightUnit;
-  const { habitus: _fallbackHabitus, ...fallbackWithoutHabitus } = fallback;
+  const { habitus: _fallbackHabitus, avsAppointment: _fallbackAppointment, ...fallbackWithoutHabitus } = fallback;
   const candidate: InjectionEncounter = {
     ...fallbackWithoutHabitus,
+    ...(envelope.avsAppointment !== undefined ? { avsAppointment: envelope.avsAppointment as AvsAppointment } : {}),
     orderingProvider: envelope.orderingProvider,
     ...(envelope.habitus === "lean" ||
     envelope.habitus === "average" ||
@@ -395,8 +409,12 @@ export function isUsableInjectionRecord(value: unknown): boolean {
 export function injectionPresentationExtensionValue(
   encounter: InjectionEncounter,
 ): TypedInjectionEnvelope {
+  if (encounter.avsAppointment !== undefined && !isAvsAppointment(encounter.avsAppointment)) {
+    throw new Error("Appointment reminder data is invalid; the previous saved record is unchanged.");
+  }
   return {
-    version: 2,
+    version: 3,
+    ...(encounter.avsAppointment ? { avsAppointment: encounter.avsAppointment } : {}),
     orderingProvider: encounter.orderingProvider,
     habitus: encounter.habitus ?? "",
     weight: encounter.vitals?.weight ?? "",
