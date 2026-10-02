@@ -1680,6 +1680,7 @@ export function UdsPanel({
           >
             {NOTES.openUdsNotes}…
           </button>
+          <ActionShelf label="Record tools" heading="UDS record tools" class="lf-uds-tools" description="Carry existing context or add this documentation to the local activity log.">
           {!locked && (
             <button
               type="button"
@@ -1737,6 +1738,7 @@ export function UdsPanel({
           >
             {udsLogLabel}
           </button>
+          </ActionShelf>
         </div>
 
         <WorkflowLedgerTabs

@@ -78,7 +78,8 @@ test('popover listeners stay balanced and one Escape dismisses one surface', asy
     await workspace.locator(':scope > summary').click();
     await expect(workspace).toHaveAttribute('open', '');
     expect(await counts()).toEqual(resting.map(value => value + 1));
-    await review.locator(':scope > summary').click();
+    await review.locator(':scope > summary').focus();
+    await page.keyboard.press('Enter');
     await expect(workspace).not.toHaveAttribute('open', '');
     await expect(review).toHaveAttribute('open', '');
     expect(await counts()).toEqual(resting.map(value => value + 1));
@@ -133,4 +134,25 @@ test('save and lookup commands fire once and preserve native modal focus', async
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(provider).toBeFocused();
   expect(await page.evaluate(() => window.__saveRequests)).toBe(2);
+});
+
+
+test('legacy and shell notices share one surface without dropping either message', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/');
+  await page.locator('.lf-service-administer').click();
+  await expect(page.locator('[data-toast]')).toContainText('Injection opened.');
+  await page.evaluate(() => window.toast('Synthetic compatibility notice'));
+  await expect(page.locator('#toast')).toBeHidden();
+  await expect(page.locator('#toast')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('[data-toast]')).toHaveCount(1);
+  await expect(page.locator('[data-toast]')).toContainText('Injection opened.');
+  await expect(page.locator('[data-toast]')).toContainText('Synthetic compatibility notice');
+  await page.clock.runFor(1700);
+  await expect(page.locator('[data-toast]')).not.toContainText('Synthetic compatibility notice');
+  await page.clock.runFor(4000);
+  await expect(page.locator('[data-toast]')).toHaveCount(0);
+  await page.evaluate(() => window.toast('Synthetic compatibility notice'));
+  await expect(page.locator('[data-toast]')).toHaveCount(1);
+  await expect(page.locator('[data-toast]')).toHaveText('Synthetic compatibility notice');
 });

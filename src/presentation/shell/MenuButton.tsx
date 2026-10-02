@@ -85,7 +85,7 @@ export function MenuButton({
   };
 
   const openAndFocus = (position: "first" | "last") => {
-    layer.activate();
+    if (!layer.activate()) return;
     pendingFocusRef.current = position;
     setOpen(true);
   };
@@ -175,7 +175,7 @@ export function MenuButton({
             }
           }}
           onKeyDown={(event) => {
-          if (event.defaultPrevented || event.isComposing) return;
+            if (event.defaultPrevented || event.isComposing) return;
             const items = menuItems();
             const currentIndex = items.findIndex(
               (item) =>

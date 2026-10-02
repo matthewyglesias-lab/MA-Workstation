@@ -990,10 +990,12 @@ test.describe('MA Workstation browser journeys', () => {
     const keyboardReference = page.getByRole('dialog', { name: 'Keyboard Reference' });
     await expect(keyboardReference).toBeVisible();
     await expect(keyboardReference).toContainText('F9');
-    await expect(keyboardReference).toContainText('Lookup');
+    await expect(keyboardReference).toContainText('contextual local lookup');
     await page.keyboard.press('Escape');
     await expect(keyboardReference).toBeHidden();
+    await panel.locator('.lf-uds-tools > summary').click();
     await expect(panel.getByRole('button', { name: 'Add to daily log' })).toBeDisabled();
+    await page.keyboard.press('Escape');
     await expect(panel.getByRole('button', { name: 'Save' })).toBeDisabled();
     await expect(
       panel.locator('.wfp-field[data-field-path="patient.name"]')
@@ -1005,7 +1007,9 @@ test.describe('MA Workstation browser journeys', () => {
       .toHaveAttribute('data-requirement', 'required');
     await expect(panel.locator('.wfp-field[data-field-path="patient.name"] input'))
       .toHaveAttribute('aria-required', 'true');
+    await panel.locator('.lf-uds-tools > summary').click();
     await expect(panel.getByRole('button', { name: 'Log as needs review' })).toBeEnabled();
+    await page.keyboard.press('Escape');
   });
 
   test('uses field-owned F9 lookups and evaluator-stamped transaction ledgers', async ({ page }) => {
@@ -1086,6 +1090,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(specimenTab).toHaveClass(/is-stop/);
     await expect(specimenTab.locator('.wfp-ledger-state')).toContainText('required');
 
+    await udsPanel.locator('.lf-uds-tools > summary').click();
     await udsPanel.getByRole('button', { name: 'Use documenting staff', exact: true }).click();
     const collectorField = udsPanel.locator('.wfp-field[data-field-path="collector"]');
     await expect(collectorField.locator('.wfp-register-source')).toHaveText('Session');
@@ -1535,8 +1540,10 @@ test.describe('MA Workstation browser journeys', () => {
       name: 'Add to daily log',
       exact: true,
     });
+    await page.locator('.lf-uds-tools > summary').click();
     await expect(blankUdsLog).toBeVisible();
     await expect(blankUdsLog).toBeDisabled();
+    await page.keyboard.press('Escape');
 
     await openWorkflow(page, 'samples');
     const sampleLog = page.locator('.wfp-panel').getByRole('button', {
@@ -1605,11 +1612,11 @@ test.describe('MA Workstation browser journeys', () => {
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
     await expect(patientBanner).toHaveCSS('background-color', 'rgb(237, 243, 239)');
-    await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
+    await expect(page.locator('.cd2004-patient-primary')).toContainText('Patient records');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
+    await expect(page.locator('.cd2004-patient-primary')).toContainText('Patient records');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Alpha, Patient');
 
     await openWorkflow(page, 'samples');
@@ -1747,7 +1754,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
     await expect(page.locator('.lf-workspace-shelf > summary')).toBeVisible();
     await expect(page.locator('.lf-workspace-shelf .lf-shelf-panel')).toBeHidden();
-    await expect(page.locator('.meditech-context-rail')).toBeVisible();
+    await expect(page.locator('.lf-section-rail')).toBeVisible();
 
     // Native dialogs live in the top layer rather than inside the ordinary
     // stacking tree. The viewport gate must close one before it can own focus,
@@ -2093,7 +2100,7 @@ test.describe('MA Workstation browser journeys', () => {
         await expectNoHorizontalPageOverflow(page);
       }
 
-      const titlebar = page.locator('.cd2004-app-titlebar');
+      const titlebar = page.locator('.lf-masthead');
       const titlebarBox = await titlebar.boundingBox();
       expect(titlebarBox).not.toBeNull();
       expect(titlebarBox.x).toBeGreaterThanOrEqual(0);

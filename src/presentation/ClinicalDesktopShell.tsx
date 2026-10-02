@@ -1592,7 +1592,7 @@ export function ClinicalDesktopShell({
                   onViewChange={setChartView}
                   onOpenNote={openChartNote}
                   onNewNote={startNoteFromChart}
-                  onReturnToDraft={isDocumentService(selectedWorkflow) ? () => closeChart(selectedWorkflow) : undefined}
+                  onReturnToService={isDocumentService(selectedWorkflow) ? () => closeChart(selectedWorkflow) : undefined}
                   {...(activePatientKey && activePatientKey !== chartPatient.key
                     ? { otherNotePatient: patient.name?.trim() ?? "" }
                     : {})}

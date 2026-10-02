@@ -14,6 +14,7 @@ export type ClinicalTone = "neutral" | "ready" | "warning" | "stop" | "info";
 export type DesktopIconName =
   | WorkflowId
   | "save"
+  | "search"
   | "records"
   | "note"
   | "print"

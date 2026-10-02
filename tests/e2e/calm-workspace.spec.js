@@ -58,7 +58,7 @@ for (const size of [{width:1440,height:900},{width:1024,height:768},{width:800,h
     await expect(page.locator('.cd2004-patient-banner')).toContainText('Calm workspace, Synthetic');
     const tips=page.locator('.lf-review-disclosure');
     await expect(tips.locator('.lf-review-detail')).toBeHidden();
-    await expect(tips.locator('summary')).toContainText('Confirm the patient');
+    await expect(tips.locator('summary')).toHaveText('Review tips');
     await shot(page,info,'03-injection-at-rest');
     await tips.locator('summary').click();
     await expect(tips.locator('.lf-review-detail')).toContainText('current order');

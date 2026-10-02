@@ -11,6 +11,7 @@ import type {
   WorkflowFieldState,
 } from "../../application/workstation-projection";
 import { requestWorkstationFieldLookup } from "../workstation-events";
+import { DesktopIcon } from "../DesktopIcon";
 import { RegisterMarkers } from "./ClinicalRegister";
 import { hasProviderRegister } from "../../domain/provider-register";
 import { OptionList, type OptionListProps } from "./OptionList";
@@ -270,7 +271,7 @@ export function WorkflowField({
               requestWorkstationFieldLookup(select);
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+            <DesktopIcon name="search" width="16" height="16"/>
           </button>
         </div>
       ) : (

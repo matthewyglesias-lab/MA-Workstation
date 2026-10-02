@@ -43,13 +43,13 @@ export function createDismissalOwner(target: EventTarget, modalOpen: () => boole
   };
   return {
     activate(layer: DismissibleLayer) {
-      if (active.has(layer.id)) return;
+      if (active.has(layer.id)) { active.set(layer.id, layer); return true; }
       const ticket = ++activation;
       // These are independent shell/field popovers, not stacked windows.
       for (const current of [...active.values()]) dismiss(current, "superseded");
       // A dismissal callback may synchronously open another layer. The newest
       // activation wins; never leave two owners registered after re-entry.
-      if (ticket !== activation) return;
+      if (ticket !== activation) return false;
       active.set(layer.id, layer);
       if (!listening) {
         target.addEventListener("pointerdown", outside);
@@ -57,6 +57,7 @@ export function createDismissalOwner(target: EventTarget, modalOpen: () => boole
         target.addEventListener("keydown", escape);
         listening = true;
       }
+      return true;
     },
     deactivate: remove,
     get size() { return active.size; },

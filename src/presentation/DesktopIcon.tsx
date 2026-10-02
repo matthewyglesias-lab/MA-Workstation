@@ -46,6 +46,8 @@ export function DesktopIcon({ name, ...props }: DesktopIconProps) {
   } satisfies JSX.SVGAttributes<SVGSVGElement>;
 
   switch (name) {
+    case "search":
+      return <svg width="18" height="18" {...common}><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>;
     case "arrow-right":
       return <svg {...common} width="16" height="16"><path d="M4.5 12h15m-6-6 6 6-6 6"/></svg>;
     case "chevron-down":

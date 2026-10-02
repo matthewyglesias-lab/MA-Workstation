@@ -43,7 +43,7 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
   const activeIndex = matchedIndex >= 0 ? matchedIndex : results.length ? 0 : -1;
 
   const layer = useDismissibleLayer(hostRef, () => closeResults());
-  const openResults = () => { layer.activate(); setOpen(true); };
+  const openResults = () => { if (layer.activate()) setOpen(true); };
   const closeResults = () => {
     layer.deactivate();
     setOpen(false);

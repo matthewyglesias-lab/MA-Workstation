@@ -31,10 +31,6 @@ function readDensity(): Density {
   catch { return "comfortable"; }
 }
 
-function SearchGlyph() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>;
-}
-
 /** Shell-only actions. Never writes an encounter or bypasses its navigation guard. */
 export function WorkspaceTools({ commands, onFocusInjection, focused = false, open, onOpen, onDismiss }: {
   open: boolean; onOpen: () => void; onDismiss: () => void;
@@ -52,7 +48,7 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false, op
   return <div class="lf-workspace-tools">
     <ActionShelf label="Workspace" heading="Workspace tools" description="Find a service, adjust spacing, or use the guided injection view." class="lf-workspace-shelf">
       <button type="button" class="lf-command-trigger" aria-label="Search workspace commands" aria-haspopup="dialog" onClick={onOpen}>
-        <SearchGlyph/><span><strong>Find a tool</strong><small>Search services, records and more.</small></span><kbd>Ctrl K</kbd>
+        <DesktopIcon name="search"/><span><strong>Find a tool</strong><small>Search services, records and more.</small></span><kbd>Ctrl K</kbd>
       </button>
       {commands.filter(command => ["reference", "log", "tms"].includes(command.id)).map(command =>
         <button key={command.id} type="button" class="cd2004-nav-item" title={command.id === "tms" ? "Future / TMS" : command.label} disabled={command.disabled} onClick={command.onInvoke}>
@@ -87,7 +83,7 @@ function CommandPalette({ commands, onDismiss }: { commands: WorkspaceCommand[];
   };
   return <ModalDialog class="lf-command-dialog cd2004-print-exclude" labelledBy="lf-command-title" onDismiss={onDismiss}>
     <DialogHeading id="lf-command-title" title="Find a tool" closeLabel="Close command search" onClose={onDismiss} />
-    <div class="lf-command-input"><SearchGlyph/><input ref={input} value={query} placeholder="Search injections, UDS, notes, forms…" aria-label="Search commands" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="lf-command-results" aria-activedescendant={selected >= 0 ? `lf-command-${selected}` : undefined} onInput={(event) => { setQuery(event.currentTarget.value); setActive(0); }} onKeyDown={(event) => {
+    <div class="lf-command-input"><DesktopIcon name="search"/><input ref={input} value={query} placeholder="Search injections, UDS, notes, forms…" aria-label="Search commands" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="lf-command-results" aria-activedescendant={selected >= 0 ? `lf-command-${selected}` : undefined} onInput={(event) => { setQuery(event.currentTarget.value); setActive(0); }} onKeyDown={(event) => {
       if (event.isComposing) return;
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault(); setActive(nextEnabledCommand(matches, selected, event.key === "ArrowDown" ? 1 : -1));

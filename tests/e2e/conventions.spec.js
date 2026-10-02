@@ -448,7 +448,7 @@ test.describe('Phase 3b patient chart conventions', () => {
 
     await expect(search).toHaveAttribute(
       'placeholder',
-      /2-3 letters of the patient's name, or DOB as mm\/dd\/yyyy/i
+      'Name or DOB'
     );
 
     await search.click();
@@ -509,6 +509,31 @@ test.describe('Phase 3b patient chart conventions', () => {
     await search.press('Enter');
     await expect(page.locator('[data-patient-chart]')).toBeVisible();
     await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
+  });
+
+  test('returns from patient browsing to the active service without changing records', async ({ page }, info) => {
+    await bootWithPatientChart(page, { width: 800, height: 600 });
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
+    const name = page.locator('.wfp-panel input[placeholder="Last, First"]');
+    const dob = page.locator('.wfp-panel input[placeholder="MM/DD/YYYY"]');
+    await name.fill('Return path, Synthetic');
+    await dob.fill('01/02/1990');
+    await dob.press('Tab');
+    const records = () => page.evaluate(keys => keys.map(key => localStorage.getItem(key)), [INJECTION_RECORDS_KEY, UDS_RECORDS_KEY]);
+    const before = await records();
+    await openBakerChart(page);
+    await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
+    await expect(page.locator('.lf-draft-return')).toContainText('active service is unchanged');
+    await expect(page.getByRole('button', { name: 'Return to active service', exact: true })).toHaveCount(1);
+    expect(await records()).toEqual(before);
+    await page.screenshot({ path: info.outputPath('patient-browse-800.png') });
+    await page.getByRole('button', { name: 'Return to active service', exact: true }).click();
+    await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
+    await expect(name).toHaveValue('Return path, Synthetic');
+    await expect(name).toBeFocused();
+    await expect(dob).toHaveValue('01/02/1990');
+    expect(await records()).toEqual(before);
+    await page.screenshot({ path: info.outputPath('patient-return-800.png') });
   });
 
   test('shows Facesheet cards that each state their ordering rule', async ({ page }) => {
@@ -947,15 +972,12 @@ test.describe('Phase 3b patient chart conventions', () => {
     // Clinic and staff are not lost — the header's top right still carries them.
     await expect(page.locator('.tebra-app-context')).toContainText('Alex Rivera, MA');
 
-    // The rail follows the browsed chart too, rather than claiming no patient
-    // is selected beside that patient's own Facesheet, and offers the chart's
-    // two pages as navigation.
-    const railContext = page.locator('.tebra-section-rail-context');
-    await expect(railContext).toContainText('CURRENT PATIENT');
-    await expect(railContext).toContainText('Baker, Test');
-    await expect(railContext).not.toContainText('No patient selected');
-    await expect(page.locator('[data-chart-nav="facesheet"]')).toBeVisible();
-    await expect(page.locator('[data-chart-nav="notes"]')).toBeVisible();
+    // The chart owns its patient context and local page navigation once. Do
+    // not reintroduce the retired duplicate patient menu in the masthead.
+    await expect(page.locator('.tebra-section-rail-context,[data-chart-nav]')).toHaveCount(0);
+    await expect(page.locator('.tebra-facesheet-name')).toHaveCount(1);
+    await expect(page.locator('[data-chart-tab="facesheet"]')).toBeVisible();
+    await expect(page.locator('[data-chart-tab="notes"]')).toBeVisible();
 
     // And it comes back on the way out.
     await page.keyboard.press('Escape');

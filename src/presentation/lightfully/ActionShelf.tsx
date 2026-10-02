@@ -21,7 +21,7 @@ export function ActionShelf({ label, heading, description, placement = "down", c
       if (event.defaultPrevented || event.isComposing || !["ArrowDown", "ArrowUp"].includes(event.key)) return;
       event.preventDefault();
       if (!host.current) return;
-      disclosure.open();
+      if (!disclosure.open()) return;
       const items = host.current.querySelectorAll<HTMLButtonElement>("button:not(:disabled):not([aria-disabled=true])");
       (event.key === "ArrowUp" ? items[items.length - 1] : items[0])?.focus({ preventScroll: true });
     }}><span>{label}</span><svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>

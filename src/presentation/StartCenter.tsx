@@ -244,7 +244,7 @@ export function StartCenter({
         }}>
           {FILTERS.map((candidate) => <button key={candidate.id} type="button" role="tab" id={`lf-work-tab-${candidate.id}`} aria-controls="lf-work-panel" tabIndex={filter === candidate.id ? 0 : -1} aria-selected={filter === candidate.id} class={filter === candidate.id ? "is-selected" : ""} onClick={() => setFilter(candidate.id)}><span>{candidate.label}</span><b>{countFor(candidate.id)}</b></button>)}
         </div>
-        <label class="lf-worklist-search"><DesktopIcon name="patient"/><input type="search" aria-label="Filter local work by patient or medication" placeholder="Filter this worklist" value={query} onInput={(event) => setQuery(event.currentTarget.value)}/></label>
+        <label class="lf-worklist-search"><DesktopIcon name="search"/><input type="search" aria-label="Filter local work by patient or medication" placeholder="Filter this worklist" value={query} onInput={(event) => setQuery(event.currentTarget.value)}/></label>
       </div>
       <div class="cd2004-worklist-sheet" id="lf-work-panel" role="tabpanel" aria-labelledby={`lf-work-tab-${filter}`}>
         {visibleRows.length ? <table class="lf-work-table"><caption class="cd2004-visually-hidden">Local records and unfinished work in this tab</caption><thead><tr><th scope="col">Patient / task</th><th scope="col">Service</th><th scope="col">Date / time</th><th scope="col">Status</th><th scope="col"><span class="cd2004-visually-hidden">Action</span></th></tr></thead><tbody>

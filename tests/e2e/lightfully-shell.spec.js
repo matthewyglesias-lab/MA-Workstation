@@ -31,7 +31,8 @@ test.describe('Lightfully standalone shell', () => {
         await expect(shortcut).toBeInViewport({ ratio: 1 });
       }
       await expect(page.locator('.lf-worklist-empty strong')).toBeInViewport({ ratio: 1 });
-      await expect(page.locator('.lf-worklist-empty button')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('.lf-document-action')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('.lf-worklist-empty button')).toHaveCount(0);
       const composition = await page.locator('.lf-start-center').evaluate(node => {
         const heading = node.querySelector('.lf-worklist-heading').getBoundingClientRect();
         const service = node.querySelector('.lf-service-launcher').getBoundingClientRect();

@@ -444,7 +444,7 @@ test.describe('workstation visual snapshots', () => {
     await expect(page.locator('.meditech-workstation-gate')).toHaveCount(0);
     await expect(page.locator('.lf-workspace-shelf > summary')).toBeVisible();
     await expect(page.locator('.lf-workspace-shelf .lf-shelf-panel')).toBeHidden();
-    await expect(page.locator('.meditech-context-rail')).toBeVisible();
+    await expect(page.locator('.lf-section-rail')).toBeVisible();
     await expect(page.locator('.cd2004-inspector-window')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible();
     await expect(page.locator('[data-injection-record-actions]')).toBeVisible();

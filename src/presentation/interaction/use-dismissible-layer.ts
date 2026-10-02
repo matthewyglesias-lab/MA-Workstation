@@ -21,14 +21,17 @@ export function useDismissibleLayer(host: { current: HTMLElement | null }, onDis
   const owner = useRef<ReturnType<typeof createDismissalOwner> | null>(null);
   const deactivate = () => owner.current?.deactivate(id.current);
   useLayoutEffect(() => deactivate, []);
+  // A field-information component can remain mounted while rendering null.
+  // Release its old host too; do not wait for a future pointer event to clean up.
+  useLayoutEffect(() => { if (!host.current) deactivate(); });
   return {
     deactivate,
     activate() {
       const element = host.current;
-      if (!element) return;
+      if (!element) return false;
       const nextOwner = ownerFor(element.ownerDocument);
       owner.current = nextOwner;
-      nextOwner.activate({
+      return nextOwner.activate({
         id: id.current,
         contains: target => target instanceof Node && element.contains(target),
         dismiss: reason => latestDismiss.current(reason),
@@ -49,12 +52,19 @@ export function useDisclosureLayer(host: { current: HTMLDetailsElement | null })
     if (restoreFocus) host.current.querySelector<HTMLElement>(":scope > summary")?.focus({ preventScroll: true });
   };
   const open = () => {
-    layer.activate();
+    if (!layer.activate()) return false;
     if (host.current) host.current.open = true;
+    return true;
   };
   return {
     close, open,
-    onToggle: () => { if (host.current?.open) layer.activate(); else layer.deactivate(); },
-    onSummaryClick: () => { if (!host.current?.open) layer.activate(); else layer.deactivate(); },
+    onToggle: () => {
+      if (host.current?.open) { if (!layer.activate()) host.current.open = false; }
+      else layer.deactivate();
+    },
+    onSummaryClick: (event: Event) => {
+      if (!host.current?.open) { if (!layer.activate()) event.preventDefault(); }
+      else layer.deactivate();
+    },
   };
 }

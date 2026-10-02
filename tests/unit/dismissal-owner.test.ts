@@ -13,6 +13,22 @@ function harness() {
 }
 
 describe('single non-modal dismissal ownership', () => {
+  it('reports a rejected older activation so its caller cannot expose an unowned popup', () => {
+    const {owner,layer}=harness(); const newest=layer(), first=layer(), older=layer();
+    first.dismiss=() => { owner.activate(newest); };
+    expect(owner.activate(first)).toBe(true);
+    expect(owner.activate(older)).toBe(false);
+    expect(owner.activate(newest)).toBe(true);
+    expect(owner.size).toBe(1);
+  });
+  it('refreshes a retained host without installing another set of listeners', () => {
+    const {owner,layer,target,add}=harness(); const first=layer();
+    owner.activate(first);
+    const refreshed={...first,contains:()=>true}; owner.activate(refreshed);
+    target.dispatchEvent(new Event('pointerdown'));
+    expect(first.dismiss).not.toHaveBeenCalled(); expect(add).toHaveBeenCalledTimes(3);
+  });
+
   it('installs nothing while closed and exactly one listener per event while open', () => {
     const {owner,layer,add,remove} = harness(); const a=layer();
     expect(add).not.toHaveBeenCalled(); owner.activate(a); owner.activate(a);

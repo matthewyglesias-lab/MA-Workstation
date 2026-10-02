@@ -102,7 +102,9 @@
   #lf-workstation .lf-empty-patient { display: flex; justify-content: space-between; gap: 20px; min-height: 58px; }
 
   /* Service workspace: one title, one view switch and one attached action dock. */
-  #lf-workstation > .cd2004-workspace { grid-column: 1; grid-row: 2; display: block; min-width: 0; min-height: 0; padding: 0; overflow: hidden; background: var(--lf-canvas); }
+  #lf-workstation > .cd2004-workspace { grid-column: 1; grid-row: 2; min-width: 0; min-height: 0; overflow: hidden; background: var(--lf-canvas); }
+  #lf-workstation > .cd2004-workspace:not(.is-kiosk) { display: block; padding: 0; }
+  #lf-workstation > .cd2004-workspace.is-kiosk { display: grid; grid-template-columns: var(--kiosk-rail-width) minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 12px; padding: 12px; }
   #lf-workstation .cd2004-work-window { display: flex; flex-direction: column; height: 100%; width: 100%; min-width: 0; min-height: 0; border: 0; border-radius: 0; margin: 0; background: transparent; box-shadow: none; overflow: hidden; }
   #lf-workstation .cd2004-work-window > .cd2004-window-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; padding: 0; overflow: hidden; background: transparent; }
   #lf-workstation .lf-service-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 20px; min-height: 64px; margin: 0; padding: 12px var(--lf-shell-gutter); border: 0; background: transparent; }
@@ -207,6 +209,10 @@
     #lf-workstation .lf-shortcut-arrow { display: none; }
     #lf-workstation .lf-service-shortcut { padding: 13px 14px; gap: 10px; }
     #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr) minmax(330px,.85fr); }
+  }
+  @media (max-width: 1179px) {
+    #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr); }
+    #lf-workstation[data-preview-open=true] .has-document-split > .cd2004-workflow-slot { display: none; }
   }
   @media (max-width: 949px) {
     :root { --lf-shell-gutter: 16px; }
