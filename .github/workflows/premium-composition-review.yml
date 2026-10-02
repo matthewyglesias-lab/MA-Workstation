@@ -11,11 +11,12 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write
     env:
       VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+      PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/results.json
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,9 +27,8 @@ jobs:
           test "$GITHUB_REF" = refs/heads/codex/premium-workstation-composition
           python - <<'PY'
           import base64, hashlib, json, lzma, pathlib, subprocess
-          parts = [pathlib.Path('.review-transport/composition-01.b64'), pathlib.Path('.review-transport/composition-02.b64')]
-          raw = lzma.decompress(base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True))
-          assert hashlib.sha256(raw).hexdigest() == '5a2952b563c12bcb47d8899fc9fa6a20db76fa02c6cfdcb32a79a2c75088f7bb', 'Transport digest mismatch'
+          raw = lzma.decompress(base64.b64decode(pathlib.Path('.review-transport/revision-02.b64').read_text().strip(), validate=True))
+          assert hashlib.sha256(raw).hexdigest() == '963756aee94900f104095748e2436c428f90ac0221c164e8a06dc5cc8133bdc1', 'Transport digest mismatch'
           changes = json.loads(raw)
           def digest(path):
               return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
@@ -53,7 +53,7 @@ jobs:
               subprocess.run(['git','add','-A','--',*[c['p'] for c in changes]],check=True)
               subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
               subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
-              subprocess.run(['git','commit','-m','refactor: coherent clinical composition and single popover event owner'],check=True)
+              subprocess.run(['git','commit','-m','refactor: remove obsolete chrome and verify exclusive event ownership'],check=True)
               subprocess.run(['git','push','origin','HEAD:refs/heads/codex/premium-workstation-composition'],check=True)
           pathlib.Path('review-evidence').mkdir(exist_ok=True)
           pathlib.Path('review-evidence/COMMIT.txt').write_bytes(subprocess.check_output(['git','rev-parse','HEAD']))
@@ -71,8 +71,8 @@ jobs:
       - run: npm run build
       - run: node scripts/package-standalone.mjs
       - run: npx playwright install --with-deps chromium
-      - name: Actual composition, input and event-ownership journeys
-        run: npx playwright test tests/e2e/premium-composition.spec.js tests/e2e/control-details.spec.js tests/e2e/clinic-composition.spec.js --retries=0 --reporter=line,json,html
+      - name: Full browser, clinical, recovery, print and composition review
+        run: npx playwright test --retries=0 --reporter=line,json,html
       - name: Archive exact tested source
         if: always()
         run: git archive HEAD | gzip > review-evidence/source.tar.gz
