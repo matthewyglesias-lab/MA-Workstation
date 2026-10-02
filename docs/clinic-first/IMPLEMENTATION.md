@@ -1,8 +1,10 @@
 # Clinic-first workstation review
 
-This increment continues draft PR #68. Tebra remains the chart of record.
-It does not authorize a merge, deployment, or replacement of a clinic's working
-copy. All review fixtures are synthetic.
+This work continues PR #68. Tebra remains the chart of record. The user's later
+instruction authorizes merging the verified refinement to main, which triggers
+the existing Azure deployment pipeline. All review fixtures are synthetic.
+See [CONTROL-REFINEMENT.md](CONTROL-REFINEMENT.md) for the final detail pass,
+release scope and remaining clinic review. No clinic's local records are moved.
 
 The user's screenshot review prompted a further structural visual revision.
 See [VISUAL-REVISION.md](VISUAL-REVISION.md) for the current composition and its
@@ -18,7 +20,7 @@ the PR description identifies the final source and evidence.
 | Injection and UDS records | Existing versioned repositories, local storage keys, validated snapshots, stale-write and read-only guards. No migration. |
 | Forms and Samples interruptions | `WorkflowRecovery` stores the exact typed encounter in this tab's `sessionStorage`. Separate from signed records. |
 | Application state | The existing coordinator and typed panels remain authoritative. Worklist rows are read-only projections, never permission to open or overwrite a record. |
-| Screen design | The three finishing stylesheets are consolidated in `lightfully/workspace.css`; compatibility base selectors remain to avoid a risky mechanical rewrite. |
+| Screen design | `lightfully/workspace.css` owns composition; `lightfully/controls.css` owns field appearance and the final detail tokens. Compatibility base selectors remain. |
 | Paper design | Root-scoped `documents/injection-avs.css` and `documents/clinical-print.css` are independent of screen composition and clinical calculation. |
 
 ## Changes staff will experience

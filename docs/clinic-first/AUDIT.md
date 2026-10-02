@@ -4,7 +4,9 @@ Audit baseline: `4bc9b5bb2390568bf75a5dd06fda50fbd8ae5790` (2026-10-01).
 This scope follows the user's application-wide refinement request. It supersedes
 prior presentation-only limitations, while retaining the local-only runtime,
 medication engines, established note structure, existing record formats and
-review-before-release boundary. No merge or production deployment.
+review-before-release boundary. The initial audit was draft-only; the user's
+later instruction authorizes merging PR #68 to main after verification.
+See [CONTROL-REFINEMENT.md](CONTROL-REFINEMENT.md) for the current release scope.
 
 ## Observed findings and staged work
 
