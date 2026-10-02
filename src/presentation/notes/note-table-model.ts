@@ -411,6 +411,37 @@ export const patientNoteOpenAccessibleLabel = (
   return hasDuplicate ? disambiguatedSavedNoteLabel(base, row.recordId) : base;
 };
 
+/** Compute the existing disambiguation rule once per visible list, in O(n).
+ * Keys, not row count, establish a collision: repeated copies of the same key
+ * must behave exactly like the original peer.key !== row.key check.
+ * No record data is cached outside this render snapshot.
+ */
+function accessibleLabels(
+  rows: readonly NotesTableRow[],
+  baseLabel: (row: NotesTableRow) => string,
+): string[] {
+  const bases = rows.map(baseLabel);
+  const peers = new Map<string, Set<string>>();
+  rows.forEach((row, index) => {
+    const base = bases[index]!;
+    const keys = peers.get(base);
+    if (keys) keys.add(row.key);
+    else peers.set(base, new Set([row.key]));
+  });
+  return rows.map((row, index) => {
+    const base = bases[index]!;
+    return peers.get(base)!.size > 1
+      ? disambiguatedSavedNoteLabel(base, row.recordId)
+      : base;
+  });
+}
+
+export const notesTableAccessibleLabels = (rows: readonly NotesTableRow[]): string[] =>
+  accessibleLabels(rows, notesTableRowOpenBaseLabel);
+
+export const patientNoteAccessibleLabels = (rows: readonly NotesTableRow[]): string[] =>
+  accessibleLabels(rows, patientNoteOpenBaseLabel);
+
 export const noteLockLabel = (lock: NoteLock): string => {
   const staff = nonEmptyString(lock.staff);
   const parsedTime = parseChartDate(lock.timestamp, "datetime");

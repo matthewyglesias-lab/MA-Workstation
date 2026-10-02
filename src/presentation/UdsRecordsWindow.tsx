@@ -1,3 +1,4 @@
+import { createRecordListView } from "./record-list-view";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   filteredNoteCount,
@@ -11,7 +12,6 @@ import { UdsRecordRepository, type UdsRecord } from "../persistence/uds-records"
 import { browserSafeStorage } from "../persistence/storage";
 import {
   addendaCount,
-  searchText,
   trapDialogTabKey,
 } from "./records-drawer-shared";
 import { NotesTable } from "./notes/NotesTable";
@@ -112,18 +112,9 @@ export function UdsRecordsWindow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const visible = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase();
-    return records.filter((record) => {
-      const passesFilter =
-        filter === "all"
-          ? true
-          : filter === "addenda"
-            ? addendaCount(record) > 0
-            : record.status === (filter === "locked" ? "completed" : "draft");
-      return passesFilter && (!needle || searchText(record).includes(needle));
-    }).map(udsRecordToNotesTableRow);
-  }, [records, query, filter]);
+  // Repository reload replaces the snapshot; never cache across storage revisions.
+  const selectRows = useMemo(() => createRecordListView(records, udsRecordToNotesTableRow), [records]);
+  const visible = useMemo(() => selectRows(query, filter), [selectRows, query, filter]);
 
   const onKeyDown = (event: KeyboardEvent) => trapDialogTabKey(dialogRef.current, event);
 

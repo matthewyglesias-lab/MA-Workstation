@@ -50,9 +50,13 @@ export function DailyCloseoutPanel() {
   const entries = readTodayActivityLog();
   const stats = activityLogStats(entries);
   const review = needsReviewEntries(entries);
+  const originalIndexes = new Map<typeof entries[number], number>();
+  entries.forEach((entry, index) => {
+    if (!originalIndexes.has(entry)) originalIndexes.set(entry, index);
+  });
   const visibleRows = filterActivityLog(entries, filter).map((entry) => ({
     entry,
-    index: entries.indexOf(entry),
+    index: originalIndexes.get(entry)!,
   }));
 
   const deleteRow = (index: number) => {

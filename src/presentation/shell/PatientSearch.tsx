@@ -38,7 +38,8 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
     [patients, query],
   );
   const longEnough = query.trim().length >= PATIENT_QUERY_MIN_LENGTH;
-  const activeIndex = results.findIndex((patient) => patient.key === activeKey);
+  const matchedIndex = results.findIndex((patient) => patient.key === activeKey);
+  const activeIndex = matchedIndex >= 0 ? matchedIndex : results.length ? 0 : -1;
 
   const closeResults = () => {
     setOpen(false);
@@ -54,16 +55,6 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  useEffect(() => {
-    if (!open || !results.length) {
-      if (activeKey !== null) setActiveKey(null);
-      return;
-    }
-    if (!results.some((patient) => patient.key === activeKey)) {
-      setActiveKey(results[0]!.key);
-    }
-  }, [activeKey, open, results]);
-
   const choose = (patient: ChartPatient) => {
     if (onSelect(patient) === false) return;
     closeResults();
@@ -78,7 +69,10 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
   };
 
   return (
-    <div class="tebra-patient-search" ref={hostRef} data-patient-search>
+    <div class="tebra-patient-search" ref={hostRef} data-patient-search
+      onFocusOut={event => {
+        if (!(event.relatedTarget instanceof Node) || !hostRef.current?.contains(event.relatedTarget)) closeResults();
+      }}>
       <label class="records-sr-only" for={inputId}>
         {PATIENT_SEARCH.label}
       </label>
@@ -98,16 +92,16 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
         value={query}
         onInput={(event) => {
           const nextQuery = event.currentTarget.value;
-          const nextResults = searchChartPatients(patients, nextQuery);
           setQuery(nextQuery);
           setOpen(true);
-          setActiveKey(nextResults[0]?.key ?? null);
+          setActiveKey(null);
         }}
         onFocus={() => {
           setOpen(true);
           setActiveKey(results[0]?.key ?? null);
         }}
         onKeyDown={(event) => {
+          if (event.isComposing) return;
           if (event.key === "Escape") {
             if (!open) return;
             event.preventDefault();
@@ -165,7 +159,7 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
                 key={patient.key}
                 type="button"
                 role="option"
-                aria-selected={patient.key === activeKey}
+                aria-selected={index === activeIndex}
                 tabIndex={-1}
                 class="tebra-patient-search-result"
                 data-patient-result={patient.key}

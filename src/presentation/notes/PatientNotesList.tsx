@@ -14,7 +14,7 @@ import {
 } from "../patient-chart-model";
 import { LockIndicator } from "./LockIndicator";
 import {
-  patientNoteOpenAccessibleLabel,
+  patientNoteAccessibleLabels,
   type NotesTableRow,
 } from "./note-table-model";
 import { StatusChip } from "./StatusChip";
@@ -64,6 +64,7 @@ export function PatientNotesList({ rows, onOpen }: PatientNotesListProps) {
     DEFAULT_PATIENT_NOTES_FILTER,
   );
   const visible = useMemo(() => filterPatientNotes(rows, filter), [rows, filter]);
+  const labels = useMemo(() => patientNoteAccessibleLabels(visible), [visible]);
 
   const patch = (next: Partial<PatientNotesFilter>) =>
     setFilter((current) => ({ ...current, ...next }));
@@ -143,7 +144,7 @@ export function PatientNotesList({ rows, onOpen }: PatientNotesListProps) {
 
       {visible.length ? (
         <ul class="tebra-record-list">
-          {visible.map((row) => (
+          {visible.map((row, index) => (
             <li key={row.key} class="tebra-record-row" data-note-type={row.noteType}>
               <div class="tebra-record-copy">
                 <strong class="tebra-record-title">
@@ -162,7 +163,7 @@ export function PatientNotesList({ rows, onOpen }: PatientNotesListProps) {
                   type="button"
                   class="tebra-record-action"
                   data-patient-note-open={row.recordId}
-                  aria-label={patientNoteOpenAccessibleLabel(row, visible)}
+                  aria-label={labels[index]}
                   onClick={() => onOpen(row.key)}
                 >
                   {PATIENT_NOTES.open}

@@ -4,7 +4,7 @@ import { LockIndicator } from "./LockIndicator";
 import {
   DEFAULT_NOTE_SORT,
   nextNoteSort,
-  notesTableRowAccessibleLabel,
+  notesTableAccessibleLabels,
   sortNotesTableRows,
   type NoteSort,
   type NoteSortKey,
@@ -28,6 +28,7 @@ const SORTABLE_COLUMNS: ReadonlyArray<{ key: NoteSortKey; label: string }> = [
 export function NotesTable({ rows, label, emptyMessage, onOpen }: NotesTableProps) {
   const [sort, setSort] = useState<NoteSort>(DEFAULT_NOTE_SORT);
   const sortedRows = useMemo(() => sortNotesTableRows(rows, sort), [rows, sort]);
+  const labels = useMemo(() => notesTableAccessibleLabels(sortedRows), [sortedRows]);
 
   const sortableHeader = (key: NoteSortKey, columnLabel: string) => {
     const active = sort.key === key;
@@ -62,14 +63,14 @@ export function NotesTable({ rows, label, emptyMessage, onOpen }: NotesTableProp
       </thead>
       <tbody>
         {sortedRows.length ? (
-          sortedRows.map((row) => (
+          sortedRows.map((row, index) => (
             <tr
               key={row.key}
               class="notes-table-row records-drawer-row"
               tabIndex={0}
               data-records-open={row.recordId}
               data-note-type={row.noteType}
-              aria-label={notesTableRowAccessibleLabel(row, sortedRows)}
+              aria-label={labels[index]}
               onClick={() => onOpen(row.recordId)}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" && event.key !== " ") return;

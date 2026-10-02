@@ -1,5 +1,5 @@
 import { NOTES, RECORD, SHELL, WORKLIST_EMPTY, noteCount } from "./vocabulary";
-import { useState } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 import { DesktopIcon } from "./DesktopIcon";
 import { SERVICES } from "./lightfully/ServiceWorkspace";
 import { WORKFLOW_LABELS } from "./types";
@@ -157,25 +157,34 @@ export function StartCenter({
 
   // A review item is also present in the general Today queue. Keep it once in
   // its higher-priority register instead of showing the same local work twice.
-  const reviewItems = uniqueQueueRows(needsReview);
-  const reviewIds = new Set(reviewItems.map((item) => item.id));
-  const todayItems = uniqueQueueRows(todayQueue).filter(
-    (item) => !reviewIds.has(item.id),
-  );
-  // Injection records are a local record register. Only editable records
-  // belong on the current worklist; signed history stays in Open Notes.
-  const savedDrafts = injectionRecords.filter(
-    (record) => !isLockedRecord(record),
-  );
-  const allRows = [
-    ...reviewItems.map((item) => queueWorklistRow(item, "review")),
-    ...savedDrafts.map(recordWorklistRow),
-    ...todayItems.map((item) => queueWorklistRow(item, "today")),
-  ];
-  const searchWords = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  const visibleRows = allRows.filter((row) => rowMatchesFilter(row, filter) && searchWords.every((word) => `${row.patientLabel} ${row.taskLabel} ${row.stateLabel}`.toLocaleLowerCase().includes(word)));
-  const countFor = (candidate: WorklistFilter) =>
-    allRows.filter((row) => rowMatchesFilter(row, candidate)).length;
+  const allRows = useMemo(() => {
+    const reviewItems = uniqueQueueRows(needsReview);
+    const reviewIds = new Set(reviewItems.map(item => item.id));
+    const todayItems = uniqueQueueRows(todayQueue).filter(item => !reviewIds.has(item.id));
+    const savedDrafts = injectionRecords.filter(record => !isLockedRecord(record));
+    return [
+      ...reviewItems.map(item => queueWorklistRow(item, "review")),
+      ...savedDrafts.map(recordWorklistRow),
+      ...todayItems.map(item => queueWorklistRow(item, "today")),
+    ];
+  }, [needsReview, todayQueue, injectionRecords]);
+  const indexedRows = useMemo(() => allRows.map(row => ({
+    row, text: `${row.patientLabel} ${row.taskLabel} ${row.stateLabel}`.toLocaleLowerCase(),
+  })), [allRows]);
+  const counts = useMemo(() => {
+    const value = { all: allRows.length, review: 0, today: 0, drafts: 0 };
+    for (const row of allRows) {
+      if (row.source === "drafts") value.drafts++;
+      else { value.today++; if (row.source === "review") value.review++; }
+    }
+    return value;
+  }, [allRows]);
+  const visibleRows = useMemo(() => {
+    const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    return indexedRows.filter(({row, text}) => rowMatchesFilter(row, filter) &&
+      words.every(word => text.includes(word))).map(({row}) => row);
+  }, [indexedRows, filter, query]);
+  const countFor = (candidate: WorklistFilter) => counts[candidate];
 
   const openRow = (row: WorklistRow) => {
     if (row.queueItem) onQueueItemOpen?.(row.queueItem);
