@@ -607,7 +607,8 @@ test.describe('Phase 3b patient chart conventions', () => {
     const list = page.locator('[data-patient-notes]');
     await expect(list).toBeVisible();
 
-    // Exactly four 200x40 filter fields in one panel.
+    // Patient-chart filters retain their explicit 40px design height in Compact.
+    // This is distinct from 34px clinical entry and 42px Comfortable controls.
     const fields = list.locator('[data-patient-notes-filter]');
     await expect(fields).toHaveCount(4);
     expect(
@@ -617,7 +618,7 @@ test.describe('Phase 3b patient chart conventions', () => {
           return [Math.round(box.width), Math.round(box.height)];
         })
       )
-    ).toEqual([[200, 42], [200, 42], [200, 42], [200, 42]]);
+    ).toEqual([[200, 40], [200, 40], [200, 40], [200, 40]]);
 
     // 100px rows, a 73x38 Open button, and no global-ledger 44px row here.
     const rows = list.locator('.tebra-record-row');

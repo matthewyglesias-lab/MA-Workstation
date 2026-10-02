@@ -248,8 +248,8 @@ export function StartCenter({
       </div>
       <div class="cd2004-worklist-sheet" id="lf-work-panel" role="tabpanel" aria-labelledby={`lf-work-tab-${filter}`}>
         {visibleRows.length ? <table class="lf-work-table"><caption class="cd2004-visually-hidden">Local records and unfinished work in this tab</caption><thead><tr><th scope="col">Patient / task</th><th scope="col">Service</th><th scope="col">Date / time</th><th scope="col">Status</th><th scope="col"><span class="cd2004-visually-hidden">Action</span></th></tr></thead><tbody>
-          {visibleRows.map((row) => <tr key={row.id} class="tebra-record-row" data-worklist-row={row.source}>
-            <td class="tebra-record-copy"><strong class="tebra-record-title">{row.patientLabel}</strong><span class="tebra-record-meta">{row.taskLabel}</span></td>
+          {visibleRows.map((row) => <tr key={row.id} class="lf-work-row" data-worklist-row={row.source}>
+            <td class="lf-work-patient"><strong class="tebra-record-title">{row.patientLabel}</strong><span class="tebra-record-meta">{row.taskLabel}</span></td>
             <td><span class="lf-table-service"><DesktopIcon name={row.service}/>{WORKFLOW_LABELS[row.service]}</span></td>
             <td class="lf-table-date">{row.timeLabel || "—"}</td>
             <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{TONE_GLYPH[row.tone ?? "neutral"]}</span>{row.stateLabel}</span></td>

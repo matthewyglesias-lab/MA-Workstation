@@ -401,6 +401,35 @@ async function settleForCapture(page) {
   });
 }
 
+async function expectNativeWorklistGeometry(page) {
+  const table = page.locator('.lf-work-table');
+  const rows = table.locator('tbody > tr');
+  await expect(rows).toHaveCount(4);
+  const geometry = await table.evaluate(node => {
+    const headers = Array.from(node.querySelectorAll('thead th')).map(h => h.getBoundingClientRect());
+    return Array.from(node.querySelectorAll('tbody > tr')).map(row => ({
+      display: getComputedStyle(row).display,
+      height: row.getBoundingClientRect().height,
+      cells: Array.from(row.children).map((cell, index) => ({
+        width: cell.getBoundingClientRect().width,
+        leftDelta: Math.abs(cell.getBoundingClientRect().left - headers[index].left),
+        display: getComputedStyle(cell).display,
+      })),
+    }));
+  });
+  for (const row of geometry) {
+    expect(row.display).toBe('table-row');
+    expect(row.height).toBeLessThan(180);
+    expect(row.cells).toHaveLength(5);
+    expect(row.cells[0].width).toBeGreaterThan(180);
+    for (const cell of row.cells) {
+      expect(cell.display).toBe('table-cell');
+      expect(cell.leftDelta).toBeLessThanOrEqual(1);
+    }
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+}
+
 test.describe('workstation visual snapshots', () => {
   test('empty chart at 1024 x 768', async ({ page }) => {
     await bootDeterministicWorkstation(page, VIEWPORTS.desktop1024);
@@ -420,6 +449,7 @@ test.describe('workstation visual snapshots', () => {
     await openWorkflow(page, 'home');
     await expect(page.getByRole('heading', { name: 'Worklist', exact: true })).toBeVisible();
     await settleForCapture(page);
+    await expectNativeWorklistGeometry(page);
 
     await expect(page.locator('.cd2004-shell')).toHaveScreenshot(
       'current-worklist-1366x768.png',
@@ -593,3 +623,19 @@ test.describe('workstation visual snapshots', () => {
     );
   });
 });
+
+for (const viewport of [VIEWPORTS.desktop1440, VIEWPORTS.minimumDesktop]) {
+  test(`populated worklist preserves native columns and keyboard resume at ${viewport.width}`, async ({ page }, info) => {
+    await bootDeterministicWorkstation(page, viewport);
+    await openWorkflow(page, 'home');
+    await settleForCapture(page);
+    await expectNativeWorklistGeometry(page);
+    await page.screenshot({path:info.outputPath(`populated-worklist-${viewport.width}.png`)});
+    const draft = page.locator('.lf-work-table tbody tr').filter({hasText:'Patel, Rowan'});
+    await expect(draft).toHaveCount(1);
+    const resume = draft.getByRole('button', {name:'Resume', exact:true});
+    await resume.focus(); await expect(resume).toBeFocused(); await page.keyboard.press('Enter');
+    await expect(page.locator('.wfp-panel input[placeholder="Last, First"]')).toHaveValue('Patel, Rowan');
+    await expect(page.locator('.wfp-panel input[placeholder="MM/DD/YYYY"]')).toHaveValue('11/03/1994');
+  });
+}

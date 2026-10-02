@@ -8,6 +8,13 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const read = (path: string) => readFileSync(root + path, 'utf8');
 
 describe('presentation ownership boundaries', () => {
+  it('keeps table rows separate from the patient-note flex-card owner', () => {
+    const worklist = read('src/presentation/StartCenter.tsx');
+    expect(worklist).toContain('class="lf-work-row"');
+    expect(worklist).not.toMatch(/<tr[^>]*class="tebra-record-row"/);
+    expect(read('src/presentation/notes/PatientNotesList.tsx')).toContain('class="tebra-record-row"');
+  });
+
   it('does not reinstall private global dismissal handlers in migrated components', () => {
     for (const path of ['shell/MenuButton.tsx','shell/PatientSearch.tsx','shell/SectionRail.tsx',
       'lightfully/ActionShelf.tsx','lightfully/WorkspaceTools.tsx','workflows/ClinicalRegister.tsx']) {
