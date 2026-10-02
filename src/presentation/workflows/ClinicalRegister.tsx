@@ -1,3 +1,5 @@
+import { useRef } from "preact/hooks";
+import { useDisclosureLayer } from "../interaction/use-dismissible-layer";
 import { DesktopIcon } from "../DesktopIcon";
 import type { ComponentChildren } from "preact";
 import type { WorkflowFieldSource } from "../../application/workstation-projection";
@@ -28,18 +30,15 @@ export function RegisterMarkers({
   source?: ClinicalFieldSource; state: ClinicalFieldState; changed?: boolean;
   changeDetail?: string; fieldLabel?: string;
 }) {
+  const host = useRef<HTMLDetailsElement>(null);
+  const disclosure = useDisclosureLayer(host);
   const showSource = !SILENT_SOURCE.has(source);
   const sourceLabel = SOURCE_LABEL[source] ?? source;
   // Required state belongs to aria-required/aria-invalid and one caption asterisk,
   // not a second “Required” stamp. All provenance remains available on demand.
   if (!showSource && !changed && state !== "REV") return null;
-  return <details class="wfp-register-markers lf-field-provenance" onKeyDown={event => {
-    if (event.key === "Escape" && event.currentTarget.open) {
-      event.preventDefault(); event.stopPropagation(); event.currentTarget.open = false;
-      event.currentTarget.querySelector("summary")?.focus();
-    }
-  }}>
-    <summary aria-label={`${fieldLabel}: field information`} title={`${fieldLabel}: ${changed ? "value edited; " : ""}${sourceLabel}`}>
+  return <details ref={host} class="wfp-register-markers lf-field-provenance" onToggle={disclosure.onToggle}>
+    <summary onClick={disclosure.onSummaryClick} aria-label={`${fieldLabel}: field information`} title={`${fieldLabel}: ${changed ? "value edited; " : ""}${sourceLabel}`}>
       {changed ? <span class="lf-edited-label">Edited</span> : state === "REV" ? <span class="lf-edited-label">Review</span> :
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v5"/><circle cx="10" cy="6" r=".6" fill="currentColor"/></svg>}
     </summary>

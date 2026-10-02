@@ -315,17 +315,11 @@ export const PATIENT = {
   contextMismatch: "Patient context mismatch",
 } as const;
 
-/**
- * Patient search. The affordance and its copy are Tebra's own: staff type the
- * first two or three letters of a name, or a date of birth. Ours matches
- * against notes saved in this browser and says so, because a search that looks
- * like it reaches a practice-wide directory and does not is the worst kind of
- * seam.
- */
+/** Local patient browsing, never a practice directory or a note-creation action. */
 export const PATIENT_SEARCH = {
-  label: "Search patients",
-  placeholder: "First 2-3 letters of the patient's name, or DOB as mm/dd/yyyy",
-  scopeHint: "Patients with notes saved in this browser.",
+  label: "Find local patient records",
+  placeholder: "Name or DOB",
+  scopeHint: "Patients with notes saved in this browser. For DOB, use MM/DD/YYYY.",
   keepTyping: "Type at least two characters.",
   noMatches: "No patients match.",
   results: "Patient results",

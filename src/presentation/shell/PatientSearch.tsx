@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from "preact/hooks";
+import { useId, useMemo, useRef, useState } from "preact/hooks";
+import { useDismissibleLayer } from "../interaction/use-dismissible-layer";
 import { PATIENT, PATIENT_SEARCH, noteCount } from "../vocabulary";
 import {
   PATIENT_QUERY_MIN_LENGTH,
@@ -41,19 +42,13 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
   const matchedIndex = results.findIndex((patient) => patient.key === activeKey);
   const activeIndex = matchedIndex >= 0 ? matchedIndex : results.length ? 0 : -1;
 
+  const layer = useDismissibleLayer(hostRef, () => closeResults());
+  const openResults = () => { layer.activate(); setOpen(true); };
   const closeResults = () => {
+    layer.deactivate();
     setOpen(false);
     setActiveKey(null);
   };
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!hostRef.current?.contains(event.target as Node)) closeResults();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
 
   const choose = (patient: ChartPatient) => {
     if (onSelect(patient) === false) return;
@@ -64,16 +59,13 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
   const moveActive = (index: number) => {
     const patient = results[index];
     if (!patient) return;
-    setOpen(true);
+    openResults();
     setActiveKey(patient.key);
   };
 
   return (
-    <div class="tebra-patient-search" ref={hostRef} data-patient-search
-      onFocusOut={event => {
-        if (!(event.relatedTarget instanceof Node) || !hostRef.current?.contains(event.relatedTarget)) closeResults();
-      }}>
-      <label class="records-sr-only" for={inputId}>
+    <div class="tebra-patient-search" ref={hostRef} data-patient-search>
+      <label class="lf-search-scope" for={inputId}>
         {PATIENT_SEARCH.label}
       </label>
       <input
@@ -93,22 +85,15 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
         onInput={(event) => {
           const nextQuery = event.currentTarget.value;
           setQuery(nextQuery);
-          setOpen(true);
+          openResults();
           setActiveKey(null);
         }}
         onFocus={() => {
-          setOpen(true);
+          openResults();
           setActiveKey(results[0]?.key ?? null);
         }}
         onKeyDown={(event) => {
           if (event.isComposing) return;
-          if (event.key === "Escape") {
-            if (!open) return;
-            event.preventDefault();
-            event.stopPropagation();
-            closeResults();
-            return;
-          }
 
           if (!results.length) return;
 

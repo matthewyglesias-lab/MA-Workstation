@@ -14,22 +14,7 @@
  }
  /* Calm, consistent chrome. Never turn focus into a filled card. */
  #lf-workstation {--cd-ink:#294255;--cd-ink-muted:#587080;--cd-border-mid:#c6d4dc;--cd-border-dark:#9eb4c0;--cd-chrome:#f6f8f9;--cd-chrome-light:#f8fafb;--cd-chrome-dark:#e4ebef;--cd-selection:#edf4f6;--cd-paper:#fff;--cd-paper-alt:#f8fafb;--cd-amber-soft:#fff8eb;}
- #lf-workstation .tebra-app-header-main {height:56px;min-height:56px;}
- #lf-workstation .lf-sidebar-brand {padding-block:20px 24px;}
- #lf-workstation .lf-service-header {padding:18px 32px;background:#fbfcfc;}
- #lf-workstation .lf-service-heading h1 {margin-top:6px;font-size:29px;line-height:1.2;}
  #lf-workstation .lf-eyebrow {font-size:10px;letter-spacing:.1em;font-weight:500;}
- #lf-workstation .cd2004-patient-banner {padding:16px 32px;grid-template-columns:minmax(215px,1.55fr) 120px minmax(145px,1fr) minmax(230px,1.35fr);min-height:84px;gap:20px;background:#fff;}
- #lf-workstation .cd2004-patient-banner small {text-transform:none;letter-spacing:0;font-size:10px;line-height:16px;}
- #lf-workstation .cd2004-patient-primary strong {font-size:14px;line-height:21px;font-weight:600;}
- #lf-workstation .cd2004-patient-field strong {font-size:12px;font-weight:500;}
- #lf-workstation .meditech-patient-safety {border-radius:8px;padding:9px 12px;min-height:46px;box-shadow:none;gap:4px 7px;}
- #lf-workstation .meditech-patient-safety > strong {font-size:11px;text-transform:none;letter-spacing:0;font-weight:400;}
- #lf-workstation .meditech-patient-safety > b {font-size:12px;font-weight:600;}
- #lf-workstation .meditech-patient-safety small {font:400 11px/17px var(--tw-font-sans);text-transform:none;letter-spacing:0;}
- #lf-workstation .meditech-patient-safety[data-allergy-tone=documented-negative] {background:var(--lf-soft);color:var(--lf-ink);border:1px solid var(--lf-line);}
- #lf-workstation .meditech-patient-safety[data-allergy-tone=review] {background:var(--tw-review-bg);color:var(--tw-review-fg);border:1px solid var(--tw-review-border);}
- #lf-workstation .cd2004-context-mismatch {border-radius:8px;line-height:1.5;padding:12px;}
  /* Shared controls, not the former terminal-style beveled command buttons. */
  #lf-workstation :is(.cd2004-command-button,.cd2004-link-button,.wfp-group-action,.wfp-field-action > button,.wfp-vitals-toggle,.cd2004-note-toolbar button) {min-height:36px;padding:7px 12px;background:#fff;color:#3c7083;border:1px solid var(--lf-control-border);border-radius:var(--lf-radius);font:500 12px/18px var(--tw-font-sans);letter-spacing:0;text-transform:none;box-shadow:none;cursor:pointer;}
  #lf-workstation :is(.cd2004-command-button,.cd2004-link-button,.wfp-group-action):hover:not(:disabled) {background:#f2f6f8;border-color:#9fb6c2;}
@@ -73,7 +58,6 @@
  #lf-workstation .wfp-field-caption::after {content:none;}
  #lf-workstation .wfp-panel .wfp-field textarea {min-height:86px;resize:vertical;}
  #lf-workstation .wfp-panel .wfp-field select {appearance:auto;background-image:none;padding-right:8px;}
- #lf-workstation .wfp-panel .wfp-field.is-incomplete :is(input,select,textarea) {border-color:#b77070;background-color:#fff;}
  #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc,.wfp-calculated-value) {margin:5px 0 0;padding:0;color:var(--lf-muted);font:400 11px/17px var(--tw-font-sans);letter-spacing:0;text-transform:none;}
  #lf-workstation .wfp-panel .wfp-field-entry {display:flex;align-items:start;gap:6px;width:100%;max-width:none;min-width:0;}
  #lf-workstation .wfp-panel .wfp-field-entry > :first-child {flex:1 1 auto;min-width:0;}
@@ -195,8 +179,6 @@
  /* Responsive content proportions, without shrinking readable text or touch
     targets. Existing unsupported-small-viewport guard remains authoritative. */
  @media (max-width:1179px) {
-  #lf-workstation .cd2004-patient-banner {grid-template-columns:minmax(175px,1.4fr) 105px minmax(205px,1fr);gap:16px;}
-  #lf-workstation .cd2004-patient-field:nth-child(3) {display:none;}
   #lf-workstation .wfp-panel .wfp-tabbar {gap:15px;}
   #lf-workstation .wfp-row.lf-medication-order-row {grid-template-columns:repeat(2,minmax(0,1fr));}
   #lf-workstation .wfp-row.lf-patient-order-row {grid-template-columns:minmax(160px,1fr) minmax(120px,.6fr);}
@@ -206,8 +188,6 @@
  }
  @media (max-width:949px) {
   #lf-workstation {--lf-space:16px;}
-  #lf-workstation .cd2004-patient-banner {padding:12px 22px;gap:12px;grid-template-columns:minmax(135px,1fr) 90px minmax(175px,1fr);}
-  #lf-workstation .lf-service-header {padding:16px 22px;}
   #lf-workstation .wfp-transaction-chrome {padding-inline:22px;}
   #lf-workstation .wfp-panel .wfp-transaction-page {padding:20px 22px;}
   #lf-workstation .wfp-panel > :is(.wfp-summary-bar,.wfp-tabbar) {padding-inline:22px;}
@@ -241,22 +221,16 @@
  #lf-workstation[data-kiosk-mode=true] .wfp-panel :is(button,input:not([type=checkbox]):not([type=radio]),select,textarea) {min-height:44px;}
  #lf-workstation[data-kiosk-mode=true] .wfp-site-tile {min-height:52px;}
  @media (max-height:700px) {
-  #lf-workstation .cd2004-patient-banner {padding-block:10px;min-height:68px;}
-  #lf-workstation .lf-service-header {padding-block:12px;}
-  #lf-workstation .lf-service-heading h1 {font-size:26px;}
   #lf-workstation .wfp-panel .wfp-tab {min-height:42px;}
  }
  @media (prefers-reduced-motion:reduce) {#lf-workstation * {animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
 
  /* Finish geometry and reachability across the shared shell. */
- #lf-workstation .meditech-patient-safety {margin:0;}
- #lf-workstation .meditech-patient-safety[data-allergy-tone=documented-negative] > :is(strong,b,small) {color:var(--lf-ink);}
  #lf-workstation .wfp-panel .wfp-summary-bar .wfp-summary-print-avs {margin-left:auto;}
  #lf-workstation .wfp-site-tile-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
  #lf-workstation .wfp-needle-band-mark {display:none;}
  #lf-workstation .wfp-needle-band-option input[type=radio] {display:block;position:relative;opacity:1;clip:auto;clip-path:none;appearance:auto;width:15px;height:15px;min-width:15px;min-height:15px;margin:0;}
  #lf-workstation .wfp-needle-weight-value {width:90px;min-height:36px;padding:7px 10px;border:1px solid var(--lf-control-border);border-radius:7px;background:#fff;font:13px/20px var(--tw-font-sans);}
- #lf-workstation .cd2004-workflow-slot:is([data-workflow=samples],[data-workflow=forms]) > .cd2004-workflow-body {overflow:hidden;display:flex;flex-direction:column;}
  #lf-workstation .cd2004-workflow-slot:is([data-workflow=samples],[data-workflow=forms]) .wfp-panel {height:100%;min-height:0;overflow:hidden;flex:1;}
  #lf-workstation .lf-service-scroll {flex:1;min-height:0;overflow:auto;padding:24px 32px;background:#fff;}
  #lf-workstation .lf-service-scroll > .wfp-tabpanel {width:100%;padding:0;margin-inline:auto;max-width:var(--lf-content-width);}

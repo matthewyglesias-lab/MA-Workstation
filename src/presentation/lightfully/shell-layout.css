@@ -1,0 +1,262 @@
+/* One owner for the screen composition: masthead, patient context, service
+ * workspace and worklist. Superseded component rules were removed from the
+ * earlier Lightfully layers. Clinical forms, persistence and print stay separate.
+ */
+@media screen {
+  :root { --lf-shell-gutter: 24px; }
+  .lf-workstation#lf-workstation {
+    display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr);
+    gap: 0; width: 100%; height: 100%; min-width: 0; min-height: 0; padding: 0;
+    overflow: hidden; color: var(--lf-ink); background: var(--lf-canvas);
+    font: 400 14px/1.5 var(--tw-font-sans);
+  }
+  #lf-workstation .lf-app-header {
+    grid-column: 1; grid-row: 1; min-width: 0; position: relative; z-index: 12;
+    display: block; margin: 0; padding: 0; border: 0; background: var(--lf-paper);
+  }
+  #lf-workstation .lf-masthead {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    min-height: 68px; padding: 8px var(--lf-shell-gutter); border-bottom: 1px solid var(--lf-line);
+  }
+  #lf-workstation .lf-section-rail {
+    display: flex; align-items: center; flex: 0 0 auto; gap: 18px; min-height: 0;
+    height: auto; width: auto; min-width: 0; margin: 0; padding: 0;
+    overflow: visible; border: 0; background: transparent;
+  }
+  #lf-workstation .ipmg-brand {
+    display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+    gap: 0; min-width: 128px; padding: 0; margin: 0; border: 0;
+  }
+  #lf-workstation .ipmg-brand-logo { display: block; width: 100px; height: 35px; object-fit: contain; }
+  #lf-workstation .ipmg-product-name { display: block; color: var(--lf-ink); font: 600 12px/17px var(--tw-font-sans); letter-spacing: .02em; border: 0; padding: 0; white-space: nowrap; }
+  #lf-workstation .lf-primary-navigation { display: flex; align-items: center; gap: 4px; padding: 0; margin: 0; }
+  #lf-workstation .lf-primary-navigation .cd2004-nav-item {
+    display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; width: auto;
+    min-height: 38px; padding: 8px 11px; border: 1px solid transparent; border-radius: 8px;
+    margin: 0; background: transparent; box-shadow: none; cursor: pointer;
+    color: #496472; font: 500 12px/20px var(--tw-font-sans); white-space: nowrap;
+  }
+  #lf-workstation .lf-primary-navigation .cd2004-nav-item svg { width: 17px; height: 17px; color: var(--lf-leaf); }
+  #lf-workstation .lf-primary-navigation .cd2004-nav-item:hover:not(:disabled) { background: var(--lf-soft); }
+  #lf-workstation .lf-primary-navigation .cd2004-nav-item.is-selected { color: var(--lf-ink); background: #edf3ef; border-color: #dae5df; font-weight: 700; }
+  #lf-workstation .lf-document-action {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    width: auto; flex: 0 0 auto; min-height: 38px; padding: 8px 12px; margin: 0;
+    color: var(--lf-ink); border: 1px solid #b7c7cb; border-radius: 8px;
+    background: #fff; box-shadow: none; font: 600 12px/20px var(--tw-font-sans); cursor: pointer;
+  }
+  #lf-workstation .lf-document-action svg { width: 17px; height: 17px; flex: 0 0 17px; }
+  #lf-workstation .lf-document-action:hover { background: #f8efec; border-color: #ba897e; }
+  #lf-workstation[data-active-workflow=home]:not([data-chart-view]) .lf-document-action { background: var(--lf-coral); border-color: var(--lf-coral); color: #1b3141; }
+  #lf-workstation .lf-masthead-utilities { display: flex; align-items: center; justify-content: flex-end; gap: 14px; min-width: 0; flex: 1 1 auto; }
+  #lf-workstation .lf-header-search { min-width: 150px; flex: 0 1 310px; margin: 0; padding: 0; }
+  #lf-workstation .tebra-patient-search { position: relative; min-width: 0; max-width: none; width: 100%; }
+  #lf-workstation .lf-search-scope { display: block; margin: 0 0 3px; color: #496472; font: 600 10px/14px var(--tw-font-sans); letter-spacing: .01em; }
+  #lf-workstation .tebra-patient-search-results {
+    position: absolute; top: calc(100% + 8px); left: 0; right: auto; z-index: 30;
+    width: min(380px,calc(100vw - 48px)); max-height: min(480px,calc(100dvh - 100px));
+    overflow: auto; border: 1px solid var(--lf-line); border-radius: 10px;
+    background: #fff; box-shadow: 0 10px 32px rgb(27 49 65 / 13%); color: var(--lf-ink);
+  }
+  #lf-workstation .tebra-patient-search-scope { padding: 13px 15px; margin: 0; background: #f6f6f9; color: #496472; font: 400 12px/19px var(--tw-font-sans); border-bottom: 1px solid var(--lf-line); }
+  #lf-workstation .tebra-patient-search-empty { padding: 17px 15px; margin: 0; font: 400 13px/20px var(--tw-font-sans); color: var(--lf-muted); }
+  #lf-workstation .tebra-patient-search-result { display: block; width: 100%; min-height: 62px; padding: 12px 15px; border: 0; border-bottom: 1px solid var(--lf-line); border-radius: 0; background: #fff; color: var(--lf-ink); text-align: left; cursor: pointer; }
+  #lf-workstation .tebra-patient-search-result strong { display: block; font: 600 14px/21px var(--tw-font-sans); overflow-wrap: anywhere; }
+  #lf-workstation .tebra-patient-search-result small { display: block; font: 400 12px/20px var(--tw-font-sans); color: var(--lf-muted); margin-top: 3px; }
+  #lf-workstation .tebra-patient-search-result:is(:hover,[aria-selected=true]) { background: #edf3ef; box-shadow: inset 3px 0 #527e6b; }
+  #lf-workstation .tebra-app-context { display: flex; align-items: center; flex: 0 0 auto; gap: 12px; color: var(--lf-ink); margin: 0; }
+  #lf-workstation .tebra-workspace-badge { display: inline-block; white-space: normal; max-width: 170px; padding: 0; border: 0; background: transparent; font: 600 10px/15px var(--tw-font-sans); letter-spacing: .035em; }
+  #lf-workstation .tebra-workspace-badge.is-local { color: #596f7a; }
+  #lf-workstation .tebra-workspace-badge.is-error { padding: 5px 7px; border: 1px solid var(--tw-stop-border); color: var(--tw-stop-fg); background: var(--tw-stop-bg); }
+  #lf-workstation .tebra-account-avatar { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #edf1f5; color: var(--lf-leaf); font: 600 11px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-masthead .tebra-menu-quiet { padding: 4px; min-height: 38px; color: var(--lf-ink); gap: 6px; font: 500 12px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-workspace-tools { flex: 0 0 auto; }
+
+  /* Safety context does not disappear into a menu. Only record-browsing actions
+   * are disclosed. Long identities/allergy statements expand the band. */
+  #lf-workstation .cd2004-patient-banner {
+    display: grid; grid-template-columns: minmax(160px,1.15fr) 110px minmax(110px,.7fr) minmax(220px,1.5fr);
+    align-items: center; gap: 12px 24px; width: 100%; min-height: 64px; height: auto;
+    padding: 10px var(--lf-shell-gutter); margin: 0; border: 0; border-bottom: 1px solid #dce5df;
+    background: var(--lf-sage); color: var(--lf-ink); overflow: visible;
+  }
+  #lf-workstation .cd2004-patient-primary { display: flex; align-items: center; gap: 10px; min-width: 0; border: 0; background: transparent; padding: 0; }
+  #lf-workstation .cd2004-patient-primary > svg { width: 30px; height: 30px; padding: 6px; flex: 0 0 30px; background: #e0ebe5; border-radius: 50%; color: #4c7461; }
+  #lf-workstation .cd2004-patient-primary > span { min-width: 0; }
+  #lf-workstation .cd2004-patient-field { min-width: 0; border: 0; background: transparent; padding: 0; }
+  #lf-workstation :is(.cd2004-patient-primary,.cd2004-patient-field) small { display: block; color: #4f686f; font: 400 11px/17px var(--tw-font-sans); letter-spacing: 0; }
+  #lf-workstation :is(.cd2004-patient-primary,.cd2004-patient-field) strong { display: block; overflow-wrap: anywhere; white-space: normal; color: var(--lf-ink); font: 600 13px/20px var(--tw-font-sans); font-variant-numeric: tabular-nums; }
+  #lf-workstation .cd2004-patient-primary strong { font-size: 14px; }
+  #lf-workstation .lf-patient-navigation { display: block; border: 0; padding: 0; margin: 0; }
+  #lf-workstation .lf-patient-navigation > .lf-shelf-trigger { display: inline-flex; padding: 0; min-height: 19px; border: 0; border-radius: 3px; background: transparent; color: #3f6573; font: 500 11px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-patient-navigation .lf-shelf-panel { right: auto; left: 0; }
+  #lf-workstation .meditech-patient-safety { display: block; min-width: 0; max-width: none; height: auto; padding: 6px 10px; border: 1px solid #ddc992; border-radius: 7px; background: #fff8e8; color: #69501f; font: 400 12px/18px var(--tw-font-sans); overflow: visible; }
+  #lf-workstation .meditech-patient-safety > strong { display: inline; font: 600 11px/18px var(--tw-font-sans); }
+  #lf-workstation .meditech-patient-safety b { display: inline; margin-left: 4px; font-weight: 600; white-space: normal; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; }
+  #lf-workstation .meditech-patient-safety > small { display: block; margin-top: 2px; color: #66572f; font: 400 11px/16px var(--tw-font-sans); white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+  #lf-workstation .meditech-patient-safety[data-allergy-tone=documented-negative] { border-color: #cbdcd3; background: #f6faf7; color: #3f6250; }
+  #lf-workstation .meditech-patient-safety[data-allergy-tone=documented-negative] > small { color: #4c665a; }
+  #lf-workstation .cd2004-patient-banner.has-mismatch { border: 2px solid var(--tw-stop-fg); }
+  #lf-workstation .cd2004-context-mismatch { grid-column: 1/-1; display: flex; justify-content: space-between; gap: 16px; padding: 9px 12px; border-radius: 5px; background: var(--tw-stop-bg); color: var(--tw-stop-fg); }
+  #lf-workstation .cd2004-context-mismatch strong,#lf-workstation .cd2004-context-mismatch small { display: block; white-space: normal; }
+  #lf-workstation .lf-empty-patient { display: flex; justify-content: space-between; gap: 20px; min-height: 58px; }
+
+  /* Service workspace: one title, one view switch and one attached action dock. */
+  #lf-workstation > .cd2004-workspace { grid-column: 1; grid-row: 2; display: block; min-width: 0; min-height: 0; padding: 0; overflow: hidden; background: var(--lf-canvas); }
+  #lf-workstation .cd2004-work-window { display: flex; flex-direction: column; height: 100%; width: 100%; min-width: 0; min-height: 0; border: 0; border-radius: 0; margin: 0; background: transparent; box-shadow: none; overflow: hidden; }
+  #lf-workstation .cd2004-work-window > .cd2004-window-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; padding: 0; overflow: hidden; background: transparent; }
+  #lf-workstation .lf-service-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 20px; min-height: 64px; margin: 0; padding: 12px var(--lf-shell-gutter); border: 0; background: transparent; }
+  #lf-workstation .lf-service-heading { display: flex; align-items: center; min-width: 0; gap: 8px; }
+  #lf-workstation .lf-service-heading h1 { margin: 0; font: 400 28px/36px var(--lf-display); color: var(--lf-ink); letter-spacing: -.5px; }
+  #lf-workstation .lf-service-change { display: grid; place-items: center; flex: 0 0 30px; width: 30px; min-height: 30px; padding: 5px; color: var(--lf-leaf); background: transparent; border: 1px solid transparent; border-radius: 7px; cursor: pointer; }
+  #lf-workstation .lf-service-change:hover { border-color: #cad7da; background: #fff; }
+  #lf-workstation .lf-service-change svg { width: 17px; height: 17px; }
+  #lf-workstation .lf-service-header-actions { display: flex; align-items: center; flex: 0 0 auto; gap: 18px; }
+  #lf-workstation .lf-review-disclosure > .lf-shelf-trigger { min-height: 34px; padding: 5px 7px; border-color: transparent; background: transparent; color: #496472; }
+  #lf-workstation .lf-review-disclosure .lf-shelf-panel { width: 330px; }
+  #lf-workstation .lf-review-detail { margin: 0; padding: 6px 12px 10px; font: 400 13px/21px var(--tw-font-sans); color: #496472; }
+  #lf-workstation .lf-form-legend { margin: 0; padding: 8px 12px 12px; border-top: 1px solid var(--lf-line); font: 400 12px/20px var(--tw-font-sans); color: var(--lf-muted); }
+  #lf-workstation .lf-form-legend > span { color: var(--tw-stop-fg); font-weight: 600; }
+  #lf-workstation .lf-view-switch { display: flex; align-items: center; gap: 3px; border: 1px solid #cbd7dc; border-radius: 9px; padding: 3px; background: #edf1f2; }
+  #lf-workstation .lf-view-switch button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 4px 12px; border: 0; border-radius: 6px; background: transparent; color: #496472; font: 500 12px/20px var(--tw-font-sans); cursor: pointer; box-shadow: none; }
+  #lf-workstation .lf-view-switch button[aria-pressed=true] { background: #fff; color: var(--lf-ink); box-shadow: 0 1px 3px rgb(38 62 56 / 9%); }
+  #lf-workstation .lf-view-switch svg { width: 15px; height: 15px; }
+  #lf-workstation .cd2004-transaction-window { display: grid; grid-template-columns: minmax(0,1fr); flex: 1; gap: 16px; min-height: 0; min-width: 0; margin: 0 var(--lf-shell-gutter) 16px; overflow: hidden; }
+  #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr) minmax(360px,.9fr); }
+  #lf-workstation .cd2004-workflow-slot { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+  #lf-workstation:not([data-kiosk-mode=true]) .cd2004-workflow-slot:is([data-workflow=administer],[data-workflow=uds],[data-workflow=samples],[data-workflow=forms]) { container: workflow / inline-size; background: #fff; border: 1px solid var(--lf-line); border-radius: 12px; }
+  #lf-workstation .cd2004-workflow-body { flex: 1; min-width: 0; min-height: 0; padding: 0; overflow: auto; background: transparent; }
+  #lf-workstation .cd2004-workflow-body.is-transaction-scroll { overflow: hidden; }
+  #lf-workstation .cd2004-workspace[data-workflow=home] .cd2004-transaction-window { margin: 0; }
+  #lf-workstation[data-chart-view] .cd2004-transaction-window { margin-top: 18px; }
+  #lf-workstation[data-chart-view] .cd2004-workflow-slot { container-type: normal; border: 0; border-radius: 0; background: transparent; }
+  #lf-workstation .lf-draft-return { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex: 0 0 auto; padding: 8px 24px; border-bottom: 1px solid var(--lf-line); background: #f5f6f9; color: #496472; font: 400 12px/20px var(--tw-font-sans); }
+  #lf-workstation[data-kiosk-mode=true] .lf-masthead-utilities { justify-content: space-between; }
+  #lf-workstation[data-kiosk-mode=true] .cd2004-transaction-window { margin: 0; }
+
+  /* The service desk: a compact service strip above one full-width work queue. */
+  #lf-workstation .lf-start-center { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto minmax(0,1fr) auto; gap: 20px; width: 100%; height: 100%; min-height: 0; max-width: 1440px; padding: 24px var(--lf-shell-gutter) 16px; margin: 0 auto; background: transparent; }
+  #lf-workstation .lf-worklist-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0; margin: 0; border: 0; background: transparent; }
+  #lf-workstation .lf-worklist-heading .lf-eyebrow { display: block; color: #597280; font: 600 10px/16px var(--tw-font-sans); letter-spacing: .12em; }
+  #lf-workstation .lf-worklist-heading h1 { margin: 3px 0 5px; color: var(--lf-ink); font: 400 34px/42px var(--lf-display); letter-spacing: -.7px; }
+  #lf-workstation .lf-worklist-heading p { margin: 0; color: var(--lf-muted); font: 400 13px/21px var(--tw-font-sans); }
+  #lf-workstation .lf-worklist-heading time { flex: 0 0 auto; color: #496472; font: 500 13px/21px var(--tw-font-sans); font-variant-numeric: tabular-nums; }
+  #lf-workstation .lf-service-launcher { min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; background: transparent; overflow: visible; }
+  #lf-workstation .lf-launcher-caption { display: flex; align-items: baseline; gap: 14px; margin: 0 0 9px; }
+  #lf-workstation .lf-launcher-caption h2 { margin: 0; color: var(--lf-ink); font: 600 13px/21px var(--tw-font-sans); }
+  #lf-workstation .lf-launcher-caption p { margin: 0; color: var(--lf-muted); font: 400 12px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-service-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--lf-line); border-radius: 12px; background: #fff; overflow: hidden; }
+  #lf-workstation .lf-service-shortcut { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 80px; width: 100%; padding: 15px 18px; border: 0; border-right: 1px solid var(--lf-line); border-radius: 0; background: transparent; text-align: left; color: var(--lf-ink); box-shadow: none; cursor: pointer; }
+  #lf-workstation .lf-service-shortcut:last-child { border-right: 0; }
+  #lf-workstation .lf-service-shortcut:hover:not(:disabled) { background: #f4f6f8; }
+  #lf-workstation .lf-service-shortcut:focus-visible { outline-offset: -3px; }
+  #lf-workstation .lf-shortcut-number { display: grid; place-items: center; width: 38px; height: 40px; flex: 0 0 38px; border: 0; border-radius: 9px; background: #edf1f4; color: var(--lf-leaf); }
+  #lf-workstation .lf-shortcut-number svg { width: 21px; height: 21px; }
+  #lf-workstation .lf-service-administer .lf-shortcut-number { background: #fbe9e5; color: #995344; }
+  #lf-workstation .lf-service-uds .lf-shortcut-number { background: #e3eef2; color: #376a7e; }
+  #lf-workstation .lf-service-samples .lf-shortcut-number { background: #e4eee7; color: #496e5a; }
+  #lf-workstation .lf-service-forms .lf-shortcut-number { background: #ebe6f1; color: #716086; }
+  #lf-workstation .lf-shortcut-copy { min-width: 0; flex: 1; }
+  #lf-workstation .lf-shortcut-copy strong { display: block; color: var(--lf-ink); font: 600 14px/21px var(--tw-font-sans); }
+  #lf-workstation .lf-shortcut-copy small { display: block; margin-top: 3px; color: var(--lf-muted); font: 400 12px/19px var(--tw-font-sans); }
+  #lf-workstation .lf-shortcut-arrow { display: inline-flex; align-items: center; flex: 0 0 16px; color: var(--lf-leaf); }
+  #lf-workstation .lf-shortcut-arrow svg { width: 16px; height: 16px; }
+  #lf-workstation .lf-worklist-card { display: flex; flex-direction: column; min-width: 0; min-height: 0; align-self: stretch; margin: 0; border: 1px solid var(--lf-line); border-radius: 12px; background: #fff; overflow: hidden; }
+  #lf-workstation .lf-worklist-intro { display: flex; align-items: baseline; gap: 16px; flex: 0 0 auto; padding: 18px 22px 6px; }
+  #lf-workstation .lf-worklist-intro h2 { margin: 0; color: var(--lf-ink); font: 400 23px/30px var(--lf-display); letter-spacing: -.3px; }
+  #lf-workstation .lf-worklist-intro p { margin: 0; color: var(--lf-muted); font: 400 12px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-worklist-controls { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 16px; min-width: 0; padding: 6px 22px 12px; border-bottom: 1px solid var(--lf-line); background: #fff; }
+  #lf-workstation .cd2004-worklist-tabs { display: flex; align-items: center; gap: 20px; width: auto; padding: 0; margin: 0; border: 0; background: transparent; }
+  #lf-workstation .cd2004-worklist-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--lf-muted); font: 500 12px/20px var(--tw-font-sans); box-shadow: none; cursor: pointer; white-space: nowrap; }
+  #lf-workstation .cd2004-worklist-tabs button.is-selected { border-bottom-color: #4d7765; color: var(--lf-ink); font-weight: 700; }
+  #lf-workstation .cd2004-worklist-tabs button:hover { color: var(--lf-ink); }
+  #lf-workstation .cd2004-worklist-tabs b { display: inline-grid; place-items: center; min-width: 20px; padding: 0 5px; height: 20px; border-radius: 5px; background: #eef2f4; color: #496472; font: 500 11px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-worklist-search { display: flex; align-items: center; gap: 8px; flex: 0 1 270px; min-width: 140px; margin-left: auto; border: 0; padding: 0; }
+  #lf-workstation .lf-worklist-search svg { width: 17px; height: 17px; flex: 0 0 17px; color: var(--lf-leaf); }
+  #lf-workstation .lf-worklist-search input { width: 100%; min-width: 0; }
+  #lf-workstation .cd2004-worklist-sheet { flex: 1 1 auto; min-height: 0; min-width: 0; margin: 0; border: 0; background: #fff; overflow: auto; overscroll-behavior: contain; }
+  #lf-workstation .lf-work-table { width: 100%; border-collapse: collapse; table-layout: fixed; font: 400 13px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-work-table th { position: sticky; top: 0; z-index: 1; padding: 9px 18px; border-bottom: 1px solid var(--lf-line); background: #f4f6f8; color: #496472; font: 600 11px/18px var(--tw-font-sans); text-align: left; text-transform: none; }
+  #lf-workstation .lf-work-table td { padding: 13px 18px; border-bottom: 1px solid var(--lf-line); vertical-align: middle; background: #fff; overflow-wrap: anywhere; }
+  #lf-workstation .lf-work-table th:first-child { width: 34%; }
+  #lf-workstation .lf-work-table th:nth-child(2) { width: 17%; }
+  #lf-workstation .lf-work-table th:nth-child(3) { width: 18%; }
+  #lf-workstation .lf-work-table th:nth-child(4) { width: 21%; }
+  #lf-workstation .lf-work-table th:last-child { width: 10%; }
+  #lf-workstation .lf-work-table tr:hover td { background: #f6f8f7; }
+  #lf-workstation .lf-work-table .tebra-record-title { display: block; color: var(--lf-ink); font: 600 13px/21px var(--tw-font-sans); white-space: normal; }
+  #lf-workstation .lf-work-table .tebra-record-meta { display: block; margin-top: 3px; font: 400 12px/19px var(--tw-font-sans); color: var(--lf-muted); white-space: normal; }
+  #lf-workstation .lf-table-service { display: inline-flex; align-items: center; gap: 7px; color: #496472; font-size: 12px; }
+  #lf-workstation .lf-table-service svg { flex: 0 0 16px; width: 16px; height: 16px; }
+  #lf-workstation .lf-table-date { color: #496472; font-size: 12px; font-variant-numeric: tabular-nums; }
+  #lf-workstation .lf-worklist-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 170px; height: 100%; padding: 22px; gap: 10px; color: var(--lf-muted); background: #fff; text-align: center; }
+  #lf-workstation .lf-empty-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #d1dfd7; border-radius: 50%; background: #edf3ef; color: #4d7765; }
+  #lf-workstation .lf-empty-mark svg { width: 20px; height: 20px; }
+  #lf-workstation .lf-worklist-empty strong { color: var(--lf-ink); font: 400 24px/31px var(--lf-display); }
+  #lf-workstation .lf-worklist-empty small { max-width: 480px; font: 400 13px/21px var(--tw-font-sans); }
+  #lf-workstation .cd2004-worklist-footer { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 16px; min-height: 36px; padding: 8px 22px; border: 0; border-top: 1px solid var(--lf-line); background: #f7f8fa; color: var(--lf-muted); font: 400 11px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-workspace-footnote { margin: 0; padding: 0; color: var(--lf-muted); font: 400 11px/18px var(--tw-font-sans); }
+
+  @media (max-width: 1199px) {
+    #lf-workstation .lf-masthead { gap: 14px; }
+    #lf-workstation .lf-section-rail { gap: 10px; }
+    #lf-workstation .lf-masthead-utilities { gap: 10px; }
+    #lf-workstation .lf-masthead .tebra-menu-quiet > span:not(.tebra-account-avatar):not(.tebra-action-caret) { display: none; }
+    #lf-workstation .lf-document-action > span { display: none; }
+    #lf-workstation .lf-document-action { width: 38px; padding: 8px; }
+    #lf-workstation .lf-shortcut-arrow { display: none; }
+    #lf-workstation .lf-service-shortcut { padding: 13px 14px; gap: 10px; }
+    #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr) minmax(330px,.85fr); }
+  }
+  @media (max-width: 949px) {
+    :root { --lf-shell-gutter: 16px; }
+    #lf-workstation .lf-masthead { min-height: 64px; gap: 10px; padding-block: 6px; }
+    #lf-workstation .ipmg-brand { min-width: 107px; }
+    #lf-workstation .ipmg-brand-logo { width: 86px; height: 30px; }
+    #lf-workstation .ipmg-product-name { font-size: 11px; line-height: 16px; }
+    #lf-workstation .lf-primary-navigation .cd2004-nav-item { padding-inline: 7px; gap: 5px; }
+    #lf-workstation .lf-primary-navigation .cd2004-nav-item > svg { display: none; }
+    #lf-workstation .lf-header-search { min-width: 152px; }
+    #lf-workstation .tebra-app-context { gap: 8px; }
+    #lf-workstation .tebra-workspace-badge.is-local { max-width: 42px; font-size: 9px; line-height: 13px; }
+    #lf-workstation .tebra-patient-search-results { left: auto; right: 0; }
+    #lf-workstation .cd2004-patient-banner { grid-template-columns: minmax(145px,1fr) 90px 104px minmax(200px,1.3fr); gap: 12px; padding-block: 8px; }
+    #lf-workstation .cd2004-patient-primary { gap: 8px; }
+    #lf-workstation .cd2004-patient-primary > svg { display: none; }
+    #lf-workstation .lf-service-header { min-height: 56px; padding-block: 9px; gap: 14px; }
+    #lf-workstation .lf-service-heading h1 { font-size: 26px; line-height: 34px; }
+    #lf-workstation .lf-service-header-actions { gap: 8px; }
+    #lf-workstation .lf-view-switch button { padding-inline: 9px; }
+    #lf-workstation .lf-service-shortcut { min-height: 74px; padding: 12px; gap: 9px; }
+    #lf-workstation .lf-shortcut-number { width: 30px; height: 34px; flex-basis: 30px; }
+    #lf-workstation .lf-shortcut-copy strong { font-size: 12px; line-height: 19px; }
+    #lf-workstation .lf-shortcut-copy small { font-size: 11px; line-height: 17px; }
+    #lf-workstation .lf-worklist-intro { padding: 14px 16px 4px; }
+    #lf-workstation .lf-worklist-controls { padding: 4px 16px 10px; }
+    #lf-workstation .cd2004-worklist-tabs { gap: 14px; }
+    #lf-workstation .lf-work-table th,#lf-workstation .lf-work-table td { padding-inline: 12px; }
+    #lf-workstation .lf-work-table th:first-child { width: 30%; }
+    #lf-workstation .lf-work-table th:nth-child(2) { width: 15%; }
+    #lf-workstation .lf-work-table th:nth-child(3) { width: 18%; }
+    #lf-workstation .lf-work-table th:nth-child(4) { width: 25%; }
+    #lf-workstation .lf-work-table th:last-child { width: 12%; }
+  }
+  @media (max-height: 700px) {
+    #lf-workstation .lf-start-center { gap: 12px; padding-top: 16px; padding-bottom: 10px; }
+    #lf-workstation .lf-worklist-heading h1 { font-size: 30px; line-height: 37px; margin-block: 2px 3px; }
+    #lf-workstation .lf-worklist-heading p { font-size: 12px; line-height: 19px; }
+    #lf-workstation .lf-worklist-intro h2 { font-size: 21px; line-height: 27px; }
+    #lf-workstation .lf-worklist-empty { min-height: 150px; padding: 15px; gap: 6px; }
+    #lf-workstation .lf-worklist-empty strong { font-size: 22px; line-height: 28px; }
+    #lf-workstation .lf-worklist-empty small { font-size: 12px; line-height: 20px; }
+    #lf-workstation .cd2004-transaction-window { margin-bottom: 10px; }
+  }
+  @media (forced-colors: active) {
+    #lf-workstation .lf-primary-navigation .cd2004-nav-item.is-selected { border-color: Highlight; }
+    #lf-workstation .lf-document-action,#lf-workstation .lf-view-switch,#lf-workstation .lf-service-strip { border-color: ButtonText; }
+    #lf-workstation .tebra-patient-search-results,#lf-workstation .cd2004-workflow-slot,#lf-workstation .meditech-patient-safety { border-color: CanvasText; }
+    #lf-workstation .lf-view-switch button[aria-pressed=true] { outline: 1px solid Highlight; }
+    #lf-workstation .tebra-patient-search-result[aria-selected=true] { outline: 1px solid Highlight; outline-offset: -2px; }
+    #lf-workstation .cd2004-worklist-tabs button.is-selected { border-bottom-color: Highlight; }
+  }
+}

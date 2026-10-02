@@ -41,6 +41,7 @@ interface PatientChartProps {
   onPrint?: () => void;
   /** Name of the patient an open note belongs to, when it is not this one. */
   otherNotePatient?: string;
+  onReturnToDraft?: () => void;
 }
 
 const VIEW_TABS: ReadonlyArray<[PatientChartView, string]> = [
@@ -70,6 +71,7 @@ export function PatientChart({
   onNewNote,
   onPrint,
   otherNotePatient,
+  onReturnToDraft,
 }: PatientChartProps) {
   const [visibleCards, setVisibleCards] = useState<FacesheetCardId[]>(() =>
     readFacesheetCards(),
@@ -122,6 +124,7 @@ export function PatientChart({
         }
       />
 
+      {onReturnToDraft && <div class="lf-draft-return"><span>Browsing local records · the active service remains open.</span><button type="button" class="lf-text-button" onClick={onReturnToDraft}>Return to active draft</button></div>}
       <div class="tebra-patient-chart-tabs" role="tablist" aria-label={FACESHEET.title}>
         {VIEW_TABS.map(([id, label]) => (
           <button

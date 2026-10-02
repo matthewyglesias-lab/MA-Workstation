@@ -1,4 +1,4 @@
-import { DesktopIcon } from "../DesktopIcon";
+import { ActionShelf } from "./ActionShelf";
 import type { WorkflowId } from "../types";
 
 /** Presentation prompts, not clinical rules, attestations, or saved review state. */
@@ -17,17 +17,15 @@ export function reviewCue(workflow: WorkflowId, previewOpen: boolean) {
     : { label: "Check as you go", detail };
 }
 
-/** Never claims a check is complete. No live region, popup, new gate, or persistence. */
+/** Optional explanatory guidance; required fields and actual clinical warnings
+ * retain their own visible state. This surface never records a review. */
 export function ReviewCue({ workflow, previewOpen }: { workflow: WorkflowId; previewOpen: boolean }) {
   const cue = reviewCue(workflow, previewOpen);
   if (!cue) return null;
-  return (
-    <div class="ipmg-review-cue cd2004-print-exclude" data-review-cue={previewOpen ? "preview" : workflow}
-      role="note" aria-label="Documentation review reminder">
-      <details class="lf-review-disclosure">
-        <summary><DesktopIcon name="note"/><strong>{cue.label}</strong><span class="lf-review-brief">{previewOpen ? "Check the final note, then file and verify in Tebra." : "Confirm the patient and details. Recheck changes."}</span><span class="lf-review-tail">Review tips <DesktopIcon name="chevron-down"/></span></summary>
-        <p class="lf-review-detail">{cue.detail}</p>
-      </details>
-    </div>
-  );
+  return <div class="lf-service-reminder cd2004-print-exclude" data-review-cue={previewOpen ? "preview" : workflow}>
+    <ActionShelf label="Review tips" heading={cue.label} class="lf-review-disclosure">
+      <p class="lf-review-detail">{cue.detail}</p>
+      <p class="lf-form-legend"><span aria-hidden="true">*</span> Required when applicable. No check is assumed complete.</p>
+    </ActionShelf>
+  </div>;
 }

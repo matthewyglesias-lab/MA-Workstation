@@ -40,8 +40,7 @@ export function ServiceHeader({ workflow, previewOpen, onPreview, onChangeServic
 }) {
   const service = SERVICES.find(item => item.id === workflow);
   return <header class="lf-service-header">
-    <div class="lf-service-heading"><span class="lf-eyebrow">Document care</span><h1>{service?.label ?? WORKFLOW_LABELS[workflow]}</h1></div>
-    <div class="lf-service-header-actions"><button type="button" class="lf-text-button" onClick={onChangeService} aria-haspopup="dialog">Change service <DesktopIcon name="chevron-down"/></button><div class="lf-view-switch" role="group" aria-label="Workspace view"><button type="button" aria-pressed={!previewOpen} onClick={() => { if(previewOpen) onPreview(); }}>Details</button><button type="button" aria-pressed={previewOpen} aria-controls="lf-document-preview" onClick={() => { if (!previewOpen) onPreview(); }}><DesktopIcon name="note"/>Preview</button></div></div>
-    <div class="lf-service-guidance"><p class="lf-form-legend"><span aria-hidden="true">*</span> Required when applicable.</p><ReviewCue workflow={workflow} previewOpen={previewOpen} /></div>
+    <div class="lf-service-heading"><h1>{service?.label ?? WORKFLOW_LABELS[workflow]}</h1><button type="button" class="lf-service-change" onClick={onChangeService} aria-label="Change service" title="Change service" aria-haspopup="dialog"><DesktopIcon name="chevron-down"/></button></div>
+    <div class="lf-service-header-actions"><ReviewCue workflow={workflow} previewOpen={previewOpen} /><div class="lf-view-switch" role="group" aria-label="Workspace view"><button type="button" aria-pressed={!previewOpen} onClick={() => { if(previewOpen) onPreview(); }}>Details</button><button type="button" aria-pressed={previewOpen} aria-controls="lf-document-preview" onClick={() => { if (!previewOpen) onPreview(); }}><DesktopIcon name="note"/>Preview</button></div></div>
   </header>;
 }

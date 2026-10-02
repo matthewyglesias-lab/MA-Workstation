@@ -130,10 +130,11 @@ describe("workstation vocabulary", () => {
   });
 
   it("keeps patient search honest about what it searches", () => {
-    // The affordance is Tebra's; the scope is ours, and saying so is the
-    // difference between a faithful control and a lie about reach.
-    expect(PATIENT_SEARCH.placeholder).toMatch(/2-3 letters/i);
-    expect(PATIENT_SEARCH.placeholder).toMatch(/mm\/dd\/yyyy/i);
+    // Scope is explicit in the persistent label, not just an opened result.
+    expect(PATIENT_SEARCH.label).toBe("Find local patient records");
+    expect(PATIENT_SEARCH.placeholder).toBe("Name or DOB");
+    expect(PATIENT_SEARCH.scopeHint).toMatch(/mm\/dd\/yyyy/i);
+    expect(PATIENT_SEARCH.keepTyping).toMatch(/at least two characters/i);
     expect(PATIENT_SEARCH.scopeHint).toMatch(/saved in this browser/i);
   });
 

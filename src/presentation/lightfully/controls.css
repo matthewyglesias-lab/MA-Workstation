@@ -59,11 +59,6 @@
   }
   body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
   :is(input,textarea)[readonly] { background-color: #f4f3f6; color: #496472; border-color: #b7c4ca; }
-  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
-  :is(input,select,textarea)[aria-invalid=true],
-  body:has(#lf-workstation) #lf-workstation .wfp-field.is-incomplete :is(input,select,textarea) {
-    border-color: #ae625c;
-  }
   body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) select:not([multiple]):not([size]) {
     appearance: none; padding-right: 34px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233c7083' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6.5 9 5.5 5.5L17.5 9'/%3E%3C/svg%3E");
@@ -98,35 +93,26 @@
   #lf-workstation :is(.wfp-option-row.is-selected,.wfp-site-tile.is-selected,.wfp-needle-band-option.is-selected) { background: #edf3ef; border-color: #779587; }
   #lf-workstation .wfp-option-row.is-ready.is-selected { background: #edf3ef; border-color: #779587; }
 
+  /* Invalid entry is distinct from an untouched required field. */
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) :is(input,select,textarea)[aria-invalid=true] {
+    border-color: #ae625c;
+  }
   /* Compact search stays compact; clinical entry keeps its comfortable height. */
-  body:has(#lf-workstation) #lf-workstation :is(.lf-header-search,.lf-worklist-search) input { min-height: 34px; height: 34px; font-size: 12px; padding-block: 5px; }
-  body:has(#lf-workstation) #lf-workstation .lf-header-search input { border-color: #a9bac3; background: #fff; }
+  body:has(#lf-workstation) #lf-workstation :is(.lf-header-search,.lf-worklist-search) input {
+    min-height: 34px; height: 34px; padding: 5px 10px; font-size: 13px; line-height: 22px;
+  }
 
   /* Color roles: lavender canvas, white work, sage context, coral start action. */
-  #lf-workstation .cd2004-patient-banner { background: #edf3ef; }
-  #lf-workstation .cd2004-patient-primary > svg { background: #e0ebe5; }
-  #lf-workstation .lf-service-launcher { background: #eef0f4; }
-  #lf-workstation .lf-service-launcher .lf-service-shortcut { border-color: #d6dfe4; }
-  #lf-workstation .lf-service-launcher .lf-service-shortcut:hover { background: #fff; }
-  #lf-workstation .lf-shortcut-number { border-radius: 9px; background: #fff; color: #3c7083; }
-  #lf-workstation .lf-service-administer .lf-shortcut-number { background: #fbe9e5; color: #995344; }
-  #lf-workstation .lf-service-uds .lf-shortcut-number { background: #e3eef2; color: #376a7e; }
-  #lf-workstation .lf-service-samples .lf-shortcut-number { background: #e4eee7; color: #496e5a; }
-  #lf-workstation .lf-service-forms .lf-shortcut-number { background: #ebe6f1; color: #716086; }
   #lf-workstation :is(.lf-shortcut-arrow,.lf-service-tail,.lf-review-tail) { display: inline-flex; align-items: center; gap: 6px; }
   #lf-workstation :is(.lf-shortcut-arrow,.lf-service-tail,.lf-review-tail,.lf-text-button,.lf-secondary-button,.tebra-record-open,.lf-issue-arrow) svg { width: 16px; height: 16px; flex: 0 0 16px; }
   #lf-workstation .lf-text-button { display: inline-flex; align-items: center; gap: 6px; }
   #lf-workstation :is(.lf-tab-complete,.lf-disclosure-chevron) svg { width: 15px; height: 15px; display: block; }
-  #lf-workstation .lf-view-switch { background: #edf1f2; border-color: #cbd7dc; border-radius: 9px; }
-  #lf-workstation .lf-view-switch button { border-radius: 6px; }
   #lf-workstation :is(.cd2004-record-actions,.wfp-panel > .wfp-summary-bar.lf-service-footer) { background: #f7f8fa; }
   #lf-workstation .wfp-operator-guidance { background: #edf3f5; border-radius: 8px; }
   #lf-workstation .wfp-schedule-head > strong { color: var(--lf-ink); }
   #lf-workstation .lf-document-checks { background: #f5f5f7; border-color: var(--lf-line); }
   #lf-workstation .lf-note-paper { border-color: #d8e1e6; }
   #lf-workstation .lf-note-paper .cd2004-note-heading > strong { font-size: 24px; }
-  #lf-workstation .lf-start-center .cd2004-worklist-footer { background: #f7f8fa; }
-  #lf-workstation .lf-empty-mark { background: #edf3ef; border-color: #d1dfd7; }
   #lf-workstation :is(.lf-navigation-popover,.tebra-action-menu-list,.lf-provenance-content) { border-radius: 10px; border-top-width: 1px; }
   #lf-workstation .lf-service-dialog,#lf-workstation .lf-command-dialog,
   body:has(#lf-workstation) :is(.cd2004-dialog-frame,.cd2004-lookup-window,.records-drawer) { border-radius: 12px; border-top-width: 1px; }

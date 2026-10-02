@@ -4,20 +4,22 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 /** Section navigation adapts to the available form width; it never advances care. */
 export function WorkflowTabList({ label, children }: { label: string; children: ComponentChildren }) {
   const ref = useRef<HTMLDivElement>(null);
+  const sync = () => {
+    const node = ref.current;
+    if (!node) return;
+    node.setAttribute("aria-orientation", getComputedStyle(node).flexDirection === "column" ? "vertical" : "horizontal");
+    node.querySelectorAll<HTMLButtonElement>('[role="tab"]').forEach(tab => {
+      tab.tabIndex = tab.getAttribute("aria-selected") === "true" ? 0 : -1;
+    });
+  };
+  useLayoutEffect(sync);
   useLayoutEffect(() => {
     const node = ref.current;
     if (!node) return;
-    const sync = () => {
-      node.setAttribute("aria-orientation", getComputedStyle(node).flexDirection === "column" ? "vertical" : "horizontal");
-      node.querySelectorAll<HTMLButtonElement>('[role="tab"]').forEach(tab => {
-        tab.tabIndex = tab.getAttribute("aria-selected") === "true" ? 0 : -1;
-      });
-    };
-    sync();
     const observer = new ResizeObserver(sync);
     observer.observe(node);
     return () => observer.disconnect();
-  });
+  }, []);
   return <div ref={ref} class="wfp-tabbar wfp-ledger-tabs" role="tablist" aria-label={label} onKeyDown={event => {
     if (event.defaultPrevented || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
     const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)'));

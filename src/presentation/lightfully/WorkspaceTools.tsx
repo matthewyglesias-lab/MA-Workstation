@@ -36,12 +36,12 @@ function SearchGlyph() {
 }
 
 /** Shell-only actions. Never writes an encounter or bypasses its navigation guard. */
-export function WorkspaceTools({ commands, onFocusInjection, focused = false }: {
+export function WorkspaceTools({ commands, onFocusInjection, focused = false, open, onOpen, onDismiss }: {
+  open: boolean; onOpen: () => void; onDismiss: () => void;
   commands: WorkspaceCommand[];
   onFocusInjection?: () => void;
   focused?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   const [density, setDensity] = useState<Density>(readDensity);
 
   useEffect(() => {
@@ -49,22 +49,15 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false }: 
     try { localStorage.setItem(DENSITY_KEY, density); } catch { /* Cosmetic preference only. */ }
     return () => { delete document.documentElement.dataset.lfDensity; };
   }, [density]);
-  useEffect(() => {
-    const listener = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "k") return;
-      // A signing, conflict, or identity dialog always retains control.
-      if (event.defaultPrevented || document.querySelector("dialog[open], .meditech-workstation-content.is-unsupported")) return;
-      event.preventDefault();
-      setOpen(true);
-    };
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
   return <div class="lf-workspace-tools">
     <ActionShelf label="Workspace" heading="Workspace tools" description="Find a service, adjust spacing, or use the guided injection view." class="lf-workspace-shelf">
-      <button type="button" class="lf-command-trigger" aria-label="Search workspace commands" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <button type="button" class="lf-command-trigger" aria-label="Search workspace commands" aria-haspopup="dialog" onClick={onOpen}>
         <SearchGlyph/><span><strong>Find a tool</strong><small>Search services, records and more.</small></span><kbd>Ctrl K</kbd>
       </button>
+      {commands.filter(command => ["reference", "log", "tms"].includes(command.id)).map(command =>
+        <button key={command.id} type="button" class="cd2004-nav-item" title={command.id === "tms" ? "Future / TMS" : command.label} disabled={command.disabled} onClick={command.onInvoke}>
+          <DesktopIcon name={command.icon}/><span><strong>{command.label}</strong><small>{command.description}</small></span><DesktopIcon name="arrow-right"/>
+        </button>)}
       <button type="button" class="lf-density-toggle" data-shelf-stay-open aria-label="Compact workspace" aria-pressed={density === "compact"} onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="5" rx="1.5"/><rect x="4" y="14" width="16" height="5" rx="1.5"/></svg>
         <span><strong>Workspace spacing</strong><small>{density === "compact" ? "Compact spacing is on." : "Comfortable spacing is on."}</small></span><span class="lf-preference-state" aria-hidden="true">{density === "compact" ? "Compact" : "Roomier"}</span>
@@ -73,7 +66,7 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false }: 
         <DesktopIcon name="administer"/><span><strong>{focused ? "Back to the full workspace" : "Guided injection view"}</strong><small>{focused ? "Leave the focused injection view." : "Open the existing guided injection view."}</small></span><DesktopIcon name="arrow-right"/>
       </button>}
     </ActionShelf>
-    {open && <CommandPalette commands={commands} onDismiss={() => setOpen(false)} />}
+    {open && <CommandPalette commands={commands} onDismiss={onDismiss} />}
   </div>;
 }
 
@@ -113,8 +106,4 @@ function CommandPalette({ commands, onDismiss }: { commands: WorkspaceCommand[];
     </div>
     <footer><span><kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open</span><span></span></footer>
   </ModalDialog>;
-}
-
-export function LightfullyMark({ small = false }: { small?: boolean }) {
-  return <svg width={small ? 28 : 36} height={small ? 28 : 36} viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M8 31V21a12 12 0 0 1 24 0v10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M14 31V21a6 6 0 0 1 12 0v10M20 3v3M6 8l3 3M34 8l-3 3M3 21h3M34 21h3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="20" cy="27" r="2" fill="currentColor"/></svg>;
 }

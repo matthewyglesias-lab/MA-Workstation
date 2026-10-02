@@ -18,36 +18,9 @@
   clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important;
  }
  #lf-workstation {--cd-chrome:#f7f8fa;--cd-chrome-light:#fff;--cd-chrome-dark:#edf0f3;--cd-border-mid:var(--lf-line);}
- .lf-workstation#lf-workstation {grid-template-columns:200px minmax(0,1fr);}
- #lf-workstation .lf-section-rail {padding:0 14px;}
- #lf-workstation .lf-sidebar-brand {padding:25px 7px 28px;gap:11px;}
- #lf-workstation .lf-brand-symbol {border-radius:12px;background:#fff0ea;width:36px;height:38px;}
- #lf-workstation .lf-sidebar-brand b {font-weight:600;letter-spacing:.08em;}
- #lf-workstation .lf-document-action {min-height:44px;border-radius:9px;font-weight:500;font-size:12px;}
- #lf-workstation .lf-primary-navigation {gap:5px;padding-top:24px;}
- #lf-workstation .lf-section-rail .cd2004-nav-item {min-height:43px;font-size:12px;border-radius:9px;}
- #lf-workstation .lf-current-service {border-radius:9px;min-height:43px;font-weight:500;}
- #lf-workstation .lf-current-service small {display:none;}
  #lf-workstation .lf-patient-navigation {padding-top:17px;border-color:#e1e6e9;}
- #lf-workstation .lf-section-rail .cd2004-nav-item kbd {display:none;}
- #lf-workstation .lf-tools-navigation {margin-top:18px;}
- #lf-workstation .tebra-app-header-main {height:52px;min-height:52px;padding-inline:30px;}
  #lf-workstation .lf-command-trigger {border-color:transparent;font-weight:400;}
  #lf-workstation .lf-command-trigger kbd {border:0;background:transparent;font-size:9px;}
- #lf-workstation .cd2004-patient-banner {min-height:70px;padding:12px 30px;gap:20px;}
- #lf-workstation .cd2004-patient-primary {gap:11px;}
- #lf-workstation .cd2004-patient-banner small {font-size:10px;font-weight:400;color:var(--lf-muted);}
- #lf-workstation .cd2004-patient-primary strong {font-size:14px;font-weight:600;}
- #lf-workstation .meditech-patient-safety {padding:7px 12px;min-height:42px;}
- #lf-workstation .meditech-patient-safety[data-allergy-tone=documented-negative] {background:#f6f8f9;border-color:transparent;}
- #lf-workstation .lf-service-header {padding:21px 30px 19px;background:#fff;border-bottom:0;}
- #lf-workstation .lf-service-heading h1 {font:400 31px/1.15 var(--lf-heading-font);margin:0;letter-spacing:-.6px;}
- #lf-workstation .lf-form-legend {font:400 11px/18px var(--tw-font-sans);color:var(--lf-muted);margin:8px 0 0;}
- #lf-workstation .lf-form-legend > span {color:#a84f47;font-weight:600;}
- #lf-workstation .lf-view-switch {background:#f4f5f7;border-color:transparent;border-radius:9px;padding:4px;}
- #lf-workstation .lf-view-switch button {font-size:12px;border-radius:6px;min-height:32px;}
- #lf-workstation .lf-view-switch button[aria-pressed=true] {box-shadow:0 1px 4px rgb(41 66 85 / 9%);}
- #lf-workstation .lf-service-header-actions {gap:17px;}
  #lf-workstation .lf-text-button {font-size:12px;font-weight:400;}
  /* Tabs are locations, not a bank of validation stamps. */
  #lf-workstation .wfp-transaction-chrome {padding-inline:30px;background:#fff;border:0;border-bottom:1px solid var(--lf-line);}
@@ -76,7 +49,6 @@
  #lf-workstation .wfp-field-label {position:relative;display:flex;align-items:center;min-height:21px;gap:4px;margin-bottom:7px;padding:0;}
  #lf-workstation .wfp-field-caption {font:500 12px/20px var(--tw-font-sans);color:#445e6d;letter-spacing:0;text-transform:none;}
  #lf-workstation .wfp-req {display:inline;font:500 12px/20px var(--tw-font-sans);color:#a84f47;text-decoration:none;}
- #lf-workstation .wfp-panel .wfp-field.is-incomplete :is(input,select,textarea) {border-color:#b36b64;background:#fff;}
  #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc) {font:400 11px/18px var(--tw-font-sans);color:#5e7481;margin-top:6px;}
  /* One connected choice field: the search affordance no longer looks like an
     unrelated ellipsis command. Native select and the F9 lookup both remain. */
@@ -217,15 +189,6 @@
   #lf-workstation .wfp-operator-guidance-list {grid-column:1;}
  }
  @media (max-width:949px) {
-  .lf-workstation#lf-workstation {grid-template-columns:158px minmax(0,1fr);}
-  #lf-workstation .lf-section-rail {padding-inline:9px;}
-  #lf-workstation .lf-document-action {font-size:10px;}
-  #lf-workstation .tebra-app-header-main {padding-inline:20px;}
-  #lf-workstation .cd2004-patient-banner {padding:10px 20px;min-height:62px;}
-  #lf-workstation .lf-service-header {padding:15px 22px;}
-  #lf-workstation .lf-service-heading h1 {font-size:27px;}
-  #lf-workstation .lf-form-legend {max-width:235px;font-size:10px;line-height:16px;margin-top:5px;}
-  #lf-workstation .lf-service-header-actions {gap:10px;}
   #lf-workstation .wfp-transaction-chrome {padding-inline:22px;}
   #lf-workstation .wfp-panel .wfp-tab {font-size:12px;gap:5px;min-height:43px;}
   #lf-workstation .wfp-panel .wfp-tabbar {gap:14px;}
@@ -238,9 +201,6 @@
   #lf-workstation .lf-service-footer {padding:11px 18px;}
  }
  @media (max-height:700px) {
-  #lf-workstation .lf-service-header {padding-block:12px;}
-  #lf-workstation .lf-service-heading h1 {font-size:26px;}
-  #lf-workstation .lf-form-legend {margin-top:4px;}
   #lf-workstation .wfp-panel .wfp-tab {min-height:41px;}
   #lf-workstation .cd2004-record-actions {min-height:60px;}
   body:has(#lf-workstation) .cd2004-dialog-titlebar {padding:19px 23px 13px;}
