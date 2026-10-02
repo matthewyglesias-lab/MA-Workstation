@@ -282,7 +282,7 @@ test.describe('Injection focus workspace', () => {
       await page.setViewportSize(size);
       await expect(completion).toBeVisible();
       await expect(editor).toBeHidden();
-      await panel.locator('input[placeholder="Last, First"]').evaluate(node => node.focus());
+      await editor.evaluate(node => node.focus());
       await expect(completion).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(completion.getByRole('button', { name: 'Print patient handout' })).toBeFocused();

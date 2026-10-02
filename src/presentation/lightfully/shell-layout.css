@@ -251,6 +251,7 @@
     #lf-workstation .lf-work-table th:last-child { width: 12%; }
   }
   @media (max-height: 700px) {
+    #lf-workstation .lf-service-header { min-height: 52px; padding-block: 8px; }
     #lf-workstation .lf-start-center { gap: 12px; padding-top: 16px; padding-bottom: 10px; }
     #lf-workstation .lf-worklist-heading h1 { font-size: 30px; line-height: 37px; margin-block: 2px 3px; }
     #lf-workstation .lf-worklist-heading p { font-size: 12px; line-height: 19px; }
