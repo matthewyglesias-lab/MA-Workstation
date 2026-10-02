@@ -84,6 +84,12 @@ for (const size of [{width:1440,height:900},{width:1024,height:768},{width:800,h
 }
 
 test('workspace choices preserve the draft; density alone persists and the command dialog returns focus',async({page})=>{
+    // A returning staff member's explicit Comfortable preference is retained;
+    // this journey then changes it to Compact and verifies that choice persists.
+    await page.addInitScript(() => {
+      const key = 'ipmg.lightfully.ui-density.v1';
+      if (localStorage.getItem(key) === null) localStorage.setItem(key, 'comfortable');
+    });
   await boot(page); await clickWorkspace(page,'.cd2004-nav-item[title="Injection"]');
   await page.locator('[data-field-path="patient.name"] input').fill('Options preserve, Synthetic');
   await page.locator('[data-injection-save]').click();

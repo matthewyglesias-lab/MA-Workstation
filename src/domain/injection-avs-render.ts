@@ -184,11 +184,19 @@ const hasDensePrimaryFacts = (model: InjectionAvsModel): boolean =>
 export type InjectionAvsLayoutVariant =
   | "routine-one-page"
   | "routine-two-page"
-  | "complex-two-page";
+  | "complex-two-page"
+  | "follow-up-three-page";
 
 export const selectInjectionAvsLayout = (
   model: InjectionAvsModel,
 ): InjectionAvsLayoutVariant => {
+  // A long preparation/overdose alert plus the new reminder can exceed page
+  // one even without ordinary guidance. Preserve every instruction and keep
+  // the due date with the appointment on their own identified continuation.
+  if (appointmentLineBudget(model.providerAppointment) > 0 &&
+      estimatedPrimaryLines(model) > ROUTINE_PRIMARY_LINE_CAPACITY) {
+    return "follow-up-three-page";
+  }
   if (
     model.timeline.length > 2 ||
     Boolean(model.documentSubtitle) ||
@@ -428,12 +436,12 @@ export const renderInjectionAvsHtml = (
     heading: model.providerAppointment && model.providerAppointment.mode !== "omit" ? "Clinic information" : "Plan your next visit",
     rows: model.nextDose.contactLines,
   };
-  const renderContact = (compact = false): string =>
+  const renderContact = (compact = false, suffix = compact ? "continued" : "primary"): string =>
     model.nextDose.contactLines.length
       ? renderSection(
           contactBlock,
           compact ? "avs2-sec-contact-compact" : "",
-          compact ? "continued" : "primary",
+          suffix,
         )
       : "";
 
@@ -448,7 +456,15 @@ export const renderInjectionAvsHtml = (
   // or stranded on an unlabeled browser-created page.
   const layout = selectInjectionAvsLayout(model);
   const pages = partitionInjectionAvsBlocks(model, layout);
+  const followUpPage = layout === "follow-up-three-page";
+  const primaryTimeline = followUpPage ? model.timeline.filter(step => step.state !== "due") : model.timeline;
+  const followUpTimeline = followUpPage ? model.timeline.filter(step => step.state === "due") : [];
+  const followUpGuidance = followUpPage ? model.blocks.filter(block => block.kind === "timing" || block.kind === "site-care") : [];
+  const finalGuidance = followUpPage
+    ? pages.continuation.filter(block => block.kind !== "timing" && block.kind !== "site-care")
+    : pages.continuation;
   const twoPage = layout !== "routine-one-page";
+  const totalPages = followUpPage ? 3 : twoPage ? 2 : 1;
   const continuation = twoPage
     ? `<header class="avs2-continuation">` +
       `<div class="avs2-continuation-title"><h2>After Visit Summary - Continued</h2></div>` +
@@ -527,26 +543,35 @@ export const renderInjectionAvsHtml = (
     `<section class="avs2-overview" aria-labelledby="avs-treatment-summary">` +
     `<h2 class="avs2-overview-title" id="avs-treatment-summary">Your treatment today</h2>` +
     renderSpine(
-      model.timeline,
+      primaryTimeline,
       model.administrationNote,
       model.nextDose.instruction,
       model.administration.find((row) => row.label === "ROUTE / SITE")?.value ?? "",
-      renderAvsAppointment(model.providerAppointment),
+      followUpPage ? "" : renderAvsAppointment(model.providerAppointment),
     ) +
     `</section>` +
+    (followUpPage ? `<p class="avs2-page-pointer">${followUpTimeline.length ? "Your next injection and provider appointment are" : "Your provider appointment details are"} on page 2. Please read all pages of this handout.</p>` : "") +
     renderContact() +
     renderGuidance(pages.primary) +
     `</div>` +
-    renderFooter(1, twoPage ? 2 : 1) +
+    renderFooter(1, totalPages) +
     `</div>` +
+    (followUpPage
+      ? `<div class="avs2-page avs2-page-continuation avs2-page-follow-up"><div class="avs2-page-body">` +
+        continuation +
+        `<section class="avs2-overview" aria-labelledby="avs-upcoming-care"><h2 class="avs2-overview-title" id="avs-upcoming-care">Your follow-up visits</h2>` +
+        renderSpine(followUpTimeline, "", model.nextDose.instruction, "", renderAvsAppointment(model.providerAppointment)) +
+        `</section>` + renderGuidance(followUpGuidance) + renderContact(true, "follow-up") +
+        `</div>` + renderFooter(2, totalPages) + `</div>`
+      : "") +
     (twoPage
       ? `<div class="avs2-page avs2-page-continuation">` +
         `<div class="avs2-page-body">` +
         continuation +
-        renderGuidance(pages.continuation) +
+        renderGuidance(finalGuidance) +
         renderContact(true) +
         `</div>` +
-        renderFooter(2, 2) +
+        renderFooter(totalPages, totalPages) +
         `</div>`
       : "") +
     `</article>`

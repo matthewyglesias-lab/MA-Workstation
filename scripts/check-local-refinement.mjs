@@ -31,7 +31,7 @@ const reviewedHandout = new Map([
   ['src/domain/avs-appointment.ts', '453a3997a2f971500bdfe107d07584497ac726646783def26dd59a44abab4f53'],
   ['src/domain/avs-appointment-render.ts', 'f1818a8d8e7d5bcfc801af2cdcc93e5267f5d1bf0af64a3feb275e3bdf116c2e'],
   ['src/domain/injection-avs-content.ts', '759b654e1cf1ac5ff9b3d97aac9d857b658eae9bc05c3eac682d1b3bbff4033d'],
-  ['src/domain/injection-avs-render.ts', '3632136fadae4e2bc92ddca8ba645eab748b52ecfc2a1c288e2c4af53fab33cc'],
+  ['src/domain/injection-avs-render.ts', '39160256761589ce4e0c27425f47a60e5deb56f9404bb6d724f24803064d5776'],
   ['src/domain/injection-avs-guidance.ts', '4e4951d5427dbf4a70951ba9a1dc35485dbd69b711b87590f9fed19bf0eea7a9'],
 ]);
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();

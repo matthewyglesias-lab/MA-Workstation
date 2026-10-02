@@ -1533,7 +1533,12 @@ for (const scenario of ['initiation-write-in', 'cold-chain-remote-long', 'vivitr
     await expectAvsPagesToFit(page);
     await expectAvsSemanticStructure(page);
     const pages = await page.locator('#avsSheet .avs2-page').count();
-    expect(pages).toBeLessThanOrEqual(4);
+    expect(pages).toBeLessThanOrEqual(3);
+    if (scenario === 'vivitrol-partial') {
+      expect(pages).toBe(3);
+      await expect(page.locator('#avsSheet .avs2-page-primary')).toContainText('on page 2');
+      await expect(page.locator('#avsSheet .avs2-page-follow-up .avs2-step-due .avs2-appointment')).toHaveCount(1);
+    }
     await expectPrintContract(page, {rootId:'avsSheet',content:[scenario==='initiation-write-in'?'Invega Sustenna':scenario==='cold-chain-remote-long'?'Uzedy':'Vivitrol'],minPages:pages,maxPages:pages,checkParity:false});
   });
 }

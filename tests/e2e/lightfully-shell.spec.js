@@ -60,6 +60,12 @@ test.describe('Lightfully standalone shell', () => {
     });
   }
   test('keeps searches temporary and persists only the display-density choice', async ({ page }) => {
+    // A returning staff member's explicit Comfortable preference is retained;
+    // this journey then changes it to Compact and verifies that choice persists.
+    await page.addInitScript(() => {
+      const key = 'ipmg.lightfully.ui-density.v1';
+      if (localStorage.getItem(key) === null) localStorage.setItem(key, 'comfortable');
+    });
     await boot(page);
     await openWorkspaceOptions(page);
   await page.getByRole('button', { name: 'Compact workspace', exact: true }).click();

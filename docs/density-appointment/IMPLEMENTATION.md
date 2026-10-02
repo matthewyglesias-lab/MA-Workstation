@@ -139,3 +139,19 @@ worklist row instead of the F11 dialog row. Recovery now explicitly selects and
 focuses the modal-owned row. Additional long, remote, cold-chain and initiation
 appointment printing cases use the actual application renderer and PDF output.
 These corrections require their own exact-source complete review before merge.
+
+
+## Long-document correction
+
+The second full-history focused review passed 819 unit tests and 44 of 45
+browser journeys. It confirmed signed completion/reprints, recovery and all
+routine appointment variants. The new long Vivitrol/partial-reminder scenario
+exposed 87px of first-page overflow. The correction adds a deterministic third
+page only when the appointment plus primary safety material exceeds the existing
+primary-page budget. Safety warnings and today's treatment stay first; the
+intact due-date/appointment panel and timing/site-care guidance follow on a
+fully identified page 2; remaining guidance and emergency instructions continue
+on page 3. All page counts and section identifiers are explicit. No warning,
+medication text, writing-line height or patient body type is reduced. Historical
+omitted-reminder documents continue to use their unchanged layout. The heading
+also explicitly retains the original sage accent in the print cascade.

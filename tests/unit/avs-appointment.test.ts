@@ -70,6 +70,20 @@ describe("patient handout output", () => {
   expect(next.nextDose.dateLong).toBe(before.nextDose.dateLong);expect(next.blocks).toEqual(before.blocks);expect(next.emergency).toEqual(before.emergency);expect(next.leadAlerts).toEqual(before.leadAlerts);
   expect(next.providerAppointment?.date).toBe("2026-11-05");
  });
+ it("keeps a heavy primary safety section and appointment on separate fully numbered pages", () => {
+  const source = input({ medicationKey: "vivitrol", medicationName: "Vivitrol", dose: "380 mg", providerAppointment: { ...appointment(), time: "", location: "", provider: "Synthetic Appointment Provider for Comprehensive Follow-up and Medication Management, PMHNP-BC" } });
+  const model = buildInjectionAvsModel(source);
+  expect(selectInjectionAvsLayout(model)).toBe("follow-up-three-page");
+  const html = renderInjectionAvsHtml(model, DEFAULT_AVS_CHROME);
+  expect(html).toContain("Page 1 of 3"); expect(html).toContain("Page 2 of 3"); expect(html).toContain("Page 3 of 3");
+  const firstEnd = html.indexOf('class="avs2-page avs2-page-continuation avs2-page-follow-up"');
+  expect(html.indexOf('class="avs2-appointment ')).toBeGreaterThan(firstEnd);
+  expect(html.match(/class="avs2-appointment /g)).toHaveLength(1);
+  for (const block of [...model.leadAlerts, ...model.blocks, model.emergency]) {
+   const escaped = block.heading.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+   expect(html).toContain(escaped);
+  }
+ });
  it("charges print space for blank handwriting and moves guidance to a named continuation", () => {
   const model=buildInjectionAvsModel(input({providerAppointment:emptyAvsAppointment()}));
   expect(selectInjectionAvsLayout(model)).not.toBe('routine-one-page');
