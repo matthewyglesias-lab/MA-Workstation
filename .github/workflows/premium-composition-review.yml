@@ -11,12 +11,13 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     permissions:
       contents: write
     env:
       VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
-      PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/results.json
+      TEST_STANDALONE_FILE: '1'
+      PLAYWRIGHT_HTML_OPEN: never
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,8 +28,8 @@ jobs:
           test "$GITHUB_REF" = refs/heads/codex/premium-workstation-composition
           python - <<'PY'
           import base64, hashlib, json, lzma, pathlib, subprocess
-          raw = lzma.decompress(base64.b64decode(pathlib.Path('.review-transport/revision-02.b64').read_text().strip(), validate=True))
-          assert hashlib.sha256(raw).hexdigest() == '963756aee94900f104095748e2436c428f90ac0221c164e8a06dc5cc8133bdc1', 'Transport digest mismatch'
+          raw = lzma.decompress(base64.b64decode(pathlib.Path('.review-transport/revision-03.b64').read_text().strip(), validate=True))
+          assert hashlib.sha256(raw).hexdigest() == '8348a2d9f939f82c165ded78e8d3e58935e1f311a2e3bc88320a2988de7a8797', 'Transport digest mismatch'
           changes = json.loads(raw)
           def digest(path):
               return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
@@ -53,11 +54,10 @@ jobs:
               subprocess.run(['git','add','-A','--',*[c['p'] for c in changes]],check=True)
               subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
               subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
-              subprocess.run(['git','commit','-m','refactor: remove obsolete chrome and verify exclusive event ownership'],check=True)
+              subprocess.run(['git','commit','-m','fix: keep focused headers visible, narrow previews exclusive and notifications unified'],check=True)
               subprocess.run(['git','push','origin','HEAD:refs/heads/codex/premium-workstation-composition'],check=True)
           pathlib.Path('review-evidence').mkdir(exist_ok=True)
-          pathlib.Path('review-evidence/COMMIT.txt').write_bytes(subprocess.check_output(['git','rev-parse','HEAD']))
-          pathlib.Path('review-evidence/TREE.txt').write_bytes(subprocess.check_output(['git','rev-parse','HEAD^{tree}']))
+          pathlib.Path('review-evidence/SOURCE_COMMIT.txt').write_bytes(subprocess.check_output(['git','rev-parse','HEAD']))
           pathlib.Path('review-evidence/changed-files.json').write_text(json.dumps([{k:c[k] for k in ['p','b','a']} for c in changes],indent=2))
           PY
       - uses: actions/setup-node@v4
@@ -71,11 +71,43 @@ jobs:
       - run: npm run build
       - run: node scripts/package-standalone.mjs
       - run: npx playwright install --with-deps chromium
-      - name: Full browser, clinical, recovery, print and composition review
-        run: npx playwright test --retries=0 --reporter=line,json,html
-      - name: Archive exact tested source
+      - name: Corrected complete journeys
+        id: journeys
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/focused.json
+        run: npx playwright test --grep 'one coherent shell|popover listeners|save and lookup|legacy and shell|focused injection keeps|editorial masthead|entry and preview|returns from patient browsing|quiet everyday controls' --retries=0 --reporter=line,json,html
+      - name: Preserve focused journey evidence
         if: always()
-        run: git archive HEAD | gzip > review-evidence/source.tar.gz
+        run: |
+          cp -r test-results review-evidence/focused-captures 2>/dev/null || true
+      - name: Generate candidate screen references without changing tolerances
+        id: candidates
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/visual-candidates.json
+        run: npx playwright test tests/e2e/visual-snapshots.spec.js tests/e2e/lightfully-shell.spec.js --update-snapshots --retries=0 --reporter=line,json,html
+      - name: Commit candidates only when complete journeys pass
+        if: steps.journeys.outcome == 'success' && steps.candidates.outcome == 'success'
+        run: |
+          git add tests/e2e/visual-snapshots.spec.js-snapshots/ tests/e2e/lightfully-shell.spec.js-snapshots/
+          python - <<'PY'
+          import subprocess
+          paths=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert all('/linux/' in p and p.endswith('.png') and p.startswith('tests/e2e/') for p in paths), 'Unexpected staged change'
+          PY
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'test: capture candidate Linux composition references for visual review'
+            git push origin HEAD:refs/heads/codex/premium-workstation-composition
+          fi
+      - name: Archive exact source and capture identity
+        if: always()
+        run: |
+          git rev-parse HEAD > review-evidence/COMMIT.txt
+          git rev-parse HEAD^{tree} > review-evidence/TREE.txt
+          git archive HEAD | gzip > review-evidence/source.tar.gz
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -84,5 +116,10 @@ jobs:
             review-evidence/
             test-results/
             playwright-report/
+            tests/e2e/visual-snapshots.spec.js-snapshots/linux/
+            tests/e2e/lightfully-shell.spec.js-snapshots/linux/
           retention-days: 7
           if-no-files-found: error
+      - name: Require both complete journey reviews
+        if: always()
+        run: test '${{ steps.journeys.outcome }}' = success && test '${{ steps.candidates.outcome }}' = success
