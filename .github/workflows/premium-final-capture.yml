@@ -1,0 +1,99 @@
+name: Premium compact composition verification
+on:
+  push:
+    branches: [codex/premium-workstation-composition]
+    paths: [.github/workflows/premium-final-capture.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+      TEST_STANDALONE_FILE: '1'
+      PLAYWRIGHT_HTML_OPEN: never
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Refine exact short-screen framing and remove this temporary workflow
+        run: |
+          test "$GITHUB_REF" = refs/heads/codex/premium-workstation-composition
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python - <<'PY'
+          import pathlib, hashlib, subprocess
+          p=pathlib.Path('src/presentation/lightfully/shell-layout.css')
+          raw=p.read_bytes()
+          assert hashlib.sha256(raw).hexdigest() == '55599d6acc9e572f449c6bd357ca2cf49473b324acb0b891703e4cfff7b2d604', 'Changed CSS preimage'
+          old='    #lf-workstation .lf-service-header { min-height: 52px; padding-block: 8px; }'
+          new='    #lf-workstation .lf-service-header { min-height: 50px; padding-block: 6px; }'
+          text=raw.decode(); assert text.count(old)==1
+          result=text.replace(old,new).encode()
+          assert hashlib.sha256(result).hexdigest() == '45651313a7b4190c27ba51b7909875208fd4efe61a3d0294b94fbfb1eff6f41b'
+          p.write_bytes(result)
+          pathlib.Path('.github/workflows/premium-final-capture.yml').unlink()
+          assert not pathlib.Path('.review-transport').exists()
+          subprocess.run(['git','add','src/presentation/lightfully/shell-layout.css','.github/workflows/premium-final-capture.yml'],check=True)
+          subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
+          subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
+          subprocess.run(['git','commit','-m','fix: align compact service framing without shrinking clinical controls'],check=True)
+          subprocess.run(['git','push','origin','HEAD:refs/heads/codex/premium-workstation-composition'],check=True)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-local-refinement.mjs
+      - run: npm run check
+      - name: Unit verification
+        run: mkdir -p review-evidence && npx vitest run --reporter=default --reporter=json --outputFile=review-evidence/unit.json
+      - run: npm run build
+      - run: node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Focused complete journeys
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/focused.json
+        run: npx playwright test tests/e2e/premium-composition.spec.js tests/e2e/modal-ownership.spec.js tests/e2e/kiosk-flow.spec.js --retries=0 --reporter=line,json,html
+      - name: Preserve focused screenshots and reports
+        if: always()
+        run: cp -r test-results review-evidence/focused-captures 2>/dev/null || true
+      - name: Screen reference candidates
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: review-evidence/candidates.json
+        run: npx playwright test tests/e2e/visual-snapshots.spec.js tests/e2e/lightfully-shell.spec.js --update-snapshots --retries=0 --reporter=line,json,html
+      - name: Record candidates for inspection and independent read-only PR CI
+        run: |
+          git add tests/e2e/visual-snapshots.spec.js-snapshots/ tests/e2e/lightfully-shell.spec.js-snapshots/
+          python - <<'PY'
+          import subprocess
+          paths=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert all('/linux/' in p and p.endswith('.png') and p.startswith('tests/e2e/') for p in paths)
+          PY
+          if ! git diff --cached --quiet; then
+            git commit -m 'test: capture premium composition screen references for independent review'
+            git push origin HEAD:refs/heads/codex/premium-workstation-composition
+          fi
+      - name: Archive exact source and identity
+        if: always()
+        run: |
+          mkdir -p review-evidence
+          git rev-parse HEAD > review-evidence/COMMIT.txt
+          git rev-parse HEAD^{tree} > review-evidence/TREE.txt
+          git archive HEAD | gzip > review-evidence/source.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: premium-compact-composition-review
+          path: |
+            review-evidence/
+            test-results/
+            playwright-report/
+            tests/e2e/visual-snapshots.spec.js-snapshots/linux/
+            tests/e2e/lightfully-shell.spec.js-snapshots/linux/
+          retention-days: 7
+          if-no-files-found: error
