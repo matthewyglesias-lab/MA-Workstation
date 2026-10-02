@@ -226,7 +226,7 @@ export function StartCenter({
           disabled={!onWorkflowOpen} onClick={() => onWorkflowOpen?.(service.id)}>
           <span class="lf-shortcut-number" aria-hidden="true"><DesktopIcon name={service.id}/></span>
           <span class="lf-shortcut-copy"><strong>{service.id === "uds" ? "Drug screen" : service.id === "samples" ? "Samples" : service.id === "forms" ? "Forms & requests" : "Injection"}</strong><small>{service.id === "administer" ? "Document an injection" : service.id === "uds" ? "Collection & results" : service.id === "samples" ? "Medication handoff" : "Prepare documentation"}</small></span>
-          <span class="lf-shortcut-arrow" aria-hidden="true">↗</span>
+          <span class="lf-shortcut-arrow"><DesktopIcon name="arrow-right"/></span>
         </button>)}
       </div>
       </aside>
@@ -253,9 +253,9 @@ export function StartCenter({
             <td><span class="lf-table-service"><DesktopIcon name={row.service}/>{WORKFLOW_LABELS[row.service]}</span></td>
             <td class="lf-table-date">{row.timeLabel || "—"}</td>
             <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{TONE_GLYPH[row.tone ?? "neutral"]}</span>{row.stateLabel}</span></td>
-            <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.udsDraft ? !onUdsDraftOpen : row.session ? !onWorkflowOpen : row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<span aria-hidden="true"> →</span></button></td>
+            <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.udsDraft ? !onUdsDraftOpen : row.session ? !onWorkflowOpen : row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<DesktopIcon name="arrow-right"/></button></td>
           </tr>)}
-        </tbody></table> : <div class="tebra-record-empty lf-worklist-empty"><span class="lf-empty-mark" aria-hidden="true"><span/><DesktopIcon name={query.trim() ? "records" : "note"}/></span><strong>{query.trim() ? "No matching work" : filter === "all" ? "Your worklist is clear" : worklistEmptyText(filter)}</strong><small>{query.trim() ? "Try another patient or medication, or clear the search." : filter === "all" ? "Document an injection, drug screen, samples or a form request. Your unfinished work will appear here." : worklistEmptyHint(filter)}</small>{query.trim() ? <button type="button" class="lf-secondary-button" onClick={() => setQuery("")}>Clear search</button> : filter === "all" && <button type="button" class="lf-secondary-button" disabled={!onDocumentService} onClick={onDocumentService}>Choose a service <span aria-hidden="true">→</span></button>}</div>}
+        </tbody></table> : <div class="tebra-record-empty lf-worklist-empty"><span class="lf-empty-mark" aria-hidden="true"><span/><DesktopIcon name={query.trim() ? "records" : "note"}/></span><strong>{query.trim() ? "No matching work" : filter === "all" ? "Your worklist is clear" : worklistEmptyText(filter)}</strong><small>{query.trim() ? "Try another patient or medication, or clear the search." : filter === "all" ? "Document an injection, drug screen, samples or a form request. Your unfinished work will appear here." : worklistEmptyHint(filter)}</small>{query.trim() ? <button type="button" class="lf-secondary-button" onClick={() => setQuery("")}>Clear search</button> : filter === "all" && <button type="button" class="lf-secondary-button" disabled={!onDocumentService} onClick={onDocumentService}>Choose a service <DesktopIcon name="arrow-right"/></button>}</div>}
       </div>
       <footer class="cd2004-worklist-footer"><span aria-live="polite">{noteCount(visibleRows.length, "local item")} shown</span><span>Local records &amp; open sessions</span></footer>
       </div>

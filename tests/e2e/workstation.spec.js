@@ -704,11 +704,11 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administeredDisposition).toHaveClass(/is-selected/);
     await expect(administeredDisposition).toHaveCSS(
       'background-color',
-      'rgb(234, 240, 237)'
+      'rgb(237, 243, 239)'
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
-      'rgb(150, 177, 167)'
+      'rgb(119, 149, 135)'
     );
     await expect(page.locator('#clinicalDispositionBadge')).toHaveText(
       'Administration documented'
@@ -876,8 +876,8 @@ test.describe('MA Workstation browser journeys', () => {
         horizontalOverflow: node.scrollWidth - node.clientWidth
       };
     });
-    expect(drawerVisual.borderRadius).toBe(10);
-    expect(drawerVisual.searchRadius).toBe(5);
+    expect(drawerVisual.borderRadius).toBe(12);
+    expect(drawerVisual.searchRadius).toBe(8);
     expect(drawerVisual.fontFamily).toContain('Inter Variable');
     expect(drawerVisual.headerBackground).toBe('none');
     expect(drawerVisual.horizontalOverflow).toBeLessThanOrEqual(1);
@@ -1638,7 +1638,7 @@ test.describe('MA Workstation browser journeys', () => {
     // persistence remains a separate status in the rail and action bar.
     const patientBanner = page.locator('.cd2004-patient-banner');
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(238, 241, 235)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(237, 243, 239)');
     await expect(page.locator('.cd2004-patient-primary')).toContainText('Facesheet');
     await page.keyboard.press('F12');
     await expect(page.locator('#injRecordStatus')).toHaveText('Saved');
@@ -1657,10 +1657,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(mismatch).toBeVisible();
     await expect(mismatch).toContainText('Bravo, Patient');
     await expect(mismatch).toHaveCSS('background-color', 'rgb(253, 243, 226)');
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(238, 241, 235)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(237, 243, 239)');
     await mismatch.getByRole('button', { name: 'Make active' }).click();
     await expect(patientBanner).toHaveClass(/has-active-chart/);
-    await expect(patientBanner).toHaveCSS('background-color', 'rgb(238, 241, 235)');
+    await expect(patientBanner).toHaveCSS('background-color', 'rgb(237, 243, 239)');
     await expect(patientBanner).toContainText('Bravo, Patient');
 
     await openWorkflow(page, 'uds');

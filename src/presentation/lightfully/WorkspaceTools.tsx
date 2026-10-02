@@ -70,7 +70,7 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false }: 
         <span><strong>Workspace spacing</strong><small>{density === "compact" ? "Compact spacing is on." : "Comfortable spacing is on."}</small></span><span class="lf-preference-state" aria-hidden="true">{density === "compact" ? "Compact" : "Roomier"}</span>
       </button>
       {onFocusInjection && <button type="button" class="lf-focus-trigger" aria-label={focused ? "Exit injection focus" : "Open focused injection workspace"} aria-pressed={focused} onClick={onFocusInjection}>
-        <DesktopIcon name="administer"/><span><strong>{focused ? "Back to the full workspace" : "Guided injection view"}</strong><small>{focused ? "Leave the focused injection view." : "Open the existing guided injection view."}</small></span><span aria-hidden="true">→</span>
+        <DesktopIcon name="administer"/><span><strong>{focused ? "Back to the full workspace" : "Guided injection view"}</strong><small>{focused ? "Leave the focused injection view." : "Open the existing guided injection view."}</small></span><DesktopIcon name="arrow-right"/>
       </button>}
     </ActionShelf>
     {open && <CommandPalette commands={commands} onDismiss={() => setOpen(false)} />}
@@ -106,7 +106,7 @@ function CommandPalette({ commands, onDismiss }: { commands: WorkspaceCommand[];
     <div class="lf-command-results">
     <div id="lf-command-results" role="listbox" aria-label="Workspace destinations">
       {matches.map((command, index) => <div key={command.id} id={`lf-command-${index}`} role="option" aria-selected={index === selected} aria-disabled={command.disabled || undefined} class={`lf-command-result${index === selected ? " is-active" : ""}${command.disabled ? " is-disabled" : ""}`} onMouseDown={(event) => event.preventDefault()} onMouseEnter={() => { if (!command.disabled) setActive(index); }} onClick={() => invoke(command)}>
-        <span class="lf-command-icon"><DesktopIcon name={command.icon}/></span><span><strong>{command.label}</strong><small>{command.description}</small></span><span class="lf-command-availability" aria-hidden="true">{command.disabled ? "Unavailable here" : "↗"}</span>
+        <span class="lf-command-icon"><DesktopIcon name={command.icon}/></span><span><strong>{command.label}</strong><small>{command.description}</small></span><span class="lf-command-availability" aria-hidden="true">{command.disabled ? "Unavailable here" : <DesktopIcon name="arrow-right"/>}</span>
       </div>)}
     </div>
       {!matches.length && <div class="lf-command-empty" role="status"><p>No matching tools. Try “notes,” “samples,” or “injection.”</p><button type="button" class="lf-secondary-button" onClick={() => { setQuery(""); setActive(0); input.current?.focus(); }}>Show all tools</button></div>}

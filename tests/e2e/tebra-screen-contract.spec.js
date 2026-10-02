@@ -17,9 +17,9 @@ const WORKFLOWS = [
 ];
 
 // Screen-only token overrides from lightfully-shell.css, as rendered rgb().
-const INK = 'rgb(30, 51, 43)';
-const HEADER_PAPER = 'rgb(245, 242, 237)';
-const SECTION_RAIL_FILL = 'rgb(245, 247, 240)';
+const INK = 'rgb(41, 66, 85)';
+const HEADER_PAPER = 'rgb(246, 243, 246)';
+const SECTION_RAIL_FILL = 'rgb(246, 246, 249)';
 const CORAL = 'rgb(243, 117, 101)';
 const WHITE = 'rgb(255, 255, 255)';
 
@@ -62,7 +62,7 @@ test.describe('Lightfully screen contract', () => {
     // Chart rows use the repository's 8px product-control adaptation; the
     // measured rail itself stays square and flush to the workspace edge.
     expect(home.navRadius).toBe('6px');
-    expect(home.navFont).toMatch(/^"Inter Variable"/);
+    expect(home.navFont).toMatch(/^"Workstation Mulish"/);
     // The measured shell uses a warm-white header and rail, and
     // a lavender workspace. The
     // Notes-specific table/list grammar remains deliberately unasserted until
@@ -71,7 +71,7 @@ test.describe('Lightfully screen contract', () => {
     expect(home.appHeaderGradient).toBe('none');
     expect(home.sectionRailBackground).toBe('rgba(0, 0, 0, 0)');
     expect(home.sectionRailRadius).toBe('0px');
-    expect(home.workWindowBackground).toBe('rgb(245, 242, 237)');
+    expect(home.workWindowBackground).toBe('rgb(246, 243, 246)');
     expect(home.workWindowRadius).toBe('0px');
     expect(home.workTitlebarColor).toBe(INK);
     expect(home.workTitlebarGradient).toBe('none');
@@ -103,12 +103,12 @@ test.describe('Lightfully screen contract', () => {
       // Worksheets are warm-white paper with a pale lavender tab strip.
       expect(contract.panel.backgroundColor).toBe(WHITE);
       expect(contract.tabbar.backgroundColor).toBe(SECTION_RAIL_FILL);
-      expect(contract.panel.fontFamily).toMatch(/^"Inter Variable"/);
+      expect(contract.panel.fontFamily).toMatch(/^"Workstation Mulish"/);
       expect(contract.horizontalOverflow).toBeLessThanOrEqual(1);
       if (contract.lookup) {
         expect(contract.lookup.backgroundImage).toBe('none');
         expect(contract.lookup.boxShadow).toBe('none');
-        expect(contract.lookup.borderRadius).toBe('0px 5px 5px 0px');
+        expect(contract.lookup.borderRadius).toBe('0px 8px 8px 0px');
       }
     }
   });

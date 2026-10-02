@@ -27,6 +27,9 @@ export type DesktopIconName =
   | "staff"
   | "location"
   | "alert"
+  | "arrow-right"
+  | "chevron-down"
+  | "chevron-right"
   | "check";
 
 export interface PatientContext {

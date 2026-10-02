@@ -1,3 +1,4 @@
+import { DesktopIcon } from "../DesktopIcon";
 import { DialogHeading } from "../lightfully/DialogHeading";
 import type { ClinicalIssue } from "../../domain/contracts";
 import { ModalDialog } from "../ModalDialog";
@@ -84,7 +85,7 @@ export function OutstandingRequirements<Tab extends string>({
                 {items.map(stop => <button key={`${stop.code}-${stop.field ?? ""}`} type="button" class="wfp-issue-row" onClick={() => navigate(tab, stop.field)}>
                   <span class="wfp-issue-tab lf-sr-only">{tabLabels[tab]}</span>
                   <span class="wfp-issue-message">{stop.message}</span>
-                  <span class="lf-issue-arrow" aria-hidden="true">→</span>
+                  <span class="lf-issue-arrow"><DesktopIcon name="arrow-right"/></span>
                 </button>)}
               </div>
             </section>;

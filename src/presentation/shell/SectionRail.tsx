@@ -72,7 +72,7 @@ export function SectionRail({ selectedWorkflow, onWorkflowOpen, onDocumentServic
       <button type="button" class="cd2004-nav-item" disabled={!onOpenRecords} aria-label="Open saved notes (F11)"
         onClick={() => { closeMenus(); onOpenRecords?.(); }}><DesktopIcon name="records"/><span>Saved records</span><kbd>F11</kbd></button>
       {onOpenChart && patientName && !activeChartView && <details class="lf-patient-navigation lf-header-disclosure">
-        <summary class={activeChartView ? "is-selected" : ""} title={patientName}><DesktopIcon name="patient"/><span>Patient records</span><span aria-hidden="true">⌄</span></summary>
+        <summary class={activeChartView ? "is-selected" : ""} title={patientName}><DesktopIcon name="patient"/><span>Patient records</span><DesktopIcon name="chevron-down"/></summary>
         <div class="lf-navigation-popover">
           <div class="tebra-section-rail-context"><small>CURRENT PATIENT</small><strong>{patientName}</strong></div>
           <button type="button" class={`cd2004-nav-item${activeChartView === "facesheet" ? " is-selected" : ""}`} data-chart-nav="facesheet"
@@ -84,7 +84,7 @@ export function SectionRail({ selectedWorkflow, onWorkflowOpen, onDocumentServic
         </div>
       </details>}
       <details class="lf-tools-navigation lf-header-disclosure">
-        <summary class={toolsActive ? "is-selected" : ""}><DesktopIcon name="reference"/><span>Tools</span><span aria-hidden="true">⌄</span></summary>
+        <summary class={toolsActive ? "is-selected" : ""}><DesktopIcon name="reference"/><span>Tools</span><DesktopIcon name="chevron-down"/></summary>
         <div class="lf-navigation-popover">{(["reference", "log", "tms"] as WorkflowId[]).map(workflow =>
           <button key={workflow} type="button" class={`cd2004-nav-item${selectedWorkflow === workflow ? " is-selected" : ""}`}
             title={WORKFLOW_LABELS[workflow]} aria-current={selectedWorkflow === workflow ? "page" : undefined}
@@ -93,7 +93,7 @@ export function SectionRail({ selectedWorkflow, onWorkflowOpen, onDocumentServic
     </div>
     {isDocumentService(selectedWorkflow) && !activeChartView && <span class="lf-current-service" aria-current="page"><DesktopIcon name={selectedWorkflow}/><span>{WORKFLOW_LABELS[selectedWorkflow]}</span></span>}
     <button type="button" class="lf-document-action cd2004-worklist-new" aria-haspopup="dialog"
-      onClick={() => { closeMenus(); onDocumentService(); }}><DesktopIcon name="new"/><span>Document a service</span><span aria-hidden="true">→</span></button>
+      onClick={() => { closeMenus(); onDocumentService(); }}><DesktopIcon name="new"/><span>Document a service</span><DesktopIcon name="arrow-right"/></button>
     {onOpenChart && patientName && activeChartView && <div class="lf-chart-navigation">
       <div class="tebra-section-rail-context"><small>CURRENT PATIENT</small><strong>{patientName}</strong></div>
       <button type="button" class={`cd2004-nav-item${activeChartView === "facesheet" ? " is-selected" : ""}`} data-chart-nav="facesheet"

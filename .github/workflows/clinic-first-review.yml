@@ -1,8 +1,8 @@
 name: Clinic-first full review
 on:
   pull_request:
-    branches: [codex/lightfully-standalone-rebuild]
-    types: [opened, synchronize, reopened]
+    branches: [codex/lightfully-standalone-rebuild, main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 permissions:
   contents: read

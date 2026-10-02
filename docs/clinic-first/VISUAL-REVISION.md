@@ -1,5 +1,9 @@
 # Visual revision after screenshot review
 
+The subsequent [control refinement](CONTROL-REFINEMENT.md) refines this
+composition using the actual Letter Builder reference. Its release scope
+records the user's later authorization to merge after verification.
+
 The user's review of `2818377` was correct: the reliability improvements were
 substantial, but the application still had nearly the same screen composition.
 That pass should not have been described as a completed visual redesign.

@@ -18,6 +18,7 @@ import "./lightfully/lightfully-shell.css";
 import "./lightfully/lightfully-components.css";
 import "./lightfully/contemporary.css";
 import "./lightfully/workspace.css";
+import "./lightfully/controls.css";
 import "./documents/injection-avs.css";
 import "./documents/clinical-print.css";
 import { ActionShelf } from "./lightfully/ActionShelf";
@@ -2042,7 +2043,7 @@ function PatientBanner({
   const incompleteLabel = incompletePatient.name?.trim() || (incompletePatient.dob?.trim() ? `DOB: ${incompletePatient.dob}` : "");
   if (!hasActiveChart && !mismatch) return <div class="cd2004-patient-banner is-no-active-chart lf-empty-patient">
     <div class="cd2004-patient-primary"><DesktopIcon name="patient"/><span><strong>{incompleteLabel || PATIENT.noPatient}</strong><small>{incompleteLabel ? "Patient details incomplete. Complete name and DOB before finishing." : "Enter the patient details below, or open a saved note."}</small></span></div>
-    <button type="button" class="lf-text-button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>{NOTES.openNotes} <span aria-hidden="true">→</span></button>
+    <button type="button" class="lf-text-button" onClick={onSelectLocalRecord} disabled={!onSelectLocalRecord}>{NOTES.openNotes} <DesktopIcon name="arrow-right"/></button>
   </div>;
   return (
     <div

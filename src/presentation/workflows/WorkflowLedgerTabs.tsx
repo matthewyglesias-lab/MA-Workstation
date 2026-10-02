@@ -1,3 +1,4 @@
+import { DesktopIcon } from "../DesktopIcon";
 import type { WorkflowLedgerState } from "../../application/workstation-projection";
 import { WorkflowTabList } from "./WorkflowTabList";
 
@@ -69,7 +70,7 @@ export function WorkflowLedgerTabs<Tab extends string>({
             <span id={stateId} class={`wfp-ledger-state is-${tab.state}`} title={stateLabel}>
               <span class="lf-sr-only">{stateLabel}</span>
               {tab.stopCount ? <span class="lf-tab-count" aria-hidden="true">{tab.stopCount}</span> :
-                tab.state === "complete" || tab.state === "locked" ? <span class="lf-tab-complete" aria-hidden="true">✓</span> : null}
+                tab.state === "complete" || tab.state === "locked" ? <span class="lf-tab-complete"><DesktopIcon name="check"/></span> : null}
             </span>
           </button>
         );

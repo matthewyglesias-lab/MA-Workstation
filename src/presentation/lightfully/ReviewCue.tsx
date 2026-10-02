@@ -25,7 +25,7 @@ export function ReviewCue({ workflow, previewOpen }: { workflow: WorkflowId; pre
     <div class="ipmg-review-cue cd2004-print-exclude" data-review-cue={previewOpen ? "preview" : workflow}
       role="note" aria-label="Documentation review reminder">
       <details class="lf-review-disclosure">
-        <summary><DesktopIcon name="note"/><strong>{cue.label}</strong><span class="lf-review-brief">{previewOpen ? "Check the final note, then file and verify in Tebra." : "Confirm the patient and details. Recheck changes."}</span><span class="lf-review-tail">Review tips <span aria-hidden="true">⌄</span></span></summary>
+        <summary><DesktopIcon name="note"/><strong>{cue.label}</strong><span class="lf-review-brief">{previewOpen ? "Check the final note, then file and verify in Tebra." : "Confirm the patient and details. Recheck changes."}</span><span class="lf-review-tail">Review tips <DesktopIcon name="chevron-down"/></span></summary>
         <p class="lf-review-detail">{cue.detail}</p>
       </details>
     </div>

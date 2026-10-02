@@ -19,7 +19,7 @@ for(const size of [{width:1440,height:900},{width:800,height:600}]) {
   await inViewport(help.locator('.cd2004-help-dialog'),size);
   const helpRows=await help.locator('.cd2004-shortcut-row').evaluateAll(rows=>rows.map(row=>({height:row.clientHeight,content:row.scrollHeight})));
   for(const row of helpRows) expect(row.content).toBeLessThanOrEqual(row.height+1);
-  expect(await help.locator('.lf-dialog-title').evaluate(n=>getComputedStyle(n).backgroundColor)).toBe('rgb(248, 245, 241)');
+  expect(await help.locator('.lf-dialog-title').evaluate(n=>getComputedStyle(n).backgroundColor)).toBe('rgb(245, 246, 249)');
   const close=help.getByRole('button',{name:'Close keyboard reference'}),ok=help.getByRole('button',{name:'OK',exact:true});
   await close.focus();await page.keyboard.press('Shift+Tab');await expect(ok).toBeFocused();
   await page.keyboard.press('Tab');await expect(close).toBeFocused();await page.keyboard.press('Escape');await expect(help).toHaveCount(0);
@@ -89,7 +89,7 @@ for(const size of [{width:1440,height:900},{width:800,height:600}]) {
   const summary=page.locator('.kiosk-patient-summary');await expect(summary).toBeVisible();await inViewport(summary,size);
   expect(await summary.evaluate(n=>getComputedStyle(n).backgroundColor)).toBe('rgb(255, 255, 255)');
   for(const node of await summary.locator('.kiosk-patient-identity strong,.kiosk-patient-facts dd,.kiosk-shell-actions button').all()){
-   expect(await node.evaluate(n=>getComputedStyle(n).color)).toBe('rgb(30, 51, 43)');
+   expect(await node.evaluate(n=>getComputedStyle(n).color)).toBe('rgb(41, 66, 85)');
   }
   await expect(summary).toContainText('Focus QA, Synthetic');await expect(summary).toContainText('01/02/1990');
   await page.getByRole('button',{name:'Return to full workspace',exact:true}).click();

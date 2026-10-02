@@ -70,7 +70,7 @@
 
   /* Every unresolved check remains an actionable row, with a consistent hierarchy. */
   body:has(#lf-workstation) .lf-requirements-group h3 { padding-bottom: 9px; border-bottom: 1px solid #d9e1df; font: 400 22px/28px var(--lf-display); color: var(--lf-leaf); }
-  body:has(#lf-workstation) .lf-requirements-group h3 > span { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: #edf1ee; color: #4d655c; font: 500 11px/18px var(--tw-font-sans); }
+  body:has(#lf-workstation) .lf-requirements-group h3 > span { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: #edf1ee; color: #496472; font: 500 11px/18px var(--tw-font-sans); }
   body:has(#lf-workstation) .lf-requirements-group .wfp-issue-row { display: flex; align-items: center; gap: 14px; padding: 12px 10px; min-height: 44px; border-radius: 5px; border: 0; border-bottom: 1px solid #ece9eb; background: #fff; text-align: left; color: var(--lf-ink); font: 400 13px/21px var(--tw-font-sans); }
   body:has(#lf-workstation) .lf-requirements-group .wfp-issue-row:hover { background: #f8f5f1; }
   body:has(#lf-workstation) .lf-issue-arrow { margin-left: auto; flex-shrink: 0; color: var(--lf-leaf); }
@@ -80,7 +80,7 @@
   body:has(#lf-workstation) .cd2004-lookup-row { min-height: 48px; padding: 13px 14px; }
   body:has(#lf-workstation) .cd2004-lookup-row :is(strong,small) { white-space: normal; overflow-wrap: anywhere; }
   body:has(#lf-workstation) .cd2004-lookup-row small { color: var(--lf-muted); font: 400 12px/19px var(--tw-font-sans); margin-top: 4px; }
-  body:has(#lf-workstation) .cd2004-lookup-row:hover:not(:disabled) { background: #f5f2ed; }
+  body:has(#lf-workstation) .cd2004-lookup-row:hover:not(:disabled) { background: #f6f3f6; }
   body:has(#lf-workstation) .cd2004-lookup-row.is-selected { background: #e7efeb; border-left: 3px solid #70998c; }
   body:has(#lf-workstation) .cd2004-lookup-empty { padding: 25px 18px; background: #faf8f5; color: var(--lf-muted); font: 400 13px/21px var(--tw-font-sans); }
 
@@ -92,11 +92,11 @@
   body:has(#lf-workstation) .notes-table th { position: sticky; top: 0; z-index: 2; }
   body:has(#lf-workstation) .notes-table-row { cursor: pointer; }
   body:has(#lf-workstation) .notes-table-row:hover td { background: #f8f5f1; }
-  body:has(#lf-workstation) .notes-table-row:focus-visible { outline: 2px solid #42695c; outline-offset: -3px; background: #edf2f3; }
+  body:has(#lf-workstation) .notes-table-row:focus-visible { outline: 2px solid #3c7083; outline-offset: -3px; background: #edf2f3; }
   body:has(#lf-workstation) .notes-table-empty { padding: 35px 26px; white-space: normal; background: #faf8f5; color: var(--lf-muted); font: 400 13px/22px var(--tw-font-sans); }
   body:has(#lf-workstation) .records-drawer-foot { background: #f8f5f1; padding: 15px 26px; gap: 18px; border-top: 1px solid #e2ded8; }
   body:has(#lf-workstation) .records-drawer-foot p { max-width: 530px; font: 400 11px/18px var(--tw-font-sans); color: var(--lf-muted); }
-  body:has(#lf-workstation) .records-drawer-new:not(:disabled) { border: 1px solid #f37565; background: #f37565; color: #1e332b; }
+  body:has(#lf-workstation) .records-drawer-new:not(:disabled) { border: 1px solid #f37565; background: #f37565; color: #1b3141; }
   body:has(#lf-workstation) .lf-records-reset { padding: 0 26px 12px; }
   body:has(#lf-workstation) .lf-records-reset button { padding: 7px 11px; border: 1px solid #afc0c7; border-radius: 5px; background: #fff; color: #315f72; font: 500 12px/20px var(--tw-font-sans); }
   body:has(#lf-workstation) .records-drawer-action-error { margin: 0 26px 12px; padding: 11px 14px; border-radius: 6px; }
@@ -110,7 +110,7 @@
   #lf-workstation .tebra-patient-card-host[data-card-dismissed=true] .tebra-patient-card { opacity: 0; pointer-events: none; }
   #lf-workstation .tebra-patient-notes-filters { background: #f8f6f3; border-color: #e2ded8; border-radius: 7px; gap: 15px; }
   #lf-workstation .tebra-patient-notes-field > span { color: var(--lf-muted); font: 500 11px/18px var(--tw-font-sans); }
-  #lf-workstation .tebra-patient-notes-field :is(input,select) { color: var(--lf-ink); background: #fff; border: 1px solid #b8c5bd; border-radius: 5px; box-shadow: none; font: 400 13px/20px var(--tw-font-sans); }
+  #lf-workstation .tebra-patient-notes-field :is(input,select) { color: var(--lf-ink); background: #fff; border: 1px solid #83969e; border-radius: 5px; box-shadow: none; font: 400 13px/20px var(--tw-font-sans); }
   #lf-workstation .tebra-summary-facts :is(dt,dd), #lf-workstation .tebra-summary-rotation { font-family: var(--tw-font-sans); line-height: 1.6; }
   #lf-workstation .tebra-summary-card-rule { color: var(--lf-muted); font: 400 11px/18px var(--tw-font-sans); background: #faf9f6; }
   #lf-workstation .tebra-summary-note-row { padding: 10px 0; border-bottom: 1px solid #e4e7e5; }
@@ -127,7 +127,7 @@
   #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field > label { font: 500 12px/20px var(--tw-font-sans); color: var(--lf-leaf); }
   #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field-hint { line-height: 1.75; }
   #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field-hint li + li { margin-top: 6px; }
-  #lf-workstation .lf-reference-clear { margin-top: 8px; border: 1px solid #b8c5bd; border-radius: 5px; color: #315f72; background: #fff; padding: 8px 12px; font: 500 12px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-reference-clear { margin-top: 8px; border: 1px solid #83969e; border-radius: 5px; color: #315f72; background: #fff; padding: 8px 12px; font: 500 12px/20px var(--tw-font-sans); }
   #lf-workstation .wfp-wall { background: #f8f5f1; color: var(--lf-muted); border: 1px solid #e4dfd7; border-radius: 8px 22px 8px 8px; box-shadow: none; }
   #lf-workstation .wfp-wall-title { color: var(--lf-leaf); font: 400 26px/33px var(--lf-display); }
   #lf-workstation .kiosk-rail-heading h2 { color: var(--lf-leaf); font: 400 23px/30px var(--lf-display); }
@@ -136,7 +136,7 @@
 
   /* Quiet feedback; never repaint an error as success or animate form values. */
   #lf-workstation .tebra-toast-region { right: 20px; bottom: 48px; max-width: min(470px,calc(100vw - 40px)); }
-  #lf-workstation .tebra-toast { margin: 0; padding: 13px 18px; border: 1px solid #bdd0ca; border-left: 3px solid #739c8e; border-radius: 7px 17px 7px 7px; box-shadow: 0 8px 24px rgb(27 49 65 / 12%); color: #1e332b; background: #f5f8f5; font: 400 13px/21px var(--tw-font-sans); }
+  #lf-workstation .tebra-toast { margin: 0; padding: 13px 18px; border: 1px solid #bdd0ca; border-left: 3px solid #739c8e; border-radius: 7px 17px 7px 7px; box-shadow: 0 8px 24px rgb(27 49 65 / 12%); color: #294255; background: #f5f8f5; font: 400 13px/21px var(--tw-font-sans); }
 
   @media (max-width: 949px) {
     body:has(#lf-workstation) .cd2004-dialog-frame { max-height: calc(100dvh - 24px); }
@@ -173,7 +173,7 @@
   #lf-workstation .lf-closeout-panel .wfp-kpi-row > div:last-child { border: 0; }
   #lf-workstation .lf-closeout-panel .wfp-kpi-value { font: 400 28px/34px var(--lf-display); color: var(--lf-leaf); }
   #lf-workstation .lf-closeout-panel .wfp-kpi-label { color: var(--lf-muted); font: 500 11px/18px var(--tw-font-sans); }
-  #lf-workstation .lf-closeout-panel .wfp-table-wrap { overflow: auto; border: 1px solid #dce1d9; border-radius: 6px; }
+  #lf-workstation .lf-closeout-panel .wfp-table-wrap { overflow: auto; border: 1px solid #dde4e7; border-radius: 6px; }
   #lf-workstation .lf-closeout-panel .wfp-table th { color: var(--lf-muted); background: var(--lf-lavender); font: 500 11px/18px var(--tw-font-sans); }
   #lf-workstation .lf-closeout-panel .wfp-table td { font: 400 12px/20px var(--tw-font-sans); padding: 12px 10px; }
 }
@@ -189,7 +189,7 @@
   }
   body:has(#lf-workstation) .lf-lookup-reset:hover { background: #eaf0f2; }
   body:has(#lf-workstation) .cd2004-lookup-row:focus-visible {
-    outline: 2px solid #42695c; outline-offset: -3px; background: #eaf0f2;
+    outline: 2px solid #3c7083; outline-offset: -3px; background: #eaf0f2;
   }
   body:has(#lf-workstation) .cd2004-lookup-empty p { margin: 0; }
   #lf-workstation .lf-closeout-panel [role=tabpanel] { min-width: 0; }
@@ -228,7 +228,7 @@
   #lf-workstation .lf-shortcut-arrow { opacity: .85; }
   #lf-workstation .lf-worklist-heading p { max-width: 560px; }
   #lf-workstation .lf-worklist-card { border-radius: 8px 8px 20px 8px; }
-  #lf-workstation .lf-worklist-empty { background: #fffefa; }
+  #lf-workstation .lf-worklist-empty { background: #ffffff; }
 
   /* A small, labelled shelf, not an unlabeled ellipsis or a second toolbar. */
   #lf-workstation .lf-action-shelf {
@@ -252,7 +252,7 @@
     position: absolute; top: calc(100% + 8px); right: 0; z-index: 90;
     width: 315px; max-width: calc(100vw - 40px); max-height: min(450px,calc(100dvh - 130px));
     overflow-y: auto; overscroll-behavior: contain; padding: 0;
-    background: #fffefa; color: var(--lf-ink);
+    background: #ffffff; color: var(--lf-ink);
     border: 1px solid #d6deda; border-top: 3px solid #edb66f;
     border-radius: 8px 22px 8px 8px;
     box-shadow: 0 10px 32px rgb(27 49 65 / 15%);
@@ -263,7 +263,7 @@
   }
   #lf-workstation .lf-shelf-intro { padding: 19px 19px 14px; border-bottom: 1px solid #e5e1dc; }
   #lf-workstation .lf-shelf-intro > strong { display: block; color: var(--lf-leaf); font: 400 23px/28px var(--lf-display); }
-  #lf-workstation .lf-shelf-intro p { margin: 7px 0 0; color: #607168; font: 400 12px/19px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-intro p { margin: 7px 0 0; color: #617581; font: 400 12px/19px var(--tw-font-sans); }
   #lf-workstation .lf-shelf-actions { display: grid; padding: 8px; gap: 4px; }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button {
     display: flex; align-items: center; justify-content: flex-start; gap: 12px;
@@ -275,12 +275,12 @@
   #lf-workstation .lf-shelf-actions > button > svg { flex: 0 0 18px; width: 18px; height: 18px; color: var(--lf-leaf); }
   #lf-workstation .lf-shelf-actions > button > span:has(strong) { flex: 1; min-width: 0; }
   #lf-workstation .lf-shelf-actions > button strong { display: block; font: 500 13px/20px var(--tw-font-sans); }
-  #lf-workstation .lf-shelf-actions > button small { display: block; margin-top: 2px; color: #607168; font: 400 11px/17px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-actions > button small { display: block; margin-top: 2px; color: #617581; font: 400 11px/17px var(--tw-font-sans); }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button:hover:not(:disabled) { background: #f1eef3; }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button.is-danger { color: #913d33; }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button.is-danger:hover:not(:disabled) { background: #fbece6; }
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button:disabled { background: #f3f3f0; color: #61737d; border-color: transparent; cursor: not-allowed; }
-  #lf-workstation .lf-shelf-panel kbd { display: inline-block; background: transparent; padding: 0; border: 0; color: #607168; font: 400 10px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-panel kbd { display: inline-block; background: transparent; padding: 0; border: 0; color: #617581; font: 400 10px/18px var(--tw-font-sans); }
   /* These rows replace icon-only header controls. Keep their useful labels at
      every size; the older toolbar's span-hiding rules must not leak in. */
   #lf-workstation .lf-shelf-panel .lf-shelf-actions > button > span { display: block; }
@@ -321,7 +321,7 @@
   #lf-workstation .lf-review-disclosure[open] > summary { padding-bottom: 8px; }
   #lf-workstation .lf-review-disclosure > summary:hover { background: #f8efea; }
   #lf-workstation .lf-shelf-trigger:focus-visible,
-  #lf-workstation .lf-review-disclosure > summary:focus-visible { outline: 2px solid #42695c; outline-offset: 2px; }
+  #lf-workstation .lf-review-disclosure > summary:focus-visible { outline: 2px solid #3c7083; outline-offset: 2px; }
 
   @media (max-width: 949px) {
     #lf-workstation .lf-service-shortcut { min-height: 68px; padding: 12px 14px; }
@@ -354,7 +354,7 @@
 @media screen {
   :root {
     --lf-gutter: 40px;
-    --lf-rule: #dce1d9;
+    --lf-rule: #dde4e7;
     --lf-dialog-gutter: 24px;
   }
   #lf-workstation { text-rendering: optimizeLegibility; }
@@ -394,12 +394,6 @@
     border-top-right-radius: 0; border-bottom-right-radius: 0;
   }
   #lf-workstation .wfp-panel .wfp-field-hint { margin-top: 6px; line-height: 19px; }
-  #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):focus-visible {
-    box-shadow: none; outline: 2px solid var(--lf-leaf); outline-offset: 2px;
-  }
-  #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea)[aria-invalid=true] {
-    border-color: #ad625b;
-  }
   #lf-workstation .wfp-panel .wfp-tab {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   }
@@ -473,7 +467,6 @@
     #lf-workstation .lf-shelf-intro { padding-block: 14px 10px; }
   }
   @media (forced-colors: active) {
-    #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea)[aria-invalid=true] { border-color: Mark; }
     body:has(#lf-workstation) .notes-table-row:focus-visible { outline-color: Highlight; }
   }
 }
@@ -567,7 +560,7 @@
   }
   #lf-workstation .cd2004-note-section > header small { color: var(--lf-muted); font-size: 11px; }
   #lf-workstation .cd2004-note-section > header .cd2004-note-mark {
-    min-height: 28px; padding: 3px 8px; color: #4d655c; background: #f0f4f3;
+    min-height: 28px; padding: 3px 8px; color: #496472; background: #f0f4f3;
     font: 500 11px/20px var(--tw-font-sans); text-transform: none; letter-spacing: 0;
   }
   #lf-workstation .cd2004-note-section > header .cd2004-note-mark:hover:not(:disabled) { background: #e4ece9; }
@@ -584,10 +577,10 @@
  * when a preview is open. It never changes fields, evaluation or record state. */
 @media screen {
   :root {
-    --lf-canvas: #f5f2ed;
-    --lf-surface: #fffefa;
+    --lf-canvas: #f6f3f6;
+    --lf-surface: #ffffff;
     --lf-soft: #f3f4ee;
-    --lf-rule: #dce1d9;
+    --lf-rule: #dde4e7;
     --lf-gutter: 32px;
   }
   #lf-workstation.lf-workstation > .tebra-context-rail { border-top: 0; border-bottom: 1px solid var(--lf-line); }
@@ -613,8 +606,8 @@
   #lf-workstation .lf-review-tail { color: var(--lf-leaf); }
   #lf-workstation .lf-review-detail { padding: 9px 0 2px; max-width: 560px; }
   #lf-workstation .lf-view-switch { border: 1px solid #c9d4cb; border-radius: 7px; padding: 3px; background: #e8ede5; gap: 3px; }
-  #lf-workstation .lf-view-switch button { border-radius: 4px; background: transparent; color: #4d655c; }
-  #lf-workstation .lf-view-switch button[aria-pressed=true] { background: #fffefa; color: var(--lf-ink); box-shadow: 0 1px 3px rgb(38 62 56 / 8%); }
+  #lf-workstation .lf-view-switch button { border-radius: 4px; background: transparent; color: #496472; }
+  #lf-workstation .lf-view-switch button[aria-pressed=true] { background: #ffffff; color: var(--lf-ink); box-shadow: 0 1px 3px rgb(38 62 56 / 8%); }
 
   /* The worklist puts services beside current work, leaving one useful queue. */
   #lf-workstation .lf-start-center { display: grid; grid-template-columns: 292px minmax(0,1fr); grid-template-rows: max-content minmax(0,1fr) max-content; gap: 28px; max-width: 1440px; height: 100%; padding: 36px var(--lf-gutter) 24px; align-content: start; }
@@ -627,12 +620,12 @@
   #lf-workstation .lf-service-launcher .lf-service-strip { display: flex; flex-direction: column; border: 0; border-radius: 0; background: transparent; }
   #lf-workstation .lf-service-launcher .lf-service-shortcut { width: 100%; min-height: 80px; padding: 15px 0; gap: 12px; border: 0; border-top: 1px solid #cbd6c9; border-radius: 0; background: transparent; }
   #lf-workstation .lf-service-launcher .lf-service-shortcut:hover { background: #f2f5ed; }
-  #lf-workstation .lf-shortcut-number { background: #fffefa; width: 36px; height: 40px; border-radius: 6px; flex: 0 0 36px; color: var(--lf-leaf); }
+  #lf-workstation .lf-shortcut-number { background: #ffffff; width: 36px; height: 40px; border-radius: 6px; flex: 0 0 36px; color: var(--lf-leaf); }
   #lf-workstation .lf-shortcut-number svg { width: 20px; height: 20px; }
   #lf-workstation .lf-shortcut-copy strong { font: 500 14px/21px var(--tw-font-sans); color: var(--lf-ink); }
   #lf-workstation .lf-shortcut-copy small { margin-top: 3px; font-size: 11px; }
   #lf-workstation .lf-shortcut-arrow { font-size: 18px; }
-  #lf-workstation .lf-worklist-card { align-self: stretch; background: #fffefa; border: 1px solid #dce1d9; border-radius: 10px; overflow: hidden; }
+  #lf-workstation .lf-worklist-card { align-self: stretch; background: #ffffff; border: 1px solid #dde4e7; border-radius: 10px; overflow: hidden; }
   #lf-workstation .lf-worklist-intro { flex: 0 0 auto; padding: 24px 24px 0; }
   #lf-workstation .lf-worklist-intro > p { margin-bottom: 14px; }
   #lf-workstation .lf-worklist-controls { flex: 0 0 auto; background: transparent; padding: 10px 24px 14px; min-height: 48px; flex-wrap: wrap; gap: 10px 18px; }
@@ -654,11 +647,9 @@
   #lf-workstation .wfp-panel .wfp-section-head { font: 600 17px/26px var(--tw-font-sans); color: var(--lf-ink); letter-spacing: -.25px; padding-bottom: 19px; }
   #lf-workstation .wfp-panel .wfp-section { padding-top: 25px; padding-bottom: 30px; }
   #lf-workstation .wfp-panel .wfp-section-body { gap: 22px; }
-  #lf-workstation .wfp-panel .wfp-field-caption { font-size: 12px; color: #425b50; }
-  #lf-workstation .wfp-panel .wfp-field :is(input:not([type=checkbox]):not([type=radio]),select,textarea) { border-color: #b8c5bd; background-color: #fffefa; }
-  #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):disabled { background: #f0f2ed; color: #627066; }
+  #lf-workstation .wfp-panel .wfp-field-caption { font-size: 12px; color: #445e6d; }
   #lf-workstation .wfp-panel .wfp-field.is-incomplete :is(input,select,textarea) { border-color: #ae625c; }
-  #lf-workstation .wfp-panel .wfp-field-lookup-button { background: #f4f6f0; border-color: #b8c5bd; color: var(--lf-leaf); }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button { background: #f4f6f0; border-color: #83969e; color: var(--lf-leaf); }
   #lf-workstation .wfp-panel .wfp-tabbar { padding-top: 5px; gap: 20px; }
   #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { border-bottom-color: #53745b; }
   #lf-workstation .wfp-summary-fact { background: transparent; border: 0; padding-inline: 0; margin-right: 8px; }
@@ -682,7 +673,7 @@
   #lf-workstation .lf-document-checks .cd2004-readiness-item > span > strong { font-size: 11px; line-height: 17px; }
   #lf-workstation .lf-document-checks .cd2004-readiness-item > span > small { font-size: 10px; line-height: 15px; margin-top: 2px; }
   #lf-workstation .lf-document-checks .cd2004-readiness-state { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  #lf-workstation .lf-note-paper { flex: 0 0 auto; min-width: 0; border: 1px solid #d6ded3; border-radius: 3px; background: #fffefa; box-shadow: 0 2px 5px rgb(38 62 56 / 4%); padding: 24px 23px 0; }
+  #lf-workstation .lf-note-paper { flex: 0 0 auto; min-width: 0; border: 1px solid #d6ded3; border-radius: 3px; background: #ffffff; box-shadow: 0 2px 5px rgb(38 62 56 / 4%); padding: 24px 23px 0; }
   #lf-workstation .lf-note-paper .cd2004-note-heading { padding: 0 0 13px; border: 0; background: transparent; gap: 9px; flex-wrap: wrap; }
   #lf-workstation .lf-note-paper .cd2004-note-heading > svg { display: none; }
   #lf-workstation .lf-note-paper .cd2004-note-heading > strong { color: var(--lf-ink); font: 400 25px/31px var(--lf-display); }

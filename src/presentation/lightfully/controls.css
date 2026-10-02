@@ -1,0 +1,149 @@
+/* Screen detail system. The September Letter Builder supplies the typography
+ * reference; its unmodified OFL fonts are bundled for offline consistency.
+ * This file owns input visuals and interaction states across forms and tools.
+ * Clinical semantics and patient-facing print styles remain separate. */
+@media screen {
+  @font-face {
+    font-family: "Workstation Lora"; font-style: normal; font-weight: 400 500;
+    font-display: swap; src: url("./fonts/lora-latin.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Workstation Mulish"; font-style: normal; font-weight: 400 700;
+    font-display: swap; src: url("./fonts/mulish-latin.woff2") format("woff2");
+  }
+  :root {
+    --tw-font-sans: "Workstation Mulish", "Inter Variable", Arial, sans-serif;
+    --lf-display: "Workstation Lora", Georgia, serif;
+    --lf-heading-font: var(--lf-display);
+    --lf-ink: #294255; --lf-muted: #617581; --lf-leaf: #3c7083;
+    --lf-canvas: #f6f3f6; --lf-lavender: var(--lf-canvas);
+    --lf-paper: #fff; --lf-surface: #fff; --lf-soft: #f5f6f8;
+    --lf-sage: #edf3ef; --lf-line: #dde4e7; --lf-rule: var(--lf-line);
+    --lf-control-border: #83969e; --lf-control-hover: #5f7d8b;
+    --lf-control-height: 42px; --lf-control-radius: 8px;
+    --lf-field-muted: #f2f4f5; --lf-focus: #3c7083;
+    --lf-hover: #eef3f5;
+    --tw-teal-900: var(--lf-ink); --tw-teal-800: var(--lf-ink);
+    --tw-teal-700: var(--lf-leaf); --tw-text-primary: var(--lf-ink);
+    --tw-text-secondary: #496472; --tw-text-muted: var(--lf-muted);
+    --tw-focus-ring: 0 0 0 3px rgb(60 112 131 / 13%);
+  }
+
+  /* One native control treatment, also used by lookups and portalled dialogs.
+   * Explicitly exclude checkboxes, radios and hidden/button inputs. */
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
+  :where(input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=button]):not([type=submit]):not([type=range]):not([type=color]):not([type=file]),select,textarea) {
+    box-sizing: border-box; min-width: 0; min-height: var(--lf-control-height);
+    padding: 9px 12px; border: 1px solid var(--lf-control-border);
+    border-radius: var(--lf-control-radius); background-color: #fff;
+    color: var(--lf-ink); font: 400 14px/22px var(--tw-font-sans);
+    letter-spacing: 0; box-shadow: none; opacity: 1;
+  }
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) textarea {
+    min-height: 110px; resize: vertical; line-height: 1.6;
+  }
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) :is(input,textarea)::placeholder {
+    color: #617581; opacity: 1; font: inherit;
+  }
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
+  :is(input,select,textarea):not(:disabled):not([readonly]):not([aria-invalid=true]):hover { border-color: var(--lf-control-hover); }
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
+  :is(input,select,textarea):not(:disabled):focus {
+    border-color: var(--lf-focus); outline: 2px solid var(--lf-focus);
+    outline-offset: 2px; box-shadow: none;
+  }
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
+  :is(input,select,textarea):disabled {
+    color: #61717b; background-color: var(--lf-field-muted);
+    border-color: #bdc9ce; cursor: not-allowed; opacity: 1; box-shadow: none;
+  }
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
+  :is(input,textarea)[readonly] { background-color: #f4f3f6; color: #496472; border-color: #b7c4ca; }
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer)
+  :is(input,select,textarea)[aria-invalid=true],
+  body:has(#lf-workstation) #lf-workstation .wfp-field.is-incomplete :is(input,select,textarea) {
+    border-color: #ae625c;
+  }
+  body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) select:not([multiple]):not([size]) {
+    appearance: none; padding-right: 34px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233c7083' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6.5 9 5.5 5.5L17.5 9'/%3E%3C/svg%3E");
+    background-position: right 10px center; background-repeat: no-repeat; background-size: 18px;
+  }
+  /* The lookup is an adjoining command, never a second, misaligned field. */
+  body:has(#lf-workstation) #lf-workstation .wfp-field-entry > select,
+  body:has(#lf-workstation) #lf-workstation .wfp-field-entry > :first-child > select,
+  body:has(#lf-workstation) #lf-workstation .wfp-field-entry > :first-child > .wfp-select-group > select {
+    border-top-right-radius: 0; border-bottom-right-radius: 0;
+  }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button {
+    width: 40px; min-width: 40px; flex-basis: 40px; height: var(--lf-control-height);
+    min-height: var(--lf-control-height); margin-left: -1px; padding: 0;
+    border: 1px solid var(--lf-control-border); border-left-color: #d1dce1;
+    border-radius: 0 var(--lf-control-radius) var(--lf-control-radius) 0;
+    color: var(--lf-leaf); background: #f5f8f9; box-shadow: none;
+  }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button:hover:not(:disabled) { background: #e9f1f4; }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button:disabled { color: #61717b; background: var(--lf-field-muted); }
+  #lf-workstation .wfp-panel .wfp-field-label { min-height: 22px; margin-bottom: 7px; gap: 5px; }
+  body:has(#lf-workstation) #lf-workstation .wfp-panel .wfp-field :where(input:not([type=checkbox]):not([type=radio]),select,textarea) { width: 100%; max-width: none; }
+  #lf-workstation .wfp-panel .wfp-field-caption { color: #405c6d; font: 600 12px/20px var(--tw-font-sans); }
+  #lf-workstation .wfp-panel :is(.wfp-field-hint,.wfp-option-desc,.wfp-select-desc) { color: var(--lf-muted); line-height: 1.6; }
+  #lf-workstation input.wfp-date-entry { font-variant-numeric: tabular-nums; }
+  #lf-workstation .wfp-field-entry :is(input,select):focus { position: relative; z-index: 1; }
+  #lf-workstation .wfp-field-lookup-button:focus-visible { position: relative; z-index: 2; }
+  #lf-workstation .wfp-panel input:is([type=checkbox],[type=radio]),
+  body:has(#lf-workstation) .cd2004-dialog-frame input:is([type=checkbox],[type=radio]) { accent-color: var(--lf-leaf); }
+  #lf-workstation :is(.wfp-option-row,.wfp-site-tile,.wfp-needle-band-option) { border-radius: 8px; border-color: #b7c7cb; }
+  #lf-workstation :is(.wfp-option-row,.wfp-site-tile,.wfp-needle-band-option):has(input:focus-visible) { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+  #lf-workstation :is(.wfp-option-row.is-selected,.wfp-site-tile.is-selected,.wfp-needle-band-option.is-selected) { background: #edf3ef; border-color: #779587; }
+  #lf-workstation .wfp-option-row.is-ready.is-selected { background: #edf3ef; border-color: #779587; }
+
+  /* Compact search stays compact; clinical entry keeps its comfortable height. */
+  body:has(#lf-workstation) #lf-workstation :is(.lf-header-search,.lf-worklist-search) input { min-height: 34px; height: 34px; font-size: 12px; padding-block: 5px; }
+  body:has(#lf-workstation) #lf-workstation .lf-header-search input { border-color: #a9bac3; background: #fff; }
+
+  /* Color roles: lavender canvas, white work, sage context, coral start action. */
+  #lf-workstation .cd2004-patient-banner { background: #edf3ef; }
+  #lf-workstation .cd2004-patient-primary > svg { background: #e0ebe5; }
+  #lf-workstation .lf-service-launcher { background: #eef0f4; }
+  #lf-workstation .lf-service-launcher .lf-service-shortcut { border-color: #d6dfe4; }
+  #lf-workstation .lf-service-launcher .lf-service-shortcut:hover { background: #fff; }
+  #lf-workstation .lf-shortcut-number { border-radius: 9px; background: #fff; color: #3c7083; }
+  #lf-workstation .lf-service-administer .lf-shortcut-number { background: #fbe9e5; color: #995344; }
+  #lf-workstation .lf-service-uds .lf-shortcut-number { background: #e3eef2; color: #376a7e; }
+  #lf-workstation .lf-service-samples .lf-shortcut-number { background: #e4eee7; color: #496e5a; }
+  #lf-workstation .lf-service-forms .lf-shortcut-number { background: #ebe6f1; color: #716086; }
+  #lf-workstation :is(.lf-shortcut-arrow,.lf-service-tail,.lf-review-tail) { display: inline-flex; align-items: center; gap: 6px; }
+  #lf-workstation :is(.lf-shortcut-arrow,.lf-service-tail,.lf-review-tail,.lf-text-button,.lf-secondary-button,.tebra-record-open,.lf-issue-arrow) svg { width: 16px; height: 16px; flex: 0 0 16px; }
+  #lf-workstation .lf-text-button { display: inline-flex; align-items: center; gap: 6px; }
+  #lf-workstation :is(.lf-tab-complete,.lf-disclosure-chevron) svg { width: 15px; height: 15px; display: block; }
+  #lf-workstation .lf-view-switch { background: #edf1f2; border-color: #cbd7dc; border-radius: 9px; }
+  #lf-workstation .lf-view-switch button { border-radius: 6px; }
+  #lf-workstation :is(.cd2004-record-actions,.wfp-panel > .wfp-summary-bar.lf-service-footer) { background: #f7f8fa; }
+  #lf-workstation .wfp-operator-guidance { background: #edf3f5; border-radius: 8px; }
+  #lf-workstation .wfp-schedule-head > strong { color: var(--lf-ink); }
+  #lf-workstation .lf-document-checks { background: #f5f5f7; border-color: var(--lf-line); }
+  #lf-workstation .lf-note-paper { border-color: #d8e1e6; }
+  #lf-workstation .lf-note-paper .cd2004-note-heading > strong { font-size: 24px; }
+  #lf-workstation .lf-start-center .cd2004-worklist-footer { background: #f7f8fa; }
+  #lf-workstation .lf-empty-mark { background: #edf3ef; border-color: #d1dfd7; }
+  #lf-workstation :is(.lf-navigation-popover,.tebra-action-menu-list,.lf-provenance-content) { border-radius: 10px; border-top-width: 1px; }
+  #lf-workstation .lf-service-dialog,#lf-workstation .lf-command-dialog,
+  body:has(#lf-workstation) :is(.cd2004-dialog-frame,.cd2004-lookup-window,.records-drawer) { border-radius: 12px; border-top-width: 1px; }
+  body:has(#lf-workstation) :is(.cd2004-dialog-titlebar,.records-drawer-head,.cd2004-dialog-actions) { background: #f5f6f9; border-color: var(--lf-line); }
+  body:has(#lf-workstation) :is(.cd2004-dialog-titlebar h2,.records-drawer-head h2) { color: var(--lf-ink); }
+  body:has(#lf-workstation) :is(.lf-dialog-close,.records-drawer-close) { background: transparent; border-radius: 7px; color: var(--lf-leaf); }
+  #lf-workstation .lf-service-icon { border-radius: 10px; }
+  #lf-workstation .lf-service-option:nth-child(4) .lf-service-icon { background: #ebe6f1; color: #716086; }
+  @container workflow (min-width: 1080px) {
+    #lf-workstation .wfp-panel .wfp-tabbar { background: #f6f6f9; }
+    #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { background: #e7efeb; border-left-color: #527e6b; }
+  }
+  @media (forced-colors: active) {
+    body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) select:not([multiple]):not([size]) { appearance: auto; background-image: none; }
+    body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) :is(input,select,textarea) { border-color: ButtonText; }
+    body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) :is(input,select,textarea):disabled { border-color: GrayText; color: GrayText; }
+    body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) button:disabled { color: GrayText; border-color: GrayText; }
+    #lf-workstation :is(.wfp-option-row,.wfp-site-tile,.wfp-needle-band-option).is-selected { outline: 1px solid Highlight; }
+  }
+}

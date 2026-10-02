@@ -12,7 +12,7 @@ interface DesktopIconProps extends JSX.SVGAttributes<SVGSVGElement> {
  * is `currentColor` it stays correct on the teal header, in the rail, and
  * inside the coral primary action without a single per-surface override.
  */
-const soft = { fill: "currentColor", opacity: 0.14, stroke: "none" } as const;
+const soft = { fill: "currentColor", opacity: 0.06, stroke: "none" } as const;
 
 /**
  * Workstation pictograms.
@@ -25,7 +25,7 @@ const soft = { fill: "currentColor", opacity: 0.14, stroke: "none" } as const;
  * in the navigation rail.
  *
  * The replacement follows the conventions every contemporary product icon set
- * shares, Tebra's own included: a 24-unit grid, uniform 1.5 stroke, round caps
+ * shares, Tebra's own included: a 24-unit grid, uniform 1.65 stroke, round caps
  * and joins, geometry on the half-pixel so nothing renders blurred, and
  * `currentColor` throughout. Nothing here names a colour, so the icons cannot
  * drift out of step with the tokens the way a hard-coded palette did.
@@ -38,7 +38,7 @@ export function DesktopIcon({ name, ...props }: DesktopIconProps) {
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
-    "stroke-width": 1.5,
+    "stroke-width": 1.65,
     "stroke-linecap": "round",
     "stroke-linejoin": "round",
     "aria-hidden": true,
@@ -46,6 +46,12 @@ export function DesktopIcon({ name, ...props }: DesktopIconProps) {
   } satisfies JSX.SVGAttributes<SVGSVGElement>;
 
   switch (name) {
+    case "arrow-right":
+      return <svg {...common} width="16" height="16"><path d="M4.5 12h15m-6-6 6 6-6 6"/></svg>;
+    case "chevron-down":
+      return <svg {...common} width="16" height="16"><path d="m6.5 9 5.5 5.5L17.5 9"/></svg>;
+    case "chevron-right":
+      return <svg {...common} width="16" height="16"><path d="m9 6.5 5.5 5.5L9 17.5"/></svg>;
     /* Dashboard: panels of work, not a folder of files. */
     case "home":
       return (
@@ -83,14 +89,15 @@ export function DesktopIcon({ name, ...props }: DesktopIconProps) {
         </svg>
       );
 
-    /* Samples: a capped collection tube, filled to the line. */
+    /* Medication samples: a capsule, distinct from the UDS specimen cup. */
     case "samples":
       return (
         <svg {...common}>
-          <path d="M9.5 12.5h5V17a2.5 2.5 0 0 1-5 0z" {...soft} />
-          <rect x="8.2" y="2.5" width="7.6" height="3.6" rx="1.4" />
-          <path d="M9.5 6.1V17a2.5 2.5 0 0 0 5 0V6.1" />
-          <path d="M9.5 12.5h5" />
+          <g transform="rotate(40 12 12)">
+            <path d="M7.5 12h9v4a4.5 4.5 0 0 1-9 0z" {...soft}/>
+            <rect x="7.5" y="3.5" width="9" height="17" rx="4.5"/>
+            <path d="M7.5 12h9M10 7.5v1.5"/>
+          </g>
         </svg>
       );
 

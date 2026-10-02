@@ -29,7 +29,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768
     await boot(page, viewport);
     const masthead = await page.locator('.tebra-context-rail').boundingBox();
     expect(masthead.width).toBeGreaterThanOrEqual(viewport.width - 2);
-    await expect(page.locator('#currentWorklistTitle')).toHaveCSS('font-family', /Georgia/);
+    await expect(page.locator('#currentWorklistTitle')).toHaveCSS('font-family', /Workstation Lora/);
     await expect(page.locator('.lf-service-shortcut')).toHaveCount(4);
     await expect(page.locator('[data-workspace-badge=local]')).toBeInViewport();
     const buttonStyle = await page.locator('.lf-document-action').evaluate(n => ({ fg: getComputedStyle(n).color, bg: getComputedStyle(n).backgroundColor }));

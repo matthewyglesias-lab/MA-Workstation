@@ -1,3 +1,4 @@
+import { DesktopIcon } from "../DesktopIcon";
 import type { ComponentChildren } from "preact";
 import type { WorkflowFieldSource } from "../../application/workstation-projection";
 
@@ -87,7 +88,7 @@ export function TransactionLine({
   return (
     <div class={`wfp-transaction ${open ? "is-open" : ""}`}>
       <button type="button" class="wfp-transaction-line" aria-expanded={open} onClick={onToggle}>
-        <span class="lf-disclosure-chevron" aria-hidden="true">{open ? "⌄" : "›"}</span>
+        <span class="lf-disclosure-chevron"><DesktopIcon name={open ? "chevron-down" : "chevron-right"}/></span>
         <strong>{readableHeading(label)}</strong>
         <span class={`wfp-transaction-state ${documented ? "is-documented" : ""}`}>
           {documented ? "Documented" : "Not recorded"}

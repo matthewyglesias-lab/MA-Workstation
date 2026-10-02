@@ -166,7 +166,7 @@ test.describe('Phase 3a global Open Notes conventions', () => {
     const headerColors = await table.locator('thead th').evaluateAll((headers) =>
       headers.map((header) => getComputedStyle(header).backgroundColor)
     );
-    expect(new Set(headerColors)).toEqual(new Set(['rgb(245, 242, 237)']));
+    expect(new Set(headerColors)).toEqual(new Set(['rgb(246, 243, 246)']));
 
     const rows = table.locator('tbody [data-records-open]');
     await expect(rows).toHaveCount(SYNTHETIC_INJECTION_RECORDS.length);
@@ -576,7 +576,7 @@ test.describe('Phase 3b patient chart conventions', () => {
           return [Math.round(box.width), Math.round(box.height)];
         })
       )
-    ).toEqual([[200, 40], [200, 40], [200, 40], [200, 40]]);
+    ).toEqual([[200, 42], [200, 42], [200, 42], [200, 42]]);
 
     // 100px rows, a 73x38 Open button, and no global-ledger 44px row here.
     const rows = list.locator('.tebra-record-row');
