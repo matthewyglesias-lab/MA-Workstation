@@ -1,0 +1,33 @@
+name: Premium composition review environment
+on:
+  push:
+    branches: [codex/premium-workstation-composition]
+    paths: [.github/workflows/premium-review-environment.yml]
+permissions:
+  contents: read
+jobs:
+  environment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Package source and locked dependencies for offline review
+        run: |
+          mkdir -p review-environment
+          git archive HEAD | gzip > review-environment/source.tar.gz
+          tar -czf review-environment/dependencies.tar.gz node_modules
+          git rev-parse HEAD > review-environment/COMMIT.txt
+          sha256sum package-lock.json review-environment/source.tar.gz review-environment/dependencies.tar.gz > review-environment/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: premium-offline-review-environment
+          path: review-environment/
+          retention-days: 2
+          if-no-files-found: error
