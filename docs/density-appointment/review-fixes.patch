@@ -1,0 +1,218 @@
+diff --git a/docs/density-appointment/IMPLEMENTATION.md b/docs/density-appointment/IMPLEMENTATION.md
+index e2ce9c685d24b0910790594d012f94e8f853894e..6376923f21f46cb584f0cf379d92edcacf9dfb7c 100644
+--- a/docs/density-appointment/IMPLEMENTATION.md
++++ b/docs/density-appointment/IMPLEMENTATION.md
+@@ -87,9 +87,14 @@ pagination and physical handwriting clearance still require verification.
+ 
+ The clinical preservation script retains its original baseline and protected
+ paths. Exact, reviewed hashes are added for the optional metadata/rendering
+-files. The injection engine and guidance executable source are byte-identical
+-to the starting candidate after removing only the new optional type declarations
+-and their comments. The script is not changed to broadly exempt clinical files.
++files. Browser verification found that the all-facts administration fingerprint
++was inadvertently including appointment metadata, so editing a reminder cleared
++an already completed clinical review. The reviewed fix explicitly excludes only
++`avsAppointment` from that fingerprint. Medication/dose/timing rules and the
++clinical facts in the fingerprint remain unchanged; tests prove reminder-only
++edits preserve review while dose, provider, dates, time and lot edits invalidate
++it. Guidance executable source remains unchanged beyond the optional type. The
++script is not changed to broadly exempt clinical files.
+ The full-history guard itself cannot run against the source-only local checkout.
+ 
+ ## Verification completed locally
+@@ -121,3 +126,16 @@ colors, pointer/keyboard interaction, and actual print pages before release.
+ 
+ Normal local browser navigation is blocked by environment policy. No attempt
+ was made to disable or bypass that policy. No code was merged or deployed.
++
++
++## First repository browser review
++
++Run 37055658690 used full Git history: 812 unit tests passed, with no skips.
++Forty of 42 focused browser cases passed, including actual 34px desktop geometry
++at 1440/1366/800, 44px guided controls, and five appointment print variants.
++Two failures were investigated rather than ignored: the clinical-review metadata
++coupling above, and a recovery test selecting an identically named background
++worklist row instead of the F11 dialog row. Recovery now explicitly selects and
++focuses the modal-owned row. Additional long, remote, cold-chain and initiation
++appointment printing cases use the actual application renderer and PDF output.
++These corrections require their own exact-source complete review before merge.
+diff --git a/scripts/check-local-refinement.mjs b/scripts/check-local-refinement.mjs
+index 6dc513797b1bba71eb0791df6fb09b630bd64216..2b321cad720350715e5d5fafe84bd3dd06d04880 100644
+--- a/scripts/check-local-refinement.mjs
++++ b/scripts/check-local-refinement.mjs
+@@ -16,10 +16,11 @@ const reviewedScope = new Set([
+   'src/persistence/storage.ts',
+   'src/persistence/workflow-recovery.ts',
+ ]);
+-// The reviewed unconfirmed-default corrections and optional handout type are permitted in these
++// Reviewed defaults, the optional handout type, and its explicit exclusion from
++// administration-review invalidation are permitted in these
+ // clinical/compatibility files. A different byte requires an explicit re-review.
+ const reviewedDefaults = new Map([
+-  ['src/domain/injection.ts', 'dce597e006f458e1b5f07c7fab498bad98f7c3a42f41bba7aa00438192597d75'],
++  ['src/domain/injection.ts', 'c78e1c6602fa11a06a75adb2722cd0f78da790891ba249fa62253a6efcaa4b91'],
+   ['src/legacy/legacy-markup.html', '97ea5fa36ff7e4b0a6ae9f56085f49b6994c9b99df868ce17fae470de430fbd2'],
+   ['public/legacy/legacy-runtime.js', 'c570e6e85ceb1f9218fabe232c62a0c699b7c293d47f7def0194ee96e7586381'],
+ ]);
+diff --git a/src/domain/injection.ts b/src/domain/injection.ts
+index f010dbc2292043a7062b097adce6b2711955be52..692c471ec922d95c2a3aeee673a05c695624bcb6 100644
+--- a/src/domain/injection.ts
++++ b/src/domain/injection.ts
+@@ -958,7 +958,8 @@ export const injectionAttestationRequired = (
+  * Stable signature of every encounter fact that participates in the final
+  * administration review. Disposition is deliberately excluded: choosing a
+  * disposition records the review; changing any clinical/documentation fact
+- * after that choice invalidates it.
++ * after that choice invalidates it. The optional provider-appointment reminder
++ * is handout metadata only and does not participate in administration review.
+  */
+ export const injectionAdministrationReviewFingerprint = (
+   encounter: InjectionEncounter,
+@@ -969,7 +970,11 @@ export const injectionAdministrationReviewFingerprint = (
+     clinicalReferenceVersion: _clinicalReferenceVersion,
+     ...reviewedDetails
+   } = encounter.details ?? {};
+-  const { disposition: _disposition, ...encounterFacts } = encounter;
++  const {
++    disposition: _disposition,
++    avsAppointment: _avsAppointment,
++    ...encounterFacts
++  } = encounter;
+   // These three detail fields are renderer/catalog provenance that can settle
+   // asynchronously after the visible clinical value is already present. The
+   // actual NDC, next-dose date, and every staff-entered review fact remain in
+diff --git a/tests/e2e/density-and-appointment.spec.js b/tests/e2e/density-and-appointment.spec.js
+index 24e8be5553198d3ab152d1f88e36114a0cc85c82..4374c13089a5dd6d65f02e01bad4c3997adee354 100644
+--- a/tests/e2e/density-and-appointment.spec.js
++++ b/tests/e2e/density-and-appointment.spec.js
+@@ -61,10 +61,18 @@ test('partial appointment persists through the same draft and identity changes c
+   await page.reload();
+   // Resume through the original record owner, not by injecting data into a form.
+   await page.keyboard.press('F11');
+-  const row=page.getByRole('row').filter({hasText:'Appointment, Synthetic'}).first();await row.focus();await page.keyboard.press('Enter');
++  const drawer = page.locator('.records-drawer');
++  await expect(drawer).toBeVisible();
++  // F11 owns focus: never select the identically named background worklist row.
++  const row = drawer.getByRole('row').filter({hasText:'Appointment, Synthetic'});
++  await expect(row).toHaveCount(1);
++  await row.focus(); await expect(row).toBeFocused(); await page.keyboard.press('Enter');
++  await expect(drawer).toBeHidden();
+   await panel.getByRole('tab',{name:'Review',exact:true}).click();
+   await panel.locator('[data-avs-appointment-editor] summary').click();
+   await expect(panel.getByLabel('Provider appointment time')).toHaveValue('10:30');
++  await expect(panel.getByLabel('Appointment provider',{exact:true})).toHaveValue('Synthetic Appointment Provider');
++  await expect(panel.getByLabel('Provider appointment location')).toHaveValue('San Bernardino clinic');
+   await panel.getByRole('tab',{name:'Order & Timing',exact:true}).click();
+   await panel.locator('input[placeholder="Last, First"]').fill('Different, Synthetic');
+   await panel.getByRole('tab',{name:'Review',exact:true}).click();
+diff --git a/tests/e2e/kiosk-flow.spec.js b/tests/e2e/kiosk-flow.spec.js
+index 60c753ed728c77eabee409596e06e362175dff60..dc996cb0f320f6f8cf79f785aba4db2d34709556 100644
+--- a/tests/e2e/kiosk-flow.spec.js
++++ b/tests/e2e/kiosk-flow.spec.js
+@@ -271,6 +271,8 @@ test.describe('Injection focus workspace', () => {
+     await appointment.getByLabel('Appointment provider', { exact: true }).fill('Synthetic Appointment Provider');
+     await appointment.getByLabel('Provider appointment visit type').selectOption('in-person');
+     await appointment.getByLabel('Provider appointment location').fill('Confirmed synthetic office');
++    // Scheduling metadata must not silently erase the already completed clinical review.
++    await expect(finish).toBeEnabled();
+     await finish.click();
+     await confirmLocalSignature(page);
+ 
+@@ -286,6 +288,8 @@ test.describe('Injection focus workspace', () => {
+     await expect(printedAppointment).toContainText('Friday, August 28, 2026');
+     await expect(printedAppointment).toContainText('10:30 AM');
+     const signedHandout = await page.locator('#avsSheet').innerHTML();
++    // The native dialog is stubbed; explicitly end the simulated print session.
++    await page.evaluate(() => document.body.classList.remove('print-avs'));
+     await completion.getByRole('button', { name: 'Print patient handout' }).click();
+     expect(await page.locator('#avsSheet').innerHTML()).toBe(signedHandout);
+     await page.evaluate(() => document.body.classList.remove('print-avs'));
+diff --git a/tests/e2e/print-regression.spec.js b/tests/e2e/print-regression.spec.js
+index a482502f09c7f097b9dbe29726cc960da3a31b9c..16afe6d656453f3b14c5b45c77b5e105cb1b947e 100644
+--- a/tests/e2e/print-regression.spec.js
++++ b/tests/e2e/print-regression.spec.js
+@@ -1502,3 +1502,38 @@ for (const variant of ['write-in', 'typed', 'partial', 'schedule', 'omit']) {
+     });
+   });
+ }
++
++
++// Longer and non-routine documents use the same real renderer and page-fit checks.
++for (const scenario of ['initiation-write-in', 'cold-chain-remote-long', 'vivitrol-partial']) {
++  test(`appointment AVS preserves ${scenario} instructions and pagination`, async ({ page }) => {
++    if (scenario === 'initiation-write-in') await prepareInitiationInjection(page);
++    else if (scenario === 'cold-chain-remote-long') await prepareUzedyColdChainAvs(page);
++    else await prepareVivitrolInjection(page);
++    const editor = await setAppointmentFormat(page, scenario === 'initiation-write-in' ? 'write-in' : 'details');
++    if (scenario !== 'initiation-write-in') {
++      await fillDate(editor.getByLabel('Provider appointment date'), '2026-11-03');
++      await editor.getByLabel('Appointment provider', { exact: true }).fill('Synthetic Appointment Provider for Comprehensive Follow-up and Medication Management, PMHNP-BC');
++      await editor.getByLabel('Provider appointment visit type').selectOption('video');
++      if (scenario === 'cold-chain-remote-long') {
++        await editor.getByLabel('Provider appointment time').fill('13:45');
++        await editor.getByLabel('Provider appointment location').fill('Video visit: use the connection instructions confirmed by the clinic. Contact the front desk if the link has not arrived. This provider appointment is separate from the injection visit; confirm the injection plan with clinic staff.');
++      }
++    }
++    await setFieldsAndRender(page, {bodyClass:'print-avs',renderName:'renderAVS',rootId:'avsSheet'});
++    const reminder = page.locator('#avsSheet .avs2-appointment');
++    await expect(reminder).toHaveCount(1);
++    if (scenario === 'initiation-write-in') await expect(reminder.locator('.avs2-write-line')).toHaveCount(4);
++    else {
++      await expect(reminder).toContainText('Video visit');
++      await expect(reminder).not.toContainText('In person');
++      if (scenario === 'cold-chain-remote-long') await expect(reminder).toContainText('1:45 PM');
++      else await expect(reminder.locator('.avs2-write-line')).toHaveCount(2);
++    }
++    await expectAvsPagesToFit(page);
++    await expectAvsSemanticStructure(page);
++    const pages = await page.locator('#avsSheet .avs2-page').count();
++    expect(pages).toBeLessThanOrEqual(4);
++    await expectPrintContract(page, {rootId:'avsSheet',content:[scenario==='initiation-write-in'?'Invega Sustenna':scenario==='cold-chain-remote-long'?'Uzedy':'Vivitrol'],minPages:pages,maxPages:pages,checkParity:false});
++  });
++}
+diff --git a/tests/unit/avs-appointment.test.ts b/tests/unit/avs-appointment.test.ts
+index 5187d6c3a402f493f05f7c45f13a10ff251f2061..29f8d5cd64d0739b32279ac57c07d15cd1c4bdf1 100644
+--- a/tests/unit/avs-appointment.test.ts
++++ b/tests/unit/avs-appointment.test.ts
+@@ -3,7 +3,7 @@ import { emptyAvsAppointment, isAvsAppointment, validAppointmentDate, validAppoi
+ import { appointmentLineBudget, renderAvsAppointment } from "../../src/domain/avs-appointment-render";
+ import { buildInjectionAvsModel, type InjectionAvsInput } from "../../src/domain/injection-avs-content";
+ import { buildInjectionAvsHtml, renderInjectionAvsHtml, DEFAULT_AVS_CHROME, selectInjectionAvsLayout } from "../../src/domain/injection-avs-render";
+-import { emptyInjectionEncounter, InjectionEngine } from "../../src/domain/injection";
++import { emptyInjectionEncounter, InjectionEngine, injectionAdministrationReviewFingerprint, hasCurrentInjectionAdministrationReview } from "../../src/domain/injection";
+ import { injectionPresentationExtensionValue, readInjectionPresentationExtension, TYPED_INJECTION_ENCOUNTER_KEY } from "../../src/presentation/workflows/injection/injection-presentation-extension";
+ import { writeFileSync, mkdirSync } from "node:fs";
+ const appointment = () => ({ ...emptyAvsAppointment(), mode: "details" as const, date: "2026-11-03", time: "10:30", provider: "Synthetic Provider, PMHNP-BC", location: "San Bernardino clinic", visitType: "in-person" as const });
+@@ -77,6 +77,31 @@ describe("patient handout output", () => {
+  });
+ });
+ describe("encounter ownership and backwards compatibility", () => {
++ it("appointment-only edits preserve the current clinical administration review", () => {
++  const encounter = emptyInjectionEncounter();
++  encounter.disposition = {
++   ...encounter.disposition, kind: "administered", reviewedBy: "Synthetic Staff",
++   reviewedAt: "2026-10-02T09:00:00-07:00",
++   reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
++  };
++  expect(hasCurrentInjectionAdministrationReview(encounter)).toBe(true);
++  for (const reminder of [emptyAvsAppointment(), appointment(), { ...appointment(), date: "2026-11-05", time: "11:45" }]) {
++   const edited = { ...encounter, avsAppointment: reminder };
++   expect(injectionAdministrationReviewFingerprint(edited)).toBe(encounter.disposition.reviewFingerprint);
++   expect(hasCurrentInjectionAdministrationReview(edited)).toBe(true);
++  }
++ });
++ it.each(["dose", "orderingProvider", "administrationDate", "administrationTime", "nextDoseDate", "lot"] as const)("clinical %s changes still invalidate administration review", key => {
++  const encounter = { ...emptyInjectionEncounter(), avsAppointment: appointment() };
++  encounter.disposition = {
++   ...encounter.disposition, kind: "administered", reviewedBy: "Synthetic Staff",
++   reviewedAt: "2026-10-02T09:00:00-07:00",
++   reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
++  };
++  const edited = { ...encounter, [key]: "Changed clinical value" };
++  expect(hasCurrentInjectionAdministrationReview(edited)).toBe(false);
++ });
++
+  it("round-trips exactly in the existing atomic typed envelope", () => {
+   const a={...appointment(),provider:"  Synthetic Provider  "};const source={...emptyInjectionEncounter(),avsAppointment:a};
+   const stored=injectionPresentationExtensionValue(source);expect(stored.version).toBe(3);
