@@ -1,0 +1,199 @@
+diff --git a/docs/density-appointment/IMPLEMENTATION.md b/docs/density-appointment/IMPLEMENTATION.md
+index 6376923f21f46cb584f0cf379d92edcacf9dfb7c..04088746fb58f6f46c6ff5282d16d8948e73f6e3 100644
+--- a/docs/density-appointment/IMPLEMENTATION.md
++++ b/docs/density-appointment/IMPLEMENTATION.md
+@@ -139,3 +139,19 @@ worklist row instead of the F11 dialog row. Recovery now explicitly selects and
+ focuses the modal-owned row. Additional long, remote, cold-chain and initiation
+ appointment printing cases use the actual application renderer and PDF output.
+ These corrections require their own exact-source complete review before merge.
++
++
++## Long-document correction
++
++The second full-history focused review passed 819 unit tests and 44 of 45
++browser journeys. It confirmed signed completion/reprints, recovery and all
++routine appointment variants. The new long Vivitrol/partial-reminder scenario
++exposed 87px of first-page overflow. The correction adds a deterministic third
++page only when the appointment plus primary safety material exceeds the existing
++primary-page budget. Safety warnings and today's treatment stay first; the
++intact due-date/appointment panel and timing/site-care guidance follow on a
++fully identified page 2; remaining guidance and emergency instructions continue
++on page 3. All page counts and section identifiers are explicit. No warning,
++medication text, writing-line height or patient body type is reduced. Historical
++omitted-reminder documents continue to use their unchanged layout. The heading
++also explicitly retains the original sage accent in the print cascade.
+diff --git a/scripts/check-local-refinement.mjs b/scripts/check-local-refinement.mjs
+index 2b321cad720350715e5d5fafe84bd3dd06d04880..d7881b246fd0d76ff4e99472391c6a8338906323 100644
+--- a/scripts/check-local-refinement.mjs
++++ b/scripts/check-local-refinement.mjs
+@@ -31,7 +31,7 @@ const reviewedHandout = new Map([
+   ['src/domain/avs-appointment.ts', '453a3997a2f971500bdfe107d07584497ac726646783def26dd59a44abab4f53'],
+   ['src/domain/avs-appointment-render.ts', 'f1818a8d8e7d5bcfc801af2cdcc93e5267f5d1bf0af64a3feb275e3bdf116c2e'],
+   ['src/domain/injection-avs-content.ts', '759b654e1cf1ac5ff9b3d97aac9d857b658eae9bc05c3eac682d1b3bbff4033d'],
+-  ['src/domain/injection-avs-render.ts', '3632136fadae4e2bc92ddca8ba645eab748b52ecfc2a1c288e2c4af53fab33cc'],
++  ['src/domain/injection-avs-render.ts', '39160256761589ce4e0c27425f47a60e5deb56f9404bb6d724f24803064d5776'],
+   ['src/domain/injection-avs-guidance.ts', '4e4951d5427dbf4a70951ba9a1dc35485dbd69b711b87590f9fed19bf0eea7a9'],
+ ]);
+ const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+diff --git a/src/domain/injection-avs-render.ts b/src/domain/injection-avs-render.ts
+index dc965894756d84a5489b3b098674c783f8d09faa..cbda8c14b76725636a5a1db3165050ad3074c6cc 100644
+--- a/src/domain/injection-avs-render.ts
++++ b/src/domain/injection-avs-render.ts
+@@ -184,11 +184,19 @@ const hasDensePrimaryFacts = (model: InjectionAvsModel): boolean =>
+ export type InjectionAvsLayoutVariant =
+   | "routine-one-page"
+   | "routine-two-page"
+-  | "complex-two-page";
++  | "complex-two-page"
++  | "follow-up-three-page";
+ 
+ export const selectInjectionAvsLayout = (
+   model: InjectionAvsModel,
+ ): InjectionAvsLayoutVariant => {
++  // A long preparation/overdose alert plus the new reminder can exceed page
++  // one even without ordinary guidance. Preserve every instruction and keep
++  // the due date with the appointment on their own identified continuation.
++  if (appointmentLineBudget(model.providerAppointment) > 0 &&
++      estimatedPrimaryLines(model) > ROUTINE_PRIMARY_LINE_CAPACITY) {
++    return "follow-up-three-page";
++  }
+   if (
+     model.timeline.length > 2 ||
+     Boolean(model.documentSubtitle) ||
+@@ -428,12 +436,12 @@ export const renderInjectionAvsHtml = (
+     heading: model.providerAppointment && model.providerAppointment.mode !== "omit" ? "Clinic information" : "Plan your next visit",
+     rows: model.nextDose.contactLines,
+   };
+-  const renderContact = (compact = false): string =>
++  const renderContact = (compact = false, suffix = compact ? "continued" : "primary"): string =>
+     model.nextDose.contactLines.length
+       ? renderSection(
+           contactBlock,
+           compact ? "avs2-sec-contact-compact" : "",
+-          compact ? "continued" : "primary",
++          suffix,
+         )
+       : "";
+ 
+@@ -448,7 +456,15 @@ export const renderInjectionAvsHtml = (
+   // or stranded on an unlabeled browser-created page.
+   const layout = selectInjectionAvsLayout(model);
+   const pages = partitionInjectionAvsBlocks(model, layout);
++  const followUpPage = layout === "follow-up-three-page";
++  const primaryTimeline = followUpPage ? model.timeline.filter(step => step.state !== "due") : model.timeline;
++  const followUpTimeline = followUpPage ? model.timeline.filter(step => step.state === "due") : [];
++  const followUpGuidance = followUpPage ? model.blocks.filter(block => block.kind === "timing" || block.kind === "site-care") : [];
++  const finalGuidance = followUpPage
++    ? pages.continuation.filter(block => block.kind !== "timing" && block.kind !== "site-care")
++    : pages.continuation;
+   const twoPage = layout !== "routine-one-page";
++  const totalPages = followUpPage ? 3 : twoPage ? 2 : 1;
+   const continuation = twoPage
+     ? `<header class="avs2-continuation">` +
+       `<div class="avs2-continuation-title"><h2>After Visit Summary - Continued</h2></div>` +
+@@ -527,26 +543,35 @@ export const renderInjectionAvsHtml = (
+     `<section class="avs2-overview" aria-labelledby="avs-treatment-summary">` +
+     `<h2 class="avs2-overview-title" id="avs-treatment-summary">Your treatment today</h2>` +
+     renderSpine(
+-      model.timeline,
++      primaryTimeline,
+       model.administrationNote,
+       model.nextDose.instruction,
+       model.administration.find((row) => row.label === "ROUTE / SITE")?.value ?? "",
+-      renderAvsAppointment(model.providerAppointment),
++      followUpPage ? "" : renderAvsAppointment(model.providerAppointment),
+     ) +
+     `</section>` +
++    (followUpPage ? `<p class="avs2-page-pointer">${followUpTimeline.length ? "Your next injection and provider appointment are" : "Your provider appointment details are"} on page 2. Please read all pages of this handout.</p>` : "") +
+     renderContact() +
+     renderGuidance(pages.primary) +
+     `</div>` +
+-    renderFooter(1, twoPage ? 2 : 1) +
++    renderFooter(1, totalPages) +
+     `</div>` +
++    (followUpPage
++      ? `<div class="avs2-page avs2-page-continuation avs2-page-follow-up"><div class="avs2-page-body">` +
++        continuation +
++        `<section class="avs2-overview" aria-labelledby="avs-upcoming-care"><h2 class="avs2-overview-title" id="avs-upcoming-care">Your follow-up visits</h2>` +
++        renderSpine(followUpTimeline, "", model.nextDose.instruction, "", renderAvsAppointment(model.providerAppointment)) +
++        `</section>` + renderGuidance(followUpGuidance) + renderContact(true, "follow-up") +
++        `</div>` + renderFooter(2, totalPages) + `</div>`
++      : "") +
+     (twoPage
+       ? `<div class="avs2-page avs2-page-continuation">` +
+         `<div class="avs2-page-body">` +
+         continuation +
+-        renderGuidance(pages.continuation) +
++        renderGuidance(finalGuidance) +
+         renderContact(true) +
+         `</div>` +
+-        renderFooter(2, 2) +
++        renderFooter(totalPages, totalPages) +
+         `</div>`
+       : "") +
+     `</article>`
+diff --git a/src/presentation/documents/injection-avs.css b/src/presentation/documents/injection-avs.css
+index 90dfb691b1ca668e2c97ea7667bd793b757636a4..5c15c375085da5fc5247c9f56a7466ab4c6e1a12 100644
+--- a/src/presentation/documents/injection-avs.css
++++ b/src/presentation/documents/injection-avs.css
+@@ -58,7 +58,7 @@
+   }
+   body.print-avs #avsSheet .avs2-appointment-title {
+     margin: 0 0 10px; font-family: inherit; font-size: 13px;
+-    font-weight: 600; line-height: 1.4; color: var(--avs-accent);
++    font-weight: 600; line-height: 1.4; color: var(--avs-accent) !important;
+   }
+   body.print-avs #avsSheet :is(.avs2-appointment-when,.avs2-appointment-where) {
+     display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; margin: 3px 0;
+@@ -80,6 +80,8 @@
+   body.print-avs #avsSheet .avs2-follow-up { margin: 6px 0; padding: 0 17px 11px; border: 1px solid #c6d5c3; border-left: 4px solid var(--avs-accent); border-radius: 0 5px 5px 0; background: #f8fbf6; }
+   body.print-avs #avsSheet .avs2-follow-up > .avs2-appointment { margin-top: 0; border-top: 0; }
+ 
++  body.print-avs #avsSheet .avs2-page-pointer { margin: 12px 0 8px; font-size: 12px; line-height: 1.5; color: var(--avs-ink) !important; }
++
+   body.print-avs #avsSheet .avs2-page {
+     position: relative;
+     display: grid;
+diff --git a/tests/e2e/print-regression.spec.js b/tests/e2e/print-regression.spec.js
+index 16afe6d656453f3b14c5b45c77b5e105cb1b947e..d50b8c37c2c92daedfc2b16b34d1d5297ffdb272 100644
+--- a/tests/e2e/print-regression.spec.js
++++ b/tests/e2e/print-regression.spec.js
+@@ -1533,7 +1533,12 @@ for (const scenario of ['initiation-write-in', 'cold-chain-remote-long', 'vivitr
+     await expectAvsPagesToFit(page);
+     await expectAvsSemanticStructure(page);
+     const pages = await page.locator('#avsSheet .avs2-page').count();
+-    expect(pages).toBeLessThanOrEqual(4);
++    expect(pages).toBeLessThanOrEqual(3);
++    if (scenario === 'vivitrol-partial') {
++      expect(pages).toBe(3);
++      await expect(page.locator('#avsSheet .avs2-page-primary')).toContainText('on page 2');
++      await expect(page.locator('#avsSheet .avs2-page-follow-up .avs2-step-due .avs2-appointment')).toHaveCount(1);
++    }
+     await expectPrintContract(page, {rootId:'avsSheet',content:[scenario==='initiation-write-in'?'Invega Sustenna':scenario==='cold-chain-remote-long'?'Uzedy':'Vivitrol'],minPages:pages,maxPages:pages,checkParity:false});
+   });
+ }
+diff --git a/tests/unit/avs-appointment.test.ts b/tests/unit/avs-appointment.test.ts
+index 29f8d5cd64d0739b32279ac57c07d15cd1c4bdf1..fa9276c3afcfbe963f07405da056c69f89260469 100644
+--- a/tests/unit/avs-appointment.test.ts
++++ b/tests/unit/avs-appointment.test.ts
+@@ -70,6 +70,20 @@ describe("patient handout output", () => {
+   expect(next.nextDose.dateLong).toBe(before.nextDose.dateLong);expect(next.blocks).toEqual(before.blocks);expect(next.emergency).toEqual(before.emergency);expect(next.leadAlerts).toEqual(before.leadAlerts);
+   expect(next.providerAppointment?.date).toBe("2026-11-05");
+  });
++ it("keeps a heavy primary safety section and appointment on separate fully numbered pages", () => {
++  const source = input({ medicationKey: "vivitrol", medicationName: "Vivitrol", dose: "380 mg", providerAppointment: { ...appointment(), time: "", location: "", provider: "Synthetic Appointment Provider for Comprehensive Follow-up and Medication Management, PMHNP-BC" } });
++  const model = buildInjectionAvsModel(source);
++  expect(selectInjectionAvsLayout(model)).toBe("follow-up-three-page");
++  const html = renderInjectionAvsHtml(model, DEFAULT_AVS_CHROME);
++  expect(html).toContain("Page 1 of 3"); expect(html).toContain("Page 2 of 3"); expect(html).toContain("Page 3 of 3");
++  const firstEnd = html.indexOf('class="avs2-page avs2-page-continuation avs2-page-follow-up"');
++  expect(html.indexOf('class="avs2-appointment ')).toBeGreaterThan(firstEnd);
++  expect(html.match(/class="avs2-appointment /g)).toHaveLength(1);
++  for (const block of [...model.leadAlerts, ...model.blocks, model.emergency]) {
++   const escaped = block.heading.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
++   expect(html).toContain(escaped);
++  }
++ });
+  it("charges print space for blank handwriting and moves guidance to a named continuation", () => {
+   const model=buildInjectionAvsModel(input({providerAppointment:emptyAvsAppointment()}));
+   expect(selectInjectionAvsLayout(model)).not.toBe('routine-one-page');
