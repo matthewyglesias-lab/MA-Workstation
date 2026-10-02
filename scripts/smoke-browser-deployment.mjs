@@ -88,7 +88,7 @@ try {
       await page
         .locator('body[data-application-ready="true"]')
         .waitFor({ state: "attached", timeout: 20_000 });
-      await requireVisible(page, ".cd2004-shell", "The classic workstation shell");
+      await requireVisible(page, ".cd2004-shell", "The workstation shell");
       await requireVisible(
         page,
         ".cd2004-start-center",
@@ -106,11 +106,11 @@ try {
 
       await verifyNoPageOverflow(page, "Desktop");
 
-      const startNewInjection = page.getByRole("button", {
-        name: "Start new injection",
-        exact: true,
-      });
-      await startNewInjection.click();
+      // Follow the same visible service launcher used in clinic. "Start new
+      // injection" is a record action inside an active service, not the home
+      // entry point in the refined workstation.
+      const injectionService = page.locator(".lf-service-shortcut.lf-service-administer");
+      await injectionService.click();
       await page
         .locator('.cd2004-shell[data-active-workflow="administer"]')
         .waitFor({ state: "visible", timeout: 10_000 });

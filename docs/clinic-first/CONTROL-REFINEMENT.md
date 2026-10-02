@@ -47,6 +47,11 @@ printing, interruption and standalone coverage remains. Intentional screen
 contracts and inspected Linux captures follow the new visual system; screenshot
 tolerances and clinical/document fixtures are unchanged.
 
+The release smoke check now opens injections through the visible service
+launcher. Its old home-screen button locator no longer matched the refined
+navigation. Both the HTTP and Chromium deployment checks passed locally against
+the built application, including viewport recovery and retained input.
+
 The PR records final exact-source CI results. Visual review is engineering
 review, not clinical acceptance. Managed Edge/Windows, physical printing and
 real clinic use remain outside this Linux browser verification.
