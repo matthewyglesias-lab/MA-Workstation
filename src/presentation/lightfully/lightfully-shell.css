@@ -148,7 +148,6 @@
  #lf-workstation :is(button,input,select,textarea,summary):focus-visible,#lf-workstation .lf-service-dialog :is(button,input):focus-visible,#lf-workstation .lf-command-dialog :is(button,input):focus-visible {outline:2px solid #3c7083;outline-offset:2px;box-shadow:none;}
  #lf-workstation button:disabled,#lf-workstation .lf-service-dialog button:disabled {cursor:default;}
  /* Focused injection mode is retained as the existing optional seven-step workflow. */
- #lf-workstation.lf-workstation[data-kiosk-mode=true] {grid-template-columns:minmax(0,1fr);}
  #lf-workstation[data-kiosk-mode=true] .wfp-summary-bar .wfp-workflow-title {display:block;}
  :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-section {padding-block:14px;}
  :root[data-lf-density=compact] #lf-workstation .wfp-row {gap:13px;margin-bottom:12px;}
@@ -179,8 +178,5 @@
  #lf-workstation .wfp-select-group-inline {min-width:0;}
  #lf-workstation .wfp-select-group-inline > select {width:100%;max-width:none;flex:1;}
  /* Focus mode retains the original accessible touch-target contract. */
- #lf-workstation.lf-workstation[data-kiosk-mode=true] {grid-template-columns:minmax(0,1fr);}
- #lf-workstation[data-kiosk-mode=true] .wfp-panel :is(input:not([type=checkbox]):not([type=radio]),select,textarea,button) {min-height:44px;}
- #lf-workstation[data-kiosk-mode=true] .wfp-site-tile {min-height:44px;}
  @media (prefers-reduced-motion:reduce) {.lf-workstation *, #lf-workstation .lf-service-dialog *,#lf-workstation .lf-command-dialog * {scroll-behavior:auto!important;transition:none!important;}}
 }

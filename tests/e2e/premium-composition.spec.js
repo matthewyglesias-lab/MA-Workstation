@@ -27,7 +27,7 @@ for (const size of [{ width: 1440, height: 900 }, { width: 800, height: 600 }]) 
       const dob = panel.locator('input[placeholder="MM/DD/YYYY"]');
       await dob.fill('01/02/1990');
       await dob.press('Tab');
-      const primary = page.locator('.cd2004-patient-primary strong');
+      const primary = page.locator('[data-active-patient-name]');
       const mismatch = page.locator('.cd2004-context-mismatch');
       await expect.poll(async () => (await primary.textContent())?.includes(patientName) || await mismatch.isVisible()).toBe(true);
       if (await mismatch.isVisible()) await mismatch.getByRole('button', { name: 'Make active', exact: true }).click();

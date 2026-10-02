@@ -1555,6 +1555,7 @@ export function ClinicalDesktopShell({
         <Panel
           pane="work"
           title={windowTitle}
+          suspended={kioskVisible && Boolean(kioskLocked)}
           active={focusedPane === "work"}
           onActivate={setFocusedPane}
         >
@@ -2013,7 +2014,7 @@ function PatientBanner({
             <button type="button" data-chart-nav="facesheet" aria-label="Open the Facesheet" onClick={() => onOpenChart("facesheet")}><DesktopIcon name="patient"/><span>Patient summary</span></button>
             <button type="button" data-chart-nav="notes" aria-label="Open this patient's Notes" onClick={() => onOpenChart("notes")}><DesktopIcon name="note"/><span>Patient notes</span></button>
           </ActionShelf> : <small>{chartContextLabel}</small>}
-          <strong>{patientNameLabel}</strong>
+          <strong data-active-patient-name>{patientNameLabel}</strong>
         </span>
       </div>
       <div class="cd2004-patient-field" title={`DOB: ${dobLabel}`}>

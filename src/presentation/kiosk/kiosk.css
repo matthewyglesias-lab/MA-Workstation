@@ -549,9 +549,6 @@
     padding-inline: 18px;
   }
 
-  .cd2004-shell .cd2004-workspace.is-kiosk.has-kiosk-completion > .cd2004-work-window {
-    display: none;
-  }
 
   .cd2004-shell .kiosk-sign-next {
     grid-column: 2;

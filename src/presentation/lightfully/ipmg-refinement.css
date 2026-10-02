@@ -134,7 +134,6 @@
   #lf-workstation .kiosk-stepper button[aria-current=step] { border-color: #7d9da7; background: #e7eef0; color: #294255; }
 
   /* A disclosure can never cover a clinical field or its lookup button. */
-  #lf-workstation.lf-workstation[data-kiosk-mode=true] { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr) auto; }
 
   /* Preserve clinical meaning; no brand color is a verification result. */
   #lf-workstation .wfp-option-row.is-stop.is-selected { background: var(--tw-stop-bg); color: var(--tw-stop-fg); border-color: var(--tw-stop-border); }
@@ -155,7 +154,6 @@
     #lf-workstation .cd2004-record-actions, #lf-workstation .lf-service-footer { min-height: 55px; padding-block: 8px; }
   }
   :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-field-lookup-button { min-height: 36px; height: 36px; }
-  #lf-workstation[data-kiosk-mode=true] .wfp-panel .wfp-field-lookup-button { height: 44px; }
   @media (forced-colors: active) {
     #lf-workstation .wfp-tab[aria-selected=true] { border-bottom: 3px solid Highlight; }
   }

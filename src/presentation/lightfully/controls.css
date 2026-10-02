@@ -97,6 +97,10 @@
   body:has(#lf-workstation) :is(#lf-workstation,.cd2004-dialog-frame,.records-drawer) :is(input,select,textarea)[aria-invalid=true] {
     border-color: #ae625c;
   }
+  /* Guided injection touch targets: one owner, independent of density. */
+  #lf-workstation[data-kiosk-mode=true] .wfp-panel :is(button,input:not([type=checkbox]):not([type=radio]),select,textarea) { min-height: 44px; }
+  #lf-workstation[data-kiosk-mode=true] .wfp-panel .wfp-field-lookup-button { min-height: 44px; height: 44px; }
+
   /* Compact search stays compact; clinical entry keeps its comfortable height. */
   body:has(#lf-workstation) #lf-workstation :is(.lf-header-search,.lf-worklist-search) input {
     min-height: 34px; height: 34px; padding: 5px 10px; font-size: 13px; line-height: 22px;

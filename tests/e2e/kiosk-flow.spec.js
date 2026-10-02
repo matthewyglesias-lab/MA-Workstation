@@ -273,9 +273,28 @@ test.describe('Injection focus workspace', () => {
       .toBeEnabled();
     await expect(completion).toBeFocused();
     await expect(page.locator('.is-primary:visible')).toHaveCount(1);
+    const editor = page.locator('#cd2004-pane-work');
+    await expect(editor).toHaveAttribute('inert', '');
+    await expect(editor).toBeHidden();
+    // The mounted source remains available to printing, but is not a second
+    // editor behind the outcome at either supported composition width.
+    for (const size of [{ width: 1440, height: 900 }, { width: 800, height: 600 }]) {
+      await page.setViewportSize(size);
+      await expect(completion).toBeVisible();
+      await expect(editor).toBeHidden();
+      await panel.locator('input[placeholder="Last, First"]').evaluate(node => node.focus());
+      await expect(completion).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(completion.getByRole('button', { name: 'Print patient handout' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(completion.getByRole('button', { name: 'Start next patient' })).toBeFocused();
+      await completion.focus();
+    }
 
     await completion.getByRole('button', { name: 'Start next patient' }).click();
     await expect(completion).toBeHidden();
+    await expect(editor).not.toHaveAttribute('inert', '');
+    await expect(editor).toBeVisible();
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-kiosk-step', 'identify');
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('');
     await expect(panel.locator('input[placeholder="Last, First"]')).toBeFocused();

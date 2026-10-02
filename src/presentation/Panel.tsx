@@ -5,6 +5,8 @@ interface PanelProps {
   pane: DesktopPane;
   title: string;
   active?: boolean;
+  /** Keep the editor mounted for records/print, but unavailable behind an outcome. */
+  suspended?: boolean;
   children: ComponentChildren;
   toolbar?: ComponentChildren;
   footer?: ComponentChildren;
@@ -20,6 +22,7 @@ export function Panel({
   pane,
   title,
   active = false,
+  suspended = false,
   children,
   toolbar,
   footer,
@@ -35,6 +38,9 @@ export function Panel({
         .filter(Boolean)
         .join(" ")}
       data-pane={pane}
+      data-suspended={suspended ? "true" : undefined}
+      inert={suspended}
+      aria-hidden={suspended ? "true" : undefined}
       id={`cd2004-pane-${pane}`}
       role="region"
       aria-label={`${title} panel`}

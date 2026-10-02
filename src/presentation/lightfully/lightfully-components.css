@@ -218,7 +218,6 @@
  :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-section-body {gap:14px;}
  :root[data-lf-density=compact] #lf-workstation .wfp-row {margin:0;gap:14px;}
  #lf-workstation[data-kiosk-mode=true] {--lf-control-height:44px;}
- #lf-workstation[data-kiosk-mode=true] .wfp-panel :is(button,input:not([type=checkbox]):not([type=radio]),select,textarea) {min-height:44px;}
  #lf-workstation[data-kiosk-mode=true] .wfp-site-tile {min-height:52px;}
  @media (max-height:700px) {
   #lf-workstation .wfp-panel .wfp-tab {min-height:42px;}

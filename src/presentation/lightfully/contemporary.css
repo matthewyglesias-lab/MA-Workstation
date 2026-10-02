@@ -207,6 +207,5 @@
   body:has(#lf-workstation) .cd2004-dialog-titlebar h2 {font-size:24px;}
  }
  :root[data-lf-density=compact] #lf-workstation .wfp-panel .wfp-field-lookup-button {height:36px;min-height:36px;}
- #lf-workstation[data-kiosk-mode=true] .wfp-panel .wfp-field-lookup-button {height:44px;}
  @media(prefers-reduced-motion:reduce) {body:has(#lf-workstation) * {scroll-behavior:auto!important;}}
 }

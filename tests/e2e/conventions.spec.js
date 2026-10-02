@@ -532,7 +532,11 @@ test.describe('Phase 3b patient chart conventions', () => {
     const oldInjectionRecords = JSON.parse(before[0]);
     const savedInjectionRecords = JSON.parse(afterBrowse[0]);
     const originalIds = new Set(oldInjectionRecords.map(record => record.id));
-    expect(savedInjectionRecords.filter(record => originalIds.has(record.id))).toEqual(oldInjectionRecords);
+    // The repository orders its array by updatedAt on every save. Compare the
+    // complete original records by identity, not the incidental storage order.
+    const byId = records => [...records].sort((a, b) => a.id.localeCompare(b.id));
+    expect(byId(savedInjectionRecords.filter(record => originalIds.has(record.id))))
+      .toEqual(byId(oldInjectionRecords));
     const activeDraft = savedInjectionRecords.filter(record => !originalIds.has(record.id));
     expect(activeDraft).toHaveLength(1);
     expect(activeDraft[0].patient).toEqual({ name: 'Return path, Synthetic', dob: '01/02/1990' });
