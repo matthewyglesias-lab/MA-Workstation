@@ -320,28 +320,28 @@ function ClinicianLabSheet({
     : encounter.collectionDateTime
       ? "INVALID / NOT ENTERED"
       : "NOT ENTERED";
-  const reported = hasValidCollectionTime ? collected : "PENDING";
+
   const reportPanels = displayedUdsPanels(encounter);
 
   return (
-    <section class="meditech-lab-sheet" aria-label="UDS clinician laboratory report preview">
-      <header class="meditech-lab-header">
+    <section class="lf-lab-sheet" aria-label="UDS clinician laboratory report preview">
+      <header class="lf-lab-header">
         <div>
-          <strong>INTEGRATED PSYCHIATRIC MEDICAL GROUP</strong>
-          <span>POINT OF CARE LABORATORY</span>
+          <strong>Inland Psychiatric Medical Group</strong>
+          <span>Point-of-care testing</span>
         </div>
         <div>
-          <b>UDS SCREEN</b>
-          <span>CLINICIAN RESULT REPORT</span>
+          <b>Urine drug screen</b>
+          <span>Clinician report preview</span>
         </div>
       </header>
 
-      <div class="meditech-lab-status">
+      <div class="lf-lab-status">
         <strong>PRELIMINARY / PRESUMPTIVE</strong>
         <span>Confirm unexpected findings by definitive laboratory method.</span>
       </div>
 
-      <dl class="meditech-lab-demographics">
+      <dl class="lf-lab-demographics">
         <div>
           <dt>PATIENT</dt>
           <dd>{encounter.patient.name || "NO PATIENT ENTERED"}</dd>
@@ -351,16 +351,16 @@ function ClinicianLabSheet({
           <dd>{encounter.patient.dob || "—"}</dd>
         </div>
         <div>
-          <dt>ACCESSION</dt>
-          <dd>POC-UDS / OPEN</dd>
+          <dt>Document</dt>
+          <dd>Local preview</dd>
         </div>
         <div>
           <dt>COLLECTED</dt>
           <dd>{collected}</dd>
         </div>
         <div>
-          <dt>REPORTED</dt>
-          <dd>{reported}</dd>
+          <dt>Report time</dt>
+          <dd>Not documented</dd>
         </div>
         <div>
           <dt>COLLECTOR</dt>
@@ -368,7 +368,7 @@ function ClinicianLabSheet({
         </div>
       </dl>
 
-      <dl class="meditech-lab-device">
+      <dl class="lf-lab-device">
         <div>
           <dt>SPECIMEN</dt>
           <dd>Urine, random</dd>
@@ -391,7 +391,7 @@ function ClinicianLabSheet({
         </div>
       </dl>
 
-      <table class="meditech-lab-results">
+      <table class="lf-lab-results">
         <thead>
           <tr>
             <th>TEST / ANALYTE</th>
@@ -433,7 +433,7 @@ function ClinicianLabSheet({
         </tbody>
       </table>
 
-      <div class="meditech-lab-interpretation">
+      <div class="lf-lab-interpretation">
         <div>
           <b>VALIDITY</b>
           <span>{encounter.validity}</span>
@@ -453,12 +453,12 @@ function ClinicianLabSheet({
         )}
       </div>
 
-      <footer class="meditech-lab-footer">
+      <footer class="lf-lab-footer">
         <p>
           Results are qualitative screening findings and are not diagnostic. Clinical correlation is required.
         </p>
         {includeSignatureFields && (
-          <div class="meditech-lab-signatures">
+          <div class="lf-lab-signatures">
             <span>REVIEWED BY</span>
             <span>DATE / TIME</span>
           </div>
@@ -2202,7 +2202,7 @@ export function UdsPanel({
             bandDetail={reportStatus.detail}
           />
           <div class="wfp-exception-register" aria-label="Exception register">
-            <div class="wfp-exception-head"><strong>EXCEPTION REGISTER</strong><span>{udsExceptions.length ? `${udsExceptions.length} ACTIVE` : "CLEAR"}</span></div>
+            <div class="wfp-exception-head"><strong>Exceptions to review</strong><span>{udsExceptions.length ? `${udsExceptions.length} documented` : "None documented"}</span></div>
             {udsExceptions.length ? udsExceptions.map((item) => (
               <button type="button" class="wfp-exception-line" onClick={() => { setTab(item.tab); setTimeout(() => (document.querySelector(`[data-field-path="${item.field}"] input, [data-field-path="${item.field}"] select, [data-field-path="${item.field}"] button`) as HTMLElement | null)?.focus(), 0); }}>
                 <span>REV</span><strong>{item.label}</strong><span>GO TO {UDS_TAB_LABEL[item.tab].toUpperCase()} →</span>

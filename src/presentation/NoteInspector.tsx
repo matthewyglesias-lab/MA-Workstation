@@ -91,12 +91,9 @@ export function NoteInspector({
 }: NoteInspectorProps) {
   const verdict = summarizeReadinessVerdict(readiness);
   const stats = noteDocumentStats(sections.map((section) => section.content));
-  // There is one note, written in its final form from the first documented
-  // field onward, so the only state worth marking is whether the local record
-  // has been filed. A second mark reading DRAFT said nothing the readiness
-  // verdict above does not already say, and said it on every note that was
-  // merely unfiled - including finished ones.
-  const filed = postState === "posted";
+  // The compatibility state "posted" means signed in this browser only.
+  // Neither a local signature nor a clipboard copy proves a Tebra handoff.
+  const signedLocally = postState === "posted";
   const patientIdentified = Boolean(patient?.name || patient?.dob);
   // The verdict still gets its words from vocabulary rather than carrying them
   // on the projection: this branch's Phase 1 amendment removed `headline` and
@@ -183,7 +180,7 @@ export function NoteInspector({
         <strong>{title}</strong>
         <span class="cd2004-note-marks">
           <span class="cd2004-note-mark">LOCAL</span>
-          {filed && <span class="cd2004-note-mark is-filed">FILED</span>}
+          {signedLocally && <span class="cd2004-note-mark is-filed">Signed locally</span>}
         </span>
       </div>
 
@@ -237,6 +234,7 @@ export function NoteInspector({
         </button>
       </div>
 
+      <p class="lf-note-boundary">{signedLocally ? "This note is signed in this browser. " : "This is a documentation preview. "}Copying does not file it. Confirm the final note separately in Tebra.</p>
       {/* Announced, not just drawn: the confirmation is the whole point of the
           change, and an operator using a screen reader needs it too. */}
       <div class="cd2004-note-copy-status" role="status" aria-live="polite">

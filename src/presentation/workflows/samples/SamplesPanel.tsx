@@ -1,3 +1,5 @@
+import { DraftRecoveryNotice } from "../../lightfully/DraftRecoveryNotice";
+import type { RecoveryStatus } from "../../../persistence/workflow-recovery";
 import { ActionShelf } from "../../lightfully/ActionShelf";
 import { labelControls } from "../WorkflowField";
 import type { ComponentChildren, Ref } from "preact";
@@ -78,6 +80,7 @@ function tabForSamplesField(field?: string): SamplesTab {
 interface SamplesPanelProps {
   initialEncounter: SamplesEncounter;
   initialDirty?: boolean;
+  recoveryStatus?: RecoveryStatus;
   activePatient: PatientContext;
   evaluation?: ClinicalEvaluation<SamplesEvaluationOutput>;
   staffSignInValue: string;
@@ -222,6 +225,7 @@ function Field({
 export function SamplesPanel({
   initialEncounter,
   initialDirty = false,
+  recoveryStatus,
   activePatient,
   evaluation,
   staffSignInValue,
@@ -534,6 +538,7 @@ export function SamplesPanel({
       </div>
 
       <div class="lf-service-scroll">
+      <DraftRecoveryNotice status={recoveryStatus} />
       <OutstandingRequirements<SamplesTab>
         open={requirementsOpen}
         onClose={() => setRequirementsOpen(false)}

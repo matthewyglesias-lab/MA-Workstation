@@ -68,6 +68,9 @@ export class SafeStorage {
     }
     try {
       this.storage.setItem(key, value);
+      if (this.storage.getItem(key) !== value) {
+        return failure("storage-write-failed", "The saved data could not be verified. Keep your current work open and try again.");
+      }
       return success(undefined);
     } catch (cause) {
       return failure(
@@ -84,6 +87,9 @@ export class SafeStorage {
     }
     try {
       this.storage.removeItem(key);
+      if (this.storage.getItem(key) !== null) {
+        return failure("storage-remove-failed", "The data could not be removed. It was not reported as deleted.");
+      }
       return success(undefined);
     } catch (cause) {
       return failure(

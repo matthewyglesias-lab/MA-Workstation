@@ -1,0 +1,560 @@
+/* Current workstation composition. Screen-only; clinical print lives in documents/.
+ * These previously separate finishing layers are maintained together in cascade order. */
+@import "./utility-surfaces.css";
+
+/* Deep-surface refinement: same approved Lightfully direction, no new theme.
+   Screen-only; semantic warning/error colors and all paper templates are retained. */
+@media screen {
+  :root { --lf-hover: #f1eef3; --lf-motion: 130ms; --lf-ease: cubic-bezier(.2,.7,.3,1); }
+
+  /* Action menus: readable identity, aligned commands, visible disabled state. */
+  #lf-workstation .tebra-action-menu-list {
+    padding: 9px; min-width: 245px; max-width: min(340px,calc(100vw - 32px));
+    max-height: min(520px,calc(100dvh - 130px)); overflow-y: auto;
+    border: 1px solid #d6dddf; border-top: 3px solid #f8ce1b;
+    border-radius: 8px 18px 8px 8px; background: #fff;
+    box-shadow: 0 12px 36px rgb(27 49 65 / 13%); color: var(--lf-ink);
+  }
+  #lf-workstation .tebra-action-menu-list :is([role=menuitem],[role=menuitemcheckbox],[role=menuitemradio]) {
+    min-height: 39px; width: 100%; padding: 9px 12px; border: 0;
+    border-radius: 5px; background: transparent; color: var(--lf-ink);
+    font: 400 12px/20px var(--tw-font-sans); text-align: left; box-shadow: none;
+  }
+  #lf-workstation .tebra-action-menu-list :is([role=menuitem],[role=menuitemcheckbox],[role=menuitemradio]):is(:hover,:focus-visible):not(:disabled) {
+    background: var(--lf-hover); color: var(--lf-ink);
+  }
+  #lf-workstation .tebra-action-menu-list :is(button:disabled,[aria-disabled=true]) {
+    color: #61737d; background: #f5f6f6; cursor: not-allowed;
+  }
+  #lf-workstation .tebra-account-identity { padding: 11px 12px 15px; margin: 0 0 6px; border-bottom: 1px solid var(--lf-line); }
+  #lf-workstation .tebra-account-identity strong { color: var(--lf-leaf); font: 400 22px/28px var(--lf-display); }
+  #lf-workstation .tebra-account-identity small { display: block; margin-top: 6px; color: var(--lf-muted); font: 400 11px/18px var(--tw-font-sans); }
+  #lf-workstation .tebra-account-scope { padding: 12px; margin: 6px 0 0; border-top: 1px solid var(--lf-line); color: var(--lf-muted); font: 400 11px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-navigation-popover { padding: 9px; max-height: calc(100dvh - 115px); overflow-y: auto; }
+  #lf-workstation .lf-header-disclosure[open] > summary { background: #e9f0f2; }
+  #lf-workstation .lf-command-result.is-disabled { opacity: 1; color: #61737d; background: #f5f6f6; cursor: not-allowed; }
+  #lf-workstation .lf-command-result.is-disabled :is(strong,small) { color: #61737d; }
+  #lf-workstation .lf-command-availability { font: 400 10px/16px var(--tw-font-sans); }
+  #lf-workstation .lf-command-empty { margin: 12px; padding: 24px; border-radius: 6px; background: #f8f5f1; color: var(--lf-muted); font: 400 13px/21px var(--tw-font-sans); }
+
+  /* Dialog bodies scroll independently: actions and titles never fall offscreen. */
+  body:has(#lf-workstation) :is(.cd2004-dialog-frame,.records-drawer) {
+    max-height: calc(100dvh - 40px); border-radius: 10px 24px 10px 10px;
+    color: var(--lf-ink); background: #fff;
+  }
+  body:has(#lf-workstation) .cd2004-dialog-frame { display: flex; flex-direction: column; min-height: 0; }
+  body:has(#lf-workstation) .cd2004-dialog-frame > form { display: flex; flex-direction: column; min-height: 0; }
+  body:has(#lf-workstation) .cd2004-dialog-frame :is(.cd2004-dialog-titlebar,.cd2004-dialog-actions) { flex: 0 0 auto; }
+  body:has(#lf-workstation) .cd2004-dialog-frame .cd2004-dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  body:has(#lf-workstation) .lf-dialog-title { gap: 20px; }
+  body:has(#lf-workstation) .lf-dialog-title h2 { overflow-wrap: anywhere; }
+  body:has(#lf-workstation) .lf-dialog-close { flex: 0 0 32px; width: 32px; height: 32px; min-height: 32px; padding: 6px; }
+  body:has(#lf-workstation) .lf-dialog-close:hover:not(:disabled) { background: #e3dfdf; }
+  body:has(#lf-workstation) .lf-dialog-close:disabled { background: #eceeef; color: #61737d; cursor: wait; }
+  body:has(#lf-workstation) .cd2004-dialog-field { gap: 7px; color: var(--lf-ink); font: 500 12px/20px var(--tw-font-sans); }
+  body:has(#lf-workstation) .cd2004-dialog-field :is(input,select,textarea) { font: 400 14px/21px var(--tw-font-sans); min-height: 40px; padding: 9px 11px; }
+  body:has(#lf-workstation) .cd2004-dialog-field small { color: var(--lf-muted); font: 400 12px/19px var(--tw-font-sans); }
+
+  /* The final review reads as a deliberate document, not a generic confirm box. */
+  body:has(#lf-workstation) .cd2004-attestation-review { background: #eef3f0; padding: 17px 20px; gap: 0; border: 1px solid #dbe5df; border-radius: 6px 17px 6px 6px; }
+  body:has(#lf-workstation) .cd2004-attestation-review > div { padding: 8px 0; gap: 4px; min-width: 0; }
+  body:has(#lf-workstation) .cd2004-attestation-review dt { color: #4d6761; font: 400 11px/18px var(--tw-font-sans); }
+  body:has(#lf-workstation) .cd2004-attestation-review dd { color: var(--lf-ink); font: 500 13px/21px var(--tw-font-sans); overflow-wrap: anywhere; }
+  body:has(#lf-workstation) .cd2004-record-action-warning { border-left: 3px solid #a37d35; padding: 10px 13px; background: #faf5e9; color: #624e28; font: 400 12px/20px var(--tw-font-sans); }
+  body:has(#lf-workstation) .cd2004-attestation-acknowledgement { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid #afc3bd; border-radius: 6px; font: 400 13px/21px var(--tw-font-sans); background: #fff; }
+  body:has(#lf-workstation) .cd2004-attestation-acknowledgement input { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 2px; }
+  body:has(#lf-workstation) .cd2004-attestation-acknowledgement:has(input:checked) { background: #f0f5f1; border-color: #789b8f; }
+  body:has(#lf-workstation) .cd2004-record-action-error { border: 1px solid var(--tw-stop-border); background: var(--tw-stop-bg); color: var(--tw-stop-fg); border-radius: 6px; padding: 12px 14px; }
+  body:has(#lf-workstation) .cd2004-record-action-dialog[aria-busy=true] .cd2004-dialog-actions { cursor: progress; }
+
+  /* Every unresolved check remains an actionable row, with a consistent hierarchy. */
+  body:has(#lf-workstation) .lf-requirements-group h3 { padding-bottom: 9px; border-bottom: 1px solid #d9e1df; font: 400 22px/28px var(--lf-display); color: var(--lf-leaf); }
+  body:has(#lf-workstation) .lf-requirements-group h3 > span { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: #edf1ee; color: #425f70; font: 500 11px/18px var(--tw-font-sans); }
+  body:has(#lf-workstation) .lf-requirements-group .wfp-issue-row { display: flex; align-items: center; gap: 14px; padding: 12px 10px; min-height: 44px; border-radius: 5px; border: 0; border-bottom: 1px solid #ece9eb; background: #fff; text-align: left; color: var(--lf-ink); font: 400 13px/21px var(--tw-font-sans); }
+  body:has(#lf-workstation) .lf-requirements-group .wfp-issue-row:hover { background: #f8f5f1; }
+  body:has(#lf-workstation) .lf-issue-arrow { margin-left: auto; flex-shrink: 0; color: var(--lf-leaf); }
+  body:has(#lf-workstation) .cd2004-lookup-body { display: flex; flex-direction: column; gap: 17px; }
+  body:has(#lf-workstation) .cd2004-lookup-body > .cd2004-dialog-field { flex: 0 0 auto; }
+  body:has(#lf-workstation) .cd2004-lookup-results { min-height: 70px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid #d8e1e3; border-radius: 6px; }
+  body:has(#lf-workstation) .cd2004-lookup-row { min-height: 48px; padding: 13px 14px; }
+  body:has(#lf-workstation) .cd2004-lookup-row :is(strong,small) { white-space: normal; overflow-wrap: anywhere; }
+  body:has(#lf-workstation) .cd2004-lookup-row small { color: var(--lf-muted); font: 400 12px/19px var(--tw-font-sans); margin-top: 4px; }
+  body:has(#lf-workstation) .cd2004-lookup-row:hover:not(:disabled) { background: #f6f4f7; }
+  body:has(#lf-workstation) .cd2004-lookup-row.is-selected { background: #e7efeb; border-left: 3px solid #70998c; }
+  body:has(#lf-workstation) .cd2004-lookup-empty { padding: 25px 18px; background: #faf8f5; color: var(--lf-muted); font: 400 13px/21px var(--tw-font-sans); }
+
+  /* Saved-history drawers: common Injection and UDS treatment. */
+  body:has(#lf-workstation) .records-drawer { display: flex; flex-direction: column; min-height: 0; }
+  body:has(#lf-workstation) .records-drawer > :not(.records-drawer-results) { flex-shrink: 0; }
+  body:has(#lf-workstation) .records-drawer-results { flex: 1 1 auto; min-height: 90px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  body:has(#lf-workstation) .records-drawer-status { padding: 6px 26px 12px; color: var(--lf-muted); font: 400 11px/18px var(--tw-font-sans); }
+  body:has(#lf-workstation) .notes-table th { position: sticky; top: 0; z-index: 2; }
+  body:has(#lf-workstation) .notes-table-row { cursor: pointer; }
+  body:has(#lf-workstation) .notes-table-row:hover td { background: #f8f5f1; }
+  body:has(#lf-workstation) .notes-table-row:focus-visible { outline: 2px solid #3c7083; outline-offset: -3px; background: #edf2f3; }
+  body:has(#lf-workstation) .notes-table-empty { padding: 35px 26px; white-space: normal; background: #faf8f5; color: var(--lf-muted); font: 400 13px/22px var(--tw-font-sans); }
+  body:has(#lf-workstation) .records-drawer-foot { background: #f8f5f1; padding: 15px 26px; gap: 18px; border-top: 1px solid #e2ded8; }
+  body:has(#lf-workstation) .records-drawer-foot p { max-width: 530px; font: 400 11px/18px var(--tw-font-sans); color: var(--lf-muted); }
+  body:has(#lf-workstation) .records-drawer-new:not(:disabled) { border: 1px solid #f37565; background: #f37565; color: #1b3141; }
+  body:has(#lf-workstation) .lf-records-reset { padding: 0 26px 12px; }
+  body:has(#lf-workstation) .lf-records-reset button { padding: 7px 11px; border: 1px solid #afc0c7; border-radius: 5px; background: #fff; color: #315f72; font: 500 12px/20px var(--tw-font-sans); }
+  body:has(#lf-workstation) .records-drawer-action-error { margin: 0 26px 12px; padding: 11px 14px; border-radius: 6px; }
+
+  /* Patient details retain their data and read-only semantics. */
+  #lf-workstation .tebra-patient-card { padding: 18px; max-width: min(340px,calc(100vw - 70px)); border: 1px solid #cddbd5; border-top: 3px solid #c1d6cd; border-radius: 7px 20px 7px 7px; background: #fff; box-shadow: 0 12px 36px rgb(27 49 65 / 14%); }
+  #lf-workstation .tebra-patient-card-name { font: 400 23px/29px var(--lf-display); color: var(--lf-leaf); padding-bottom: 9px; border-bottom: 1px solid var(--lf-line); }
+  #lf-workstation .tebra-patient-card dl { gap: 11px; }
+  #lf-workstation .tebra-patient-card dt { font: 400 11px/18px var(--tw-font-sans); color: var(--lf-muted); text-transform: none; letter-spacing: 0; }
+  #lf-workstation .tebra-patient-card dd { font: 500 12px/19px var(--tw-font-sans); color: var(--lf-ink); }
+  #lf-workstation .tebra-patient-card-host[data-card-dismissed=true] .tebra-patient-card { opacity: 0; pointer-events: none; }
+  #lf-workstation .tebra-patient-notes-filters { background: #f8f6f3; border-color: #e2ded8; border-radius: 7px; gap: 15px; }
+  #lf-workstation .tebra-patient-notes-field > span { color: var(--lf-muted); font: 500 11px/18px var(--tw-font-sans); }
+  #lf-workstation .tebra-patient-notes-field :is(input,select) { color: var(--lf-ink); background: #fff; border: 1px solid #aebfc6; border-radius: 5px; box-shadow: none; font: 400 13px/20px var(--tw-font-sans); }
+  #lf-workstation .tebra-summary-facts :is(dt,dd), #lf-workstation .tebra-summary-rotation { font-family: var(--tw-font-sans); line-height: 1.6; }
+  #lf-workstation .tebra-summary-card-rule { color: var(--lf-muted); font: 400 11px/18px var(--tw-font-sans); background: #faf9f6; }
+  #lf-workstation .tebra-summary-note-row { padding: 10px 0; border-bottom: 1px solid #e4e7e5; }
+  #lf-workstation .tebra-summary-note-type { font-weight: 500; color: var(--lf-ink); }
+  #lf-workstation .tebra-summary-note-visit { color: var(--lf-muted); font-size: 11px; }
+
+  /* Reference browsing is not a second clinical worksheet. */
+  #lf-workstation .lf-reference-panel > .wfp-field-hint { margin: 0; padding: 14px var(--lf-gutter); background: #edf2ef; color: #415f55; max-width: none; }
+  #lf-workstation .lf-reference-panel > .wfp-tabpanel { padding: 6px var(--lf-gutter) 26px; overflow-y: auto; min-height: 0; }
+  #lf-workstation .lf-reference-panel .wfp-lookup { gap: 32px; }
+  #lf-workstation .lf-reference-panel .wfp-lookup > .wfp-section + .wfp-section { padding-left: 27px; border-left: 1px solid #dce4e0; }
+  #lf-workstation .lf-reference-panel .wfp-section-head { font-size: 25px; }
+  #lf-workstation .lf-reference-panel .wfp-option-row { margin-bottom: 7px; }
+  #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field > label { font: 500 12px/20px var(--tw-font-sans); color: var(--lf-leaf); }
+  #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field-hint { line-height: 1.75; }
+  #lf-workstation .lf-reference-panel .wfp-lookup .wfp-field-hint li + li { margin-top: 6px; }
+  #lf-workstation .lf-reference-clear { margin-top: 8px; border: 1px solid #aebfc6; border-radius: 5px; color: #315f72; background: #fff; padding: 8px 12px; font: 500 12px/20px var(--tw-font-sans); }
+  #lf-workstation .wfp-wall { background: #f8f5f1; color: var(--lf-muted); border: 1px solid #e4dfd7; border-radius: 8px 22px 8px 8px; box-shadow: none; }
+  #lf-workstation .wfp-wall-title { color: var(--lf-leaf); font: 400 26px/33px var(--lf-display); }
+  #lf-workstation .kiosk-rail-heading h2 { color: var(--lf-leaf); font: 400 23px/30px var(--lf-display); }
+  #lf-workstation .kiosk-checklist { border-color: #dbe4df; background: #fafbf9; border-radius: 6px 18px 6px 6px; }
+  #lf-workstation .kiosk-checklist li { border-bottom: 1px solid #e1e8e3; }
+
+  /* Quiet feedback; never repaint an error as success or animate form values. */
+  #lf-workstation .tebra-toast-region { right: 20px; bottom: 48px; max-width: min(470px,calc(100vw - 40px)); }
+  #lf-workstation .tebra-toast { margin: 0; padding: 13px 18px; border: 1px solid #bdd0ca; border-left: 3px solid #739c8e; border-radius: 7px 17px 7px 7px; box-shadow: 0 8px 24px rgb(27 49 65 / 12%); color: #1b3141; background: #f5f8f5; font: 400 13px/21px var(--tw-font-sans); }
+
+  @media (max-width: 949px) {
+    body:has(#lf-workstation) .cd2004-dialog-frame { max-height: calc(100dvh - 24px); }
+    body:has(#lf-workstation) .lf-dialog-title { padding: 17px 20px 14px; }
+    body:has(#lf-workstation) .lf-dialog-title h2 { font-size: 25px; }
+    body:has(#lf-workstation) .cd2004-dialog-body { padding: 16px 20px; }
+    body:has(#lf-workstation) .cd2004-dialog-actions { padding: 12px 20px; }
+    body:has(#lf-workstation) .cd2004-attestation-review { padding: 12px 16px; }
+    body:has(#lf-workstation) .records-drawer-head { padding: 18px 20px 13px; }
+    body:has(#lf-workstation) .records-drawer-foot { padding: 12px 20px; }
+    #lf-workstation .lf-reference-panel .wfp-lookup { gap: 20px; }
+    #lf-workstation .lf-reference-panel .wfp-lookup > .wfp-section + .wfp-section { padding-left: 18px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    #lf-workstation :is(.lf-navigation-popover,.tebra-action-menu-list),
+    body:has(#lf-workstation) dialog[open] > .cd2004-dialog-frame { animation: lf-gentle-reveal 120ms var(--lf-ease) both; }
+    #lf-workstation :is(button,summary,.wfp-option-row),
+    body:has(#lf-workstation) :is(.cd2004-dialog-frame,.records-drawer) button { transition: background-color var(--lf-motion) var(--lf-ease), border-color var(--lf-motion) var(--lf-ease), color var(--lf-motion) var(--lf-ease); }
+  }
+  @keyframes lf-gentle-reveal { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    #lf-workstation *, body:has(#lf-workstation) :is(.cd2004-dialog-frame,.records-drawer) * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  @media (forced-colors: active) {
+    #lf-workstation .tebra-toast, body:has(#lf-workstation) .cd2004-attestation-acknowledgement { border: 1px solid CanvasText; }
+    body:has(#lf-workstation) .cd2004-lookup-row.is-selected { border-left: 3px solid Highlight; }
+  }
+}
+
+@media screen {
+  #lf-workstation .lf-closeout-panel > .wfp-section { margin-inline: var(--lf-gutter); }
+  #lf-workstation .lf-closeout-panel .wfp-kpi-row { gap: 0; background: #f8f6f3; border-block: 1px solid #e4dfd7; padding: 18px 0; }
+  #lf-workstation .lf-closeout-panel .wfp-kpi-row > div { border-right: 1px solid #e3ddd4; padding: 0 16px; }
+  #lf-workstation .lf-closeout-panel .wfp-kpi-row > div:last-child { border: 0; }
+  #lf-workstation .lf-closeout-panel .wfp-kpi-value { font: 400 28px/34px var(--lf-display); color: var(--lf-leaf); }
+  #lf-workstation .lf-closeout-panel .wfp-kpi-label { color: var(--lf-muted); font: 500 11px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-closeout-panel .wfp-table-wrap { overflow: auto; border: 1px solid #dce2e3; border-radius: 6px; }
+  #lf-workstation .lf-closeout-panel .wfp-table th { color: var(--lf-muted); background: var(--lf-lavender); font: 500 11px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-closeout-panel .wfp-table td { font: 400 12px/20px var(--tw-font-sans); padding: 12px 10px; }
+}
+
+/* Final recovery and keyboard states: the same controls on secondary screens. */
+@media screen {
+  body:has(#lf-workstation) .lf-lookup-reset {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 36px; padding: 7px 12px; margin-top: 10px;
+    border: 1px solid var(--lf-control-border); border-radius: 6px;
+    background: #fff; color: #315f72; cursor: pointer;
+    font: 500 12px/20px var(--tw-font-sans); box-shadow: none;
+  }
+  body:has(#lf-workstation) .lf-lookup-reset:hover { background: #eaf0f2; }
+  body:has(#lf-workstation) .cd2004-lookup-row:focus-visible {
+    outline: 2px solid #3c7083; outline-offset: -3px; background: #eaf0f2;
+  }
+  body:has(#lf-workstation) .cd2004-lookup-empty p { margin: 0; }
+  #lf-workstation .lf-closeout-panel [role=tabpanel] { min-width: 0; }
+  #lf-workstation .lf-closeout-panel .wfp-table th { position: sticky; top: 0; z-index: 1; }
+  #lf-workstation .tebra-patient-card-host[data-card-dismissed=true] .tebra-patient-card { visibility: hidden; }
+  /* Status text, not a green surface, establishes what happened. Persistent
+     errors and clinical warnings retain their own explicit state treatments. */
+  #lf-workstation .tebra-toast { border-color: #cbd8df; border-left-color: #7795a2; background: #f5f7f8; }
+}
+
+/* A quieter first layer over the approved Lightfully palette.
+ * Screen-only. These disclosures never contain evaluator warnings or required
+ * clinical inputs; the original record state and primary actions stay visible.
+ */
+@media screen {
+  /* Keep the brand header present without competing with the current encounter. */
+  #lf-workstation:not([data-active-workflow="home"]) .lf-document-action {
+    background: #fff8f4; border-color: #c98a7e; color: #743e35;
+  }
+  #lf-workstation:not([data-active-workflow="home"]) .lf-document-action:hover {
+    background: #fbe5df; border-color: #b86758;
+  }
+  #lf-workstation .lf-current-service { display: none; }
+  #lf-workstation .lf-service-strip {
+    border: 1px solid #e2deda; border-radius: 8px 26px 8px 8px;
+    background: #fcf9f5; overflow: hidden;
+  }
+  #lf-workstation .lf-service-shortcut { min-height: 91px; border-color: #e2deda; padding-inline: 20px; }
+  #lf-workstation .lf-service-shortcut:first-child { padding-left: 20px; }
+  #lf-workstation .lf-service-shortcut:hover:not(:disabled) { background: #f9eeea; }
+  #lf-workstation .lf-service-uds:hover:not(:disabled) { background: #edf3f5; }
+  #lf-workstation .lf-service-samples:hover:not(:disabled) { background: #edf2e9; }
+  #lf-workstation .lf-service-forms:hover:not(:disabled) { background: #fbf4e1; }
+  #lf-workstation .lf-service-shortcut:focus-visible { outline-offset: -4px; }
+  #lf-workstation .lf-shortcut-number { background: #f6dfd7; }
+  #lf-workstation .lf-shortcut-arrow { opacity: .85; }
+  #lf-workstation .lf-worklist-heading p { max-width: 560px; }
+  #lf-workstation .lf-worklist-card { border-radius: 8px 8px 20px 8px; }
+  #lf-workstation .lf-worklist-empty { background: #fffefa; }
+
+  /* A small, labelled shelf, not an unlabeled ellipsis or a second toolbar. */
+  #lf-workstation .lf-action-shelf {
+    position: relative; flex: 0 0 auto; min-width: 0; margin: 0; padding: 0;
+    border: 0; color: var(--lf-ink); background: transparent;
+  }
+  #lf-workstation .lf-shelf-trigger {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    list-style: none; min-height: 38px; padding: 8px 12px; margin: 0;
+    border: 1px solid #bbc9cc; border-radius: 6px; background: #fff;
+    color: #365566; cursor: pointer; white-space: nowrap;
+    font: 500 12px/20px var(--tw-font-sans); user-select: none;
+  }
+  #lf-workstation .lf-shelf-trigger::-webkit-details-marker { display: none; }
+  #lf-workstation .lf-shelf-trigger::marker { content: ""; }
+  #lf-workstation .lf-shelf-trigger > svg { flex: 0 0 12px; }
+  #lf-workstation .lf-shelf-trigger:hover,
+  #lf-workstation .lf-action-shelf[open] > .lf-shelf-trigger { background: #f2ecef; border-color: #a6b9c1; }
+  #lf-workstation .lf-action-shelf[open] > .lf-shelf-trigger > svg { transform: rotate(180deg); }
+  #lf-workstation .lf-shelf-panel {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 90;
+    width: 315px; max-width: calc(100vw - 40px); max-height: min(450px,calc(100dvh - 130px));
+    overflow-y: auto; overscroll-behavior: contain; padding: 0;
+    background: #fffefa; color: var(--lf-ink);
+    border: 1px solid #d6deda; border-top: 3px solid #edb66f;
+    border-radius: 8px 22px 8px 8px;
+    box-shadow: 0 10px 32px rgb(27 49 65 / 15%);
+  }
+  #lf-workstation .lf-action-shelf:not([open]) > .lf-shelf-panel { display: none; }
+  #lf-workstation .lf-action-shelf[data-placement="up"] > .lf-shelf-panel {
+    top: auto; bottom: calc(100% + 10px); border-top-color: #cd8f80;
+  }
+  #lf-workstation .lf-shelf-intro { padding: 19px 19px 14px; border-bottom: 1px solid #e5e1dc; }
+  #lf-workstation .lf-shelf-intro > strong { display: block; color: var(--lf-leaf); font: 400 23px/28px var(--lf-display); }
+  #lf-workstation .lf-shelf-intro p { margin: 7px 0 0; color: #526b79; font: 400 12px/19px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-actions { display: grid; padding: 8px; gap: 4px; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button {
+    display: flex; align-items: center; justify-content: flex-start; gap: 12px;
+    width: 100%; min-height: 46px; padding: 11px 12px; border: 1px solid transparent;
+    border-radius: 5px; margin: 0; background: transparent; box-shadow: none;
+    white-space: normal; text-align: left; color: var(--lf-ink);
+    font: 500 12px/20px var(--tw-font-sans);
+  }
+  #lf-workstation .lf-shelf-actions > button > svg { flex: 0 0 18px; width: 18px; height: 18px; color: var(--lf-leaf); }
+  #lf-workstation .lf-shelf-actions > button > span:has(strong) { flex: 1; min-width: 0; }
+  #lf-workstation .lf-shelf-actions > button strong { display: block; font: 500 13px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-actions > button small { display: block; margin-top: 2px; color: #526b79; font: 400 11px/17px var(--tw-font-sans); }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button:hover:not(:disabled) { background: #f1eef3; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button.is-danger { color: #913d33; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button.is-danger:hover:not(:disabled) { background: #fbece6; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button:disabled { background: #f3f3f0; color: #61737d; border-color: transparent; cursor: not-allowed; }
+  #lf-workstation .lf-shelf-panel kbd { display: inline-block; background: transparent; padding: 0; border: 0; color: #526b79; font: 400 10px/18px var(--tw-font-sans); }
+  /* These rows replace icon-only header controls. Keep their useful labels at
+     every size; the older toolbar's span-hiding rules must not leak in. */
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button > span { display: block; }
+  /* The old compact action row was a horizontal scroller, which clipped an
+     upward disclosure despite its valid bounding box. The shorter row fits
+     naturally now, so permit the panel to paint and receive real pointer input. */
+  #lf-workstation .cd2004-record-actions-buttons { overflow: visible; flex-wrap: wrap; }
+  #lf-workstation .cd2004-record-actions:has(.lf-action-shelf[open]) { z-index: 8; }
+  #lf-workstation .wfp-panel > .wfp-summary-bar.lf-service-footer {
+    position: relative; z-index: 4; padding: 10px var(--lf-gutter); gap: 10px;
+    overflow: visible; min-width: 0; background: #f9f8f6;
+  }
+  #lf-workstation .wfp-panel > .lf-service-footer:has(.lf-action-shelf[open]) { z-index: 8; }
+  #lf-workstation .lf-preference-state { flex: 0 0 auto; color: #476658; font: 500 10px/16px var(--tw-font-sans); }
+  #lf-workstation .lf-workspace-shelf > .lf-shelf-trigger { border-color: transparent; background: transparent; min-height: 32px; padding-block: 5px; font-size: 11px; }
+  #lf-workstation .lf-workspace-shelf[open] > .lf-shelf-trigger { background: #eae6ec; }
+  #lf-workstation .lf-workspace-shelf .lf-shelf-panel { width: 354px; }
+  #lf-workstation .lf-record-shelf > .lf-shelf-trigger { min-height: 38px; }
+  #lf-workstation .cd2004-record-actions-buttons { gap: 9px; }
+  #lf-workstation .cd2004-record-actions-state > small { max-width: 620px; }
+  #lf-workstation .lf-context-shelf > .lf-shelf-trigger { background: transparent; }
+
+  /* Brief reminders stay visible. The longer how-to is available by choice;
+     actual clinical warnings, blockers and status flags remain untouched. */
+  #lf-workstation .ipmg-review-cue { display: block; padding: 0; border-left: 2px solid #d48979; background: #fcf7f2; }
+  #lf-workstation .lf-review-disclosure { margin: 0; border: 0; padding: 0; }
+  #lf-workstation .lf-review-disclosure > summary {
+    display: flex; align-items: baseline; gap: 9px; min-height: 32px; padding: 7px 12px;
+    list-style: none; cursor: pointer; color: #4f626d; font: 400 11px/18px var(--tw-font-sans);
+  }
+  #lf-workstation .lf-review-disclosure > summary::-webkit-details-marker { display: none; }
+  #lf-workstation .lf-review-disclosure > summary::marker { content: ""; }
+  #lf-workstation .lf-review-disclosure > summary > svg { flex: 0 0 14px; width: 14px; height: 14px; align-self: center; color: #925047; }
+  #lf-workstation .lf-review-disclosure > summary strong { margin: 0; flex: 0 0 auto; }
+  #lf-workstation .lf-review-brief { flex: 1; }
+  #lf-workstation .lf-review-tail { margin-left: auto; color: #7e443b; white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; }
+  #lf-workstation .lf-review-detail { padding: 0 16px 12px 35px; max-width: 1000px; }
+  #lf-workstation .lf-review-disclosure[open] > summary { padding-bottom: 8px; }
+  #lf-workstation .lf-review-disclosure > summary:hover { background: #f8efea; }
+  #lf-workstation .lf-shelf-trigger:focus-visible,
+  #lf-workstation .lf-review-disclosure > summary:focus-visible { outline: 2px solid #3c7083; outline-offset: 2px; }
+
+  @media (max-width: 949px) {
+    #lf-workstation .lf-service-shortcut { min-height: 68px; padding: 12px 14px; }
+    #lf-workstation .lf-service-shortcut:first-child { padding-left: 14px; }
+    #lf-workstation .lf-shelf-trigger { font-size: 11px; padding-inline: 10px; }
+    #lf-workstation .lf-review-disclosure > summary { gap: 7px; }
+    #lf-workstation .lf-review-disclosure > summary strong { font-size: 10px; }
+    #lf-workstation .lf-review-tail { font-size: 10px; }
+  }
+  @media (max-height: 700px) {
+    #lf-workstation .lf-service-shortcut { min-height: 58px; padding-block: 9px; }
+    #lf-workstation .lf-review-disclosure > summary { padding-block: 4px; min-height: 27px; }
+    #lf-workstation .lf-shelf-intro { padding: 14px 16px 10px; }
+    #lf-workstation .lf-shelf-panel .lf-shelf-actions > button { padding-block: 9px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    #lf-workstation .lf-shelf-trigger,
+    #lf-workstation .lf-service-shortcut { transition: background-color 120ms ease; }
+  }
+  @media (forced-colors: active) {
+    #lf-workstation .lf-shelf-panel,
+    #lf-workstation .lf-shelf-trigger,
+    #lf-workstation .ipmg-review-cue { border: 1px solid CanvasText; }
+  }
+}
+
+/* Finishing rules for the existing Lightfully system, not another theme.
+ * Screen-only: do not apply these geometry changes to clinical print roots.
+ */
+@media screen {
+  :root {
+    --lf-gutter: 40px;
+    --lf-rule: #dce2e3;
+    --lf-dialog-gutter: 24px;
+  }
+  #lf-workstation { text-rendering: optimizeLegibility; }
+  #lf-workstation :is(.lf-masthead-brand,.lf-service-heading,.lf-service-header-actions,
+    .wfp-field,.wfp-field-entry,.lf-shortcut-copy,.cd2004-record-actions-state) { min-width: 0; }
+  #lf-workstation .lf-section-rail { column-gap: 20px; }
+  #lf-workstation .lf-primary-navigation { gap: 4px; }
+  #lf-workstation .ipmg-brand { gap: 18px; }
+  #lf-workstation .lf-worklist-heading h1 { letter-spacing: -.8px; }
+  #lf-workstation .lf-service-heading h1 { letter-spacing: -.45px; }
+  #lf-workstation .lf-worklist-heading p { line-height: 1.65; }
+  #lf-workstation .lf-service-shortcut { align-items: center; }
+  #lf-workstation .lf-shortcut-copy small { margin-top: 4px; }
+  #lf-workstation .lf-shortcut-arrow { line-height: 1; }
+
+  /* Identical label slots keep entered values level, whether or not the field
+     has provenance, a required marker, a date input or an attached lookup. */
+  #lf-workstation .wfp-panel .wfp-field > .wfp-field-label {
+    display: flex; align-items: center; gap: 4px;
+    min-height: 24px; margin: 0 0 6px; padding: 0; line-height: 20px;
+  }
+  #lf-workstation .wfp-panel .wfp-field-caption { line-height: 20px; }
+  #lf-workstation .wfp-panel .lf-field-provenance { line-height: 20px; }
+  #lf-workstation .wfp-panel .lf-field-provenance > summary {
+    width: 24px; height: 24px; min-height: 24px; padding: 2px;
+  }
+  #lf-workstation .wfp-panel .wfp-req { text-decoration: none; line-height: 20px; }
+  #lf-workstation .wfp-panel .wfp-row { column-gap: 20px; row-gap: 18px; align-items: start; }
+  #lf-workstation .wfp-panel .wfp-section-body { row-gap: 18px; }
+  #lf-workstation .wfp-panel .wfp-section { border-bottom-color: var(--lf-rule); }
+  #lf-workstation .wfp-panel .wfp-section-head { line-height: 30px; letter-spacing: -.25px; }
+  #lf-workstation .wfp-panel .wfp-field-entry { gap: 0; align-items: flex-start; }
+  #lf-workstation .wfp-panel .wfp-field-lookup-button {
+    flex: 0 0 36px; width: 36px; margin-left: 0; border-left-width: 0; padding: 8px;
+  }
+  #lf-workstation .wfp-panel .wfp-field .wfp-field-entry select {
+    border-top-right-radius: 0; border-bottom-right-radius: 0;
+  }
+  #lf-workstation .wfp-panel .wfp-field-hint { margin-top: 6px; line-height: 19px; }
+  #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea):focus-visible {
+    box-shadow: none; outline: 2px solid var(--lf-leaf); outline-offset: 2px;
+  }
+  #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea)[aria-invalid=true] {
+    border-color: #ad625b;
+  }
+  #lf-workstation .wfp-panel .wfp-tab {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  #lf-workstation .lf-tab-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding-inline: 4px;
+    font: 500 10px/1 var(--tw-font-sans); font-variant-numeric: tabular-nums;
+  }
+  #lf-workstation :is(.wfp-kv-value,.lf-table-date,.cd2004-patient-field strong,
+    .notes-table-visit,.wfp-kpi-value) { font-variant-numeric: tabular-nums; }
+  #lf-workstation .lf-shelf-trigger { line-height: 20px; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button { align-items: center; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button > svg { stroke-width: 1.6; }
+  #lf-workstation .lf-shelf-intro { padding: 18px 20px 14px; }
+  #lf-workstation .lf-shelf-actions { padding: 8px; }
+  #lf-workstation .lf-shelf-panel .lf-shelf-actions > button { padding-inline: 12px; }
+  #lf-workstation .lf-shelf-intro p { line-height: 20px; }
+  #lf-workstation .cd2004-record-actions-state { line-height: 20px; }
+  #lf-workstation .cd2004-record-actions-state > small { line-height: 17px; }
+  #lf-workstation .cd2004-record-actions-buttons { align-items: center; }
+  #lf-workstation .lf-review-disclosure > summary { align-items: center; }
+  #lf-workstation .lf-review-detail { margin-top: 0; line-height: 19px; }
+
+  /* One inset and one rule weight throughout the record/detail overlays. */
+  body:has(#lf-workstation) :is(.cd2004-dialog-titlebar,.records-drawer-head) {
+    padding: 22px var(--lf-dialog-gutter) 18px;
+  }
+  body:has(#lf-workstation) .cd2004-dialog-body { padding-inline: var(--lf-dialog-gutter); }
+  body:has(#lf-workstation) .cd2004-dialog-actions { padding-inline: var(--lf-dialog-gutter); gap: 10px; }
+  body:has(#lf-workstation) :is(.cd2004-dialog-titlebar,.records-drawer-head) h2 { margin: 0; line-height: 1.2; }
+  body:has(#lf-workstation) .lf-dialog-close { align-self: flex-start; margin: 0; }
+  body:has(#lf-workstation) .records-drawer-filters { padding-inline: var(--lf-dialog-gutter); }
+  body:has(#lf-workstation) .notes-table :is(th,td) { vertical-align: middle; }
+  body:has(#lf-workstation) .notes-table :is(th,td):first-child { padding-left: var(--lf-dialog-gutter); }
+  body:has(#lf-workstation) .notes-table :is(th,td):last-child { padding-right: var(--lf-dialog-gutter); }
+  body:has(#lf-workstation) .notes-table th button { display: inline-flex; align-items: center; gap: 7px; line-height: 18px; }
+  body:has(#lf-workstation) .notes-table-row:focus-visible { outline: 2px solid var(--lf-leaf); outline-offset: -2px; }
+  body:has(#lf-workstation) .cd2004-attestation-review { column-gap: 24px; }
+  body:has(#lf-workstation) .cd2004-attestation-review dd { margin-left: 0; }
+  /* A plain dimmed backdrop avoids a full-window blur/compositing pass. */
+  body:has(#lf-workstation) dialog[open][class]::backdrop { backdrop-filter: none; }
+
+  /* Long names and explanatory text wrap rather than push neighboring columns. */
+  #lf-workstation :is(.tebra-summary-card-head h3,.tebra-summary-card-body,
+    .tebra-patient-note-title,.wfp-option-title,.wfp-option-desc) { overflow-wrap: anywhere; }
+  #lf-workstation .tebra-summary-card-head { align-items: center; }
+  #lf-workstation .tebra-summary-card-head h3 { margin: 0; }
+  #lf-workstation .tebra-summary-facts dt { line-height: 18px; }
+  #lf-workstation .tebra-summary-facts dd { margin-left: 0; line-height: 21px; }
+  #lf-workstation .lf-closeout-panel .wfp-kpi-row { align-items: stretch; }
+  #lf-workstation .lf-closeout-panel .wfp-kpi-label { min-height: 18px; }
+  #lf-workstation .lf-closeout-panel .wfp-table td { vertical-align: top; }
+  #lf-workstation .lf-closeout-panel .wfp-table :is(th,td):first-child { text-align: right; font-variant-numeric: tabular-nums; }
+  #lf-workstation .lf-reference-panel .wfp-section-head .wfp-group-action { font: 400 11px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-reference-panel .wfp-option-row { align-items: start; }
+  #lf-workstation .lf-reference-panel .wfp-option-row input { margin-top: 4px; }
+
+  @media (max-width: 1179px) { :root { --lf-gutter: 28px; } }
+  @media (max-width: 949px) {
+    :root { --lf-gutter: 22px; --lf-dialog-gutter: 20px; }
+    #lf-workstation .lf-section-rail { column-gap: 12px; }
+    #lf-workstation .lf-primary-navigation { gap: 0; }
+    #lf-workstation .wfp-panel .wfp-row { column-gap: 16px; }
+    #lf-workstation .lf-review-disclosure > summary { flex-wrap: wrap; }
+    #lf-workstation .lf-review-brief { min-width: 160px; }
+    #lf-workstation .lf-shelf-intro { padding: 16px 20px 12px; }
+  }
+  @media (max-height: 700px) {
+    #lf-workstation .wfp-panel .wfp-section-head { line-height: 28px; }
+    #lf-workstation .wfp-panel .wfp-section-body { row-gap: 14px; }
+    #lf-workstation .lf-shelf-intro { padding-block: 14px 10px; }
+  }
+  @media (forced-colors: active) {
+    #lf-workstation .wfp-panel .wfp-field :is(input,select,textarea)[aria-invalid=true] { border-color: Mark; }
+    body:has(#lf-workstation) .notes-table-row:focus-visible { outline-color: Highlight; }
+  }
+}
+
+/* The saved-record overlay is a readable register, not a narrow card. Its
+ * first column and all dialog chrome share the same left edge. */
+@media screen {
+  body:has(#lf-workstation) .records-drawer {
+    width: min(840px, calc(100vw - 48px));
+    height: min(680px, calc(100dvh - 48px));
+  }
+  body:has(#lf-workstation) .records-drawer-results { padding-inline: 0; }
+  body:has(#lf-workstation) :is(.records-drawer-search,.records-drawer-status,.records-drawer-foot,.lf-records-reset) { padding-inline: var(--lf-dialog-gutter); }
+  body:has(#lf-workstation) .records-drawer-head p { margin: 10px 0 0; line-height: 20px; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(1) { width: 36%; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(2) { width: 8%; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(3) { width: 14%; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(4) { width: 20%; }
+  body:has(#lf-workstation) .records-drawer .notes-table th:nth-child(5) { width: 22%; }
+  /* The chart's New Note split control stays primary; the global chooser
+     remains available, but no longer competes with the patient's own action. */
+  #lf-workstation[data-chart-view] .lf-document-action { background: #fff8f5; color: #793f36; border-color: #c88275; }
+  #lf-workstation[data-chart-view] .lf-document-action:hover { background: #faeae4; }
+}
+
+/* Clinic-first details: lifecycle boundaries and clinician report surfaces. */
+@media screen {
+  #lf-workstation .lf-recovery-notice {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+    margin: 0 0 20px; padding: 10px 0 12px; border-bottom: 1px solid var(--lf-line);
+    color: var(--lf-muted); font: 400 12px/1.6 var(--tw-font-sans);
+  }
+  #lf-workstation .lf-recovery-notice strong { color: var(--lf-ink); font-weight: 600; }
+  #lf-workstation .lf-recovery-notice.is-error {
+    color: #85463e; border-color: #d7a59c; background: #fff7f4; padding: 12px;
+  }
+  #lf-workstation .lf-recovery-notice.is-error strong { color: inherit; }
+  #lf-workstation .lf-note-boundary {
+    margin: 0; padding: 12px 20px; color: var(--lf-muted);
+    background: #faf8f5; border-block: 1px solid var(--lf-line); font: 400 12px/1.6 var(--tw-font-sans);
+  }
+  #lf-workstation .cd2004-note-mark.is-filed { text-transform: none; letter-spacing: 0; }
+  #lf-workstation .lf-lab-sheet {
+    max-width: 960px; margin: 0 auto; background: #fff; color: var(--lf-ink);
+    font: 400 13px/1.55 var(--tw-font-sans); overflow-wrap: anywhere;
+  }
+  #lf-workstation .lf-lab-header {
+    display: flex; justify-content: space-between; gap: 24px;
+    border-bottom: 1px solid var(--lf-line); padding: 0 0 18px;
+  }
+  #lf-workstation .lf-lab-header > div { display: flex; flex-direction: column; gap: 4px; }
+  #lf-workstation .lf-lab-header > div:last-child { text-align: right; }
+  #lf-workstation .lf-lab-header b { font: 400 24px/1.2 var(--lf-display); }
+  #lf-workstation .lf-lab-header span { color: var(--lf-muted); font-size: 12px; }
+  #lf-workstation .lf-lab-status { padding: 14px 0; display: grid; gap: 3px; }
+  #lf-workstation .lf-lab-status strong { font-size: 12px; color: #805f2c; }
+  #lf-workstation :is(.lf-lab-demographics,.lf-lab-device) {
+    display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px 20px;
+    padding: 16px 0; margin: 0; border-top: 1px solid var(--lf-line);
+  }
+  #lf-workstation :is(.lf-lab-demographics,.lf-lab-device) dt {
+    font-size: 10px; font-weight: 600; color: var(--lf-muted); letter-spacing: .03em;
+  }
+  #lf-workstation :is(.lf-lab-demographics,.lf-lab-device) dd { margin: 3px 0 0; }
+  #lf-workstation .lf-lab-results { width: 100%; border-collapse: collapse; margin: 10px 0 18px; }
+  #lf-workstation .lf-lab-results :is(th,td) { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--lf-line); }
+  #lf-workstation .lf-lab-results th { background: #f5f5f7; font-size: 10px; font-weight: 600; }
+  #lf-workstation .lf-lab-results td:first-child { width: 35%; }
+  #lf-workstation .lf-lab-results td span { display: block; color: var(--lf-muted); font-size: 12px; }
+  #lf-workstation .lf-lab-results .is-abnormal { color: #963c32; background: #fff8f4; font-weight: 600; }
+  #lf-workstation .lf-lab-interpretation { display: grid; gap: 10px; }
+  #lf-workstation .lf-lab-interpretation > div { display: grid; grid-template-columns: 180px 1fr; gap: 16px; }
+  #lf-workstation .lf-lab-interpretation b { font-size: 11px; font-weight: 600; }
+  #lf-workstation .lf-lab-footer { margin-top: 20px; border-top: 1px solid var(--lf-line); color: var(--lf-muted); }
+  #lf-workstation .lf-lab-signatures { display: flex; justify-content: space-between; padding: 25px 0; }
+  #lf-workstation .wfp-wall { border: 0; border-block: 1px solid var(--lf-line); background: #faf8f5; padding: 28px; }
+  #lf-workstation .wfp-wall-title { margin: 0 0 12px; font: 400 25px/1.3 var(--lf-display); text-transform: none; }
+  #lf-workstation .wfp-wall p { max-width: 64ch; font: 400 14px/1.65 var(--tw-font-sans); }
+  body:has(#lf-workstation) :is(.cd2004-dialog-frame,.records-drawer) { border-radius: 10px; }
+  #lf-workstation .tebra-action-menu-list { border-radius: 8px; border-top: 1px solid var(--lf-line); }
+}
+@media screen and (max-width: 900px) {
+  #lf-workstation :is(.lf-lab-demographics,.lf-lab-device) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #lf-workstation .lf-lab-results :is(th,td) { padding: 8px 6px; }
+}

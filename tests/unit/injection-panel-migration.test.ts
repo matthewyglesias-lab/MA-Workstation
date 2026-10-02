@@ -73,8 +73,8 @@ describe("injectionEncounterToDocumentationInput", () => {
     expect(input!.chiefComplaint?.summary).toBeUndefined();
     expect(input!.components?.[0]).toMatchObject({ medication: "Haldol Dec.", dose: "100 mg" });
 
-    // Pre-checked chips and the pre-filled "NKDA" allergy field are defaults,
-    // not documented findings, until a disposition is recorded.
+    // Unconfirmed checks and blank allergy status cannot become documented
+    // findings in an unfinished encounter.
     expect(input!.preAdministration?.verification).toBeUndefined();
     expect(input!.preAdministration?.clinicalReview).toBeUndefined();
     expect(input!.preAdministration?.allergyReviewed).toBe(false);

@@ -18,7 +18,7 @@ const WORKFLOWS = [
 
 // Screen-only token overrides from lightfully-shell.css, as rendered rgb().
 const NAVY = 'rgb(41, 66, 85)';
-const HEADER_PAPER = 'rgb(255, 255, 255)';
+const HEADER_PAPER = 'rgb(246, 244, 247)';
 const LAVENDER_50 = 'rgb(255, 255, 255)';
 const CORAL = 'rgb(243, 117, 101)';
 const WHITE = 'rgb(255, 255, 255)';
@@ -61,7 +61,7 @@ test.describe('Lightfully screen contract', () => {
     expect(home.retiredLauncherCount).toBe(0);
     // Chart rows use the repository's 8px product-control adaptation; the
     // measured rail itself stays square and flush to the workspace edge.
-    expect(home.navRadius).toBe('9px');
+    expect(home.navRadius).toBe('6px');
     expect(home.navFont).toMatch(/^"Inter Variable"/);
     // The measured shell uses a warm-white header and rail, and
     // a lavender workspace. The
@@ -71,7 +71,7 @@ test.describe('Lightfully screen contract', () => {
     expect(home.appHeaderGradient).toBe('none');
     expect(home.sectionRailBackground).toBe('rgba(0, 0, 0, 0)');
     expect(home.sectionRailRadius).toBe('0px');
-    expect(home.workWindowBackground).toBe('rgb(251, 252, 252)');
+    expect(home.workWindowBackground).toBe('rgb(246, 244, 247)');
     expect(home.workWindowRadius).toBe('0px');
     expect(home.workTitlebarColor).toBe(NAVY);
     expect(home.workTitlebarGradient).toBe('none');
@@ -108,7 +108,7 @@ test.describe('Lightfully screen contract', () => {
       if (contract.lookup) {
         expect(contract.lookup.backgroundImage).toBe('none');
         expect(contract.lookup.boxShadow).toBe('none');
-        expect(contract.lookup.borderRadius).toBe('0px 9px 9px 0px');
+        expect(contract.lookup.borderRadius).toBe('0px 5px 5px 0px');
       }
     }
   });
@@ -176,7 +176,7 @@ test.describe('Lightfully screen contract', () => {
       expect(layout.panelOverflow).toBeLessThanOrEqual(1);
 
       const lifecycleAction = page.locator(
-        '.cd2004-record-actions-buttons button:not(:disabled)'
+        '.cd2004-record-actions .lf-record-shelf > summary'
       ).first();
       await lifecycleAction.focus();
       await page.keyboard.press('Tab');

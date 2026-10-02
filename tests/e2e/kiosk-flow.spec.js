@@ -1,3 +1,4 @@
+const { confirmInjectionChecks } = require('./injection-confirmation');
 const { test, expect } = require('@playwright/test');
 const { setProvider } = require('./provider-entry');
 const { fillDate } = require('./date-entry');
@@ -243,6 +244,7 @@ test.describe('Injection focus workspace', () => {
     if (await technique.first().isVisible()) await technique.first().click();
     await panel.locator('.wfp-field:has-text("Allergy status") input')
       .fill('No known allergies confirmed');
+    await confirmInjectionChecks(panel);
     await panel.locator('.wfp-checkbox-row label', {
       hasText: 'No acute concerns today confirmed',
     }).click();

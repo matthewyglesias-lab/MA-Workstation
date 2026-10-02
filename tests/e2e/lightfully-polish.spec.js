@@ -10,9 +10,9 @@ test('injection context and requirements stay legible without terminal-style sta
   await panel.locator('[name="inj-medication"]').selectOption('maintena');
   await expect(page.locator('.cd2004-patient-banner')).toContainText('Record status');
   await expect(page.locator('.cd2004-patient-banner')).not.toContainText(/inj_\d/);
-  const allergy=page.locator('[data-allergy-tone="documented-negative"]');
-  await expect(allergy).toContainText('NKDA');
-  expect(await allergy.evaluate(n=>getComputedStyle(n).backgroundColor)).toBe('rgb(246, 248, 249)');
+  const allergy=page.locator('[data-allergy-tone="review"]');
+  await expect(allergy).not.toContainText('NKDA');
+  await expect(allergy).toBeVisible();
   await expect(page.locator('[data-operator-guidance]')).toContainText('Clinical guidance');
   await expect(panel.locator('[data-field-path="reason"]')).toBeVisible();
   const required=panel.locator('.wfp-status-flag.is-stop');

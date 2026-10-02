@@ -1,37 +1,45 @@
-/** Fail closed outside the explicitly approved presentation and AVS-copy scope. */
+/** Clinic-first scope: protect clinical engines, note grammar and existing record formats. */
 import { execFileSync } from 'node:child_process';
-const baseline = '59551bc914b945f268710fca3ef44c2e9ca62c50';
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+const baseline = '4bc9b5bb2390568bf75a5dd06fda50fbd8ae5790';
 const protectedPaths = [
   'src/domain', 'src/application', 'src/persistence', 'src/documentation',
   'src/legacy', 'public/legacy', 'tests/fixtures', 'src/main.tsx',
   'package.json', 'package-lock.json', 'scripts/package-standalone.mjs',
 ];
-// User-approved 2026-10-01 AVS hours/visit-copy exception. Exact blob pins,
-// not a general exemption for these paths. The original guidance is retained.
-const approvedAvsBlobs = new Map([
-  ['src/domain/injection-avs-content.ts', 'fad35abd60a7f5b45b2200399ea033a3d9153a25'],
-  ['src/domain/injection-avs-guidance.ts', 'c1c0664d922cdf414590cc4e1e3fda061a7126aa'],
-  ['tests/fixtures/print-baseline-v1.json', 'cae9bf84936e0dd0e5fdd4532174a14be158c5b8'],
+// Explicitly authorized by the 2026-10-01 clinic-first request (see AUDIT.md).
+// These changes are separately covered by failure/reload/browser tests. Existing
+// Injection/UDS schemas, keys, clinical rules and note content remain protected.
+const reviewedScope = new Set([
+  'src/main.tsx',
+  'src/persistence/storage.ts',
+  'src/persistence/workflow-recovery.ts',
+]);
+// Only the documented unconfirmed-default corrections are permitted in these
+// clinical/compatibility files. A different byte requires an explicit re-review.
+const reviewedDefaults = new Map([
+  ['src/domain/injection.ts', 'ad92ae767542c7411f77cce42273a63b3eb090ab518eb7da5d620dac7fbe3741'],
+  ['src/legacy/legacy-markup.html', '97ea5fa36ff7e4b0a6ae9f56085f49b6994c9b99df868ce17fae470de430fbd2'],
+  ['public/legacy/legacy-runtime.js', 'c570e6e85ceb1f9218fabe232c62a0c699b7c293d47f7def0194ee96e7586381'],
 ]);
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 try {
   git('cat-file', '-e', `${baseline}^{commit}`);
-  const changed = git('diff', '--no-renames', '--name-only', baseline, 'HEAD', '--', ...protectedPaths)
-    .split('\n').filter(Boolean);
-  const unexpected = changed.filter(path => !approvedAvsBlobs.has(path));
+  // Include the working tree, not just HEAD, so local pre-commit checks are real.
+  const changed = [
+    ...git('diff', '--no-renames', '--name-only', baseline, '--', ...protectedPaths).split('\n'),
+    ...git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths).split('\n'),
+  ].filter(Boolean);
+  const unexpected = changed.filter(path => !reviewedScope.has(path) && !reviewedDefaults.has(path));
   if (unexpected.length) throw new Error(`Protected files changed:\n${unexpected.join('\n')}`);
-  for (const [path, sha] of approvedAvsBlobs) {
-    if (git('rev-parse', `HEAD:${path}`) !== sha) {
-      throw new Error(`Approved AVS content drifted: ${path}`);
-    }
+  for (const [path, expected] of reviewedDefaults) {
+    const actual = createHash('sha256').update(readFileSync(path)).digest('hex');
+    if (actual !== expected) throw new Error(`Unreviewed clinical/default change: ${path}`);
   }
-  if (git('rev-parse', `${baseline}:src/domain/injection-avs-content.ts`) !==
-      git('rev-parse', 'HEAD:src/domain/injection-avs-guidance.ts')) {
-    throw new Error('Preserved medication guidance differs from the pinned baseline.');
-  }
-  console.log(`Protected paths match ${baseline}, except the exact approved AVS hours/visit-copy patch.`);
+  console.log(`Clinical rules, note grammar and existing record schemas match ${baseline}; reviewed documentation defaults and recovery changes are explicit.`);
 } catch (error) {
-  console.error('Local refinement boundary failed. Use full git history; do not skip this check.');
+  console.error('Clinical preservation check failed. Use full git history and review the actual difference.');
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 }

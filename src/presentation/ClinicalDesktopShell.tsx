@@ -17,9 +17,8 @@ import "./tebra-screen-contract.css";
 import "./lightfully/lightfully-shell.css";
 import "./lightfully/lightfully-components.css";
 import "./lightfully/contemporary.css";
-import "./lightfully/final-polish.css";
-import "./lightfully/calm-workspace.css";
-import "./lightfully/precision-polish.css";
+import "./lightfully/workspace.css";
+import "./documents/injection-avs.css";
 import { ActionShelf } from "./lightfully/ActionShelf";
 import { DialogHeading } from "./lightfully/DialogHeading";
 import { worklistDate } from "./lightfully/worklist-display";
@@ -94,6 +93,7 @@ import {
   type InjectionRecordActions as InjectionRecordActionsConfig,
   type InjectionKioskStepId,
   type PatientContext,
+  type WorkspaceSessionDraft,
   type WorkflowId,
 } from "./types";
 
@@ -293,6 +293,7 @@ export function ClinicalDesktopShell({
   locationLabel = PATIENT.noLocation,
   localStorageAvailable = true,
   workflowSummaries = {},
+  sessionDrafts = [],
   needsReview = [],
   todayQueue = [],
   injectionRecords = [],
@@ -1350,6 +1351,7 @@ export function ClinicalDesktopShell({
     needsReview,
     todayQueue,
     injectionRecords: dashboardInjectionRecords,
+    sessionDrafts,
     onQueueItemOpen,
     onRecordOpen,
     onStartNewInjection,
@@ -1658,7 +1660,7 @@ export function ClinicalDesktopShell({
         } satisfies FunctionKeyActions}
       />
 
-      {serviceChooserOpen && <ServiceChooser summaries={workflowSummaries} onDismiss={() => setServiceChooserOpen(false)} onOpen={workflow => { if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow); }}/>} 
+      {serviceChooserOpen && <ServiceChooser sessions={sessionDrafts} summaries={workflowSummaries} onDismiss={() => setServiceChooserOpen(false)} onOpen={workflow => { if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow); }}/>}
       <Toast message={announcement} />
 
       <p
@@ -1727,6 +1729,7 @@ export function ClinicalDesktopShell({
 }
 
 interface RenderWorkflowOptions {
+  sessionDrafts?: WorkspaceSessionDraft[];
   onDocumentService?: () => void;
   workflow: WorkflowId;
   patient: PatientContext;
@@ -1900,6 +1903,7 @@ function InjectionRecordActions({
 }
 
 function renderWorkflowContent({
+  sessionDrafts,
   onDocumentService,
   workflow,
   patient,
@@ -1923,6 +1927,7 @@ function renderWorkflowContent({
   if (workflow === "home") {
     return (
       <StartCenter
+        sessionDrafts={sessionDrafts}
         onDocumentService={onDocumentService}
         needsReview={needsReview}
         todayQueue={todayQueue}

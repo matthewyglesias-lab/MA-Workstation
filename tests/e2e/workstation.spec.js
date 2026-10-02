@@ -1,3 +1,4 @@
+const { confirmInjectionChecks } = require('./injection-confirmation');
 const { openRecordActions } = require('./workspace-navigation');
 const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
@@ -196,6 +197,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel
       .locator('.wfp-field:has-text("Allergy status") input')
       .fill('NKDA confirmed in this local record');
+    await confirmInjectionChecks(panel);
     await panel
       .locator('.wfp-checkbox-row label', { hasText: 'No acute concerns today confirmed' })
       .click();
@@ -702,7 +704,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(administeredDisposition).toHaveClass(/is-selected/);
     await expect(administeredDisposition).toHaveCSS(
       'background-color',
-      'rgb(238, 244, 246)'
+      'rgb(234, 240, 237)'
     );
     await expect(administeredDisposition).toHaveCSS(
       'border-left-color',
@@ -812,8 +814,8 @@ test.describe('MA Workstation browser journeys', () => {
 
     await page.goto('/');
     await expect(page.locator('.cd2004-shell')).toBeVisible();
-    await expect(page.locator('.cd2004-app-title b')).toHaveText('IPMG');
-    await expect(page.locator('.cd2004-app-title > span')).toHaveText('MA Workstation');
+    await expect(page.locator('.ipmg-brand-logo')).toHaveAttribute('alt', 'Inland Psychiatric Medical Group');
+    await expect(page.locator('.ipmg-product-name')).toHaveText('MA Workstation');
     await expect(page.locator('.cd2004-app-environment')).toContainText('Local only');
     await expect(page.locator('.cd2004-app-environment')).not.toContainText('LIVE');
     await openWorkflow(page, 'administer');
@@ -1077,7 +1079,7 @@ test.describe('MA Workstation browser journeys', () => {
     });
     await expect(currentLookupRow).toHaveAttribute('aria-selected', 'true');
     await page.mouse.move(0, 0);
-    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(234, 242, 245)');
+    await expect(currentLookupRow).toHaveCSS('background-color', 'rgb(231, 239, 235)');
     await lookup.getByRole('searchbox', { name: 'Search options' }).press('Enter');
     await expect(reason).toHaveValue('prn');
     await expect(page.locator('[data-toast]')).toContainText(
@@ -1159,7 +1161,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.cd2004-menu-title')).toHaveCount(0);
 
     const trigger = page.locator('.tebra-account-trigger');
-    await expect(trigger).toContainText('Not signed in');
+    await expect(trigger).toContainText('Staff name');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
     await trigger.click();
@@ -1211,7 +1213,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(navigator.getByText('Saved records', { exact: true })).toBeVisible();
     await expect(navigator.locator('.lf-tools-navigation > summary')).toBeVisible();
     await expect(navigator.locator('.cd2004-nav-item > i')).toHaveCount(0);
-    await expect(navigator.locator('.lf-primary-navigation button svg')).toHaveCount(2);
+    await expect(navigator.locator('.lf-primary-navigation button svg')).toHaveCount(5);
     await expect(work).toBeVisible();
     await expect(inspector).toHaveCount(0);
     await expect(page.locator('.cd2004-caption-button')).toHaveCount(0);
@@ -1706,7 +1708,7 @@ test.describe('MA Workstation browser journeys', () => {
     // :modal proves - the shell chrome genuinely cannot be reached or focused.
     expect(await dialog.evaluate(node => node.matches(':modal'))).toBe(true);
     expect(await page.evaluate(() => {
-      const target = document.querySelector('.cd2004-shell > header button');
+      const target = document.querySelector('.tebra-account-trigger');
       target?.focus();
       return document.activeElement === target;
     })).toBe(false);
@@ -1720,7 +1722,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.tebra-account-trigger')).toBeFocused();
     // ...and the shell chrome is reachable again once the dialog closes.
     expect(await page.evaluate(() => {
-      const target = document.querySelector('.cd2004-shell > header button');
+      const target = document.querySelector('.tebra-account-trigger');
       target?.focus();
       return document.activeElement === target;
     })).toBe(true);
@@ -2554,6 +2556,7 @@ test.describe('MA Workstation browser journeys', () => {
     const lockedStartNew = page.locator(
       '[data-injection-record-actions] [data-injection-new]'
     );
+    await openRecordActions(page);
     await expect(lockedStartNew).toBeVisible();
     await expect(lockedStartNew).toHaveAccessibleName('Start new injection');
     await expect(page.locator('#ptName')).toBeDisabled();
@@ -2581,6 +2584,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('.record-addenda-item').first()).toContainText('Saved clarification by the current reviewer.');
 
     await addendumTextField.fill('Pending clarification that must not be abandoned.');
+    await openRecordActions(page);
     await lockedStartNew.click();
     await expect(addendumTextField).toHaveValue('Pending clarification that must not be abandoned.');
     await expect(page.locator('#ptName')).toHaveValue('QA, Formatted Note');
@@ -2678,6 +2682,7 @@ test.describe('MA Workstation browser journeys', () => {
     await panel
       .locator('.wfp-field:has-text("Allergy status") input')
       .fill('NKDA confirmed in this local record');
+    await confirmInjectionChecks(panel);
     await panel
       .locator('.wfp-checkbox-row label', { hasText: 'No acute concerns today confirmed' })
       .click();
@@ -2967,6 +2972,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#ptName')).toHaveValue(patient);
     await expect(page.locator('.cd2004-shell')).toHaveAttribute('data-post-state', 'posted');
     await expect(page.locator('#panel-administer')).toHaveClass(/record-readonly/);
+    await openRecordActions(page);
     await expect(
       page.locator('[data-injection-record-actions] [data-injection-new]')
     ).toBeVisible();
@@ -3492,20 +3498,20 @@ test.describe('MA Workstation browser journeys', () => {
     }
   });
 
-  test('renders the UDS clinician view as a dense preliminary laboratory report', async ({ page }) => {
+  test('renders the UDS clinician view as a readable preliminary laboratory report', async ({ page }) => {
     await page.goto('/');
     await openWorkflow(page, 'uds');
     await page.getByRole('tab', { name: 'Review' }).click();
 
     const reportPreview = page.locator('.wfp-report-preview');
-    const report = page.locator('.meditech-lab-sheet');
+    const report = page.locator('.lf-lab-sheet');
     await expect(reportPreview.getByText('WAITING FOR RESULTS')).toBeVisible();
     await expect(report).toBeHidden();
     await reportPreview.locator('summary').click();
     await expect(report).toBeVisible();
-    await expect(report).toContainText('POINT OF CARE LABORATORY');
+    await expect(report).toContainText('Point-of-care testing');
     await expect(report).toContainText('PRELIMINARY / PRESUMPTIVE');
-    await expect(report.locator('.meditech-lab-results tbody tr')).toHaveCount(14);
+    await expect(report.locator('.lf-lab-results tbody tr')).toHaveCount(14);
     await expect(report.locator('th')).toHaveText([
       'TEST / ANALYTE',
       'RESULT',
@@ -3605,6 +3611,7 @@ test.describe('MA Workstation browser journeys', () => {
     await fillUdsSpecimen(page, panel, 'SAFE life 14-Panel Cup');
     await panel.locator('.cd2004-record-actions button.is-save').click();
 
+    await openRecordActions(page);
     await panel.locator('.cd2004-record-actions button.is-danger').click();
     const dialog = page.getByRole('dialog', { name: 'Discard draft' });
     await expect(dialog).toBeVisible();
@@ -3615,6 +3622,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(dialog).toBeHidden();
     await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue('Rivera, Ana');
 
+    await openRecordActions(page);
     await panel.locator('.cd2004-record-actions button.is-danger').click();
     await dialog.getByRole('button', { name: 'Discard draft' }).click();
     await expect(dialog).toBeHidden();

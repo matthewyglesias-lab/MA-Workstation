@@ -1,0 +1,809 @@
+/* ===================== INJECTION AVS (mature clinical refinement) =====================
+ * This is deliberately an evolution of the existing AVS, not a second visual
+ * language imported from another product. It keeps the dose timeline and the
+ * reviewed patient copy, while replacing the editorial/marginalia experiment
+ * with a restrained outpatient-document system: a locally bundled display
+ * face over a clinical body sans, a visible patient banner, a single due-date
+ * emphasis, quiet rules, and compact guidance.
+ */
+@media print {
+  /* legacy.css globally sets overflow-x:hidden. Per the overflow shorthand
+     rules that computes the other axis to auto, turning the printable document
+     into a scroll viewport. Edge then paints that scrollbar into the PDF and
+     clips content below the fixed AVS page. Dedicated AVS printing must be a
+     normal paged flow from the root through the staged sheet. */
+  html:has(body.print-avs),
+  body.print-avs,
+  body.print-avs #print-root,
+  body.print-avs #avsSheet {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body.print-avs #avsSheet {
+    max-width: 7.5in !important;
+  }
+
+  body.print-avs #avsSheet .avs2 {
+    --avs-ink: #294255;
+    --avs-muted: #68767c;
+    --avs-rule: #d5dad9;
+    --avs-rule-light: #e9ebea;
+    --avs-accent: #3c6173;
+    --avs-accent-soft: #f7f3f0;
+    --avs-surface: #fcfbf8;
+    --avs-surface-strong: #f7f6f2;
+    --avs-warm: #8a6645;
+    --avs-warm-rule: #e5d7c7;
+    --avs-warm-soft: #fcf9f4;
+    --avs-alert: #8a4d4d;
+    --avs-alert-rule: #e2cdca;
+    --avs-alert-soft: #fcf8f7;
+
+    color: var(--avs-ink) !important;
+    font-family: Aptos, "Segoe UI", Arial, sans-serif !important;
+    font-size: 14.25px !important;
+    line-height: 1.48 !important;
+  }
+
+  body.print-avs #avsSheet .avs2 * {
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
+
+  body.print-avs #avsSheet .avs2-page {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    width: 100%;
+    min-height: 10.27in;
+    height: auto;
+    padding-bottom: 0;
+  }
+
+  /* The footer stays in normal layout flow. It therefore has dedicated space
+     on every deterministic page instead of being painted over patient copy. */
+  body.print-avs #avsSheet .avs2-page-body {
+    position: relative;
+    z-index: 1;
+    min-height: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-draft .avs2-page::after {
+    content: "STAFF DRAFT";
+    position: absolute;
+    z-index: 0;
+    top: 50%;
+    left: 50%;
+    color: rgba(62, 68, 72, 0.075);
+    font-size: 70px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    white-space: nowrap;
+  }
+
+  body.print-avs #avsSheet .avs2-page-continuation {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  body.print-avs #avsSheet .avs2-run {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1.5px solid var(--avs-accent);
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.055em;
+    line-height: 1.35;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-run > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  body.print-avs #avsSheet .avs2-brand {
+    text-align: left;
+  }
+
+  body.print-avs #avsSheet .avs2-clinic-contact {
+    text-align: right;
+  }
+
+  body.print-avs #avsSheet .avs2-run-name {
+    color: var(--avs-ink);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.085em;
+  }
+
+  body.print-avs #avsSheet .avs2-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 13px;
+  }
+
+  body.print-avs #avsSheet .avs2-title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: var(--avs-ink);
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.06;
+    text-align: left;
+  }
+
+  body.print-avs #avsSheet .avs2-title-detail {
+    display: block;
+    margin-top: 4px;
+    color: var(--avs-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    line-height: 1.25;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-subtitle {
+    margin: 7px 0 0;
+    color: var(--avs-alert);
+    font-family: inherit;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    text-align: left;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-status {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    padding: 3px 0 2px;
+    border: 0;
+    border-radius: 3px;
+    color: var(--avs-muted);
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    line-height: 1.2;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-status-draft,
+  body.print-avs #avsSheet .avs2-status-handoff {
+    padding: 4px 7px 3px;
+    border: 1px solid var(--avs-rule);
+    font-size: 8px;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-id {
+    margin: 14px 0 0;
+    padding: 11px 13px 12px;
+    border: 1px solid var(--avs-rule);
+    border-left: 2px solid var(--avs-accent);
+    border-radius: 3px;
+    background: var(--avs-surface);
+    color: var(--avs-ink);
+    font-size: 10px;
+    line-height: 1.3;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-id dl {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px 14px;
+    margin: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-id-pair {
+    min-width: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-id-patient,
+  body.print-avs #avsSheet .avs2-id-provider {
+    grid-column: span 2;
+  }
+
+  body.print-avs #avsSheet .avs2-id-pair:not(:last-child)::after {
+    content: none;
+  }
+
+  body.print-avs #avsSheet .avs2-id-k {
+    display: block;
+    margin: 0 0 2px;
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 7.8px;
+    font-weight: 700;
+    letter-spacing: 0.085em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-id-v {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--avs-ink);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs2-id-patient .avs2-id-v {
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
+    font-size: 12.75px;
+    font-weight: 700;
+  }
+
+  body.print-avs #avsSheet .avs2-overview {
+    margin-top: 16px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-overview-title,
+  body.print-avs #avsSheet .avs2-lab {
+    margin: 0 0 7px;
+    padding: 0;
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.005em;
+    line-height: 1.3;
+    text-align: left;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-spine {
+    margin-top: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body.print-avs #avsSheet .avs2-step {
+    display: grid;
+    grid-template-columns: 92px 18px minmax(0, 1fr);
+    column-gap: 12px;
+    margin: 0;
+    padding: 8px 0 10px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-step-given {
+    border-top: 1px solid var(--avs-rule-light);
+  }
+
+  body.print-avs #avsSheet .avs2-step-due {
+    margin: 0;
+    padding: 8px 0 10px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.print-avs #avsSheet .avs2-step-due .avs2-step-body {
+    margin-top: -3px;
+    padding: 11px 13px 12px 15px;
+    border: 1px solid var(--avs-rule);
+    border-left: 2px solid var(--avs-accent);
+    border-radius: 3px;
+    background: var(--avs-accent-soft);
+  }
+
+  body.print-avs #avsSheet .avs2-when {
+    padding-top: 1px;
+    color: var(--avs-ink);
+    text-align: right;
+  }
+
+  body.print-avs #avsSheet .avs2-when b {
+    display: block;
+    color: inherit;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  body.print-avs #avsSheet .avs2-when span {
+    display: block;
+    margin-top: 3px;
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 7.6px;
+    font-weight: 700;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-rail {
+    position: relative;
+  }
+
+  body.print-avs #avsSheet .avs2-step .avs2-rail::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -8px;
+    bottom: -12px;
+    width: 1px;
+    background: #cbd2d2;
+    transform: translateX(-50%);
+  }
+
+  body.print-avs #avsSheet .avs2-step:first-child .avs2-rail::before {
+    top: 8px;
+  }
+
+  body.print-avs #avsSheet .avs2-step:last-child .avs2-rail::before {
+    bottom: auto;
+    height: 16px;
+  }
+
+  body.print-avs #avsSheet .avs2-node {
+    position: absolute;
+    left: 50%;
+    top: 4px;
+    width: 8px;
+    height: 8px;
+    border: 1px solid var(--avs-muted);
+    border-radius: 50%;
+    background: #fff;
+    transform: translateX(-50%);
+  }
+
+  body.print-avs #avsSheet .avs2-step-given .avs2-node {
+    background: var(--avs-muted);
+  }
+
+  body.print-avs #avsSheet .avs2-step-due .avs2-node {
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    border-color: var(--avs-accent);
+    background: var(--avs-accent);
+  }
+
+  body.print-avs #avsSheet .avs2-b,
+  body.print-avs #avsSheet .avs2-step-body {
+    max-width: none;
+  }
+
+  body.print-avs #avsSheet .avs2-step-given .avs2-step-body {
+    position: relative;
+    padding-right: 36px;
+  }
+
+  body.print-avs #avsSheet .avs2-site-marker {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    width: 26px;
+    height: 34px;
+    color: var(--avs-muted);
+  }
+
+  body.print-avs #avsSheet .avs2-site-dot {
+    fill: var(--avs-accent);
+    stroke: #fff;
+    stroke-width: 0.8;
+  }
+
+  body.print-avs #avsSheet .avs2-b,
+  body.print-avs #avsSheet .avs2-p,
+  body.print-avs #avsSheet .avs2-ul li,
+  body.print-avs #avsSheet .avs2-step-body .avs2-p {
+    font-size: 14.25px !important;
+    line-height: 1.48 !important;
+  }
+
+  body.print-avs #avsSheet .avs2-step-title {
+    color: var(--avs-ink);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs2-step-given .avs2-step-title {
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
+    color: var(--avs-ink);
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  body.print-avs #avsSheet .avs2-step-due .avs2-step-title {
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
+    color: var(--avs-accent);
+    font-size: 18.5px;
+    font-weight: 700;
+  }
+
+  body.print-avs #avsSheet .avs2-step-due .avs2-when b {
+    color: var(--avs-accent);
+    font-size: 15px;
+  }
+
+  body.print-avs #avsSheet .avs2-step-date {
+    margin-top: 3px;
+    color: var(--avs-ink);
+    font-family: "Plus Jakarta Sans Variable", Aptos, "Segoe UI", Arial,
+      sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs2-step-instr {
+    margin-top: 3px;
+    color: var(--avs-accent);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-step-body .avs2-p {
+    margin: 4px 0 0 !important;
+  }
+
+  body.print-avs #avsSheet .avs2-p {
+    margin: 0 0 5px !important;
+  }
+
+  body.print-avs #avsSheet .avs2-p:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  body.print-avs #avsSheet .avs2-ul {
+    margin: 0;
+    padding: 0 0 0 16px;
+    list-style: disc;
+  }
+
+  body.print-avs #avsSheet .avs2-ul li {
+    margin: 0 0 4px !important;
+    padding: 0 0 0 2px;
+  }
+
+  body.print-avs #avsSheet .avs2-ul li::before {
+    content: none;
+  }
+
+  body.print-avs #avsSheet .avs2-sec {
+    display: block;
+    margin: 0;
+    padding: 9px 0 0;
+    border-top: 1px solid var(--avs-rule-light);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-sec-contact {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+    padding: 10px 12px 11px;
+    border: 1px solid var(--avs-rule);
+    border-radius: 3px;
+    background: var(--avs-surface);
+  }
+
+  body.print-avs #avsSheet .avs2-sec-contact .avs2-lab {
+    margin: 2px 0 0;
+  }
+
+  body.print-avs #avsSheet .avs2-pairs {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1.45fr);
+    gap: 12px;
+    margin: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-pairs > div {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    padding-left: 10px;
+    border-left: 1px solid var(--avs-rule-light);
+  }
+
+  body.print-avs #avsSheet .avs2-pairs dt {
+    min-width: 0;
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    line-height: 1.25;
+  }
+
+  body.print-avs #avsSheet .avs2-pairs dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    margin: 2px 0 0;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.28;
+  }
+
+  body.print-avs #avsSheet .avs2-pairs > div:first-child dd {
+    color: var(--avs-accent);
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+
+  body.print-avs #avsSheet .avs2-guidance {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  body.print-avs #avsSheet .avs2-guidance-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: start;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-guidance-row-single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.print-avs #avsSheet .avs2-continuation {
+    display: none;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-continuation {
+    display: block;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--avs-rule);
+    color: var(--avs-ink);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.015em;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-continuation h2 {
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+  }
+
+  body.print-avs #avsSheet .avs2-continuation-title {
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--avs-accent);
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-continuation > span:last-child {
+    color: var(--avs-muted);
+    font-size: 8px;
+    letter-spacing: 0.045em;
+  }
+
+  body.print-avs #avsSheet .avs2-continuation-id {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+    gap: 10px 18px;
+    margin: 8px 0 0;
+  }
+
+  body.print-avs #avsSheet .avs2-continuation-id > div {
+    min-width: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-continuation-id dt {
+    color: var(--avs-muted);
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  body.print-avs #avsSheet .avs2-continuation-id dd {
+    margin: 1px 0 0;
+    font-size: 9px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-guidance {
+    margin-top: 14px;
+  }
+
+  body.print-avs #avsSheet .avs2-sec-call,
+  body.print-avs #avsSheet .avs2-sec-general {
+    grid-column: 1 / -1;
+  }
+
+  body.print-avs #avsSheet .avs2-alert {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.38fr) minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--avs-warm-rule);
+    border-left: 2px solid var(--avs-warm);
+    border-radius: 3px;
+    background: var(--avs-warm-soft);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.print-avs #avsSheet .avs2-alert-bar {
+    margin: 0;
+    color: var(--avs-warm);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.005em;
+    line-height: 1.35;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-alert-body {
+    max-width: none;
+    margin: 0;
+  }
+
+  body.print-avs #avsSheet .avs2-alert-emergency {
+    border-color: var(--avs-alert-rule);
+    border-left-color: var(--avs-alert);
+    background: var(--avs-alert-soft);
+  }
+
+  body.print-avs #avsSheet .avs2-alert-emergency .avs2-alert-bar {
+    color: var(--avs-alert);
+  }
+
+  body.print-avs #avsSheet .avs2-sec-contact-compact {
+    margin-top: 6px;
+    padding-top: 9px;
+  }
+
+  body.print-avs #avsSheet .avs2-page-continuation .avs2-guidance {
+    gap: 8px 24px;
+    margin-top: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-page-continuation .avs2-sec {
+    padding-top: 6px;
+  }
+
+  body.print-avs #avsSheet .avs2-page-continuation .avs2-sec-call {
+    grid-column: auto;
+  }
+
+  body.print-avs #avsSheet .avs2-page-continuation .avs2-alert {
+    margin-top: 7px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-heading {
+    margin-top: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-id {
+    margin-top: 10px;
+    padding-top: 9px;
+    padding-bottom: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-overview {
+    margin-top: 12px;
+  }
+
+  body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-sec-contact {
+    margin-top: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-guidance {
+    gap: 8px 24px;
+    margin-top: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-sec {
+    padding-top: 6px;
+  }
+
+  body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-sec-call {
+    grid-column: auto;
+  }
+
+  body.print-avs #avsSheet .avs2-layout-routine-one-page .avs2-alert {
+    margin-top: 4px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  body.print-avs #avsSheet .avs2-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    align-items: end;
+    gap: 16px;
+    grid-row: 2;
+    margin-top: 13px;
+    padding-top: 7px;
+    border-top: 1px solid var(--avs-rule);
+    color: var(--avs-muted);
+    font-family: inherit;
+    font-size: 7.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+    text-transform: none;
+  }
+
+  body.print-avs #avsSheet .avs2-foot > span:last-child {
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-heading {
+    margin-top: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-id {
+    margin-top: 10px;
+    padding-top: 9px;
+    padding-bottom: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-overview {
+    margin-top: 12px;
+  }
+
+  body.print-avs #avsSheet .avs2-page-primary .avs2-alert {
+    margin-top: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  body.print-avs #avsSheet .avs2-complex .avs2-page-primary .avs2-sec-contact {
+    margin-top: 7px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}

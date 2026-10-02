@@ -1,3 +1,9 @@
+> Current scope: the user's clinic-first request now explicitly includes state,
+> recovery, architecture and AVS refinement. See `docs/clinic-first/AUDIT.md`.
+> Earlier presentation-only restrictions below document prior increments; the
+> current preservation check still locks clinical engines, note grammar,
+> existing record schemas and the compatibility runtime to PR head 4bc9b5bb.
+
 # IPMG local workstation · controlled refinement
 
 Working PR: #68. Baseline: `59551bc914b945f268710fca3ef44c2e9ca62c50`

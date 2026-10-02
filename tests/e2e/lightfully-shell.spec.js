@@ -101,7 +101,7 @@ test.describe('Lightfully standalone shell', () => {
     await expect(page.locator('.lf-workstation')).toHaveAttribute('data-kiosk-mode', 'true');
     await expect(page.locator('.kiosk-stepper [data-kiosk-step]')).toHaveCount(7);
     await expect(page.locator('.wfp-panel')).toHaveCount(1);
-    await page.getByRole('button', { name: 'Exit injection focus', exact: true }).click();
+    await page.getByRole('button', { name: 'Return to full workspace', exact: true }).click();
     await expect(page.locator('.lf-workstation')).not.toHaveAttribute('data-kiosk-mode', 'true');
   });
   test('keeps command navigation inert below the supported workstation size', async ({ page }) => {

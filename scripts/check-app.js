@@ -106,9 +106,9 @@ assert.match(
   'Legacy dose picker must show all labeled strengths before autofilling the interval',
 );
 
-assert.match(html, /<input id="allergies" value="NKDA"/i, 'Allergy status must default to NKDA - staff review/edit it rather than fill a blank required field');
-assert.match(html, /resp:"well", attest:\{\}/, 'Routine injection response must start as tolerated well for quick review');
-assert.match(html, /ATTEST\.forEach\(a=>S\.attest\[a\.id\]=!a\.off&&a\.id!=="prior"\)/, 'Routine attestations must start selected while prior-dose tolerance requires current-review confirmation');
+assert.match(html, /<input id="allergies" value=""/i, 'Allergy status must remain blank until explicitly documented');
+assert.match(html, /resp:"", attest:\{\}/, 'A new injection must not imply an observed response');
+assert.match(html, /ATTEST\.forEach\(a=>S\.attest\[a\.id\]=false\)/, 'All injection attestations must begin unconfirmed');
 assert.match(html, /const UDS=\{reason:"",temp:"not documented",control:"not documented"/, 'UDS must start without an implied encounter type or normal quality-control findings');
 assert.match(html, /const S=\{ med:null, dose:"", site:"", route:"", intervalKey:"", reason:""/, 'Injection must require an explicit encounter type');
 assert.match(html, /if\(!UDS\.reason\)issues\.push\('encounter type'\)/, 'UDS finalized outputs must require an explicit encounter type');
@@ -120,10 +120,10 @@ assert.match(html, /issues\.push\(\.\.\.udsReadingVerificationIssues\(\)\);/, 'U
 assert.match(html, /monthExpired\(val\('udsExp'\),val\('udsDateTime'\)\)/, 'Expired UDS cups must block finalized output against the documented collection date');
 assert.match(html, /<select id="udsValidity"><option value="not documented">Not documented<\/option>/, 'UDS validity must start neutral until staff explicitly reviews quality control');
 assert.match(html, /<select id="udsConsistent"><option value="">Select review status<\/option>/, 'UDS medication alignment must require an explicit staff review');
-assert.match(html, /<select id="sampleMedCheck"><option>Prescriber reviewed \/ ok to dispense<\/option>/, 'Sample medication review must start selected for quick review');
-assert.match(html, /<select id="sampleEdu"><option>Reviewed with patient<\/option>/, 'Sample education must start selected for quick review');
+assert.match(html, /<select id="sampleMedCheck"><option value="not documented">Not documented<\/option>/, 'Sample medication review must start unconfirmed');
+assert.match(html, /<select id="sampleEdu"><option value="not documented">Not documented<\/option>/, 'Sample education must start unconfirmed');
 assert.match(html, /<script id="rc537FastReviewScript">/, 'Expected visible fast review-by-exception controls');
-assert.match(html, /Quick review — routine injection checks are preselected\./, 'Injection workflow must explain review-by-exception');
+assert.match(html, /Document the checks completed today\./, 'Injection workflow must request explicit documentation');
 assert.match(html, /Verified NKDA\?<\/span><button type="button">Enter NKDA<\/button>/, 'A quick action to (re-)enter NKDA must remain available for records where the default was cleared or changed');
 assert.match(html, /window\.IPMG_FAST_REVIEW&&st\.ok&&!st\.block&&!st\.review/, 'Routine workflow cards must auto-confirm once their fields are complete');
 assert.match(html, /id="udsUsePatient"/, 'UDS must support fast current-patient transfer');

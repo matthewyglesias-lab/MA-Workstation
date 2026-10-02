@@ -43,7 +43,9 @@ review-before-release boundary. No merge or production deployment.
 - Local unit suite: 736 tests, 52 files, passed.
 - Local full browser attempt: browser executable missing (292 startup failures,
   one disabled standalone case). This is environment failure, not app evidence.
-- Read-only CI will establish browser baseline and produce screenshots/traces.
+- Full read-only CI baseline at `6ed5b3f`: 261 browser tests passed, 32 failed,
+  no retries. Run `36949881617` preserves exact source provenance, report,
+  screenshots and traces. The failures are being reconciled individually.
 - Only synthetic patient fixtures are permitted in tests and evidence.
 
 ## Verification boundaries
@@ -52,3 +54,13 @@ Medication eligibility, dose, route, interval, timing calculations and approved
 product instructions are preserved. If clinical rules must change, stop and
 obtain current primary references plus explicit rule tests before implementing.
 Output fidelity and UI automation do not constitute clinical validation.
+
+## Additional safety finding during implementation
+
+The typed injection factory and compatibility runtime preselected routine
+verification checks and NKDA; the compatibility response default implied
+tolerance before observation. Compatibility sample controls also preselected
+review/education. New sessions now begin unconfirmed. Historical documented
+values remain intact. See [DOCUMENTATION-SAFETY.md](DOCUMENTATION-SAFETY.md)
+for current primary-source rationale and regression scope. Dosing, eligibility,
+intervals and established note grammar are unchanged.

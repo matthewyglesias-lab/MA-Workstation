@@ -1,3 +1,5 @@
+import { DraftRecoveryNotice } from "../../lightfully/DraftRecoveryNotice";
+import type { RecoveryStatus } from "../../../persistence/workflow-recovery";
 import { ActionShelf } from "../../lightfully/ActionShelf";
 import { labelControls, OptionList } from "../WorkflowField";
 import type { ComponentChildren, Ref } from "preact";
@@ -41,6 +43,7 @@ const LETTER_BUILDER_ENABLED = false;
 interface FormsPanelProps {
   initialEncounter: FormsEncounter;
   initialDirty?: boolean;
+  recoveryStatus?: RecoveryStatus;
   activePatient: PatientContext;
   evaluation?: ClinicalEvaluation<FormsEvaluationOutput>;
   staffSignInValue: string;
@@ -112,6 +115,7 @@ function Field({
 export function FormsPanel({
   initialEncounter,
   initialDirty = false,
+  recoveryStatus,
   activePatient,
   evaluation,
   staffSignInValue,
@@ -252,6 +256,7 @@ export function FormsPanel({
       </div>
 
       <div class="lf-service-scroll">
+      <DraftRecoveryNotice status={recoveryStatus} />
       {tab === "request" && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-section" role="group" aria-label="Patient & request">
@@ -435,9 +440,9 @@ export function FormsPanel({
       {tab === "letter" && !LETTER_BUILDER_ENABLED && (
         <div class="wfp-tabpanel" role="tabpanel">
           <div class="wfp-wall">
-            <div class="wfp-wall-title">Letter Builder — Module Not Installed</div>
+            <div class="wfp-wall-title">Letter drafting is not available</div>
             <p>
-              Provider letter drafting is not available in this build.
+              Continue to prepare approved letters through the clinic’s existing letter workflow. You can track the request and its follow-up here.
             </p>
           </div>
         </div>

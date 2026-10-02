@@ -61,16 +61,16 @@ export function WorkspaceTools({ commands, onFocusInjection, focused = false }: 
     return () => window.removeEventListener("keydown", listener);
   }, []);
   return <div class="lf-workspace-tools">
-    <ActionShelf label="Workspace" heading="Make yourself at home" description="Useful tools, a little more room, or a focused view." class="lf-workspace-shelf">
+    <ActionShelf label="Workspace" heading="Workspace tools" description="Find a service, adjust spacing, or use the guided injection view." class="lf-workspace-shelf">
       <button type="button" class="lf-command-trigger" aria-label="Search workspace commands" aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <SearchGlyph/><span><strong>Find a tool</strong><small>Search services, records and more.</small></span><kbd>Ctrl K</kbd>
       </button>
       <button type="button" class="lf-density-toggle" data-shelf-stay-open aria-label="Compact workspace" aria-pressed={density === "compact"} onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="5" rx="1.5"/><rect x="4" y="14" width="16" height="5" rx="1.5"/></svg>
-        <span><strong>Roomier or compact</strong><small>{density === "compact" ? "Compact spacing is on." : "Comfortable spacing is on."}</small></span><span class="lf-preference-state" aria-hidden="true">{density === "compact" ? "Compact" : "Roomier"}</span>
+        <span><strong>Workspace spacing</strong><small>{density === "compact" ? "Compact spacing is on." : "Comfortable spacing is on."}</small></span><span class="lf-preference-state" aria-hidden="true">{density === "compact" ? "Compact" : "Roomier"}</span>
       </button>
       {onFocusInjection && <button type="button" class="lf-focus-trigger" aria-label={focused ? "Exit injection focus" : "Open focused injection workspace"} aria-pressed={focused} onClick={onFocusInjection}>
-        <DesktopIcon name="administer"/><span><strong>{focused ? "Back to the full workspace" : "One step at a time"}</strong><small>{focused ? "Leave the focused injection view." : "Open the existing guided injection view."}</small></span><span aria-hidden="true">→</span>
+        <DesktopIcon name="administer"/><span><strong>{focused ? "Back to the full workspace" : "Guided injection view"}</strong><small>{focused ? "Leave the focused injection view." : "Open the existing guided injection view."}</small></span><span aria-hidden="true">→</span>
       </button>}
     </ActionShelf>
     {open && <CommandPalette commands={commands} onDismiss={() => setOpen(false)} />}

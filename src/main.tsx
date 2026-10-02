@@ -100,6 +100,7 @@ import {
 } from './persistence/keys';
 import { UdsRecordRepository, type UdsRecord } from './persistence/uds-records';
 import { browserSafeStorage } from './persistence/storage';
+import { WorkflowRecovery, browserRecoveryStorage } from './persistence/workflow-recovery';
 import {
   holdUdsRecordMutationLock,
   isUnambiguousUsableUdsRecordList,
@@ -472,12 +473,16 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     evaluation: ClinicalEvaluation<UdsEvaluationOutput>;
     locked: boolean;
   } | null>(null);
+  const formsRecovery = useMemo(() => new WorkflowRecovery('forms', browserRecoveryStorage()), []);
+  const samplesRecovery = useMemo(() => new WorkflowRecovery('samples', browserRecoveryStorage()), []);
+  const [formsRecoveryStatus, setFormsRecoveryStatus] = useState(formsRecovery.status);
+  const [samplesRecoveryStatus, setSamplesRecoveryStatus] = useState(samplesRecovery.status);
   const [formsRecordEpoch, setFormsRecordEpoch] = useState(0);
   const [typedFormsState, setTypedFormsState] =
-    useState<TransientWorkflowState<FormsEncounter> | null>(null);
+    useState<TransientWorkflowState<FormsEncounter> | null>(() => formsRecovery.initial ? { encounter: formsRecovery.initial, dirty: true } : null);
   const [samplesRecordEpoch, setSamplesRecordEpoch] = useState(0);
   const [typedSamplesState, setTypedSamplesState] =
-    useState<TransientWorkflowState<SamplesEncounter> | null>(null);
+    useState<TransientWorkflowState<SamplesEncounter> | null>(() => samplesRecovery.initial ? { encounter: samplesRecovery.initial, dirty: true } : null);
   // UDS persistence metadata must outlive the panel. The patient chart and
   // workflow navigation intentionally unmount workflow content; retaining
   // only the encounter would remount a signed record as an editable new note
@@ -502,9 +507,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const typedInjectionStateRef = useRef<typeof typedInjectionState>(null);
   const typedInjectionDirtyRef = useRef(false);
   const typedFormsStateRef =
-    useRef<TransientWorkflowState<FormsEncounter> | null>(null);
+    useRef<TransientWorkflowState<FormsEncounter> | null>(typedFormsState);
   const typedSamplesStateRef =
-    useRef<TransientWorkflowState<SamplesEncounter> | null>(null);
+    useRef<TransientWorkflowState<SamplesEncounter> | null>(typedSamplesState);
   const [pendingTransientReplacement, setPendingTransientReplacement] =
     useState<{ workflow: TransientWorkflow; patient: PatientContext } | null>(null);
   const [recordsOpen, setRecordsOpen] = useState(false);
@@ -621,8 +626,8 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     const protectUnsavedTypedWork = (event: BeforeUnloadEvent) => {
       if (
         !typedInjectionStateRef.current?.dirty &&
-        !typedFormsStateRef.current?.dirty &&
-        !typedSamplesStateRef.current?.dirty
+        (!typedFormsStateRef.current?.dirty || formsRecovery.isCurrent(typedFormsStateRef.current.encounter)) &&
+        (!typedSamplesStateRef.current?.dirty || samplesRecovery.isCurrent(typedSamplesStateRef.current.encounter))
       ) {
         return;
       }
@@ -708,6 +713,8 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     (encounter: FormsEncounter, state: { dirty: boolean }) => {
       const next = { encounter, dirty: state.dirty };
       typedFormsStateRef.current = next;
+      if (state.dirty) formsRecovery.save(encounter);
+      setFormsRecoveryStatus(formsRecovery.status);
       setTypedFormsState(next);
     },
     [],
@@ -717,6 +724,8 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     (encounter: SamplesEncounter, state: { dirty: boolean }) => {
       const next = { encounter, dirty: state.dirty };
       typedSamplesStateRef.current = next;
+      if (state.dirty) samplesRecovery.save(encounter);
+      setSamplesRecoveryStatus(samplesRecovery.status);
       setTypedSamplesState(next);
     },
     [],
@@ -913,6 +922,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             clinical.state.workflows.forms.encounter
           }
           initialDirty={typedFormsState?.dirty}
+          recoveryStatus={formsRecoveryStatus}
           activePatient={context.patient}
           evaluation={selectClinicalEvaluation(clinical, 'forms')}
           staffSignInValue={activeStaffValue()}
@@ -997,6 +1007,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             clinical.state.workflows.samples.encounter
           }
           initialDirty={typedSamplesState?.dirty}
+          recoveryStatus={samplesRecoveryStatus}
           activePatient={context.patient}
           evaluation={selectClinicalEvaluation(clinical, 'samples')}
           staffSignInValue={activeStaffValue()}
@@ -1375,6 +1386,14 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       name: chartPatient.name ?? '',
       dob: chartPatient.dob ?? '',
     };
+    const recovery = workflow === 'forms' ? formsRecovery : samplesRecovery;
+    const cleared = recovery.clear();
+    if (!cleared.ok) {
+      if (workflow === 'forms') setFormsRecoveryStatus('error');
+      else setSamplesRecoveryStatus('error');
+      setPendingTransientReplacement(null);
+      return false;
+    }
     if (workflow === 'forms') {
       const encounter = {
         ...emptyFormsEncounter(),
@@ -1729,6 +1748,10 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         locationLabel={snapshot.locationLabel}
         localStorageAvailable={snapshot.localStorageAvailable}
         workflowSummaries={snapshot.workflowSummaries}
+        sessionDrafts={[
+          ...(typedFormsState?.dirty ? [{ workflow: 'forms' as const, patientLabel: typedFormsState.encounter.patient.name || 'Patient not entered', recoveryAvailable: formsRecoveryStatus !== 'error' }] : []),
+          ...(typedSamplesState?.dirty ? [{ workflow: 'samples' as const, patientLabel: typedSamplesState.encounter.patient.name || 'Patient not entered', recoveryAvailable: samplesRecoveryStatus !== 'error' }] : []),
+        ]}
         needsReview={snapshot.needsReview}
         todayQueue={snapshot.todayQueue}
         injectionRecords={snapshot.injectionRecords}

@@ -166,7 +166,7 @@ test.describe('Phase 3a global Open Notes conventions', () => {
     const headerColors = await table.locator('thead th').evaluateAll((headers) =>
       headers.map((header) => getComputedStyle(header).backgroundColor)
     );
-    expect(new Set(headerColors)).toEqual(new Set(['rgb(245, 247, 248)']));
+    expect(new Set(headerColors)).toEqual(new Set(['rgb(246, 244, 247)']));
 
     const rows = table.locator('tbody [data-records-open]');
     await expect(rows).toHaveCount(SYNTHETIC_INJECTION_RECORDS.length);
@@ -644,7 +644,7 @@ test.describe('Phase 3b patient chart conventions', () => {
       (await bar.locator('button').allTextContents())
         .map((text) => text.trim())
         .filter(Boolean)
-    ).toEqual(['New Note', 'Print', 'More', 'Customize View']);
+    ).toEqual(['New Note', 'Print', 'Customize View']);
 
     // The split menu offers the note types this module actually has.
     const disclosure = bar.locator('.tebra-action-split-disclosure');

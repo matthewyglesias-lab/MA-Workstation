@@ -3,7 +3,7 @@ import { DesktopIcon } from "../DesktopIcon";
 import { DialogHeading } from "./DialogHeading";
 import { ReviewCue } from "./ReviewCue";
 import { ModalDialog } from "../ModalDialog";
-import { WORKFLOW_LABELS, type WorkflowId, type WorkflowSummary } from "../types";
+import { WORKFLOW_LABELS, type WorkflowId, type WorkflowSummary, type WorkspaceSessionDraft } from "../types";
 
 /** Navigation metadata only. The original service owns its form and validation. */
 export const SERVICES = [
@@ -14,7 +14,8 @@ export const SERVICES = [
 ] as const;
 export const isDocumentService = (id: WorkflowId) => SERVICES.some(service => service.id === id);
 
-export function ServiceChooser({ onDismiss, onOpen }: {
+export function ServiceChooser({ onDismiss, onOpen, sessions = [] }: {
+  sessions?: WorkspaceSessionDraft[];
   onDismiss: () => void;
   onOpen: (workflow: WorkflowId) => void;
   summaries: Partial<Record<WorkflowId, WorkflowSummary>>;
@@ -29,7 +30,7 @@ export function ServiceChooser({ onDismiss, onOpen }: {
         onDismiss();
         // Exit the native top layer before asking the existing transition guard.
         requestAnimationFrame(() => onOpen(service.id));
-      }}><span class="lf-service-icon"><DesktopIcon name={service.id}/></span><span><strong>{service.label}</strong><small>{service.detail}</small></span><span class="lf-service-tail">Open <span aria-hidden="true">→</span></span></button>)}
+      }}><span class="lf-service-icon"><DesktopIcon name={service.id}/></span><span><strong>{service.label}</strong><small>{sessions.find(session => session.workflow === service.id) ? `Resume unfinished work for ${sessions.find(session => session.workflow === service.id)!.patientLabel}.` : service.detail}</small></span><span class="lf-service-tail">{sessions.some(session => session.workflow === service.id) ? "Resume" : "Open"} <span aria-hidden="true">→</span></span></button>)}
     </div>
   </ModalDialog>;
 }

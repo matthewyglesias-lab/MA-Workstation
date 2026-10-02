@@ -544,7 +544,7 @@ function CheckList({
                 {required && <abbr class="wfp-req" title="Required">*</abbr>}
                 {reviewState ? (
                   <span class={`wfp-review-state is-${reviewState}`}>
-                    {reviewState.toUpperCase()}
+                    {reviewState === "confirmed" ? "Confirmed" : reviewState === "expected" ? "Documented" : "Not documented"}
                   </span>
                 ) : (
                   optional && <span class="wfp-opt">optional</span>
@@ -3643,7 +3643,7 @@ export function InjectionPanel({
                 role="status"
               >
                 <div class="wfp-review-contract-head">
-                  <strong>STANDARD PRE-ADMIN SET</strong>
+                  <strong>Verification before administration</strong>
                   <span>
                     {administrationReviewCurrent
                       ? `CONFIRMED${encounter.disposition.reviewedBy ? ` · ${encounter.disposition.reviewedBy}` : " · HISTORICAL RECORD"}${encounter.disposition.reviewedAt ? ` · ${new Date(encounter.disposition.reviewedAt).toLocaleString()}` : ""}`
@@ -3651,8 +3651,8 @@ export function InjectionPanel({
                   </span>
                 </div>
                 <p>
-                  Routine checks are preselected as reminders. Clear any step not completed; they
-                  become confirmed only when you select the final administration disposition.
+                  Select only the checks you completed for this patient today. Record allergy status
+                  and the observed response before confirming an administration.
                 </p>
               </div>
               <CheckList
@@ -4018,8 +4018,7 @@ export function InjectionPanel({
             </h2>
             <div class="wfp-section-body">
               <p class="wfp-field-hint">
-                Use the checked routine review items as a fast review-by-exception sheet, then make one final
-                documentation choice. An administration note remains unavailable until a complete
+                Review the documented checks and actual outcome, then choose the disposition. An administration note remains unavailable until a complete
                 administration is documented.
               </p>
               <div

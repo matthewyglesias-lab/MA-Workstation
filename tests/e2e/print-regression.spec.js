@@ -1,3 +1,4 @@
+const { confirmInjectionChecks } = require('./injection-confirmation');
 const { clickWorkspace } = require('./workspace-navigation');
 const { test, expect } = require('@playwright/test');
 const { setProvider, expectProviderValue, selectRegisteredProvider } = require('./provider-entry');
@@ -110,6 +111,7 @@ async function preparePrintableInjection(page) {
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
   await panel.locator('input[placeholder*="allergy / ADR status"]').fill('NKDA verified in active record');
+    await confirmInjectionChecks(panel);
   await panel.locator('label[for="inj-safety-none"]').click();
 
   await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
@@ -446,9 +448,9 @@ async function expectRefinedAvsVisualSystem(page) {
   expect(visual.titleFont).toContain('Plus Jakarta Sans Variable');
   expect(visual.bodyFontSize).toBeGreaterThanOrEqual(14);
   expect(visual.undersizedBodyCopy, 'patient guidance dropped below 10.5pt').toEqual([]);
-  expect(visual.patientRadius).toBe(6);
-  expect(visual.dueRadius).toBe(6);
-  expect(visual.emergencyRadius).toBe(6);
+  expect(visual.patientRadius).toBe(3);
+  expect(visual.dueRadius).toBe(3);
+  expect(visual.emergencyRadius).toBe(3);
   expect(visual.emergencyEdge).toBe(2);
   expect(visual.emergencyHeadingTransform).toBe('none');
   // These luminance gaps are the forced-grayscale contract: hierarchy must
@@ -710,6 +712,7 @@ async function expectPrintContract(page, {
     printBackground: true,
     displayHeaderFooter: false
   });
+  await test.info().attach(`${rootId}-print.pdf`, { body: pdf, contentType: 'application/pdf' });
   expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
   expect(pdf.length).toBeGreaterThan(5_000);
 

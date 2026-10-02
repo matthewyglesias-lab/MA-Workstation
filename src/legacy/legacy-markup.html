@@ -325,7 +325,7 @@
           <div class="chips" id="medSpecChips"></div>
         </div>
         <div class="row3" style="margin-top:14px">
-          <div class="field"><label>Allergy status <span class="req">*</span></label><input id="allergies" value="NKDA" placeholder="Enter documented allergy / ADR status" /></div>
+          <div class="field"><label>Allergy status <span class="req">*</span></label><input id="allergies" value="" placeholder="Enter documented allergy / ADR status" /></div>
           <div class="field"><label>BP</label><input id="bp" placeholder="124/78" /></div>
           <div class="field"><label>HR</label><input id="hr" placeholder="72" /></div>
           <div class="field"><label>Temp</label><input id="temp" placeholder="98.6" /></div>
@@ -633,8 +633,8 @@
             <div><h2>Safety handoff</h2><div class="hint">Plain language for the patient; more detailed note for staff/Tebra.</div></div>
           </div>
           <div class="row2">
-            <div class="field"><label>Medication list / interaction check</label><select id="sampleMedCheck"><option>Prescriber reviewed / ok to dispense</option><option>Pending provider confirmation</option><option>Medication list not available</option><option>Patient counseled to ask pharmacist before starting</option><option value="not documented">Not documented</option></select></div>
-            <div class="field"><label>Patient education</label><select id="sampleEdu"><option>Reviewed with patient</option><option>Reviewed with caregiver</option><option>Written instructions only</option><option>Needs additional counseling</option><option value="not documented">Not documented</option></select></div>
+            <div class="field"><label>Medication list / interaction check</label><select id="sampleMedCheck"><option value="not documented">Not documented</option><option>Prescriber reviewed / ok to dispense</option><option>Pending provider confirmation</option><option>Medication list not available</option><option>Patient counseled to ask pharmacist before starting</option></select></div>
+            <div class="field"><label>Patient education</label><select id="sampleEdu"><option value="not documented">Not documented</option><option>Reviewed with patient</option><option>Reviewed with caregiver</option><option>Written instructions only</option><option>Needs additional counseling</option></select></div>
           </div>
           <div class="field" style="margin-top:13px"><label>Extra patient-friendly note</label><textarea id="sampleExtra" placeholder="Optional: call if nausea is severe, take at bedtime if provider instructed, pharmacy prior auth pending, etc."></textarea></div>
           <div class="row2" style="margin-top:13px">

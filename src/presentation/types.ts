@@ -151,6 +151,13 @@ export interface WorkflowRenderContext {
   onInjectionKioskStepChange?: (step: InjectionKioskStepId) => void;
 }
 
+/** Editable Forms/Samples work retained in the current tab, not a signed record. */
+export interface WorkspaceSessionDraft {
+  workflow: 'forms' | 'samples';
+  patientLabel: string;
+  recoveryAvailable: boolean;
+}
+
 export interface ClinicalDesktopShellProps {
   organizationName?: string;
   activeWorkflow?: WorkflowId;
@@ -165,6 +172,7 @@ export interface ClinicalDesktopShellProps {
   locationLabel?: string;
   localStorageAvailable?: boolean;
   workflowSummaries?: Partial<Record<WorkflowId, WorkflowSummary>>;
+  sessionDrafts?: WorkspaceSessionDraft[];
   needsReview?: WorkQueueItem[];
   todayQueue?: WorkQueueItem[];
   injectionRecords?: InjectionRecordRow[];

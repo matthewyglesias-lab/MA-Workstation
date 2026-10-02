@@ -8,12 +8,14 @@ import {
   type InjectionRecordRow,
   type WorkQueueItem,
   type WorkflowId,
+  type WorkspaceSessionDraft,
 } from "./types";
 
 type WorklistFilter = "all" | "review" | "today" | "drafts";
 type WorklistSource = "review" | "today" | "drafts";
 
 export interface StartCenterProps {
+  sessionDrafts?: WorkspaceSessionDraft[];
   onDocumentService?: () => void;
   needsReview: WorkQueueItem[];
   todayQueue: WorkQueueItem[];
@@ -42,6 +44,7 @@ interface WorklistRow {
   tone?: ClinicalTone;
   queueItem?: WorkQueueItem;
   record?: InjectionRecordRow;
+  session?: WorkspaceSessionDraft;
 }
 
 const FILTERS: Array<{ id: WorklistFilter; label: string }> = [
@@ -142,6 +145,7 @@ const TONE_GLYPH: Record<ClinicalTone, string> = {
 };
 
 export function StartCenter({
+  sessionDrafts = [],
   onDocumentService,
   needsReview,
   todayQueue,
@@ -165,9 +169,16 @@ export function StartCenter({
     return [
       ...reviewItems.map(item => queueWorklistRow(item, "review")),
       ...savedDrafts.map(recordWorklistRow),
+      ...sessionDrafts.map((session): WorklistRow => ({
+        id: `session:${session.workflow}`, source: 'drafts', service: session.workflow,
+        priorityLabel: 'Unfinished session', patientLabel: session.patientLabel,
+        taskLabel: session.recoveryAvailable ? 'Reload recovery available in this tab' : 'Keep this tab open; recovery unavailable',
+        timeLabel: 'Open session', stateLabel: 'Unfinished', actionLabel: 'Resume',
+        tone: session.recoveryAvailable ? 'neutral' : 'warning', session,
+      })),
       ...todayItems.map(item => queueWorklistRow(item, "today")),
     ];
-  }, [needsReview, todayQueue, injectionRecords]);
+  }, [needsReview, todayQueue, injectionRecords, sessionDrafts]);
   const indexedRows = useMemo(() => allRows.map(row => ({
     row, text: `${row.patientLabel} ${row.taskLabel} ${row.stateLabel}`.toLocaleLowerCase(),
   })), [allRows]);
@@ -187,6 +198,7 @@ export function StartCenter({
   const countFor = (candidate: WorklistFilter) => counts[candidate];
 
   const openRow = (row: WorklistRow) => {
+    if (row.session) { onWorkflowOpen?.(row.session.workflow); return; }
     if (row.queueItem) onQueueItemOpen?.(row.queueItem);
     if (row.record) onRecordOpen?.(row.record);
   };
@@ -218,17 +230,17 @@ export function StartCenter({
         <label class="lf-worklist-search"><DesktopIcon name="patient"/><input type="search" aria-label="Filter local work by patient or medication" placeholder="Filter this worklist" value={query} onInput={(event) => setQuery(event.currentTarget.value)}/></label>
       </div>
       <div class="cd2004-worklist-sheet" id="lf-work-panel" role="tabpanel" aria-labelledby={`lf-work-tab-${filter}`}>
-        {visibleRows.length ? <table class="lf-work-table"><caption class="cd2004-visually-hidden">Work saved in this browser</caption><thead><tr><th scope="col">Patient / task</th><th scope="col">Service</th><th scope="col">Date / time</th><th scope="col">Status</th><th scope="col"><span class="cd2004-visually-hidden">Action</span></th></tr></thead><tbody>
+        {visibleRows.length ? <table class="lf-work-table"><caption class="cd2004-visually-hidden">Local records and unfinished work in this tab</caption><thead><tr><th scope="col">Patient / task</th><th scope="col">Service</th><th scope="col">Date / time</th><th scope="col">Status</th><th scope="col"><span class="cd2004-visually-hidden">Action</span></th></tr></thead><tbody>
           {visibleRows.map((row) => <tr key={row.id} class="tebra-record-row" data-worklist-row={row.source}>
             <td class="tebra-record-copy"><strong class="tebra-record-title">{row.patientLabel}</strong><span class="tebra-record-meta">{row.taskLabel}</span></td>
             <td><span class="lf-table-service"><DesktopIcon name={row.service}/>{WORKFLOW_LABELS[row.service]}</span></td>
             <td class="lf-table-date">{row.timeLabel || "—"}</td>
             <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{TONE_GLYPH[row.tone ?? "neutral"]}</span>{row.stateLabel}</span></td>
-            <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<span aria-hidden="true"> →</span></button></td>
+            <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.session ? !onWorkflowOpen : row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<span aria-hidden="true"> →</span></button></td>
           </tr>)}
         </tbody></table> : <div class="tebra-record-empty lf-worklist-empty"><span class="lf-empty-mark" aria-hidden="true"><span/><DesktopIcon name={query.trim() ? "records" : "note"}/></span><strong>{query.trim() ? "No matching work" : filter === "all" ? "Your worklist is clear" : worklistEmptyText(filter)}</strong><small>{query.trim() ? "Try another patient or medication, or clear the search." : filter === "all" ? "Document an injection, drug screen, samples or a form request. Your unfinished work will appear here." : worklistEmptyHint(filter)}</small>{query.trim() ? <button type="button" class="lf-secondary-button" onClick={() => setQuery("")}>Clear search</button> : filter === "all" && <button type="button" class="lf-secondary-button" disabled={!onDocumentService} onClick={onDocumentService}>Choose a service <span aria-hidden="true">→</span></button>}</div>}
       </div>
-      <footer class="cd2004-worklist-footer"><span aria-live="polite">{noteCount(visibleRows.length, "local item")} shown</span><span>Saved in this browser</span></footer>
+      <footer class="cd2004-worklist-footer"><span aria-live="polite">{noteCount(visibleRows.length, "local item")} shown</span><span>Local records &amp; open sessions</span></footer>
       </div>
       <p class="lf-workspace-footnote">Review and copy completed documentation to Tebra. This worklist is not an appointment schedule.</p>
     </section>
