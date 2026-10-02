@@ -1,0 +1,53 @@
+name: Clinic-first full review
+on:
+  pull_request:
+    branches: [codex/lightfully-standalone-rebuild]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: clinic-first-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VITE_ENABLE_INJECTION_PATIENT_SCREENING: 'true'
+      TEST_STANDALONE_FILE: '1'
+      PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/browser-results.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+      - run: node scripts/package-standalone.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Full workflow and visual regression
+        run: npx playwright test --retries=0 --reporter=line,json,html
+      - name: Preserve exact review provenance
+        if: always()
+        run: |
+          mkdir -p test-results
+          git rev-parse HEAD > test-results/COMMIT.txt
+          git rev-parse HEAD^{tree} > test-results/TREE.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clinic-first-full-review
+          path: |
+            playwright-report/
+            test-results/
+            standalone/
+          retention-days: 7
+          if-no-files-found: error
