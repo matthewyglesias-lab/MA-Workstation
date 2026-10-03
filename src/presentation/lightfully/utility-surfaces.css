@@ -112,8 +112,36 @@
   #lf-workstation .wfp-transaction-page > .wfp-field-hint {max-width:none;}
   #lf-workstation .lf-tool-page-header {padding-inline:var(--lf-gutter);}
   #lf-workstation .lf-tool-page-header h1 {color:var(--lf-leaf);}
-  #lf-workstation .tebra-facesheet-banner {border:0;border-bottom:1px solid var(--lf-line);background:#f8f5f1;}
-  #lf-workstation .tebra-facesheet-name {font:400 29px/1.2 var(--lf-display);color:var(--lf-leaf);}
+  /* Browsed patient: pair every foreground with the light surface. The legacy
+     sheet supplies structural layout only; no inverse banner colors survive. */
+  #lf-workstation .tebra-facesheet-banner {border:0;border-bottom:1px solid var(--lf-line);border-radius:10px;background:#f8f5f1;color:var(--lf-ink);padding:20px;gap:16px 24px;}
+  #lf-workstation .tebra-facesheet-identity {flex:1 1 280px;align-items:flex-start;}
+  #lf-workstation .tebra-facesheet-identity-copy {min-width:0;}
+  #lf-workstation .tebra-facesheet-avatar {background:var(--lf-sage);color:var(--lf-leaf);}
+  #lf-workstation .tebra-facesheet-name {font:400 29px/1.2 var(--lf-display);color:var(--lf-ink);overflow-wrap:anywhere;}
+  #lf-workstation .tebra-facesheet-name .tebra-patient-card-trigger {text-align:left;white-space:normal;color:inherit;}
+  #lf-workstation .tebra-facesheet-meta {color:#496472;font:400 13px/21px var(--tw-font-sans);gap:4px 8px;margin-top:7px;}
+  #lf-workstation .tebra-facesheet-banner-side {flex:0 1 440px;min-width:0;align-items:flex-start;gap:10px;}
+  #lf-workstation .tebra-facesheet-allergies {color:var(--lf-ink);font:400 13px/21px var(--tw-font-sans);overflow-wrap:anywhere;}
+  #lf-workstation .tebra-facesheet-allergies strong {color:#496472;font:600 12px/20px var(--tw-font-sans);text-transform:none;letter-spacing:0;}
+  #lf-workstation .tebra-facesheet-allergies b {font-weight:600;color:var(--lf-ink);}
+  #lf-workstation .tebra-facesheet-scope {color:#496472;font:400 12px/20px var(--tw-font-sans);max-width:52ch;}
+  #lf-workstation .tebra-facesheet-banner .tebra-action-bar {flex-wrap:wrap;gap:8px;}
+  #lf-workstation .tebra-facesheet-banner .tebra-action-outlined {color:var(--lf-ink);background:#fff;border:1px solid var(--lf-control-border);border-radius:8px;min-height:34px;font:500 12px/20px var(--tw-font-sans);}
+  #lf-workstation .tebra-facesheet-banner .tebra-action-outlined:hover:not(:disabled) {background:var(--lf-sage);border-color:var(--lf-leaf);}
+  #lf-workstation .tebra-facesheet-banner .tebra-action-outlined:disabled {color:#61717b;background:#edf1f2;border-color:#aebbc1;opacity:1;cursor:not-allowed;}
+  #lf-workstation .tebra-facesheet-banner :is(button,summary):focus-visible {outline:2px solid var(--lf-leaf);outline-offset:3px;box-shadow:none;}
+  #lf-workstation .tebra-facesheet-other-note {flex-basis:100%;margin:0;padding:10px 12px;border:1px solid var(--tw-review-border);border-radius:8px;color:var(--tw-review-fg);background:var(--tw-review-bg);font:500 13px/21px var(--tw-font-sans);}
+  @media (max-width:949px) {
+    #lf-workstation .tebra-facesheet-banner {padding:16px;gap:14px;}
+    #lf-workstation .tebra-facesheet-name {font-size:25px;line-height:1.25;}
+    #lf-workstation .tebra-facesheet-banner-side {flex-basis:100%;}
+  }
+  @media (forced-colors:active) {
+    #lf-workstation .tebra-facesheet-banner {background:Canvas;color:CanvasText;border:1px solid CanvasText;}
+    #lf-workstation :is(.tebra-facesheet-name,.tebra-facesheet-meta,.tebra-facesheet-scope,.tebra-facesheet-allergies,.tebra-facesheet-allergies strong,.tebra-facesheet-allergies b) {color:CanvasText;}
+    #lf-workstation .tebra-facesheet-banner .tebra-action-outlined {border-color:ButtonText;color:ButtonText;background:ButtonFace;}
+  }
   #lf-workstation .tebra-summary-card {border:1px solid var(--lf-line);border-radius:6px;box-shadow:none;}
   #lf-workstation .tebra-summary-card-head {background:#f2f5f3;border-bottom:1px solid var(--lf-line);}
   #lf-workstation .tebra-summary-card-head h3 {font:400 21px/27px var(--lf-display);color:var(--lf-leaf);}
