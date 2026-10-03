@@ -1,0 +1,43 @@
+.clinical-component-fixture.app-shell {
+  display: block;
+  min-height: 100vh;
+}
+.fixture-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 30px;
+  background: #f5eadb;
+  border-bottom: 1px solid #dfc9ac;
+  color: #574528;
+}
+.fixture-banner strong {
+  font-size: 14px;
+}
+.fixture-banner p {
+  margin: 5px 0 0;
+  font-size: 12px;
+}
+.fixture-content {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px 30px 50px;
+}
+.fixture-scenarios {
+  color: #6b706d;
+  font-size: 12px;
+  margin: 0 0 24px;
+}
+@media (max-width: 650px) {
+  .fixture-banner {
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
+  .fixture-content {
+    padding: 20px 14px 40px;
+  }
+  .fixture-banner .button {
+    min-width: 94px;
+  }
+}

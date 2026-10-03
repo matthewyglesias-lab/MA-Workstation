@@ -1,0 +1,259 @@
+.workstation-screening-panel {
+  margin: 20px 0;
+  padding: 18px 0;
+  border-block: 1px solid var(--border, #d7e2e5);
+}
+.workstation-screening-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.workstation-screening-toolbar > div:first-child {
+  flex: 1 1 280px;
+}
+.workstation-screening-toolbar h3 {
+  margin: 0 0 5px;
+}
+.workstation-screening-toolbar p,
+.workstation-screening-preview-note {
+  margin: 0;
+  color: var(--muted, #5b6e75);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.workstation-screening-toolbar label {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted, #5b6e75);
+}
+.workstation-screening-toolbar select {
+  min-width: 125px;
+}
+.workstation-screening-preview {
+  margin-top: 14px;
+}
+.workstation-screening-preview summary {
+  color: var(--navy, #203d4e);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.workstation-screening-preview-note {
+  margin: 9px 0 12px;
+}
+.workstation-screening-preview-scroll {
+  max-height: 600px;
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid #d7e2e5;
+  border-radius: 10px;
+  background: #f3f6f5;
+}
+.workstation-screening-sheet {
+  box-sizing: border-box;
+  max-width: 790px;
+  margin: 0 auto;
+  padding: 34px 40px;
+  background: #fff;
+  color: #263f44;
+  font:
+    13px/1.55 "Clinic Mulish",
+    Arial,
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.workstation-screening-header {
+  margin-bottom: 21px;
+  padding-bottom: 17px;
+  border-bottom: 2px solid #709b8c;
+}
+.workstation-screening-header .workstation-screening-brand {
+  margin: 0 0 16px;
+  color: #42675c;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+.workstation-screening-header .workstation-screening-eyebrow {
+  margin: 0 0 6px;
+  color: #60746e;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.workstation-screening-header h1 {
+  margin: 0 0 8px;
+  font:
+    25px/1.2 "Clinic Lora",
+    Georgia,
+    serif;
+  color: #294e44;
+}
+.workstation-screening-header p {
+  margin: 0;
+}
+.workstation-screening-identity {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+.workstation-screening-identity > div {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+}
+.workstation-screening-identity span {
+  color: #60746e;
+  font-size: 10px;
+}
+.workstation-screening-identity strong {
+  font-weight: 600;
+}
+.workstation-screening-instructions {
+  padding: 13px 15px;
+  margin: 0 0 22px;
+  border-left: 3px solid #91aa9f;
+  background: #f5f8f6;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.workstation-screening-sheet h2 {
+  margin: 23px 0 12px;
+  color: #3a6256;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.workstation-screening-question {
+  display: grid;
+  grid-template-columns: 23px minmax(0, 1fr);
+  gap: 9px;
+  padding: 10px 0 13px;
+  border-bottom: 1px solid #e4ebe7;
+}
+.workstation-screening-question-number {
+  padding-top: 1px;
+  color: #72867e;
+  font-size: 11px;
+}
+.workstation-screening-question p {
+  margin: 0 0 10px;
+}
+.workstation-screening-answer-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  font-size: 12px;
+}
+.workstation-screening-answer-options > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.workstation-screening-empty-box {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 13px;
+  height: 13px;
+  border: 1px solid #586d64;
+  background: white;
+}
+.workstation-screening-staff-note {
+  margin: 20px 0;
+  font-size: 11px;
+}
+.workstation-screening-write-line {
+  display: block;
+  height: 27px;
+  border-bottom: 1px solid #a3b3ab;
+}
+.workstation-screening-signature {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 26px;
+  margin-top: 14px;
+  font-size: 10px;
+}
+.workstation-screening-signature .workstation-screening-write-line {
+  margin-bottom: 5px;
+}
+.workstation-screening-consent p {
+  margin: 0;
+}
+.workstation-screening-footer {
+  margin-top: 26px;
+  padding-top: 10px;
+  border-top: 1px solid #cddbd3;
+  color: #60746e;
+  font-size: 9px;
+}
+.workstation-screening-footer p {
+  margin: 0;
+}
+.workstation-screening-footer a {
+  color: inherit;
+}
+@media (max-width: 650px) {
+  .workstation-screening-preview-scroll {
+    padding: 6px;
+  }
+  .workstation-screening-sheet {
+    padding: 20px 16px;
+  }
+  .workstation-screening-identity {
+    grid-template-columns: 1fr 1fr;
+  }
+  .workstation-screening-signature {
+    grid-template-columns: 1fr 90px;
+    gap: 15px;
+  }
+}
+@media print {
+  #console-print-document .workstation-screening-sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+  #console-print-document .workstation-screening-header h1 {
+    font-size: 21pt;
+  }
+  #console-print-document .workstation-screening-identity {
+    grid-template-columns: 1.4fr 1fr 1fr;
+  }
+  #console-print-document .workstation-screening-header,
+  #console-print-document .workstation-screening-identity,
+  #console-print-document .workstation-screening-instructions,
+  #console-print-document .workstation-screening-question,
+  #console-print-document .workstation-screening-follow-up,
+  #console-print-document .workstation-screening-consent,
+  #console-print-document .workstation-screening-footer {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  #console-print-document .workstation-screening-sheet h2 {
+    break-after: avoid;
+    page-break-after: avoid;
+    font-size: 10pt;
+  }
+  #console-print-document .workstation-screening-question {
+    padding: 9px 0 12px;
+  }
+  #console-print-document .workstation-screening-instructions,
+  #console-print-document .workstation-screening-staff-note {
+    font-size: 9pt;
+  }
+  #console-print-document .workstation-screening-answer-options {
+    font-size: 9pt;
+  }
+  #console-print-document .workstation-screening-empty-box {
+    width: 10pt;
+    height: 10pt;
+  }
+  #console-print-document .workstation-screening-footer {
+    font-size: 8pt;
+  }
+}

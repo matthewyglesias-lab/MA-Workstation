@@ -1,0 +1,47 @@
+# Clinic Console only; the original Static Web App stays in Azure.
+# Synthetic evaluation only on the $7/month compute profile.
+# Patient data requires a separately approved HIPAA-enabled Render workspace.
+# See console/docs/render-setup.md; no workspace upgrade is configured here.
+services:
+  - type: web
+    name: ipmg-clinic-console
+    runtime: node
+    plan: 0.5c-512mb
+    region: ohio
+    repo: https://github.com/matthewyglesias-lab/MA-Workstation
+    branch: feat/azure-sql-clinic-console
+    rootDir: console
+    buildCommand: npm ci --include=dev && npm run build && npm prune --omit=dev
+    startCommand: node --max-old-space-size=192 dist/server/server/main.js
+    healthCheckPath: /api/health
+    autoDeployTrigger: "off"
+    numInstances: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: CONSOLE_MODE
+        value: sql
+      - key: AUTH_MODE
+        value: pin
+      - key: HOST
+        value: 0.0.0.0
+      - key: CLINIC_TIMEZONE
+        value: America/Los_Angeles
+      - key: CLINIC_ID
+        sync: false
+      - key: SQL_SERVER
+        sync: false
+      - key: SQL_DATABASE
+        value: clinic-console
+      - key: SQL_POOL_MAX
+        value: "4"
+      - key: SQL_AUTH
+        value: azure-active-directory-service-principal-secret
+      - key: SQL_TENANT_ID
+        sync: false
+      - key: SQL_CLIENT_ID
+        sync: false
+      - key: SQL_CLIENT_SECRET
+        sync: false

@@ -2,6 +2,10 @@
 
 The IPMG MAGIC Ambulatory Workstation is a frontend-only, MEDITECH-inspired clinical workstation for Injection, UDS, Samples, and Forms workflows. Its dense client-server chrome, persistent Record List/function rail, chart context, and fixed function-key command deck are built with TypeScript, Vite, and Preact. Records remain in the current browser.
 
+## Azure SQL clinic console rebuild
+
+The new patient-centered helper engine lives in [`console/`](console/README.md). It has its own frontend, authenticated API, Azure SQL migrations, inventory transaction engine, tests and deployment preparation. Tebra remains the authoritative clinical chart. The rebuild is a separate foundation under development; the existing workstation and its deployment remain in place.
+
 ## Local development
 
 Use Node.js 22, matching the CI environment.

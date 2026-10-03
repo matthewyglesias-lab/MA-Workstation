@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "matthewyglesias-lab/MA-Workstation",
+  "sourceCommit": "8f5b63b01307b4a0b5d7bce6013ba9f4161e7237",
+  "adaptation": "Relative ESM imports gain .js, Prettier formatting, and pure initiation protocol extraction only. Source documentation wording is unchanged.",
+  "files": [
+    {
+      "sourcePath": "src/documentation/grammar.ts",
+      "destinationPath": "console/src/shared/workstation/documentation/grammar.ts",
+      "sourceSha256": "c50522b6543d4a76c6e8a339ec82060418094e46b9039ecdad5ad9c195ae35dc",
+      "vendoredSha256": "b5873f9a80b5d06356ac5b35bcd9de34145a78c8c8f4c8de200ee4481ec618b9"
+    },
+    {
+      "sourcePath": "src/documentation/types.ts",
+      "destinationPath": "console/src/shared/workstation/documentation/types.ts",
+      "sourceSha256": "cbc84d8e3b3397dee74b0db1be12dc1d9657539b58a7d5dc57f57d8d4e6f926e",
+      "vendoredSha256": "c5eb0077f10720f4e82fdb9ccd77340beaee559554d81cee956cad57c98f8b1c"
+    },
+    {
+      "sourcePath": "src/documentation/injection.ts",
+      "destinationPath": "console/src/shared/workstation/documentation/injection.ts",
+      "sourceSha256": "caac42cdc5f12ab8b0d67de5a2a68ece8a273990dd98403021f9dffc5e7e2cb7",
+      "vendoredSha256": "dfdd78498f7d7b9c96e83ad766477a1c9595b7eaae17c1d6101e2382e0365370"
+    },
+    {
+      "sourcePath": "src/documentation/adapters/injection-from-encounter.ts",
+      "destinationPath": "console/src/shared/workstation/documentation/adapters/injection-from-encounter.ts",
+      "sourceSha256": "3d01a6fa350d69ce355bc58bcca62ea128d0c1c21d26b831ba70c157cb78e5b5",
+      "vendoredSha256": "434e6bf515169a6b3fd2a62d90b4cf6dab0e72cbc284a91eab8b9d15e5a1fa79"
+    },
+    {
+      "sourcePath": "src/domain/injection-avs-content.ts",
+      "destinationPath": "console/src/shared/workstation/domain/injection-avs-content.ts",
+      "sourceSha256": "163fd2a9a2e275661c2b99d1601d7672477e63581193eb62fd1d0f4006257742",
+      "vendoredSha256": "ee33cfac1758c4848a8b6266ce64abde547b34a7b2711e04f87b1cf26b032b30"
+    },
+    {
+      "sourcePath": "src/domain/injection-avs-render.ts",
+      "destinationPath": "console/src/shared/workstation/domain/injection-avs-render.ts",
+      "sourceSha256": "e40cfd7fe51332091ffe887f36b39e17f94efe8ddff5a739b0fca567eb62a082",
+      "vendoredSha256": "7a97df53874f64069406e89f0593ea7eb010a190ac2c0bf9a2b7608d5544b956"
+    },
+    {
+      "sourcePath": "src/domain/provider-register.ts",
+      "destinationPath": "console/src/shared/workstation/domain/provider-register.ts",
+      "sourceSha256": "02e30cd6e63842630df5a25d897d432763122b308eac544355854227534f26ea",
+      "vendoredSha256": "ab8ca88b5e130113f7d76e16e1749e5ce382da2a8584adc1e943a9980f8ad249"
+    },
+    {
+      "sourcePath": "src/legacy/documentation-adapter.ts",
+      "destinationPath": "console/src/shared/workstation/documentation/adapters/initiation-protocol.ts",
+      "sourceSha256": "981c7399252658e6667702ef72ec57db8db4ac93f7c5a1967f6f09c42dc10861",
+      "vendoredSha256": "89b93cbf292fa055c5c05f482cf3ddacc964b8af0e7f474b1e8c0bf8814b92e4",
+      "extraction": "LegacyInitiationSecond, LegacyInitiationSnapshot; MONTHS; compact/explicit; formatIsoDate/formatMonth/formatTime; addCalendarDays through mapLegacyInitiationProtocol. No DOM adapter code."
+    }
+  ]
+}
