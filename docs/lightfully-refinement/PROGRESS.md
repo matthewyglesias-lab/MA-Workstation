@@ -150,3 +150,42 @@ its continuation. The actual rail/preview/dialog paths now pass at both core siz
 Date is fixed while native animation frames run for focus tests; persistence cycle
 checks use a controlled clock and settle pending autosave explicitly. No focus
 assertion was relaxed to make a broken route pass.
+
+### Completion/output/failure checkpoint (this commit)
+
+The focused signed outcome now offers Print patient handout, Copy note and Next
+as distinct actions. Copy uses the same canonical section strings and exact divider
+as preview; read-only scope disables journey navigation and keeps one inert retained
+editor. Existing clipboard feedback is local to the outcome, keyed to record identity.
+Native Next double-click plus repeated Enter creates exactly one encounter generation
+at both core sizes; the signed record remains byte-for-byte intact and new patient
+identity, appointment, disclosure and receipt state reset.
+
+Fault injection rejects draft writes and completed-record writes through the real
+storage boundary installed before application boot. No success card precedes durable
+signature. Values remain visible, one draft/id survives retry, and one completed
+attestation is stored after actual recovery. Denied clipboard plus denied fallback
+shows Copy blocked; copied attempted text matches the exact canonical note. A delayed
+copy resolves after Next without showing success on the next patient. Native print
+request/return preserves signed-local state and historical bytes; physical printing
+is not asserted.
+
+Source inspection and failure testing showed that the existing command explicitly
+permits a protected retry after a rejected write. The prior projection's provisional
+error-state gate would have contradicted that command. It now preserves that real
+capability, shows Save failed, and labels the step Retry signing (or Retry handoff
+save), never an unqualified Ready to sign. The unit case now asserts the command
+contract and visible failure together. No signing guard was weakened or added.
+Saves/signatures use synchronous browser-local storage; async database-save delay is
+not an application capability. Pending presentation states are tested in the pure
+model; actual failed writes and delayed output/stale callbacks are browser tested.
+
+Checks, preservation, **857 units / 61 files**, screening-enabled build pass.
+**7/7 completion/fault/focused browser tests** and **5/5 ownership browser tests**,
+retries zero, pass. The ownership test now has a positive AVS control with patient A's
+appointment before selected-patient restoration, then checks canonical/save/preview/
+actual AVS patient B identity and absence of A's provider. Another actual 20-cycle
+case starts with a current administration review and preserves its fingerprint,
+saved note, writes and dirty=false. A real generated Letter PDF was extracted and
+visually inspected: correct DOB, blank write-in reminder, honest STAFF PREVIEW —
+NOT FINAL scope after identity/review change. Artifact in `evidence/`.

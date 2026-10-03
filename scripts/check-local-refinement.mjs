@@ -39,7 +39,7 @@ const reviewedHandout = new Map([
 // Exact bytes remain protected. See docs/lightfully-refinement/PROGRESS.md.
 const reviewedRefinement = new Map([
   ['src/application/injection-identity-transition.ts', 'e678ea0302a03ac01ec6978eb4e4cb9f6e991c3c2ba632cad5a30878b0e217e2'],
-  ['src/application/injection-workflow-progress.ts', 'e48be8a89c1a7be9413a2c651ddc0b0e5724c22c4fc78cdde4c71a5a01f1c4e9'],
+  ['src/application/injection-workflow-progress.ts', 'a7248df2efaf7462f76f2a4b58a4ab43fdfccf91ed4b9298d3f7f3caed60427b'],
   ['src/application/readiness-projection.ts', '0a20f7d886a9fb79e3f37fe9f11ab68e6ad4b892106d21766ffaf4bce133ede4'],
 ]);
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();

@@ -27,6 +27,7 @@ import { DialogHeading } from "./lightfully/DialogHeading";
 import { worklistDate } from "./lightfully/worklist-display";
 import { ServiceChooser, ServiceHeader, isDocumentService } from "./lightfully/ServiceWorkspace";
 import { WorkspaceTools, type WorkspaceCommand } from "./lightfully/WorkspaceTools";
+import { noteDocumentText } from "./note-document";
 import {
   InjectionRecordRepository,
 } from "../persistence/injection-records";
@@ -1525,6 +1526,8 @@ export function ClinicalDesktopShell({
             patientMismatch={isMismatch}
             context={injectionKioskContext}
             progress={injectionProgress}
+            noteText={noteDocumentText(noteSections.map(section => section.content))}
+            copyUnsafe={noteCopyUnsafe}
             activeStep={injectionKioskStep}
             locked={Boolean(kioskLocked)}
             fullscreen={kioskController.fullscreen}

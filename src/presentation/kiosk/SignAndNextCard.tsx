@@ -2,22 +2,28 @@ import { useEffect, useRef, useState } from "preact/hooks";
 
 import { DesktopIcon } from "../DesktopIcon";
 import { KIOSK, SHELL } from "../vocabulary";
+import { useCopyFeedback, copyButtonLabel, copyFeedbackMessage } from "../clipboard";
 
 interface SignAndNextCardProps {
   patientLabel: string;
+  noteText: string;
+  copyUnsafe?: boolean;
   onPrintHandout: () => void;
   onStartNextPatient: () => void | boolean;
 }
 
-/** The focused, two-choice end of the signed-note loop. */
+/** One durable signed outcome; output requests remain separate from Next. */
 export function SignAndNextCard({
   patientLabel,
+  noteText,
+  copyUnsafe,
   onPrintHandout,
   onStartNextPatient,
 }: SignAndNextCardProps) {
   const cardRef = useRef<HTMLElement>(null);
   const startingRef = useRef(false);
   const [starting, setStarting] = useState(false);
+  const { state: copyState, copy } = useCopyFeedback();
   const startNext = () => {
     if (startingRef.current) return;
     startingRef.current = true;
@@ -57,11 +63,15 @@ export function SignAndNextCard({
           <DesktopIcon name="print" />
           {KIOSK.printHandout}
         </button>
+        <button type="button" class="is-secondary" onClick={() => copy(noteText)} disabled={copyUnsafe || !noteText.trim()}>
+          <DesktopIcon name="copy" />{copyButtonLabel(copyState, "Copy note")}
+        </button>
         <button type="button" class="is-primary" onClick={startNext} disabled={starting}>
           <DesktopIcon name="new" />
           {KIOSK.startNextPatient}
         </button>
       </div>
+      {copyState && <p class="kiosk-copy-feedback" role="status">{copyFeedbackMessage(copyState)}</p>}
     </section>
   );
 }

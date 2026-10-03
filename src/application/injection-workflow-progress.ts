@@ -150,11 +150,15 @@ export function projectInjectionWorkflowProgress({ encounter, evaluation, canSig
       : completion === "in-progress" ? "In progress" : "Not started";
     return { id, label: nonAdministration && id === "sign" ? "Finish handoff" : LABELS[id], applicable, completion, concerns: ownedConcerns, missingFields, stateLabel };
   });
-  const persistenceAvailable = !signed && !saving && lifecycle !== "saving" && lifecycle !== "error";
+  // A rejected prior write is lifecycle history, not a new authorization rule.
+  // Existing commands may permit a protected retry; their capability remains
+  // authoritative, while the failure headline must stay visible.
+  const persistenceAvailable = !signed && !saving && lifecycle !== "saving";
   const canSaveHandoff = persistenceAvailable && nonAdministration && evaluation.output.recordStatus === "handoff-ready" && canSave;
   const actionAvailable = persistenceAvailable && !nonAdministration && canSign;
   const sign = steps.find(step => step.id === "sign")!;
-  sign.stateLabel = signed ? "Signed locally" : nonAdministration ? canSaveHandoff ? "Save handoff" : "Review handoff" : actionAvailable ? "Ready to sign" : "Review note";
+  sign.stateLabel = signed ? "Signed locally" : nonAdministration ? canSaveHandoff ? lifecycle === "error" ? "Retry handoff save" : "Save handoff" : "Review handoff"
+    : actionAvailable ? lifecycle === "error" ? "Retry signing" : "Ready to sign" : "Review note";
   const clinicalSteps = steps.filter(step => step.applicable && step.id !== "sign");
   const completed = clinicalSteps.filter(step => step.completion === "complete").length;
   const lifecycleLabel = signed ? "Signed locally" : lifecycle === "error" ? "Save failed" : saving || lifecycle === "saving" ? "Saving locally…"

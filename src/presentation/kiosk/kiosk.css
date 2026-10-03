@@ -491,9 +491,17 @@
   .cd2004-shell .kiosk-sign-next-actions {
     grid-column: 1 / -1;
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 10px;
     padding-top: 6px;
+  }
+
+  .cd2004-shell .kiosk-copy-feedback {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: var(--tw-fs-ws-base);
+    line-height: var(--tw-lh-ws-base);
   }
 
   .cd2004-shell .kiosk-sign-next-actions button {

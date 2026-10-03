@@ -70,7 +70,12 @@ describe("positive injection documentation progress and distinct action capabili
     const model=project(documentedInjection(),{...options,canSign:true});
     expect(model.lifecycleLabel).toBe(label);
     if(options.lifecycle==="locked") {expect(model.headline).toBe("Signed locally");expect(model.canSign).toBe(false);}
-    if(["saving","error"].includes(options.lifecycle)) expect(model.canSign).toBe(false);
+    if(options.lifecycle === "saving") expect(model.canSign).toBe(false);
+    if(options.lifecycle === "error") {
+      expect(model.headline).toBe("Save failed");
+      expect(model.canSign).toBe(true); // Existing protected command permits retry.
+      expect(step(model,"sign").stateLabel).toBe("Retry signing");
+    }
   });
   it.each(["orderingProvider","site","administrationDate","dose","response"] as const)("retains identity progress after a material %s edit", key => {
     const encounter=documentedInjection();const next={...encounter,[key]:key==="response"?{kind:""}:"Changed"};

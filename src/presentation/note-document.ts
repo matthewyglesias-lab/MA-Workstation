@@ -16,6 +16,10 @@
 
 export type NoteSegmentRole = "plain" | "heading" | "label" | "value";
 
+/** Canonical whole-note join used by both preview and signed outcome. */
+export const noteDocumentText = (sections: readonly string[]): string =>
+  sections.join("\n\n────────────────────────────────\n\n");
+
 export interface NoteSegment {
   text: string;
   role: NoteSegmentRole;

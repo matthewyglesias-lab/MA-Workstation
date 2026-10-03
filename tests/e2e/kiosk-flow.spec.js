@@ -310,6 +310,8 @@ test.describe('Injection focus workspace', () => {
       await page.keyboard.press('Tab');
       await expect(completion.getByRole('button', { name: 'Print patient handout' })).toBeFocused();
       await page.keyboard.press('Tab');
+      await expect(completion.getByRole('button', { name: 'Copy note' })).toBeFocused();
+      await page.keyboard.press('Tab');
       await expect(completion.getByRole('button', { name: 'Start next patient' })).toBeFocused();
       await completion.focus();
     }

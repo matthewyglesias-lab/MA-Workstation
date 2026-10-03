@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { clickWorkspace } = require('./workspace-navigation');
 const { fillDate } = require('./date-entry');
+const { prepareRefinementInjection } = require('./refinement-fixture');
 const KEY = 'ipmgMedAssistInjectionRecordsV1';
 const localPatient = { name: 'Same, Synthetic', dob: '01/03/1990' };
 const oldRecord = {
@@ -82,12 +83,16 @@ test('opening and closing exception details is a pure view action through 20 cyc
   await page.screenshot({ path: info.outputPath('exception-after.png') });
 });
 
-test('selected local patient with same name and different DOB cannot inherit an appointment', async ({ page }) => {
+test('selected local patient with same name and different DOB cannot inherit an appointment', async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-10-02T16:00:00Z'));
   const panel = await boot(page, [oldRecord]);
   await page.keyboard.press('F11');
   const drawer = page.locator('.records-drawer');
   const row = drawer.getByRole('row').filter({ hasText: localPatient.name });
   await row.focus(); await row.press('Enter'); await expect(drawer).toBeHidden();
+  await prepareRefinementInjection(page, { review: false });
+  await panel.getByRole('tab', { name: 'Order & Timing', exact: true }).click();
+  await panel.locator('input[placeholder="Last, First"]').fill(localPatient.name);
   await panel.locator('input[placeholder="MM/DD/YYYY"]').fill('01/02/1990');
   await panel.locator('input[placeholder="MM/DD/YYYY"]').press('Tab');
   const editor = await reminder(panel);
@@ -96,6 +101,10 @@ test('selected local patient with same name and different DOB cannot inherit an 
   await editor.getByLabel('Appointment provider', { exact: true }).fill('Patient A appointment provider');
   await editor.getByLabel('Provider appointment time').fill('10:30');
   await expect(editor.getByLabel('Appointment provider', { exact: true })).toHaveValue('Patient A appointment provider');
+  await page.evaluate(() => { window.__ipmgNativePrint = () => {}; window.cleanPrintClasses = () => {}; });
+  await panel.getByRole('button', { name: 'Print AVS', exact: true }).click();
+  await expect(page.locator('#avsSheet')).toContainText('Patient A appointment provider');
+  await page.evaluate(() => document.body.classList.remove('print-avs'));
   await panel.getByRole('button', { name: 'Use selected local patient', exact: true }).click();
   await panel.getByRole('tab', { name: 'Order & Timing', exact: true }).click();
   await expect(panel.locator('input[placeholder="Last, First"]')).toHaveValue(localPatient.name);
@@ -109,6 +118,33 @@ test('selected local patient with same name and different DOB cannot inherit an 
     version: 1, mode: 'write-in', date: '', time: '', provider: '', location: '', visitType: '',
   });
   expect(JSON.stringify(saved.snapshot)).not.toContain('Patient A appointment provider');
+  await panel.getByRole('button', { name: 'Print AVS', exact: true }).click();
+  await expect(page.locator('#avsSheet .avs2-id')).toContainText(localPatient.name);
+  await expect(page.locator('#avsSheet .avs2-id')).toContainText(localPatient.dob);
+  await expect(page.locator('#avsSheet')).not.toContainText('Patient A appointment provider');
+  await page.pdf({ path: info.outputPath('restored-patient-appointment.pdf'), format: 'Letter', printBackground: true });
+  await page.evaluate(() => document.body.classList.remove('print-avs'));
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  await expect(page.locator('.cd2004-inspector .cd2004-note-ident')).toContainText(localPatient.dob);
+});
+
+test('exception disclosure preserves a genuinely current administration review and exact saved note through 20 cycles', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-02T16:00:00Z') });
+  const panel = await boot(page);
+  await prepareRefinementInjection(page);
+  await save(page); await page.clock.runFor(1000);
+  const record = (await records(page))[0];
+  expect(record.snapshot.disposition.reviewFingerprint).not.toBe('');
+  expect(record.snapshot.disposition.kind).toBe('administered');
+  await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
+  const before = await state(page);
+  const disclosure = panel.getByRole('button', { name: /Administration exception/i });
+  for (let i = 0; i < 20; i++) {
+    await disclosure.click(); await disclosure.click(); await page.clock.runFor(1000);
+    expect(await state(page)).toEqual(before); expect(await dirty(page)).toBe(false);
+  }
+  await panel.getByRole('tab', { name: 'Review', exact: true }).click();
+  await expect(panel.getByText('Review confirmed.', { exact: true })).toBeVisible();
 });
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 800, height: 600 }]) {

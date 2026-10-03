@@ -11,7 +11,7 @@ import {
   readinessVerdictCopy,
 } from "./vocabulary";
 import { copyButtonLabel, copyFeedbackMessage, useCopyFeedback } from "./clipboard";
-import { noteDocumentLines, noteDocumentStats } from "./note-document";
+import { noteDocumentLines, noteDocumentStats, noteDocumentText } from "./note-document";
 import type { NoteSection, PatientContext, ReadinessItem } from "./types";
 
 /**
@@ -19,7 +19,6 @@ import type { NoteSection, PatientContext, ReadinessItem } from "./types";
  * section: the same rule the documentation engine uses to join them, so the
  * whole note reads as it does on screen.
  */
-const DOCUMENT_DIVIDER = "\n\n────────────────────────────────\n\n";
 
 /** Identifies the toolbar command, so its confirmation stays its own. */
 const WHOLE_NOTE = "note";
@@ -223,7 +222,7 @@ export function NoteInspector({
           disabled={!sections.length || copyUnsafe}
           onClick={() =>
             copy(
-              sections.map((section) => section.content).join(DOCUMENT_DIVIDER),
+              noteDocumentText(sections.map((section) => section.content)),
               WHOLE_NOTE,
             )
           }

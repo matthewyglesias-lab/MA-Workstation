@@ -18,6 +18,8 @@ interface KioskShellProps {
   patientMismatch: boolean;
   context?: InjectionKioskContext;
   progress: InjectionWorkflowProgress;
+  noteText: string;
+  copyUnsafe?: boolean;
   activeStep: InjectionKioskStepId;
   locked: boolean;
   fullscreen: boolean;
@@ -46,6 +48,8 @@ export function KioskShell({
   patientMismatch,
   context,
   progress,
+  noteText,
+  copyUnsafe,
   activeStep,
   locked,
   fullscreen,
@@ -141,6 +145,9 @@ export function KioskShell({
 
       {locked && (
         <SignAndNextCard
+          key={patient.localRecordId}
+          noteText={noteText}
+          copyUnsafe={copyUnsafe}
           patientLabel={patient.name?.trim() ?? ""}
           onPrintHandout={onPrintHandout}
           onStartNextPatient={onStartNextPatient}
