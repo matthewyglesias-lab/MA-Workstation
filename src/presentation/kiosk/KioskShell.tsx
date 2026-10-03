@@ -27,7 +27,7 @@ interface KioskShellProps {
   onToggleFullscreen: () => void;
   onExit: () => void;
   onPrintHandout: () => void;
-  onStartNextPatient: () => void;
+  onStartNextPatient: () => void | boolean;
 }
 
 const dateLabel = (value?: string): string =>

@@ -265,7 +265,8 @@ test('debounced typed-only additional-note edit persists without a manual save',
   );
   await dialog.locator('[data-records-open]').click();
   await panel.getByRole('tab', { name: 'Review', exact: true }).click();
-  await panel.locator('#inj-site-assessed').evaluate(input => input.click());
+  await panel.getByRole('button',{name:/Additional note items/}).click();
+  await panel.locator('#inj-site-assessed').check();
 
   await expect.poll(() => page.evaluate(key => {
     const records = JSON.parse(localStorage.getItem(key) || '[]');
@@ -282,6 +283,7 @@ test('debounced typed-only additional-note edit persists without a manual save',
   );
   await dialog.locator('[data-records-open]').click();
   await panel.getByRole('tab', { name: 'Review', exact: true }).click();
+  if (await panel.getByRole('button',{name:/Additional note items/}).getAttribute('aria-expanded') === 'false') await panel.getByRole('button',{name:/Additional note items/}).click();
   await expect(panel.locator('#inj-site-assessed')).toBeChecked();
 });
 
@@ -649,7 +651,9 @@ test('reopens exact structured response and additional-note facts from the saved
   await panel.getByRole('tab', { name: 'Review', exact: true }).click();
 
   await panel.locator('select[name="inj-response"]').selectOption('bleed');
+  await panel.getByRole('button',{name:/Supplementary response detail/}).click();
   await panel.locator('select[name="inj-response-detail"]').selectOption('extended');
+  await panel.getByRole('button',{name:/Additional note items/}).click();
   await panel.locator('#inj-site-assessed').check();
   await panel.locator('#inj-post-observation').check();
   await panel.locator('#inj-education-provided').check();
@@ -683,8 +687,11 @@ test('reopens exact structured response and additional-note facts from the saved
   await panel.getByRole('tab', { name: 'Review', exact: true }).click();
 
   await expect(panel.locator('select[name="inj-response"]')).toHaveValue('bleed');
+  await expect(panel.getByRole('button',{name:/Supplementary response detail/})).toContainText(/extended/i);
+  await panel.getByRole('button',{name:/Supplementary response detail/}).click();
   await expect(panel.locator('select[name="inj-response-detail"]'))
     .toHaveValue('extended');
+  if (await panel.getByRole('button',{name:/Additional note items/}).getAttribute('aria-expanded') === 'false') await panel.getByRole('button',{name:/Additional note items/}).click();
   await expect(panel.locator('#inj-site-assessed')).toBeChecked();
   await expect(panel.locator('#inj-post-observation')).toBeChecked();
   await expect(panel.locator('#inj-education-provided')).toBeChecked();

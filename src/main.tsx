@@ -463,6 +463,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     encounter: InjectionEncounter;
     evaluation: ClinicalEvaluation<InjectionEvaluationOutput>;
     dirty: boolean;
+    reviewInvalidated?: boolean;
   } | null>(null);
   const [injectionExtensionInstalled, setInjectionExtensionInstalled] =
     useState(false);
@@ -560,11 +561,13 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     (
       encounter: InjectionEncounter,
       evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
+      reviewInvalidated = false,
     ) => {
       const next = {
         encounter,
         evaluation,
         dirty: typedInjectionDirtyRef.current,
+        reviewInvalidated,
       };
       typedInjectionStateRef.current = next;
       setTypedInjectionState(next);
@@ -998,9 +1001,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           onKioskStepChange={context.onInjectionKioskStepChange}
           onPendingAddendumChange={rememberPendingInjectionAddendum}
           onDirtyChange={rememberInjectionDirty}
-          onWorkflowStateChange={(encounter, evaluation) =>
+          onWorkflowStateChange={(encounter, evaluation, reviewInvalidated) =>
             {
-              rememberInjectionState(encounter, evaluation);
+              rememberInjectionState(encounter, evaluation, reviewInvalidated);
               const next = readLegacyShellSnapshot(runtime);
               if (!sameSnapshot(snapshotRef.current, next)) {
                 snapshotRef.current = next;
@@ -1752,6 +1755,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         canSign: canSignInjection, canSave: injectionDraftCanPersist,
         lifecycle: injectionRecordState?.lifecycle ?? 'new',
         dirty: typedInjectionState.dirty, saving: posting,
+        reviewInvalidated: typedInjectionState.reviewInvalidated,
         capabilityDetail: injectionPersistenceBlockingDetail ?? attestationBlockingDetail,
       }) : undefined;
 

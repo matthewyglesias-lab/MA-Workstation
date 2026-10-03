@@ -1545,7 +1545,7 @@ export function ClinicalDesktopShell({
               const started = injectionRecordActions?.onStartNew();
               if (started === false) {
                 setInternalStatus(RECORD.currentNoteStayedOpen);
-                return;
+                return false;
               }
               setInjectionKioskStep("identify");
               setInternalStatus(KIOSK.nextPatientStarted);

@@ -16,7 +16,9 @@ interface OutstandingRequirementsProps<Tab extends string> {
   /** Display name for each tab, used as the row's "go here" label. */
   tabLabels: Record<Tab, string>;
   /** Switches the panel to the tab owning the clicked requirement. */
-  onNavigate: (tab: Tab) => void;
+  onNavigate: (tab: Tab, field?: string) => void;
+  /** A typed editor may own reveal-and-focus; generic panels retain fallback. */
+  ownsFieldNavigation?: boolean;
 }
 
 /**
@@ -38,15 +40,16 @@ export function OutstandingRequirements<Tab extends string>({
   tabForField,
   tabLabels,
   onNavigate,
+  ownsFieldNavigation = false,
 }: OutstandingRequirementsProps<Tab>) {
   if (!open || !stops.length) return null;
 
   const navigate = (tab: Tab, field?: string) => {
-    onNavigate(tab);
+    onNavigate(tab, field);
     onClose();
     // The native dialog first restores its trigger; then move to the actual
     // visible answer after the target section has rendered. Never fill a value.
-    if (field) requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (field && !ownsFieldNavigation) requestAnimationFrame(() => requestAnimationFrame(() => {
       const candidates = document.querySelectorAll<HTMLElement>(".wfp-panel [data-field-path]");
       const target = Array.from(candidates).find(node => node.dataset.fieldPath === field && node.getClientRects().length > 0);
       const control = target?.querySelector<HTMLElement>("input:not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not(:disabled)");

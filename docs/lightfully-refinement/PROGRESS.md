@@ -85,7 +85,7 @@ required; these tests alone do not close all F04/F05 acceptance families.
    Native Git push authentication was rejected; exact local Git tree and commit
    were published through authenticated GitHub Git objects with a non-force
    fast-forward, then fetched and compared. No intervening work overwritten.
-2. Step-specific progress checkpoint (this commit): one pure model uses positive
+2. `dac180afa5e2b0ea76f25f25aaa612b643d49e25`: step-specific progress checkpoint: one pure model uses positive
    engine requirements, exact shared verification predicate, existing review
    freshness, actual command capability and durable lifecycle. Rail, summary,
    preview and worksheet header consume it. Unknown named stops precede warnings.
@@ -120,3 +120,33 @@ lifecycle tests; upper shell, populated worklist, timing anatomy and entire prev
 full 48-family traceability and exact-final-head checks. PR remains draft until
 these engineering gates pass. Clinic observation, assistive technology and physical
 printer checks are separately outstanding and cannot be inferred from screenshots.
+
+### Navigation/disclosure checkpoint (this commit)
+
+- Removed the duplicate Injection field/tab map; issue, preview, rail and review
+  routes use the shared typed mapping. A scoped request reveals dependent content,
+  waits for mounting, focuses the visible control, or lands on an actionable
+  visible page fallback. Same-tab steps and reselecting the current step work.
+  Full/focused view retains a valid location; edits never auto-advance.
+- Specific material-change receipts follow the unchanged engine fingerprint.
+  Affected Administration moves to Review again; unrelated identity stays recorded.
+  Appointment edits and exact no-ops are exempt. Receipts are transient view state.
+- Vitals, supplementary response detail and additional note items use the same
+  independent disclosure primitive and populated summaries. Custom required details
+  stay visible. Twenty actual collapse/expand cycles preserve note and record bytes;
+  same-record recovery restores all values. No automatic note statements added.
+- Populated handoff removal on returning to administration has deliberate cancel/
+  accept behavior. Existing administered sign safeguards unchanged. A leftover
+  selected exception on a handoff is now reachable for its required removal.
+- Next patient has synchronous duplicate-activation suppression; failed starts
+  remain retryable. Additional outcome/fault tests are still required.
+
+Checks/static/preservation and **857 unit tests / 61 files** pass. Production build
+with screening enabled and **45/45 browser tests**, retries zero, pass: ownership,
+progress, new navigation/disclosure cases, existing focused journey and all 27
+full-draft protection cases. Earlier runs exposed a scoped lookup that omitted
+continuation siblings; fixed by looking only in the mounted visible editor, including
+its continuation. The actual rail/preview/dialog paths now pass at both core sizes.
+Date is fixed while native animation frames run for focus tests; persistence cycle
+checks use a controlled clock and settle pending autosave explicitly. No focus
+assertion was relaxed to make a broken route pass.

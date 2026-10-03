@@ -148,7 +148,12 @@ export function InjectionStepper({ activeStep, progress, onChange }: InjectionSt
                 aria-controls={`injection-ledger-panel-${step.tab}`}
                 aria-label={`${step.label}: ${step.stateLabel}`}
                 disabled={skipped}
-                onClick={() => onChange(step.id)}
+                onClick={() => {
+                  if (current) window.dispatchEvent(new CustomEvent("ipmg:navigate-workflow-source", {
+                    detail: { workflow: "administer", tab: step.tab, field: step.field, action: step.action },
+                  }));
+                  else onChange(step.id);
+                }}
               >
                 <span class="kiosk-step-number" aria-hidden="true">
                   {index + 1}

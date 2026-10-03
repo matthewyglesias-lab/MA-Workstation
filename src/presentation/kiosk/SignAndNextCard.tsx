@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 
 import { DesktopIcon } from "../DesktopIcon";
 import { KIOSK, SHELL } from "../vocabulary";
@@ -6,7 +6,7 @@ import { KIOSK, SHELL } from "../vocabulary";
 interface SignAndNextCardProps {
   patientLabel: string;
   onPrintHandout: () => void;
-  onStartNextPatient: () => void;
+  onStartNextPatient: () => void | boolean;
 }
 
 /** The focused, two-choice end of the signed-note loop. */
@@ -16,6 +16,17 @@ export function SignAndNextCard({
   onStartNextPatient,
 }: SignAndNextCardProps) {
   const cardRef = useRef<HTMLElement>(null);
+  const startingRef = useRef(false);
+  const [starting, setStarting] = useState(false);
+  const startNext = () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setStarting(true);
+    if (onStartNextPatient() === false) {
+      startingRef.current = false;
+      setStarting(false);
+    }
+  };
 
   useEffect(() => {
     // Signing closes a modal and returns focus to a control that this card
@@ -46,7 +57,7 @@ export function SignAndNextCard({
           <DesktopIcon name="print" />
           {KIOSK.printHandout}
         </button>
-        <button type="button" class="is-primary" onClick={onStartNextPatient}>
+        <button type="button" class="is-primary" onClick={startNext} disabled={starting}>
           <DesktopIcon name="new" />
           {KIOSK.startNextPatient}
         </button>
