@@ -350,3 +350,28 @@ the common required-entry path, not human task time or physical output.
   from this Linux Chromium environment.
 - No database/framework/scheduling integration, Actions changes, deployment or
   merge. Existing large-chunk build warning remains outside scope.
+
+### Reviewed visual references and consolidated evidence
+
+Manually inspected all nine intentional Linux reference PNGs and the real
+populated-worklist image before updating its decoded-RGBA hash. Then ran a separate
+**21/21** shell, state-reference and populated-worklist browser verification,
+**zero retries**, with no update flag or tolerance change. Unsupported-mobile and
+Windows references are unchanged. Reference generation is not certification.
+
+The reproducible comparison uses one identical 14-item mixed-service fixture on
+main and current production builds. Correctly bounded complete-row measurement
+supersedes preliminary viewport counts: **4/2/2/1 → 6/4/4/2** at 1440/1366/1024/800.
+Ordinary full-view timing **321 → 198px**, upper patient shell **157 → 140px**,
+completed preview summary **136/223 → 46px** at wide/minimum sizes. Compact and
+Comfortable control heights remain 34/42px, guided 44px. Expanded contents grow.
+Before/after images, measurement JSON, routine click trace and four-size/both-density
+expanded/blocked/long-signed/end-of-note captures are committed as review evidence.
+Capture utilities write evidence only and cannot regenerate visual references.
+
+[ACCEPTANCE.md](ACCEPTANCE.md) maps every F01–F10 finding and all **48** scenario
+families to implementation/test evidence, the four visual gates, exact-copy/print
+preservation and explicit environment/clinic limits. All engineering workstreams
+are implemented. Exact-final-commit full unit/browser/standalone/CI verification
+must now run after this commit. Final SHA/tree and results belong in the actual PR
+so verification does not require amending the commit it certifies.

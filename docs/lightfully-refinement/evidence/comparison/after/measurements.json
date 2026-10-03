@@ -1,0 +1,482 @@
+[
+  {
+    "name": "worklist-populated",
+    "size": {
+      "width": 1440,
+      "height": 900
+    },
+    "header": {
+      "height": 68,
+      "visible": 68,
+      "scroll": 68
+    },
+    "editor": null,
+    "preview": null,
+    "timing": null,
+    "readiness": null,
+    "noteScroll": null,
+    "rows": 6
+  },
+  {
+    "name": "shell-timing",
+    "size": {
+      "width": 1440,
+      "height": 900
+    },
+    "header": {
+      "height": 140,
+      "visible": 140,
+      "scroll": 140
+    },
+    "editor": {
+      "height": 551,
+      "visible": 551,
+      "scroll": 1114
+    },
+    "preview": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "timing": {
+      "height": 198,
+      "visible": 196,
+      "scroll": 196
+    },
+    "readiness": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "noteScroll": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "rows": 0
+  },
+  {
+    "name": "preview-ready",
+    "size": {
+      "width": 1440,
+      "height": 900
+    },
+    "header": {
+      "height": 140,
+      "visible": 140,
+      "scroll": 140
+    },
+    "editor": {
+      "height": 502,
+      "visible": 502,
+      "scroll": 1064
+    },
+    "preview": {
+      "height": 680,
+      "visible": 680,
+      "scroll": 680
+    },
+    "timing": {
+      "height": 164,
+      "visible": 162,
+      "scroll": 162
+    },
+    "readiness": {
+      "height": 46,
+      "visible": 44,
+      "scroll": 44
+    },
+    "noteScroll": {
+      "height": 680,
+      "visible": 680,
+      "scroll": 1179
+    },
+    "rows": 0
+  },
+  {
+    "name": "focused",
+    "size": {
+      "width": 1440,
+      "height": 900
+    },
+    "header": {
+      "height": 68,
+      "visible": 68,
+      "scroll": 68
+    },
+    "editor": {
+      "height": 577,
+      "visible": 577,
+      "scroll": 2263
+    },
+    "preview": null,
+    "timing": {
+      "height": 208,
+      "visible": 206,
+      "scroll": 206
+    },
+    "readiness": null,
+    "noteScroll": null,
+    "rows": 0
+  },
+  {
+    "name": "worklist-populated",
+    "size": {
+      "width": 1366,
+      "height": 768
+    },
+    "header": {
+      "height": 68,
+      "visible": 68,
+      "scroll": 68
+    },
+    "editor": null,
+    "preview": null,
+    "timing": null,
+    "readiness": null,
+    "noteScroll": null,
+    "rows": 4
+  },
+  {
+    "name": "shell-timing",
+    "size": {
+      "width": 1366,
+      "height": 768
+    },
+    "header": {
+      "height": 140,
+      "visible": 140,
+      "scroll": 140
+    },
+    "editor": {
+      "height": 419,
+      "visible": 419,
+      "scroll": 1114
+    },
+    "preview": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "timing": {
+      "height": 198,
+      "visible": 196,
+      "scroll": 196
+    },
+    "readiness": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "noteScroll": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "rows": 0
+  },
+  {
+    "name": "preview-ready",
+    "size": {
+      "width": 1366,
+      "height": 768
+    },
+    "header": {
+      "height": 140,
+      "visible": 140,
+      "scroll": 140
+    },
+    "editor": {
+      "height": 380,
+      "visible": 380,
+      "scroll": 1084
+    },
+    "preview": {
+      "height": 548,
+      "visible": 548,
+      "scroll": 548
+    },
+    "timing": {
+      "height": 164,
+      "visible": 162,
+      "scroll": 162
+    },
+    "readiness": {
+      "height": 46,
+      "visible": 44,
+      "scroll": 44
+    },
+    "noteScroll": {
+      "height": 548,
+      "visible": 548,
+      "scroll": 1243
+    },
+    "rows": 0
+  },
+  {
+    "name": "focused",
+    "size": {
+      "width": 1366,
+      "height": 768
+    },
+    "header": {
+      "height": 68,
+      "visible": 68,
+      "scroll": 68
+    },
+    "editor": {
+      "height": 445,
+      "visible": 445,
+      "scroll": 2263
+    },
+    "preview": null,
+    "timing": {
+      "height": 208,
+      "visible": 206,
+      "scroll": 206
+    },
+    "readiness": null,
+    "noteScroll": null,
+    "rows": 0
+  },
+  {
+    "name": "worklist-populated",
+    "size": {
+      "width": 1024,
+      "height": 768
+    },
+    "header": {
+      "height": 68,
+      "visible": 68,
+      "scroll": 68
+    },
+    "editor": null,
+    "preview": null,
+    "timing": null,
+    "readiness": null,
+    "noteScroll": null,
+    "rows": 4
+  },
+  {
+    "name": "shell-timing",
+    "size": {
+      "width": 1024,
+      "height": 768
+    },
+    "header": {
+      "height": 140,
+      "visible": 140,
+      "scroll": 140
+    },
+    "editor": {
+      "height": 380,
+      "visible": 380,
+      "scroll": 1138
+    },
+    "preview": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "timing": {
+      "height": 198,
+      "visible": 196,
+      "scroll": 196
+    },
+    "readiness": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "noteScroll": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "rows": 0
+  },
+  {
+    "name": "preview-ready",
+    "size": {
+      "width": 1024,
+      "height": 768
+    },
+    "header": {
+      "height": 140,
+      "visible": 140,
+      "scroll": 140
+    },
+    "editor": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "preview": {
+      "height": 548,
+      "visible": 548,
+      "scroll": 548
+    },
+    "timing": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "readiness": {
+      "height": 46,
+      "visible": 44,
+      "scroll": 44
+    },
+    "noteScroll": {
+      "height": 548,
+      "visible": 548,
+      "scroll": 1113
+    },
+    "rows": 0
+  },
+  {
+    "name": "focused",
+    "size": {
+      "width": 1024,
+      "height": 768
+    },
+    "header": {
+      "height": 68,
+      "visible": 68,
+      "scroll": 68
+    },
+    "editor": {
+      "height": 410,
+      "visible": 410,
+      "scroll": 2433
+    },
+    "preview": null,
+    "timing": {
+      "height": 358,
+      "visible": 356,
+      "scroll": 356
+    },
+    "readiness": null,
+    "noteScroll": null,
+    "rows": 0
+  },
+  {
+    "name": "worklist-populated",
+    "size": {
+      "width": 800,
+      "height": 600
+    },
+    "header": {
+      "height": 64,
+      "visible": 64,
+      "scroll": 64
+    },
+    "editor": null,
+    "preview": null,
+    "timing": null,
+    "readiness": null,
+    "noteScroll": null,
+    "rows": 2
+  },
+  {
+    "name": "shell-timing",
+    "size": {
+      "width": 800,
+      "height": 600
+    },
+    "header": {
+      "height": 139,
+      "visible": 139,
+      "scroll": 139
+    },
+    "editor": {
+      "height": 245,
+      "visible": 245,
+      "scroll": 1210
+    },
+    "preview": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "timing": {
+      "height": 198,
+      "visible": 196,
+      "scroll": 196
+    },
+    "readiness": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "noteScroll": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "rows": 0
+  },
+  {
+    "name": "preview-ready",
+    "size": {
+      "width": 800,
+      "height": 600
+    },
+    "header": {
+      "height": 139,
+      "visible": 139,
+      "scroll": 139
+    },
+    "editor": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "preview": {
+      "height": 401,
+      "visible": 401,
+      "scroll": 401
+    },
+    "timing": {
+      "height": 0,
+      "visible": 0,
+      "scroll": 0
+    },
+    "readiness": {
+      "height": 46,
+      "visible": 44,
+      "scroll": 44
+    },
+    "noteScroll": {
+      "height": 401,
+      "visible": 401,
+      "scroll": 1157
+    },
+    "rows": 0
+  },
+  {
+    "name": "focused",
+    "size": {
+      "width": 800,
+      "height": 600
+    },
+    "header": {
+      "height": 64,
+      "visible": 64,
+      "scroll": 64
+    },
+    "editor": {
+      "height": 230,
+      "visible": 230,
+      "scroll": 2459
+    },
+    "preview": null,
+    "timing": {
+      "height": 358,
+      "visible": 356,
+      "scroll": 356
+    },
+    "readiness": null,
+    "noteScroll": null,
+    "rows": 0
+  }
+]

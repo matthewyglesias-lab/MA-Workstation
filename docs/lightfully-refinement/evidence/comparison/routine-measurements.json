@@ -1,0 +1,98 @@
+[
+  {
+    "port": 4174,
+    "width": 1440,
+    "clicks": 16,
+    "targets": [
+      "Document a service",
+      "InjectionMedication, timing, administration and after-visit instructions.Open",
+      "Product",
+      "Administration",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "No acute concerns today confirmed*",
+      "checkbox",
+      "Review",
+      "Review complete — document administration",
+      "inj-disposition"
+    ],
+    "unusedOptionalOpened": 0
+  },
+  {
+    "port": 4174,
+    "width": 800,
+    "clicks": 16,
+    "targets": [
+      "Document a service",
+      "InjectionMedication, timing, administration and after-visit instructions.Open",
+      "Product",
+      "Administration",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "No acute concerns today confirmed*",
+      "checkbox",
+      "Review",
+      "Review complete — document administration",
+      "inj-disposition"
+    ],
+    "unusedOptionalOpened": 0
+  },
+  {
+    "port": 4173,
+    "width": 1440,
+    "clicks": 16,
+    "targets": [
+      "Document a service",
+      "InjectionMedication, timing, administration and after-visit instructions.Open",
+      "Product",
+      "Administration",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "No acute concerns today confirmed*",
+      "checkbox",
+      "Review",
+      "Review complete — document administration",
+      "inj-disposition"
+    ],
+    "unusedOptionalOpened": 0
+  },
+  {
+    "port": 4173,
+    "width": 800,
+    "clicks": 16,
+    "targets": [
+      "Document a service",
+      "InjectionMedication, timing, administration and after-visit instructions.Open",
+      "Product",
+      "Administration",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "checkbox",
+      "No acute concerns today confirmed*",
+      "checkbox",
+      "Review",
+      "Review complete — document administration",
+      "inj-disposition"
+    ],
+    "unusedOptionalOpened": 0
+  }
+]
