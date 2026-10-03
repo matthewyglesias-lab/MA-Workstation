@@ -125,7 +125,8 @@ test.describe('Lightfully screen contract', () => {
       const coral = ['rgb(243, 117, 101)', 'rgb(231, 107, 92)', 'rgb(246, 178, 168)'];
       const statusSelectors = [
         '.cd2004-readiness-verdict', '.cd2004-readiness-item',
-        '.wfp-result-cycle', '.wfp-exception-line', '.cd2004-note-mark'
+        '.wfp-result-cycle', '.wfp-exception-line', '.cd2004-note-mark',
+        '[data-injection-requirements]', '.lf-progress-heading', '.lf-progress-issue'
       ];
       const offenders = [];
       let matchedStatusCount = 0;

@@ -528,6 +528,12 @@ test.describe('Phase 3b patient chart conventions', () => {
     // The existing leave guard saves the active injection before browsing.
     // That intentional write must not change any pre-existing record, and
     // returning from this read-only chart must perform no additional write.
+    // The frozen legacy writer can still have the pre-browse input autosave
+    // queued after its guarded save (also reproduced on main). Settle that
+    // existing task before measuring the return action; compare exact bytes.
+    await page.clock.install();
+    await page.clock.runFor(1000);
+    await page.clock.resume();
     const afterBrowse = await records();
     const oldInjectionRecords = JSON.parse(before[0]);
     const savedInjectionRecords = JSON.parse(afterBrowse[0]);

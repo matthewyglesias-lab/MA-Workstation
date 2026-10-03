@@ -1586,6 +1586,18 @@ test.describe('MA Workstation browser journeys', () => {
 
     for (const workflow of ['administer', 'uds', 'samples', 'forms']) {
       await openWorkflow(page, workflow);
+      if (workflow === 'administer') {
+        await page.getByRole('button', { name: 'Preview', exact: true }).click();
+        const progress = inspector.locator('.lf-injection-progress');
+        await expect(progress).toContainText('Documentation in progress');
+        await expect(progress.locator('summary')).toContainText('0 of 6 steps recorded');
+        await progress.locator('summary').click();
+        await expect(progress.locator('.lf-progress-checks li')).toHaveCount(6);
+        await expect(progress.locator('.lf-progress-checks li').filter({ hasText: 'Documented' })).toHaveCount(0);
+        await expect(progress).not.toContainText('Typed engine shadow');
+        await page.getByRole('button', { name: 'Details', exact: true }).click();
+        continue;
+      }
       const readiness = inspector.locator('.cd2004-readiness-list');
       await expect(readiness.locator('.cd2004-readiness-item')).not.toHaveCount(0);
       await expect(readiness.locator('.cd2004-readiness-item.is-pending')).not.toHaveCount(0);
@@ -2405,6 +2417,7 @@ test.describe('MA Workstation browser journeys', () => {
 
     // Any post-review clinical change invalidates attribution immediately.
     await openInjectionTab(page, 'Outcome');
+    await panel.getByRole('button', { name: /Additional note items/ }).click();
     await panel.getByRole('checkbox', { name: 'Post-injection education provided' }).check();
     await expect(administered).not.toBeChecked();
     await openInjectionTab(page, 'Administration');
@@ -3376,31 +3389,15 @@ test.describe('MA Workstation browser journeys', () => {
       expect(rendered).toBe(copied.replace(/\r\n/g, '\n'));
     }
 
-    // Line numbers are chrome. A hand-dragged selection across the note must
-    // not be able to pull them into the clipboard alongside the clinical text.
-    const selectable = await page.evaluate(() =>
-      [...document.querySelectorAll('.cd2004-note-lineno')].every(
-        (node) => getComputedStyle(node).userSelect === 'none'
-      )
-    );
-    expect(selectable).toBe(true);
-
-    // Numbering restarts per section and counts every line, blanks included,
-    // so a number always points at the line beside it.
-    const numbering = await page.evaluate(() =>
-      [...document.querySelectorAll('.cd2004-note-section')].map((section) =>
-        [...section.querySelectorAll('.cd2004-note-lineno')].map((n) => n.textContent)
-      )
-    );
-    for (const section of numbering) {
-      expect(section).toEqual(section.map((_, index) => String(index + 1)));
-    }
+    // The refined viewer removes decorative line numbers entirely. Exact
+    // rendered/copy parity above still includes every blank and wrapped line.
+    await expect(inspector.locator('.cd2004-note-lineno')).toHaveCount(0);
 
     await expect(inspector.locator('.cd2004-note-eod')).toHaveText('End of note');
     // An unfiled note carries no second state mark: it is the same note that
     // will be filed, so the heading says only where it lives.
-    await expect(inspector.locator('.cd2004-note-heading .cd2004-note-mark'))
-      .toHaveText(['Local']);
+    await expect(inspector.locator('.cd2004-note-mode'))
+      .toHaveText('Read-only preview · local');
   });
 
   /**

@@ -2399,7 +2399,10 @@ export function InjectionPanel({
                   {RECORD.injectionProtectionUnavailableShort}
                 </span>
               ) : (
-                <button type="button" class="wfp-status-flag is-idle" onClick={() => setRequirementsOpen(true)}>
+                <button type="button" class="wfp-status-flag is-idle"
+                  data-injection-requirements={stops.length}
+                  aria-label={stops.length ? `${workflowProgress?.headline ?? "Documentation in progress"}: ${stops.length} items to complete` : undefined}
+                  onClick={() => setRequirementsOpen(true)}>
                   {workflowProgress?.headline ?? "Documentation in progress"}
                 </button>
               )}

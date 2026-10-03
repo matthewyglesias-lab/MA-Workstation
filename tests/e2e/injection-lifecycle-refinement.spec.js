@@ -70,7 +70,9 @@ for(const viewport of [{width:1440,height:900},{width:800,height:600}]) {
     await expect(completion).toContainText('Injection note signed');
     expect((await stored(page))[0]).toEqual(historical);
     await page.evaluate(()=>{document.body.classList.remove('print-avs');window.__delayCopy=true;});
-    await completion.getByRole('button',{name:'Copy blocked',exact:true}).click();
+    // The earlier blocked outcome was asserted; its transient label may have
+    // cleared while staff requested printing. Invoke the same native copy action.
+    await completion.getByRole('button',{name:/^Copy (blocked|note)$/}).click();
     await expect.poll(()=>page.evaluate(()=>typeof window.__resolveCopy)).toBe('function');
     const generation=await page.evaluate(()=>window.ipmgInjectionRecordGeneration());
     await completion.getByRole('button',{name:'Start next patient',exact:true}).dblclick();await page.keyboard.press('Enter');await page.keyboard.press('Enter');

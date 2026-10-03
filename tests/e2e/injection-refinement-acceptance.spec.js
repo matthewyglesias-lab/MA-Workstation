@@ -26,7 +26,11 @@ for(const viewport of [{width:1440,height:900},{width:800,height:600}]){
   await page.setViewportSize(viewport);await page.clock.setFixedTime(new Date('2026-10-02T16:00:00Z'));await page.goto('/');const panel=await prepareRefinementInjection(page);
   await staff(page);await panel.getByRole('tab',{name:'Order & Timing',exact:true}).click();
   await panel.locator('[data-field-path="priorSite"] select').selectOption('R deltoid');
-  await panel.getByRole('tab',{name:'Review',exact:true}).click();await panel.getByText('Review complete — document administration',{exact:true}).click();
+  await panel.getByRole('tab',{name:'Review',exact:true}).click();
+  // A permitted warning does not bypass the mandatory current administration review.
+  await expect(page.locator('[data-injection-finish]')).toBeDisabled();
+  await expect(panel.locator('.wfp-invalidation-receipt')).toContainText('Prior site changed');
+  await panel.getByText('Review complete — document administration',{exact:true}).click();
   await focused(page);
   await expect(page.locator('[data-injection-finish]')).toBeEnabled();
   await expect(page.locator('.kiosk-checklist .lf-progress-heading')).toContainText('Ready to sign');

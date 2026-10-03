@@ -1640,15 +1640,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         ? runtime.startNewInjection()
         : runtime.discardInjectionDraft();
     if (discarded) {
-      typedInjectionDirtyRef.current = false;
-      typedInjectionStateRef.current = null;
-      setTypedInjectionState(null);
-      injectionRecordGenerationRef.current =
-        window.ipmgInjectionRecordGeneration?.() ??
-        injectionRecordGenerationRef.current;
-      setInjectionRecordEpoch((value) => value + 1);
-      coordinator.navigate('injection');
-      coordinator.synchronize(['injection']);
+      // Discard is the same record-ownership boundary as New/Open. Adopt the
+      // newly cleared identity before coordinator inheritance can refill it.
+      synchronizeInjectionRecordSwitch();
     }
     refresh();
     return discarded;

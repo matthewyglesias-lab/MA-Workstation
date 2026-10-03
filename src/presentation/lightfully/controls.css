@@ -21,7 +21,7 @@
     --lf-sage: #edf3ef; --lf-line: #dde4e7; --lf-rule: var(--lf-line);
     --lf-control-border: #83969e; --lf-control-hover: #5f7d8b;
     --lf-control-height: 34px; --lf-control-radius: 8px;
-    --lf-control-padding: 6px 10px; --lf-control-font: 13px; --lf-control-line: 20px;
+    --lf-control-padding: 6px 10px; --lf-control-block-padding: 6px; --lf-control-font: 13px; --lf-control-line: 20px;
     --lf-label-gap: 4px; --lf-row-gap: 12px; --lf-column-gap: 16px;
     --lf-section-gap: 14px; --lf-heading-gap: 8px; --lf-section-font: 15px;
     --lf-editor-inset: 14px 20px; --lf-choice-padding: 7px 10px; --lf-textarea-height: 96px;
@@ -36,13 +36,13 @@
   /* Cosmetic preference on html also reaches portalled dialogs. Guided view
    * deliberately retains the roomier hit targets without a second editor. */
   :root[data-lf-density=comfortable], :root:has(#lf-workstation[data-kiosk-mode=true]) {
-    --lf-control-height: 42px; --lf-control-padding: 9px 12px;
+    --lf-control-height: 42px; --lf-control-padding: 9px 12px; --lf-control-block-padding: 9px;
     --lf-control-font: 14px; --lf-control-line: 22px; --lf-label-gap: 6px;
     --lf-row-gap: 22px; --lf-column-gap: 20px; --lf-section-gap: 25px;
     --lf-heading-gap: 16px; --lf-section-font: 17px;
     --lf-editor-inset: 24px 30px; --lf-choice-padding: 11px 12px; --lf-textarea-height: 110px;
   }
-  :root:has(#lf-workstation[data-kiosk-mode=true]) { --lf-control-height: 44px; --lf-control-padding: 10px 12px; }
+  :root:has(#lf-workstation[data-kiosk-mode=true]) { --lf-control-height: 44px; --lf-control-padding: 10px 12px; --lf-control-block-padding: 10px; }
 
   /* One native control treatment, also used by lookups and portalled dialogs.
    * Explicitly exclude checkboxes, radios and hidden/button inputs. */
@@ -86,7 +86,8 @@
     border-top-right-radius: 0; border-bottom-right-radius: 0;
   }
   #lf-workstation .wfp-panel .wfp-field-lookup-button {
-    width: var(--lf-control-height); min-width: var(--lf-control-height); flex-basis: var(--lf-control-height); height: auto; align-self: stretch;
+    width: var(--lf-control-height); min-width: var(--lf-control-height); flex-basis: var(--lf-control-height); height: max(var(--lf-control-height), calc(1lh + 2 * var(--lf-control-block-padding) + 2px)); align-self: flex-start;
+    box-sizing: border-box; font: 400 var(--lf-control-font)/var(--lf-control-line) var(--tw-font-sans);
     min-height: var(--lf-control-height); margin-left: -1px; padding: 0;
     border: 1px solid var(--lf-control-border); border-left-color: #d1dce1;
     border-radius: 0 var(--lf-control-radius) var(--lf-control-radius) 0;

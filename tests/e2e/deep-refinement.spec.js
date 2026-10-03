@@ -52,7 +52,7 @@ for (const width of [1440,800]) {
     await clickWorkspace(page,'.cd2004-nav-item[title="Injection"]');
     await page.locator('[data-field-path="patient.name"] input').fill('Deep review, Synthetic');
     await page.locator('[name="inj-medication"]').selectOption('maintena');
-    await page.locator('.wfp-status-flag.is-stop').click();
+    await page.locator('[data-injection-requirements]').click();
     const requirements=page.locator('.cd2004-outstanding-requirements-dialog');
     await insideViewport(page,requirements.locator('.cd2004-dialog-frame'));
     await expect(requirements.locator('.wfp-issue-row').first()).toBeVisible();
@@ -151,7 +151,7 @@ test('reduced-motion preference disables new decorative transitions',async({page
   await page.keyboard.press('Escape');
   await clickWorkspace(page,'.cd2004-nav-item[title="Injection"]');
   await page.locator('[name="inj-medication"]').selectOption('maintena');
-  await page.locator('.wfp-status-flag.is-stop').click();
+  await page.locator('[data-injection-requirements]').click();
   await expect(page.locator('dialog[open] .cd2004-dialog-frame')).toHaveCSS('animation-name','none');
 });
 

@@ -19,10 +19,10 @@ print styles or deployment changes authorized by this checkpoint.
 
 | Finding | Status | Owners / evidence |
 | --- | --- | --- |
-| F04 exception visibility/data conflation | In progress | InjectionPanel.tsx, ClinicalRegister.tsx; real browser regression pending |
-| F05 identity/reminder carryover | In progress | InjectionPanel update boundary and selected-patient action; recovery tests pending |
-| F01–F03, F06–F10 | Pending implementation | See supplied audit and full specification; all remain required |
-| 48 QA families | Pending complete verification | D01–D03 and R01 have checkpoint evidence; remaining families require mapping and final suite |
+| F04 exception visibility/data conflation | Implemented; checkpoint browser checks pass | Independent disclosure/clinical choice, guarded removal; canonical/review/note/dirty/write-count invariants |
+| F05 identity/reminder carryover | Implemented; checkpoint browser checks pass | Shared typed/selected identity policy, same-record recovery, actual AVS isolation |
+| F01–F03, F06–F10 | Implemented; exact-final verification pending | Shared progress/capability/lifecycle, navigation, review receipts, completion, optional details and four visual owners |
+| 48 QA families | Checkpoint evidence collected; final reconciliation pending | Acceptance mapping will distinguish engineering checks from outstanding clinic/AT/physical-printer review |
 
 ## Baseline verification
 
@@ -114,12 +114,11 @@ rows at 1440×900 and 3 at 1366×768. These are observations, not acceptance.
 
 ## Remaining work
 
-Reveal/focus navigation, specific invalidation receipts, optional summaries,
-non-administration destructive transitions, completion/Next stress, fault-injected
-lifecycle tests; upper shell, populated worklist, timing anatomy and entire preview;
-full 48-family traceability and exact-final-head checks. PR remains draft until
-these engineering gates pass. Clinic observation, assistive technology and physical
-printer checks are separately outstanding and cannot be inferred from screenshots.
+Reconcile all 48 acceptance families, review and commit intentional Linux visual
+references and before/after evidence, then run the complete suite with retries
+disabled on the exact final commit. Publish coherent checkpoints and update the
+actual PR to review-ready after these engineering gates pass. Clinic observation,
+assistive technology and physical printer checks remain separately outstanding.
 
 ### Navigation/disclosure checkpoint (this commit)
 
@@ -299,3 +298,55 @@ PDFs retained under evidence/print/. Print CSS, clinical templates and paginatio
 fixtures were not changed. Physical printer/handwriting assessment remains clinic
 work. Full-suite diagnostic and like-for-like comparison captures are in progress;
 this checkpoint is not final certification.
+
+### Full-suite reconciliation and related regressions
+
+The first diagnostic full run completed: **346 passed / 28 failed**, zero retries,
+zero skips. Failures were inspected, not relabeled as passes. Retired aggregate
+Injection badges/checklists/line-number references now assert the shared progress
+and local lifecycle semantics. Optional clinical statements are explicitly opened
+before changing them. Exact canonical whole-note/section-copy comparisons, engine
+sign guards, record-byte isolation checks and screenshot tolerances are retained.
+
+Two related defects were fixed at their owners: discard now uses the same record
+switch boundary as New/Open, preventing selected identity from refilling a newly
+cleared encounter; initial menu focus uses the post-DOM layout effect so an
+immediate native typeahead key reaches the open menu. Existing real browser
+regressions exercise these paths. Lookup height now derives from the control line
+metrics and padding rather than the entire field wrapper (which may include a
+helper gloss); ordinary 34/42px and simulated enlarged text both align.
+
+The existing browse/return byte-invariant test reproduced a queued legacy autosave
+on unchanged main (only updatedAt changed). It now settles that pre-browse task
+before measuring Return, retaining exact byte equality and all untouched-record
+checks. The frozen legacy duplicate timestamp write is tracked separately below;
+this checkpoint does not change its runtime.
+
+Rechecks: **4/4 original workstation lifecycle/copy tests passed**; a 44-case
+ownership/navigation/control/lifecycle run passed **43**, with the remaining test
+incorrectly requiring transient Copy blocked feedback after its legitimate timeout.
+That second activation now selects the actual idle-or-blocked Copy command; denial
+and stale completion assertions remain intact. Final **11/11** deep-density and
+lifecycle cases pass, zero retries: four sizes × Compact/Comfortable expanded
+exceptions, visible blocked preview, explicit removal, long signed preview and
+end-of-note; plus write rejection/retry, denied output and exactly-once Next.
+All 27 draft-safety cases and four service-composition cases passed in the 44-case
+run. Earlier new deep fixtures had wrong density/custom-field selectors; corrected
+to persisted preference and the actual input, without changing application rules.
+
+Routine required entry through documented administration was measured with actual
+click events at 1440 and 800 on the exact baseline and current production builds:
+**16 clicks in each**, **zero unused optional disclosures opened**. This measures
+the common required-entry path, not human task time or physical output.
+
+### Separately tracked scope
+
+- Baseline legacy queued autosave can duplicate a timestamp-only write after a
+  guarded browse save. Reproduced on main; settle the existing task for the return
+  action invariant. A legacy persistence redesign is outside this focused change.
+- Human assistive-technology review, clinic findability/backtracking/task timing,
+  actual printer and handwriting assessment remain outstanding, never automated
+  acceptance claims. Windows/managed Edge raster references cannot be certified
+  from this Linux Chromium environment.
+- No database/framework/scheduling integration, Actions changes, deployment or
+  merge. Existing large-chunk build warning remains outside scope.
