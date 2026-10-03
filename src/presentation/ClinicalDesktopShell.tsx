@@ -58,6 +58,7 @@ import { PatientSearch } from "./shell/PatientSearch";
 import { Panel } from "./Panel";
 import { DesktopIcon } from "./DesktopIcon";
 import { Toast } from "./Toast";
+import { useWorkstationFeedback } from "./interaction/use-workstation-feedback";
 import { AppHeader } from "./shell/AppHeader";
 import { AccountMenu, WorkspaceBadge } from "./shell/AccountMenu";
 import { SectionRail } from "./shell/SectionRail";
@@ -336,7 +337,7 @@ export function ClinicalDesktopShell({
   const [internalWorkflow, setInternalWorkflow] =
     useState<WorkflowId>(defaultActiveWorkflow);
   const [focusedPane, setFocusedPane] = useState<DesktopPane>("work");
-  const [internalStatus, setInternalStatus] = useState<string | null>(null);
+  const { message: internalStatus, purpose: feedbackPurpose, announce: setInternalStatus, navigate: announceNavigation } = useWorkstationFeedback();
   const [fieldPrompt, setFieldPrompt] = useState<string | null>(null);
   const [focusedControl, setFocusedControl] =
     useState<FocusedControlContext | null>(null);
@@ -415,10 +416,10 @@ export function ClinicalDesktopShell({
    * reappears on every Tab, or that re-announces "New draft" each time the
    * lifecycle re-reports it, is noise that teaches people to ignore it.
    *
-   * So only shell announcements toast. Ambient state keeps its own polite live
-   * region - visually hidden, since sighted staff can already see the focused
-   * field and the lifecycle footer. Nothing that was announced before has
-   * stopped being announced.
+   * Routine navigation remains available to assistive technology without a
+   * floating confirmation. Consequential action outcomes retain the toast.
+   * Callers choose the event purpose; no message text is filtered. Ambient
+   * field/lifecycle state retains its separate visually hidden prompt.
    */
   const announcement = internalStatus ?? "";
   const ambientPrompt = fieldPrompt ?? statusMessage ?? SHELL.readyToBegin;
@@ -435,7 +436,7 @@ export function ClinicalDesktopShell({
       capturedScrollWorkflowRef.current = selectedWorkflow;
     }
     if (activeWorkflow === undefined) setInternalWorkflow(workflow);
-    setInternalStatus(`${WORKFLOW_LABELS[workflow]} opened.`);
+    announceNavigation(`${WORKFLOW_LABELS[workflow]} opened.`);
     return true;
   };
 
@@ -511,7 +512,7 @@ export function ClinicalDesktopShell({
     reloadChartIndex();
     setChartPatientKeyState(key);
     setChartView(view);
-    setInternalStatus(`${PATIENT.facesheet} opened.`);
+    announceNavigation(`${PATIENT.facesheet} opened.`);
     return true;
   };
 
@@ -558,7 +559,7 @@ export function ClinicalDesktopShell({
       reloadChartIndex();
     }
     setChartPatientKeyState(null);
-    setInternalStatus(`${WORKFLOW_LABELS[destination]} opened.`);
+    announceNavigation(`${WORKFLOW_LABELS[destination]} opened.`);
     focusWorkflowContentNextFrame();
   };
 
@@ -837,7 +838,7 @@ export function ClinicalDesktopShell({
       ) ?? target;
     focusTarget.focus({ preventScroll: true });
     setFocusedPane("work");
-    setInternalStatus(`${direction > 0 ? "Next" : "Previous"} worksheet section focused.`);
+    announceNavigation(`${direction > 0 ? "Next" : "Previous"} worksheet section focused.`);
     return true;
   }, []);
 
@@ -862,7 +863,7 @@ export function ClinicalDesktopShell({
     target.click();
     target.focus({ preventScroll: true });
     setFocusedPane("work");
-    setInternalStatus(`${direction > 0 ? "Next" : "Previous"} worksheet page focused.`);
+    announceNavigation(`${direction > 0 ? "Next" : "Previous"} worksheet page focused.`);
     return true;
   }, [focusWorksheetSection]);
 
@@ -933,11 +934,11 @@ export function ClinicalDesktopShell({
     focusTarget.focus({ preventScroll: true });
     if (target === workHostRef.current) {
       setFocusedPane("work");
-      setInternalStatus("Worksheet zone focused.");
+      announceNavigation("Worksheet zone focused.");
     } else if (target.classList.contains("lf-section-rail")) {
-      setInternalStatus(`${NOTES.openNotes} zone focused.`);
+      announceNavigation(`${NOTES.openNotes} zone focused.`);
     } else {
-      setInternalStatus("Command zone focused.");
+      announceNavigation("Command zone focused.");
     }
   }, []);
 
@@ -968,7 +969,7 @@ export function ClinicalDesktopShell({
       prompt: field?.dataset.fieldPrompt,
       options,
     });
-    setInternalStatus("Choose a value from the available options.");
+    announceNavigation("Choose a value from the available options.");
     return true;
   }, []);
 
@@ -991,7 +992,7 @@ export function ClinicalDesktopShell({
     if (select && openFieldLookup(select)) return;
     if (onLookup) {
       onLookup();
-      setInternalStatus(`${NOTES.openNotes} opened.`);
+      announceNavigation(`${NOTES.openNotes} opened.`);
       return;
     }
     setInternalStatus("No local lookup is available in this context.");
@@ -1276,7 +1277,7 @@ export function ClinicalDesktopShell({
         case "local-emr":
           if (onOpenRecords) {
             onOpenRecords();
-            setInternalStatus(`${NOTES.openNotes} opened.`);
+            announceNavigation(`${NOTES.openNotes} opened.`);
           } else {
             setInternalStatus(`${NOTES.openNotes} is unavailable.`);
           }
@@ -1450,7 +1451,7 @@ export function ClinicalDesktopShell({
           }}
           onOpenRecords={onOpenRecords}
         />}
-        search={<PatientSearch patients={chartIndex.patients} onSelect={(selected) => openChart(selected.key)} />}
+        search={<PatientSearch patients={chartIndex.patients} onRefresh={reloadChartIndex} onSelect={(selected) => openChart(selected.key)} />}
         tools={<WorkspaceTools
           open={commandPaletteOpen}
           onOpen={() => setCommandPaletteOpen(true)}
@@ -1498,7 +1499,11 @@ export function ClinicalDesktopShell({
           one fact it uniquely carried, that a note is open for someone else,
           moved into the chart header.
         */}
-        {!chartOpen && !kioskVisible && selectedWorkflow !== "home" && (
+        {!chartOpen && !kioskVisible && selectedWorkflow !== "home" &&
+          (isDocumentService(selectedWorkflow) || isMismatch || Boolean(
+            patient.name?.trim() || patient.dob?.trim() || patient.localRecordId?.trim() ||
+            workflowPatient?.name?.trim() || workflowPatient?.dob?.trim()
+          )) && (
         <PatientBanner
           patient={patient}
           workflowPatient={workflowPatient}
@@ -1640,7 +1645,7 @@ export function ClinicalDesktopShell({
                   );
                   input?.scrollIntoView({ block: "center" });
                   input?.focus({ preventScroll: true });
-                  setInternalStatus("Dated addendum field focused.");
+                  announceNavigation("Dated addendum field focused.");
                 }}
               />
             )}
@@ -1654,7 +1659,7 @@ export function ClinicalDesktopShell({
       </main>
 
       {serviceChooserOpen && <ServiceChooser sessions={sessionDrafts} summaries={workflowSummaries} onDismiss={() => setServiceChooserOpen(false)} onOpen={workflow => { if (openWorkflow(workflow) && chartPatientKeyState) closeChart(workflow); }}/>}
-      <Toast message={announcement} />
+      <Toast message={announcement} purpose={feedbackPurpose} />
 
       <p
         class="cd2004-visually-hidden"

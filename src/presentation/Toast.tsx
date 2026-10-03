@@ -1,27 +1,18 @@
 import { useEffect, useLayoutEffect, useState } from "preact/hooks";
+import { feedbackPresentation, type FeedbackPurpose } from "./interaction/use-workstation-feedback";
 
 interface ToastProps {
   /** The latest status message. Empty or unchanged text shows nothing new. */
   message: string;
   /** How long a message stays on screen. */
   durationMs?: number;
+  purpose?: FeedbackPurpose;
 }
 
-/**
- * Transient status, replacing the status bar.
- *
- * A permanent strip along the bottom edge is a desktop-application affordance;
- * Tebra confirms an action with a toast and then gets out of the way, and
- * `PLAN.md` §2.2 lists `Toast` rather than a status bar. The behaviour that
- * mattered is kept: this is still a polite live region, so a screen reader
- * hears "Draft saved" exactly as it did before.
- *
- * The message is cleared on a timer rather than left up. A status line that
- * never clears stops being read — the last thing that happened and the current
- * state look identical, which is how a stale "Saved" outlives the save.
- */
-export function Toast({ message, durationMs = 4000 }: ToastProps) {
-  const [shown, setShown] = useState("");
+/** One status owner for explicit action outcomes and quiet navigation. Legacy
+ * notifications retain their own expiry and are never filtered by wording. */
+export function Toast({ message, durationMs = 4000, purpose = "action" }: ToastProps) {
+  const [shown, setShown] = useState({ message: "", purpose });
   const [compatibilityMessage, setCompatibilityMessage] = useState("");
 
   useLayoutEffect(() => {
@@ -55,15 +46,15 @@ export function Toast({ message, durationMs = 4000 }: ToastProps) {
   useEffect(() => {
     const next = message.trim();
     if (!next) {
-      setShown("");
+      setShown({ message: "", purpose });
       return;
     }
-    setShown(next);
-    const timer = globalThis.setTimeout(() => setShown(""), durationMs);
+    setShown({ message: next, purpose });
+    const timer = globalThis.setTimeout(() => setShown({ message: "", purpose }), durationMs);
     return () => globalThis.clearTimeout(timer);
-  }, [message, durationMs]);
+  }, [message, purpose, durationMs]);
 
-  const messages = [...new Set([shown, compatibilityMessage].filter(Boolean))];
+  const { visible: messages, announcement } = feedbackPresentation(shown.message, shown.purpose, compatibilityMessage);
   return (
     <div
       class="tebra-toast-region cd2004-print-exclude"
@@ -71,6 +62,7 @@ export function Toast({ message, durationMs = 4000 }: ToastProps) {
       aria-live="polite"
       aria-atomic="true"
     >
+      {announcement && <span class="cd2004-visually-hidden" data-navigation-announcement>{announcement}</span>}
       {messages.length ? (
         <p class="tebra-toast" data-toast>
           {messages.map(text => <span key={text}>{text}</span>)}
