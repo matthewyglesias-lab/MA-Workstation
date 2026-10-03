@@ -39,7 +39,7 @@ for (const width of [1440, 800]) {
       await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
       await panel.locator('[data-field-path="allergies"] input').fill(allergy);
       await page.locator('[data-injection-save]').click();
-      await page.clock.runFor(4500); // settle the existing debounced legacy boundary
+      await page.clock.runFor(4500);
       const before = await page.evaluate(key => localStorage.getItem(key), RECORDS);
       expect(before).toBeTruthy();
       await page.locator('[data-patient-search] input').fill('PatientCtx');
@@ -48,7 +48,7 @@ for (const width of [1440, 800]) {
       await option.click();
       const banner = page.locator('.tebra-facesheet-banner');
       await expect(banner).toBeVisible();
-      await expect(banner.locator('.tebra-facesheet-name')).toHaveText(name);
+      await expect(banner.locator('.tebra-patient-card-trigger')).toHaveText(name);
       await expect(banner.locator('.tebra-facesheet-meta')).toContainText('01/02/1990');
       await expect(banner.locator('.tebra-facesheet-allergies b')).toContainText(allergy || 'Not recorded');
       for (const selector of ['.tebra-patient-card-trigger', '.tebra-facesheet-meta', '.tebra-facesheet-allergies strong', '.tebra-facesheet-allergies b', '.tebra-facesheet-scope']) {
@@ -66,4 +66,23 @@ for (const width of [1440, 800]) {
       expect(await page.evaluate(key => localStorage.getItem(key), RECORDS)).toBe(before);
     });
   }
+}
+
+for (const width of [1440, 800]) {
+  test(`routine missing response is a quiet correction, not clinical clearance at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 800 ? 600 : 900 });
+    await page.clock.install({ time: new Date('2026-10-02T10:30:00-07:00') });
+    await page.goto('/');
+    const panel = await prepareRefinementInjection(page, { response: false, review: false });
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    const preview = page.locator('.cd2004-document-split');
+    const correction = preview.locator('.lf-progress-requirement').filter({ hasText: 'observed post-injection response' });
+    await expect(correction).toBeVisible();
+    await expect(preview.locator('.lf-progress-issue').filter({ hasText: 'observed post-injection response' })).toHaveCount(0);
+    await page.screenshot({ path: info.outputPath(`documentation-attention-${width}.png`) });
+    await correction.click();
+    await expect(panel.locator('select[name="inj-response"]')).toBeFocused();
+    await panel.locator('select[name="inj-response"]').selectOption('well');
+    await expect(panel.getByText('Review complete — document administration', { exact: true })).toBeEnabled();
+  });
 }
