@@ -1049,8 +1049,11 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     return undefined;
   };
 
-  const canLeaveActiveEditor = (): boolean => {
+  const canLeaveActiveEditor = (
+    options: { persistCleanInjectionDraft?: boolean } = {},
+  ): boolean => {
     const currentWorkflow = runtime.activeWorkflow();
+    const persistCleanInjectionDraft = options.persistCleanInjectionDraft ?? true;
     if (
       currentWorkflow === 'administer' &&
       (pendingInjectionAddendumRef.current || pendingInjectionAddendum)
@@ -1100,13 +1103,15 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       }
       const legacyState = runtime.injectionRecordState();
       const saved = current
-        ? saveFullInjectionDraft({
-            encounter: current.encounter,
-            typedDirty: current.dirty,
-            readLegacyState: runtime.injectionRecordState,
-            saveLegacyDraft: runtime.saveDraft,
-            extensionAvailable: injectionPresentationExtensionAvailable,
-          })
+        ? !current.dirty && !persistCleanInjectionDraft && legacyState.lifecycle !== 'saving'
+          ? true
+          : saveFullInjectionDraft({
+              encounter: current.encounter,
+              typedDirty: current.dirty,
+              readLegacyState: runtime.injectionRecordState,
+              saveLegacyDraft: runtime.saveDraft,
+              extensionAvailable: injectionPresentationExtensionAvailable,
+            })
         : !legacyState.canDiscard || runtime.saveDraft();
       if (!saved) {
         coordinator.synchronize(['injection']);
@@ -1759,7 +1764,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         organizationName="Inland Psychiatric Medical Group"
         activeWorkflow={activeWorkflow}
         onWorkflowChange={openWorkflow}
-        onBeforeViewChange={canLeaveActiveEditor}
+        onBeforeViewChange={() =>
+          canLeaveActiveEditor({ persistCleanInjectionDraft: false })
+        }
         patient={patient}
         workflowPatient={workflowPatient}
         onUseWorkflowPatient={(workflow) => {

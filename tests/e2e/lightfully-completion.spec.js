@@ -43,6 +43,14 @@ for (const width of [1440, 800]) {
       await page.clock.runFor(4500); // settle the existing debounced legacy boundary
       const before = await page.evaluate(key => localStorage.getItem(key), RECORDS);
       expect(before).toBeTruthy();
+      await page.evaluate(key => {
+        const original = Storage.prototype.setItem;
+        window.__patientBrowseInjectionWrites = 0;
+        Storage.prototype.setItem = function(name, value) {
+          if (this === localStorage && name === key) window.__patientBrowseInjectionWrites += 1;
+          return original.call(this, name, value);
+        };
+      }, RECORDS);
       await page.locator('[data-patient-search] input').fill('PatientCtx');
       const option = page.locator('[data-patient-result]').filter({ hasText: name });
       await expect(option).toHaveCount(1);
@@ -65,6 +73,7 @@ for (const width of [1440, 800]) {
       await page.getByRole('button', { name: 'Return to active service', exact: true }).click();
       await expect(panel).toBeVisible();
       expect(await page.evaluate(key => localStorage.getItem(key), RECORDS)).toBe(before);
+      expect(await page.evaluate(() => window.__patientBrowseInjectionWrites ?? 0)).toBe(0);
     });
   }
 }
