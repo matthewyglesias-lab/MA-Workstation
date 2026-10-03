@@ -210,3 +210,25 @@ boxes fitting. Removed the optional plus icon at this width; added explicit sibl
 clearance assertion. Final four-size tests pass, and screenshots were inspected
 at 1440 and 800 with clear 10px clearance. Artifacts in evidence/after-shell/.
 The original before captures remain in the evidence workspace for final comparison.
+
+### Typed injection timing checkpoint
+
+Audited both injection call sites and the UDS point-of-care consumer. Injection
+now uses its own typed presentation-only register (next/elapsed/window semantic
+keys); the existing UDS report component and clinical values retain their API.
+Removed superseded injection-specific schedule CSS; timing.css owns the new
+surface. Future due date/provenance/actions and this visit's elapsed/window/status
+occupy separate semantic groups. No calculation, callback, missed-dose guidance,
+weekend flag, override provenance or clinical severity changed. One concise live
+status replaces the entire readout's live region; unrelated patient edits cause
+zero mutations in that status. Guidance is quiet when ordinary and expands when
+warning/stop. No dedicated empty Override footer or green success band remains.
+
+Checks/preservation/screening build pass. Seven existing timing/override/Other/
+weekend browser cases and four new actual-interaction composition cases pass,
+retries zero. Wide ordinary timing meets the 180–220px target; both named regions,
+all engine values, source and cancel behavior asserted at all four requested sizes.
+Initial layout measured 248px, so the facts were regrouped rather than weakening
+the height check. Screenshot review at 1440 and 800 confirms separate dates and
+visible actions/guidance. Artifacts in evidence/after-timing/. Full clinical state
+and output parity suites remain required in final verification.

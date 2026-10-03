@@ -74,7 +74,7 @@ import { notifyLegacyFieldInput, setLegacyFieldValue } from "../legacy-mirror";
 import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
-import { ScheduleRegister } from "../ScheduleRegister";
+import { InjectionTimingRegister } from "../InjectionTimingRegister";
 import {
   injectionTimingDayFlag,
   injectionTimingTone,
@@ -2744,8 +2744,8 @@ export function InjectionPanel({
                   dates come from the evaluation's structured fields rather
                   than its prose message, which is what keeps every date on
                   this screen in one format. */}
-              <ScheduleRegister
-                title="SCHEDULE — NEXT DOSE"
+              <InjectionTimingRegister
+                variant="timing"
                 marker={
                   oneTimeOtherWithoutReturn
                     ? "N/A"
@@ -2773,6 +2773,7 @@ export function InjectionPanel({
                 }
                 rows={[
                   {
+                    kind: "next" as const,
                     label: "Next dose due",
                     value: registerDate(encounter.nextDoseDate || suggestedNextDose),
                     // Built from the parts rather than the persisted
@@ -2786,6 +2787,7 @@ export function InjectionPanel({
                     ? []
                     : [
                         {
+                          kind: "elapsed" as const,
                           label: "Days since prior",
                           value:
                             evaluation.output.timing.daysSincePrior === null
@@ -2805,6 +2807,7 @@ export function InjectionPanel({
                     ? []
                     : [
                         {
+                          kind: "window" as const,
                           label: "Window",
                           value: `${registerDate(evaluation.output.timing.earliestDate)} – ${registerDate(evaluation.output.timing.latestDate)}`,
                           note: evaluation.output.timing.expectedDate
@@ -3828,8 +3831,8 @@ export function InjectionPanel({
           aria-label={kioskMode ? INJECTION_TAB_LABELS.review : undefined}
         >
           {!nonAdministration && (
-            <ScheduleRegister
-              title="RETURN TARGET"
+            <InjectionTimingRegister
+              variant="return"
               marker={
                 oneTimeOtherWithoutReturn
                   ? "N/A"
@@ -3853,6 +3856,7 @@ export function InjectionPanel({
               }
               rows={[
                 {
+                  kind: "next" as const,
                   label: "Next dose due",
                   value: registerDate(encounter.nextDoseDate || suggestedNextDose),
                   // Same provenance the Order tab shows. Two tabs describing
