@@ -1,4 +1,4 @@
-import { useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 import { useDisclosureLayer } from "../interaction/use-dismissible-layer";
 import { DesktopIcon } from "../DesktopIcon";
 import type { ComponentChildren } from "preact";
@@ -74,26 +74,29 @@ export function WorkflowSummaryFact({
 export function TransactionLine({
   label,
   documented,
+  summary,
   open,
-  onToggle,
+  onOpenChange,
   children,
 }: {
   label: string;
   documented?: boolean;
+  summary?: string;
   open: boolean;
-  onToggle: () => void;
+  onOpenChange: (open: boolean) => void;
   children: ComponentChildren;
 }) {
+  const contentId = useId();
   return (
     <div class={`wfp-transaction ${open ? "is-open" : ""}`}>
-      <button type="button" class="wfp-transaction-line" aria-expanded={open} onClick={onToggle}>
+      <button type="button" class="wfp-transaction-line" aria-expanded={open} aria-controls={contentId} onClick={() => onOpenChange(!open)}>
         <span class="lf-disclosure-chevron"><DesktopIcon name={open ? "chevron-down" : "chevron-right"}/></span>
         <strong>{readableHeading(label)}</strong>
         <span class={`wfp-transaction-state ${documented ? "is-documented" : ""}`}>
-          {documented ? "Documented" : "Not recorded"}
+          {summary ?? (documented ? "Documented" : "Not recorded")}
         </span>
       </button>
-      {open && <div class="wfp-transaction-body">{children}</div>}
+      {open && <div id={contentId} class="wfp-transaction-body">{children}</div>}
     </div>
   );
 }

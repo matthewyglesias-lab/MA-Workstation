@@ -115,7 +115,7 @@ import {
 // Four transaction pages match how staff actually complete the MAR: establish
 // order/timing, identify the physical product, administer and verify, review.
 import { AvsAppointmentEditor } from "../../documents/AvsAppointmentEditor";
-import { emptyAvsAppointment } from "../../../domain/avs-appointment";
+import { applyInjectionIdentityTransition } from "../../../application/injection-identity-transition";
 
 type InjectionTab = "order" | "product" | "administration" | "review";
 
@@ -1328,6 +1328,7 @@ export function InjectionPanel({
     onKioskStepChange(defaultInjectionKioskStepForTab(tab));
   }, [kioskMode, onKioskStepChange, tab]);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [exceptionOpen, setExceptionOpen] = useState(() => Boolean(initialEncounter.details?.administrationException));
   const [patientScreeningDialogOpen, setPatientScreeningDialogOpen] = useState(false);
   const [lateDoseDialogOpen, setLateDoseDialogOpen] = useState(false);
   const [lateDoseReviewChoice, setLateDoseReviewChoice] = useState<"provider-authorized" | "other">(
@@ -1473,7 +1474,9 @@ export function InjectionPanel({
     // keyboard shortcut can edit a field and request navigation in the same
     // browser task; publish the exact next encounter before that guard runs.
     const previous = encounterRef.current;
-    const candidate = updater(previous);
+    const candidate = applyInjectionIdentityTransition(previous, updater(previous));
+    // Exact no-ops do not invalidate review or create an unsaved revision.
+    if (JSON.stringify(candidate) === JSON.stringify(previous)) return;
     const materialFactsChanged =
       injectionAdministrationReviewFingerprint(previous) !==
       injectionAdministrationReviewFingerprint(candidate);
@@ -1557,10 +1560,6 @@ export function InjectionPanel({
       (previous) => ({
         ...previous,
         patient: { ...previous.patient, ...partial },
-        // A different identity never silently inherits a scheduling reminder.
-        avsAppointment: Object.entries(partial).some(([key, value]) =>
-          previous.patient[key as keyof InjectionEncounter["patient"]] !== value)
-          ? emptyAvsAppointment() : previous.avsAppointment,
       }),
       { silentPatientIdentity: true },
     );
@@ -2347,16 +2346,38 @@ export function InjectionPanel({
     setLateDoseDialogOpen(false);
   };
 
+  const removeAdministrationException = () => {
+    const details = encounterRef.current.details;
+    const populated = [details?.exceptionSummary, details?.exceptionRecipient,
+      details?.exceptionTime, details?.exceptionOutcome].some((value) => value?.trim());
+    if (populated && !window.confirm("Remove the recorded administration exception and its details?")) return;
+    patchDetails({ administrationException: false, exceptionSummary: "", exceptionRecipient: "",
+      exceptionTime: "", exceptionOutcome: "" });
+  };
+
   const administrationExceptionEditor =
     nonAdministration ? null : (
       <TransactionLine
-        label="ADMINISTRATION EXCEPTION — Something changed during or after administration"
-        documented={encounter.details?.administrationException ?? false}
-        open={encounter.details?.administrationException ?? false}
-        onToggle={() => patchDetails({ administrationException: !encounter.details?.administrationException })}
+        label="Administration exception"
+        summary={!encounter.details?.administrationException ? "Not recorded" :
+          stops.some((issue) => issue.code.startsWith("administration.exception-")) ? "Needs details" : "Documented"}
+        documented={Boolean(encounter.details?.administrationException) &&
+          !stops.some((issue) => issue.code.startsWith("administration.exception-"))}
+        open={exceptionOpen}
+        onOpenChange={setExceptionOpen}
       >
+          <label class="wfp-check">
+            <input type="checkbox" checked={encounter.details?.administrationException ?? false}
+              disabled={editorDisabled}
+              onChange={(event) => {
+                if (event.currentTarget.checked) patchDetails({ administrationException: true });
+                else { removeAdministrationException(); event.currentTarget.checked = Boolean(encounterRef.current.details?.administrationException); }
+              }} />
+            <span>Record an administration exception</span>
+          </label>
           {encounter.details?.administrationException && (
             <>
+              <button type="button" class="cd2004-link-button" onClick={removeAdministrationException}>Remove exception</button>
               <Field label="What changed / what was observed" field="details.exceptionSummary">
                 <textarea
                   value={encounter.details?.exceptionSummary ?? ""}
@@ -2458,7 +2479,7 @@ export function InjectionPanel({
                   type="button"
                   class="cd2004-link-button"
                   onClick={() =>
-                    patch({ patient: { name: activePatientName, dob: activePatientDob } })
+                    patchPatient({ name: activePatientName, dob: activePatientDob })
                   }
                 >
                   Use selected local patient

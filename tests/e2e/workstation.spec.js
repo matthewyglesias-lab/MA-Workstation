@@ -2250,8 +2250,9 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Administration');
     await panel
-      .getByText('Something changed during or after administration', { exact: false })
+      .getByRole('button', { name: /Administration exception/i })
       .click();
+    await panel.getByRole('checkbox', { name: 'Record an administration exception', exact: true }).check();
     await expect(disposition).toContainText('Describe what changed or was observed for the administration exception.');
     await expect(administered).toBeDisabled();
 

@@ -34,6 +34,12 @@ const reviewedHandout = new Map([
   ['src/domain/injection-avs-render.ts', '39160256761589ce4e0c27425f47a60e5deb56f9404bb6d724f24803064d5776'],
   ['src/domain/injection-avs-guidance.ts', '4e4951d5427dbf4a70951ba9a1dc35485dbd69b711b87590f9fed19bf0eea7a9'],
 ]);
+// Approved v2 ownership correction, 2026-10-03. Presentation policy resets only
+// handout metadata when current encounter identity changes; no clinical rules.
+// Exact bytes remain protected. See docs/lightfully-refinement/PROGRESS.md.
+const reviewedRefinement = new Map([
+  ['src/application/injection-identity-transition.ts', 'e678ea0302a03ac01ec6978eb4e4cb9f6e991c3c2ba632cad5a30878b0e217e2'],
+]);
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 try {
   git('cat-file', '-e', `${baseline}^{commit}`);
@@ -42,9 +48,9 @@ try {
     ...git('diff', '--no-renames', '--name-only', baseline, '--', ...protectedPaths).split('\n'),
     ...git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths).split('\n'),
   ].filter(Boolean);
-  const unexpected = changed.filter(path => !reviewedScope.has(path) && !reviewedDefaults.has(path) && !reviewedHandout.has(path));
+  const unexpected = changed.filter(path => !reviewedScope.has(path) && !reviewedDefaults.has(path) && !reviewedHandout.has(path) && !reviewedRefinement.has(path));
   if (unexpected.length) throw new Error(`Protected files changed:\n${unexpected.join('\n')}`);
-  for (const [path, expected] of [...reviewedDefaults, ...reviewedHandout]) {
+  for (const [path, expected] of [...reviewedDefaults, ...reviewedHandout, ...reviewedRefinement]) {
     const actual = createHash('sha256').update(readFileSync(path)).digest('hex');
     if (actual !== expected) throw new Error(`Unreviewed clinical/default/handout change: ${path}`);
   }

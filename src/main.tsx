@@ -982,7 +982,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         <InjectionPanel
           key={injectionRecordEpoch}
           initialEncounter={launch.encounter}
-          activePatient={context.patient}
+          activePatient={clinical.state.activePatient}
           staffSignInValue={activeStaffValue()}
           previewRef={injectionPanelRef}
           locked={runtime.injectionRecordState().lifecycle === 'locked'}
