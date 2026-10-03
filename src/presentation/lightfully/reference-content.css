@@ -1,0 +1,18 @@
+/* Reading content in Reference only. Inputs and clinical documents are not
+   restyled here. These new semantic elements replace the former field wrappers. */
+@media screen {
+  #lf-workstation .lf-reference-entry { display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;padding:12px;border:1px solid transparent;border-bottom-color:var(--lf-line);border-radius:6px;cursor:pointer;color:var(--lf-ink);background:transparent; }
+  #lf-workstation .lf-reference-entry input {margin:4px 0 0;accent-color:var(--lf-leaf);}
+  #lf-workstation .lf-reference-entry.is-selected {background:var(--lf-sage);border-color:#9bb5aa;}
+  #lf-workstation .lf-reference-entry:hover {background:#f3f5f7;}
+  #lf-workstation .lf-reference-entry:has(input:focus-visible) {outline:2px solid var(--lf-leaf);outline-offset:2px;}
+  #lf-workstation .lf-reference-fact { margin: 0; padding: 14px 0; border-top: 1px solid var(--lf-line); color: var(--lf-ink); }
+  #lf-workstation .lf-reference-fact h3 { margin: 0 0 8px; font: 600 13px/21px var(--tw-font-sans); color: var(--lf-leaf); }
+  #lf-workstation .lf-reference-fact :is(p,ul,dl) { margin: 0; font: 400 13px/22px var(--tw-font-sans); }
+  #lf-workstation .lf-reference-fact ul { padding-left: 18px; }
+  #lf-workstation .lf-reference-fact li + li { margin-top: 6px; }
+  #lf-workstation .lf-reference-fact dl { display: grid; gap: 10px; }
+  #lf-workstation .lf-reference-fact dt { font-weight: 600; }
+  #lf-workstation .lf-reference-fact dd { margin: 2px 0 0; color: #496472; }
+  #lf-workstation .lf-reference-article { min-width: 0; }
+}

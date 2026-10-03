@@ -20,6 +20,7 @@ export interface OptionListProps<T extends string> {
   describedBy?: string;
   required?: boolean;
   invalid?: boolean;
+  disabled?: boolean;
 }
 
 export function OptionList<T extends string>({
@@ -34,6 +35,7 @@ export function OptionList<T extends string>({
   describedBy,
   required,
   invalid,
+  disabled,
 }: OptionListProps<T>) {
   const selected = options.find((option) => option.key === value);
   return (
@@ -41,12 +43,13 @@ export function OptionList<T extends string>({
       <select
         name={name}
         value={value}
+        disabled={disabled}
         aria-labelledby={labelledBy}
         aria-label={labelledBy ? undefined : ariaLabel}
         aria-describedby={describedBy}
         aria-required={required || undefined}
         aria-invalid={invalid || undefined}
-        onChange={(event) => onChange(event.currentTarget.value as T)}
+        onChange={(event) => { if (!disabled) onChange(event.currentTarget.value as T); }}
       >
         {placeholder && (
           <option value="" disabled>

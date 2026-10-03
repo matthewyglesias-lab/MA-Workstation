@@ -1,3 +1,4 @@
+import "../../lightfully/reference-content.css";
 import { ToolPageHeader } from "../../lightfully/ToolPageHeader";
 import { useMemo, useState } from "preact/hooks";
 import {
@@ -5,46 +6,17 @@ import {
   allKnowledgeEntries,
   searchKnowledgeEntries,
   type KnowledgeCategory,
-  type KnowledgeEntry,
   type KnowledgeRow,
 } from "../../../domain/knowledge-catalog";
 
 function EntryRow({ row }: { row: KnowledgeRow }) {
-  if (row.kind === "list") {
-    return (
-      <div class="wfp-field">
-        <label>{row.label}</label>
-        <ul class="wfp-field-hint" style="margin:0;padding-left:14px;list-style:disc;">
-          {row.items.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
-  if (row.kind === "facts") {
-    return (
-      <div class="wfp-field">
-        <label>{row.label}</label>
-        <div class="wfp-row">
-          {row.items.map((item) => (
-            <div key={item.term}>
-              <div class="wfp-option-title">{item.term}</div>
-              <div class="wfp-option-desc">{item.detail}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div class="wfp-field">
-      <label>{row.label}</label>
-      <p class="wfp-field-hint" style="margin:0;">
-        {row.value}
-      </p>
-    </div>
-  );
+  return <section class="lf-reference-fact">
+    <h3>{row.label}</h3>
+    {row.kind === "list" ? <ul>{row.items.map(item => <li key={item}>{item}</li>)}</ul> :
+      row.kind === "facts" ? <dl>{row.items.map(item => <div key={item.term}>
+        <dt>{item.term}</dt><dd>{item.detail}</dd>
+      </div>)}</dl> : <p>{row.value}</p>}
+  </section>;
 }
 
 /**
@@ -133,7 +105,7 @@ export function KnowledgePanel() {
               results.map((entry) => (
                 <label
                   key={entry.id}
-                  class={`wfp-option-row ${selected?.id === entry.id ? "is-selected" : ""}`}
+                  class={`lf-reference-entry ${selected?.id === entry.id ? "is-selected" : ""}`}
                 >
                   <input
                     type="radio"
@@ -161,15 +133,15 @@ export function KnowledgePanel() {
         </div>
 
         {selected && (
-          <div class="wfp-section">
-            <div class="wfp-section-head">{selected.title}</div>
+          <article class="wfp-section lf-reference-article" aria-label={selected.title}>
+            <h2 class="wfp-section-head">{selected.title}</h2>
             <div class="wfp-section-body">
               <p class="wfp-field-hint">{selected.sub}</p>
               {selected.rows.map((row) => (
                 <EntryRow key={row.label} row={row} />
               ))}
             </div>
-          </div>
+          </article>
         )}
         </div>
       </div>

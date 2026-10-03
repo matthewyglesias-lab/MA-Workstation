@@ -3,6 +3,7 @@ import { useEffect, useState } from "preact/hooks";
 import {
   OTHER_PROVIDER_KEY,
   hasProviderRegister,
+  findRegisteredProvider,
   providerRegisterOptions,
   resolveProviderDisplay,
   type RegisteredProvider,
@@ -36,6 +37,18 @@ export interface ProviderFieldProps {
   invalid?: boolean;
 }
 
+/** Presentation options retain canonical IDs/names. Suppress only the exact
+ * credential already in the canonical label, never other contextual details. */
+export function providerEntryOptions(register?: ReadonlyArray<RegisteredProvider>, prescribersOnly?: boolean) {
+  return providerRegisterOptions(register, { prescribersOnly }).map(option => ({
+    ...option,
+    // The canonical label already contains this verified credential. Do not
+    // repeat it below the select and again in the search result.
+    description: option.description === findRegisteredProvider(option.key, register)?.credential
+      ? undefined : option.description,
+  }));
+}
+
 export function ProviderField({
   value,
   onChange,
@@ -49,7 +62,7 @@ export function ProviderField({
   required,
   invalid,
 }: ProviderFieldProps) {
-  const options = providerRegisterOptions(register, { prescribersOnly });
+  const options = providerEntryOptions(register, prescribersOnly);
   const registered = options.some((option) => option.key === value);
   // Anything not matching a register id is free text: an "Other" entry, or a
   // record written before the register existed.
@@ -109,6 +122,7 @@ export function ProviderField({
         describedBy={describedBy}
         required={required}
         invalid={invalid}
+        disabled={disabled}
         inline
       />
       {usingOther && (

@@ -1,3 +1,4 @@
+import { ActionShelf } from "../../lightfully/ActionShelf";
 import { ToolPageHeader } from "../../lightfully/ToolPageHeader";
 import { useState } from "preact/hooks";
 import {
@@ -68,18 +69,14 @@ export function DailyCloseoutPanel() {
     <div class="wfp-panel lf-closeout-panel cd2004-print-exclude" tabIndex={-1}>
       <ToolPageHeader title="Daily closeout">
         <span class="wfp-status-flag is-idle">{stats.total} logged today</span>
-        <button type="button" class="cd2004-link-button" onClick={() => clickLegacyControl("copyDailySummary")}>
-          Copy summary
-        </button>
-        <button type="button" class="cd2004-link-button" onClick={() => clickLegacyControl("exportDailyCsv")}>
-          Export CSV
-        </button>
         <button type="button" class="cd2004-command-button" onClick={() => clickLegacyControl("printDailyLog")}>
           Print daily log
         </button>
-        <button type="button" class="cd2004-command-button" onClick={() => clickLegacyControl("saveDailyPdf")}>
-          Save closeout PDF
-        </button>
+        <ActionShelf label="Output options" heading="Closeout outputs" class="lf-closeout-outputs">
+          <button type="button" onClick={() => clickLegacyControl("copyDailySummary")}>Copy summary</button>
+          <button type="button" onClick={() => clickLegacyControl("exportDailyCsv")}>Export CSV</button>
+          <button type="button" onClick={() => clickLegacyControl("saveDailyPdf")}>Save closeout PDF</button>
+        </ActionShelf>
       </ToolPageHeader>
 
       <div class="wfp-section">
@@ -216,9 +213,9 @@ export function DailyCloseoutPanel() {
           )}
 
           </div>
-          <button type="button" class="cd2004-link-button" onClick={() => clickLegacyControl("clearLog")}>
-            Clear log
-          </button>
+          <ActionShelf label="Manage local activity" heading="Local log management" description="These tools affect the activity log in this browser, not the clinical chart." placement="up" class="lf-closeout-management">
+            <button type="button" class="is-danger" onClick={() => clickLegacyControl("clearLog")}>Clear log</button>
+          </ActionShelf>
         </div>
       </div>
     </div>
