@@ -9,6 +9,11 @@ for (const viewport of [{ width:1440,height:900 },{ width:1366,height:768 },{ wi
     await expect(page.locator('.lf-work-row')).toHaveCount(14);
     for (const chip of await page.locator('.lf-work-row[data-worklist-row="drafts"] .tebra-state-chip').all()) await expect(chip).toHaveClass(/is-neutral/);
     for (const chip of await page.locator('.lf-work-row[data-worklist-row="review"] .tebra-state-chip').all()) await expect(chip).toHaveClass(/is-warning/);
+    // Recorded state keeps a visible, font-independent mark beside its words.
+    const recordedMark = page.locator('.lf-work-row .tebra-state-chip.is-ready svg').first();
+    await expect(recordedMark).toBeVisible();
+    const mark = await recordedMark.boundingBox();
+    expect(mark.width).toBeGreaterThan(0); expect(mark.height).toBeGreaterThan(0);
     const geometry = await page.evaluate(() => {
       const masthead = document.querySelector('.lf-masthead').getBoundingClientRect();
       const scroller = document.querySelector('.cd2004-worklist-sheet').getBoundingClientRect();

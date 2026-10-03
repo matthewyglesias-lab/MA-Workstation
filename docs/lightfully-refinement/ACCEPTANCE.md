@@ -188,7 +188,7 @@ Patient screening and integrated provider appointment output are preserved.
 
 ## Reproduction and final gate
 
-Use locked `npm ci`, Chromium from Playwright 1.62.0 and Linux for Linux references.
+Use locked `npm ci`, Chromium from Playwright 1.62.0 and Ubuntu 24 for the strict Linux worklist reference. The zero-tolerance fixture intentionally pins the CI renderer; Debian 13 text rasterization differs. Other visual tolerances are unchanged.
 Build with `VITE_ENABLE_INJECTION_PATIENT_SCREENING=true`, then package standalone.
 Run `npm run check`, `node scripts/check-local-refinement.mjs`, `npm run test:unit`,
 and `TEST_STANDALONE_FILE=1 npx playwright test --retries=0` with JSON/HTML reports.
@@ -208,3 +208,37 @@ Saved Records redesign, new medication rules, external Tebra filing, automatic
 signing, post-sign appointment editing, new service workflows or broader shortcut
 ownership redesign. Clinic/AT/printer observations are explicitly separate from
 the completed engineering implementation.
+
+## Canonical Linux renderer and worklist mark
+
+The native Debian 13 full run on `03f4f66` passed 384/384, but its new strict
+worklist reference differed in hosted Ubuntu. Exact-head Clinic-first CI finished
+383 passed / one strict-image failure, no retries/skips/flaky results; its recorded
+COMMIT/TREE matched that head. Manual artifact CI also failed this reference
+(its standalone case is intentionally disabled by that existing workflow).
+These failures are not called passed. Images were downloaded and visually
+inspected; the compiled CSS bytes match and fonts load successfully.
+
+Ubuntu 24 reproduction narrowed the remaining CI/container difference to 1,610
+pixels exclusively inside the two recorded-state badges. The bundled text face
+lacks the checkmark glyph, making it depend on system fallback fonts. StartCenter
+now uses its existing SVG check icon at an explicit 12px viewport, retains the
+same state word/tone, and removes the superseded text checkmark. A browser
+regression checks the mark is actually visible with nonzero bounds at all four
+sizes. No clinical or lifecycle value changes. The reviewed image is
+[evidence/canonical-linux-worklist.png](evidence/canonical-linux-worklist.png).
+
+The final strict hash comes from that reviewed Ubuntu image. `.toEqual(reference)`,
+zero pixel tolerance and all other test tolerances remain unchanged. **13/13**
+canonical Ubuntu state-reference/worklist interaction checks passed, retries zero,
+in a separate verification run after review. Full exact-head verification must
+follow the commit. Other Linux PNG and all Windows references are unchanged.
+
+Canonical local reproduction uses the existing Playwright image
+`mcr.microsoft.com/playwright:v1.62.0-noble`, digest
+`sha256:baed2032d533817f3dbe6425de795788430ba345e819a1201337009ba17c9d07`.
+It mounts the repository read-only, with a temporary writable Vite config-cache
+mount and a separate report directory. It runs the existing production preview
+and full locked suite with `CI=true`, `TEST_STANDALONE_FILE=1`, `--retries=0`, and
+JSON reporting. The managed environment proxy/CA remains intact; no Actions,
+framework, dependencies, Dockerfile or deployment configuration was changed.

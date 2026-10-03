@@ -401,3 +401,34 @@ verification remains enabled. Canceled runs are not counted as passing checks.
 
 Scoped 20-cycle recheck: **1/1 passed in 32 seconds**, zero retries, all exact
 invariants retained. New final full-run and CI results will be recorded on the PR.
+
+### Hosted renderer reconciliation and SVG ownership checkpoint
+
+Native Debian 13 exact `03f4f66` verification passed **384/384**, zero retries,
+failures, skips/flaky results; 857 units/static/preservation/build/package passed.
+PR was marked ready after that exact verification. Its final hosted Clinic-first
+run finished **383 passed / one strict worklist image failure**, zero retries or
+skips. Manual artifact CI also failed the same fingerprint; its existing standalone
+flag is disabled. Neither failed CI run is reported as passed.
+
+Downloaded and inspected the actual CI capture and provenance. CSS bytes match
+local output, font requests succeeded, no font console errors. Debian/Ubuntu text
+rasterization differs; an Ubuntu 24 reproduction narrowed its remaining difference
+from CI to **1,610 pixels inside two recorded-state badges only**. Their text
+checkmark falls back outside the bundled font. Replaced that mark at its StartCenter
+owner with the existing SVG icon and explicit 12px viewport; removed the old ready
+text glyph. The label/tone/data and native table remain unchanged. New browser
+checks assert a genuinely visible mark with nonzero bounds at all four sizes.
+
+Reviewed the new Ubuntu image before updating the single zero-tolerance RGBA
+reference. Separate canonical **13/13** state/reference/worklist interaction cases
+pass, retries zero; all other image/contrast/test tolerances unchanged. Reference
+capture before its review intentionally failed the old hash and is not verification.
+Updated the four production worklist images and retained the canonical image.
+Normal geometry/row counts and all four service actions are preserved.
+
+Canonical Ubuntu 24 Playwright 1.62.0 image/digest is recorded in ACCEPTANCE.md.
+Repository is mounted read-only except ephemeral config cache; reports separate.
+No new project/container config, dependency or Actions modifications. This small
+source/reference checkpoint must receive complete exact-head unit/browser/CI
+verification, with final provenance/results recorded on the PR without amendment.
