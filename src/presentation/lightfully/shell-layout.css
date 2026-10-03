@@ -16,7 +16,7 @@
   }
   #lf-workstation .lf-masthead {
     display: flex; align-items: center; justify-content: space-between; gap: 24px;
-    min-height: 68px; padding: 8px var(--lf-shell-gutter); border-bottom: 1px solid var(--lf-line);
+    min-height: 68px; padding: 7px var(--lf-shell-gutter); border-bottom: 1px solid var(--lf-line);
   }
   #lf-workstation .lf-section-rail {
     display: flex; align-items: center; flex: 0 0 auto; gap: 18px; min-height: 0;
@@ -34,7 +34,7 @@
     display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; width: auto;
     min-height: 38px; padding: 8px 11px; border: 1px solid transparent; border-radius: 8px;
     margin: 0; background: transparent; box-shadow: none; cursor: pointer;
-    color: #496472; font: 500 12px/20px var(--tw-font-sans); white-space: nowrap;
+    color: #496472; font: 500 13px/20px var(--tw-font-sans); white-space: nowrap;
   }
   #lf-workstation .lf-primary-navigation .cd2004-nav-item svg { width: 17px; height: 17px; color: var(--lf-leaf); }
   #lf-workstation .lf-primary-navigation .cd2004-nav-item:hover:not(:disabled) { background: var(--lf-soft); }
@@ -43,7 +43,7 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     width: auto; flex: 0 0 auto; min-height: 38px; padding: 8px 12px; margin: 0;
     color: var(--lf-ink); border: 1px solid #b7c7cb; border-radius: 8px;
-    background: #fff; box-shadow: none; font: 600 12px/20px var(--tw-font-sans); cursor: pointer;
+    background: #fff; box-shadow: none; font: 600 13px/20px var(--tw-font-sans); cursor: pointer;
   }
   #lf-workstation .lf-document-action svg { width: 17px; height: 17px; flex: 0 0 17px; }
   #lf-workstation .lf-document-action:hover { background: #f8efec; border-color: #ba897e; }
@@ -140,18 +140,17 @@
   #lf-workstation[data-kiosk-mode=true] .cd2004-transaction-window { margin: 0; }
 
   /* The service desk: a compact service strip above one full-width work queue. */
-  #lf-workstation .lf-start-center { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto minmax(0,1fr) auto; gap: 20px; width: 100%; height: 100%; min-height: 0; max-width: 1440px; padding: 24px var(--lf-shell-gutter) 16px; margin: 0 auto; background: transparent; }
+  #lf-workstation .lf-start-center { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto minmax(0,1fr) auto; gap: 16px; width: 100%; height: 100%; min-height: 0; max-width: 1440px; padding: 20px var(--lf-shell-gutter) 16px; margin: 0 auto; background: transparent; }
   #lf-workstation .lf-worklist-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0; margin: 0; border: 0; background: transparent; }
   #lf-workstation .lf-worklist-heading .lf-eyebrow { display: block; color: #597280; font: 600 10px/16px var(--tw-font-sans); letter-spacing: .12em; }
-  #lf-workstation .lf-worklist-heading h1 { margin: 3px 0 5px; color: var(--lf-ink); font: 400 34px/42px var(--lf-display); letter-spacing: -.7px; }
+  #lf-workstation .lf-worklist-heading h1 { margin: 3px 0 5px; color: var(--lf-ink); font: 400 30px/38px var(--lf-display); letter-spacing: -.7px; }
   #lf-workstation .lf-worklist-heading p { margin: 0; color: var(--lf-muted); font: 400 13px/21px var(--tw-font-sans); }
   #lf-workstation .lf-worklist-heading time { flex: 0 0 auto; color: #496472; font: 500 13px/21px var(--tw-font-sans); font-variant-numeric: tabular-nums; }
   #lf-workstation .lf-service-launcher { min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; background: transparent; overflow: visible; }
   #lf-workstation .lf-launcher-caption { display: flex; align-items: baseline; gap: 14px; margin: 0 0 9px; }
   #lf-workstation .lf-launcher-caption h2 { margin: 0; color: var(--lf-ink); font: 600 13px/21px var(--tw-font-sans); }
-  #lf-workstation .lf-launcher-caption p { margin: 0; color: var(--lf-muted); font: 400 12px/20px var(--tw-font-sans); }
   #lf-workstation .lf-service-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--lf-line); border-radius: 12px; background: #fff; overflow: hidden; }
-  #lf-workstation .lf-service-shortcut { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 80px; width: 100%; padding: 15px 18px; border: 0; border-right: 1px solid var(--lf-line); border-radius: 0; background: transparent; text-align: left; color: var(--lf-ink); box-shadow: none; cursor: pointer; }
+  #lf-workstation .lf-service-shortcut { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 64px; width: 100%; padding: 10px 18px; border: 0; border-right: 1px solid var(--lf-line); border-radius: 0; background: transparent; text-align: left; color: var(--lf-ink); box-shadow: none; cursor: pointer; }
   #lf-workstation .lf-service-shortcut:last-child { border-right: 0; }
   #lf-workstation .lf-service-shortcut:hover:not(:disabled) { background: #f4f6f8; }
   #lf-workstation .lf-service-shortcut:focus-visible { outline-offset: -3px; }
@@ -167,10 +166,7 @@
   #lf-workstation .lf-shortcut-arrow { display: inline-flex; align-items: center; flex: 0 0 16px; color: var(--lf-leaf); }
   #lf-workstation .lf-shortcut-arrow svg { width: 16px; height: 16px; }
   #lf-workstation .lf-worklist-card { display: flex; flex-direction: column; min-width: 0; min-height: 0; align-self: stretch; margin: 0; border: 1px solid var(--lf-line); border-radius: 12px; background: #fff; overflow: hidden; }
-  #lf-workstation .lf-worklist-intro { display: flex; align-items: baseline; gap: 16px; flex: 0 0 auto; padding: 18px 22px 6px; }
-  #lf-workstation .lf-worklist-intro h2 { margin: 0; color: var(--lf-ink); font: 400 23px/30px var(--lf-display); letter-spacing: -.3px; }
-  #lf-workstation .lf-worklist-intro p { margin: 0; color: var(--lf-muted); font: 400 12px/20px var(--tw-font-sans); }
-  #lf-workstation .lf-worklist-controls { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 16px; min-width: 0; padding: 6px 22px 12px; border-bottom: 1px solid var(--lf-line); background: #fff; }
+  #lf-workstation .lf-worklist-controls { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 16px; min-width: 0; padding: 12px 22px; border-bottom: 1px solid var(--lf-line); background: #fff; }
   #lf-workstation .cd2004-worklist-tabs { display: flex; align-items: center; gap: 20px; width: auto; padding: 0; margin: 0; border: 0; background: transparent; }
   #lf-workstation .cd2004-worklist-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--lf-muted); font: 500 12px/20px var(--tw-font-sans); box-shadow: none; cursor: pointer; white-space: nowrap; }
   #lf-workstation .cd2004-worklist-tabs button.is-selected { border-bottom-color: #4d7765; color: var(--lf-ink); font-weight: 700; }
@@ -182,14 +178,14 @@
   #lf-workstation .cd2004-worklist-sheet { flex: 1 1 auto; min-height: 0; min-width: 0; margin: 0; border: 0; background: #fff; overflow: auto; overscroll-behavior: contain; }
   #lf-workstation .lf-work-table { width: 100%; border-collapse: collapse; table-layout: fixed; font: 400 13px/20px var(--tw-font-sans); }
   #lf-workstation .lf-work-table th { position: sticky; top: 0; z-index: 1; padding: 9px 18px; border-bottom: 1px solid var(--lf-line); background: #f4f6f8; color: #496472; font: 600 11px/18px var(--tw-font-sans); text-align: left; text-transform: none; }
-  #lf-workstation .lf-work-table td { padding: 13px 18px; border-bottom: 1px solid var(--lf-line); vertical-align: middle; background: #fff; overflow-wrap: anywhere; }
+  #lf-workstation .lf-work-table td { padding: 8px 18px; border-bottom: 1px solid var(--lf-line); vertical-align: middle; background: #fff; overflow-wrap: anywhere; }
   #lf-workstation .lf-work-table th:first-child { width: 34%; }
   #lf-workstation .lf-work-table th:nth-child(2) { width: 17%; }
   #lf-workstation .lf-work-table th:nth-child(3) { width: 18%; }
   #lf-workstation .lf-work-table th:nth-child(4) { width: 21%; }
   #lf-workstation .lf-work-table th:last-child { width: 10%; }
   #lf-workstation .lf-work-table tr:hover td { background: #f6f8f7; }
-  #lf-workstation .lf-work-table .tebra-record-title { display: block; color: var(--lf-ink); font: 600 13px/21px var(--tw-font-sans); white-space: normal; }
+  #lf-workstation .lf-work-table .tebra-record-title { display: block; color: var(--lf-ink); font: 600 14px/22px var(--tw-font-sans); white-space: normal; }
   #lf-workstation .lf-work-table .tebra-record-meta { display: block; margin-top: 3px; font: 400 12px/19px var(--tw-font-sans); color: var(--lf-muted); white-space: normal; }
   #lf-workstation .lf-table-service { display: inline-flex; align-items: center; gap: 7px; color: #496472; font-size: 12px; }
   #lf-workstation .lf-table-service svg { flex: 0 0 16px; width: 16px; height: 16px; }
@@ -207,8 +203,6 @@
     #lf-workstation .lf-section-rail { gap: 10px; }
     #lf-workstation .lf-masthead-utilities { gap: 10px; }
     #lf-workstation .lf-masthead .tebra-menu-quiet > span:not(.tebra-account-avatar):not(.tebra-action-caret) { display: none; }
-    #lf-workstation .lf-document-action > span { display: none; }
-    #lf-workstation .lf-document-action { width: 38px; padding: 8px; }
     #lf-workstation .lf-shortcut-arrow { display: none; }
     #lf-workstation .lf-service-shortcut { padding: 13px 14px; gap: 10px; }
     #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr) minmax(330px,.85fr); }
@@ -225,7 +219,11 @@
     #lf-workstation .ipmg-product-name { font-size: 11px; line-height: 16px; }
     #lf-workstation .lf-primary-navigation .cd2004-nav-item { padding-inline: 7px; gap: 5px; }
     #lf-workstation .lf-primary-navigation .cd2004-nav-item > svg { display: none; }
-    #lf-workstation .lf-header-search { min-width: 152px; }
+    #lf-workstation .lf-header-search { min-width: 125px; }
+    #lf-workstation .lf-masthead-utilities { gap: 8px; }
+    #lf-workstation .lf-section-rail { gap: 8px; }
+    #lf-workstation .lf-document-action { padding-inline: 8px; }
+    #lf-workstation .lf-document-action > svg { display: none; }
     #lf-workstation .tebra-app-context { gap: 8px; }
     #lf-workstation .tebra-workspace-badge.is-local { max-width: 42px; font-size: 9px; line-height: 13px; }
     #lf-workstation .tebra-patient-search-results { left: auto; right: 0; }
@@ -236,11 +234,10 @@
     #lf-workstation .lf-service-heading h1 { font-size: 26px; line-height: 34px; }
     #lf-workstation .lf-service-header-actions { gap: 8px; }
     #lf-workstation .lf-view-switch button { padding-inline: 9px; }
-    #lf-workstation .lf-service-shortcut { min-height: 74px; padding: 12px; gap: 9px; }
+    #lf-workstation .lf-service-shortcut { min-height: 64px; padding: 10px; gap: 9px; }
     #lf-workstation .lf-shortcut-number { width: 30px; height: 34px; flex-basis: 30px; }
-    #lf-workstation .lf-shortcut-copy strong { font-size: 12px; line-height: 19px; }
+    #lf-workstation .lf-shortcut-copy strong { font-size: 13px; line-height: 20px; }
     #lf-workstation .lf-shortcut-copy small { font-size: 11px; line-height: 17px; }
-    #lf-workstation .lf-worklist-intro { padding: 14px 16px 4px; }
     #lf-workstation .lf-worklist-controls { padding: 4px 16px 10px; }
     #lf-workstation .cd2004-worklist-tabs { gap: 14px; }
     #lf-workstation .lf-work-table th,#lf-workstation .lf-work-table td { padding-inline: 12px; }
@@ -255,7 +252,6 @@
     #lf-workstation .lf-start-center { gap: 12px; padding-top: 16px; padding-bottom: 10px; }
     #lf-workstation .lf-worklist-heading h1 { font-size: 30px; line-height: 37px; margin-block: 2px 3px; }
     #lf-workstation .lf-worklist-heading p { font-size: 12px; line-height: 19px; }
-    #lf-workstation .lf-worklist-intro h2 { font-size: 21px; line-height: 27px; }
     #lf-workstation .lf-worklist-empty { min-height: 150px; padding: 15px; gap: 6px; }
     #lf-workstation .lf-worklist-empty strong { font-size: 22px; line-height: 28px; }
     #lf-workstation .lf-worklist-empty small { font-size: 12px; line-height: 20px; }

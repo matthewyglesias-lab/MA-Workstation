@@ -189,3 +189,24 @@ case starts with a current administration review and preserves its fingerprint,
 saved note, writes and dirty=false. A real generated Letter PDF was extracted and
 visually inspected: correct DOB, blank write-in reminder, honest STAFF PREVIEW —
 NOT FINAL scope after identity/review change. Artifact in `evidence/`.
+
+### Upper shell / populated worklist checkpoint
+
+Removed duplicated Continue work heading and launcher explanatory copy. Retained
+one Document care primary, readable 13px destinations and label at 800px; removed
+the old patient-safety margins and narrow fixed cell heights at their source.
+Native worklist rows remain table-row/table-cell; draft source now uses neutral
+lifecycle tone rather than the legacy draft warning. Actual review items retain
+warning text/glyph/tone. Names use 14px type and wrap without truncation; normal
+rows are 61px. Ordinary 14-item mixed-service fixture gives six complete rows at
+1440×900 and four at 1366×768; narrow long rows grow naturally.
+
+Checks/preservation/build and 857 units pass. Seven existing shell/service/browser
+checks and four new populated worklist checks pass, retries zero. New fixture was
+initially quarantined because one patient's summary identity disagreed with its
+snapshot identity; corrected both instead of weakening the isolation guard. Visual
+review then found actual Document care/search overlap at 800px despite individual
+boxes fitting. Removed the optional plus icon at this width; added explicit sibling
+clearance assertion. Final four-size tests pass, and screenshots were inspected
+at 1440 and 800 with clear 10px clearance. Artifacts in evidence/after-shell/.
+The original before captures remain in the evidence workspace for final comparison.

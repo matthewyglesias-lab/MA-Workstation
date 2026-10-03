@@ -109,7 +109,8 @@ function recordWorklistRow(record: InjectionRecordRow): WorklistRow {
     taskLabel: record.medicationLabel,
     stateLabel: record.statusLabel,
     actionLabel: "Resume",
-    tone: record.tone,
+    // This source contains editable local drafts, not evaluated clinical alerts.
+    tone: "neutral",
     record,
   };
 }
@@ -220,7 +221,7 @@ export function StartCenter({
     <section class="cd2004-start-center lf-start-center" aria-labelledby="currentWorklistTitle">
       <header class="lf-worklist-heading cd2004-worklist-header"><div><span class="lf-eyebrow">YOUR LOCAL WORKSPACE</span><h1 id="currentWorklistTitle">Worklist</h1><p>Choose a service, pick up a draft, or review what needs attention.</p></div><time>{new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date())}</time></header>
       <aside class="lf-service-launcher" aria-label="Document care">
-      <div class="lf-launcher-caption"><h2>Document care</h2><p>Start a service or pick up where you left off.</p></div>
+      <div class="lf-launcher-caption"><h2>Start a service</h2></div>
       <div class="lf-service-strip" aria-label="Start or resume a service">
         {SERVICES.map((service) => <button type="button" class={`lf-service-shortcut lf-service-${service.id}`} key={service.id}
           disabled={!onWorkflowOpen} onClick={() => onWorkflowOpen?.(service.id)}>
@@ -231,7 +232,6 @@ export function StartCenter({
       </div>
       </aside>
       <div class="lf-worklist-card">
-      <div class="lf-worklist-intro"><h2>Continue work</h2><p>Drafts, open sessions and documentation to review.</p></div>
       <div class="lf-worklist-controls">
         <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters" onKeyDown={(event) => {
           const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
