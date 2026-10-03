@@ -50,6 +50,10 @@ for(const effective of [{width:1440,height:900},{width:800,height:600}]){
 }
 
 test('twenty view/density/focused cycles retain data and observer ownership',async({page})=>{
+ // Over 200 real interactions: the four-worker full run completed 19 cycles
+ // in the default minute with no failed calls. Budget the whole stress task;
+ // retain all 20 cycles, ordinary assertion deadlines and exact invariants.
+ test.setTimeout(120_000);
  await page.addInitScript(()=>{
   const Native=ResizeObserver;const owners=new Map();
   window.ResizeObserver=class extends Native{

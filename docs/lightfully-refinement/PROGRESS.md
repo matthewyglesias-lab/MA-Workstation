@@ -375,3 +375,29 @@ preservation and explicit environment/clinic limits. All engineering workstreams
 are implemented. Exact-final-commit full unit/browser/standalone/CI verification
 must now run after this commit. Final SHA/tree and results belong in the actual PR
 so verification does not require amending the commit it certifies.
+
+### Final-suite stress workload correction
+
+Exact `e7bfa07` full run finished **383 passed / 1 failed**, zero retries/skips/flaky
+results. The only failure was the new 20-cycle mode/density/browser stress case
+exceeding its default 60-second total budget. Trace inspection shows **19 complete
+cycles**, no failed browser call, and normal final action durations of 0.1–0.33s;
+time expired during the twentieth cycle. Its own task budget is now 120 seconds.
+All 20 real cycles, exact note equality, observer ownership and singular editor/ID
+assertions remain; ordinary assertion deadlines, screenshot/contrast tolerances,
+other test budgets and retries are unchanged. This corrects the repeated workload
+budget, not an application navigation failure. The failed run is not certification.
+
+All 38 print cases passed in that full run. Actual regenerated representative PDFs
+match the previously inspected clinical text and pagination except the legitimate
+random new encounter record numbers. Exact copied-note assertions passed. Final
+checks must run again after this small test/ledger checkpoint.
+
+The existing Azure PR workflow would automatically deploy a preview after green
+checks. To honor no deployment without modifying Actions, its PR-triggered run
+was canceled and the same workflow manually invoked on the working branch: its
+existing deployment condition excludes workflow_dispatch. Clinic-first exact-head
+verification remains enabled. Canceled runs are not counted as passing checks.
+
+Scoped 20-cycle recheck: **1/1 passed in 32 seconds**, zero retries, all exact
+invariants retained. New final full-run and CI results will be recorded on the PR.
