@@ -262,3 +262,40 @@ New test initially attempted an unsupported response key; corrected to an actual
 catalog option, without changing response rules. Final screenshots reviewed at
 1440/1366/800; artifacts in evidence/after-preview/. Zoom/text enlargement, expanded
 long fixtures, full matrix and exact-head suite still remain required.
+
+### Enlargement, stress and acceptance checkpoint
+
+Actual Chromium browser zoom uses chrome.tabs.setZoom(2) in an ephemeral,
+test-only extension. Physical 2880×1800 and 1600×1200 produce supported effective
+1440×900 and 800×600 work areas; actual entry and generated-document access pass.
+Chromium has no text-only zoom command: a separate test doubles measured font and
+line metrics simultaneously and exercises typing, lookup, Escape and visible focus.
+This is a text-resize simulation, not a claim of native text-only zoom or WCAG
+conformance. It found a fixed-height lookup button; removed that height so it
+stretches with its field. Shell groups reflow and preserve a scrollable working
+area under enlarged text. Ordinary masthead, target sizes and density checks remain
+required and unchanged. Four actual enlargement images reviewed and retained.
+
+21/21 coherent browser cases pass (zero retries): missing-response ownership,
+actual warning-only repeated-site sign capability, unfamiliar concern ordering and
+visible fallback navigation, native zoom/text enlargement, contrast, forced colors,
+reduced motion, control alignment and existing premium command/notice behavior.
+The unfamiliar issue is explicitly a test-only rendered future issue using the
+real navigation handler, not a substituted production evaluator or sign gate.
+Twenty view/density/focused cycles preserve note bytes, singular editors and active
+observer counts; twenty popover cycles preserve listener and dismissal ownership.
+Two additional timing cases pass: no prompt during partial date entry, once per
+facts on Review, cancellation records no approval, changed facts prompt anew.
+Initial timing assertion incorrectly sought the Order-only review action on Review;
+the corrected test invokes the actual visible Review timing route and then asserts
+its actionable requirement. No clinical review requirement or test tolerance changed.
+
+857 units, type/static/preservation checks and screening-enabled build passed.
+All 38 existing print tests passed with retries disabled. Rendered and visually
+inspected every page of actual three-page Vivitrol partial-appointment and Uzedy
+long-identity/typed-appointment PDFs: separate injection/provider dates, readable
+continuation identity, emergency instructions and footer bounds. Representative
+PDFs retained under evidence/print/. Print CSS, clinical templates and pagination
+fixtures were not changed. Physical printer/handwriting assessment remains clinic
+work. Full-suite diagnostic and like-for-like comparison captures are in progress;
+this checkpoint is not final certification.

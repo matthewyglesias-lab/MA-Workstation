@@ -5,9 +5,9 @@
 @media screen {
   :root { --lf-shell-gutter: 24px; }
   .lf-workstation#lf-workstation {
-    display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr);
+    display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(28em,1fr);
     gap: 0; width: 100%; height: 100%; min-width: 0; min-height: 0; padding: 0;
-    overflow: hidden; color: var(--lf-ink); background: var(--lf-canvas);
+    overflow: auto; color: var(--lf-ink); background: var(--lf-canvas);
     font: 400 14px/1.5 var(--tw-font-sans);
   }
   #lf-workstation .lf-app-header {
@@ -15,11 +15,11 @@
     display: block; margin: 0; padding: 0; border: 0; background: var(--lf-paper);
   }
   #lf-workstation .lf-masthead {
-    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px;
     min-height: 68px; padding: 7px var(--lf-shell-gutter); border-bottom: 1px solid var(--lf-line);
   }
   #lf-workstation .lf-section-rail {
-    display: flex; align-items: center; flex: 0 0 auto; gap: 18px; min-height: 0;
+    display: flex; flex-wrap: wrap; align-items: center; flex: 0 0 auto; max-width: 100%; gap: 18px; min-height: 0;
     height: auto; width: auto; min-width: 0; margin: 0; padding: 0;
     overflow: visible; border: 0; background: transparent;
   }
@@ -48,7 +48,7 @@
   #lf-workstation .lf-document-action svg { width: 17px; height: 17px; flex: 0 0 17px; }
   #lf-workstation .lf-document-action:hover { background: #f8efec; border-color: #ba897e; }
   #lf-workstation[data-active-workflow=home]:not([data-chart-view]) .lf-document-action { background: var(--lf-coral); border-color: var(--lf-coral); color: #1b3141; }
-  #lf-workstation .lf-masthead-utilities { display: flex; align-items: center; justify-content: flex-end; gap: 14px; min-width: 0; flex: 1 1 auto; }
+  #lf-workstation .lf-masthead-utilities { display: flex; align-items: center; justify-content: flex-end; gap: 14px; min-width: 24em; max-width: 100%; flex: 1 1 24em; }
   #lf-workstation .lf-header-search { min-width: 150px; flex: 0 1 310px; margin: 0; padding: 0; }
   #lf-workstation .tebra-patient-search { position: relative; min-width: 0; max-width: none; width: 100%; }
   #lf-workstation .lf-search-scope { display: block; margin: 0 0 3px; color: #496472; font: 600 10px/14px var(--tw-font-sans); letter-spacing: .01em; }
@@ -221,7 +221,7 @@
     #lf-workstation .lf-document-action { padding-inline: 8px; }
     #lf-workstation .lf-document-action > svg { display: none; }
     #lf-workstation .tebra-app-context { gap: 8px; }
-    #lf-workstation .tebra-workspace-badge.is-local { max-width: 42px; font-size: 9px; line-height: 13px; }
+    #lf-workstation .tebra-workspace-badge.is-local { max-width: 4.2em; font-size: 10px; line-height: 15px; }
     #lf-workstation .tebra-patient-search-results { left: auto; right: 0; }
     #lf-workstation .cd2004-patient-banner { grid-template-columns: minmax(145px,1fr) 90px 104px minmax(200px,1.3fr); gap: 12px; padding-block: 8px; }
     #lf-workstation .cd2004-patient-primary { gap: 8px; }
