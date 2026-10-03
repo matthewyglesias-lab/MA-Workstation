@@ -72,7 +72,6 @@ import { notifyLegacyFieldInput, setLegacyFieldValue } from "../legacy-mirror";
 import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
-import { StatusFlag } from "../StatusFlag";
 import { ScheduleRegister } from "../ScheduleRegister";
 import {
   injectionTimingDayFlag,
@@ -408,6 +407,7 @@ function tabForInjectionField(field?: string): InjectionTab {
 
 interface InjectionPanelProps {
   initialEncounter: InjectionEncounter;
+  workflowProgress?: import("../../../application/injection-workflow-progress").InjectionWorkflowProgress;
   activePatient: PatientContext;
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
@@ -1256,6 +1256,7 @@ const emptyDetails = (): InjectionAdministrationDetails => ({});
 
 export function InjectionPanel({
   initialEncounter,
+  workflowProgress,
   activePatient,
   staffSignInValue,
   previewRef,
@@ -2431,12 +2432,9 @@ export function InjectionPanel({
                   {RECORD.injectionProtectionUnavailableShort}
                 </span>
               ) : (
-                <StatusFlag
-                  idle={(evaluation?.readiness ?? "idle") === "idle"}
-                  stopCount={stops.length}
-                  warningCount={evaluation?.warnings.length ?? 0}
-                  onOpenRequirements={() => setRequirementsOpen(true)}
-                />
+                <button type="button" class="wfp-status-flag is-idle" onClick={() => setRequirementsOpen(true)}>
+                  {workflowProgress?.headline ?? "Documentation in progress"}
+                </button>
               )}
               {encounter.medicationKey && <WorkflowSummaryFact
                 label="Next dose"

@@ -1,3 +1,4 @@
+import { projectInjectionWorkflowProgress } from "./application/injection-workflow-progress";
 import { render } from 'preact';
 import { emptyAvsAppointment, appointmentForInput } from './domain/avs-appointment';
 /*
@@ -981,6 +982,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       return (
         <InjectionPanel
           key={injectionRecordEpoch}
+          workflowProgress={injectionProgress}
           initialEncounter={launch.encounter}
           activePatient={clinical.state.activePatient}
           staffSignInValue={activeStaffValue()}
@@ -1742,6 +1744,17 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const staffSignInName = activeStaffValue().trim();
   const [locked, unlock] = useIdleLock(staffSignInName.length > 0);
 
+  const canSignInjection = activeWorkflow === 'administer' && readinessModel.typedReady &&
+    localAttestationReady && injectionExtensionInstalled && injectionDraftProtectionAvailable;
+  const injectionProgress = activeWorkflow === 'administer' && injectionEncounter && typedInjectionState
+    ? projectInjectionWorkflowProgress({
+        encounter: injectionEncounter, evaluation: typedInjectionState.evaluation,
+        canSign: canSignInjection, canSave: injectionDraftCanPersist,
+        lifecycle: injectionRecordState?.lifecycle ?? 'new',
+        dirty: typedInjectionState.dirty, saving: posting,
+        capabilityDetail: injectionPersistenceBlockingDetail ?? attestationBlockingDetail,
+      }) : undefined;
+
   return (
     <WorkstationViewportBoundary>
       <ClinicalDesktopShell
@@ -1778,13 +1791,8 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             ? 'Locked browser-local record. Original record is read-only.'
             : undefined
         }
-        canComplete={
-          activeWorkflow === 'administer' &&
-          readinessModel.typedReady &&
-          localAttestationReady &&
-          injectionExtensionInstalled &&
-          injectionDraftProtectionAvailable
-        }
+        canComplete={canSignInjection}
+        injectionProgress={injectionProgress}
         statusMessage={snapshot.statusMessage}
         onSaveDraft={
           activeWorkflow === 'administer' && injectionDraftCanPersist

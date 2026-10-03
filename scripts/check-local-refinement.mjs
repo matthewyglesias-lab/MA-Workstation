@@ -20,7 +20,7 @@ const reviewedScope = new Set([
 // administration-review invalidation are permitted in these
 // clinical/compatibility files. A different byte requires an explicit re-review.
 const reviewedDefaults = new Map([
-  ['src/domain/injection.ts', 'c78e1c6602fa11a06a75adb2722cd0f78da790891ba249fa62253a6efcaa4b91'],
+  ['src/domain/injection.ts', 'f818945c954c06e8e549e19a864e6f3cdb8ccd926f893aadfe92db51f7594f2a'],
   ['src/legacy/legacy-markup.html', '97ea5fa36ff7e4b0a6ae9f56085f49b6994c9b99df868ce17fae470de430fbd2'],
   ['public/legacy/legacy-runtime.js', 'c570e6e85ceb1f9218fabe232c62a0c699b7c293d47f7def0194ee96e7586381'],
 ]);
@@ -39,6 +39,8 @@ const reviewedHandout = new Map([
 // Exact bytes remain protected. See docs/lightfully-refinement/PROGRESS.md.
 const reviewedRefinement = new Map([
   ['src/application/injection-identity-transition.ts', 'e678ea0302a03ac01ec6978eb4e4cb9f6e991c3c2ba632cad5a30878b0e217e2'],
+  ['src/application/injection-workflow-progress.ts', 'e48be8a89c1a7be9413a2c651ddc0b0e5724c22c4fc78cdde4c71a5a01f1c4e9'],
+  ['src/application/readiness-projection.ts', '0a20f7d886a9fb79e3f37fe9f11ab68e6ad4b892106d21766ffaf4bce133ede4'],
 ]);
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 try {

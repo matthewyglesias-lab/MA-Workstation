@@ -1,6 +1,6 @@
 import { Fragment } from "preact";
 
-import type { WorkstationReadinessItem } from "../../application/workstation-projection";
+import type { InjectionWorkflowProgress } from "../../application/injection-workflow-progress";
 import type {
   InjectionKioskContext,
   InjectionKioskStepId,
@@ -17,10 +17,9 @@ interface KioskShellProps {
   workflowPatient?: PatientContext;
   patientMismatch: boolean;
   context?: InjectionKioskContext;
-  readiness: readonly WorkstationReadinessItem[];
+  progress: InjectionWorkflowProgress;
   activeStep: InjectionKioskStepId;
   locked: boolean;
-  canComplete: boolean;
   fullscreen: boolean;
   fullscreenSupported: boolean;
   onStepChange: (step: InjectionKioskStepId) => void;
@@ -46,10 +45,9 @@ export function KioskShell({
   workflowPatient,
   patientMismatch,
   context,
-  readiness,
+  progress,
   activeStep,
   locked,
-  canComplete,
   fullscreen,
   fullscreenSupported,
   onStepChange,
@@ -135,13 +133,10 @@ export function KioskShell({
       <aside class="kiosk-journey-rail" aria-label={KIOSK.modeName}>
         <InjectionStepper
           activeStep={activeStep}
-          readiness={readiness}
-          locked={locked}
-          canComplete={canComplete}
-          nonAdministration={Boolean(context?.nonAdministration)}
+          progress={progress}
           onChange={onStepChange}
         />
-        <CareChecklistRail readiness={readiness} />
+        <CareChecklistRail progress={progress} />
       </aside>
 
       {locked && (

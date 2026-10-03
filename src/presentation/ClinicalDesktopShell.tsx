@@ -314,6 +314,7 @@ export function ClinicalDesktopShell({
   onReviewComplete,
   injectionRecordActions,
   injectionKioskContext,
+  injectionProgress,
   onStartNewInjection,
   onOpenRecords,
   onLookup,
@@ -1400,6 +1401,7 @@ export function ClinicalDesktopShell({
         title={noteTitle ?? `${WORKFLOW_LABELS[selectedWorkflow]} note`}
         subtitle={noteSubtitle}
         readiness={readiness}
+        injectionProgress={injectionProgress}
         sections={noteSections}
         patient={documentPatient}
         copyUnsafe={noteCopyUnsafe}
@@ -1516,16 +1518,15 @@ export function ClinicalDesktopShell({
         id="cd2004-work-area"
         data-workflow={selectedWorkflow}
       >
-        {kioskVisible ? (
+        {kioskVisible && injectionProgress ? (
           <KioskShell
             patient={patient}
             workflowPatient={workflowPatient}
             patientMismatch={isMismatch}
             context={injectionKioskContext}
-            readiness={readiness}
+            progress={injectionProgress}
             activeStep={injectionKioskStep}
             locked={Boolean(kioskLocked)}
-            canComplete={canComplete}
             fullscreen={kioskController.fullscreen}
             fullscreenSupported={kioskController.fullscreenSupported}
             onStepChange={setInjectionKioskStep}

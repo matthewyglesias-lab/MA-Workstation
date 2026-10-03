@@ -1,4 +1,4 @@
-import type { WorkstationReadinessItem } from "../../application/workstation-projection";
+import type { InjectionWorkflowProgress } from "../../application/injection-workflow-progress";
 import { DesktopIcon } from "../DesktopIcon";
 import type { InjectionKioskStepId } from "../types";
 import { KIOSK } from "../vocabulary";
@@ -98,88 +98,22 @@ export interface ProjectedInjectionKioskStep
   stateLabel: string;
 }
 
-const READINESS_SUFFIXES: Record<
-  Exclude<InjectionKioskStepId, "sign">,
-  readonly string[]
-> = {
-  identify: ["patient-order"],
-  "verify-order": ["patient-order", "medication-schedule"],
-  prepare: ["product-trace"],
-  site: ["administration"],
-  administer: ["administration", "safety"],
-  response: ["disposition-followup"],
-};
-
-const stateLabel = (state: InjectionKioskStepState): string => {
-  switch (state) {
-    case "complete":
-      return KIOSK.stateComplete;
-    case "ready":
-      return KIOSK.stateReady;
-    case "stop":
-      return KIOSK.stateRequired;
-    case "warning":
-      return KIOSK.stateReview;
-    case "skipped":
-      return KIOSK.stateSkipped;
-    case "pending":
-    default:
-      return KIOSK.statePending;
-  }
-};
-
-/**
- * Rolls up the already-projected documentation stages. It does not inspect
- * encounter fields or reproduce a clinical rule; the engine-backed Care
- * Checklist remains the only source of completion, warning, and stop state.
- */
-function aggregateReadiness(
-  readiness: readonly WorkstationReadinessItem[],
-  suffixes: readonly string[],
-): InjectionKioskStepState {
-  const items = readiness.filter((item) =>
-    suffixes.some((suffix) => item.id.endsWith(suffix)),
-  );
-  if (!items.length) return "pending";
-  if (items.some((item) => item.state === "stop")) return "stop";
-  if (items.some((item) => item.state === "warning")) return "warning";
-  if (items.some((item) => item.state === "pending")) return "pending";
-  return "complete";
-}
-
-export function projectInjectionKioskSteps({
-  readiness,
-  locked,
-  canComplete,
-  nonAdministration,
-}: {
-  readiness: readonly WorkstationReadinessItem[];
-  locked: boolean;
-  canComplete: boolean;
-  nonAdministration: boolean;
-}): ProjectedInjectionKioskStep[] {
-  return INJECTION_KIOSK_STEPS.map((step) => {
-    let state: InjectionKioskStepState;
-    if (
-      nonAdministration &&
-      (step.id === "prepare" || step.id === "site" || step.id === "administer")
-    ) {
-      state = "skipped";
-    } else if (step.id === "sign") {
-      state = locked ? "complete" : canComplete ? "ready" : "pending";
-    } else {
-      state = aggregateReadiness(readiness, READINESS_SUFFIXES[step.id]);
-    }
-    return { ...step, state, stateLabel: stateLabel(state) };
+/** Adapt the shared encounter model to the retained focused rail design. */
+export function projectInjectionKioskSteps(progress: InjectionWorkflowProgress): ProjectedInjectionKioskStep[] {
+  return INJECTION_KIOSK_STEPS.map(definition => {
+    const step = progress.steps.find(step => step.id === definition.id)!;
+    const state: InjectionKioskStepState = !step.applicable ? "skipped"
+      : step.id === "sign" && progress.canSign ? "ready"
+      : step.completion === "complete" ? "complete"
+      : step.concerns.some(issue => issue.severity === "stop") ? "stop"
+      : step.concerns.length ? "warning" : "pending";
+    return { ...definition, label: step.label, state, stateLabel: step.stateLabel };
   });
 }
 
 interface InjectionStepperProps {
   activeStep: InjectionKioskStepId;
-  readiness: readonly WorkstationReadinessItem[];
-  locked: boolean;
-  canComplete: boolean;
-  nonAdministration: boolean;
+  progress: InjectionWorkflowProgress;
   onChange: (step: InjectionKioskStepId) => void;
 }
 
@@ -192,20 +126,8 @@ const stateIcon = (
       ? "alert"
       : "note";
 
-export function InjectionStepper({
-  activeStep,
-  readiness,
-  locked,
-  canComplete,
-  nonAdministration,
-  onChange,
-}: InjectionStepperProps) {
-  const steps = projectInjectionKioskSteps({
-    readiness,
-    locked,
-    canComplete,
-    nonAdministration,
-  });
+export function InjectionStepper({ activeStep, progress, onChange }: InjectionStepperProps) {
+  const steps = projectInjectionKioskSteps(progress);
 
   return (
     <nav class="kiosk-stepper" aria-labelledby="kiosk-steps-title">
@@ -236,6 +158,7 @@ export function InjectionStepper({
                   <small>
                     <DesktopIcon name={stateIcon(step.state)} />
                     {step.stateLabel}
+                    {step.state === "complete" && progress.steps.find(item => item.id === step.id)?.concerns.length ? " · Advisory" : ""}
                   </small>
                 </span>
               </button>

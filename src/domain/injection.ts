@@ -1795,6 +1795,10 @@ const verificationSatisfied = (
   return Boolean(encounter.verifications[key]);
 };
 
+// The progress adapter reuses the evaluator's exact positive predicate; no
+// medication/initialization rules are duplicated in presentation components.
+export const injectionVerificationSatisfied = verificationSatisfied;
+
 const evaluateInitiation = (
   encounter: InjectionEncounter,
   stops: ClinicalIssue[],

@@ -128,8 +128,6 @@
   #lf-workstation .wfp-wall { background: #f8f5f1; color: var(--lf-muted); border: 1px solid #e4dfd7; border-radius: 8px 22px 8px 8px; box-shadow: none; }
   #lf-workstation .wfp-wall-title { color: var(--lf-leaf); font: 400 26px/33px var(--lf-display); }
   #lf-workstation .kiosk-rail-heading h2 { color: var(--lf-leaf); font: 400 23px/30px var(--lf-display); }
-  #lf-workstation .kiosk-checklist { border-color: #dbe4df; background: #fafbf9; border-radius: 6px 18px 6px 6px; }
-  #lf-workstation .kiosk-checklist li { border-bottom: 1px solid #e1e8e3; }
 
   /* Quiet feedback; never repaint an error as success or animate form values. */
   #lf-workstation .tebra-toast-region { right: 20px; bottom: 48px; max-width: min(470px,calc(100vw - 40px)); }

@@ -1,3 +1,5 @@
+import type { InjectionWorkflowProgress } from "../application/injection-workflow-progress";
+import { InjectionProgressSummary } from "./InjectionProgressSummary";
 import { DesktopIcon } from "./DesktopIcon";
 import { Illustration } from "./Illustration";
 import { summarizeReadinessVerdict } from "../application/readiness-projection";
@@ -26,6 +28,7 @@ interface NoteInspectorProps {
   title: string;
   subtitle?: string;
   readiness: ReadinessItem[];
+  injectionProgress?: InjectionWorkflowProgress;
   sections: NoteSection[];
   patient?: PatientContext;
   /**
@@ -82,6 +85,7 @@ export function NoteInspector({
   title,
   subtitle,
   readiness,
+  injectionProgress,
   sections,
   patient,
   copyUnsafe,
@@ -112,7 +116,7 @@ export function NoteInspector({
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
-      <div class="lf-document-checks">
+      {injectionProgress ? <InjectionProgressSummary progress={injectionProgress} /> : <div class="lf-document-checks">
       {/* The aggregate verdict, colour-coded, because a per-row scan is slower
           than staff need when they are deciding whether a note can be signed.
           Scope is decided in `summarizeReadinessVerdict`; wording in
@@ -172,7 +176,7 @@ export function NoteInspector({
         )}
       </div>
 
-      </div>
+      </div>}
       <article class="lf-note-paper" aria-label="Generated documentation">
       {/* A document header, not a panel caption. It names the document, whose
           it is, and what state it is in - which is what separates a document
