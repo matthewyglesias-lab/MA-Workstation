@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { clickWorkspace } = require('./workspace-navigation');
 const { prepareRefinementInjection } = require('./refinement-fixture');
 const RECORDS = 'ipmgMedAssistInjectionRecordsV1';
 
@@ -39,7 +40,7 @@ for (const width of [1440, 800]) {
       await panel.getByRole('tab', { name: 'Administration', exact: true }).click();
       await panel.locator('[data-field-path="allergies"] input').fill(allergy);
       await page.locator('[data-injection-save]').click();
-      await page.clock.runFor(4500);
+      await page.clock.runFor(4500); // settle the existing debounced legacy boundary
       const before = await page.evaluate(key => localStorage.getItem(key), RECORDS);
       expect(before).toBeTruthy();
       await page.locator('[data-patient-search] input').fill('PatientCtx');
@@ -83,6 +84,72 @@ for (const width of [1440, 800]) {
     await correction.click();
     await expect(panel.locator('select[name="inj-response"]')).toBeFocused();
     await panel.locator('select[name="inj-response"]').selectOption('well');
-    await expect(panel.getByText('Review complete — document administration', { exact: true })).toBeEnabled();
+    await expect(panel.getByRole('radio', { name: 'Review complete — document administration', exact: true })).toBeEnabled();
+  });
+}
+
+for (const width of [1440, 800]) {
+  test(`provider lookup stays scoped and cancellation preserves the field at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 800 ? 600 : 900 });
+    await page.goto('/');
+    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
+    const provider = page.locator('[data-field-path="orderingProvider"] select');
+    await provider.focus();
+    const before = await provider.inputValue();
+    await provider.press('F9');
+    const dialog = page.locator('[data-field-lookup-dialog]');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Choose the provider for this field.');
+    await expect(dialog.locator('.cd2004-lookup-row small')).toHaveCount(0);
+    await page.screenshot({ path: info.outputPath(`provider-lookup-${width}.png`) });
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(provider).toBeFocused();
+    await expect(provider).toHaveValue(before);
+    await provider.press('F9');
+    const search = dialog.getByRole('searchbox');
+    await search.press('ArrowDown');
+    const option = dialog.locator('[role="option"]:focus');
+    await expect(option).toHaveCount(1);
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+    expect(await provider.inputValue()).not.toBe('');
+  });
+  test(`reference browsing is a reading surface without creating clinical records at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 800 ? 600 : 900 });
+    await page.goto('/');
+    const before = await page.evaluate(key => localStorage.getItem(key), RECORDS);
+    await clickWorkspace(page, '.cd2004-nav-item[title="Reference"]');
+    const panel = page.locator('.lf-reference-panel');
+    await panel.getByRole('searchbox').fill('Invega');
+    const choices = panel.getByRole('radio');
+    expect(await choices.count()).toBeGreaterThan(0);
+    await choices.first().check();
+    const article = panel.locator('.lf-reference-article');
+    await expect(article).toBeVisible();
+    await expect(article.locator('label,input,select,textarea')).toHaveCount(0);
+    expect(await article.locator('.lf-reference-fact').count()).toBeGreaterThan(0);
+    expect(await page.evaluate(key => localStorage.getItem(key), RECORDS)).toBe(before);
+    await page.screenshot({ path: info.outputPath(`reference-reading-${width}.png`) });
+  });
+  test(`closeout separates output from deliberate data management at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 800 ? 600 : 900 });
+    await page.goto('/');
+    await clickWorkspace(page, '.cd2004-nav-item[title="Daily Closeout"]');
+    const panel = page.locator('.lf-closeout-panel');
+    await expect(panel.getByRole('button', { name: 'Print daily log', exact: true })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Clear log', exact: true })).toBeHidden();
+    const output = panel.locator('.lf-closeout-outputs');
+    await output.locator('summary').click();
+    await expect(output.getByRole('button', { name: 'Export CSV', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    const before = await page.evaluate(key => localStorage.getItem(key), RECORDS);
+    const management = panel.locator('.lf-closeout-management');
+    await management.locator('summary').click();
+    await expect(management.getByRole('button', { name: 'Clear log', exact: true })).toBeVisible();
+    await expect(management).toContainText('not the clinical chart');
+    await page.screenshot({ path: info.outputPath(`closeout-actions-${width}.png`) });
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(key => localStorage.getItem(key), RECORDS)).toBe(before);
   });
 }

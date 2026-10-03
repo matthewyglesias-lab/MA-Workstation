@@ -59,6 +59,15 @@
   body:has(#lf-workstation) .records-drawer-filters button {font:500 12px/18px var(--tw-font-sans);min-height:34px;border-radius:7px;box-shadow:none;}
   body:has(#lf-workstation) .records-drawer-filters button.on {background:#eaf2f5;border-color:#cadde5;color:var(--lf-ink);}
   body:has(#lf-workstation) .records-drawer-foot button {font:500 12px/18px var(--tw-font-sans);border-radius:8px;box-shadow:none;}
+  /* Clinical selections and data-removal commands have different jobs. Keep
+     native inputs and confirmation callbacks; change only their composition. */
+  #lf-workstation .wfp-disposition-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;}
+  #lf-workstation .wfp-disposition-list .wfp-option-row {display:grid;grid-template-columns:18px minmax(0,1fr);align-items:start;gap:9px;min-width:0;margin:0;padding:10px 12px;}
+  #lf-workstation .wfp-disposition-list .wfp-option-row > input {margin:4px 0 0;}
+  #lf-workstation .wfp-disposition-list .wfp-option-title {font:500 13px/21px var(--tw-font-sans);white-space:normal;}
+  #lf-workstation .wfp-transaction-body > .cd2004-link-button {width:auto;min-width:0;align-self:flex-end;justify-self:end;min-height:34px;padding:6px 8px;border:0;background:transparent;color:#963f37;font:500 12px/20px var(--tw-font-sans);text-decoration:underline;text-underline-offset:3px;}
+  #lf-workstation .wfp-transaction-body > .cd2004-link-button:hover {background:#fff1ed;}
+  #lf-workstation[data-kiosk-mode=true] .wfp-transaction-body > .cd2004-link-button {min-height:44px;}
   /* Focus mode shares the light patient surface. Retire inverse text left by
      its former dark banner without changing any patient or clinical state. */
   #lf-workstation .kiosk-patient-summary {color:var(--lf-ink);background:#fff;border-bottom:1px solid var(--lf-line);}

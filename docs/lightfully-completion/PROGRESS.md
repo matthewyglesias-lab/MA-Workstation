@@ -32,6 +32,31 @@ and exact-code/evidence safeguards. Added two actual UI correction-route cases.
 Browser verification remains with committed CI. Corrected the patient-header
 test to read the actual patient trigger, not its containing tooltip host.
 
+## Checkpoint 3 — clinical controls and secondary work
+
+Provider result descriptions no longer repeat the exact canonical credential;
+lookup prose is field-specific without changing selection, typeahead or Escape.
+The normal timing register states its verdict once while retaining dates,
+provenance, exceptional guidance and current-visit/future-date separation.
+Reference detail is a semantic reading surface rather than inert form-label
+wrappers; its searchable index retains native radio selection. Closeout keeps
+Print daily log primary, with other outputs and guarded log management in
+separate named disclosures using the existing shared owner. Clinical outcome
+choices align consistently; exception removal is a quiet secondary command.
+
+While reviewing shared provider entry, the registered-provider select was found
+not to receive its disabled prop. OptionList now supports that prop and prevents
+its change callback while disabled; the text fallback and existing clinical
+read-only guards remain unchanged. A dedicated regression covers the boundary.
+
+Checkpoint 2 CI stopped at a test-fixture type error: optional priorSite assigned
+to required site. The fixture now uses its explicit empty fallback; production
+code and assertions were not weakened. Source/new-test TypeScript and 56 targeted
+units across four files pass locally. The source-only recovered checkout is not
+a full current-history environment, so full suites remain committed-CI work.
+Six actual-browser lookup/reference/closeout tests were added; no fresh local
+browser success is claimed.
+
 ## Subsequent checkpoints
 
 1. Clinical choice/destructive-action/lookup and menu consistency.

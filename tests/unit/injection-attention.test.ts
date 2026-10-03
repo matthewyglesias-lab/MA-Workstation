@@ -59,7 +59,7 @@ describe("calm documentation attention is not a clinical permission", () => {
     expect(JSON.stringify({ encounter, progress, evaluation })).toBe(before);
   });
   it("exposes entered invalid values, clinical advisories and unfamiliar stops once without filtering them", () => {
-    const encounter = documented(); encounter.details = { ...encounter.details, volume: "4" }; encounter.site = encounter.priorSite;
+    const encounter = documented(); encounter.details = { ...encounter.details, volume: "4" }; encounter.site = encounter.priorSite ?? "";
     const { progress } = project(encounter);
     const extra = finding("future.named.issue", "future.field"); progress.concerns.push(extra);
     const partition = partitionInjectionAttention(progress);
