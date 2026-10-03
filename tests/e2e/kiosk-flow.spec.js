@@ -123,12 +123,13 @@ test.describe('Injection focus workspace', () => {
       await expect(button.locator('.kiosk-step-copy small svg')).toHaveCount(1);
       await expect(button.locator('.kiosk-step-copy small')).not.toHaveText('');
     }
-    const checklistItems = page.locator('.kiosk-checklist li');
-    expect(await checklistItems.count()).toBeGreaterThan(0);
-    for (let index = 0; index < await checklistItems.count(); index += 1) {
-      await expect(checklistItems.nth(index).locator('.kiosk-checklist-icon svg'))
-        .toHaveCount(1);
-      await expect(checklistItems.nth(index).locator('small')).not.toHaveText('');
+    const checks = page.locator('.kiosk-checklist .lf-progress-checks');
+    await expect(checks).not.toHaveAttribute('open', '');
+    await checks.locator('summary').click();
+    await expect(checks.locator('li')).toHaveCount(6);
+    for (const item of await checks.locator('li').all()) {
+      await expect(item.locator('strong')).not.toHaveText('');
+      await expect(item.locator('span')).not.toHaveText('');
     }
 
     await expect.poll(() => page.evaluate(() =>
@@ -308,6 +309,8 @@ test.describe('Injection focus workspace', () => {
       await expect(completion).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(completion.getByRole('button', { name: 'Print patient handout' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(completion.getByRole('button', { name: 'Copy note' })).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(completion.getByRole('button', { name: 'Start next patient' })).toBeFocused();
       await completion.focus();

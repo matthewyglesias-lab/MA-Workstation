@@ -27,6 +27,7 @@ import { DialogHeading } from "./lightfully/DialogHeading";
 import { worklistDate } from "./lightfully/worklist-display";
 import { ServiceChooser, ServiceHeader, isDocumentService } from "./lightfully/ServiceWorkspace";
 import { WorkspaceTools, type WorkspaceCommand } from "./lightfully/WorkspaceTools";
+import { noteDocumentText } from "./note-document";
 import {
   InjectionRecordRepository,
 } from "../persistence/injection-records";
@@ -314,6 +315,7 @@ export function ClinicalDesktopShell({
   onReviewComplete,
   injectionRecordActions,
   injectionKioskContext,
+  injectionProgress,
   onStartNewInjection,
   onOpenRecords,
   onLookup,
@@ -342,6 +344,7 @@ export function ClinicalDesktopShell({
     useState<WorkstationLookupTransaction | null>(null);
   const [serviceChooserOpen, setServiceChooserOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [canSplitDocument, setCanSplitDocument] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [injectionKioskStep, setInjectionKioskStep] =
@@ -369,6 +372,7 @@ export function ClinicalDesktopShell({
   const lastExternalHandoffTokenRef = useRef(externalWorkflowHandoffToken);
   const shellRef = useRef<HTMLDivElement>(null);
   const workHostRef = useRef<HTMLDivElement>(null);
+  const transactionHostRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const saveDraftRef = useRef(onSaveDraft);
   const selectedWorkflow = activeWorkflow ?? internalWorkflow;
@@ -1322,6 +1326,15 @@ export function ClinicalDesktopShell({
   const showsSideInspector = false;
   useEffect(() => { setPreviewOpen(false); }, [selectedWorkflow]);
   useEffect(() => {
+    const host = transactionHostRef.current;
+    if (!host) return;
+    // Actual available space: 600px entry + 480px document + 16px gutter.
+    const measure = () => setCanSplitDocument(host.clientWidth >= 1096);
+    const observer = new ResizeObserver(measure);
+    observer.observe(host); measure();
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
     const revealSource = () => setPreviewOpen(false);
     window.addEventListener("ipmg:navigate-workflow-source", revealSource);
     return () => window.removeEventListener("ipmg:navigate-workflow-source", revealSource);
@@ -1397,9 +1410,11 @@ export function ClinicalDesktopShell({
       onActivate={setFocusedPane}
     >
       <NoteInspector
+        key={`${selectedWorkflow}:${documentPatient?.localRecordId ?? "new"}:${documentPatient?.name ?? ""}:${documentPatient?.dob ?? ""}`}
         title={noteTitle ?? `${WORKFLOW_LABELS[selectedWorkflow]} note`}
         subtitle={noteSubtitle}
         readiness={readiness}
+        injectionProgress={injectionProgress}
         sections={noteSections}
         patient={documentPatient}
         copyUnsafe={noteCopyUnsafe}
@@ -1490,7 +1505,9 @@ export function ClinicalDesktopShell({
           mismatch={isMismatch}
           selectedWorkflow={selectedWorkflow}
           workflowStateLabel={
-            postState === "posted"
+            selectedWorkflow === "administer" && injectionProgress
+              ? injectionProgress.lifecycleLabel
+              : postState === "posted"
               ? NOTES.statusSigned
               : WORKFLOW_SUMMARY_STATE_LABEL[
                   workflowSummaries[selectedWorkflow]?.state ?? "idle"
@@ -1516,16 +1533,17 @@ export function ClinicalDesktopShell({
         id="cd2004-work-area"
         data-workflow={selectedWorkflow}
       >
-        {kioskVisible ? (
+        {kioskVisible && injectionProgress ? (
           <KioskShell
             patient={patient}
             workflowPatient={workflowPatient}
             patientMismatch={isMismatch}
             context={injectionKioskContext}
-            readiness={readiness}
+            progress={injectionProgress}
+            noteText={noteDocumentText(noteSections.map(section => section.content))}
+            copyUnsafe={noteCopyUnsafe}
             activeStep={injectionKioskStep}
             locked={Boolean(kioskLocked)}
-            canComplete={canComplete}
             fullscreen={kioskController.fullscreen}
             fullscreenSupported={kioskController.fullscreenSupported}
             onStepChange={setInjectionKioskStep}
@@ -1544,7 +1562,7 @@ export function ClinicalDesktopShell({
               const started = injectionRecordActions?.onStartNew();
               if (started === false) {
                 setInternalStatus(RECORD.currentNoteStayedOpen);
-                return;
+                return false;
               }
               setInjectionKioskStep("identify");
               setInternalStatus(KIOSK.nextPatientStarted);
@@ -1562,6 +1580,8 @@ export function ClinicalDesktopShell({
           {serviceWorkspace && <ServiceHeader workflow={selectedWorkflow} previewOpen={previewOpen}
             onPreview={() => setPreviewOpen(value => !value)} onChangeService={() => setServiceChooserOpen(true)}/>}
           <div
+            ref={transactionHostRef}
+            data-document-layout={canSplitDocument ? "split" : "single"}
             class={`cd2004-transaction-window ${
               showsDocumentSplit ? "has-document-split" : ""
             }`}
@@ -1571,6 +1591,8 @@ export function ClinicalDesktopShell({
             class="cd2004-workflow-slot"
             data-workflow={selectedWorkflow}
             data-post-state={postState}
+            inert={showsDocumentSplit && !canSplitDocument ? true : undefined}
+            aria-hidden={showsDocumentSplit && !canSplitDocument ? "true" : undefined}
           >
             <div
               class={`cd2004-workflow-body ${

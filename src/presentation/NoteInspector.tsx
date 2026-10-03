@@ -1,3 +1,5 @@
+import type { InjectionWorkflowProgress } from "../application/injection-workflow-progress";
+import { InjectionProgressSummary } from "./InjectionProgressSummary";
 import { DesktopIcon } from "./DesktopIcon";
 import { Illustration } from "./Illustration";
 import { summarizeReadinessVerdict } from "../application/readiness-projection";
@@ -9,7 +11,8 @@ import {
   readinessVerdictCopy,
 } from "./vocabulary";
 import { copyButtonLabel, copyFeedbackMessage, useCopyFeedback } from "./clipboard";
-import { noteDocumentLines, noteDocumentStats } from "./note-document";
+import "./lightfully/preview.css";
+import { noteDocumentLines, noteDocumentStats, noteDocumentText } from "./note-document";
 import type { NoteSection, PatientContext, ReadinessItem } from "./types";
 
 /**
@@ -17,7 +20,6 @@ import type { NoteSection, PatientContext, ReadinessItem } from "./types";
  * section: the same rule the documentation engine uses to join them, so the
  * whole note reads as it does on screen.
  */
-const DOCUMENT_DIVIDER = "\n\n────────────────────────────────\n\n";
 
 /** Identifies the toolbar command, so its confirmation stays its own. */
 const WHOLE_NOTE = "note";
@@ -26,6 +28,7 @@ interface NoteInspectorProps {
   title: string;
   subtitle?: string;
   readiness: ReadinessItem[];
+  injectionProgress?: InjectionWorkflowProgress;
   sections: NoteSection[];
   patient?: PatientContext;
   /**
@@ -39,28 +42,12 @@ interface NoteInspectorProps {
   postMessage?: string;
 }
 
-/**
- * One section of the document, preserving the exact generated lines.
- *
- * The gutter is a sibling grid cell per line rather than a single column of
- * numbers beside a single block of text. That is what keeps the numbering
- * honest once a line wraps - a shared column would drift out of step with the
- * text the moment any line took two visual rows, and a line number pointing at
- * the wrong line is worse than none.
- *
- * The numbers are `user-select: none` in CSS, so dragging a selection across
- * the note and copying it by hand cannot pull chrome into the clipboard. The
- * Copy buttons never touch the DOM at all - they copy `section.content`
- * directly - so they are unaffected either way.
- */
+/** Lossless generated lines; decoration never enters copy content. */
 function NoteDocumentBody({ content }: { content: string }) {
   return (
     <div class="cd2004-note-body">
       {noteDocumentLines(content).map((line) => (
         <>
-          <span class="cd2004-note-lineno" aria-hidden="true">
-            {line.number}
-          </span>
           <span class={`cd2004-note-line is-${line.kind}`}>
             {line.segments.map((segment, index) =>
               segment.role === "plain" ? (
@@ -82,6 +69,7 @@ export function NoteInspector({
   title,
   subtitle,
   readiness,
+  injectionProgress,
   sections,
   patient,
   copyUnsafe,
@@ -112,7 +100,7 @@ export function NoteInspector({
 
   return (
     <div class={`cd2004-inspector is-${postState}`}>
-      <div class="lf-document-checks">
+      {injectionProgress ? <InjectionProgressSummary progress={injectionProgress} /> : <div class="lf-document-checks">
       {/* The aggregate verdict, colour-coded, because a per-row scan is slower
           than staff need when they are deciding whether a note can be signed.
           Scope is decided in `summarizeReadinessVerdict`; wording in
@@ -147,7 +135,7 @@ export function NoteInspector({
 
       <div class="cd2004-readiness-list" aria-label="Readiness checks">
         {readiness.length ? (
-          readiness.map((item) => (
+          readiness.filter(item => item.state !== "complete").map((item) => (
             <div key={item.id} class={`cd2004-readiness-item is-${item.state}`}>
               <span class="cd2004-readiness-marker" aria-hidden="true">
                 {item.state === "complete"
@@ -171,19 +159,37 @@ export function NoteInspector({
           <div class="cd2004-empty-row">{SHELL.startNoteForReadiness}</div>
         )}
       </div>
-
-      </div>
+      <details class="lf-preview-checks"><summary>View checks <span>{readiness.filter(item => item.state === "complete").length} of {readiness.length} recorded</span></summary>
+        <ul>{readiness.filter(item => item.state === "complete").map(item => <li key={item.id}><strong>{item.label}</strong><span>{readinessItemStateLabel(item.state)}</span></li>)}</ul>
+      </details>
+      </div>}
       <article class="lf-note-paper" aria-label="Generated documentation">
-      {/* A document header, not a panel caption. It names the document, whose
-          it is, and what state it is in - which is what separates a document
-          viewer from a text box, and what the old preview never said. */}
-      <div class="cd2004-note-heading">
-        <DesktopIcon name="note" />
-        <strong>{title}</strong>
-        <span class="cd2004-note-marks">
-          <span class="cd2004-note-mark">Local</span>
-          {signedLocally && <span class="cd2004-note-mark is-signed">Signed locally</span>}
-        </span>
+      {/* One header identifies the document, its local scope and copy action. */}
+      <div class="cd2004-note-toolbar" role="toolbar" aria-label="Document review commands">
+        <div class="cd2004-note-heading"><strong>{title}</strong>
+          <span class="cd2004-note-mode" title={subtitle}>{signedLocally ? "Signed locally · read-only" : "Read-only preview · local"}</span>
+        </div>
+        <button
+          type="button"
+          class={`cd2004-command-button cd2004-note-copy-all${wholeNoteCopy ? ` is-${wholeNoteCopy}` : ""}`}
+          disabled={!sections.length || copyUnsafe}
+          onClick={() =>
+            copy(
+              noteDocumentText(sections.map((section) => section.content)),
+              WHOLE_NOTE,
+            )
+          }
+          title={
+            copyUnsafe
+              ? RECORD.noteCopyWithheld
+              : sections.length
+                ? "Copy this note exactly as it reads here."
+                : "Document the encounter to build this note."
+          }
+        >
+          <DesktopIcon name="copy" />
+          {copyButtonLabel(wholeNoteCopy, "Copy note")}
+        </button>
       </div>
 
       {(patient?.name || patient?.dob || patient?.visitLabel) && (
@@ -208,33 +214,6 @@ export function NoteInspector({
           )}
         </dl>
       )}
-
-      <div class="cd2004-note-toolbar" role="toolbar" aria-label="Document review commands">
-        <span class="cd2004-note-mode" title={subtitle}>
-          Read-only preview · local
-        </span>
-        <button
-          type="button"
-          class={`cd2004-command-button cd2004-note-copy-all${wholeNoteCopy ? ` is-${wholeNoteCopy}` : ""}`}
-          disabled={!sections.length || copyUnsafe}
-          onClick={() =>
-            copy(
-              sections.map((section) => section.content).join(DOCUMENT_DIVIDER),
-              WHOLE_NOTE,
-            )
-          }
-          title={
-            copyUnsafe
-              ? RECORD.noteCopyWithheld
-              : sections.length
-                ? "Copy this note exactly as it reads here."
-                : "Document the encounter to build this note."
-          }
-        >
-          <DesktopIcon name="copy" />
-          {copyButtonLabel(wholeNoteCopy, "Copy note")}
-        </button>
-      </div>
 
       <p class="lf-note-boundary">{signedLocally ? "This note is signed in this browser. " : "This is a documentation preview. "}Copying does not file it. Confirm the final note separately in Tebra.</p>
       {/* Announced, not just drawn: the confirmation is the whole point of the

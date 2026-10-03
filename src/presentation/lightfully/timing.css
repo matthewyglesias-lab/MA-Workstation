@@ -1,0 +1,40 @@
+/* Sole screen owner of the typed timing register. No dates or conclusions are
+   calculated here; warning/stop detail can always expand the ordinary geometry. */
+@media screen {
+  #lf-workstation .lf-timing-register { container: timing / inline-size; padding: 18px 20px; border: 1px solid var(--lf-line); border-radius: 10px; background: #fbfcfa; color: var(--lf-ink); }
+  #lf-workstation .lf-timing-layout { display: grid; gap: 18px; }
+  #lf-workstation .lf-timing-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding: 0; background: transparent; border: 0; }
+  #lf-workstation .lf-timing-head > strong { font: 600 16px/23px var(--tw-font-sans); }
+  #lf-workstation .lf-timing-mark { font: 500 12px/20px var(--tw-font-sans); color: #536b70; }
+  #lf-workstation .lf-timing-rows { margin: 9px 0 0; display: grid; gap: 7px; }
+  #lf-workstation .lf-timing-row { display: grid; grid-template-columns: minmax(105px,.5fr) minmax(0,1fr); gap: 6px 12px; }
+  #lf-workstation .lf-timing-row dt { font: 500 12px/20px var(--tw-font-sans); color: #536b70; }
+  #lf-workstation .lf-timing-row dd { margin: 0; min-width: 0; font: 500 13px/21px var(--tw-font-sans); overflow-wrap: anywhere; }
+  #lf-workstation .lf-timing-value { font-variant-numeric: tabular-nums; }
+  #lf-workstation .lf-timing-note { display: inline; margin-left: 6px; color: #536b70; font: 400 12px/20px var(--tw-font-sans); }
+  #lf-workstation [data-timing-fact=next] { display: block; }
+  #lf-workstation [data-timing-fact=next] dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #lf-workstation [data-timing-fact=next] .lf-timing-value { display: block; font: 400 22px/30px var(--lf-display); color: var(--lf-ink); }
+  #lf-workstation [data-timing-fact=next] .lf-timing-note { display: block; margin-left: 0; }
+  #lf-workstation .lf-timing-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; }
+  #lf-workstation .lf-timing-actions button { min-height: 34px; padding: 6px 10px; font: 500 12px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-timing-visit { padding-top: 16px; border-top: 1px solid var(--lf-line); }
+  #lf-workstation .lf-timing-status { display: flex; flex-wrap: wrap; gap: 5px 10px; align-items: baseline; margin-top: 7px; font: 400 12px/20px var(--tw-font-sans); }
+  #lf-workstation .lf-timing-status strong { font-weight: 500; }
+  #lf-workstation .lf-timing-verdict,#lf-workstation .lf-timing-flag { display: inline-block; padding: 1px 6px; border: 1px solid #cddbd2; border-radius: 4px; color: #3c624e; background: #f0f6f1; font: 600 11px/18px var(--tw-font-sans); }
+  #lf-workstation .lf-timing-flag { margin: 4px 0 0 6px; }
+  #lf-workstation .lf-timing-verdict.is-neutral,#lf-workstation .lf-timing-flag.is-neutral { color: #536b70; background: #f2f4f5; border-color: #d1dade; }
+  #lf-workstation .lf-timing-verdict.is-warning,#lf-workstation .lf-timing-flag.is-warning { color: var(--tw-review-fg); background: var(--tw-review-bg); border-color: var(--tw-review-border); }
+  #lf-workstation .lf-timing-verdict.is-stop,#lf-workstation .lf-timing-flag.is-stop { color: var(--tw-stop-fg); background: var(--tw-stop-bg); border-color: var(--tw-stop-border); }
+  #lf-workstation .lf-timing-band { margin-top: 14px; font: 400 12px/20px var(--tw-font-sans); color: #536b70; }
+  #lf-workstation .lf-timing-band:empty { display: none; }
+  #lf-workstation .lf-timing-band:is(.is-warning,.is-stop) { padding: 10px 12px; border: 1px solid var(--tw-review-border); border-radius: 6px; color: var(--tw-review-fg); background: var(--tw-review-bg); }
+  #lf-workstation .lf-timing-band.is-stop { color: var(--tw-stop-fg); background: var(--tw-stop-bg); border-color: var(--tw-stop-border); }
+  @container timing (min-width: 680px) {
+    #lf-workstation .lf-timing-layout { grid-template-columns: minmax(0,1fr) minmax(0,1.6fr); gap: 24px; }
+    #lf-workstation .lf-timing-visit { border-top: 0; border-left: 1px solid var(--lf-line); padding: 0 0 0 24px; }
+  }
+  @media (forced-colors: active) {
+    #lf-workstation .lf-timing-register,#lf-workstation .lf-timing-band,#lf-workstation .lf-timing-verdict,#lf-workstation .lf-timing-flag { border-color: CanvasText; }
+  }
+}

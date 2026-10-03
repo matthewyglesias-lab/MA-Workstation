@@ -20,7 +20,7 @@ const reviewedScope = new Set([
 // administration-review invalidation are permitted in these
 // clinical/compatibility files. A different byte requires an explicit re-review.
 const reviewedDefaults = new Map([
-  ['src/domain/injection.ts', 'c78e1c6602fa11a06a75adb2722cd0f78da790891ba249fa62253a6efcaa4b91'],
+  ['src/domain/injection.ts', 'f818945c954c06e8e549e19a864e6f3cdb8ccd926f893aadfe92db51f7594f2a'],
   ['src/legacy/legacy-markup.html', '97ea5fa36ff7e4b0a6ae9f56085f49b6994c9b99df868ce17fae470de430fbd2'],
   ['public/legacy/legacy-runtime.js', 'c570e6e85ceb1f9218fabe232c62a0c699b7c293d47f7def0194ee96e7586381'],
 ]);
@@ -34,6 +34,14 @@ const reviewedHandout = new Map([
   ['src/domain/injection-avs-render.ts', '39160256761589ce4e0c27425f47a60e5deb56f9404bb6d724f24803064d5776'],
   ['src/domain/injection-avs-guidance.ts', '4e4951d5427dbf4a70951ba9a1dc35485dbd69b711b87590f9fed19bf0eea7a9'],
 ]);
+// Approved v2 ownership correction, 2026-10-03. Presentation policy resets only
+// handout metadata when current encounter identity changes; no clinical rules.
+// Exact bytes remain protected. See docs/lightfully-refinement/PROGRESS.md.
+const reviewedRefinement = new Map([
+  ['src/application/injection-identity-transition.ts', 'e678ea0302a03ac01ec6978eb4e4cb9f6e991c3c2ba632cad5a30878b0e217e2'],
+  ['src/application/injection-workflow-progress.ts', 'a7248df2efaf7462f76f2a4b58a4ab43fdfccf91ed4b9298d3f7f3caed60427b'],
+  ['src/application/readiness-projection.ts', '0a20f7d886a9fb79e3f37fe9f11ab68e6ad4b892106d21766ffaf4bce133ede4'],
+]);
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 try {
   git('cat-file', '-e', `${baseline}^{commit}`);
@@ -42,9 +50,9 @@ try {
     ...git('diff', '--no-renames', '--name-only', baseline, '--', ...protectedPaths).split('\n'),
     ...git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths).split('\n'),
   ].filter(Boolean);
-  const unexpected = changed.filter(path => !reviewedScope.has(path) && !reviewedDefaults.has(path) && !reviewedHandout.has(path));
+  const unexpected = changed.filter(path => !reviewedScope.has(path) && !reviewedDefaults.has(path) && !reviewedHandout.has(path) && !reviewedRefinement.has(path));
   if (unexpected.length) throw new Error(`Protected files changed:\n${unexpected.join('\n')}`);
-  for (const [path, expected] of [...reviewedDefaults, ...reviewedHandout]) {
+  for (const [path, expected] of [...reviewedDefaults, ...reviewedHandout, ...reviewedRefinement]) {
     const actual = createHash('sha256').update(readFileSync(path)).digest('hex');
     if (actual !== expected) throw new Error(`Unreviewed clinical/default/handout change: ${path}`);
   }

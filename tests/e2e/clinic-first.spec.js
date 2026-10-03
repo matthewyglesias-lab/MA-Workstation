@@ -60,7 +60,7 @@ test('signed local record never claims a Tebra filing',async({page})=>{
   await boot(page);await page.getByRole('button',{name:'Open saved notes (F11)'}).click();
   await page.locator('[data-records-open]').first().click();
   await page.getByRole('button',{name:'Preview',exact:true}).click();
-  await expect(page.locator('.cd2004-note-mark.is-signed')).toHaveText('Signed locally');
+  await expect(page.locator('.cd2004-note-mode')).toHaveText('Signed locally · read-only');
   await expect(page.locator('.lf-note-boundary')).toContainText('Confirm the final note separately in Tebra');
   await expect(page.locator('#lf-document-preview')).not.toContainText('FILED');
 });

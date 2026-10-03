@@ -87,7 +87,7 @@ test('popover listeners stay balanced and one Escape dismisses one surface', asy
   const resting = await counts();
   const workspace = page.locator('.lf-workspace-shelf');
   const review = page.locator('.lf-review-disclosure');
-  for (let n = 0; n < 12; n++) {
+  for (let n = 0; n < 20; n++) {
     await workspace.locator(':scope > summary').click();
     await expect(workspace).toHaveAttribute('open', '');
     expect(await counts()).toEqual(resting.map(value => value + 1));

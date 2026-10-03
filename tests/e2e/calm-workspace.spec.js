@@ -54,7 +54,7 @@ for (const size of [{width:1440,height:900},{width:1024,height:768},{width:800,h
     await expect(page.locator('[data-injection-finish]')).toBeDisabled();
     await expect(page.locator('[data-injection-new]')).toBeHidden();
     await expect(page.locator('[data-injection-discard]')).toBeHidden();
-    await expect(page.locator('.wfp-status-flag.is-stop')).toBeVisible();
+    await expect(page.locator('[data-injection-requirements]')).toBeVisible();
     await expect(page.locator('.cd2004-patient-banner')).toContainText('Calm workspace, Synthetic');
     const tips=page.locator('.lf-review-disclosure');
     await expect(tips.locator('.lf-review-detail')).toBeHidden();
@@ -143,7 +143,7 @@ test('collapsed options do not swallow keyboard shortcuts or clinical blockers',
   await page.keyboard.press('Control+k'); await expect(page.getByRole('combobox',{name:'Search commands'})).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-injection-finish]')).toBeDisabled();
-  await page.locator('.wfp-status-flag.is-stop').click();
+  await page.locator('[data-injection-requirements]').click();
   await expect(page.locator('.cd2004-outstanding-requirements-dialog')).toBeVisible();
   await expect(page.locator('.wfp-issue-row').first()).toBeVisible();
 });

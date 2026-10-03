@@ -91,10 +91,6 @@
  #lf-workstation .cd2004-record-actions-buttons button.is-danger {background:transparent;border-color:transparent;color:#98504a;}
  #lf-workstation .cd2004-record-action-separator {display:none;}
  /* Preview is a document, not an editor with line-number gutters. */
- #lf-workstation .cd2004-document-split {border:0;border-left:1px solid #dce5ea;padding:0;min-width:0;min-height:0;background:#f3f6f8;}
- #lf-workstation .cd2004-inspector-window {height:100%;border:0;border-radius:0;background:#f3f6f8;box-shadow:none;}
- #lf-workstation .cd2004-inspector-window .cd2004-window-title {font-size:11px;font-weight:600;}
- #lf-workstation .cd2004-inspector-window > .cd2004-window-body {background:#f3f6f8;overflow:auto;}
  #lf-workstation .cd2004-readiness-verdict {padding:10px 16px;font-size:10px;}
  #lf-workstation .cd2004-readiness-list {display:block;max-height:170px;overflow:auto;border-bottom:1px solid #dce5ea;background:#f8fafb;}
  #lf-workstation .cd2004-readiness-item {display:flex;align-items:flex-start;gap:7px;padding:8px 16px;border-bottom:1px solid #e9eef1;font-size:11px;min-height:34px;}
@@ -103,19 +99,6 @@
  #lf-workstation .cd2004-readiness-marker {width:16px;height:16px;flex:0 0 16px;border:0;border-radius:50%;background:#e5edf1;color:#526e7e;font-size:10px;}
  #lf-workstation .cd2004-readiness-item.is-stop .cd2004-readiness-marker {background:#fff0ed;color:#a63737;}
  #lf-workstation .cd2004-readiness-item.is-warning .cd2004-readiness-marker {background:#fff7df;color:#82591c;}
- #lf-workstation .cd2004-note-heading {padding:15px 18px 9px;border:0;background:#fff;font-size:12px;}
- #lf-workstation .cd2004-note-ident {padding:2px 18px 12px;background:#fff;}
- #lf-workstation .cd2004-note-toolbar {padding:8px 18px;background:#fff;border-block:1px solid #edf1f3;}
- #lf-workstation .cd2004-note-sections {background:#fff;}
- #lf-workstation .cd2004-note-section {border-bottom:1px solid #edf1f3;}
- #lf-workstation .cd2004-note-section > header {background:#fff;padding:12px 18px 5px;border:0;}
- #lf-workstation .cd2004-note-body {display:block;font:400 12px/1.7 var(--tw-font-sans);padding:8px 18px 18px;border:0;}
- #lf-workstation .cd2004-note-lineno {display:none;}
- #lf-workstation .cd2004-note-line {display:block;min-height:1.3em;white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;}
- #lf-workstation .cd2004-note-empty {padding:32px 20px;min-height:180px;}
- #lf-workstation .cd2004-note-empty > svg {width:54px;height:54px;opacity:.8;}
- #lf-workstation .cd2004-note-foot,#lf-workstation .cd2004-note-eod {padding:9px 18px;background:#fff;font-size:8px;color:#6d8592;}
- #lf-workstation .cd2004-note-mark {border:0;border-radius:3px;background:#f1f5f7;color:#607584;font:9px/16px var(--tw-font-sans);}
  #lf-workstation .cd2004-toast {border-radius:7px;font-size:12px;background:#294255;color:#fff;}
  /* Dialogs share the same calm controls, including the native service chooser. */
  #lf-workstation .lf-service-dialog,#lf-workstation .lf-command-dialog {width:min(570px,calc(100vw - 48px));max-height:calc(100dvh - 56px);padding:0;border:1px solid #d8e3e9;border-radius:12px;background:#fff;color:#294255;font-family:var(--tw-font-sans);box-shadow:0 24px 70px rgb(27 49 65 / 18%);}
@@ -148,7 +131,6 @@
  /* Focused injection mode is retained as the existing optional seven-step workflow. */
  #lf-workstation[data-kiosk-mode=true] .wfp-summary-bar .wfp-workflow-title {display:block;}
  @media (max-width:1179px) {
-  #lf-workstation .cd2004-document-split {border-left:0;}
   #lf-workstation .cd2004-readiness-list {max-height:135px;}
   #lf-workstation .wfp-panel .wfp-tabbar {gap:13px;}
   #lf-workstation .cd2004-record-actions-state > small {max-width:300px;}

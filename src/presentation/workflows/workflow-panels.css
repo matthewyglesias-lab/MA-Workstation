@@ -3243,37 +3243,6 @@
   line-height: var(--tw-lh-ws-base);
 }
 
-.cd2004-shell [data-workflow="administer"] .wfp-schedule-register {
-  border-top-color: var(--tw-border-subtle);
-  border-right-color: var(--tw-border-subtle);
-  border-bottom-color: var(--tw-border-subtle);
-  border-left-width: 4px;
-  border-radius: var(--tw-radius-tight);
-  box-shadow:
-    0 1px 2px rgb(0 58 67 / 8%),
-    0 3px 10px rgb(0 58 67 / 5%);
-}
-
-.cd2004-shell [data-workflow="administer"] .wfp-schedule-head {
-  min-height: 40px;
-  padding: 8px 12px;
-  color: var(--tw-text-primary);
-  background: var(--tw-surface-sunken);
-  border-bottom-color: var(--tw-border-subtle);
-}
-
-.cd2004-shell [data-workflow="administer"] .wfp-schedule-head > strong {
-  font-size: var(--tw-fs-ws-base);
-  line-height: var(--tw-lh-ws-base);
-  letter-spacing: 0;
-}
-
-.cd2004-shell [data-workflow="administer"] .wfp-schedule-row > :is(dt, dd),
-.cd2004-shell [data-workflow="administer"] :is(.wfp-schedule-band, .wfp-schedule-foot) {
-  padding: 8px 12px;
-  font-size: var(--tw-fs-ws-base);
-  line-height: var(--tw-lh-ws-base);
-}
 
 /* Full-size workstations get Tebra's 32px content gutter. At the supported
    minimum, the gutter steps down while the same clinical page remains the

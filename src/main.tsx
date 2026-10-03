@@ -1,3 +1,4 @@
+import { projectInjectionWorkflowProgress } from "./application/injection-workflow-progress";
 import { render } from 'preact';
 import { emptyAvsAppointment, appointmentForInput } from './domain/avs-appointment';
 /*
@@ -462,6 +463,7 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     encounter: InjectionEncounter;
     evaluation: ClinicalEvaluation<InjectionEvaluationOutput>;
     dirty: boolean;
+    reviewInvalidated?: boolean;
   } | null>(null);
   const [injectionExtensionInstalled, setInjectionExtensionInstalled] =
     useState(false);
@@ -559,11 +561,13 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
     (
       encounter: InjectionEncounter,
       evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
+      reviewInvalidated = false,
     ) => {
       const next = {
         encounter,
         evaluation,
         dirty: typedInjectionDirtyRef.current,
+        reviewInvalidated,
       };
       typedInjectionStateRef.current = next;
       setTypedInjectionState(next);
@@ -981,8 +985,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
       return (
         <InjectionPanel
           key={injectionRecordEpoch}
+          workflowProgress={injectionProgress}
           initialEncounter={launch.encounter}
-          activePatient={context.patient}
+          activePatient={clinical.state.activePatient}
           staffSignInValue={activeStaffValue()}
           previewRef={injectionPanelRef}
           locked={runtime.injectionRecordState().lifecycle === 'locked'}
@@ -996,9 +1001,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
           onKioskStepChange={context.onInjectionKioskStepChange}
           onPendingAddendumChange={rememberPendingInjectionAddendum}
           onDirtyChange={rememberInjectionDirty}
-          onWorkflowStateChange={(encounter, evaluation) =>
+          onWorkflowStateChange={(encounter, evaluation, reviewInvalidated) =>
             {
-              rememberInjectionState(encounter, evaluation);
+              rememberInjectionState(encounter, evaluation, reviewInvalidated);
               const next = readLegacyShellSnapshot(runtime);
               if (!sameSnapshot(snapshotRef.current, next)) {
                 snapshotRef.current = next;
@@ -1635,15 +1640,9 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
         ? runtime.startNewInjection()
         : runtime.discardInjectionDraft();
     if (discarded) {
-      typedInjectionDirtyRef.current = false;
-      typedInjectionStateRef.current = null;
-      setTypedInjectionState(null);
-      injectionRecordGenerationRef.current =
-        window.ipmgInjectionRecordGeneration?.() ??
-        injectionRecordGenerationRef.current;
-      setInjectionRecordEpoch((value) => value + 1);
-      coordinator.navigate('injection');
-      coordinator.synchronize(['injection']);
+      // Discard is the same record-ownership boundary as New/Open. Adopt the
+      // newly cleared identity before coordinator inheritance can refill it.
+      synchronizeInjectionRecordSwitch();
     }
     refresh();
     return discarded;
@@ -1742,6 +1741,18 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
   const staffSignInName = activeStaffValue().trim();
   const [locked, unlock] = useIdleLock(staffSignInName.length > 0);
 
+  const canSignInjection = activeWorkflow === 'administer' && readinessModel.typedReady &&
+    localAttestationReady && injectionExtensionInstalled && injectionDraftProtectionAvailable;
+  const injectionProgress = activeWorkflow === 'administer' && injectionEncounter && typedInjectionState
+    ? projectInjectionWorkflowProgress({
+        encounter: injectionEncounter, evaluation: typedInjectionState.evaluation,
+        canSign: canSignInjection, canSave: injectionDraftCanPersist,
+        lifecycle: injectionRecordState?.lifecycle ?? 'new',
+        dirty: typedInjectionState.dirty, saving: posting,
+        reviewInvalidated: typedInjectionState.reviewInvalidated,
+        capabilityDetail: injectionPersistenceBlockingDetail ?? attestationBlockingDetail,
+      }) : undefined;
+
   return (
     <WorkstationViewportBoundary>
       <ClinicalDesktopShell
@@ -1778,13 +1789,8 @@ function LegacyDesktopApp({ runtime }: { runtime: LegacyRuntime }) {
             ? 'Locked browser-local record. Original record is read-only.'
             : undefined
         }
-        canComplete={
-          activeWorkflow === 'administer' &&
-          readinessModel.typedReady &&
-          localAttestationReady &&
-          injectionExtensionInstalled &&
-          injectionDraftProtectionAvailable
-        }
+        canComplete={canSignInjection}
+        injectionProgress={injectionProgress}
         statusMessage={snapshot.statusMessage}
         onSaveDraft={
           activeWorkflow === 'administer' && injectionDraftCanPersist

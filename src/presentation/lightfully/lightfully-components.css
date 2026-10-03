@@ -16,7 +16,7 @@
  #lf-workstation {--cd-ink:#294255;--cd-ink-muted:#587080;--cd-border-mid:#c6d4dc;--cd-border-dark:#9eb4c0;--cd-chrome:#f6f8f9;--cd-chrome-light:#f8fafb;--cd-chrome-dark:#e4ebef;--cd-selection:#edf4f6;--cd-paper:#fff;--cd-paper-alt:#f8fafb;--cd-amber-soft:#fff8eb;}
  #lf-workstation .lf-eyebrow {font-size:10px;letter-spacing:.1em;font-weight:500;}
  /* Shared controls, not the former terminal-style beveled command buttons. */
- #lf-workstation :is(.cd2004-command-button,.cd2004-link-button,.wfp-group-action,.wfp-field-action > button,.wfp-vitals-toggle,.cd2004-note-toolbar button) {min-height:36px;padding:7px 12px;background:#fff;color:#3c7083;border:1px solid var(--lf-control-border);border-radius:var(--lf-radius);font:500 12px/18px var(--tw-font-sans);letter-spacing:0;text-transform:none;box-shadow:none;cursor:pointer;}
+ #lf-workstation :is(.cd2004-command-button,.cd2004-link-button,.wfp-group-action,.wfp-field-action > button,.wfp-vitals-toggle) {min-height:36px;padding:7px 12px;background:#fff;color:#3c7083;border:1px solid var(--lf-control-border);border-radius:var(--lf-radius);font:500 12px/18px var(--tw-font-sans);letter-spacing:0;text-transform:none;box-shadow:none;cursor:pointer;}
  #lf-workstation :is(.cd2004-command-button,.cd2004-link-button,.wfp-group-action):hover:not(:disabled) {background:#f2f6f8;border-color:#9fb6c2;}
  #lf-workstation :is(.cd2004-command-button,.cd2004-link-button,.wfp-group-action):disabled {background:#f6f8f9;color:#758894;border-color:var(--lf-line);opacity:1;cursor:not-allowed;}
  #lf-workstation :is(button,input,select,textarea,summary,a):focus-visible {outline:2px solid #3c7083;outline-offset:3px;box-shadow:none;}
@@ -227,7 +227,6 @@
  #lf-workstation .records-drawer-foot {background:#fff;padding:12px 18px;border-top:1px solid var(--lf-line);}
  #lf-workstation .records-drawer-foot button {border-radius:7px;box-shadow:none;min-height:36px;font:500 12px/18px var(--tw-font-sans);}
  #lf-workstation .records-drawer-results {background:#fff;}
- #lf-workstation .cd2004-note-heading {font-family:var(--tw-font-sans);}
  #lf-workstation :is(.kiosk-patient-summary,.kiosk-care-checklist,.kiosk-stepper,.kiosk-sign-next-card) {border-color:var(--lf-line);box-shadow:none;background:#fff;}
  #lf-workstation .kiosk-patient-identity strong {font-family:var(--tw-font-sans);}
  #lf-workstation .kiosk-stepper button {border-radius:8px;box-shadow:none;}

@@ -15,8 +15,8 @@ test('injection context and requirements stay legible without terminal-style sta
   await expect(allergy).toBeVisible();
   await expect(page.locator('[data-operator-guidance]')).toContainText('Clinical guidance');
   await expect(panel.locator('[data-field-path="reason"]')).toBeVisible();
-  const required=panel.locator('.wfp-status-flag.is-stop');
-  await expect(required).toContainText('to resolve');
+  const required=panel.locator('[data-injection-requirements]');
+  await expect(required).toHaveAccessibleName(/Documentation in progress: \d+ items to complete/);
   await required.click();
   const dialog=page.locator('dialog[open]');
   await expect(dialog.locator('.wfp-issue-row').first()).toBeVisible();

@@ -100,10 +100,8 @@ export function firstActionableClinicalIssue(
   // than silently losing it from the staff-facing route.
   return (
     inWorkflowOrder(evaluation.stops) ??
-    evaluation.stops.find((item) => !item.section) ??
-    inWorkflowOrder(evaluation.warnings) ??
-    evaluation.warnings.find((item) => !item.section) ??
     evaluation.stops[0] ??
+    inWorkflowOrder(evaluation.warnings) ??
     evaluation.warnings[0]
   );
 }

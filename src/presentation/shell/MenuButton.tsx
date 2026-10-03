@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useId, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useId, useRef, useState } from "preact/hooks";
 import { useDismissibleLayer } from "../interaction/use-dismissible-layer";
 
 export type MenuTrigger = "split-disclosure" | "outlined" | "quiet";
@@ -90,7 +90,7 @@ export function MenuButton({
     setOpen(true);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const items = menuItems();
     const focusedIndex = items.findIndex(

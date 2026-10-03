@@ -45,9 +45,6 @@ export function ScheduleRegister({
   const showBand = Boolean(bandTitle || bandDetail);
   // Display names only. Raw provenance and the evaluator verdict remain
   // accessible; no clinical facts or decisions are translated here.
-  const readableTitle: Record<string, string> = {
-    "SCHEDULE — NEXT DOSE": "Next-dose timing", "RETURN TARGET": "Return planning",
-  };
   const readableMarker: Record<string, string> = {
     CALC: "Calculated", OVR: "Override", REF: "Reference",
     PENDING: "Not set", REVIEW: "Review", "N/A": "Not applicable",
@@ -59,7 +56,7 @@ export function ScheduleRegister({
       aria-live={ariaLive}
     >
       <header class="wfp-schedule-head">
-        <strong>{readableTitle[title] ?? title}</strong>
+        <strong>{title}</strong>
         <span class="wfp-schedule-marks">
           {marker && <span class="wfp-schedule-mark" data-source-code={marker} title={`Source: ${marker}`}>{readableMarker[marker] ?? marker}</span>}
           {verdict && (

@@ -45,8 +45,8 @@ for(const size of [{width:1440,height:900},{width:800,height:600}]) {
  test(`requirements remain complete, grouped and actionable at ${size.width}x${size.height}`,async({page})=>{
   await page.setViewportSize(size);await page.goto('/');await open(page);
   await page.locator('[name="inj-medication"]').selectOption('maintena');
-  const status=page.locator('.wfp-status-flag.is-stop');
-  const count=Number((await status.innerText()).match(/\d+/)[0]);
+  const status=page.locator('[data-injection-requirements]');
+  const count=Number(await status.getAttribute('data-injection-requirements'));
   await status.click();const dialog=page.locator('.cd2004-outstanding-requirements-dialog');
   await expect(dialog.locator('.wfp-issue-row')).toHaveCount(count);
   expect(await dialog.locator('.lf-requirements-group').count()).toBeGreaterThan(1);

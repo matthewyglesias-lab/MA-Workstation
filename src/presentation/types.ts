@@ -1,3 +1,4 @@
+import type { InjectionWorkflowProgress } from "../application/injection-workflow-progress";
 import type { ComponentChildren, Ref } from "preact";
 import { MODULE } from "./vocabulary";
 import type {
@@ -198,6 +199,7 @@ export interface ClinicalDesktopShellProps {
   onReviewComplete?: () => void;
   injectionRecordActions?: InjectionRecordActions;
   injectionKioskContext?: InjectionKioskContext;
+  injectionProgress?: InjectionWorkflowProgress;
   onStartNewInjection?: (patient?: PatientContext) => boolean | void;
   onOpenRecords?: () => void;
   /** A truthful, local contextual lookup (currently the local Record List). */

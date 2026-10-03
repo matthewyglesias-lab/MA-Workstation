@@ -109,7 +109,8 @@ function recordWorklistRow(record: InjectionRecordRow): WorklistRow {
     taskLabel: record.medicationLabel,
     stateLabel: record.statusLabel,
     actionLabel: "Resume",
-    tone: record.tone,
+    // This source contains editable local drafts, not evaluated clinical alerts.
+    tone: "neutral",
     record,
   };
 }
@@ -140,13 +141,17 @@ function worklistEmptyHint(filter: WorklistFilter) {
 }
 
 /** Status is never colour alone: every tone renders a glyph and a word. */
-const TONE_GLYPH: Record<ClinicalTone, string> = {
+const TONE_GLYPH: Record<Exclude<ClinicalTone, "ready">, string> = {
   stop: "×",
   warning: "!",
-  ready: "✓",
   info: "·",
   neutral: "·",
 };
+
+// The bundled text faces do not contain the checkmark. Keep its rendering
+// independent of system fallback fonts, using the existing icon vocabulary.
+const toneGlyph = (tone: ClinicalTone) =>
+  tone === "ready" ? <DesktopIcon name="check" width={12} height={12} /> : TONE_GLYPH[tone];
 
 export function StartCenter({
   udsDraftRows = [],
@@ -220,7 +225,7 @@ export function StartCenter({
     <section class="cd2004-start-center lf-start-center" aria-labelledby="currentWorklistTitle">
       <header class="lf-worklist-heading cd2004-worklist-header"><div><span class="lf-eyebrow">YOUR LOCAL WORKSPACE</span><h1 id="currentWorklistTitle">Worklist</h1><p>Choose a service, pick up a draft, or review what needs attention.</p></div><time>{new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date())}</time></header>
       <aside class="lf-service-launcher" aria-label="Document care">
-      <div class="lf-launcher-caption"><h2>Document care</h2><p>Start a service or pick up where you left off.</p></div>
+      <div class="lf-launcher-caption"><h2>Start a service</h2></div>
       <div class="lf-service-strip" aria-label="Start or resume a service">
         {SERVICES.map((service) => <button type="button" class={`lf-service-shortcut lf-service-${service.id}`} key={service.id}
           disabled={!onWorkflowOpen} onClick={() => onWorkflowOpen?.(service.id)}>
@@ -231,7 +236,6 @@ export function StartCenter({
       </div>
       </aside>
       <div class="lf-worklist-card">
-      <div class="lf-worklist-intro"><h2>Continue work</h2><p>Drafts, open sessions and documentation to review.</p></div>
       <div class="lf-worklist-controls">
         <div class="cd2004-worklist-tabs" role="tablist" aria-label="Current work filters" onKeyDown={(event) => {
           const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
@@ -252,7 +256,7 @@ export function StartCenter({
             <td class="lf-work-patient"><strong class="tebra-record-title">{row.patientLabel}</strong><span class="tebra-record-meta">{row.taskLabel}</span></td>
             <td><span class="lf-table-service"><DesktopIcon name={row.service}/>{WORKFLOW_LABELS[row.service]}</span></td>
             <td class="lf-table-date">{row.timeLabel || "—"}</td>
-            <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{TONE_GLYPH[row.tone ?? "neutral"]}</span>{row.stateLabel}</span></td>
+            <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{toneGlyph(row.tone ?? "neutral")}</span>{row.stateLabel}</span></td>
             <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.udsDraft ? !onUdsDraftOpen : row.session ? !onWorkflowOpen : row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<DesktopIcon name="arrow-right"/></button></td>
           </tr>)}
         </tbody></table> : <div class="tebra-record-empty lf-worklist-empty"><span class="lf-empty-mark" aria-hidden="true"><DesktopIcon name={query.trim() ? "records" : "note"}/></span><strong>{query.trim() ? "No matching work" : filter === "all" ? "Your worklist is clear" : worklistEmptyText(filter)}</strong><small>{query.trim() ? "Try another patient or medication, or clear the search." : filter === "all" ? "Choose a service above. Drafts and unfinished work will appear here." : worklistEmptyHint(filter)}</small>{query.trim() ? <button type="button" class="lf-secondary-button" onClick={() => setQuery("")}>Clear search</button> : null}</div>}

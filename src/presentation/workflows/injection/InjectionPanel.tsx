@@ -51,6 +51,8 @@ import { formatNeedleSpec } from "../../../domain/injection-needle";
 import type { InjectionHabitusBand } from "../../../domain/injection-clinical-reference";
 import type { ClinicalEvaluation } from "../../../domain/contracts";
 import { firstActionableClinicalIssue } from "../../../application/readiness-projection";
+import { injectionTabForField as tabForInjectionField, injectionStepForField } from "../../../application/injection-workflow-progress";
+import { injectionReviewInvalidationMessage } from "./review-feedback";
 import {
   projectCarriedFieldSource,
   projectWorkflowLedgerState,
@@ -72,8 +74,7 @@ import { notifyLegacyFieldInput, setLegacyFieldValue } from "../legacy-mirror";
 import { DocumentationEngine } from "../../../documentation";
 import { injectionEncounterToDocumentationInput } from "../../../documentation/adapters/injection-from-encounter";
 import { countStopsByTab, OutstandingRequirements } from "../OutstandingRequirements";
-import { StatusFlag } from "../StatusFlag";
-import { ScheduleRegister } from "../ScheduleRegister";
+import { InjectionTimingRegister } from "../InjectionTimingRegister";
 import {
   injectionTimingDayFlag,
   injectionTimingTone,
@@ -115,7 +116,7 @@ import {
 // Four transaction pages match how staff actually complete the MAR: establish
 // order/timing, identify the physical product, administer and verify, review.
 import { AvsAppointmentEditor } from "../../documents/AvsAppointmentEditor";
-import { emptyAvsAppointment } from "../../../domain/avs-appointment";
+import { applyInjectionIdentityTransition } from "../../../application/injection-identity-transition";
 
 type InjectionTab = "order" | "product" | "administration" | "review";
 
@@ -321,93 +322,9 @@ const pairedMedicationKeyFor = (
   return "";
 };
 
-// "details.*" is the one field prefix that doesn't map to a single tab - its
-// sub-fields are split across Product (source/prep/waste/product issue),
-// Administration (volume/device/site condition and administration
-// exception). Everything else maps by top-level field name/prefix alone.
-const INJECTION_DETAILS_FIELD_TAB: Record<string, InjectionTab> = {
-  purpose: "order",
-  productSource: "product",
-  waste: "product",
-  wasteAmount: "product",
-  wasteWitness: "product",
-  productIssue: "product",
-  productIssueDetail: "product",
-  productIssueAction: "product",
-  productIssueRecipient: "product",
-  productIssueNotificationTime: "product",
-  productIssueDirection: "product",
-  productIssueNextStep: "product",
-  // Dose actually delivered and the device it came through are part of the
-  // administration event, not the outcome of it.
-  volume: "administration",
-  volumeUnit: "administration",
-  device: "administration",
-  deviceOther: "administration",
-  siteCondition: "administration",
-  siteConditionOther: "administration",
-  administrationException: "administration",
-  exceptionSummary: "administration",
-  exceptionRecipient: "administration",
-  exceptionTime: "administration",
-  exceptionOutcome: "administration",
-};
-
-/**
- * Maps a ClinicalIssue's dot-path `field` back to the tab that actually
- * edits it, so an outstanding stop can be surfaced as a direct "go here"
- * link instead of leaving staff to hunt across all four tabs for whichever
- * field is still blank.
- */
-function tabForInjectionField(field?: string): InjectionTab {
-  const [head, sub] = (field ?? "").split(".");
-  switch (head) {
-    // What authorises this dose: who ordered it, why, and the exact product,
-    // dose, route and interval the order specifies.
-    case "patient":
-    case "orderingProvider":
-    case "reason":
-    case "medicationKey":
-    case "customMedication":
-    case "dose":
-    case "route":
-    case "intervalKey":
-    case "technique":
-      return "order";
-    // Timing is part of the active order context, not a separate transaction.
-    case "priorDoseDate":
-    case "priorSite":
-    case "nextDoseDate":
-    case "initiation":
-    case "administrationDate":
-      return "order";
-    // The administration event itself: where, by whom, and when.
-    case "site":
-    case "administeredBy":
-    case "administrationTime":
-    case "secondAdministrationTime":
-      return "administration";
-    case "traceability":
-      return "product";
-    case "attestations":
-    case "verifications":
-    case "vitals":
-    case "allergies":
-    case "acuteSafetyScreenConfirmed":
-    case "activeSafetyConcerns":
-      return "administration";
-    case "response":
-    case "disposition":
-      return "review";
-    case "details":
-      return (sub && INJECTION_DETAILS_FIELD_TAB[sub]) || "review";
-    default:
-      return "order";
-  }
-}
-
 interface InjectionPanelProps {
   initialEncounter: InjectionEncounter;
+  workflowProgress?: import("../../../application/injection-workflow-progress").InjectionWorkflowProgress;
   activePatient: PatientContext;
   staffSignInValue: string;
   previewRef?: Ref<HTMLDivElement>;
@@ -423,6 +340,7 @@ interface InjectionPanelProps {
   onWorkflowStateChange?: (
     encounter: InjectionEncounter,
     evaluation: ClinicalEvaluation<InjectionEvaluationOutput>,
+    reviewInvalidated?: boolean,
   ) => void;
   /** Focused-shell navigation. It changes presentation only; tabs and fields
    * remain the existing worksheet's and the engine still owns every gate. */
@@ -715,7 +633,7 @@ function OperatorGuidance({
   recommendedSite: string;
   suggestedNextDose: string;
   nonAdministration: boolean;
-  onNavigate: (tab: InjectionTab) => void;
+  onNavigate: (tab: InjectionTab, field?: string) => void;
 }) {
   if (!medication) return null;
 
@@ -785,7 +703,7 @@ function OperatorGuidance({
         <button
           type="button"
           class="wfp-operator-guidance-action"
-          onClick={() => onNavigate(blockerTab)}
+          onClick={() => onNavigate(blockerTab, firstStop.field)}
           title={firstStop.message}
           aria-label={`Next: ${firstStop.message}`}
         >
@@ -1256,6 +1174,7 @@ const emptyDetails = (): InjectionAdministrationDetails => ({});
 
 export function InjectionPanel({
   initialEncounter,
+  workflowProgress,
   activePatient,
   staffSignInValue,
   previewRef,
@@ -1275,12 +1194,18 @@ export function InjectionPanel({
   // readiness and commands must update synchronously with the field edit that
   // caused them rather than after a MutationObserver polling cycle.
   const evaluation = useMemo(() => InjectionEngine.evaluate(encounter, {}), [encounter]);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const reviewInvalidatedRef = useRef(false);
+  const [navigationNotice, setNavigationNotice] = useState<string | null>(null);
+  const [navigationTarget, setNavigationTarget] = useState<{ tab: InjectionTab; field?: string; action?: "sign" } | null>(null);
+  const navigationTargetRef = useRef(navigationTarget);
+  navigationTargetRef.current = navigationTarget;
   const onDirtyChangeRef = useRef(onDirtyChange);
   const onWorkflowStateChangeRef = useRef(onWorkflowStateChange);
   onDirtyChangeRef.current = onDirtyChange;
   onWorkflowStateChangeRef.current = onWorkflowStateChange;
   useEffect(() => {
-    onWorkflowStateChangeRef.current?.(encounter, evaluation);
+    onWorkflowStateChangeRef.current?.(encounter, evaluation, reviewInvalidatedRef.current);
     // The callback is a notification boundary, not an input to evaluation.
     // Re-notifying on a parent render would create a shell/panel render loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1298,26 +1223,16 @@ export function InjectionPanel({
     // in-worksheet navigation.
     if (tab === target.tab) requestedKioskStepRef.current = null;
     setTab(target.tab);
-    const frame = window.requestAnimationFrame(() => {
-      const candidate = target.action === "sign"
-        ? document.querySelector<HTMLElement>("[data-injection-finish]")
-        : target.field
-          ? document.querySelector<HTMLElement>(
-              `[data-field-path="${target.field}"] input:not(:disabled), ` +
-                `[data-field-path="${target.field}"] select:not(:disabled), ` +
-                `[data-field-path="${target.field}"] textarea:not(:disabled), ` +
-                `[data-field-path="${target.field}"] button:not(:disabled), ` +
-                `[data-field-path="${target.field}"][tabindex]`,
-            )
-          : null;
-      candidate?.scrollIntoView({ block: "center" });
-      candidate?.focus({ preventScroll: true });
-    });
-    return () => window.cancelAnimationFrame(frame);
+    if (!navigationTargetRef.current) requestFieldNavigation(target.tab, target.field, target.action, false);
   }, [kioskMode, kioskStep]);
 
   useEffect(() => {
-    if (!kioskMode || !onKioskStepChange) return;
+    if (!onKioskStepChange) return;
+    if (!kioskMode) {
+      if (!kioskStep || injectionKioskStepDefinition(kioskStep).tab !== tab)
+        onKioskStepChange(defaultInjectionKioskStepForTab(tab));
+      return;
+    }
     const requested = requestedKioskStepRef.current;
     if (requested) {
       if (injectionKioskStepDefinition(requested).tab !== tab) return;
@@ -1328,6 +1243,7 @@ export function InjectionPanel({
     onKioskStepChange(defaultInjectionKioskStepForTab(tab));
   }, [kioskMode, onKioskStepChange, tab]);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [exceptionOpen, setExceptionOpen] = useState(() => Boolean(initialEncounter.details?.administrationException));
   const [patientScreeningDialogOpen, setPatientScreeningDialogOpen] = useState(false);
   const [lateDoseDialogOpen, setLateDoseDialogOpen] = useState(false);
   const [lateDoseReviewChoice, setLateDoseReviewChoice] = useState<"provider-authorized" | "other">(
@@ -1338,16 +1254,6 @@ export function InjectionPanel({
   const [lateDoseReviewTimeDraft, setLateDoseReviewTimeDraft] = useState("");
   const [invalidationReceipt, setInvalidationReceipt] = useState<string | null>(null);
 
-  useEffect(() => {
-    const navigate = (event: Event) => {
-      const detail = (event as CustomEvent<{ workflow?: string; tab?: InjectionTab; field?: string }>).detail;
-      if (detail?.workflow !== "administer" || !detail.tab) return;
-      setTab(detail.tab);
-      if (detail.field) window.setTimeout(() => (document.querySelector(`[data-field-path="${detail.field}"] input, [data-field-path="${detail.field}"] select, [data-field-path="${detail.field}"] textarea, [data-field-path="${detail.field}"] button`) as HTMLElement | null)?.focus(), 0);
-    };
-    window.addEventListener("ipmg:navigate-workflow-source", navigate);
-    return () => window.removeEventListener("ipmg:navigate-workflow-source", navigate);
-  }, []);
   const [nextDoseOverrideOpen, setNextDoseOverrideOpen] = useState(false);
   const [nextDoseOverrideDate, setNextDoseOverrideDate] = useState("");
   const [nextDoseOverrideKind, setNextDoseOverrideKind] = useState<
@@ -1358,19 +1264,9 @@ export function InjectionPanel({
   // Prompt once per exact set of timing facts, not on every render while the
   // dialog is open or after staff already reviewed this same context.
   const lateDosePromptedFor = useRef("");
-  // Vitals are optional and rarely used for a routine maintenance dose - stay
-  // out of the way by default, but a reopened record that already carries a
-  // vitals value starts expanded so nothing entered is hidden from view.
-  const [vitalsOpen, setVitalsOpen] = useState(
-    () =>
-      !!(
-        initialEncounter.vitals?.bp ||
-        initialEncounter.vitals?.hr ||
-        initialEncounter.vitals?.temperature ||
-        initialEncounter.vitals?.rr ||
-        initialEncounter.vitals?.spo2
-      ),
-  );
+  const [vitalsOpen, setVitalsOpen] = useState(false);
+  const [additionalNoteOpen, setAdditionalNoteOpen] = useState(false);
+  const [responseDetailOpen, setResponseDetailOpen] = useState(false);
   // Once staff confirm "no acute concerns today", the review-trigger checklist
   // is asking about things that were already just ruled out - collapse it out
   // of the way. It stays reachable via a link, and if any trigger is already
@@ -1403,6 +1299,61 @@ export function InjectionPanel({
   const nonAdministration = Boolean(
     encounter.disposition.kind && encounter.disposition.kind !== "administered",
   );
+
+  const requestFieldNavigation = (target: InjectionTab, field?: string, action?: "sign", synchronizeStep = true) => {
+    const destination = nonAdministration && (target === "administration" || target === "product") ? "review" : target;
+    if (field?.startsWith("details.exception") || field === "details.administrationException") setExceptionOpen(true);
+    if (field?.startsWith("vitals.")) setVitalsOpen(true);
+    if (field?.startsWith("response.")) setResponseDetailOpen(true);
+    if (field?.startsWith("details.departure") || ["details.siteAssessed", "details.postInjectionObservation", "details.educationProvided"].includes(field ?? "")) setAdditionalNoteOpen(true);
+    if (field === "activeSafetyConcerns") setSafetyTriggersOpen(true);
+    const request = { tab: destination, field, action };
+    navigationTargetRef.current = request;
+    setNavigationTarget(request);
+    setNavigationNotice(null);
+    setTab(destination);
+    if (kioskMode && synchronizeStep) {
+      const primary = action === "sign" ? "sign" : injectionStepForField(field);
+      const step = injectionKioskStepDefinition(primary).tab === destination ? primary : defaultInjectionKioskStepForTab(destination);
+      requestedKioskStepRef.current = step;
+      onKioskStepChange?.(step);
+    }
+  };
+  useEffect(() => {
+    const navigate = (event: Event) => {
+      const detail = (event as CustomEvent<{ workflow?: string; tab?: InjectionTab; field?: string; action?: "sign" }>).detail;
+      if (detail?.workflow !== "administer" || locked) return;
+      requestFieldNavigation(detail.tab ?? tabForInjectionField(detail.field), detail.field, detail.action);
+    };
+    window.addEventListener("ipmg:navigate-workflow-source", navigate);
+    return () => window.removeEventListener("ipmg:navigate-workflow-source", navigate);
+  }, [locked, nonAdministration, kioskMode, onKioskStepChange]);
+  useEffect(() => {
+    if (!navigationTarget || navigationTarget.tab !== tab) return;
+    let secondFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        const root = editorRef.current;
+        if (!root || root.closest("[inert], [aria-hidden=true]")) return;
+        const activePage = root.querySelector<HTMLElement>(`#${workflowLedgerPanelId("injection-ledger", tab)}`);
+        // Some retained worksheet pages have a continuation sibling. The
+        // mounted editor owns both; never search a hidden compatibility panel.
+        const group = [...root.querySelectorAll<HTMLElement>("[data-field-path]")]
+          .find(node => node.dataset.fieldPath === navigationTarget.field && node.getClientRects().length > 0);
+        const candidates = navigationTarget.action === "sign"
+          ? root.closest(".cd2004-work-window")?.querySelectorAll<HTMLElement>("[data-injection-finish]:not(:disabled)")
+          : group?.querySelectorAll<HTMLElement>("input:not(:disabled), select:not(:disabled), textarea:not(:disabled), button:not(:disabled), [tabindex='0']");
+        const control = [...(candidates ?? [])].find(node => node.getClientRects().length > 0 && !node.closest("[hidden], [inert], [aria-hidden=true]"));
+        const focusTarget = control ?? activePage;
+        if (!control) setNavigationNotice(`In ${INJECTION_TAB_LABELS[tab]}: ${firstActionableClinicalIssue("administer", evaluation)?.message ?? "Review the visible documentation and available record action."}`);
+        focusTarget?.scrollIntoView({ block: "center", behavior: "auto" });
+        focusTarget?.focus({ preventScroll: true });
+        navigationTargetRef.current = null;
+        setNavigationTarget(null);
+      });
+    });
+    return () => { cancelAnimationFrame(firstFrame); cancelAnimationFrame(secondFrame); };
+  }, [navigationTarget, tab]);
 
   const readAddenda = () =>
     [...document.querySelectorAll<HTMLElement>(".record-addenda-item")].map((node) => ({
@@ -1473,10 +1424,17 @@ export function InjectionPanel({
     // keyboard shortcut can edit a field and request navigation in the same
     // browser task; publish the exact next encounter before that guard runs.
     const previous = encounterRef.current;
-    const candidate = updater(previous);
+    const candidate = applyInjectionIdentityTransition(previous, updater(previous));
+    // Exact no-ops do not invalidate review or create an unsaved revision.
+    if (JSON.stringify(candidate) === JSON.stringify(previous)) return;
     const materialFactsChanged =
       injectionAdministrationReviewFingerprint(previous) !==
       injectionAdministrationReviewFingerprint(candidate);
+    const receipt = injectionReviewInvalidationMessage(previous, candidate);
+    if (receipt) {
+      reviewInvalidatedRef.current = true;
+      setInvalidationReceipt(receipt);
+    }
     const next =
       materialFactsChanged && previous.disposition.kind
         ? {
@@ -1498,6 +1456,7 @@ export function InjectionPanel({
     onWorkflowStateChangeRef.current?.(
       next,
       InjectionEngine.evaluate(next, {}),
+      reviewInvalidatedRef.current,
     );
     setEncounter(next);
   };
@@ -1557,10 +1516,6 @@ export function InjectionPanel({
       (previous) => ({
         ...previous,
         patient: { ...previous.patient, ...partial },
-        // A different identity never silently inherits a scheduling reminder.
-        avsAppointment: Object.entries(partial).some(([key, value]) =>
-          previous.patient[key as keyof InjectionEncounter["patient"]] !== value)
-          ? emptyAvsAppointment() : previous.avsAppointment,
       }),
       { silentPatientIdentity: true },
     );
@@ -2139,6 +2094,12 @@ export function InjectionPanel({
 
   const selectDisposition = (kind: InjectionDisposition["kind"]) => {
     if (kind === "administered") {
+      const previous = encounterRef.current.disposition;
+      if (previous.kind && previous.kind !== "administered" &&
+          [previous.provider, previous.time, previous.outcome].some(value => value?.trim()) &&
+          !window.confirm("Return to administration and remove the recorded handoff details? Cancel keeps the handoff.")) return false;
+      reviewInvalidatedRef.current = false;
+      setInvalidationReceipt(null);
       patchDisposition({
         kind,
         provider: "",
@@ -2148,8 +2109,10 @@ export function InjectionPanel({
         reviewedAt: new Date().toISOString(),
         reviewFingerprint: injectionAdministrationReviewFingerprint(encounter),
       });
-      return;
+      return true;
     }
+    reviewInvalidatedRef.current = false;
+    setInvalidationReceipt(null);
     patchDisposition({
       kind,
       reviewedBy: "",
@@ -2347,16 +2310,38 @@ export function InjectionPanel({
     setLateDoseDialogOpen(false);
   };
 
+  const removeAdministrationException = () => {
+    const details = encounterRef.current.details;
+    const populated = [details?.exceptionSummary, details?.exceptionRecipient,
+      details?.exceptionTime, details?.exceptionOutcome].some((value) => value?.trim());
+    if (populated && !window.confirm("Remove the recorded administration exception and its details?")) return;
+    patchDetails({ administrationException: false, exceptionSummary: "", exceptionRecipient: "",
+      exceptionTime: "", exceptionOutcome: "" });
+  };
+
   const administrationExceptionEditor =
-    nonAdministration ? null : (
+    nonAdministration && !encounter.details?.administrationException ? null : (
       <TransactionLine
-        label="ADMINISTRATION EXCEPTION — Something changed during or after administration"
-        documented={encounter.details?.administrationException ?? false}
-        open={encounter.details?.administrationException ?? false}
-        onToggle={() => patchDetails({ administrationException: !encounter.details?.administrationException })}
+        label="Administration exception"
+        summary={!encounter.details?.administrationException ? "Not recorded" :
+          stops.some((issue) => issue.code.startsWith("administration.exception-")) ? "Needs details" : "Documented"}
+        documented={Boolean(encounter.details?.administrationException) &&
+          !stops.some((issue) => issue.code.startsWith("administration.exception-"))}
+        open={exceptionOpen}
+        onOpenChange={setExceptionOpen}
       >
+          <label class="wfp-check">
+            <input type="checkbox" checked={encounter.details?.administrationException ?? false}
+              disabled={editorDisabled}
+              onChange={(event) => {
+                if (event.currentTarget.checked) patchDetails({ administrationException: true });
+                else { removeAdministrationException(); event.currentTarget.checked = Boolean(encounterRef.current.details?.administrationException); }
+              }} />
+            <span>Record an administration exception</span>
+          </label>
           {encounter.details?.administrationException && (
             <>
+              <button type="button" class="cd2004-link-button" onClick={removeAdministrationException}>Remove exception</button>
               <Field label="What changed / what was observed" field="details.exceptionSummary">
                 <textarea
                   value={encounter.details?.exceptionSummary ?? ""}
@@ -2394,7 +2379,11 @@ export function InjectionPanel({
   return (
     <div
       class="wfp-panel cd2004-print-exclude"
-      ref={previewRef}
+      ref={(node) => {
+        editorRef.current = node;
+        if (typeof previewRef === "function") previewRef(node);
+        else if (previewRef) previewRef.current = node;
+      }}
       tabIndex={-1}
       data-kiosk-step={kioskMode ? kioskStep : undefined}
     >
@@ -2410,12 +2399,12 @@ export function InjectionPanel({
                   {RECORD.injectionProtectionUnavailableShort}
                 </span>
               ) : (
-                <StatusFlag
-                  idle={(evaluation?.readiness ?? "idle") === "idle"}
-                  stopCount={stops.length}
-                  warningCount={evaluation?.warnings.length ?? 0}
-                  onOpenRequirements={() => setRequirementsOpen(true)}
-                />
+                <button type="button" class="wfp-status-flag is-idle"
+                  data-injection-requirements={stops.length}
+                  aria-label={stops.length ? `${workflowProgress?.headline ?? "Documentation in progress"}: ${stops.length} items to complete` : undefined}
+                  onClick={() => setRequirementsOpen(true)}>
+                  {workflowProgress?.headline ?? "Documentation in progress"}
+                </button>
               )}
               {encounter.medicationKey && <WorkflowSummaryFact
                 label="Next dose"
@@ -2458,7 +2447,7 @@ export function InjectionPanel({
                   type="button"
                   class="cd2004-link-button"
                   onClick={() =>
-                    patch({ patient: { name: activePatientName, dob: activePatientDob } })
+                    patchPatient({ name: activePatientName, dob: activePatientDob })
                   }
                 >
                   Use selected local patient
@@ -2492,6 +2481,7 @@ export function InjectionPanel({
         aria-label="Injection clinical page"
         tabIndex={0}
       >
+      {navigationNotice && <p class="wfp-navigation-notice" role="status">{navigationNotice}</p>}
       {invalidationReceipt && (
         <div class="wfp-invalidation-receipt" role="status">
           <strong>Review updated details</strong><span>{invalidationReceipt}</span>
@@ -2508,7 +2498,7 @@ export function InjectionPanel({
         recommendedSite={recommendedSite}
         suggestedNextDose={suggestedNextDose}
         nonAdministration={nonAdministration}
-        onNavigate={setTab}
+        onNavigate={requestFieldNavigation}
       />
       )}
 
@@ -2520,9 +2510,8 @@ export function InjectionPanel({
           stops={stops}
           tabForField={tabForInjectionField}
           tabLabels={INJECTION_TAB_LABELS}
-          onNavigate={(target) =>
-            setTab(nonAdministration && (target === "administration" || target === "product") ? "review" : target)
-          }
+          ownsFieldNavigation
+          onNavigate={requestFieldNavigation}
         />
       )}
 
@@ -2531,6 +2520,7 @@ export function InjectionPanel({
       {tab === "order" && (
         <div
           class="wfp-tabpanel"
+          tabIndex={-1}
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "order")}
           aria-labelledby={
@@ -2692,7 +2682,7 @@ export function InjectionPanel({
         recommendedSite={recommendedSite}
         suggestedNextDose={suggestedNextDose}
         nonAdministration={nonAdministration}
-        onNavigate={setTab}
+        onNavigate={requestFieldNavigation}
       />
               <Field
                 label="Needle / technique"
@@ -2757,8 +2747,8 @@ export function InjectionPanel({
                   dates come from the evaluation's structured fields rather
                   than its prose message, which is what keeps every date on
                   this screen in one format. */}
-              <ScheduleRegister
-                title="SCHEDULE — NEXT DOSE"
+              <InjectionTimingRegister
+                variant="timing"
                 marker={
                   oneTimeOtherWithoutReturn
                     ? "N/A"
@@ -2786,6 +2776,7 @@ export function InjectionPanel({
                 }
                 rows={[
                   {
+                    kind: "next" as const,
                     label: "Next dose due",
                     value: registerDate(encounter.nextDoseDate || suggestedNextDose),
                     // Built from the parts rather than the persisted
@@ -2799,6 +2790,7 @@ export function InjectionPanel({
                     ? []
                     : [
                         {
+                          kind: "elapsed" as const,
                           label: "Days since prior",
                           value:
                             evaluation.output.timing.daysSincePrior === null
@@ -2818,6 +2810,7 @@ export function InjectionPanel({
                     ? []
                     : [
                         {
+                          kind: "window" as const,
                           label: "Window",
                           value: `${registerDate(evaluation.output.timing.earliestDate)} – ${registerDate(evaluation.output.timing.latestDate)}`,
                           note: evaluation.output.timing.expectedDate
@@ -3225,6 +3218,7 @@ export function InjectionPanel({
       {!nonAdministration && tab === "administration" && (
         <div
           class="wfp-tabpanel"
+          tabIndex={-1}
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "administration")}
           aria-labelledby={
@@ -3483,6 +3477,7 @@ export function InjectionPanel({
       {!nonAdministration && tab === "product" && (
         <div
           class="wfp-tabpanel"
+          tabIndex={-1}
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "product")}
           aria-labelledby={
@@ -3709,7 +3704,8 @@ export function InjectionPanel({
                   />
                 </Field>
               </div>
-              {vitalsOpen ? (
+              <TransactionLine label="Vitals (optional)" open={vitalsOpen} onOpenChange={setVitalsOpen}
+                summary={Object.entries(encounter.vitals ?? {}).filter(([, value]) => value?.trim()).map(([key, value]) => `${({bp:"BP",hr:"HR",temperature:"Temp",rr:"RR",spo2:"SpO2"} as Record<string,string>)[key] ?? key} ${value}`).join(" · ") || "No values recorded"}>
                 <div class="wfp-row">
                   <Field label="BP" field="vitals.bp">
                     <input
@@ -3754,23 +3750,8 @@ export function InjectionPanel({
                       }
                     />
                   </Field>
-                  <button
-                    type="button"
-                    class="cd2004-link-button wfp-vitals-toggle"
-                    onClick={() => setVitalsOpen(false)}
-                  >
-                    Hide vitals
-                  </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  class="cd2004-link-button wfp-vitals-toggle"
-                  onClick={() => setVitalsOpen(true)}
-                >
-                  Show vitals (optional)
-                </button>
-              )}
+              </TransactionLine>
               {requirements.acuteSafetyScreenConfirmed?.state !== "hidden" && (
                 <div
                   class={`wfp-checkbox-row ${requirements.acuteSafetyScreenConfirmed?.state === "required" ? "is-required" : ""}`}
@@ -3844,6 +3825,7 @@ export function InjectionPanel({
       {tab === "review" && (
         <div
           class="wfp-tabpanel"
+          tabIndex={-1}
           role="tabpanel"
           id={workflowLedgerPanelId("injection-ledger", "review")}
           aria-labelledby={
@@ -3852,8 +3834,8 @@ export function InjectionPanel({
           aria-label={kioskMode ? INJECTION_TAB_LABELS.review : undefined}
         >
           {!nonAdministration && (
-            <ScheduleRegister
-              title="RETURN TARGET"
+            <InjectionTimingRegister
+              variant="return"
               marker={
                 oneTimeOtherWithoutReturn
                   ? "N/A"
@@ -3877,6 +3859,7 @@ export function InjectionPanel({
               }
               rows={[
                 {
+                  kind: "next" as const,
                   label: "Next dose due",
                   value: registerDate(encounter.nextDoseDate || suggestedNextDose),
                   // Same provenance the Order tab shows. Two tabs describing
@@ -3915,6 +3898,8 @@ export function InjectionPanel({
                 />
               </Field>
               {requirements.response?.state !== "hidden" && responseDetailOptions.length > 0 && (
+                <TransactionLine label="Supplementary response detail" open={responseDetailOpen} onOpenChange={setResponseDetailOpen}
+                  summary={responseDetailOptions.find(option => option.key === encounter.response.detail)?.label ?? "No further detail recorded"}>
                 <Field
                   label="Response detail"
                   field="response.detail"
@@ -3932,6 +3917,7 @@ export function InjectionPanel({
                     inline
                   />
                 </Field>
+                </TransactionLine>
               )}
               {requirements.response?.state !== "hidden" && encounter.response.kind === "custom" && (
                 <Field label="Describe response" field="response.custom">
@@ -3948,8 +3934,9 @@ export function InjectionPanel({
           </div>
 
           {!nonAdministration && (
-            <div class="wfp-section" role="group" aria-label="Additional note items">
-              <h2 class="wfp-section-head">Additional note items</h2>
+            <TransactionLine label="Additional note items" open={additionalNoteOpen || Boolean(encounter.details?.departureStatus === "custom" && !encounter.details?.departureStatusNote?.trim())} onOpenChange={setAdditionalNoteOpen}
+              summary={`${[encounter.details?.siteAssessed, encounter.details?.postInjectionObservation, encounter.details?.educationProvided, encounter.details?.departureStatus].filter(Boolean).length} statements selected${encounter.details?.departureStatus === "custom" && !encounter.details?.departureStatusNote?.trim() ? " · Needs departure details" : ""}`}>
+
               <div class="wfp-section-body">
                 <p class="wfp-field-hint">
                   Optional one-tap additions to the generated note. None are pre-selected or required.
@@ -4010,9 +3997,10 @@ export function InjectionPanel({
                   </Field>
                 )}
               </div>
-            </div>
+            </TransactionLine>
           )}
 
+          {nonAdministration && administrationExceptionEditor}
           <div class="wfp-section" role="group" aria-label="Clinical disposition">
             <h2
               class="wfp-section-head"
@@ -4055,7 +4043,13 @@ export function InjectionPanel({
                         aria-required={requirements["disposition.kind"]?.state === "required" || undefined}
                         checked={encounter.disposition.kind === kind}
                         disabled={administrationBlocked}
-                        onChange={() => selectDisposition(kind)}
+                        onChange={() => {
+                          if (selectDisposition(kind) === false) {
+                            editorRef.current?.querySelectorAll<HTMLInputElement>("input[name=inj-disposition]").forEach(input => {
+                              input.checked = input.closest(".wfp-option-row")?.classList.contains("is-selected") ?? false;
+                            });
+                          }
+                        }}
                       />
                       <span class="wfp-option-title">
                         <span class="wfp-option-icon" aria-hidden="true">

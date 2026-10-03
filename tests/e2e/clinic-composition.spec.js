@@ -32,7 +32,7 @@ for (const service of ['administer', 'uds', 'samples', 'forms']) {
 
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
     await expect(page.getByRole('article', { name: 'Generated documentation' })).toContainText('Navigation, Synthetic');
-    await expect(page.locator('.lf-document-checks')).toBeVisible();
+    await expect(page.locator(service === 'administer' ? '#lf-document-preview .lf-injection-progress' : '.lf-document-checks')).toBeVisible();
     await page.getByRole('button', { name: 'Details', exact: true }).click();
     await expect(name).toHaveValue('Navigation, Synthetic');
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
