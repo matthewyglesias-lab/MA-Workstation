@@ -1,24 +1,26 @@
 /* One screen-only owner for injection status in the focused rail and preview.
    Current location belongs to the stepper; clinical concerns are always visible. */
 @media screen {
-  #lf-workstation .lf-injection-progress { padding: 12px 14px; color: #253b3c; background: #f7f9f6; border-block: 1px solid #dbe4df; font-family: var(--tw-font-sans); }
-  #lf-workstation .lf-progress-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; min-height: 24px; }
+  #lf-workstation .lf-injection-progress { flex: 0 0 auto; min-width: 0; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 0 12px; padding: 8px 14px; color: #253b3c; background: #f7f9f6; border-block: 1px solid #dbe4df; font-family: var(--tw-font-sans); }
+  #lf-workstation .lf-progress-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 4px 12px; min-height: 28px; }
   #lf-workstation .lf-progress-heading strong { font-size: 14px; line-height: 22px; font-weight: 600; }
   #lf-workstation .lf-progress-heading > span { color: #536563; font-size: 12px; line-height: 20px; }
-  #lf-workstation .lf-progress-capability { margin: 5px 0; font-size: 12px; line-height: 19px; }
-  #lf-workstation .lf-progress-concerns { display: grid; gap: 5px; margin-top: 8px; }
+  #lf-workstation .lf-progress-capability { grid-column: 1/-1; margin: 5px 0; font-size: 12px; line-height: 19px; }
+  #lf-workstation .lf-progress-concerns { grid-column: 1/-1; display: grid; gap: 5px; margin-top: 8px; }
   #lf-workstation .lf-progress-issue { display: block; width: 100%; min-height: 34px; padding: 7px 9px; text-align: left; white-space: normal; font: inherit; font-size: 12px; line-height: 19px; color: #3b4947; background: #fff; border: 1px solid #d9e1dc; border-left: 3px solid #9caf9f; border-radius: 4px; }
   #lf-workstation .lf-progress-issue > span { display: block; font-weight: 700; }
   #lf-workstation .lf-progress-issue.is-stop { border-left-color: #b25748; }
   #lf-workstation .lf-progress-issue.is-warning { border-left-color: #a77929; }
-  #lf-workstation .lf-progress-checks { margin-top: 7px; }
+  #lf-workstation .lf-progress-checks { grid-column: 2; grid-row: 1; margin: 0; }
+  #lf-workstation .lf-progress-checks[open] { grid-column: 1/-1; grid-row: auto; margin-top: 5px; }
   #lf-workstation .lf-progress-checks > summary { min-height: 28px; padding: 3px 0; font-size: 12px; line-height: 20px; cursor: pointer; }
   #lf-workstation .lf-progress-checks > summary span { display: inline; margin-left: 8px; color: #536563; font-size: 11px; }
   #lf-workstation .lf-progress-checks ul { margin: 6px 0 0; padding: 0; list-style: none; }
   #lf-workstation .lf-progress-checks li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid #e0e7e1; font-size: 12px; line-height: 19px; }
   #lf-workstation .lf-progress-checks li strong { font-weight: 600; }
   #lf-workstation .lf-progress-checks li span { color: #536563; }
-  #lf-workstation .kiosk-checklist { padding: 12px; border-radius: 6px 18px 6px 6px; }
+  #lf-workstation .kiosk-checklist { display: block; padding: 12px; border-radius: 6px 18px 6px 6px; }
+  #lf-workstation .kiosk-checklist .lf-progress-checks { margin-top: 7px; }
   #lf-workstation .kiosk-checklist .lf-progress-heading { display: grid; justify-content: stretch; }
   #lf-workstation .kiosk-checklist .lf-progress-checks > summary span { display: block; margin-left: 0; }
   #lf-workstation .kiosk-checklist .lf-progress-checks > summary { min-height: 44px; }

@@ -534,37 +534,6 @@
   #lf-workstation .lf-recovery-notice { padding: 12px 16px; border: 0; border-left: 2px solid #78947a; background: #f3f6ee; border-radius: 0; margin-bottom: 24px; }
   #lf-workstation .lf-recovery-notice.is-error { background: #fff7f4; border-left-color: #ae625c; }
 
-  /* Paper preview: a document with supporting checks, rather than another form. */
-  #lf-workstation .cd2004-document-split { border: 0; background: transparent; }
-  #lf-workstation .cd2004-document-split .cd2004-inspector-window { border: 0; background: transparent; border-radius: 0; }
-  #lf-workstation .cd2004-inspector-window .cd2004-window-title { font: 500 12px/20px var(--tw-font-sans); color: var(--lf-muted); text-transform: none; }
-  #lf-workstation .cd2004-inspector-window > .cd2004-window-body { overflow: hidden; background: transparent; }
-  #lf-workstation .cd2004-document-split .cd2004-inspector { display: flex; flex-direction: column; gap: 16px; padding: 0 4px 16px 0; min-height: 0; height: 100%; overflow: auto; background: transparent; }
-  #lf-workstation .lf-document-checks { flex: 0 0 auto; min-width: 0; border: 1px solid #dedfd6; background: #f9f8f1; border-radius: 7px; overflow: hidden; }
-  #lf-workstation .lf-document-checks .cd2004-readiness-verdict { min-height: 32px; padding: 8px 13px; font-size: 11px; }
-  #lf-workstation .lf-document-checks .cd2004-readiness-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); max-height: none; overflow: visible; padding: 3px 9px 8px; background: transparent; }
-  #lf-workstation .lf-document-checks .cd2004-readiness-item { display: grid; grid-template-columns: 14px minmax(0,1fr); align-items: start; gap: 3px 6px; padding: 6px 5px; min-height: 0; border: 0; background: transparent; }
-  #lf-workstation .lf-document-checks .cd2004-readiness-item > span > strong { font-size: 11px; line-height: 17px; }
-  #lf-workstation .lf-document-checks .cd2004-readiness-item > span > small { font-size: 10px; line-height: 15px; margin-top: 2px; }
-  #lf-workstation .lf-document-checks .cd2004-readiness-state { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  #lf-workstation .lf-note-paper { flex: 0 0 auto; min-width: 0; border: 1px solid #d6ded3; border-radius: 3px; background: #ffffff; box-shadow: 0 2px 5px rgb(38 62 56 / 4%); padding: 24px 23px 0; }
-  #lf-workstation .lf-note-paper .cd2004-note-heading { padding: 0 0 13px; border: 0; background: transparent; gap: 9px; flex-wrap: wrap; }
-  #lf-workstation .lf-note-paper .cd2004-note-heading > svg { display: none; }
-  #lf-workstation .lf-note-paper .cd2004-note-heading > strong { color: var(--lf-ink); font: 400 25px/31px var(--lf-display); }
-  #lf-workstation .lf-note-paper .cd2004-note-marks { margin-left: auto; }
-  #lf-workstation .lf-note-paper .cd2004-note-ident { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 0 0 17px; margin: 0; background: transparent; border: 0; }
-  #lf-workstation .lf-note-paper .cd2004-note-ident > div { display: block; }
-  #lf-workstation .lf-note-paper .cd2004-note-ident dt { font-size: 9px; color: var(--lf-muted); margin-bottom: 3px; }
-  #lf-workstation .lf-note-paper .cd2004-note-ident dd { font-size: 12px; margin: 0; }
-  #lf-workstation .lf-note-paper .cd2004-note-toolbar { padding: 11px 0; border-block: 1px solid var(--lf-line); background: transparent; }
-  #lf-workstation .lf-note-paper .lf-note-boundary { padding: 12px 0; background: transparent; border: 0; font-size: 11px; }
-  #lf-workstation .lf-note-paper .cd2004-note-sections { display: block; overflow: visible; flex: none; padding: 0; background: transparent; }
-  #lf-workstation .lf-note-paper .cd2004-note-section { border: 0; margin: 0; padding: 12px 0 17px; border-top: 1px solid var(--lf-line); background: transparent; }
-  #lf-workstation .lf-note-paper .cd2004-note-section > header { padding: 0 0 10px; border: 0; background: transparent; }
-  #lf-workstation .lf-note-paper .cd2004-note-body { padding: 0; background: transparent; line-height: 1.7; font-size: 12px; }
-  #lf-workstation .lf-note-paper .cd2004-note-foot { padding: 12px 0; border-top: 1px solid var(--lf-line); background: transparent; font-size: 9px; }
-  #lf-workstation .lf-note-paper .cd2004-note-eod { padding: 18px 0; font-size: 10px; }
-
   @container workflow (min-width: 1080px) {
     #lf-workstation:not([data-kiosk-mode=true]) .wfp-panel { display: grid; grid-template-columns: 188px minmax(0,1fr); grid-template-rows: auto minmax(0,1fr) auto; height: 100%; min-height: 0; overflow: hidden; }
     #lf-workstation .wfp-transaction-chrome { display: contents; }

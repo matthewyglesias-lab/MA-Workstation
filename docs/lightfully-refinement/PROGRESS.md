@@ -232,3 +232,33 @@ Initial layout measured 248px, so the facts were regrouped rather than weakening
 the height check. Screenshot review at 1440 and 800 confirms separate dates and
 visible actions/guidance. Artifacts in evidence/after-timing/. Full clinical state
 and output parity suites remain required in final verification.
+
+### Entire preview / retained responsive editor checkpoint
+
+A single lavender stage owns one scroll region and the white generated document.
+Consolidated title/local read-only scope/Copy in one command header; removed
+redundant Local badges and all line-number DOM decoration, while retaining the
+lossless parsing utilities and canonical copy source. Body is 13px with preserved
+whitespace and wrapping. Document identity stays visible, including at 800px;
+end-of-note is reachable. Removed 269 obsolete note/gutter rules and superseded
+Lightfully preview layers; preview.css is the screen owner. No print rules changed.
+Completed injection summary measures 46px, View checks starts closed and preserves
+explicit expansion across ordinary state/view updates. Active concerns remain
+outside it. Other-service completed checks now disclose without hiding active items.
+Patient banner injection Record status uses the shared saved/signed lifecycle,
+rather than the legacy aggregate attention label contradicting a ready action.
+
+Split decisions use the actual available transaction width: 600px entry + 480px
+note + 16px gutter. Narrow preview makes the retained editor inert/aria-hidden and
+full-width; the identical response element survives Details/Preview switching.
+Source actions restore the visible form before focus. Note copy feedback is keyed
+to actual document identity, so old completion cannot leak into another patient.
+
+Checks/preservation/build and 857 units pass. 22/22 browser tests, retries zero,
+cover all four preview sizes, exact whole-note/section attempted clipboard bytes,
+46px summary, one scroller, no decorative DOM, expansion preservation, usable pane
+widths, retained editor, source focus, ownership, lifecycle faults and all services.
+New test initially attempted an unsupported response key; corrected to an actual
+catalog option, without changing response rules. Final screenshots reviewed at
+1440/1366/800; artifacts in evidence/after-preview/. Zoom/text enlargement, expanded
+long fixtures, full matrix and exact-head suite still remain required.

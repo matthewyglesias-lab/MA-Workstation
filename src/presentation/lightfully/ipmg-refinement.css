@@ -78,14 +78,6 @@
   #lf-workstation .wfp-status-flag { font-size: 11px; }
 
   /* The document remains the real output, not a decorative reproduction. */
-  #lf-workstation .cd2004-document-split { border-left: 1px solid #d9d6d9; background: #f6f3ee; }
-  #lf-workstation .cd2004-inspector-window .cd2004-window-title { font: 400 22px/28px var(--lf-display); color: #3c7083; }
-  #lf-workstation .cd2004-inspector-window > .cd2004-window-body { background: #f6f3ee; }
-  #lf-workstation .cd2004-note-heading { color: #294255; font: 400 21px/28px var(--lf-display); }
-  #lf-workstation .cd2004-note-body { color: #263e4c; font-size: 13px; line-height: 1.7; }
-  #lf-workstation .cd2004-note-ident dd { color: #294255; font-weight: 600; }
-  #lf-workstation .cd2004-note-ident dt { color: #617581; }
-  #lf-workstation .cd2004-note-toolbar { gap: 10px; border-block-color: #e5e1dc; }
   #lf-workstation .cd2004-record-actions, #lf-workstation .lf-service-footer {
     border-top: 1px solid #d6ddd9; background: #f9f8f6; padding: 12px var(--lf-gutter); gap: 12px;
   }

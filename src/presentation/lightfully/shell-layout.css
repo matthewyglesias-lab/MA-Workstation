@@ -127,7 +127,8 @@
   #lf-workstation .lf-view-switch button[aria-pressed=true] { background: #fff; color: var(--lf-ink); box-shadow: 0 1px 3px rgb(38 62 56 / 9%); }
   #lf-workstation .lf-view-switch svg { width: 15px; height: 15px; }
   #lf-workstation .cd2004-transaction-window { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); flex: 1; gap: 16px; height: 100%; min-height: 0; min-width: 0; margin: 0 var(--lf-shell-gutter) 16px; padding: 0; background: transparent; overflow: hidden; }
-  #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr) minmax(360px,.9fr); }
+  #lf-workstation .cd2004-transaction-window.has-document-split[data-document-layout=split] { grid-template-columns: minmax(600px,1.15fr) minmax(480px,1fr); }
+  #lf-workstation .has-document-split[data-document-layout=single] > .cd2004-workflow-slot { display: none; }
   #lf-workstation .cd2004-workflow-slot { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
   #lf-workstation:not([data-kiosk-mode=true]) .cd2004-workflow-slot:is([data-workflow=administer],[data-workflow=uds],[data-workflow=samples],[data-workflow=forms]) { container: workflow / inline-size; background: #fff; border: 1px solid var(--lf-line); border-radius: 12px; }
   #lf-workstation .cd2004-workflow-body { flex: 1; min-width: 0; min-height: 0; padding: 0; overflow: auto; background: transparent; }
@@ -205,11 +206,6 @@
     #lf-workstation .lf-masthead .tebra-menu-quiet > span:not(.tebra-account-avatar):not(.tebra-action-caret) { display: none; }
     #lf-workstation .lf-shortcut-arrow { display: none; }
     #lf-workstation .lf-service-shortcut { padding: 13px 14px; gap: 10px; }
-    #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr) minmax(330px,.85fr); }
-  }
-  @media (max-width: 1179px) {
-    #lf-workstation .cd2004-transaction-window.has-document-split { grid-template-columns: minmax(0,1fr); }
-    #lf-workstation[data-preview-open=true] .has-document-split > .cd2004-workflow-slot { display: none; }
   }
   @media (max-width: 949px) {
     :root { --lf-shell-gutter: 16px; }

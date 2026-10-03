@@ -14,7 +14,7 @@ export function InjectionProgressSummary({ progress, className = "" }: { progres
   return <section class={`lf-injection-progress ${className}`} aria-label="Injection documentation status">
     <div class="lf-progress-heading">
       <strong>{progress.headline}</strong>
-      <span>{progress.lifecycleLabel}</span>
+      {progress.lifecycleLabel !== progress.headline && <span>{progress.lifecycleLabel}</span>}
     </div>
     {progress.actionDetail && <p class="lf-progress-capability">{progress.actionDetail}</p>}
     {!progress.signed && progress.concerns.length > 0 && <div class="lf-progress-concerns" aria-label="What remains and clinical advisories">
@@ -22,7 +22,7 @@ export function InjectionProgressSummary({ progress, className = "" }: { progres
         onClick={() => navigateInjectionConcern(issue)}><span>{issue.severity === "stop" ? "Needs attention" : "Advisory"}</span>{issue.message}</button>)}
     </div>}
     <details class="lf-progress-checks">
-      <summary>View checks <span>{progress.completed} of {progress.total} documentation steps recorded</span></summary>
+      <summary>View checks <span>{progress.completed} of {progress.total} steps recorded</span></summary>
       <ul>{progress.steps.filter(step => step.id !== "sign").map(step => <li key={step.id}>
         <strong>{step.label}</strong><span>{step.stateLabel}</span>
       </li>)}</ul>
