@@ -26,7 +26,13 @@ for (const service of ['administer', 'uds', 'samples', 'forms']) {
     await expect(tabs).toHaveAttribute('aria-orientation', 'horizontal');
     await first.focus();
     await page.keyboard.press('ArrowRight');
-    await expect(tabs.getByRole('tab').nth(1)).toBeFocused();
+    if (service === 'forms') {
+      await expect(tabs.getByRole('tab')).toHaveCount(1);
+      await expect(tabs.getByRole('tab', { name: 'Letter builder', exact: true })).toHaveCount(0);
+      await expect(first).toBeFocused();
+    } else {
+      await expect(tabs.getByRole('tab').nth(1)).toBeFocused();
+    }
     await page.keyboard.press('Home');
     await expect(name).toHaveValue('Navigation, Synthetic');
 

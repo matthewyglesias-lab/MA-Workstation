@@ -22,3 +22,13 @@ managed-workstation validation and were not fabricated from Linux.
 All nine local visual/geometry/resume cases passed after these corrections,
 retries=0. Final exact-head and production-artifact CI results remain pending;
 this document does not claim a full gate or company-wide certification.
+
+The broader local diagnostic run also exposed three superseded presentation
+expectations: Forms assumed a second navigation tab for unavailable letter
+authoring, and two saved-record journeys matched the old locality sentence.
+Forms now explicitly asserts its one request tab, the absence of a Letter builder
+tab and circular keyboard focus; the other workflows retain the second-tab focus
+assertion. Both record journeys assert the complete browser/workstation sentence.
+The three corrected cases passed together, retries=0. Their patient-data,
+viewport, cancellation, focus and exact-storage assertions remain intact.
+A fresh complete CI run is required on this test-aligned final tree.

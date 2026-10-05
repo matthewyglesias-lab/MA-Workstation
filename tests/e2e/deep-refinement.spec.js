@@ -38,7 +38,7 @@ for (const width of [1440,800]) {
     await launcher.click();
     const drawer=page.locator('dialog[open] .records-drawer');
     await insideViewport(page,drawer);
-    await expect(drawer).toContainText('saved on this workstation');
+    await expect(drawer).toContainText('Records saved in this browser on this workstation');
     await expect(drawer.locator('[data-records-open]')).toHaveCount(1);
     const before=await page.evaluate(key=>localStorage.getItem(key),RECORDS);
     await shot(page,info,'saved-history');
