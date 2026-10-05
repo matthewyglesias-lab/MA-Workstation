@@ -136,8 +136,6 @@
   body:has(#lf-workstation) :is(.cd2004-dialog-titlebar,.records-drawer-head,.cd2004-dialog-actions) { background: #f5f6f9; border-color: var(--lf-line); }
   body:has(#lf-workstation) :is(.cd2004-dialog-titlebar h2,.records-drawer-head h2) { color: var(--lf-ink); }
   body:has(#lf-workstation) :is(.lf-dialog-close,.records-drawer-close) { background: transparent; border-radius: 7px; color: var(--lf-leaf); }
-  #lf-workstation .lf-service-icon { border-radius: 10px; }
-  #lf-workstation .lf-service-option:nth-child(4) .lf-service-icon { background: #ebe6f1; color: #716086; }
   @container workflow (min-width: 1080px) {
     #lf-workstation .wfp-panel .wfp-tabbar { background: #f6f6f9; }
     #lf-workstation .wfp-panel .wfp-tab[aria-selected=true] { background: #e7efeb; border-left-color: #527e6b; }

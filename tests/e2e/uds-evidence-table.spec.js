@@ -1,0 +1,55 @@
+const { test, expect } = require('@playwright/test');
+const { clickWorkspace } = require('./workspace-navigation');
+const ORDER = ['BUP', 'MTD', 'MOP', 'OXY', 'PPX', 'BZO', 'BAR', 'TCA', 'AMP', 'MET', 'COC', 'MDMA', 'PCP', 'THC'];
+
+for (const width of [1440, 800]) for (const density of ['compact', 'comfortable']) {
+  test(`UDS native evidence table preserves device order and keyboard results at ${width} ${density}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 800 ? 600 : 900 });
+    await page.addInitScript(d => localStorage.setItem('ipmg.lightfully.ui-density.v1', d), density);
+    await page.goto('/');
+    await clickWorkspace(page, '.cd2004-nav-item[title="UDS"]');
+    const panel = page.locator('.wfp-panel');
+    await panel.locator('[data-field-path="device"] select').selectOption('SAFE life 14-Panel Cup');
+    await page.locator('#uds-readings-verified').check();
+    await panel.getByRole('tab', { name: /^Results/ }).click();
+    const table = panel.getByRole('table', { name: 'Physical device results in panel order' });
+    await expect(table.getByRole('columnheader')).toHaveText(['Position / analyte', 'Result', 'Flag', 'Status']);
+    await expect(table.getByRole('rowheader')).toHaveCount(14);
+    expect(await table.locator('[data-result-panel]').evaluateAll(nodes => nodes.map(n => n.dataset.resultPanel))).toEqual(ORDER);
+    const bup = table.locator('[data-result-panel="BUP"]');
+    await bup.focus();
+    await bup.press('n');
+    await expect(bup).toHaveText('NEG');
+    await bup.press('ArrowDown');
+    const mtd = table.locator('[data-result-panel="MTD"]');
+    await expect(mtd).toBeFocused();
+    await mtd.press('p');
+    await expect(mtd).toHaveText('POS*');
+    await mtd.press('ArrowDown');
+    const mop = table.locator('[data-result-panel="MOP"]');
+    await expect(mop).toBeFocused();
+    await mop.press('i');
+    await expect(mop).toHaveText('INV!');
+    await expect(mop).toBeInViewport();
+    await expect(table.locator('[data-result-state="neg"]')).toHaveCount(1);
+    await expect(table.locator('[data-result-state="pos"]')).toHaveCount(1);
+    await expect(table.locator('[data-result-state="invalid"]')).toHaveCount(1);
+    await expect(panel.getByText('Presumptive screen.', { exact: false })).toBeVisible();
+    await expect(bup).toHaveCSS('color', 'rgb(41, 66, 85)');
+    expect(await table.evaluate(n => n.scrollWidth - n.clientWidth)).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    await bup.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`uds-evidence-${width}-${density}.png`) });
+    const last = table.locator('[data-result-panel="THC"]');
+    await last.focus();
+    await expect(last).toBeInViewport();
+    await expect(table.getByRole('rowheader').last()).toBeInViewport();
+    await page.screenshot({ path: info.outputPath(`uds-evidence-last-${width}-${density}.png`) });
+    await mop.focus();
+    await mop.press('t');
+    await expect(mop).toHaveText('NT');
+    await page.emulateMedia({ forcedColors: 'active' });
+    await expect(mop).toBeFocused();
+    expect(await mop.evaluate(n => getComputedStyle(n).outlineStyle)).not.toBe('none');
+  });
+}

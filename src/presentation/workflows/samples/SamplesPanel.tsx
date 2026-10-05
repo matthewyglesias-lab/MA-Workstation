@@ -1,5 +1,6 @@
 import { DraftRecoveryNotice } from "../../lightfully/DraftRecoveryNotice";
 import { WorkflowTabList } from "../WorkflowTabList";
+import { TransactionLine } from "../ClinicalRegister";
 import type { RecoveryStatus } from "../../../persistence/workflow-recovery";
 import { ActionShelf } from "../../lightfully/ActionShelf";
 import { labelControls } from "../WorkflowField";
@@ -237,6 +238,7 @@ export function SamplesPanel({
   const [encounter, setEncounter] = useState<SamplesEncounter>(initialEncounter);
   const [tab, setTab] = useState<SamplesTab>("order");
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [titrationOpen, setTitrationOpen] = useState(false);
   const mirroredOnMount = useRef(false);
   const dirty = useRef(initialDirty);
   const encounterRef = useRef(initialEncounter);
@@ -469,6 +471,10 @@ export function SamplesPanel({
   const canFinalizeSampleLog =
     evaluation?.output.finalizedOutputAllowed ?? false;
   const firstSampleStopMessage = stops[0]?.message;
+  const titrationReviewRequired = stops.some((issue) => issue.field?.split(".")[0] === "titration");
+  useEffect(() => {
+    if (titrationReviewRequired) setTitrationOpen(true);
+  }, [titrationReviewRequired]);
 
   return (
     <div
@@ -695,13 +701,20 @@ export function SamplesPanel({
                   onInput={(event) => patch({ directions: event.currentTarget.value })}
                 />
               </Field>
-              <Field label="Titration / prescriber intent">
-                <textarea
-                  value={encounter.titration ?? ""}
-                  placeholder="Optional: Day 1–7..., then Day 8..., increase only if tolerated, bridge until pharmacy fill, etc."
-                  onInput={(event) => patch({ titration: event.currentTarget.value })}
-                />
-              </Field>
+              <TransactionLine
+                label="Titration / prescriber intent"
+                summary={titrationReviewRequired ? "Review needed" : encounter.titration?.trim() ? "Instructions entered" : "Optional"}
+                open={titrationOpen}
+                onOpenChange={setTitrationOpen}
+              >
+                <Field label="Titration / prescriber intent">
+                  <textarea
+                    value={encounter.titration ?? ""}
+                    placeholder="Optional: Day 1–7..., then Day 8..., increase only if tolerated, bridge until pharmacy fill, etc."
+                    onInput={(event) => patch({ titration: event.currentTarget.value })}
+                  />
+                </Field>
+              </TransactionLine>
             </div>
           </div>
         </div>

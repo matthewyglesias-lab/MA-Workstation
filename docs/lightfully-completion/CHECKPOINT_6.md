@@ -78,3 +78,37 @@ After publication approval, run the existing unchanged full-review and productio
 artifact workflows, verify this exact head/tree and all attempts, then investigate
 any remaining failure without dropping invariants or widening image tolerances.
 Record the complete results before continuing the phased refinement.
+
+## Authorized publication and complete gate — 2026-10-05
+
+The user authorized publication. GitHub published commit
+`37629ad4386a271ba7982726ef3552a03a32276e`, tree
+`63a9275dc3c179883526ffa1f99e7b069f155f5f`, exactly matching the approved
+local candidate tree. The earlier publication-block paragraph is historical.
+
+- Full review run `37267036690`, attempt 1: **402 passed**, 0 skipped,
+  0 unexpected, 0 flaky; configured retries **0**. Preservation, check, all
+  **898 units / 64 files**, build and standalone package also passed.
+- Artifact `11327860057` includes matching COMMIT/TREE and browser JSON.
+  Download SHA-256:
+  `477a0d9703e2f9337243bea9edf53e809a4712b34992883f9f6bed127dc28c7e`.
+- Production-artifact run `37267036717`, job `111626027697`: **401 passed**,
+  1 intentionally skipped standalone-only test. No retry was used; the unchanged
+  production configuration still permits one CI retry and will be made strictly
+  zero before final certification.
+- Production-dist artifact `11326514709` SHA-256:
+  `a565a504a8d19e2c90435d76fae9a35a2ac0e32ecc89eb9a4e4dc34315f207ba`.
+- The pipeline's later preview deployment failed because Azure has reached its
+  staging-environment limit. No unrelated environment was removed. This is a
+  hosting-capacity limitation; the exact artifact browser job passed.
+
+The local alternate-browser browse timestamp failure was traced, in scratch
+instrumentation, to a legacy autosave scheduled before the test installed its
+clock. Installing the clock before patient edits and retaining exact-byte equality,
+including a further 1000 ms after return, passed. No production or committed test
+change was made for that local-only result. The configured CI browse and native
+200% zoom cases passed in the complete run.
+
+Phase 3 is green. PR #71 remains draft; main and production remain unchanged.
+Phase 4 may proceed. This is a baseline engineering checkpoint, not the final
+admin-review candidate.

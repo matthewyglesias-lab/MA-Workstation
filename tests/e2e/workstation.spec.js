@@ -3274,7 +3274,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#uds-readings-verified')).toBeChecked();
 
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    const bup = panel.locator('.wfp-grid-row', { hasText: 'Buprenorphine' })
+    const bup = panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Buprenorphine' })
       .locator('.wfp-result-cycle');
     await expect(bup).toHaveText('NT');
     await bup.click();
@@ -3293,8 +3293,8 @@ test.describe('MA Workstation browser journeys', () => {
     await bup.press('ArrowDown');
     await page.mouse.move(0, 0);
     await expect(bup).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-    await expect(bup).toHaveCSS('color', 'rgb(31, 111, 92)');
-    const mtd = panel.locator('.wfp-grid-row', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
+    await expect(bup).toHaveCSS('color', 'rgb(41, 66, 85)');
+    const mtd = panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
     await expect(mtd).toBeFocused();
     await mtd.press('p');
     await expect(mtd).toHaveText('POS*');
@@ -3319,7 +3319,7 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('#uds-readings-verified').check();
 
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    const omittedRow = panel.locator('.wfp-grid-row', { hasText: 'Propoxyphene' });
+    const omittedRow = panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Propoxyphene' });
     // The result register follows the physical device order exactly. The cup
     // has no PPX window, so no PPX transaction row is rendered.
     await expect(omittedRow).toHaveCount(0);
@@ -3332,7 +3332,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(readyFlag).toContainText('Ready to sign');
     await expect(readyFlag.locator('.wfp-status-icon')).toHaveText('✓');
 
-    await panel.locator('.wfp-grid-row', { hasText: 'Cannabinoids / THC' })
+    await panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Cannabinoids / THC' })
       .locator('.wfp-result-cycle').click();
     await expect(omittedRow).toHaveCount(0);
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
@@ -3526,7 +3526,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#uds-readings-verified')).not.toBeChecked();
     await expect(panel.locator('.wfp-invalidation-receipt')).toContainText('PANEL PROFILE CHANGED');
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    await expect(panel.locator('.wfp-grid-row')).toHaveCount(2);
+    await expect(panel.locator('.lf-uds-evidence tbody tr')).toHaveCount(2);
     await expect(panel.locator('.wfp-result-cycle')).toHaveText(['NT', 'NT']);
   });
 
@@ -3660,7 +3660,7 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('#uds-readings-verified').check();
     await panel.getByRole('tab', { name: /^Results/ }).click();
     await applyDisplayedPanelsNegative(page, panel);
-    await panel.locator('.wfp-grid-row', { hasText: 'Cannabinoids / THC' })
+    await panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Cannabinoids / THC' })
       .locator('.wfp-result-cycle').click();
     await panel.getByRole('tab', { name: /^Review/ }).click();
 

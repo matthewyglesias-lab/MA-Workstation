@@ -93,7 +93,8 @@ function queueWorklistRow(
     taskLabel: item.detail,
     stateLabel: queueStateLabel(item),
     actionLabel: queueActionLabel(item),
-    tone: item.tone,
+    // A locally recorded lifecycle is not clinical clearance.
+    tone: requiresReview(item) ? item.tone : "neutral",
     queueItem: item,
   };
 }

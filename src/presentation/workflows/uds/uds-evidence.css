@@ -1,0 +1,60 @@
+/* Screen-only evidence table. Result data, device order and print builders
+ * remain owned by the UDS engine; this file owns the interactive table. */
+@media screen {
+  #lf-workstation .lf-uds-evidence {
+    width: 100%; table-layout: fixed; border-collapse: collapse;
+    color: var(--lf-ink); background: var(--lf-paper);
+    font: 400 var(--lf-control-font)/1.5 var(--tw-font-sans);
+  }
+  #lf-workstation .lf-uds-evidence :is(th,td) {
+    padding: 7px 10px; border-bottom: 1px solid var(--lf-line);
+    text-align: left; vertical-align: middle; overflow-wrap: anywhere;
+  }
+  #lf-workstation .lf-uds-evidence thead th {
+    color: var(--lf-muted); background: var(--lf-soft); font-weight: 500;
+  }
+  #lf-workstation .lf-uds-evidence thead th:nth-child(2) { width: 90px; }
+  #lf-workstation .lf-uds-evidence thead th:nth-child(3) { width: 60px; text-align: center; white-space: nowrap; }
+  #lf-workstation .lf-uds-evidence thead th:nth-child(4) { width: 116px; }
+  #lf-workstation .lf-uds-evidence tbody th { font-weight: 400; }
+  #lf-workstation .lf-uds-analyte { display: flex; align-items: center; gap: 12px; }
+  #lf-workstation .lf-uds-analyte .wfp-sequence-number { flex: 0 0 20px; color: var(--lf-muted); text-align: right; }
+  #lf-workstation .lf-uds-analyte strong { display: block; font-weight: 600; }
+  #lf-workstation .lf-uds-analyte small { display: block; color: var(--lf-muted); font: 400 11px/1.4 var(--tw-font-mono); }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle {
+    width: 100%; min-height: var(--lf-control-height); padding: 4px 9px;
+    color: var(--lf-ink); background: var(--lf-paper);
+    border: 1px solid var(--lf-control-border); border-radius: 5px;
+    font: inherit; text-align: center; cursor: pointer; box-shadow: none;
+  }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle b { font: 600 12px/1.5 var(--tw-font-mono); }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle.is-nt { color: var(--lf-muted); background: var(--lf-soft); }
+  #lf-workstation .lf-uds-evidence [data-result-state=pos] { background: var(--tw-stop-bg); }
+  #lf-workstation .lf-uds-evidence [data-result-state=invalid] { background: var(--tw-review-bg); }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle.is-pos { color: var(--tw-stop-fg); border-color: var(--tw-stop-fg); }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle.is-invalid { color: var(--tw-review-fg); border-color: var(--tw-review-fg); }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle:hover { background: var(--lf-hover); }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle:disabled { color: var(--lf-muted); background: var(--lf-field-muted); border-color: var(--lf-line); cursor: not-allowed; }
+  #lf-workstation .lf-uds-evidence .wfp-result-flag { text-align: center; white-space: nowrap; font: 600 12px/1.5 var(--tw-font-mono); }
+  #lf-workstation .lf-uds-evidence .wfp-result-flag.is-abnormal { color: var(--tw-stop-fg); }
+  #lf-workstation .lf-uds-evidence .wfp-result-status { color: var(--lf-muted); font-size: 12px; }
+  #lf-workstation .lf-uds-evidence [data-result-state=pos] .wfp-result-status { color: var(--tw-stop-fg); font-weight: 600; }
+  #lf-workstation .lf-uds-evidence [data-result-state=invalid] .wfp-result-status { color: var(--tw-review-fg); font-weight: 600; }
+  #lf-workstation .lf-uds-results-summary {
+    display: flex; flex-wrap: wrap;
+    gap: 5px 16px; padding: 7px 10px; border-top: 1px solid var(--lf-line);
+    background: var(--lf-paper); color: var(--lf-ink);
+    font: 400 12px/20px var(--tw-font-sans);
+  }
+}
+@media screen and (max-width: 1024px) {
+  #lf-workstation .lf-uds-evidence :is(th,td) { padding: 6px 7px; }
+  #lf-workstation .lf-uds-evidence thead th:nth-child(2) { width: 76px; }
+  #lf-workstation .lf-uds-evidence thead th:nth-child(3) { width: 52px; }
+  #lf-workstation .lf-uds-evidence thead th:nth-child(4) { width: 100px; }
+}
+@media (forced-colors: active) {
+  #lf-workstation .lf-uds-evidence :is(th,td) { border-color: CanvasText; }
+  #lf-workstation .lf-uds-evidence .wfp-result-cycle:focus-visible { outline-color: Highlight; }
+}

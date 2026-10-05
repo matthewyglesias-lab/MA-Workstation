@@ -171,11 +171,6 @@
  #lf-workstation .lf-dialog-heading {padding:25px 27px 21px;}
  #lf-workstation .lf-dialog-heading h2 {font-size:29px;margin-top:0;}
  #lf-workstation .lf-dialog-heading p {font-size:12px;line-height:20px;}
- #lf-workstation .lf-service-options {padding:0 24px 24px;gap:5px;}
- #lf-workstation .lf-service-dialog .lf-service-option {padding:15px 12px;border:0;border-radius:10px;}
- #lf-workstation .lf-service-icon {background:#eff5f6;border-radius:10px;width:39px;height:43px;}
- #lf-workstation .lf-service-option strong {font-size:14px;font-weight:500;}
- #lf-workstation .lf-service-option small {font-size:12px;line-height:20px;}
  #lf-workstation .lf-icon-button {border:0;background:#f4f6f8;border-radius:50%;width:32px;height:32px;}
  /* Preserve warning meaning regardless of ordinary selection styling. */
  #lf-workstation .wfp-option-row.is-stop.is-selected {background:var(--tw-stop-bg);color:var(--tw-stop-fg);border-color:var(--tw-stop-border);}

@@ -69,29 +69,7 @@ export function DailyCloseoutPanel() {
     <div class="wfp-panel lf-closeout-panel cd2004-print-exclude" tabIndex={-1}>
       <ToolPageHeader title="Daily closeout">
         <span class="wfp-status-flag is-idle">{stats.total} logged today</span>
-        <button type="button" class="cd2004-command-button" onClick={() => clickLegacyControl("printDailyLog")}>
-          Print daily log
-        </button>
-        <ActionShelf label="Output options" heading="Closeout outputs" class="lf-closeout-outputs">
-          <button type="button" onClick={() => clickLegacyControl("copyDailySummary")}>Copy summary</button>
-          <button type="button" onClick={() => clickLegacyControl("exportDailyCsv")}>Export CSV</button>
-          <button type="button" onClick={() => clickLegacyControl("saveDailyPdf")}>Save closeout PDF</button>
-        </ActionShelf>
       </ToolPageHeader>
-
-      <div class="wfp-section">
-        <div class="wfp-section-head">Today's summary</div>
-        <div class="wfp-section-body">
-          <div class="wfp-kpi-row">
-            {KPI_LABELS.map((item) => (
-              <div key={item.key}>
-                <div class="wfp-kpi-value">{stats[item.key]}</div>
-                <div class="wfp-kpi-label">{item.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
       <div class="wfp-section">
         <div class="wfp-section-head">
@@ -119,6 +97,34 @@ export function DailyCloseoutPanel() {
           ) : (
             <p class="wfp-field-hint">No needs-review items logged.</p>
           )}
+        </div>
+      </div>
+
+      <div class="wfp-section">
+        <div class="wfp-section-head">Closeout outputs</div>
+        <div class="wfp-section-body lf-closeout-output-actions">
+        <button type="button" class="cd2004-command-button" onClick={() => clickLegacyControl("printDailyLog")}>
+          Print daily log
+        </button>
+        <ActionShelf label="Output options" heading="Closeout outputs" class="lf-closeout-outputs">
+          <button type="button" onClick={() => clickLegacyControl("copyDailySummary")}>Copy summary</button>
+          <button type="button" onClick={() => clickLegacyControl("exportDailyCsv")}>Export CSV</button>
+          <button type="button" onClick={() => clickLegacyControl("saveDailyPdf")}>Save closeout PDF</button>
+        </ActionShelf>
+        </div>
+      </div>
+
+      <div class="wfp-section">
+        <div class="wfp-section-head">Today's summary</div>
+        <div class="wfp-section-body">
+          <div class="wfp-kpi-row">
+            {KPI_LABELS.map((item) => (
+              <div key={item.key}>
+                <div class="wfp-kpi-value">{stats[item.key]}</div>
+                <div class="wfp-kpi-label">{item.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

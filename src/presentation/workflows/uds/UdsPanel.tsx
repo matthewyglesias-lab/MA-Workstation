@@ -1,3 +1,4 @@
+import "./uds-evidence.css";
 import {
   CHECKLIST,
   draftSavedAtCopy,
@@ -2119,15 +2120,16 @@ export function UdsPanel({
 
               <div class="wfp-section wfp-device-ledger" role="group" aria-label="Physical device panel order">
                 <h3 class="wfp-section-head">Physical device order</h3>
-                <div class="wfp-grid wfp-grid-lab">
-                  <div class="wfp-grid-head"><span>Position / analyte</span><span>Result</span><span>Flag</span><span>Status</span></div>
+                <table class="lf-uds-evidence" aria-label="Physical device results in panel order">
+                  <thead><tr><th scope="col">Position / analyte</th><th scope="col">Result</th><th scope="col">Flag</th><th scope="col">Status</th></tr></thead>
+                  <tbody>
                   {displayedPanels.map((panel, index) => {
                     const state = encounter.results[panel] ?? "nt";
                     const derived = UDS_RESULT_FLAG[state];
                     return (
-                      <div class="wfp-grid-row" key={panel} data-field-path={`results.${panel}`}>
-                        <span class="wfp-grid-cell"><span class="wfp-sequence-number">{index + 1}</span> <strong>{panel}</strong> {udsPanelName(panel)}</span>
-                        <span class="wfp-grid-cell wfp-grid-cell-actions">
+                      <tr key={panel} data-field-path={`results.${panel}`} data-result-state={state}>
+                        <th scope="row"><div class="lf-uds-analyte"><span class="wfp-sequence-number">{index + 1}</span><span><strong>{udsPanelName(panel)}</strong><small>{panel}</small></span></div></th>
+                        <td>
                           <button
                             type="button"
                             class={`wfp-result-cycle is-${state}`}
@@ -2151,17 +2153,18 @@ export function UdsPanel({
                             }}
                             onClick={() => setPanelResult(panel, nextUdsResultState(state))}
                           ><b>{state === "nt" ? "NT" : state === "neg" ? "NEG" : state === "pos" ? "POS*" : "INV!"}</b></button>
-                        </span>
-                        <span class={`wfp-grid-cell wfp-result-flag ${derived.abnormal ? "is-abnormal" : ""}`}>{derived.flag}</span>
-                        <span class="wfp-grid-cell wfp-result-status">{derived.status}</span>
-                      </div>
+                        </td>
+                        <td class={`wfp-result-flag ${derived.abnormal ? "is-abnormal" : ""}`}>{derived.flag}</td>
+                        <td class="wfp-result-status">{derived.status}</td>
+                      </tr>
                     );
                   })}
-                  {displayedPanels.length === 0 && <div class="wfp-grid-empty">Select a device and define its physical panels before entering results.</div>}
-                </div>
+                  {displayedPanels.length === 0 && <tr><td colSpan={4}>Select a device and define its physical panels before entering results.</td></tr>}
+                  </tbody>
+                </table>
               </div>
 
-              <div class="wfp-summary-bar wfp-results-sticky-status">
+              <div class="lf-uds-results-summary">
                 <span>Tested: {testedCount}</span>
                 <span>Preliminary positive: {positiveCount}</span>
                 <span>Invalid: {invalidCount}</span>

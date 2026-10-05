@@ -146,6 +146,11 @@ for (const width of [1440, 800]) {
     await page.goto('/');
     await clickWorkspace(page, '.cd2004-nav-item[title="Daily Closeout"]');
     const panel = page.locator('.lf-closeout-panel');
+    const headings = panel.locator(':scope > .wfp-section > .wfp-section-head');
+    await expect(headings.nth(0)).toContainText('Needs-review queue');
+    await expect(headings.nth(1)).toHaveText('Closeout outputs');
+    await expect(headings.nth(2)).toHaveText("Today's summary");
+    await expect(panel.locator('.lf-closeout-output-actions')).toHaveCSS('flex-direction', 'row');
     await expect(panel.getByRole('button', { name: 'Print daily log', exact: true })).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Clear log', exact: true })).toBeHidden();
     const output = panel.locator('.lf-closeout-outputs');
