@@ -52,3 +52,24 @@ All thirteen worklist and visual/geometry/resume cases passed together after thi
 correction, retries=0. No screenshot tolerance or clinical golden fixture changed.
 The completed diagnostic run found no other failures. A new complete exact-head
 and production-artifact gate is required on the corrected tree.
+
+## Final engineering gate — green
+
+Certified head `4886db988834783058ca06cc97e39548edd5be44`, tree
+`c5309c9630b3bbdaf1d63bdd40cdaa34cd7ea650`.
+Full review run 37272385685 / job 111642036998 passed preservation, type/static,
+898 units, build, standalone and **414/414 browser/visual/print cases**. JSON:
+414 expected, 0 skipped/unexpected/flaky, configured retries=0, duration 14.7 min.
+Archived COMMIT/TREE match the certified head/tree. Both native 200% zoom cases pass.
+Production pipeline 37272385672 / browser job 111642060184 passed **413 cases**,
+with only the standalone-specific opt-in case skipped (covered by the full review).
+Its config also enforces retries=0. The production ZIP SHA256 is
+`34a1bfb30efaf0a94e1ae9832a6b78b17378dc82a3a76a35d66e5482df90cbbf`;
+all 25 files match the local build with the identical CI screening flag.
+The exact standalone HTML SHA256 is
+`7c22bcdb6c982679ac23a1b632f7bde46bda0776ed5b7bc242d26d2790c6267b`.
+
+Azure deploy job 111647081147 failed solely because staging environments are at
+capacity. No unrelated environment was deleted. No main or production change.
+Phase 7 now supplies the exact artifact fallback and synthetic pilot review.
+Documentation/evidence follow-up commits do not change the certified runtime.

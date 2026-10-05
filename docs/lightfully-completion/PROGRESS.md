@@ -65,3 +65,23 @@ browser success is claimed.
 
 No merge or production deployment is authorized by this checkpoint. No Actions
 files, secrets, infrastructure, branch protections or unrelated previews changed.
+
+## Final engineering and admin review follow-up
+
+Phases 3, 4A, 4B, 5A, 5B, 5C and 5D are complete. Exact engineering head
+`4886db988834783058ca06cc97e39548edd5be44` / tree
+`c5309c9630b3bbdaf1d63bdd40cdaa34cd7ea650` passed 898 units and all 414 full
+browser/visual/print cases, retries=0. Exact production artifact testing passed
+413 cases with its standalone-only opt-in case covered by the 414-case review.
+See PHASE_6_CERTIFICATION.md and docs/admin-review/TEST_EVIDENCE.md for provenance.
+
+The admin candidate has six review documents, 17 synthetic scenes, exact tested
+standalone/dist builds and a 1–2 week one-clinic pilot plan. Azure preview remains
+blocked by staging capacity. Main and production are unchanged, PR #71 stays
+draft, and company-wide readiness requires the documented organizational gates.
+# Phase 7 complete: admin and pilot review package
+
+See [PHASE_7_ADMIN_PACKAGE.md](PHASE_7_ADMIN_PACKAGE.md) and
+[ADMIN_REVIEW.md](../admin-review/ADMIN_REVIEW.md). Six admin documents, 17 inspected
+synthetic scenes, exact executable artifacts and a governed 1–2 week pilot plan
+follow the successful Phase 6 certification. This follow-up is documentation-only.

@@ -1,0 +1,138 @@
+[
+  {
+    "file": "01-worklist.png",
+    "title": "Local worklist",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "lightfully-worklist-refine-a7bee-nd-explicit-actions-at-1440-chromium/worklist-populated-1440.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "c372d1c1af2dbebf35d1c0b41b5a1d680b3509097bb66b15db7fd20ab1dccacd"
+  },
+  {
+    "file": "02-patient-chart.png",
+    "title": "Patient search and read-only chart context",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "lightfully-completion-brow-36182-nly-negative-record-at-1440-chromium/patient-context-negative-record-1440.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "8c03e46d5e77edd3c381a74f0844eab1252f9f5b15699d845130b62718f90541"
+  },
+  {
+    "file": "03-focused-routine.png",
+    "title": "Routine focused Injection",
+    "sourceKind": "Post-gate synthetic capture of exact production files",
+    "sourcePath": "admin-scenes-synthetic-rou-2d506--certified-production-files-chromium/focused-routine.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "278c0b4a888aefea73e0161a9d5c187231724b0fc005217201fd04bb1c283196"
+  },
+  {
+    "file": "04-blocked-injection.png",
+    "title": "Blocked Injection with actual exception requirements",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "lightfully-deep-evidence-e-181df-ned-preview-at-1440-compact-chromium/preview-blocked-1440-compact.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "c5ada02130baade60b5d2372307e7eca681fa834905bb0859d37cc9e19ba451c"
+  },
+  {
+    "file": "05-timing-review.png",
+    "title": "Timing review: current visit and next due date",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "lightfully-timing-refineme-03129-sit-remain-separate-at-1440-chromium/timing-on-schedule-1440.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "397c86e1a72a59731114bb8746f797c52d2aa4e1cd9a5cc4769b9b62008a408d"
+  },
+  {
+    "file": "06-ready-to-sign.png",
+    "title": "Ready to sign, with documenting staff supplied",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "lightfully-preview-refinem-4d93d-ecks-and-exact-copy-at-1440-chromium/preview-ready-1440.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "593abe9e1b451623bd93819734fd70e1f8933a8ee55c9aadda8405715fe47f4d"
+  },
+  {
+    "file": "07-signed-local.png",
+    "title": "Signed locally, read-only long note",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "lightfully-deep-evidence-e-181df-ned-preview-at-1440-compact-chromium/preview-long-signed-1440-compact.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "0ad215f29c93492dc61738c097bd643ba13c219c2e83ef44e9482f0bb737add2"
+  },
+  {
+    "file": "08-full-injection.png",
+    "title": "Full Injection mode, same routine encounter",
+    "sourceKind": "Post-gate synthetic capture of exact production files",
+    "sourcePath": "admin-scenes-synthetic-rou-2d506--certified-production-files-chromium/full-injection.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "6978cf27a0489f6399ea33dbaa89bf97ad2276889ef33a96e55206195d43c4dd"
+  },
+  {
+    "file": "09-avs-write-in.png",
+    "title": "AVS with write-in appointment fields",
+    "sourceKind": "Rendered page 1 of certified CI PDF",
+    "sourcePath": "write-in-1.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "5f263c39e12e155574d0ec512386e253fd2ada0534b19d4850b3af9601659818"
+  },
+  {
+    "file": "10-avs-typed.png",
+    "title": "AVS with typed appointment details",
+    "sourceKind": "Rendered page 1 of certified CI PDF",
+    "sourcePath": "typed-1.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "47bb7baef3528f0d429d55d360df1b7a13b7549ea1592873c8909cc4882616d7"
+  },
+  {
+    "file": "11-uds-normal.png",
+    "title": "UDS normal QC and all fourteen results NEG; preliminary boundary retained",
+    "sourceKind": "Post-gate synthetic capture of exact production files",
+    "sourcePath": "admin-scenes-synthetic-nor-bb875-etains-preliminary-boundary-chromium/uds-normal.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "e629d0c29536b9f7b8f24f67f0262e94579cd6101875f90bb24feeae533033e5"
+  },
+  {
+    "file": "12-uds-abnormal.png",
+    "title": "UDS NEG, POS* and INV! evidence; preliminary status",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "uds-evidence-table-UDS-nat-18f27-ard-results-at-1440-compact-chromium/uds-evidence-1440-compact.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "1a4b96ad60e0c9d3cdf41045b8ab151247a0204d38bce3478af89423a5577818"
+  },
+  {
+    "file": "13-samples.png",
+    "title": "Samples with optional titration/prescriber intent",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "optional-workflow-disclosu-81db9-y-and-copied-output-at-1440-chromium/samples-optional-1440.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "3588bdf9cfb151a4c5f295d38299fb13b7b8af8d1be22542d550bec2100f4b5b"
+  },
+  {
+    "file": "14-forms.png",
+    "title": "Forms/request tracking and letter availability",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "optional-workflow-disclosu-eeace-exact-copied-output-at-1440-chromium/forms-availability-1440.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "50df9da09cbb64e08729bc977e59755ae0c751b71d711ef4c0598cd008c81dd5"
+  },
+  {
+    "file": "15-saved-records.png",
+    "title": "Saved injection records, browser/workstation scope",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "saved-record-boundaries-sa-4cf60-k-and-browser-scope-at-1440-chromium/saved-injection-records-1440.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "84a3235f7298904f1efa0056b23ebc0f21b24da996f037582cd5b9e514f035cc"
+  },
+  {
+    "file": "16-storage-failure.png",
+    "title": "Failed save keeps patient data and signing disabled",
+    "sourceKind": "Post-gate synthetic capture of exact production files",
+    "sourcePath": "admin-scenes-synthetic-fai-56555-nest-and-keeps-patient-data-chromium/storage-failure.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "a81d259abecf6fdf5f19e511783eb7d621539cd44972abfde0b3146ac41ab10b"
+  },
+  {
+    "file": "17-minimum-workstation.png",
+    "title": "800x600 populated native worklist",
+    "sourceKind": "Certified CI PNG, unchanged",
+    "sourcePath": "lightfully-worklist-refine-8fa44-and-explicit-actions-at-800-chromium/worklist-populated-800.png",
+    "sourceCommit": "4886db988834783058ca06cc97e39548edd5be44",
+    "sha256": "9dc05198381a0305b5d138fbc38c344b07156a4b17ef90c27149d2e134fbeb3b"
+  }
+]
