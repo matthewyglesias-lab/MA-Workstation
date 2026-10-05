@@ -511,52 +511,69 @@ test.describe('Phase 3b patient chart conventions', () => {
     await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
   });
 
-  test('returns from patient browsing with guarded draft preservation and unchanged existing records', async ({ page }, info) => {
-    await bootWithPatientChart(page, { width: 800, height: 600 });
-    await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
-    const name = page.locator('.wfp-panel input[placeholder="Last, First"]');
-    const dob = page.locator('.wfp-panel input[placeholder="MM/DD/YYYY"]');
-    await name.fill('Return path, Synthetic');
-    await dob.fill('01/02/1990');
-    await dob.press('Tab');
-    const records = () => page.evaluate(keys => keys.map(key => localStorage.getItem(key)), [INJECTION_RECORDS_KEY, UDS_RECORDS_KEY]);
-    const before = await records();
-    await openBakerChart(page);
-    await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
-    await expect(page.locator('.lf-draft-return')).toContainText('active service is unchanged');
-    await expect(page.getByRole('button', { name: 'Return to active service', exact: true })).toHaveCount(1);
-    // The existing leave guard saves the active injection before browsing.
-    // That intentional write must not change any pre-existing record, and
-    // returning from this read-only chart must perform no additional write.
-    // The frozen legacy writer can still have the pre-browse input autosave
-    // queued after its guarded save (also reproduced on main). Settle that
-    // existing task before measuring the return action; compare exact bytes.
-    await page.clock.install();
-    await page.clock.runFor(1000);
-    await page.clock.resume();
-    const afterBrowse = await records();
-    const oldInjectionRecords = JSON.parse(before[0]);
-    const savedInjectionRecords = JSON.parse(afterBrowse[0]);
-    const originalIds = new Set(oldInjectionRecords.map(record => record.id));
-    // The repository orders its array by updatedAt on every save. Compare the
-    // complete original records by identity, not the incidental storage order.
-    const byId = records => [...records].sort((a, b) => a.id.localeCompare(b.id));
-    expect(byId(savedInjectionRecords.filter(record => originalIds.has(record.id))))
-      .toEqual(byId(oldInjectionRecords));
-    const activeDraft = savedInjectionRecords.filter(record => !originalIds.has(record.id));
-    expect(activeDraft).toHaveLength(1);
-    expect(activeDraft[0].patient).toEqual({ name: 'Return path, Synthetic', dob: '01/02/1990' });
-    expect(activeDraft[0].status).toBe('draft');
-    expect(afterBrowse[1]).toBe(before[1]);
-    await page.screenshot({ path: info.outputPath('patient-browse-800.png') });
-    await page.getByRole('button', { name: 'Return to active service', exact: true }).click();
-    await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
-    await expect(name).toHaveValue('Return path, Synthetic');
-    await expect(name).toBeFocused();
-    await expect(dob).toHaveValue('01/02/1990');
-    expect(await records()).toEqual(afterBrowse);
-    await page.screenshot({ path: info.outputPath('patient-return-800.png') });
-  });
+  for (const autosaveBeforeBrowse of [false, true]) {
+    test(`returns from patient browsing with guarded draft preservation and unchanged existing records (${autosaveBeforeBrowse ? 'autosave completed' : 'autosave pending'})`, async ({ page }, info) => {
+      await bootWithPatientChart(page, { width: 800, height: 600 });
+      await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
+      const records = () => page.evaluate(keys => keys.map(key => localStorage.getItem(key)), [INJECTION_RECORDS_KEY, UDS_RECORDS_KEY]);
+      // Capture pre-existing records before this encounter can legitimately
+      // autosave. A slower runner may save the new draft between typing and
+      // browsing; it must not then be mistaken for an untouched old record.
+      const before = await records();
+      await page.clock.install({ time: new Date('2026-10-02T16:00:00Z') });
+      await page.clock.pauseAt(new Date('2026-10-02T16:00:01Z'));
+      const name = page.locator('.wfp-panel input[placeholder="Last, First"]');
+      const dob = page.locator('.wfp-panel input[placeholder="MM/DD/YYYY"]');
+      await name.fill('Return path, Synthetic');
+      await dob.fill('01/02/1990');
+      await dob.press('Tab');
+      if (autosaveBeforeBrowse) await page.clock.runFor(1000);
+      const beforeBrowse = JSON.parse((await records())[0]);
+      const baselineIds = new Set(JSON.parse(before[0]).map(record => record.id));
+      expect(beforeBrowse.filter(record => !baselineIds.has(record.id)))
+        .toHaveLength(autosaveBeforeBrowse ? 1 : 0);
+      await openBakerChart(page);
+      await expect(page.locator('.tebra-facesheet-name')).toContainText('Baker, Test');
+      await expect(page.locator('.lf-draft-return')).toContainText('active service is unchanged');
+      await expect(page.getByRole('button', { name: 'Return to active service', exact: true })).toHaveCount(1);
+      // The existing leave guard saves the active injection before browsing.
+      // That intentional write must not change any pre-existing record, and
+      // returning from this read-only chart must perform no additional write.
+      // The frozen legacy writer can still have the pre-browse input autosave
+      // queued after its guarded save (also reproduced on main). Settle that
+      // existing task before measuring the return action; compare exact bytes.
+      await page.clock.runFor(1000);
+      const afterBrowse = await records();
+      const oldInjectionRecords = JSON.parse(before[0]);
+      const savedInjectionRecords = JSON.parse(afterBrowse[0]);
+      const originalIds = new Set(oldInjectionRecords.map(record => record.id));
+      // The repository orders its array by updatedAt on every save. Compare the
+      // complete original records by identity, not the incidental storage order.
+      const byId = records => [...records].sort((a, b) => a.id.localeCompare(b.id));
+      expect(byId(savedInjectionRecords.filter(record => originalIds.has(record.id))))
+        .toEqual(byId(oldInjectionRecords));
+      const activeDraft = savedInjectionRecords.filter(record => !originalIds.has(record.id));
+      expect(activeDraft).toHaveLength(1);
+      if (autosaveBeforeBrowse) {
+        expect(activeDraft[0].id).toBe(beforeBrowse.find(record => !baselineIds.has(record.id)).id);
+      }
+      expect(activeDraft[0].patient).toEqual({ name: 'Return path, Synthetic', dob: '01/02/1990' });
+      expect(activeDraft[0].status).toBe('draft');
+      expect(afterBrowse[1]).toBe(before[1]);
+      await page.screenshot({ path: info.outputPath('patient-browse-800.png') });
+      await page.getByRole('button', { name: 'Return to active service', exact: true }).click();
+      await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
+      await expect(name).toHaveValue('Return path, Synthetic');
+      await expect(name).toBeFocused();
+      await expect(dob).toHaveValue('01/02/1990');
+      expect(await records()).toEqual(afterBrowse);
+      // Returning must also preserve exact durable bytes after delayed tasks
+      // have had a chance to run, including the active encounter timestamp.
+      await page.clock.runFor(1000);
+      expect(await records()).toEqual(afterBrowse);
+      await page.screenshot({ path: info.outputPath('patient-return-800.png') });
+    });
+  }
 
   test('shows Facesheet cards that each state their ordering rule', async ({ page }) => {
     await bootWithPatientChart(page);
