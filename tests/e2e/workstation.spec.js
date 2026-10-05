@@ -674,18 +674,18 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Schedule');
     const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
-    // State reaches the operator three ways, and all three must agree: the
-    // spine class, the verdict word, and the band sentence. Colour alone would
-    // be unreadable to a staff member with red/green deficiency.
+    // The explicit verdict and exact date/window facts carry meaning without
+    // requiring colour or repeating the same verdict in a second sentence.
     await expect(register).toHaveClass(/is-ok/);
     await expect(register).not.toHaveClass(/is-warning/);
     await expect(registerVerdict(register)).toHaveText('ON SCHEDULE');
-    await expect(registerBand(register)).toContainText('On schedule.');
+    await expect(register.locator('.lf-timing-band')).toContainText('active-order and product-specific safety checks');
     // The window the old banner spelled out in prose is now a labeled row, in
     // the same MM/DD/YY the typed date fields use.
     await expect(registerValue(register, 'Window')).toHaveText('08/11/26 – 08/21/26');
     await expect(registerNote(register, 'Window')).toContainText('expected 08/14/26');
-    await expect(registerFlag(register, 'Days since prior')).toHaveText('IN WINDOW');
+    await expect(registerValue(register, 'Days since prior')).toHaveText('28');
+    await expect(registerFlag(register, 'Days since prior')).toHaveCount(0);
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toHaveCount(0);
@@ -736,11 +736,12 @@ test.describe('MA Workstation browser journeys', () => {
     const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
     await expect(register).toHaveClass(/is-ok/);
     await expect(registerVerdict(register)).toHaveText('ON SCHEDULE');
-    await expect(registerBand(register)).toContainText('On schedule.');
+    await expect(register.locator('.lf-timing-band')).toContainText('active-order and product-specific safety checks');
     // The last day of the window is still inside it: the flag must not read
     // "1 DAYS LATE" on the boundary.
     await expect(registerValue(register, 'Window')).toHaveText('08/11/26 – 08/21/26');
-    await expect(registerFlag(register, 'Days since prior')).toHaveText('IN WINDOW');
+    await expect(registerValue(register, 'Days since prior')).toHaveText('35');
+    await expect(registerFlag(register, 'Days since prior')).toHaveCount(0);
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toHaveCount(0);
@@ -1176,7 +1177,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(trigger).toBeFocused();
   });
 
-  test('confirms with a toast instead of a permanent status bar', async ({ page }) => {
+  test('announces routine navigation quietly and keeps local storage state visible', async ({ page }) => {
     await page.goto('/');
 
     // A strip along the bottom edge is desktop chrome; PLAN 2.2 lists a Toast.
@@ -1188,9 +1189,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(badge).toBeVisible();
     await expect(badge).toHaveAttribute('data-workspace-badge', 'local');
 
-    // An announcement toasts, then clears itself rather than going stale.
+    // Routine navigation uses the existing polite region, without a toast.
     await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
-    await expect(page.locator('[data-toast]')).toContainText('Injection opened.');
+    await expect(page.locator('[data-navigation-announcement]')).toHaveText('Injection opened.');
+    await expect(page.locator('[data-toast]')).toHaveCount(0);
   });
 
   test('keeps the navigator fixed and adds document context only inside a clinical workflow', async ({ page }) => {
