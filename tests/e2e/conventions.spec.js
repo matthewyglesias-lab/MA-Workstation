@@ -564,12 +564,13 @@ test.describe('Phase 3b patient chart conventions', () => {
       await page.getByRole('button', { name: 'Return to active service', exact: true }).click();
       await expect(page.locator('[data-patient-chart]')).toHaveCount(0);
       await expect(name).toHaveValue('Return path, Synthetic');
-      await expect(name).toBeFocused();
       await expect(dob).toHaveValue('01/02/1990');
       expect(await records()).toEqual(afterBrowse);
       // Returning must also preserve exact durable bytes after delayed tasks
-      // have had a chance to run, including the active encounter timestamp.
+      // and the normal animation-frame focus restoration have run, including
+      // the active encounter timestamp. The clock is intentionally paused.
       await page.clock.runFor(1000);
+      await expect(name).toBeFocused();
       expect(await records()).toEqual(afterBrowse);
       await page.screenshot({ path: info.outputPath('patient-return-800.png') });
     });

@@ -31,6 +31,11 @@ Local Chromium could not launch in the refreshed execution environment, before
 any test interaction, so local browser results are not claimed. CI source and
 exact production-artifact validation of this correction are pending.
 
+Harness follow-up before final certification: the chart return restores focus
+on animation frames. With the test clock paused, explicitly advance it before
+checking restored focus. Immediate and delayed exact-storage comparisons remain
+on either side of that advancement. No application focus logic is changed.
+
 The earlier review ZIP remains an immutable package of its pinned, passing
 engineering source `4886db988834783058ca06cc97e39548edd5be44`; it is not silently
 relabeled as evidence for this follow-up. PR #71 remains draft, main/production
