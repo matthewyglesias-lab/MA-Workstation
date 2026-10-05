@@ -295,7 +295,7 @@
   #lf-workstation .lf-preference-state { flex: 0 0 auto; color: #476658; font: 500 10px/16px var(--tw-font-sans); }
   #lf-workstation .lf-workspace-shelf > .lf-shelf-trigger { border-color: transparent; background: transparent; min-height: 32px; padding-block: 5px; font-size: 11px; }
   #lf-workstation .lf-workspace-shelf[open] > .lf-shelf-trigger { background: #eae6ec; }
-  #lf-workstation .lf-workspace-shelf .lf-shelf-panel { width: 354px; }
+  #lf-workstation .lf-workspace-shelf .lf-shelf-panel { width: 354px; max-height: min(480px,calc(100dvh - 100px)); }
   #lf-workstation .lf-record-shelf > .lf-shelf-trigger { min-height: 38px; }
   #lf-workstation .cd2004-record-actions-buttons { gap: 9px; }
   #lf-workstation .cd2004-record-actions-state > small { max-width: 620px; }
