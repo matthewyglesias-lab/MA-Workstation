@@ -695,28 +695,7 @@
     height: 15px;
   }
 
-  /* UDS result states keep their clinical colours and the same control
-     structure as Injection, on the neutral panel surface. */
-  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle {
-    border-width: 1px;
-    border-style: solid;
-    box-shadow: none;
-  }
 
-  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-neg {
-    color: var(--tw-ready-fg);
-    background: var(--tw-surface-panel);
-    border-color: var(--tw-ready-border);
-    box-shadow: inset 3px 0 var(--tw-ready-fg);
-  }
-
-  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-pos {
-    background: var(--tw-stop-bg);
-  }
-
-  .cd2004-shell [data-workflow="uds"] .wfp-result-cycle.is-invalid {
-    background: var(--tw-review-bg);
-  }
 }
 
 /* Below the full desktop width four site tracks squeeze the longest site names

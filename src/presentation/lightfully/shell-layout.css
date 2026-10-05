@@ -179,7 +179,7 @@
   #lf-workstation .cd2004-worklist-sheet { flex: 1 1 auto; min-height: 0; min-width: 0; margin: 0; border: 0; background: #fff; overflow: auto; overscroll-behavior: contain; }
   #lf-workstation .lf-work-table { width: 100%; border-collapse: collapse; table-layout: fixed; font: 400 13px/20px var(--tw-font-sans); }
   #lf-workstation .lf-work-table th { position: sticky; top: 0; z-index: 1; padding: 9px 18px; border-bottom: 1px solid var(--lf-line); background: #f4f6f8; color: #496472; font: 600 11px/18px var(--tw-font-sans); text-align: left; text-transform: none; }
-  #lf-workstation .lf-work-table td { padding: 8px 18px; border-bottom: 1px solid var(--lf-line); vertical-align: middle; background: #fff; overflow-wrap: anywhere; }
+  #lf-workstation .lf-work-table td { padding: 8px 18px; border-bottom: 1px solid var(--lf-line); vertical-align: top; background: #fff; overflow-wrap: anywhere; }
   #lf-workstation .lf-work-table th:first-child { width: 34%; }
   #lf-workstation .lf-work-table th:nth-child(2) { width: 17%; }
   #lf-workstation .lf-work-table th:nth-child(3) { width: 18%; }
@@ -190,7 +190,7 @@
   #lf-workstation .lf-work-table .tebra-record-meta { display: block; margin-top: 3px; font: 400 12px/19px var(--tw-font-sans); color: var(--lf-muted); white-space: normal; }
   #lf-workstation .lf-table-service { display: inline-flex; align-items: center; gap: 7px; color: #496472; font-size: 12px; }
   #lf-workstation .lf-table-service svg { flex: 0 0 16px; width: 16px; height: 16px; }
-  #lf-workstation .lf-table-date { color: #496472; font-size: 12px; font-variant-numeric: tabular-nums; }
+  #lf-workstation .lf-table-date { padding-top: 11px; color: #496472; font-size: 12px; font-variant-numeric: tabular-nums; }
   #lf-workstation .lf-worklist-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 170px; height: 100%; padding: 22px; gap: 10px; color: var(--lf-muted); background: #fff; text-align: center; }
   #lf-workstation .lf-empty-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #d1dfd7; border-radius: 50%; background: #edf3ef; color: #4d7765; }
   #lf-workstation .lf-empty-mark svg { width: 20px; height: 20px; }

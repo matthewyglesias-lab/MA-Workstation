@@ -674,18 +674,18 @@ test.describe('MA Workstation browser journeys', () => {
 
     await openInjectionTab(page, 'Schedule');
     const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
-    // State reaches the operator three ways, and all three must agree: the
-    // spine class, the verdict word, and the band sentence. Colour alone would
-    // be unreadable to a staff member with red/green deficiency.
+    // The explicit verdict and exact date/window facts carry meaning without
+    // requiring colour or repeating the same verdict in a second sentence.
     await expect(register).toHaveClass(/is-ok/);
     await expect(register).not.toHaveClass(/is-warning/);
     await expect(registerVerdict(register)).toHaveText('ON SCHEDULE');
-    await expect(registerBand(register)).toContainText('On schedule.');
+    await expect(register.locator('.lf-timing-band')).toContainText('active-order and product-specific safety checks');
     // The window the old banner spelled out in prose is now a labeled row, in
     // the same MM/DD/YY the typed date fields use.
     await expect(registerValue(register, 'Window')).toHaveText('08/11/26 – 08/21/26');
     await expect(registerNote(register, 'Window')).toContainText('expected 08/14/26');
-    await expect(registerFlag(register, 'Days since prior')).toHaveText('IN WINDOW');
+    await expect(registerValue(register, 'Days since prior')).toHaveText('28');
+    await expect(registerFlag(register, 'Days since prior')).toHaveCount(0);
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toHaveCount(0);
@@ -736,11 +736,12 @@ test.describe('MA Workstation browser journeys', () => {
     const register = scheduleRegister(panel, 'SCHEDULE — NEXT DOSE');
     await expect(register).toHaveClass(/is-ok/);
     await expect(registerVerdict(register)).toHaveText('ON SCHEDULE');
-    await expect(registerBand(register)).toContainText('On schedule.');
+    await expect(register.locator('.lf-timing-band')).toContainText('active-order and product-specific safety checks');
     // The last day of the window is still inside it: the flag must not read
     // "1 DAYS LATE" on the boundary.
     await expect(registerValue(register, 'Window')).toHaveText('08/11/26 – 08/21/26');
-    await expect(registerFlag(register, 'Days since prior')).toHaveText('IN WINDOW');
+    await expect(registerValue(register, 'Days since prior')).toHaveText('35');
+    await expect(registerFlag(register, 'Days since prior')).toHaveCount(0);
     await expect(
       panel.getByRole('button', { name: 'Document provider approval / late-dose review' })
     ).toHaveCount(0);
@@ -1176,7 +1177,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(trigger).toBeFocused();
   });
 
-  test('confirms with a toast instead of a permanent status bar', async ({ page }) => {
+  test('announces routine navigation quietly and keeps local storage state visible', async ({ page }) => {
     await page.goto('/');
 
     // A strip along the bottom edge is desktop chrome; PLAN 2.2 lists a Toast.
@@ -1188,9 +1189,10 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(badge).toBeVisible();
     await expect(badge).toHaveAttribute('data-workspace-badge', 'local');
 
-    // An announcement toasts, then clears itself rather than going stale.
+    // Routine navigation uses the existing polite region, without a toast.
     await clickWorkspace(page, '.cd2004-nav-item[title="Injection"]');
-    await expect(page.locator('[data-toast]')).toContainText('Injection opened.');
+    await expect(page.locator('[data-navigation-announcement]')).toHaveText('Injection opened.');
+    await expect(page.locator('[data-toast]')).toHaveCount(0);
   });
 
   test('keeps the navigator fixed and adds document context only inside a clinical workflow', async ({ page }) => {
@@ -3272,7 +3274,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#uds-readings-verified')).toBeChecked();
 
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    const bup = panel.locator('.wfp-grid-row', { hasText: 'Buprenorphine' })
+    const bup = panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Buprenorphine' })
       .locator('.wfp-result-cycle');
     await expect(bup).toHaveText('NT');
     await bup.click();
@@ -3291,8 +3293,8 @@ test.describe('MA Workstation browser journeys', () => {
     await bup.press('ArrowDown');
     await page.mouse.move(0, 0);
     await expect(bup).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-    await expect(bup).toHaveCSS('color', 'rgb(31, 111, 92)');
-    const mtd = panel.locator('.wfp-grid-row', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
+    await expect(bup).toHaveCSS('color', 'rgb(41, 66, 85)');
+    const mtd = panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Methadone' }).locator('.wfp-result-cycle');
     await expect(mtd).toBeFocused();
     await mtd.press('p');
     await expect(mtd).toHaveText('POS*');
@@ -3317,7 +3319,7 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('#uds-readings-verified').check();
 
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    const omittedRow = panel.locator('.wfp-grid-row', { hasText: 'Propoxyphene' });
+    const omittedRow = panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Propoxyphene' });
     // The result register follows the physical device order exactly. The cup
     // has no PPX window, so no PPX transaction row is rendered.
     await expect(omittedRow).toHaveCount(0);
@@ -3330,7 +3332,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(readyFlag).toContainText('Ready to sign');
     await expect(readyFlag.locator('.wfp-status-icon')).toHaveText('✓');
 
-    await panel.locator('.wfp-grid-row', { hasText: 'Cannabinoids / THC' })
+    await panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Cannabinoids / THC' })
       .locator('.wfp-result-cycle').click();
     await expect(omittedRow).toHaveCount(0);
     await expect(panel.locator('.wfp-issue-row')).toHaveCount(0);
@@ -3524,7 +3526,7 @@ test.describe('MA Workstation browser journeys', () => {
     await expect(page.locator('#uds-readings-verified')).not.toBeChecked();
     await expect(panel.locator('.wfp-invalidation-receipt')).toContainText('PANEL PROFILE CHANGED');
     await panel.getByRole('tab', { name: /^Results/ }).click();
-    await expect(panel.locator('.wfp-grid-row')).toHaveCount(2);
+    await expect(panel.locator('.lf-uds-evidence tbody tr')).toHaveCount(2);
     await expect(panel.locator('.wfp-result-cycle')).toHaveText(['NT', 'NT']);
   });
 
@@ -3658,7 +3660,7 @@ test.describe('MA Workstation browser journeys', () => {
     await page.locator('#uds-readings-verified').check();
     await panel.getByRole('tab', { name: /^Results/ }).click();
     await applyDisplayedPanelsNegative(page, panel);
-    await panel.locator('.wfp-grid-row', { hasText: 'Cannabinoids / THC' })
+    await panel.locator('.lf-uds-evidence tbody tr', { hasText: 'Cannabinoids / THC' })
       .locator('.wfp-result-cycle').click();
     await panel.getByRole('tab', { name: /^Review/ }).click();
 

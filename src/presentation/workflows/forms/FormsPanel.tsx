@@ -1,5 +1,6 @@
 import { DraftRecoveryNotice } from "../../lightfully/DraftRecoveryNotice";
 import { WorkflowTabList } from "../WorkflowTabList";
+import { TransactionLine } from "../ClinicalRegister";
 import type { RecoveryStatus } from "../../../persistence/workflow-recovery";
 import { ActionShelf } from "../../lightfully/ActionShelf";
 import { labelControls, OptionList } from "../WorkflowField";
@@ -34,9 +35,9 @@ import { formatDobAsTyped } from "../../format-dob";
 
 type FormsTab = "request" | "letter";
 
-// The letter builder is being rebuilt and isn't ready for use yet — the tab
-// stays visible so staff know it's coming, but shows a placeholder instead
-// of the live form. Flip to true to restore it; the domain model,
+// Letter authoring remains unavailable. A small disclosure explains the
+// clinic's existing letter workflow while request tracking stays primary.
+// The domain model,
 // documentation formatter, and print mirror underneath are already wired
 // and tested, only the interactive UI is gated.
 const LETTER_BUILDER_ENABLED = false;
@@ -126,6 +127,7 @@ export function FormsPanel({
 }: FormsPanelProps) {
   const [encounter, setEncounter] = useState<FormsEncounter>(initialEncounter);
   const [tab, setTab] = useState<FormsTab>("request");
+  const [letterAvailabilityOpen, setLetterAvailabilityOpen] = useState(false);
   const mirroredOnMount = useRef(false);
   const dirty = useRef(initialDirty);
   const encounterRef = useRef(initialEncounter);
@@ -241,7 +243,7 @@ export function FormsPanel({
           Request
           {requestTabIssues > 0 && <span class="wfp-tab-badge">{requestTabIssues}</span>}
         </button>
-        <button
+        {LETTER_BUILDER_ENABLED && <button
           type="button"
           role="tab"
           class="wfp-tab"
@@ -249,11 +251,10 @@ export function FormsPanel({
           onClick={() => setTab("letter")}
         >
           Letter builder
-          {!LETTER_BUILDER_ENABLED && <span class="wfp-tab-badge wfp-tab-badge-muted">N/A</span>}
-          {LETTER_BUILDER_ENABLED && letterTabIssues > 0 && (
+          {letterTabIssues > 0 && (
             <span class="wfp-tab-badge">{letterTabIssues}</span>
           )}
-        </button>
+        </button>}
       </WorkflowTabList>
 
       <div class="lf-service-scroll">
@@ -446,17 +447,16 @@ export function FormsPanel({
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {tab === "letter" && !LETTER_BUILDER_ENABLED && (
-        <div class="wfp-tabpanel" role="tabpanel">
-          <div class="wfp-wall">
-            <div class="wfp-wall-title">Letter drafting is not available</div>
+          {!LETTER_BUILDER_ENABLED && <TransactionLine
+            label="Letter drafting availability"
+            summary="Unavailable"
+            open={letterAvailabilityOpen}
+            onOpenChange={setLetterAvailabilityOpen}
+          >
             <p>
               Continue to prepare approved letters through the clinic’s existing letter workflow. You can track the request and its follow-up here.
             </p>
-          </div>
+          </TransactionLine>}
         </div>
       )}
 

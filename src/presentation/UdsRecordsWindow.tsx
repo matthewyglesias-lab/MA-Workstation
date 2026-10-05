@@ -199,8 +199,8 @@ export function UdsRecordsWindow({
       <section class="records-drawer">
         <div class="records-drawer-head">
           <div>
-            <h2 id="udsRecordsDrawerTitle">{OPEN_NOTES.udsTitle}</h2>
-            <p>Drug screen history · saved on this workstation</p>
+            <h2 id="udsRecordsDrawerTitle">Saved UDS records</h2>
+            <p>Records saved in this browser on this workstation</p>
           </div>
           <button
             type="button"

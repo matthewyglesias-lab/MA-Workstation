@@ -455,7 +455,8 @@ test.describe('workstation visual snapshots', () => {
     await expectNativeWorklistGeometry(page);
 
     // Pin the reviewed full image by decoded RGBA pixels, not PNG compression.
-    // This one reference is zero-tolerance and never regenerated from the app.
+    // This reference remains zero-tolerance. Updates require human inspection of
+    // the passing parent image, candidate image and exact pixel difference.
     // Keep the real PNG in the report for human inspection on every run.
     const reference = JSON.parse(readFileSync(test.info().snapshotPath(
       'current-worklist-1366x768.rgba.json'

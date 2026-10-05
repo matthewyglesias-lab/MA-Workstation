@@ -1126,79 +1126,6 @@
   border-right-color: var(--cd-border-mid);
 }
 
-/* Lab-report result table: Analyte | Result | Flag | Status. The Flag and
-   Status columns are derived from the four states already captured — they add
-   no data, they just say what a lab report has always said out loud. */
-
-/* The result column is pinned rather than `auto`: head and row are separate
-   grids, so `auto` sizes the header to the word "Result" (36px) and the body
-   to the toggle strip (387px), and the columns drift apart. */
-.cd2004-shell .wfp-grid-lab .wfp-grid-head,
-.cd2004-shell .wfp-grid-lab .wfp-grid-row {
-  grid-template-columns: minmax(0, 1fr) 132px 30px 86px;
-}
-
-/* Toggles keep their natural widths inside that pinned column — equalising
-   them clips "PRELIMINARY POSITIVE", and these labels are the domain's own
-   result vocabulary, which print depends on. */
-.cd2004-shell .wfp-grid-lab .wfp-grid-toggle {
-  flex: 0 0 auto;
-}
-
-.cd2004-shell .wfp-result-cycle {
-  width: 100%;
-  min-height: 24px;
-  padding: 2px 6px;
-  color: var(--cd-ink);
-  background: var(--cd-white);
-  border: 1px solid var(--tw-border-strong);
-  border-radius: var(--tw-radius-ws);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.cd2004-shell .wfp-result-cycle b {
-  font-family: var(--tw-font-mono);
-  font-size: var(--tw-fs-ws-meta);
-  font-variant-numeric: var(--tw-numeric-tabular);
-  letter-spacing: 0.03em;
-}
-
-.cd2004-shell .wfp-result-cycle:hover,
-.cd2004-shell .wfp-result-cycle:focus-visible {
-  background: var(--cd-selection);
-}
-
-.cd2004-shell .wfp-result-cycle.is-neg {
-  color: #285538;
-  background: var(--cd-white);
-  border-color: #66806a;
-  border-left: 3px solid var(--cd-green);
-}
-
-.cd2004-shell .wfp-result-cycle.is-neg:hover,
-.cd2004-shell .wfp-result-cycle.is-neg:focus-visible {
-  background: var(--cd-selection);
-}
-
-.cd2004-shell .wfp-result-cycle.is-pos {
-  color: #651111;
-  border-color: var(--cd-red);
-  background: var(--cd-red-soft);
-}
-
-.cd2004-shell .wfp-result-cycle.is-invalid {
-  color: #4a2d00;
-  border-color: var(--cd-amber);
-  background: var(--cd-amber-soft);
-}
-
-.cd2004-shell .wfp-result-cycle.is-nt {
-  color: var(--cd-ink-muted);
-  background: var(--cd-chrome-light);
-}
-
 .cd2004-shell .wfp-result-legend {
   display: flex;
   flex-wrap: wrap;
@@ -1208,12 +1135,6 @@
   background: var(--cd-face);
   border-bottom: 1px solid var(--cd-border-mid);
   font-size: var(--tw-fs-ws-meta);
-}
-
-.cd2004-shell .wfp-results-sticky-status {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
 }
 
 /* A one-click default offered beneath its field - the computed value the
@@ -1236,23 +1157,6 @@
   font-size: var(--tw-fs-ws-meta);
   font-style: italic;
   color: var(--cd-ink-muted);
-}
-
-.cd2004-shell .wfp-result-flag {
-  font-family: var(--tw-font-mono);
-  font-size: var(--tw-fs-ws-meta);
-  font-variant-numeric: var(--tw-numeric-tabular);
-  font-weight: 700;
-  text-align: center;
-}
-
-.cd2004-shell .wfp-result-flag.is-abnormal {
-  color: var(--cd-red);
-}
-
-.cd2004-shell .wfp-result-status {
-  color: var(--cd-ink-muted);
-  font-size: var(--tw-fs-ws-meta);
 }
 
 /* Dose-history MAR grid: Date | Medication | Route | Site. Read-only. */

@@ -93,7 +93,8 @@ function queueWorklistRow(
     taskLabel: item.detail,
     stateLabel: queueStateLabel(item),
     actionLabel: queueActionLabel(item),
-    tone: item.tone,
+    // A locally recorded lifecycle is not clinical clearance.
+    tone: requiresReview(item) ? item.tone : "neutral",
     queueItem: item,
   };
 }
@@ -150,8 +151,8 @@ const TONE_GLYPH: Record<Exclude<ClinicalTone, "ready">, string> = {
 
 // The bundled text faces do not contain the checkmark. Keep its rendering
 // independent of system fallback fonts, using the existing icon vocabulary.
-const toneGlyph = (tone: ClinicalTone) =>
-  tone === "ready" ? <DesktopIcon name="check" width={12} height={12} /> : TONE_GLYPH[tone];
+const toneGlyph = (tone: ClinicalTone, stateLabel: string) =>
+  tone === "ready" || stateLabel === "Recorded locally" ? <DesktopIcon name="check" width={12} height={12} /> : TONE_GLYPH[tone];
 
 export function StartCenter({
   udsDraftRows = [],
@@ -256,7 +257,7 @@ export function StartCenter({
             <td class="lf-work-patient"><strong class="tebra-record-title">{row.patientLabel}</strong><span class="tebra-record-meta">{row.taskLabel}</span></td>
             <td><span class="lf-table-service"><DesktopIcon name={row.service}/>{WORKFLOW_LABELS[row.service]}</span></td>
             <td class="lf-table-date">{row.timeLabel || "—"}</td>
-            <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{toneGlyph(row.tone ?? "neutral")}</span>{row.stateLabel}</span></td>
+            <td><span class={`tebra-state-chip is-${row.tone ?? "neutral"}`}><span aria-hidden="true">{toneGlyph(row.tone ?? "neutral", row.stateLabel)}</span>{row.stateLabel}</span></td>
             <td><button type="button" class="tebra-record-action" data-worklist-open={row.id} disabled={row.udsDraft ? !onUdsDraftOpen : row.session ? !onWorkflowOpen : row.queueItem ? !onQueueItemOpen : !onRecordOpen} onClick={() => openRow(row)}>{row.actionLabel}<DesktopIcon name="arrow-right"/></button></td>
           </tr>)}
         </tbody></table> : <div class="tebra-record-empty lf-worklist-empty"><span class="lf-empty-mark" aria-hidden="true"><DesktopIcon name={query.trim() ? "records" : "note"}/></span><strong>{query.trim() ? "No matching work" : filter === "all" ? "Your worklist is clear" : worklistEmptyText(filter)}</strong><small>{query.trim() ? "Try another patient or medication, or clear the search." : filter === "all" ? "Choose a service above. Drafts and unfinished work will appear here." : worklistEmptyHint(filter)}</small>{query.trim() ? <button type="button" class="lf-secondary-button" onClick={() => setQuery("")}>Clear search</button> : null}</div>}

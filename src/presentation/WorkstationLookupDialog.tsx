@@ -32,6 +32,11 @@ export function WorkstationLookupDialog({
   const searchRef = useRef<HTMLInputElement>(null);
   const [focusedValue, setFocusedValue] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const providerLookup = Boolean(transaction.control.closest('[data-provider-field="register"]'));
+  const searchLabel = "Search options";
+  const description = providerLookup
+    ? "Choose the provider for this field. The record changes only after you select a result."
+    : "Choose a value for this field. Your current entry stays unchanged until you select a result.";
   const titleId = "cd2004FieldLookupTitle";
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const options = useMemo(
@@ -72,18 +77,18 @@ export function WorkstationLookupDialog({
       onDismiss={onDismiss}
     >
       <section class="cd2004-dialog-frame" data-field-lookup-dialog>
-        <DialogHeading id={titleId} title={transaction.fieldLabel || transaction.fieldCode} description="Search the available options, then choose a value." closeLabel="Close field lookup" onClose={onDismiss} />
+        <DialogHeading id={titleId} title={transaction.fieldLabel || transaction.fieldCode} description={description} closeLabel="Close field lookup" onClose={onDismiss} />
         <div class="cd2004-lookup-context lf-sr-only"><strong>{transaction.fieldCode}</strong><span>{transaction.prompt}</span></div>
 
         <div class="cd2004-dialog-body cd2004-lookup-body">
           <label class="cd2004-dialog-field">
-            Search options
+            {searchLabel}
             <input
               ref={searchRef}
               autoFocus
               type="search"
               value={query}
-              placeholder="Search available options"
+              placeholder={providerLookup ? "Provider name" : "Search available options"}
               onInput={(event) => { setQuery(event.currentTarget.value); setFocusedValue(null); }}
               onKeyDown={(event) => {
                 if (event.isComposing) return;

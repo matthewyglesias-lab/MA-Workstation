@@ -230,8 +230,8 @@ export function RecordsWindow({
       <section class="records-drawer">
         <div class="records-drawer-head">
           <div>
-            <h2 id="recordsDrawerTitle">{NOTES.openNotes}</h2>
-            <p>Injection history · saved on this workstation</p>
+            <h2 id="recordsDrawerTitle">Saved injection records</h2>
+            <p>Records saved in this browser on this workstation</p>
           </div>
           <button
             type="button"

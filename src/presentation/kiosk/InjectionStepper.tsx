@@ -1,4 +1,5 @@
 import type { InjectionWorkflowProgress } from "../../application/injection-workflow-progress";
+import { stepAttention } from "../injection-attention";
 import { DesktopIcon } from "../DesktopIcon";
 import type { InjectionKioskStepId } from "../types";
 import { KIOSK } from "../vocabulary";
@@ -102,11 +103,12 @@ export interface ProjectedInjectionKioskStep
 export function projectInjectionKioskSteps(progress: InjectionWorkflowProgress): ProjectedInjectionKioskStep[] {
   return INJECTION_KIOSK_STEPS.map(definition => {
     const step = progress.steps.find(step => step.id === definition.id)!;
+    const attention = stepAttention(step);
     const state: InjectionKioskStepState = !step.applicable ? "skipped"
       : step.id === "sign" && progress.canSign ? "ready"
       : step.completion === "complete" ? "complete"
-      : step.concerns.some(issue => issue.severity === "stop") ? "stop"
-      : step.concerns.length ? "warning" : "pending";
+      : attention === "stop" ? "stop"
+      : attention === "warning" || step.completion === "review-again" ? "warning" : "pending";
     return { ...definition, label: step.label, state, stateLabel: step.stateLabel };
   });
 }

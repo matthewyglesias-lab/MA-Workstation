@@ -11,6 +11,8 @@ interface PatientSearchProps {
   patients: readonly ChartPatient[];
   /** Opens that patient's chart. Read-only: it starts no note. */
   onSelect: (patient: ChartPatient) => boolean | void;
+  /** Refresh the shell-owned index when search is requested after a local save. */
+  onRefresh?: () => void;
 }
 
 /**
@@ -26,7 +28,7 @@ interface PatientSearchProps {
  * Selecting a result opens a chart. It never starts, resumes or modifies a
  * note; only New Note and Open do that.
  */
-export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
+export function PatientSearch({ patients, onSelect, onRefresh }: PatientSearchProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -89,6 +91,7 @@ export function PatientSearch({ patients, onSelect }: PatientSearchProps) {
           setActiveKey(null);
         }}
         onFocus={() => {
+          onRefresh?.();
           openResults();
           setActiveKey(results[0]?.key ?? null);
         }}

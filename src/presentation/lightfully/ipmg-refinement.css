@@ -107,15 +107,6 @@
   body:has(#lf-workstation) .notes-table :is(th,td) { font-size: 12px; line-height: 20px; }
   body:has(#lf-workstation) .notes-table thead th { color: #496472; background: #f6f3f6; }
   #lf-workstation .lf-service-dialog, #lf-workstation .lf-command-dialog { border-radius: 10px 28px 10px 10px; border-top: 4px solid #f37565; }
-  #lf-workstation .lf-service-options { padding: 13px 20px 21px; gap: 2px; }
-  #lf-workstation .lf-service-dialog .lf-service-option { border-bottom: 1px solid #e4e3e4; border-radius: 0; padding: 16px 8px; background: #fff; }
-  #lf-workstation .lf-service-dialog .lf-service-option:hover { background: #f6f3f6; }
-  #lf-workstation .lf-service-option strong { color: #3c7083; font: 400 23px/29px var(--lf-display); }
-  #lf-workstation .lf-service-option small { color: #617581; font-size: 12px; line-height: 20px; }
-  #lf-workstation .lf-service-icon { width: 44px; height: 49px; border-radius: 23px 23px 6px 6px; background: #fbe4df; color: #85514a; }
-  #lf-workstation .lf-service-option:nth-child(2) .lf-service-icon { background: #e0ebef; color: #3c7083; }
-  #lf-workstation .lf-service-option:nth-child(3) .lf-service-icon { background: #e2eade; color: #496a42; }
-  #lf-workstation .lf-service-option:nth-child(4) .lf-service-icon { background: #f9ecc2; color: #6b592a; }
   #lf-workstation .lf-command-result.is-active { background: #e9f0ed; }
   #lf-workstation .lf-tool-page-header { background: #fff; padding-inline: var(--lf-gutter); }
   #lf-workstation .kiosk-patient-summary { border-top: 3px solid #f37565; background: #fff; border-radius: 6px; }

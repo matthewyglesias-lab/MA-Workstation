@@ -84,11 +84,13 @@ test('native choice controls do not paint retired marks over administration', as
 
 test('reference entry descriptions stay inside their selectable rows', async ({page})=>{
  await page.setViewportSize({width:1024,height:768});await page.goto('/');await open(page,'Reference');
- const rows=page.locator('.wfp-lookup .wfp-option-row');
+ const rows=page.locator('.wfp-lookup .lf-reference-entry');
  expect(await rows.count()).toBeGreaterThan(0);
+ await expect(rows.first().getByRole('radio')).toBeVisible();
+ await expect(rows.first().locator('.wfp-option-desc')).toBeVisible();
  const overflow=await rows.evaluateAll(ns=>ns.flatMap(n=>{
    const r=n.getBoundingClientRect(),d=n.querySelector('.wfp-option-desc')?.getBoundingClientRect();
-   return d && (d.bottom>r.bottom+1 || d.right>r.right+1) ? [n.textContent] : [];
+   return !d || d.top<r.top-1 || d.left<r.left-1 || d.bottom>r.bottom+1 || d.right>r.right+1 || n.scrollWidth>n.clientWidth+1 ? [n.textContent] : [];
  }));
  expect(overflow).toEqual([]);
 });

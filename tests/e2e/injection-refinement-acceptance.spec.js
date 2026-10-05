@@ -45,8 +45,15 @@ for(const viewport of [{width:1440,height:900},{width:800,height:600}]){
   await page.setViewportSize(viewport);await page.clock.setFixedTime(new Date('2026-10-02T16:00:00Z'));await page.goto('/');const panel=await prepareRefinementInjection(page,{response:false,review:false});await focused(page);
   for(const id of ['identify','verify-order','prepare','site'])await expect(page.locator(`.kiosk-stepper [data-kiosk-step="${id}"]`)).toContainText('Documented');
   await expect(page.locator('.kiosk-stepper [data-kiosk-step="response"]')).toContainText('Not started');
-  await page.locator('.kiosk-checklist .lf-progress-issue').filter({hasText:'observed post-injection response'}).first().click();
-  await expect(panel.locator('select[name="inj-response"]')).toBeFocused();await panel.locator('select[name="inj-response"]').selectOption('well');
+  await expect(page.locator('[data-injection-finish]')).toBeDisabled();
+  const requirement = page.locator('.kiosk-checklist .lf-progress-requirement').filter({hasText:'observed post-injection response'}).first();
+  await expect(requirement).toBeVisible();
+  await requirement.click();
+  await expect(panel.locator('select[name="inj-response"]')).toBeFocused();
+  await expect(panel.locator('select[name="inj-response"]')).toHaveValue('');
+  await expect(page.locator('.kiosk-stepper [data-kiosk-step="response"]')).not.toContainText('Documented');
+  await expect(page.locator('[data-injection-finish]')).toBeDisabled();
+  await panel.locator('select[name="inj-response"]').selectOption('well');
   await expect(page.locator('.kiosk-stepper [data-kiosk-step="response"]')).toHaveAttribute('aria-current','step');
   await expect(page.locator('.kiosk-stepper [data-kiosk-step="identify"]')).toContainText('Documented');
  });

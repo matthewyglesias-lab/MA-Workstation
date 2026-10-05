@@ -1,6 +1,10 @@
-# IPMG MAGIC Ambulatory Workstation
+# IPMG MA Workstation
 
-The IPMG MAGIC Ambulatory Workstation is a frontend-only, MEDITECH-inspired clinical workstation for Injection, UDS, Samples, and Forms workflows. Its dense client-server chrome, persistent Record List/function rail, chart context, and fixed function-key command deck are built with TypeScript, Vite, and Preact. Records remain in the current browser.
+IPMG MA Workstation is a frontend-only clinical documentation workspace for Injection, UDS, Samples and Forms. Its compact worklist, patient context, service editors, note preview and progressive workspace tools use TypeScript, Vite and Preact. Records are saved in the current browser on this workstation.
+
+Local signing, copying and printing do not file documentation in Tebra. Staff must review and confirm filing separately. This app has no server database, authenticated accounts, synchronization, centralized backup or appointment booking. The optional appointment reminder is handout metadata, not a scheduled appointment. TMS and letter authoring remain unavailable.
+
+The current branch is a review candidate for a controlled pilot. Company-wide use requires clinic governance, IT/security review, managed Windows/Edge and printer checks, staff training, support ownership and leadership approval.
 
 ## Local development
 
@@ -56,7 +60,7 @@ node scripts/generate-print-baseline-fixture.mjs --write
 - `src/domain/` contains presentation-independent clinical rules and workflow engines.
 - `src/application/` contains commands, selectors, encounter coordination, and the unidirectional store.
 - `src/persistence/` contains local-storage repositories and compatibility codecs.
-- `src/presentation/` contains the MEDITECH-style EHR shell, Record List/function rail, workflow windows, note preview, and print integration.
+- `src/presentation/` contains the compact clinical shell, worklist, patient context, service editors, note preview, and print integration.
 - `public/legacy/` contains compatibility assets extracted from the previous standalone application.
 
 During the parity cutover, a production clinical coordinator observes the live

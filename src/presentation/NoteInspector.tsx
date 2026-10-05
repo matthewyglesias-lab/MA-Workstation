@@ -215,7 +215,7 @@ export function NoteInspector({
         </dl>
       )}
 
-      <p class="lf-note-boundary">{signedLocally ? "This note is signed in this browser. " : "This is a documentation preview. "}Copying does not file it. Confirm the final note separately in Tebra.</p>
+      <p class="lf-note-boundary">Copying does not file it. Confirm the final note separately in Tebra.</p>
       {/* Announced, not just drawn: the confirmation is the whole point of the
           change, and an operator using a screen reader needs it too. */}
       <div class="cd2004-note-copy-status" role="status" aria-live="polite">

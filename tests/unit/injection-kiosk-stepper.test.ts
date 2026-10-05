@@ -10,10 +10,13 @@ import {
 import { InjectionEngine } from "../../src/domain/injection";
 import { projectInjectionWorkflowProgress } from "../../src/application/injection-workflow-progress";
 import { documentedInjection } from "./injection-progress-fixture";
-const projection = (encounter = documentedInjection(), locked = false) => projectInjectionWorkflowProgress({
-  encounter, evaluation: InjectionEngine.evaluate(encounter, {today: "2026-10-02"}),
-  canSign: true, canSave: true, lifecycle: locked ? "locked" : "draft",
-});
+const projection = (encounter = documentedInjection(), locked = false) => {
+  const evaluation = InjectionEngine.evaluate(encounter, {today: "2026-10-02"});
+  return projectInjectionWorkflowProgress({
+    encounter, evaluation,
+    canSign: evaluation.output.recordStatus === "ready-to-lock", canSave: true, lifecycle: locked ? "locked" : "draft",
+  });
+};
 
 describe("Injection focus stepper", () => {
   it("maps seven presentation steps onto the existing four worksheet pages", () => {
@@ -44,9 +47,14 @@ describe("Injection focus stepper", () => {
 
   it("uses per-step evidence rather than final-readiness suffixes", () => {
     const encounter = documentedInjection(); encounter.response = {kind: ""};
-    const steps = projectInjectionKioskSteps(projection(encounter));
+    const progress = projection(encounter);
+    const steps = projectInjectionKioskSteps(progress);
     expect(steps.find(step => step.id === "identify")).toMatchObject({state: "complete", stateLabel: "Documented"});
-    expect(steps.find(step => step.id === "response")).toMatchObject({state: "stop"});
+    // An untouched response is unfinished documentation, not an alert-colored
+    // clinical event. The actual requirement and sign prohibition remain.
+    expect(steps.find(step => step.id === "response")).toMatchObject({state: "pending"});
+    expect(progress.concerns).toEqual(expect.arrayContaining([expect.objectContaining({code: "response.required", severity: "stop"})]));
+    expect(progress.canSign).toBe(false);
     expect(steps.find(step => step.id === "site")).toMatchObject({state: "complete"});
   });
   it("marks administration-only steps not needed for a handoff", () => {
