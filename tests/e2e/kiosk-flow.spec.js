@@ -201,6 +201,9 @@ test.describe('Injection focus workspace', () => {
   });
 
   test('moves a synthetic note from Identify through Sign and starts the next patient', async ({ page }) => {
+    // Repeated-print equality includes the printed-at footer. Fix Date while
+    // leaving timers running so a wall-clock minute boundary cannot change it.
+    await page.clock.setFixedTime(new Date('2026-10-02T16:00:00Z'));
     await page.goto('/?kiosk=1');
     await signInLocalStaff(page);
     const panel = page.locator('.wfp-panel');

@@ -65,3 +65,18 @@ schedule), every node connected, and every line at least 22px high. No threshold
 page-fit, semantic, PDF, fixture, screenshot or production source changes. The
 full 415-case source and 414-case production reviews must pass again before this
 follow-up is certified; retries remain zero.
+
+## Exact repeated-print date fixture
+
+Source `bfdd1f37058e4870b642f96fb4e11f809b31647b` passed the AVS writing-room
+case and both preservation cases. Full source review `37346520353` passed 414
+cases and failed the kiosk journey's exact repeated-handout comparison. The
+expected and received HTML differ at only two characters: both page footers
+advanced from `Printed 10/05/26 1016` to `Printed 10/05/26 1017` between print
+attempts. All clinical, identity, appointment and document markup is identical.
+
+The kiosk journey now fixes Date using Playwright's `setFixedTime`, matching
+other deterministic fixtures in the suite. Timers still run normally. The
+whole-HTML equality remains exact; no timestamp is removed or normalized, and
+no runtime or print contract changes. Both complete CI paths must pass at the
+new source before certification.
