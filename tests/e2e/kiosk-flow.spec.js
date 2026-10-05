@@ -201,12 +201,13 @@ test.describe('Injection focus workspace', () => {
   });
 
   test('moves a synthetic note from Identify through Sign and starts the next patient', async ({ page }) => {
-    // Repeated-print equality includes the printed-at footer. Fix Date while
-    // leaving timers running so a wall-clock minute boundary cannot change it.
-    await page.clock.setFixedTime(new Date('2026-10-02T16:00:00Z'));
     await page.goto('/?kiosk=1');
-    await signInLocalStaff(page);
     const panel = page.locator('.wfp-panel');
+    // Query-string launch schedules patient-field focus on animation frames.
+    // Let that handoff finish before opening a menu that dismisses on blur.
+    await expect(page.locator('body')).toHaveAttribute('data-application-ready', 'true');
+    await expect(panel.locator('input[placeholder="Last, First"]')).toBeFocused();
+    await signInLocalStaff(page);
 
     await kioskStep(page, 'identify').click();
     await panel.locator('input[placeholder="Last, First"]').fill('Kiosk, Synthetic');
@@ -286,6 +287,9 @@ test.describe('Injection focus workspace', () => {
     await expect(completion.getByRole('button', { name: 'Print patient handout' }))
       .toBeEnabled();
     await expect(completion).toBeFocused();
+    // Repeated-print equality includes the printed-at footer. Fix Date only
+    // for this comparison, with timers running and the signed journey settled.
+    await page.clock.setFixedTime(new Date('2026-10-02T16:00:00Z'));
     await page.evaluate(() => { window.__ipmgNativePrint = () => {}; window.cleanPrintClasses = () => {}; });
     await completion.getByRole('button', { name: 'Print patient handout' }).click();
     const printedAppointment = page.locator('#avsSheet .avs2-step-due .avs2-appointment');

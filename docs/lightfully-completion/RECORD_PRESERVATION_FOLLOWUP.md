@@ -80,3 +80,20 @@ other deterministic fixtures in the suite. Timers still run normally. The
 whole-HTML equality remains exact; no timestamp is removed or normalized, and
 no runtime or print contract changes. Both complete CI paths must pass at the
 new source before certification.
+
+## Kiosk launch readiness before local staff entry
+
+At source `b6db3f862488d24edc91318bb139142dfeb88d7c`, full review
+`37348814787` passed 414 cases; production review `37348814731` passed 413
+and skipped the standalone-only case. Both failed while the kiosk journey
+clicked Documenting staff, before any signing or repeated-print assertion.
+The retained trace shows the menu item detached, and the failure screenshot
+shows focus on the initial patient-name field. Query-string kiosk launch owns
+a delayed focus handoff through the Injection panel's animation frames; this
+dismisses an account menu opened before that handoff completes.
+
+The journey now waits for application readiness and the actual initial
+patient-name focus before opening the account menu. The fixed Date fixture is
+narrowed to the two print attempts after the signed completion card has focus.
+No sleeps, forced clicks, bypassed UI actions, increased test timeout or runtime
+changes. The same complete CI paths and zero-retry requirement remain.
