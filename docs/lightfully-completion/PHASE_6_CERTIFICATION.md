@@ -32,3 +32,23 @@ assertion. Both record journeys assert the complete browser/workstation sentence
 The three corrected cases passed together, retries=0. Their patient-data,
 viewport, cancellation, focus and exact-storage assertions remain intact.
 A fresh complete CI run is required on this test-aligned final tree.
+
+The local full diagnostic run completed: 405 passed / 9 failed, retries=0.
+Seven failures were the three superseded expectations above and four worklist
+checks that coupled the Recorded locally SVG marker to the retired green-ready
+presentation. Two were native browser-zoom timeouts in the alternate scratch
+Chromium runtime; the locked CI browser must verify those unchanged tests.
+This diagnostic run is not a green exact-artifact certification.
+
+Recorded locally now retains the original font-independent SVG mark while using
+neutral lifecycle styling. The four worklist cases explicitly require both the
+neutral state and visible SVG dimensions, and retain all native table, row count,
+compact geometry, supported widths, keyboard resume and long patient identity
+assertions. Passing prior candidate, new candidate and difference were inspected;
+the only additional changes are the two Recorded locally markers and their text
+spacing (x956–1074/y540–633). Final strict Linux RGBA digest:
+`c696f124ba8257c7a74ccc949ceed49b3499bc6e051c7f6aefb4558b0a415c97`.
+All thirteen worklist and visual/geometry/resume cases passed together after this
+correction, retries=0. No screenshot tolerance or clinical golden fixture changed.
+The completed diagnostic run found no other failures. A new complete exact-head
+and production-artifact gate is required on the corrected tree.
