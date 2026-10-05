@@ -1489,8 +1489,15 @@ for (const variant of ['write-in', 'typed', 'partial', 'schedule', 'omit']) {
       if (variant === 'typed' || variant === 'partial') await expect(reminder).toContainText('Saturday, August 29, 2026');
       if (variant === 'typed') await expect(reminder).toContainText('10:30 AM');
       if (variant === 'schedule') await expect(reminder).toContainText('Please see the front desk before you leave.');
-      const writing = await reminder.locator('.avs2-write-line').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().height));
-      writing.forEach(height => expect(height).toBeGreaterThanOrEqual(22));
+      // The legacy autosave can rebuild the staged AVS after the format change.
+      // Re-query and measure in one browser task so a replaced node list cannot
+      // report zero geometry. Require every expected line at the original size.
+      const expectedLines = variant === 'write-in' ? 4 : variant === 'partial' ? 2 : 0;
+      await expect.poll(() => page.evaluate(() =>
+        Array.from(document.querySelectorAll('#avsSheet .avs2-appointment .avs2-write-line'))
+          .map(node => node.isConnected && node.getBoundingClientRect().height >= 22)
+      ), { message: 'Every current AVS write-in line has at least 22px of writing room' })
+        .toEqual(Array(expectedLines).fill(true));
     }
     // Original ordered return date remains August 27, not the appointment date.
     await expect(page.locator('#avsSheet .avs2-step-due')).toContainText('August 27, 2026');

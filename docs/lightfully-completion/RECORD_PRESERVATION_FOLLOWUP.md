@@ -40,3 +40,28 @@ The earlier review ZIP remains an immutable package of its pinned, passing
 engineering source `4886db988834783058ca06cc97e39548edd5be44`; it is not silently
 relabeled as evidence for this follow-up. PR #71 remains draft, main/production
 unchanged, and merge/deployment are outside this continuation's scope.
+
+## Source-review print harness follow-up
+
+At source `c1591153c9ec5d64e2dc48df1bbb1ea54e21773f`, both new
+record-preservation cases passed in both CI paths. Production-artifact browser
+review `37342369789` passed 414 cases and skipped the standalone-only case, with
+zero retries. Its deployment step hit the existing staging-environment limit.
+Full source review `37342369778` passed 414 cases and failed one separate AVS
+write-in geometry assertion, which measured all four lines as zero height.
+
+The retained trace shows the staged AVS subtree rebuilt between successive
+assertion snapshots while `print-avs` remains staged. The later failure
+screenshot shows all four writing lines. The legacy autosave calls `renderAVS`,
+which replaces `avsSheet.innerHTML`; a locator's previously resolved node list
+can therefore be detached before its geometry callback executes. This is a
+timing explanation supported by the trace and renderer, rather than a claimed
+local browser reproduction.
+
+The follow-up queries the current document and measures its lines in one browser
+task, using the existing assertion timeout to wait for rendered geometry. It
+requires the exact expected count (four write-in, two partial, zero typed or
+schedule), every node connected, and every line at least 22px high. No threshold,
+page-fit, semantic, PDF, fixture, screenshot or production source changes. The
+full 415-case source and 414-case production reviews must pass again before this
+follow-up is certified; retries remain zero.
